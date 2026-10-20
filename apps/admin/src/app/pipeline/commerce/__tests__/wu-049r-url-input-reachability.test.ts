@@ -103,7 +103,23 @@ function clickByText(text: string): boolean {
   return true;
 }
 
+/**
+ * 🔴🔴🔴 WU-130 ③(CPO 확정 2026-10-20) — **이 칸은 이제 셀러 경로에서 숨는다.**
+ *
+ * 국내·해외 자동검색이 **둘 다** 돌게 됐으므로 셀러가 판매처를 찾아 붙여넣는 칸은
+ * 제품 경로에 있을 이유가 없다. 🔴 **그러나 기능을 지우지 않았다**(CPO 조건 ③ —
+ * 「개발/검증용으로 남긴다」). 그 「남아 있다」를 **글로 선언하면 거짓이 될 수 있으므로**
+ * 이 파일이 **스위치를 켠 상태로 실제 마운트해** 증명한다.
+ *
+ * 🟢 그래서 아래 단언은 **한 줄도 약해지지 않았다** — 조건만 명시됐다.
+ *    🔴 반대쪽(기본 숨김)은 `wu-130-overseas-auto-pool` 과 `product-tab-mounted` 가 잠근다.
+ */
+const SUPPLIED_URL_FLAG = "NEXT_PUBLIC_MI_SUPPLIED_URL_INPUT";
+let flagBefore: string | undefined;
+
 beforeEach(() => {
+  flagBefore = process.env[SUPPLIED_URL_FLAG];
+  process.env[SUPPLIED_URL_FLAG] = "true";
   container = document.createElement("div");
   document.body.appendChild(container);
   // @ts-expect-error — React 가 act() 안의 업데이트를 동기 처리하게 하는 전역 플래그.
@@ -115,6 +131,8 @@ afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
   vi.unstubAllGlobals();
+  if (flagBefore === undefined) delete process.env[SUPPLIED_URL_FLAG];
+  else process.env[SUPPLIED_URL_FLAG] = flagBefore;
 });
 
 /* ══════════ A. 🟢 FULL 에서는 «한 번» 누르면 입력칸이 나온다 ══════════ */

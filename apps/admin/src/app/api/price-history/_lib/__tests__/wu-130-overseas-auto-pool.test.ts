@@ -6,6 +6,7 @@ import type { ComparisonSearchResult } from "@commerce/crawler";
 import { collectOverseasAutoPool } from "../overseas-auto-pool";
 import { isTransientShopId, OVERSEAS_AUTO_SHOP_ID, OVERSEAS_AUTO_SHOP_NAME } from "../transient-candidates";
 import {
+  DOMESTIC_REVIEW_EMPTY,
   GeminiTransientCandidates,
   OVERSEAS_AUTO_HEADING,
   SOURCE_LABEL,
@@ -14,6 +15,7 @@ import {
   TRANSIENT_SCOPE_NOTICE,
   WEB_SEARCH_HEADING,
 } from "../../../../pipeline/commerce/GeminiTransientCandidates";
+import { isSuppliedUrlInputVisible } from "../../../../pipeline/commerce/DomesticPriceIntelligencePanel";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -379,5 +381,109 @@ describe("D. 🔴 화면(마운트 DOM)", () => {
   it("D-6 🔴 자동 1회차 응답에서 그 배열을 **읽는다** — 「다시 분석」을 누르기 전에도 보인다", () => {
     expect(PANEL).toContain("setOverseasAutoEvidence(j.domesticShop?.overseasAutoEvidence ?? null)");
     expect(PANEL).toContain("setOverseasAutoEvidence(json.domesticShop?.overseasAutoEvidence ?? null)");
+  });
+});
+
+/* ══════════════════ E. 🇰🇷 국내 — 조회 사실과 후보 부재를 가른다 (WU-130 ②) ══════════════════ */
+
+describe("E. 🇰🇷 국내 (WU-130 ②)", () => {
+  /**
+   * 🔴🔴 **실측 근거**(운영 함수 · 두 상품): 국내 등록부 자격 **18곳 중 6곳이 응답** 하고
+   *    후보 **20건** 이 실제로 왔다. 🔴 그런데 그 후보가 **전부 다른 상품** 이라
+   *    ⑧ 게이트가 샵 전체를 DROPPED 했다(**올바른 차단**) ⟹ 화면 후보 0.
+   *    ⟹ 「조회했다」와 「후보가 없다」는 **다른 사실** 이고 화면이 둘을 말해야 한다.
+   */
+  it("E-1 🔴 조회가 돌았으면 🇰🇷 구역이 **참고 집계 없이도** 선다", () => {
+    expect(PANEL).toContain("const showDomesticReview = checkRan");
+    const def = PANEL.slice(PANEL.indexOf("const checkRan ="), PANEL.indexOf("const showDomesticReview"));
+    /** 🔴 세 배열 **전부** 가 「조회가 돌았다」의 근거다 — 하나만 보면 국내 구역이 또 사라진다. */
+    for (const k of ["web != null", "supplied != null", "overseasAuto != null"]) {
+      expect(def).toContain(k);
+    }
+  });
+
+  it("E-2 🔴 빈 상태 문구가 **조회 사실** 을 말하고 부재를 단정하지 않는다", () => {
+    expect(DOMESTIC_REVIEW_EMPTY).toContain("조회");
+    expect(DOMESTIC_REVIEW_EMPTY).toContain("찾지 못했습니다");
+    expect(DOMESTIC_REVIEW_EMPTY).not.toMatch(/국내에 (동일상품|상품)이 없/);
+  });
+
+  it("E-3 🟢 국내 등록부 후보는 여전히 **sink 가 아니라 upsert** 로 간다(이중 집계 금지)", () => {
+    /** 🔴 sink push 는 일시 샵 가드 **안** 에만 있어야 한다 — 밖으로 나오면
+     *  국내 등록부 후보가 `domesticCompetition` «그리고» `candidateDomesticPrice` 에
+     *  **두 번** 들어간다(가격 집계 오염). */
+    const guard = RUNNER.indexOf("if (isTransientShopId(result.shopId)) {");
+    const push = RUNNER.indexOf("transientEvidenceSink.push(");
+    expect(guard).toBeGreaterThan(-1);
+    expect(push).toBeGreaterThan(guard);
+    expect(RUNNER.split("transientEvidenceSink.push(").length - 1).toBe(1);
+  });
+});
+
+/* ══════════════════ F. ③ 붙여넣기 UI · ④ 가격 구역 통합 (WU-130) ══════════════════ */
+
+describe("F. ③④ 화면 구조 (WU-130)", () => {
+  it("F-1 🔴 붙여넣기 입력칸은 **기본 숨김** 이다 — 기능은 지우지 않았다", () => {
+    /** 🟢 기본값: 환경변수가 없으면 `false`. */
+    expect(isSuppliedUrlInputVisible()).toBe(false);
+    /** 🔴 렌더가 **그 술어에 걸려** 있어야 한다(상수 선언만 있고 안 쓰면 의미가 없다). */
+    expect(PANEL).toContain("{isSuppliedUrlInputVisible() && (");
+    /** 🟢🟢 **기능 보존** — 파서·풀·API 경계·상태·배선이 **전부 남아 있다**. */
+    expect(PANEL).toContain("candidateUrlsText");
+    expect(PANEL).toContain("onCandidateUrlsChange");
+    expect(PANEL).toContain('data-testid="wu024-candidate-urls"');
+    expect(ROUTE).toContain("candidateUrls");
+    expect(RUNNER).toContain("collectUrlCandidatePool({");
+  });
+
+  it("F-2 🟢 스위치를 켜면 **그 술어가 true** 가 된다(되돌릴 수 있다)", () => {
+    const before = process.env.NEXT_PUBLIC_MI_SUPPLIED_URL_INPUT;
+    process.env.NEXT_PUBLIC_MI_SUPPLIED_URL_INPUT = "true";
+    try {
+      expect(isSuppliedUrlInputVisible()).toBe(true);
+    } finally {
+      if (before === undefined) delete process.env.NEXT_PUBLIC_MI_SUPPLIED_URL_INPUT;
+      else process.env.NEXT_PUBLIC_MI_SUPPLIED_URL_INPUT = before;
+    }
+  });
+
+  it("F-3 🔴 두 참고가격이 **한 영역 안** 에 들어간다 — 구역 «안» 분리", () => {
+    /** 🔴 좌표를 추측하지 않는다 — 여는 testid 부터 그 `</section>` 까지만 자른다
+     *  (이 트랙에서 slice 좌표를 틀려 통과한 적이 세 번 이상이다). */
+    const start = PANEL.indexOf('data-testid="unified-price-comparison"');
+    expect(start).toBeGreaterThan(-1);
+    const end = PANEL.indexOf("</section>", start);
+    expect(end).toBeGreaterThan(start);
+    const area = PANEL.slice(start, end);
+    expect(area).toContain("UNIFIED_PRICE_COMPARISON_TITLE");
+    /** 🔴 국내·해외 블록이 **그 영역 안** 에 있어야 한다(밖에 있으면 통합이 아니다). */
+    expect(area).toContain('testId="domestic-reference"');
+    expect(area).toContain("summary={overseasReference}");
+    /** 🟢 안쪽 두 블록의 식별(testid·제목·아이콘)은 **그대로** 다 — `wu-056r1` 이 계속 잡는다. */
+    expect(area).toContain("DOMESTIC_REFERENCE_TITLE");
+  });
+
+  it("F-4 🔴 통합은 **표시만** 이다 — 집계/판정/알림 어휘가 그 영역에 없다", () => {
+    /** 🔴 좌표를 추측하지 않는다 — 여는 testid 부터 그 `</section>` 까지만 자른다
+     *  (이 트랙에서 slice 좌표를 틀려 통과한 적이 세 번 이상이다). */
+    const start = PANEL.indexOf('data-testid="unified-price-comparison"');
+    expect(start).toBeGreaterThan(-1);
+    const end = PANEL.indexOf("</section>", start);
+    expect(end).toBeGreaterThan(start);
+    const area = PANEL.slice(start, end);
+    for (const forbidden of [
+      "domesticTransientRecords",
+      "candidateDomesticPrice",
+      "computeMarketAlert",
+      "domesticCompetition",
+      "sellerDecision",
+      "summarize",
+    ]) {
+      expect(area).not.toContain(forbidden);
+    }
+  });
+
+  it("F-5 🔴 값이 둘 다 없으면 **빈 테두리를 만들지 않는다**", () => {
+    expect(PANEL).toContain("{(domesticReference || overseasReference) && (");
   });
 });

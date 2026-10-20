@@ -2314,6 +2314,36 @@ export function DomesticPriceIntelligencePanel({
  *    본문은 한 줄이고, 화면은 접힘 밖에 선다. 둘 다 지켜진다.
  * 🔴 후보도 안내문도 없으면 **아무것도 렌더하지 않는다** — 기본 화면 불변.
  */
+/**
+ * 🔴🔴 WU-130 ③ — 「AI 조사 결과 붙여넣기」 입력칸의 **노출 스위치**.
+ *
+ * 🟢 기본 **숨김** 이다(환경변수가 없으면 `false`) — 셀러가 보는 제품 경로에서 사라진다.
+ * 🔴 **기능을 지운 것이 아니다** — 파서·풀·API 경계·상태·배선은 그대로 살아 있고,
+ *    `NEXT_PUBLIC_MI_SUPPLIED_URL_INPUT=true` 로 빌드하면 **그대로 돌아온다**(검증용).
+ * 🔴 판정·가격·집계와 **무관** 하다 — 이 술어는 렌더 여부 하나만 정한다.
+ * 🟢 **상수가 아니라 함수** 다 — 그래야 검증 하니스가 「켜면 배선이 그대로 산다」를
+ *    실제 마운트로 증명할 수 있다(상수면 모듈 로드 시점에 굳어 그 증명이 불가능하다).
+ */
+export function isSuppliedUrlInputVisible(): boolean {
+  return process.env.NEXT_PUBLIC_MI_SUPPLIED_URL_INPUT === "true";
+}
+
+/**
+ * 🔴🔴 WU-130 ④ — **중복 참고가격 두 구역을 «한 영역» 으로 합친다.**
+ *
+ * WU-128 이 지목한 중복이 이것이다 — 🇰🇷 국내 참고가격과 🧾 해외 동일상품 참고가격이
+ * **서로 떨어진 두 구역** 이라 셀러가 「국내/해외를 비교한 결과」로 읽지 못했다.
+ *
+ * 🟢 **표시만 바꾼다**(CPO 조건 ②) — 집계 입력(`domesticTransientRecords` ·
+ *    `candidateDomesticPrice`) · 판정 · `computeMarketAlert` · 통화·환산 규칙은
+ *    **한 글자도 건드리지 않았다**. 두 블록을 **감싸는 테두리와 제목 하나** 가 전부다.
+ * 🔴 안쪽 두 블록의 제목·testid·🧾 아이콘·「환산 없음」 성질은 **그대로** 다 —
+ *    그래서 `wu-056r1` 계약 다섯이 **깨지지 않고** 「구역 안 분리」로만 강화된다.
+ */
+export const UNIFIED_PRICE_COMPARISON_TITLE = "📊 동일상품 가격 비교";
+/** 🔴 두 축이 **같은 영역 안에서** 비교된다는 사실을 구역이 직접 말한다. */
+export const UNIFIED_PRICE_COMPARISON_NOTE = "🇰🇷 국내와 🌎 해외를 한곳에서 비교합니다 — 참고용이며 판매판정에 반영되지 않습니다.";
+
 function TransientCandidateSections({
   web,
   supplied,
@@ -2352,18 +2382,30 @@ function TransientCandidateSections({
    *  `classifyCandidateMarket` 이 KR 로 판정하면 국내 구역으로 **옮긴다**(복제 아님) —
    *  시장은 여기서 추측하지 않고 운영 판정을 그대로 따른다. */
   const overseasAutoRest = (overseasAuto ?? []).filter((r) => !isKr(r));
-  /** 🔴 국내 구역은 **참고 집계가 있을 때** 선다 — 후보 0 이어도 empty state 를 말한다. */
-  const showDomesticReview = krRows.length > 0 || !!domesticReference;
+  /**
+   * 🔴🔴 WU-130 ② — **국내 구역은 «조회가 돌았으면» 항상 선다.**
+   *
+   * 전에는 `krRows.length > 0 || !!domesticReference` 였다. 그래서 국내 후보가 0 이면
+   * 🇰🇷 구역이 **아예 렌더되지 않았고**, 셀러는 「국내는 조회조차 안 했나?」로 읽었다 —
+   * 🔴 그것이 CEO 가 본 「국내 한 줄」 문제의 **화면 쪽 절반** 이다.
+   *
+   * 🟢 실측 근거(WU-130 ② · 두 상품): 국내 등록부 **자격 18곳 중 6곳이 응답** 하고
+   *    후보 **20건** 이 실제로 왔다. 🔴 그런데 그 후보가 **전부 다른 상품** 이라
+   *    ⑧ 게이트가 샵 전체를 DROPPED 했다(**올바른 차단**) ⟹ 화면에 0.
+   *    ⟹ 「조회했다」와 「후보가 없다」는 **다른 사실** 이고 화면이 둘을 말해야 한다.
+   * 🔴 「국내에 동일상품이 없다」로는 **적지 않는다**(WU-091 어휘 계약).
+   */
+  const checkRan =
+    web != null || supplied != null || overseasAuto != null || !!domesticReference || !!overseasReference;
+  const showDomesticReview = checkRan;
 
-  if (
-    !web?.length &&
-    !supplied?.length &&
-    !overseasAuto?.length &&
-    !notice &&
-    !overseasReference &&
-    !domesticReference
-  )
-    return null;
+  /**
+   * 🔴🔴 WU-130 ② — **「조회가 돌았다」가 렌더 조건이다.** 전에는 「후보가 있다」였고,
+   *    그래서 국내·해외가 **둘 다 0** 이면 영역이 통째로 사라졌다 — 셀러에게는
+   *    「조회조차 안 했다」로 보인다. 🟢 실측에서 국내 후보는 두 상품 모두 0 이었으므로
+   *    그것이 바로 CEO 가 본 화면이다. 🔴 「후보 없음」과 「조회 안 함」은 다른 사실이다.
+   */
+  if (!checkRan && !notice) return null;
   return (
     <>
       {/**
@@ -2378,16 +2420,33 @@ function TransientCandidateSections({
        * 🔴 이 구역은 **권위 집계가 아니다** — `domesticCompetition`(국내 최저가)과
        *    별 칸이고, 문구가 그 수명을 직접 말한다(새로고침하면 사라진다).
        */}
-      <OverseasReferencePrice
-        summary={domesticReference}
-        title={DOMESTIC_REFERENCE_TITLE}
-        note={DOMESTIC_REFERENCE_NOTE}
-        scope={DOMESTIC_REFERENCE_SCOPE}
-        icon="🇰🇷"
-        testId="domestic-reference"
-        amountTestId="domestic-lowest"
-      />
-      <OverseasReferencePrice summary={overseasReference} />
+      {/**
+       * 🔴🔴 WU-130 ④ — **한 영역 안에 🇰🇷 국내 + 🌎 해외.** 두 구역이 떨어져 있던 것이
+       *    WU-128 이 지목한 **중복** 이다. 🟢 감싸기만 했다 — 안쪽 두 블록의 제목·testid·
+       *    아이콘·환산 금지 성질은 그대로이고 **집계 계산은 한 글자도 바뀌지 않았다**.
+       * 🔴 값이 둘 다 없으면 안쪽이 각자 `null` 을 내므로 **빈 테두리만 남지 않게** 한다.
+       */}
+      {(domesticReference || overseasReference) && (
+        <section
+          data-testid="unified-price-comparison"
+          className="mt-3 rounded-md border border-border bg-surface/30 p-2"
+        >
+          <p className="text-[11px] font-medium text-text-secondary">{UNIFIED_PRICE_COMPARISON_TITLE}</p>
+          <p className="mt-0.5 text-[11px] text-text-tertiary">{UNIFIED_PRICE_COMPARISON_NOTE}</p>
+          <div className="mt-2 space-y-2">
+            <OverseasReferencePrice
+              summary={domesticReference}
+              title={DOMESTIC_REFERENCE_TITLE}
+              note={DOMESTIC_REFERENCE_NOTE}
+              scope={DOMESTIC_REFERENCE_SCOPE}
+              icon="🇰🇷"
+              testId="domestic-reference"
+              amountTestId="domestic-lowest"
+            />
+            <OverseasReferencePrice summary={overseasReference} />
+          </div>
+        </section>
+      )}
       {/**
        * 🔴🔴 WU-081 — **국내 후보 «검토» 구역.** 위 두 참고가격 구역은 **금액 집계** 이고
        *    이 구역은 **후보 행 + 사람 검토** 다. 🟢 컴포넌트는 기존 것을 그대로 쓴다.
@@ -3486,29 +3545,44 @@ export function MiPanelView({
             {/* 🔴🔴 WU-091 §5 — **보조 기능으로 내렸다.** 기본은 «접힘» 이다.
                 자동 탐색 결과가 먼저 보이고, 정말 필요할 때만 펼친다.
                 🔴 기능/배선/검증은 **한 줄도 바꾸지 않았다** — 감싸고 이름만 바꿨다. */}
-            <details data-testid="wu091-supplied-url" className="mt-3">
-              <summary
-                data-testid="wu091-supplied-url-summary"
-                className="cursor-pointer text-[11px] font-medium text-text-secondary"
-              >
-                {SUPPLIED_URL_INPUT_SUMMARY}
-              </summary>
+            {/**
+             * 🔴🔴 WU-130 ③(CPO 확정 2026-10-20) — **셀러 경로에서 «숨긴다». 지우지 않는다.**
+             *
+             * 제품의 한 문장은 「URL 하나 넣으면 **우리가** 찾아준다」다. 그런데 이 칸이
+             * 화면에 있는 동안은 셀러가 **자기가 찾아와야 하는 것** 으로 읽는다(CEO 피드백).
+             * 🟢 이제 국내(`searchDomesticShops`)와 해외(`collectOverseasAutoPool`)가
+             *    **둘 다 자동으로** 돌므로 이 칸은 제품 경로에서 필요하지 않다.
+             *
+             * 🔴 **완전 삭제하지 않는다**(CPO 조건 ③) — 파서(`extractCandidateUrlsFromAiAnswer`) ·
+             *    풀(`collectUrlCandidatePool`) · API 경계(`candidateUrls`) · 상태 · 배선은
+             *    **한 줄도 지우지 않았다**. 지우면 이후 MI 검증이 불편해진다.
+             * 🟢 켜는 법 — 빌드 환경변수 `NEXT_PUBLIC_MI_SUPPLIED_URL_INPUT=true`.
+             */}
+            {isSuppliedUrlInputVisible() && (
+              <details data-testid="wu091-supplied-url" className="mt-3">
+                <summary
+                  data-testid="wu091-supplied-url-summary"
+                  className="cursor-pointer text-[11px] font-medium text-text-secondary"
+                >
+                  {SUPPLIED_URL_INPUT_SUMMARY}
+                </summary>
 
-              <p className="mt-0.5 text-[11px] text-text-tertiary">
-                {SUPPLIED_URL_INPUT_NOTICE}
-              </p>
-              <textarea
-                id="wu024-candidate-urls"
-                aria-label={SUPPLIED_URL_INPUT_SUMMARY}
-                data-testid="wu024-candidate-urls"
-                value={candidateUrlsText}
-                onChange={(e) => onCandidateUrlsChange?.(e.target.value)}
-                disabled={rechecking}
-                rows={4}
-                placeholder="AI 답변을 그대로 붙여넣으세요 — 링크만 자동으로 골라냅니다"
-                className="mt-1 w-full rounded-md border border-border bg-surface/40 p-1.5 text-[11px] text-text-primary placeholder:text-text-tertiary disabled:opacity-50"
-              />
-            </details>
+                <p className="mt-0.5 text-[11px] text-text-tertiary">
+                  {SUPPLIED_URL_INPUT_NOTICE}
+                </p>
+                <textarea
+                  id="wu024-candidate-urls"
+                  aria-label={SUPPLIED_URL_INPUT_SUMMARY}
+                  data-testid="wu024-candidate-urls"
+                  value={candidateUrlsText}
+                  onChange={(e) => onCandidateUrlsChange?.(e.target.value)}
+                  disabled={rechecking}
+                  rows={4}
+                  placeholder="AI 답변을 그대로 붙여넣으세요 — 링크만 자동으로 골라냅니다"
+                  className="mt-1 w-full rounded-md border border-border bg-surface/40 p-1.5 text-[11px] text-text-primary placeholder:text-text-tertiary disabled:opacity-50"
+                />
+              </details>
+            )}
             <div className="mt-2 flex items-center justify-end">
               <button
                 type="button"

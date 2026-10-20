@@ -89,6 +89,27 @@ describe("WU-082 — 자동 1회차만으로 국내 축이 보인다", () => {
    */
   it("🟢 후보가 0 이어도 집계가 있으면 **empty state** 로 선다(판정 의미 없음)", async () => {
     await mount({ domesticReference: DOMESTIC_SUMMARY });
-    expect(sec("domestic-review-empty")?.textContent).toContain("국내 비교 후보가 없습니다");
+    /**
+     * 🔴🔴 WU-130 ② — **문구가 갱신됐다.** 전 문구(「국내 비교 후보가 없습니다.」)는
+     *    「조회조차 안 했다」로도 읽혔다. 실측에서 국내 등록부는 **응답했고 후보도 왔지만**
+     *    그 후보가 전부 다른 상품이어서 0 이 됐다 — 그 둘은 **다른 사실** 이다.
+     * 🟢 성질은 그대로다 — **판정 의미를 부여하지 않는다.**
+     */
+    const text = sec("domestic-review-empty")?.textContent ?? "";
+    expect(text).toContain("조회");
+    expect(text).toContain("찾지 못했습니다");
+    /** 🔴 「국내에 동일상품이 없다」로 **단정하지 않는다**(부재 ≠ 미발견). */
+    expect(text).not.toMatch(/국내에 (동일상품|상품)이 없/);
+  });
+
+  /**
+   * 🔴🔴 WU-130 ② — **조회가 돌았으면 🇰🇷 구역은 «참고 집계가 없어도» 선다.**
+   *    전에는 집계가 없으면 구역 자체가 사라져서 셀러가 「국내는 조회조차 안 했나?」로
+   *    읽었다 — 실측(두 상품)에서 국내 후보는 **전부 0** 이었으므로 그것이 곧 CEO 가
+   *    본 「국내 한 줄」 화면이다.
+   */
+  it("🟢 WU-130 — 해외만 와도 🇰🇷 국내 구역이 **선다**(조회했다는 사실을 말한다)", async () => {
+    await mount({ overseasAutoEvidence: [] });
+    expect(sec("domestic-review-empty")).toBeTruthy();
   });
 });

@@ -472,13 +472,21 @@ describe("마운트하고 effect가 전부 돈 뒤의 첫 화면", () => {
        *    「🔗 비교할 판매처 상품 URL (선택)」을 **보조 기능** 으로 내리고
        *    접힌 구역의 제목으로 바꿨다. CEO 육안 테스트에서 그 칸이 **주된 후보
        *    탐색 방법처럼** 보였고 **같은 원상품 URL 을 다시 넣어야 하는 것처럼** 읽혔다.
+       *
+       * 🔴🔴🔴 **WU-130 ③(CPO 확정 2026-10-20) — 그 두 줄이 «사라졌다».**
+       *    국내(`searchDomesticShops`)와 해외(`collectOverseasAutoPool`)가 **둘 다
+       *    자동으로** 돌게 됐으므로, 셀러가 판매처를 찾아 붙여넣는 칸은 제품 경로에
+       *    있을 이유가 없다(제품 한 문장: 「URL 하나 넣으면 **우리가** 찾아준다」).
+       * 🟢 **기능을 지운 것이 아니다** — 파서·풀·API 경계·배선은 그대로이고
+       *    `NEXT_PUBLIC_MI_SUPPLIED_URL_INPUT=true` 면 그대로 돌아온다(그 성질은
+       *    `wu-049r-url-input-reachability` 가 **켠 상태로** 증명한다).
        * 🟢 이 계약의 «성질» 은 그대로다 — 「이 화면이 더하는 것은 이 목록뿐이다」.
-       *    🔴 문자열만 갱신하고 **항목 수를 늘리지 않았다**(늘었으면 그것이 결함 신호다).
        */
-      SUPPLIED_URL_INPUT_SUMMARY,
-      SUPPLIED_URL_INPUT_NOTICE,
       "🔄 다시 분석",
     ]);
+    /** 🔴 **강화** — 기본 화면에 그 두 문구가 **없어야** 한다(숨김을 직접 단언한다). */
+    expect(after.join(" ")).not.toContain(SUPPLIED_URL_INPUT_SUMMARY);
+    expect(after.join(" ")).not.toContain(SUPPLIED_URL_INPUT_NOTICE);
 
     // 레이더는 **그림**으로만 온다 — 별점 목록이 그 아래 한 벌 더 붙지 않는다.
     expect(miElement().querySelector("svg")).not.toBeNull();

@@ -442,23 +442,49 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 
 ## 12. 현재 상태 — MI 측정 트랙 **전부 종료** (갱신 2026-10-12)
 
-### 🔴🔴🔴 **현재 착수점 — WU-130 ① 은 «끝났다». 다음은 CEO 확인 1회 → ③④** (2026-10-20)
+### 🟢🟢 **WU-130 ①②③④ 전부 종료 — 다음은 CEO 화면 확인 «1회»** (2026-10-20)
 
 🔴 **다음 세션은 `docs/HANDOFF-WU-130.md` 를 먼저 읽는다**(함정·금지·STOP 조건). 🔴 재조사 금지.
+🟢 전문 `docs/MI-OVERSEAS-MERGE-130.md` (§1~§7 = ① · **§A~§G = ②③④**).
 
 ```
-🟢 ① 해외 합류        **구현/배포 완료** — 전문 `docs/MI-OVERSEAS-MERGE-130.md`
-🟡 ② CEO 화면 확인 1회  **대기** — 「아무것도 붙여넣지 말고 B226AC009 를 열어서
-                       🌎 해외 자동검색 후보가 자동으로 뜨는지만」
-🔴 ③ 붙여넣기 UI 제거   **②가 확인된 뒤** (먼저 하면 화면이 완전히 비어 보인다 · 파서는 보존)
-🔴 ④ 가격 구역 통합     ③ 뒤 · 계약 `wu-056r1` 갱신 동반 · **표시만** 바꾼다
-🔴 가격 정책           **HOLD 유지**(§00-B) — WU-130 E2E 에서 WU-111 모순이 **재현** 됐다
+🟢 ① 🌎 해외 자동검색 → /check → MI → sink → 해외 집계   **구현/배포**
+🟢 ② 🇰🇷 국내 전수 확인                                **코드 수정 지점 «없다»**(아래)
+     + 화면 수정 1건 — 「조회했다」와 「후보 없음」을 가른다
+🟢 ③ 「AI 조사 결과 붙여넣기」 **셀러 경로에서 숨김**     기능·파서·배선은 **보존**
+     (`NEXT_PUBLIC_MI_SUPPLIED_URL_INPUT=true` 면 그대로 돌아온다)
+🟢 ④ 참고가격 두 구역 → **한 영역** 「📊 동일상품 가격 비교」(안에서 🇰🇷/🌎 분리 · 계산 0)
+🟡 CEO Action — **화면 1회**(§G) · 🔴 가격 정책은 **HOLD 유지**(§00-B)
 ```
 
-🟢🟢 **①이 닫은 구멍 한 문장**: 해외 검색은 **이미 자동으로 돌고 있었지만 브라우저에만**
-살아서 `judgeDomesticCandidate` 와 해외 금액 집계에 **한 번도 들어가지 못했다** —
-「🧾 해외 동일상품 참고가격」이 **셀러가 URL 을 붙여넣을 때만** 채워진 이유다.
-🔴 **대가** — 지금은 해외 검색이 **두 번** 돈다(브라우저 1 + `/check` 1). 한쪽 제거는 ④의 일이다.
+🟢🟢 **①이 닫은 구멍**: 해외 검색은 **이미 자동으로 돌고 있었지만 브라우저에만** 살아서
+`judgeDomesticCandidate` 와 해외 금액 집계에 **한 번도 들어가지 못했다** — 「🧾 해외 동일상품
+참고가격」이 **셀러가 URL 을 붙여넣을 때만** 채워진 이유다.
+🔴 **대가** — 지금 해외 검색이 **두 번** 돈다(브라우저 `useCollectOnce` 1 + `/check` 1).
+비용은 HTTP 뿐(유료 provider 0). 한쪽 제거는 **owner 를 하나로 만들 때** 의 일이다.
+
+🔴🔴🔴 **②의 답 — 국내는 «코드» 가 아니라 «공급» 이다 (실측 · 두 상품 · 운영 함수)**
+```
+                     S1 B226AC042        S2 B226AC009
+등록부 34 → 자격       **18**(AUTO_* 6)    **18**(AUTO_* 6)
+검색 status           {ok 6 · unsupported 12}  (둘 다)
+🟢 후보               **15**              **5**     ← 전부 looxloo.com
+판정                  DROPPED/EVIDENCE_NOT_WORTHWHILE · JUDGED **0** · 링크 **0**
+🔴🔴 후보 «내용» 을 확인했다 — S1 15건(앞치마세트·턱받이·7부내의·데님팬츠…) ·
+   S2 5건(BLUEDOG 레깅스·우주복·가디건·Hugh Rabbit·반다나스커트) ⟹ **전부 다른 상품**
+   confidence **전건 0.00~0.10** · matchLevel **전건 low**
+⟹ 🟢🟢 **⑧ 게이트의 DROPPED 는 «정확한 차단» 이다** — 버릴 동일상품이 **없었다**
+⟹ 🔴 「게이트가 국내 동일상품을 버린다」로 **읽지 않는다**
+막는 것 둘 — ⒜ **18 중 12 가 `unsupported`**(어댑터 부재 · WU-115 확정)
+             ⒝ 응답한 6곳 중 후보를 내는 곳이 **looxloo 하나** 이고 그 상품을 **안 판다**
+⟹ 🔴 해결 방향은 **어댑터/Registry 확대** 뿐이고 **§12-0 이 금지한 방향** ⟹ **CPO 결정**
+🔴 **WU-114 의 「등록부 검색 후보 0」을 정정** — 후보 «수» 는 0 이 아니었다(15/5).
+   🟢 그러나 결론(국내 JUDGED 0)은 **같다**. 두 보고를 같은 문장으로 적지 않는다
+```
+
+🟢 국내 등록부 후보는 **sink 를 타지 않는다**(비transient → `upsertDomesticProductLink` →
+`domesticCompetition` 권위 집계). 🔴 **그것은 결함이 아니고, sink 에 넣으면 «이중 집계» 다**
+(`domesticCompetition` «그리고» `candidateDomesticPrice`) ⟹ 계약 E-3 가 그 경계를 잠근다.
 
 ### 🔴🔴🔴 00. **이것부터 읽는다 — 목표는 «하나» 다** (CPO 재정립 2026-10-19)
 
@@ -909,6 +935,10 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **해외 후보는 `transientPools` 로 보내지 않는다** | `run-domestic-price-check` (WU-130) | `searchOneShop` 안에서 `withConfidence`·`enrichScored` 가 **이미** 돈다(실측 matchLevel 4/4) ⟹ 그 루프에 넣으면 **재점수 + 가격보강을 두 번** 한다 · 🟢 합류 자리는 `searchResults` 생성 줄이고 그래서 중복 집합이 해외 후보를 **같이 본다** · 🔴 `foundVeryHighInP0` 는 합류 **앞** 에서 확정(국내 검색 범위 불변 · C-5) |
 | 🔴 **일시 샵은 셋 · 술어는 하나** | `TRANSIENT_SHOP_IDS` (WU-130) | `__gemini_discovery__` · `__url_candidates__` · `__overseas_auto__` · 🔴 생산자를 넣고 **집합에 빼먹으면 DB 로 흘러간다** · 🟢 계약이 **집합 전수를 돌려** 잠근다(숫자만 고치는 길 없음) |
 | 🔴 **출처는 셋으로 가른다** | `GeminiTransientEvidence.source` (WU-130) | `SELLER_URL` ↔ `GEMINI_DISCOVERY` ↔ **`OVERSEAS_AUTO`** · 🔴 「그 외는 Gemini」로 두지 않는다(생산자가 늘 때 조용히 엉뚱한 배열에 담긴다) · 🔴 응답 **세 배열은 가른 채로** 내보내고 합치는 곳은 **MI 입력 한 곳** |
+| 🔴🔴 **국내 등록부 후보는 sink 로 보내지 않는다** | `run-domestic-price-check` sink 가드 (WU-130 ②) | 비transient → `upsertDomesticProductLink` → **`domesticCompetition`(권위 집계)** · 🔴 sink 에 넣으면 `candidateDomesticPrice` 와 **이중 집계** 가 된다 · 🟢 `transientEvidenceSink.push` 는 일시 샵 가드 **안** 에 **하나**(E-3) |
+| 🔴 **「조회했다」와 「후보 없음」은 다른 문장** | `showDomesticReview = checkRan` (WU-130 ②) | 🇰🇷 구역은 **조회가 돌았으면 참고 집계 없이도** 선다 · 🔴 전에는 후보 0 이면 구역이 **사라져** 「조회조차 안 했다」로 읽혔다(실측: 두 상품 모두 국내 후보 0) · 🔴 「국내에 동일상품이 없다」로 **적지 않는다** |
+| 🔴 **붙여넣기 입력은 «숨김» 이고 «삭제» 가 아니다** | `isSuppliedUrlInputVisible()` (WU-130 ③) | 기본 **false** · 🟢 파서·풀·API 경계(`candidateUrls`)·상태·배선 **전부 보존** · `NEXT_PUBLIC_MI_SUPPLIED_URL_INPUT=true` 로 되돌아온다 · 🔴 **상수가 아니라 함수** 다(그래야 하니스가 **켠 상태로** 배선을 증명한다 · `wu-049r`) |
+| 🔴 **참고가격은 한 영역 «안» 에서 나눈다** | `unified-price-comparison` (WU-130 ④) | 제목 **「📊 동일상품 가격 비교」** 하나 · 그 안에 🇰🇷/🌎 · 🔴 **표시만** 이다(집계·판정·알림 어휘가 그 영역에 **0** · F-4) · 🟢 안쪽 testid·제목·🧾 아이콘·환산 금지는 **그대로** 라 `wu-056r1` 다섯이 유지된다 · 🔴 StageBody 의 「📊 시장 가격 비교」(원자료 표)는 **건드리지 않았다** |
 | SSRF / DNS rebinding | `outbound-guard.ts` · `guardedLookup` (WU-025/026) | 사설IP·루프백·비표준포트·리다이렉트·DNS 재바인딩 차단 |
 | `COLOR_VARIANT` 보류 | `cross-seller.ts` (WU-044) | 색조 일치 + 색상명 불일치 → **보류**(DIFFERENT 아님) · 색상사전 확대 금지 |
 | `SIZE_SYSTEM` 비차단 | `cross-seller.ts` (WU-045) | 사이즈 라인 차이 **단독으로 SAME 을 막지 않는다**(reasons 관측으로만) |
