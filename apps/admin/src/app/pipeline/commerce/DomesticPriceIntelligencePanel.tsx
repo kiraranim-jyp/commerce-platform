@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   priceLevelFromVerdict,
   type PriceLevel,
@@ -31,6 +31,10 @@ import {
   OVERSEAS_AUTO_HEADING,
   DOMESTIC_REVIEW_HEADING,
   DOMESTIC_REVIEW_EMPTY,
+  /** 🔴 WU-131 — 📚 이전에 확인한 후보 구역. owner 는 그 컴포넌트 파일이다. */
+  ReviewHistorySection,
+  type ReviewHistoryRow,
+  type ReviewSaveState,
   type HumanReview,
   SUPPLIED_URL_INPUT_NOTICE,
   SUPPLIED_URL_INPUT_SUMMARY,
@@ -2289,6 +2293,8 @@ export function DomesticPriceIntelligencePanel({
       onCandidateUrlsChange={setCandidateUrlsText}
       urlCandidateEvidence={urlCandidateEvidence}
       overseasAutoEvidence={overseasAutoEvidence}
+      /** 🔴 WU-131 — 이력 읽기/판단 저장의 좌표. 바깥 패널만 이 값을 안다. */
+      reviewSnapshotId={snapshotId}
       urlCandidateNotice={urlCandidateNotice}
       overseasReference={overseasReference}
       domesticReference={domesticReference}
@@ -2353,6 +2359,8 @@ function TransientCandidateSections({
   domesticReference,
   domesticReview,
   onDomesticReview,
+  reviewSaveState,
+  reviewHistory,
 }: {
   web?: GeminiTransientRow[] | null;
   supplied?: GeminiTransientRow[] | null;
@@ -2364,6 +2372,10 @@ function TransientCandidateSections({
   /** 🔴 WU-081 — 사람 검토 상태. 시스템 verdict 와 **별개 칸** 이다. */
   domesticReview?: Record<string, HumanReview>;
   onDomesticReview?: (url: string, verdict: HumanReview) => void;
+  /** 🔴 WU-131 §8 — 「저장됨/저장 실패」를 행이 직접 말한다. */
+  reviewSaveState?: Record<string, ReviewSaveState>;
+  /** 🔴 WU-131 §3-B — 📚 이전에 확인한 후보. `null` = 아직 안 읽었다. */
+  reviewHistory?: ReviewHistoryRow[] | null;
 }): React.ReactNode {
   /**
    * 🔴🔴 WU-081 — **국내 후보를 «옮긴다». 복제하지 않는다.**
@@ -2462,6 +2474,7 @@ function TransientCandidateSections({
               testId="domestic-review-transient"
               review={domesticReview}
               onReview={onDomesticReview}
+              saveState={reviewSaveState}
             />
           ) : (
             <section data-testid="domestic-review-empty" className="mt-3 rounded-md border border-border bg-surface/40 p-2">
@@ -2480,10 +2493,18 @@ function TransientCandidateSections({
        *    아님 등)은 기존 두 구역과 **한 글자도 다르지 않다** — 같은 컴포넌트다.
        * 🔴 `onReview` 를 주지 않는다 — 사람 검토 블록은 🇰🇷 구역의 계약이다(WU-081).
        */}
+      {/**
+       * 🔴🔴 WU-131 §8 — **해외에도 같은 판단 체계를 단다.** 국내만 검토할 수 있으면
+       *    셀러가 해외 후보를 판단할 길이 없고 GT 가 한쪽으로만 쌓인다(§8 「별도 기능으로
+       *    만들지 않는다」). 🟢 **같은 컴포넌트 · 같은 네 버튼 · 같은 저장 경로** 다.
+       */}
       <GeminiTransientCandidates
         evidence={overseasAutoRest}
         heading={OVERSEAS_AUTO_HEADING}
         testId="overseas-auto-transient"
+        review={domesticReview}
+        onReview={onDomesticReview}
+        saveState={reviewSaveState}
       />
       {/* 🔴 WU-022 — 「지금 확인」이 돌려준 **이번 확인 한정** 후보. DB 링크와
           데이터 수명이 다르므로 구역을 가른다. 판매판정·국내 최저가에 영향 0. */}
@@ -2500,6 +2521,12 @@ function TransientCandidateSections({
           {notice}
         </p>
       )}
+      {/**
+       * 🔴🔴 WU-131 §3-B — **📚 이전에 확인한 후보.** 위 구역들은 「이번 조회에서 나온 것」
+       *    이고 여기는 「예전에 봤고 지금 검색엔 안 걸릴 수도 있는 것」이다.
+       * 🔴 **현재 검색에 다시 걸리지 않았다고 사라지는 구조면 안 된다**(지시서 문장 그대로).
+       */}
+      <ReviewHistorySection rows={reviewHistory} />
     </>
   );
 }
@@ -2546,6 +2573,8 @@ export function MiPanelView({
   onCandidateUrlsChange,
   urlCandidateEvidence = null,
   overseasAutoEvidence = null,
+  /** 🔴 WU-131 — 검토 이력 API 의 좌표. **없으면 저장 경로가 돌지 않는다**(렌더 전용 하니스). */
+  reviewSnapshotId,
   urlCandidateNotice = null,
   overseasReference = null,
   domesticReference = null,
@@ -2607,6 +2636,12 @@ export function MiPanelView({
    *       인상을 깨는 유일한 칸이다. 🔴 `null` = 그 경로가 돌지 못했다.
    */
   overseasAutoEvidence?: GeminiTransientRow[] | null;
+  /**
+   * 🔴🔴 WU-131 — **검토 이력 API 의 좌표.** 이 값이 없으면 이력을 읽지도 저장하지도
+   *    않는다(렌더 전용 하니스가 그 상태다) — 🔴 없는 주소로 fetch 해서 404 를
+   *    「이력 0건」으로 읽지 않기 위해서다.
+   */
+  reviewSnapshotId?: string;
   /** 🔴 제외/미확인 요약 한 줄. 조용히 버리지 않는다. */
   urlCandidateNotice?: string | null;
   /** 🔴 WU-049 — MI 가 낸 해외 참고가격 집계(환산 0). 없으면 null. */
@@ -2639,15 +2674,85 @@ export function MiPanelView({
    * **하나**다 — 요약 넷 + 토글 하나가 CPO가 지정한 모양이다.
    */
   /**
-   * 🔴🔴 WU-081 — **사람 검토(CEO)는 화면 state 로만 산다.**
-   *    CPO §6: 「영구 DB schema 를 새로 만드는 것을 기본값으로 하지 않는다」.
-   *    🟢 검토는 **이번 확인 화면** 에서 보고 판단하는 일이므로 transient 후보와
-   *       **같은 수명** 이면 충분하다(후보 자체가 새로고침하면 사라진다 · WU-059 계약).
-   * 🔴 이 값은 서버로 가지 않는다 — fetch · onPriceLevelChange · 등록 payload **어디에도** 없다.
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 WU-131 — **셀러 판단은 이제 «저장된다».** (WU-081 의 전제를 정정한다)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * WU-081 은 「검토는 이번 확인 화면의 일이므로 transient 와 같은 수명이면 충분하다」로
+   * 두었고, 그래서 이 값이 `useState` 에만 살았다. 🔴 **그 전제가 틀렸다** —
+   * CEO 가 수십 번 판단했는데 **새로고침하면 사라지고 다시 열면 없었다**(WU-131 §2 ⒝).
+   *
+   * 🟢 이제 `candidate_reviews` 에 저장하고 **진입할 때 다시 읽는다**.
+   * 🔴 그래도 **시스템 판정을 덮지 않는다** — WU-081 의 그 계약은 그대로다
+   *    (`system_*` 와 `human_verdict` 는 서로 다른 칸이고 서버가 둘 다 보존한다).
+   * 🔴 이 값은 MI 입력 · 가격 집계 · 알림 · 등록 payload 에 **들어가지 않는다**.
    */
   const [domesticReview, setDomesticReview] = useState<Record<string, HumanReview>>({});
-  const handleDomesticReview = (url: string, verdict: HumanReview) =>
+  /** 🔴 WU-131 §8 — 「눌렀다」가 아니라 **「저장됐다」** 를 화면이 말해야 한다. */
+  const [reviewSaveState, setReviewSaveState] = useState<Record<string, ReviewSaveState>>({});
+  /** 🔴 WU-131 §3-B — 📚 이전에 확인한 후보. `null` = 아직 안 읽었다(「0건」이 아니다). */
+  const [reviewHistory, setReviewHistory] = useState<ReviewHistoryRow[] | null>(null);
+
+  /**
+   * 🟢 진입할 때 **이력을 읽는다** — 이것이 「다시 들어와도 판단이 남아 있다」의 전부다.
+   * 🔴 실패해도 화면을 깨뜨리지 않는다(이력은 보조 정보다).
+   */
+  const loadReviewHistory = useCallback(async () => {
+    /** 🔴 식별자가 없으면 **부르지 않는다** — 없는 주소로 fetch 해서 404 를 「이력 0」으로
+     *  읽지 않기 위해서다(렌더 전용 하니스가 그 상태다). */
+    if (!reviewSnapshotId) return;
+    try {
+      const res = await fetch(`/api/price-history/${reviewSnapshotId}/candidate-reviews`);
+      if (!res.ok) return;
+      const json = (await res.json()) as { ok?: boolean; reviews?: ReviewHistoryRow[] };
+      if (!json.ok || !Array.isArray(json.reviews)) return;
+      setReviewHistory(json.reviews);
+      /** 🟢 저장된 판단을 **버튼 상태로 되살린다** — 그래야 재진입 시 선택이 보인다. */
+      const restored: Record<string, HumanReview> = {};
+      for (const r of json.reviews) if (r.humanVerdict) restored[r.candidateUrl] = r.humanVerdict;
+      setDomesticReview((prev) => ({ ...restored, ...prev }));
+    } catch {
+      /* 🔴 조용히 둔다 — 이력 조회 실패가 가격 화면을 깨뜨리지 않는다. */
+    }
+  }, [reviewSnapshotId]);
+
+  useEffect(() => {
+    void loadReviewHistory();
+  }, [loadReviewHistory]);
+
+  /**
+   * 🔴 **즉시 저장** 한다(§8). 낙관적으로 버튼을 먼저 칠하되 실패하면 **되돌리고 말한다** —
+   *    저장 안 된 판단을 저장된 것처럼 보여주면 그 자체가 거짓이다.
+   */
+  const handleDomesticReview = (url: string, verdict: HumanReview) => {
+    const before = domesticReview[url];
     setDomesticReview((prev) => ({ ...prev, [url]: verdict }));
+    /** 🔴 식별자가 없으면 **저장했다고 말하지 않는다** — 화면 state 로만 남는다. */
+    if (!reviewSnapshotId) return;
+    setReviewSaveState((prev) => ({ ...prev, [url]: "SAVING" }));
+    void (async () => {
+      try {
+        const res = await fetch(`/api/price-history/${reviewSnapshotId}/candidate-reviews`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ candidateUrl: url, humanVerdict: verdict }),
+        });
+        const json = (await res.json().catch(() => null)) as { ok?: boolean } | null;
+        if (!res.ok || !json?.ok) throw new Error("save failed");
+        setReviewSaveState((prev) => ({ ...prev, [url]: "SAVED" }));
+        await loadReviewHistory();
+      } catch {
+        /** 🔴 되돌린다 — 화면이 「저장됨」이라고 거짓말하지 않게. */
+        setDomesticReview((prev) => {
+          const next = { ...prev };
+          if (before) next[url] = before;
+          else delete next[url];
+          return next;
+        });
+        setReviewSaveState((prev) => ({ ...prev, [url]: "ERROR" }));
+      }
+    })();
+  };
 
   const [showPriceDetail, setShowPriceDetail] = useState(false);
   /**
@@ -3615,7 +3720,7 @@ export function MiPanelView({
           🟢 그리고 후보가 없으면 두 구역 모두 **아무것도 렌더하지 않는다** —
              기본 화면은 한 픽셀도 바뀌지 않는다(그 성질은 컴포넌트가 보장한다).
         */}
-        <TransientCandidateSections web={geminiEvidence} supplied={urlCandidateEvidence} overseasAuto={overseasAutoEvidence} notice={urlCandidateNotice} overseasReference={overseasReference} domesticReference={domesticReference} domesticReview={domesticReview} onDomesticReview={handleDomesticReview} />
+        <TransientCandidateSections web={geminiEvidence} supplied={urlCandidateEvidence} overseasAuto={overseasAutoEvidence} notice={urlCandidateNotice} overseasReference={overseasReference} domesticReference={domesticReference} domesticReview={domesticReview} onDomesticReview={handleDomesticReview} reviewSaveState={reviewSaveState} reviewHistory={reviewHistory} />
       </div>
     </CollapsibleSection>
   );

@@ -214,15 +214,38 @@ export interface GeminiTransientCandidatesProps {
    */
   review?: Record<string, HumanReview>;
   onReview?: (url: string, verdict: HumanReview) => void;
+  /** 🔴 WU-131 — 후보별 저장 상태. 「눌렀다」가 아니라 **「저장됐다」** 를 말한다. */
+  saveState?: Record<string, ReviewSaveState>;
 }
 
-/** 🔴 사람 검토 값 — 시스템 verdict 어휘(`SAME`/`PRESUMED_SAME`/…)와 **다른 타입** 이다. */
-export type HumanReview = "SAME" | "DIFFERENT";
+/**
+ * 🔴 사람 검토 값 — 시스템 verdict 어휘(`SAME`/`PRESUMED_SAME`/…)와 **다른 타입** 이다.
+ *
+ * 🔴🔴 WU-131 — **넷이 됐다**(CPO §8). 「유사」와 「보류」가 없으면 셀러가 애매한 후보를
+ *    억지로 동일/다름 중 하나로 밀어 넣게 되고, 그 억지가 **GT 를 오염시킨다**.
+ * 🔴 DB check constraint 와 **같은 어휘** 다(`candidate_reviews.human_verdict`) —
+ *    갈라지면 저장이 터진다.
+ */
+export const HUMAN_REVIEW_VALUES = ["SAME", "SIMILAR", "DIFFERENT", "UNDECIDED"] as const;
+export type HumanReview = (typeof HUMAN_REVIEW_VALUES)[number];
 
 /** 🟢 사람 검토 «결과» 문구 — 시스템 판정 라벨(`tierDisplay`)과 섞지 않는다. */
 const HUMAN_REVIEW_LABEL: Record<HumanReview, string> = {
-  SAME: "✅ 동일상품",
-  DIFFERENT: "❌ 다른 상품",
+  SAME: "🟢 동일상품",
+  SIMILAR: "🟡 유사상품",
+  DIFFERENT: "🔴 다른 상품",
+  UNDECIDED: "⚪ 판단보류",
+};
+
+/** 🟢 버튼에 적히는 말. 🔴 위 결과 문구와 **같은 어휘** 를 쓴다(두 말이 다르면 셀러가 헷갈린다). */
+export const HUMAN_REVIEW_BUTTON: Record<HumanReview, string> = HUMAN_REVIEW_LABEL;
+
+/** 🔴 WU-131 — 저장 상태. 「눌렀다」와 「저장됐다」는 **다른 사실** 이다(§8 「저장 성공 여부 확인」). */
+export type ReviewSaveState = "SAVING" | "SAVED" | "ERROR";
+const SAVE_STATE_TEXT: Record<ReviewSaveState, string> = {
+  SAVING: "저장 중…",
+  SAVED: "저장됨",
+  ERROR: "🔴 저장 실패 — 다시 눌러 주세요",
 };
 
 export function GeminiTransientCandidates({
@@ -231,6 +254,7 @@ export function GeminiTransientCandidates({
   testId = "gemini-transient",
   review,
   onReview,
+  saveState,
 }: GeminiTransientCandidatesProps): JSX.Element | null {
   if (!evidence || evidence.length === 0) return null;
 
@@ -326,27 +350,38 @@ export function GeminiTransientCandidates({
                * 🔴 위의 `gt-verdict`(시스템 판정)를 **덮지 않는다.** 둘이 같은 행에 **공존** 한다.
                */}
               {onReview && (
-                <div data-testid="gt-human-review" className="mt-1 flex items-center gap-2 border-t border-border/40 pt-1">
+                <div data-testid="gt-human-review" className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border/40 pt-1">
                   <span className="text-[11px] text-text-tertiary">CEO 검토</span>
-                  <button
-                    type="button"
-                    data-testid="gt-review-same"
-                    onClick={() => onReview(row.discoveredUrl, "SAME")}
-                    className="rounded border border-border px-1.5 py-0.5 text-[11px] text-text-primary hover:bg-surface"
-                  >
-                    동일상품
-                  </button>
-                  <button
-                    type="button"
-                    data-testid="gt-review-different"
-                    onClick={() => onReview(row.discoveredUrl, "DIFFERENT")}
-                    className="rounded border border-border px-1.5 py-0.5 text-[11px] text-text-primary hover:bg-surface"
-                  >
-                    다른 상품
-                  </button>
+                  {/**
+                   * 🔴🔴 WU-131 §8 — **네 개를 전부 둔다.** 「유사」와 「보류」가 없으면
+                   *    애매한 후보를 억지로 동일/다름에 밀어 넣게 되고 그것이 GT 를 오염시킨다.
+                   * 🟢 `data-testid` 는 어휘에서 **파생** 한다 — 버튼을 더할 때 좌표가 갈라지지 않는다.
+                   */}
+                  {HUMAN_REVIEW_VALUES.map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      data-testid={`gt-review-${v.toLowerCase()}`}
+                      aria-pressed={review?.[row.discoveredUrl] === v}
+                      onClick={() => onReview(row.discoveredUrl, v)}
+                      className={`rounded border px-1.5 py-0.5 text-[11px] hover:bg-surface ${
+                        review?.[row.discoveredUrl] === v
+                          ? "border-primary font-medium text-primary"
+                          : "border-border text-text-primary"
+                      }`}
+                    >
+                      {HUMAN_REVIEW_BUTTON[v]}
+                    </button>
+                  ))}
                   {review?.[row.discoveredUrl] && (
                     <span data-testid="gt-review-result" className="text-[11px] font-medium text-text-primary">
                       검토 결과: {HUMAN_REVIEW_LABEL[review[row.discoveredUrl]]}
+                    </span>
+                  )}
+                  {/* 🔴 WU-131 §8 — 「저장 성공 여부」를 화면이 **직접 말한다**. */}
+                  {saveState?.[row.discoveredUrl] && (
+                    <span data-testid="gt-review-save" className="text-[11px] text-text-tertiary">
+                      {SAVE_STATE_TEXT[saveState[row.discoveredUrl]]}
                     </span>
                   )}
                 </div>
@@ -355,6 +390,105 @@ export function GeminiTransientCandidates({
           );
         })}
       </ul>
+    </section>
+  );
+}
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴 WU-131 — **📚 이전에 확인한 후보** (검토 이력)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 왜 별 구역인가 — 위 구역들은 **「이번 조회에서 나온 것」** 이고 여기는
+ * **「예전에 봤고 지금은 검색에 안 걸릴 수도 있는 것」** 이다. 🔴 수명이 다르면
+ * 구역도 달라야 한다(WU-022 가 같은 이유로 구역을 갈랐다).
+ *
+ * 🔴 **셀러 판단과 시스템 판정을 같은 줄에 «나란히»** 적는다 — 그 불일치가 GT 다.
+ * 🔴 판단이 없는 행도 보여준다(⚪ 미판단) — 「본 적 있다」도 이력이다.
+ */
+export const REVIEW_HISTORY_HEADING = "📚 이전에 확인한 후보";
+export const REVIEW_HISTORY_EMPTY = "이 상품에 대해 이전에 확인한 후보가 없습니다.";
+
+export interface ReviewHistoryRow {
+  candidateUrl: string;
+  candidateDomain: string | null;
+  candidateTitle: string | null;
+  priceAmount: number | null;
+  priceCurrency: string | null;
+  market: string | null;
+  systemVerdict: string | null;
+  matchTruth: string | null;
+  humanVerdict: HumanReview | null;
+  source: string;
+  lastSeenAt: string;
+  reviewedAt: string | null;
+}
+
+/** 🟢 날짜는 **그대로** 적는다 — 상대시간("3일 전")을 지어내지 않는다. */
+function dayText(iso: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+}
+
+export function ReviewHistorySection({
+  rows,
+  testId = "review-history",
+}: {
+  rows?: ReviewHistoryRow[] | null;
+  testId?: string;
+}): JSX.Element | null {
+  if (!rows) return null;
+  return (
+    <section data-testid={testId} className="mt-3 rounded-md border border-border bg-surface/40 p-2">
+      <p className="text-[11px] font-medium text-text-secondary">
+        {REVIEW_HISTORY_HEADING} {rows.length}건
+      </p>
+      {rows.length === 0 ? (
+        <p className="mt-0.5 text-[11px] text-text-tertiary">{REVIEW_HISTORY_EMPTY}</p>
+      ) : (
+        <ul className="mt-2 space-y-2">
+          {rows.map((r) => (
+            <li key={r.candidateUrl} data-testid="rh-row" className="rounded border border-border/60 p-2">
+              {r.candidateTitle && (
+                <p data-testid="rh-title" className="truncate text-[11px] text-text-primary">
+                  {r.candidateTitle}
+                </p>
+              )}
+              <div className="mt-1 flex items-baseline justify-between gap-2">
+                <a
+                  data-testid="rh-url"
+                  href={r.candidateUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="truncate text-[11px] text-text-tertiary underline"
+                >
+                  {r.candidateDomain ?? r.candidateUrl}
+                </a>
+                {/* 🔴 통화 그대로 · 환산 0 · 없으면 「가격 미확인」 */}
+                <span data-testid="rh-price" className="shrink-0 text-[11px] text-text-secondary">
+                  {r.priceAmount != null && r.priceCurrency
+                    ? `${r.priceCurrency} ${r.priceAmount.toLocaleString("ko-KR")}`
+                    : PRICE_UNKNOWN_TEXT}
+                </span>
+              </div>
+              {/* 🔴🔴 **두 판단을 나란히** — 한쪽이 다른쪽을 덮지 않는다는 사실이 화면에 보인다. */}
+              <p className="mt-1 text-[11px] text-text-tertiary">
+                <span data-testid="rh-system">이전 MI: {r.systemVerdict ?? r.matchTruth ?? "판정 없음"}</span>
+                {" · "}
+                <span data-testid="rh-human" className="font-medium text-text-primary">
+                  셀러 판단: {r.humanVerdict ? HUMAN_REVIEW_LABEL[r.humanVerdict] : "⚪ 미판단"}
+                </span>
+              </p>
+              <p data-testid="rh-seen" className="text-[11px] text-text-tertiary">
+                마지막 확인일 {dayText(r.lastSeenAt) ?? "-"}
+                {r.reviewedAt ? ` · 판단일 ${dayText(r.reviewedAt)}` : ""}
+                {` · 출처 ${r.source}`}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
