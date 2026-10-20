@@ -143,6 +143,25 @@ async function tryFastPath(
   const productData: ExtractedProductData = {
     title: siteResult.productData.title,
     brand: siteResult.productData.brand,
+    /**
+     * 🔴🔴🔴 WU-137 — **이 칸이 여기서 «버려지고» 있었다.**
+     *
+     * WU-134 가 `shopifySiteStrategy` 에서 `siteBrandName` 을 채우고
+     * `canonical-product.ts` 가 그것으로 거부된 브랜드(`vendor = "AW26"`)를 복구하게
+     * 만들었다. 🔴 그런데 이 함수가 productData 를 **칸 하나씩 손으로 옮기면서** 그
+     * 칸을 빠뜨려, **운영 「새 상품 분석」(`/api/pipeline` → `universalExtract` → 이
+     * 빠른 경로)에서는 복구가 한 번도 발화하지 않았다.**
+     * 🔴 실측 증거 — WU-134 배포(18:24 KST) 뒤인 **20시 스냅샷도 `brand=""`** 였고
+     *    B226AC009 스냅샷 **16/16 전건** 이 빈 문자열이었다.
+     * 🔴🔴 원인은 **WU-110 이 기록한 그 함정** 이다 — WU-134 의 라이브 테스트가
+     *    `shopifySiteStrategy.extract` 를 **직접** 불러 「전략은 채운다」까지만 증명하고
+     *    **라우트가 실제로 쓰는 이 경로** 를 보지 않았다.
+     * 🟢 느린(Playwright) 경로는 `extractProductData` 를 그대로 쓰므로 영향이 없었다 —
+     *    Shopify 스토어만 이 빠른 경로를 타서 **브랜드 공식몰이 정확히 그 구멍에 빠졌다.**
+     * 🟢 `productDataSources` 는 **바뀌지 않는다** — `buildSiteStrategySources` 가
+     *    `siteResult.productData`(원본)를 받으므로 그 칸은 이미 반영돼 있었다.
+     */
+    siteBrandName: siteResult.productData.siteBrandName,
     price: siteResult.productData.price,
     regularPrice: siteResult.productData.regularPrice,
     sku: siteResult.productData.sku,

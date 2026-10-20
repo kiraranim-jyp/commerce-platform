@@ -35,6 +35,42 @@ describe("WU-134 — 실제 원상품 배선", () => {
   }, 180000);
 });
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴🔴 WU-137 — **라우트가 «실제로 쓰는» 경로로 다시 잰다**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 위 WU-134 케이스는 `shopifySiteStrategy.extract` 를 **직접** 부른다 ⟹ 「전략이
+ *    채운다」까지만 증명한다. 🔴 운영 「새 상품 분석」은 `/api/pipeline` 에서
+ *    **`universalExtract`** 를 부르고, 그 **빠른 경로가 `siteBrandName` 을 버리고
+ *    있었다** ⟹ 복구가 운영에서 **한 번도 발화하지 않았다**.
+ * 🔴 실측 증거: WU-134 배포(18:24 KST) 뒤인 20시 스냅샷도 `brand=""` ·
+ *    B226AC009 스냅샷 **16/16 전건** 빈 문자열.
+ * 🟢 그래서 이 케이스는 **라우트와 같은 함수** 를 부른다 — 그것이 유일한 배선 증거다.
+ */
+describe("WU-137 — 운영 라우트 경로 배선 (universalExtract)", () => {
+  it.runIf(LIVE)("새 상품 분석 경로가 브랜드를 복구한다", async () => {
+    const { universalExtract } = await import("@commerce/crawler");
+    const r = await universalExtract(ORIGIN, { debug: true });
+    const pd = r.productData as ExtractedProductData;
+    /* eslint-disable no-console */
+    console.log(
+      `ROUTE brand(vendor)=${JSON.stringify(pd.brand)} siteBrandName=${JSON.stringify(pd.siteBrandName)}`,
+    );
+    /** 🔴 전제 — 그 스토어는 여전히 vendor 에 시즌코드를 적는다. */
+    expect(pd.brand).toBe("AW26");
+    /** 🟢🟢 **배선 증명** — 빠른 경로가 그 칸을 «옮긴다»(전까지 여기서 사라졌다). */
+    expect(pd.siteBrandName).toBe("Bobo Choses");
+
+    const product = buildCanonicalProduct(ORIGIN, pd, r.productDataSources ?? {}, []);
+    console.log(`ROUTE canonical brand=${JSON.stringify(product.brand)}`);
+    /** 🟢🟢 **그래서 저장될 brand 가 비지 않는다** — 16/16 이 ""였던 그 칸이다. */
+    expect(product.brand.value).toBe("Bobo Choses");
+    /** 🟢 무슨 일이 있었는지 기록은 남는다. */
+    expect(product.brandResolution?.raw).toBe("AW26");
+  }, 300000);
+});
+
 /* ═══════ 실제 경로 E2E — 수정된 추출 → MI → 가격비교 (Positive + Negative) ═══════ */
 
 import { readFileSync, writeFileSync } from "node:fs";
