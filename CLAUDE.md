@@ -442,7 +442,30 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 
 ## 12. 현재 상태 — MI 측정 트랙 **전부 종료** (갱신 2026-10-12)
 
-### 🔴🔴🔴 **현재 착수점 — `docs/HANDOFF-WU-131.md` 하나를 읽고 §3 부터 바로 구현** (2026-10-20)
+### 🟢🟢 **WU-131 종료 — 후보 검토 이력이 «운영에» 생겼다. 다음은 CEO 확인 1회** (2026-10-20)
+
+🟢 전문 `docs/HANDOFF-WU-131.md`(§ 실행 완료 기록) + 조사 `docs/MI-REVIEW-HISTORY-131-SURVEY.md`.
+🔴 **CTO 가 할 코드 작업이 없다.** 다음 범위는 CPO 가 지정한다.
+
+```
+🟢 079_candidate_reviews **작성 + 실제 적용·검증**(columns 21 · UNIQUE 3 · check 3 ·
+   insert/select · **재삽입 차단까지 실측**) · 🔴 **079 만** 적용(078 은 안 건드렸다)
+🟢 GET/POST `/api/price-history/[snapshotId]/candidate-reviews`
+🟢 UI — 4상태(동일/유사/다름/보류) · **저장 상태 표시** · 📚 이전에 확인한 후보 ·
+   🔴 국내·해외가 **같은 카드·같은 판단 체계**
+🟢 GT 시딩 B226AC009 — 행 18 → **고유 17**(중복 1 · 상충 0) · SAME 13 · DIFFERENT 4 ·
+   입력 17 → 조회 17 · URL 중복 0 · 🔴 **「18건」으로 적지 않는다**
+🔴 B226AC010 21건 · wu-093 10건 **보류**(원상품 추정 금지) · wu-099/100 은 **가치 라벨**
+🟢 회귀 607 files / **8,462 passed** · typecheck 0 · build 0 · 배포 `942632c`
+```
+
+🔴🔴 **보호 계약 넷이 새로 생겼다** — ⒜ `system_*` 와 `human_verdict` 는 **서로 덮지 않는다**
+(seen 경로에 `human_verdict` 0 · save 경로에 `system_*` 0 · 계약이 양방향 잠금)
+⒝ UNIQUE 는 **부분 유니크 둘**(`snapshot_id,url` / `origin_code,url`) — 단독 금지
+⒞ URL 키는 `canonicalizeProductUrl`(식별 파라미터 보존 · `normalizeCandidateUrl` 금지)
+⒟ 이 값은 MI·가격·알림·등록 payload 에 **들어가지 않는다**.
+
+### 🔴 [낡음] 이전 착수점 — WU-131 구현 지시 (2026-10-20)
 
 🔴 그 문서가 **CPO 작업지시서 전문 + 조사 결과 + 정정된 숫자** 를 담고 있다. 🔴 재조사 금지.
 🔴 **중간 보고 없이 완료 보고 1회** — migration 작성/**적용** → API → UI → GT import
