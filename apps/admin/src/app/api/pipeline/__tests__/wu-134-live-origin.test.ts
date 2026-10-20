@@ -51,7 +51,13 @@ import { judgeDomesticCandidate } from "../../price-history/_lib/run-domestic-pr
 import { priceTierFromLink } from "../../domestic-price-sources/_lib/domestic-product-link";
 import { REVIEWED_SAME_SHOP_ID, REVIEWED_SAME_SHOP_NAME } from "../../price-history/_lib/transient-candidates";
 import { classifyCandidateMarket } from "../../price-history/_lib/candidate-market";
-import { selectMiSameCandidates } from "../../../pipeline/commerce/mi-same-candidates";
+import {
+  buildMarketJudgement,
+  onSaleCountNote,
+  priceRangeScope,
+  priceRangeText,
+  selectMiSameCandidates,
+} from "../../../pipeline/commerce/mi-same-candidates";
 import { domesticMatchDisplay } from "../../../pipeline/commerce/match-display";
 import type { GeminiTransientRow } from "../../../pipeline/commerce/GeminiTransientCandidates";
 
@@ -127,6 +133,33 @@ describe("WU-134 — 실제 경로 E2E (Positive + Negative)", () => {
     console.log(`E2E 📊 가격비교 — 국내 ${kr.priced.length} · 해외 ${os.priced.length}`);
     for (const p of priced) console.log(`   🟢 ${p.domain} ${p.priceCurrency} ${p.priceAmount} human=${human.get(loose(p.discoveredUrl)) ?? "(라벨없음)"}`);
     writeFileSync(path.join(OUTDIR, "wu-134-e2e.json"), JSON.stringify({ rows, priced, trueSAME, falseSAME }, null, 2), "utf8");
+
+    /* ═══ ⑤ 🔴🔴 WU-136 — **판매여부가 1순위다.** 같은 행으로 시장 판단까지 잰다 ═══
+     *
+     * 🔴 새 하니스를 만들지 않았다 — ④까지의 **같은 운영 산출** 에 술어를 하나 더 건다.
+     * 🔴 그래서 「판매중 N곳」이 ④의 가격비교 건수와 **다를 수 있고**, 그 차이가 이번
+     *    WU 가 드러낸 사실이다(모르는 것을 판매중으로 세지 않는다).
+     */
+    const judgement = buildMarketJudgement(rows);
+    console.log(
+      `\nE2E 🛒 시장 판매 판단 — verdict ${judgement.verdict} · ${onSaleCountNote(judgement)}` +
+        ` · 🇰🇷 판매중 ${judgement.domesticOnSale} · 🌎 판매중 ${judgement.overseasOnSale}`,
+    );
+    for (const c of judgement.byCurrency) console.log(`   💰 ${priceRangeText(c)} (${priceRangeScope(c)})`);
+    for (const s of judgement.sellers) {
+      console.log(
+        `   · ${s.market.padEnd(8)} ${s.row.domain} | ${s.sale.padEnd(8)} | ` +
+          `${s.price ? `${s.price.currency} ${s.price.amount}` : "가격 확인 필요"} | ` +
+          `human=${human.get(loose(s.row.discoveredUrl)) ?? "(라벨없음)"}`,
+      );
+    }
+    /** 🔴🔴 **Negative** — 판매여부를 확인하지 못한 곳이 「판매중」에 들어가지 않는다. */
+    expect(judgement.onSaleCount).toBe(judgement.sellers.filter((s) => s.row.soldOut === false).length);
+    expect(judgement.onSaleCount + judgement.unknownCount + judgement.soldOutCount).toBe(judgement.sellers.length);
+    /** 🔴 SAME 아닌 후보가 판매처 표에 **한 건도** 없다. */
+    expect(judgement.sellers.every((s) => tierOf(s.row) === "SAME")).toBe(true);
+    /** 🔴 품절이 가격 축에 들어가지 않는다. */
+    expect(judgement.pricedSellers.every((s) => s.sale !== "SOLD_OUT")).toBe(true);
 
     /** 🟢🟢 **CPO 완료 기준** — 실제 human SAME 이 system SAME 으로 재현되고 가격비교까지 간다. */
     expect(trueSAME).toBeGreaterThan(0);

@@ -2577,6 +2577,12 @@ function TransientCandidateSections({
               evidence={krRows}
               heading={DOMESTIC_REVIEW_HEADING}
               testId="domestic-review-transient"
+              /**
+               * 🔴 WU-136 §D — **기본 접힘.** 셀러의 1순위(「팔아도 되는가」)는 위
+               *    「📊 시장 판매 판단」이 답하고, 이 구역은 그 **근거이자 GT 입력** 이다.
+               * 🟢 행·버튼·저장 경로는 **한 글자도 바뀌지 않았다**(접기만 했다).
+               */
+              collapsed
               review={domesticReview}
               onReview={onDomesticReview}
               saveState={reviewSaveState}
@@ -2610,6 +2616,8 @@ function TransientCandidateSections({
         evidence={overseasAutoRest}
         heading={OVERSEAS_AUTO_HEADING}
         testId="overseas-auto-transient"
+        /** 🔴 WU-136 §D — 기본 접힘(삭제 0). */
+        collapsed
         review={domesticReview}
         onReview={onDomesticReview}
         saveState={reviewSaveState}
@@ -2628,6 +2636,8 @@ function TransientCandidateSections({
         evidence={reviewedSameRest}
         heading={REVIEWED_SAME_HEADING}
         testId="reviewed-same-transient"
+        /** 🔴 WU-136 §D — 기본 접힘(삭제 0). */
+        collapsed
         review={domesticReview}
         onReview={onDomesticReview}
         saveState={reviewSaveState}
@@ -2636,13 +2646,15 @@ function TransientCandidateSections({
       />
       {/* 🔴 WU-022 — 「지금 확인」이 돌려준 **이번 확인 한정** 후보. DB 링크와
           데이터 수명이 다르므로 구역을 가른다. 판매판정·국내 최저가에 영향 0. */}
-      <GeminiTransientCandidates evidence={webRest} />
+      <GeminiTransientCandidates evidence={webRest} collapsed />
       {/* 🔴 WU-024 — 같은 컴포넌트 · 다른 구역 · 다른 머리 문구. 표시 규칙(통화
           그대로 · UNKNOWN 시장 뱃지 없음 · 승격 버튼 없음)은 한 글자도 다르지 않다. */}
       <GeminiTransientCandidates
         evidence={suppliedRest}
         heading={SUPPLIED_URL_HEADING}
         testId="url-candidate-transient"
+        /** 🔴 WU-136 §D — 기본 접힘(삭제 0). */
+        collapsed
       />
       {notice && (
         <p data-testid="url-candidate-notice" className="mt-1 text-[11px] text-text-tertiary">

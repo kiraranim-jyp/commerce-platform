@@ -9,14 +9,23 @@ import {
   type OverseasPriceSummary,
 } from "./overseas-reference";
 import {
-  MI_SAME_AREA_NOTE,
   MI_SAME_AREA_SCOPE,
-  MI_SAME_AREA_TITLE,
   MI_SAME_DOMESTIC_HEADING,
   MI_SAME_EMPTY,
   MI_SAME_EXCLUSION_TEXT,
   MI_SAME_OVERSEAS_HEADING,
+  MI_DETAIL_FOLD_LABEL,
+  MARKET_JUDGEMENT_NOTE,
+  MARKET_JUDGEMENT_TITLE,
+  MARKET_LABEL,
+  MARKET_TABLE_HEADERS,
+  MARKET_VERDICT_TEXT,
+  SALE_STATE_TEXT,
+  buildMarketJudgement,
+  onSaleCountNote,
   pendingNote,
+  priceRangeScope,
+  priceRangeText,
   selectMiSameCandidates,
   countPendingCandidates,
   type MiSameSelection,
@@ -79,6 +88,11 @@ export function MarketPriceComparison({
   const domestic = selectMiSameCandidates(rows, "KR");
   const overseas = selectMiSameCandidates(rows, "OVERSEAS");
   /**
+   * 🔴🔴 WU-136 — **판매여부를 가격보다 먼저 계산한다**(CPO §B). 시장별로 나누기 «전» 에
+   *    센다 — 셀러의 1순위 질문(「팔리고 있는가」)은 국내/해외로 갈리지 않는다.
+   */
+  const judgement = buildMarketJudgement(rows);
+  /**
    * 🔴 WU-133 — **시장과 무관하게** 센다. 「국내/해외로 갈려서 안 보인다」가 아니라
    *    「판정이 보류돼서 안 보인다」가 사실이고, 그 사실은 시장별로 나누면 흐려진다.
    */
@@ -97,10 +111,99 @@ export function MarketPriceComparison({
       data-testid="market-price-comparison"
       className="rounded-md border border-border bg-surface/30 p-3"
     >
-      <p className="text-[11px] font-medium text-text-secondary">{MI_SAME_AREA_TITLE}</p>
-      <p className="mt-0.5 text-[11px] text-text-tertiary">{MI_SAME_AREA_NOTE}</p>
-      {/* 🔴 「유사상품은 여기 오지 않는다」를 영역이 **직접** 말한다(②의 절반). */}
-      <p className="text-[11px] text-text-tertiary">{MI_SAME_AREA_SCOPE}</p>
+      <p className="text-[11px] font-medium text-text-secondary">{MARKET_JUDGEMENT_TITLE}</p>
+      <p className="mt-0.5 text-[11px] text-text-tertiary">{MARKET_JUDGEMENT_NOTE}</p>
+
+      {/**
+       * 🔴🔴🔴 WU-136 §A — **최상단은 「팔아도 되는가」 하나다.**
+       *
+       * 🔴 CPO 지적: 전까지 이 영역은 **판정 어휘(tier·blocker)부터** 말하고 가격을
+       *    먼저 보여줬다 — 「개발자/검증자에게는 유용하지만 셀러에게는 핵심이 뒤집혀
+       *    있다」. 🟢 그래서 **순서만** 뒤집었다. 새 영역·새 계산·새 데이터는 없다.
+       * 🔴 네 결론을 **다른 문장** 으로 적는다 — 「없다」로 뭉치면 셀러가 할 행동이
+       *    달라지는데 화면이 같은 말을 한다(§G).
+       */}
+      <div data-testid="market-judgement" className="mt-2 space-y-1">
+        <p data-testid="market-verdict" className="text-[12px] font-medium text-text-primary">
+          {MARKET_VERDICT_TEXT[judgement.verdict]}
+        </p>
+        {judgement.sellers.length > 0 && (
+          <>
+            {/**
+             * 🔴🔴 「판매중 N곳」은 **ON_SALE 만** 센 숫자다. 미확인·품절을 **같은 줄에**
+             *    적어 그 분모를 숨기지 않는다 — 실측(호스트 9)에서 **7곳이 재고 칸을
+             *    공개하지 않아** 미확인이고, 그것을 판매중에 넣으면 거짓이 된다.
+             */}
+            <p data-testid="market-sale-counts" className="text-[11px] text-text-secondary">
+              {onSaleCountNote(judgement)}
+            </p>
+            {judgement.onSaleCount > 0 && (
+              <p data-testid="market-split" className="text-[11px] text-text-secondary">
+                {MARKET_LABEL.KR} {judgement.domesticOnSale}곳 · {MARKET_LABEL.OVERSEAS}{" "}
+                {judgement.overseasOnSale}곳
+              </p>
+            )}
+            {/* 🔴 통화별로만 · **환산 0**(기존 `overseas-reference` 계약과 같은 축). */}
+            {judgement.byCurrency.length > 0 && (
+              <ul data-testid="market-price-range" className="space-y-0.5">
+                {judgement.byCurrency.map((r) => (
+                  <li key={r.currency} className="text-[11px] text-text-secondary">
+                    <span className="font-medium">{priceRangeText(r)}</span>{" "}
+                    <span className="text-text-tertiary">({priceRangeScope(r)})</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {/**
+             * 🔴 WU-136 §C — **셀러가 읽는 네 칸.** 도메인·판매상태·현재가격까지
+             *    한 줄에 있어야 「어디서 얼마에」가 한눈에 보인다.
+             * 🔴 정렬은 **판매중 → 미확인 → 품절** 이다(술어가 그 순서를 들고 있다).
+             */}
+            <table data-testid="market-seller-table" className="mt-1 w-full text-[11px]">
+              <thead>
+                <tr className="text-text-tertiary">
+                  {MARKET_TABLE_HEADERS.map((h) => (
+                    <th key={h} className="py-0.5 text-left font-normal">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {judgement.sellers.map((s) => (
+                  <tr key={s.row.discoveredUrl} data-testid="market-seller-row" className="align-top">
+                    <td className="py-0.5 pr-2 whitespace-nowrap">{MARKET_LABEL[s.market]}</td>
+                    <td className="py-0.5 pr-2">
+                      <a
+                        href={s.row.discoveredUrl}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="text-text-secondary underline"
+                      >
+                        {s.row.domain}
+                      </a>
+                    </td>
+                    <td
+                      data-testid="market-seller-sale"
+                      className="py-0.5 pr-2 whitespace-nowrap text-text-secondary"
+                    >
+                      {SALE_STATE_TEXT[s.sale]}
+                    </td>
+                    {/* 🔴 가격을 **지어내지 않는다** — 확인 못 했으면 그렇게 적는다. */}
+                    <td
+                      data-testid="market-seller-price"
+                      className="py-0.5 whitespace-nowrap text-text-secondary"
+                    >
+                      {s.price ? `${s.price.currency} ${s.price.amount}` : "가격 확인 필요"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
+      </div>
+
       {/**
        * 🔴🔴🔴 WU-133 — **「비었다」로 끝내지 않는다.**
        *
@@ -119,8 +222,25 @@ export function MarketPriceComparison({
         </p>
       )}
 
-      {/* 🔴 국내를 해외 «앞» 에 둔다 — 셀러의 질문 순서가 그렇다(WU-056 과 같은 이유). */}
-      <div className="mt-2 grid gap-2 md:grid-cols-2">
+      {/**
+       * 🔴🔴🔴 WU-136 §E — **기술/참고 정보는 «지우지 않고» 접는다.**
+       *
+       * 🔴 CPO: 「정보를 삭제하는 것이 아니라 셀러의 시야에서 치우는 것」.
+       *    그래서 ⒜ 두 시장의 참고가격 집계 ⒝ SAME 행 목록 ⒞ 제외 사유 목록이
+       *    **한 글자도 사라지지 않았다** — 접힘 뒤로 옮겼을 뿐이다.
+       * 🟢 그래서 `wu-056r1`(가격 구역 식별)과 `wu-132` 계약의 DOM 단언이 **그대로
+       *    유효** 하다(React 는 `details` 가 닫혀 있어도 자식을 렌더한다).
+       * 🔴 **`open` 을 붙이지 않는다** — 붙이면 셀러 시야에 다시 들어오고, 그것이
+       *    2026-09-19 사고의 기전이다(WU-091 ① 과 같은 계약).
+       */}
+      <details data-testid="mi-detail-fold" className="mt-2">
+        <summary className="cursor-pointer text-[11px] text-text-tertiary">
+          ▸ {MI_DETAIL_FOLD_LABEL}
+        </summary>
+        {/* 🔴 「유사상품은 비교에 쓰지 않는다」를 영역이 **직접** 말한다(②의 절반). */}
+        <p className="mt-1 text-[11px] text-text-tertiary">{MI_SAME_AREA_SCOPE}</p>
+        {/* 🔴 국내를 해외 «앞» 에 둔다 — 셀러의 질문 순서가 그렇다(WU-056 과 같은 이유). */}
+        <div className="mt-2 grid gap-2 md:grid-cols-2">
         <MarketColumn
           testId="mi-same-domestic"
           heading={MI_SAME_DOMESTIC_HEADING}
@@ -143,7 +263,8 @@ export function MarketPriceComparison({
           /** 🔴 해외 블록의 제목·문구·🧾 아이콘은 **기본값 그대로** 다(`wu-056r1` 계약). */
           referenceProps={{}}
         />
-      </div>
+        </div>
+      </details>
     </section>
   );
 }

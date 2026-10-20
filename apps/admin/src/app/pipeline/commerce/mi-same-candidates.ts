@@ -186,6 +186,68 @@ export const MI_SAME_EXCLUSION_TEXT: Record<Exclude<MiSameExclusion, "NOT_SAME">
   PRICE_UNCONFIRMED: "가격 확인 필요 — 상세 페이지에서 현재가를 확인하지 못했습니다",
 };
 
+/* ───────────── 🔴🔴 WU-136 화면 문구 — **셀러의 말** 로만 적는다 ─────────────
+ * 🔴 영역을 **새로 만들지 않았다**(CPO §A) — 같은 영역의 제목과 순서를 바꿨다.
+ * 🔴 내부 토큰(`VERIFIED_CURRENT` · `PRESUMED_SAME` · tier · blocker)은 이 영역에
+ *    **한 글자도** 노출되지 않는다. 기술 데이터는 지우지 않고 **접어** 둔다(§E).
+ */
+export const MARKET_JUDGEMENT_TITLE = "📊 시장 판매 판단";
+export const MARKET_JUDGEMENT_NOTE =
+  "이 상품이 지금 어디서 얼마에 팔리고 있는지부터 봅니다. 동일상품 판정은 그 판단을 위한 중간 단계입니다.";
+
+/** 🔴 결론 한 줄. 넷을 **다른 문장** 으로 적는다 — 「없다」로 뭉치지 않는다. */
+export const MARKET_VERDICT_TEXT: Record<MarketVerdict, string> = {
+  NO_SAME: "동일상품으로 판정된 판매처가 아직 없습니다.",
+  SAME_BUT_NONE_ON_SALE:
+    "동일상품은 확인됐지만 현재 판매중인 판매처를 확인하지 못했습니다 — 품절이거나 판매여부를 확인할 수 없는 곳입니다.",
+  ON_SALE_NO_PRICE: "동일상품이 판매중인 것은 확인됐지만 현재 가격을 확인할 수 없습니다.",
+  ON_SALE: "동일상품이 현재 판매중입니다.",
+};
+
+/** 🟢 판매처 표의 머리 — **셀러가 읽는 네 칸**(CPO §C). */
+export const MARKET_TABLE_HEADERS = ["시장", "판매처", "판매상태", "현재가격"] as const;
+
+/** 🔴 판매상태를 **세 개의 다른 말** 로. 「모른다」를 「판매중」으로 적지 않는다. */
+export const SALE_STATE_TEXT: Record<SaleState, string> = {
+  ON_SALE: "🟢 판매중",
+  SOLD_OUT: "🔴 품절",
+  UNKNOWN: "⚪ 판매여부 확인불가",
+};
+
+export const MARKET_LABEL: Record<"KR" | "OVERSEAS" | "UNKNOWN", string> = {
+  KR: "🇰🇷 국내",
+  OVERSEAS: "🌎 해외",
+  UNKNOWN: "❔ 미확정",
+};
+
+/** 🔴 「판매중 N곳」은 **ON_SALE 만** 센 숫자다 — 그 사실을 화면이 같이 말한다. */
+export function onSaleCountNote(j: MarketJudgement): string {
+  const parts: string[] = [`판매중 확인 ${j.onSaleCount}곳`];
+  if (j.unknownCount > 0) parts.push(`판매여부 확인불가 ${j.unknownCount}곳`);
+  if (j.soldOutCount > 0) parts.push(`품절 ${j.soldOutCount}곳`);
+  return parts.join(" · ");
+}
+
+/** 🔴 시장가격 한 줄. **통화별로만** 적고 환산하지 않는다. */
+export function priceRangeText(r: MarketPriceRange): string {
+  const range = r.lowest === r.highest ? `${r.lowest}` : `${r.lowest} ~ ${r.highest}`;
+  return `${r.currency} ${range}`;
+}
+
+/**
+ * 🔴🔴 그 가격이 **어떤 집합의 가격인지** 를 같이 적는다.
+ *    실측(2026-10-20): 호스트 7/9 가 재고 칸을 공개하지 않아 **미확인** 이다 —
+ *    그 숫자를 「N곳에서 판매중」으로 읽히게 두면 모르는 것을 판매중으로 만든다.
+ */
+export function priceRangeScope(r: MarketPriceRange): string {
+  return r.onSale === r.n ? `${r.n}곳 · 전부 판매중 확인` : `${r.n}곳 · 그중 판매중 확인 ${r.onSale}곳`;
+}
+
+/** 🔴 유사·보류 후보는 **접는다**(삭제가 아니다 · CPO §D). */
+export const SIMILAR_FOLD_LABEL = (n: number) => `추가 검토 후보 ${n}건`;
+/** 🔴 기술 데이터는 **접는다**(삭제가 아니다 · CPO §E). */
+export const MI_DETAIL_FOLD_LABEL = "MI 상세 분석";
+
 /* ──────────────── 🔴🔴 WU-133 — 「왜 비었나」를 화면이 말한다 ────────────────
  *
  * WU-133 전수 추적이 찾은 것: 사람이 SAME 이라 확인한 13건 중 **판정까지 간 7건이
@@ -240,6 +302,162 @@ export function countPendingCandidates(
     reasons: [...freq.entries()]
       .map(([text, n]) => ({ text, n }))
       .sort((a, b) => b.n - a.n || a.text.localeCompare(b.text)),
+  };
+}
+
+/* ═══════════════ 🔴🔴 WU-136 — **판매여부가 1순위다** (CPO 재정의) ═══════════════
+ *
+ * 🔴 CPO: 「셀러가 원상품 URL 을 넣는 이유는 **이 상품을 팔아도 되는가** 다.
+ *    `SAME` 은 목적이 아니라 그 판단을 하기 위한 **중간 판정** 이다.」
+ *    ⟹ 화면 순서가 **① 판매중인가 → ② 몇 곳 → ③ 얼마 → ④ 팔 가치** 로 고정됐다.
+ *
+ * ── 🔴🔴 실측이 설계를 한 번 뒤집었다 (2026-10-20 · Shopify 공개 JSON · 호스트 9) ──
+ * ```
+ * inventory_management  9/9 가 "shopify"
+ * inventory_quantity    **2곳만** 돌려준다(thefrontshop · junioredition)
+ * ⟹ 운영 `isVariantAvailable` 의 `inventory_quantity ?? 0` 을 후보에 그대로 쓰면
+ *    **7곳이 「품절」로 떨어진다** — 「모른다」를 「0」으로 취급하는 그 행위다.
+ * 🟢 그래서 생산자는 `shopifyVariantAvailability`(boolean | null)를 쓰고,
+ *    여기서는 그 **세 상태를 그대로** 받는다. 🔴 모르는 것을 판매중으로 만들지 않는다.
+ * ```
+ */
+
+/** 🔴 **세 상태** 다. `UNKNOWN` 을 `ON_SALE` 로도 `SOLD_OUT` 으로도 접지 않는다. */
+export type SaleState = "ON_SALE" | "SOLD_OUT" | "UNKNOWN";
+
+/**
+ * 🟢 운영이 낸 `soldOut`(boolean | null)을 **읽어서** 세 상태로 옮긴다.
+ * 🔴 `null` 은 **판매여부를 확인하지 못한 것** 이고, 그 자리는 `UNKNOWN` 이다 —
+ *    「품절」이 아니다(사이트가 재고 칸을 공개하지 않는 경우가 실측 7/9 다).
+ */
+export function saleState(row: GeminiTransientRow): SaleState {
+  if (row.soldOut === true) return "SOLD_OUT";
+  if (row.soldOut === false) return "ON_SALE";
+  return "UNKNOWN";
+}
+
+/** 🟢 셀러가 읽는 **판매처 한 줄**. 🔴 값은 전부 운영 산출이다(지어낸 칸 0). */
+export interface MarketSeller {
+  row: GeminiTransientRow;
+  /** 🔴 운영 `classifyCandidateMarket` 산출을 그대로. `UNKNOWN` 을 국내로 세지 않는다. */
+  market: "KR" | "OVERSEAS" | "UNKNOWN";
+  sale: SaleState;
+  /** 🔴 `VERIFIED_CURRENT` 만. 그 외는 `null` 이고 화면이 「가격 확인 필요」로 적는다. */
+  price: { amount: number; currency: string } | null;
+}
+
+/** 통화별 시장가격. 🔴 **환산하지 않는다** — 합계 칸이 없다(`overseas-reference` 계약과 같은 축). */
+export interface MarketPriceRange {
+  currency: string;
+  lowest: number;
+  highest: number;
+  /** 그 통화에 든 판매처 수. */
+  n: number;
+  /** 🔴 그중 **판매중이 확인된** 곳. 「n 곳에서 판매중」으로 읽히지 않게 같이 적는다. */
+  onSale: number;
+}
+
+/**
+ * 🔴 셀러에게 할 **한 문장의 결론**. 넷을 섞지 않는다(CPO §G 가 요구한 예외 처리).
+ * ```
+ * NO_SAME                 동일상품 판정이 아직 없다
+ * SAME_BUT_NONE_ON_SALE   동일상품은 있는데 **판매중이 확인된 곳이 없다**
+ * ON_SALE_NO_PRICE        판매중은 확인됐는데 **가격을 확인하지 못했다**
+ * ON_SALE                 판매중 + 가격 확인 ⟹ 비교 가능
+ * ```
+ */
+export type MarketVerdict = "NO_SAME" | "SAME_BUT_NONE_ON_SALE" | "ON_SALE_NO_PRICE" | "ON_SALE";
+
+export interface MarketJudgement {
+  /** SAME 후보 전수(URL 중복 접음). 🟢 **판매중 → 미확인 → 품절** 순으로 정렬돼 있다. */
+  sellers: MarketSeller[];
+  onSaleCount: number;
+  soldOutCount: number;
+  unknownCount: number;
+  domesticOnSale: number;
+  overseasOnSale: number;
+  /** 가격 축의 분모 — 가격이 확인됐고 **품절이 아닌** 판매처. */
+  pricedSellers: MarketSeller[];
+  byCurrency: MarketPriceRange[];
+  verdict: MarketVerdict;
+}
+
+const SALE_ORDER: Record<SaleState, number> = { ON_SALE: 0, UNKNOWN: 1, SOLD_OUT: 2 };
+
+/**
+ * 🔴🔴 **판매여부를 가격보다 «먼저» 계산한다**(CPO §B).
+ *
+ * 🔴 판정하지 않는다 — `transientDisplayTier` · `saleState` · `isPriceConfirmed` 는
+ *    전부 **운영 산출을 읽는** 술어다. threshold 0 · 새 축 0 · 집계 완화 0.
+ * 🔴 `SIMILAR`/`PRESUMED_SAME`/`CONFLICT` 는 **들어오지 않는다**(CPO §B 그대로).
+ * 🔴 **품절은 가격에서 뺀다** — 「팔 수 없는 가격은 경쟁가격이 아니다」(운영
+ *    `summarizeFrom` 과 같은 방향). 🔴 그러나 **미확인은 빼지 않는다** —
+ *    빼면 그 통화 축이 사라져 셀러가 시장가를 **아예 못 본다**(WU-111 에서 측정된 손실).
+ *    🟢 대신 `onSale` 을 같이 실어 화면이 **「그중 판매중 확정 N곳」을 말한다**.
+ */
+export function buildMarketJudgement(
+  rows: readonly GeminiTransientRow[] | null | undefined,
+): MarketJudgement {
+  const sellers: MarketSeller[] = [];
+  const seen = new Set<string>();
+  for (const row of rows ?? []) {
+    if (seen.has(row.discoveredUrl)) continue;
+    seen.add(row.discoveredUrl);
+    if (transientDisplayTier(row) !== "SAME") continue;
+    const market = row.market === "KR" || row.market === "OVERSEAS" ? row.market : "UNKNOWN";
+    sellers.push({
+      row,
+      market,
+      sale: saleState(row),
+      price: isPriceConfirmed(row)
+        ? { amount: row.priceAmount as number, currency: row.priceCurrency as string }
+        : null,
+    });
+  }
+  sellers.sort((a, b) => SALE_ORDER[a.sale] - SALE_ORDER[b.sale]);
+
+  const onSale = sellers.filter((s) => s.sale === "ON_SALE");
+  const pricedSellers = sellers.filter((s) => s.price != null && s.sale !== "SOLD_OUT");
+
+  const byCurrencyMap = new Map<string, MarketPriceRange>();
+  for (const s of pricedSellers) {
+    const p = s.price as { amount: number; currency: string };
+    const cur = byCurrencyMap.get(p.currency);
+    if (!cur) {
+      byCurrencyMap.set(p.currency, {
+        currency: p.currency,
+        lowest: p.amount,
+        highest: p.amount,
+        n: 1,
+        onSale: s.sale === "ON_SALE" ? 1 : 0,
+      });
+      continue;
+    }
+    cur.lowest = Math.min(cur.lowest, p.amount);
+    cur.highest = Math.max(cur.highest, p.amount);
+    cur.n += 1;
+    if (s.sale === "ON_SALE") cur.onSale += 1;
+  }
+
+  const verdict: MarketVerdict =
+    sellers.length === 0
+      ? "NO_SAME"
+      : onSale.length === 0
+        ? "SAME_BUT_NONE_ON_SALE"
+        : pricedSellers.length === 0
+          ? "ON_SALE_NO_PRICE"
+          : "ON_SALE";
+
+  return {
+    sellers,
+    onSaleCount: onSale.length,
+    soldOutCount: sellers.filter((s) => s.sale === "SOLD_OUT").length,
+    unknownCount: sellers.filter((s) => s.sale === "UNKNOWN").length,
+    domesticOnSale: onSale.filter((s) => s.market === "KR").length,
+    overseasOnSale: onSale.filter((s) => s.market === "OVERSEAS").length,
+    pricedSellers,
+    byCurrency: [...byCurrencyMap.values()].sort((a, b) => a.currency.localeCompare(b.currency)),
+    verdict,
   };
 }
 

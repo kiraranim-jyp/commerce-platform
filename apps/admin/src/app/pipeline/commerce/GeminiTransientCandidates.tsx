@@ -16,7 +16,7 @@
  * ```
  * 🟢 **표시만 한다.** 서버가 이미 낸 값을 옮기고, 없는 값은 「미확인」으로 적는다.
  */
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 /**
  * 🔴🔴 WU-028 — 매칭 등급의 **말(label)** 은 이 파일이 owner 다(`MATCHING-UNIFY-1`).
  *    국내/해외 화면이 각자 라벨 맵을 들고 있다가 같은 판정이 화면마다 다르게 보였던
@@ -253,6 +253,13 @@ export interface GeminiTransientCandidatesProps {
   originImageUrl?: string | null;
   /** 🟢 원본 칸의 설명. 없으면 「원본 상품」이라고만 적는다. */
   originTitle?: string | null;
+  /**
+   * 🔴🔴 WU-136 §D — **기본 접힘으로 그린다**(「추가 검토 후보 N건」).
+   *    🔴 정보를 지우는 것이 아니다 — 셀러의 1순위는 「팔아도 되는가」이고 그 답은
+   *       위 **시장 판매 판단** 이 한다. 후보 행은 그 근거이자 GT 입력이라 남는다.
+   *    🟢 기본값 `false` 라 **지정하지 않은 구역의 DOM 은 전과 같다**.
+   */
+  collapsed?: boolean;
 }
 
 /** 🔴 이미지가 없을 때 적는 말. 🔴 빈 칸으로 두지 않는다(「없다」와 「못 그렸다」를 가른다). */
@@ -313,6 +320,7 @@ export function GeminiTransientCandidates({
   saveState,
   originImageUrl,
   originTitle,
+  collapsed = false,
 }: GeminiTransientCandidatesProps): JSX.Element | null {
   if (!evidence || evidence.length === 0) return null;
   /** 🔴 WU-132 ④ — 원상품 이미지가 **없으면** 비교 칸을 만들지 않는다(빈 틀 금지). */
@@ -320,9 +328,17 @@ export function GeminiTransientCandidates({
 
   return (
     <section data-testid={testId} className="mt-3 rounded-md border border-border bg-surface/40 p-2">
-      <p className="text-[11px] font-medium text-text-secondary">
-        {heading} {evidence.length}건
-      </p>
+      {/**
+       * 🔴🔴 WU-136 §D — **유사·보류 후보는 «접는다». 지우지 않는다.**
+       *
+       * 🔴 CPO: 「정보를 삭제하는 것이 아니라 셀러의 시야에서 치우는 것」. 셀러의 1순위
+       *    질문은 「팔아도 되는가」이고 그 답은 위 **시장 판매 판단** 이 한다. 후보 행은
+       *    그 판단의 **근거이자 GT 입력** 이라 남아 있어야 한다(WU-131 축적 경로).
+       * 🔴 **`open` 을 붙이지 않는다** — 펼친 채로 두면 후보가 「유력」으로 읽히고
+       *    그것이 2026-09-19 사고의 기전이다(WU-091 ① 과 같은 계약).
+       * 🟢 `collapsed=false` 면 **DOM 이 전과 같다** — 기존 계약이 그대로 유효하다.
+       */}
+      <Fold collapsed={collapsed} label={`${heading} ${evidence.length}건`}>
       {/* 🔴 두 문구는 CPO 가 지정한 고정 문장이다 — 요약하거나 바꾸지 않는다. */}
       <p className="mt-0.5 text-[11px] text-text-tertiary">{TRANSIENT_NOTICE}</p>
       <p className="text-[11px] text-text-tertiary">{TRANSIENT_SCOPE_NOTICE}</p>
@@ -499,7 +515,40 @@ export function GeminiTransientCandidates({
           );
         })}
       </ul>
+      </Fold>
     </section>
+  );
+}
+
+/**
+ * 🔴🔴 WU-136 §D/§E — **접힘 하나를 두 곳이 같이 쓴다.**
+ *
+ * 🔴 `collapsed=false` 면 **`<details>` 를 만들지 않는다** — 머리 문구를 그대로
+ *    `<p>` 로 그린다. 그래서 기존 구역의 DOM 이 **한 노드도 바뀌지 않는다**(계약 보존).
+ * 🔴 `open` 속성을 **받지 않는다** — 「기본 접힘」이 계약이다(WU-091 ①).
+ */
+function Fold({
+  collapsed,
+  label,
+  children,
+}: {
+  collapsed: boolean;
+  label: string;
+  children: ReactNode;
+}): JSX.Element {
+  if (!collapsed) {
+    return (
+      <>
+        <p className="text-[11px] font-medium text-text-secondary">{label}</p>
+        {children}
+      </>
+    );
+  }
+  return (
+    <details data-testid="candidate-fold">
+      <summary className="cursor-pointer text-[11px] font-medium text-text-secondary">▸ {label}</summary>
+      {children}
+    </details>
   );
 }
 

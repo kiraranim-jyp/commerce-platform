@@ -7,6 +7,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   MI_SAME_AREA_TITLE,
+  /** 🔴 WU-136 — 영역 제목이 「시장 판매 판단」으로 바뀌었다(영역 수는 그대로 하나). */
+  MARKET_JUDGEMENT_TITLE,
+  MARKET_VERDICT_TEXT,
   MI_SAME_EMPTY,
   isNotSoldOut,
   isPriceConfirmed,
@@ -219,7 +222,16 @@ describe("B. 🔴 영역 (마운트 DOM)", () => {
   it("B-2 🔴🔴 조회가 돌았으면 후보가 0 이어도 **선다** — 「조회 안 함」과 다르다", async () => {
     await mountArea({ rows: [] });
     expect(sec("market-price-comparison")).toBeTruthy();
-    expect(container.textContent).toContain(MI_SAME_AREA_TITLE);
+    /**
+     * 🔴🔴 WU-136 — **앵커를 갱신하고 «강화» 했다.** 영역 제목이
+     *    「📊 동일상품 가격 비교」 → **「📊 시장 판매 판단」** 으로 바뀌었다(CPO §A:
+     *    셀러의 1순위는 「동일상품인가」가 아니라 **「팔아도 되는가」** 다).
+     * 🟢 **영역은 여전히 «하나» 다** — 새로 만들지 않고 같은 영역의 순서를 뒤집었다.
+     * 🔴 **강화** — 이제 「제목이 있다」가 아니라 **「판매 결론이 제목 바로 뒤에 선다」**
+     *    까지 단언한다. 가격을 먼저 보여주는 배치로 되돌리면 FAIL 한다.
+     */
+    expect(container.textContent).toContain(MARKET_JUDGEMENT_TITLE);
+    expect(sec("market-verdict")?.textContent).toBe(MARKET_VERDICT_TEXT.NO_SAME);
     /** 🔴 「국내에 동일상품이 없다」로 적지 않는다(부재와 미발견은 다르다). */
     expect(container.textContent).toContain(MI_SAME_EMPTY);
     expect(container.textContent).not.toMatch(/국내에 (동일상품|상품)이 없/);

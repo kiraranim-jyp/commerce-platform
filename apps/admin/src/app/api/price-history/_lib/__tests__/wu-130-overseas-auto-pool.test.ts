@@ -482,7 +482,16 @@ describe("F. ③④ 화면 구조 (WU-130)", () => {
     const end = AREA.indexOf("</section>", start);
     expect(end).toBeGreaterThan(start);
     const area = AREA.slice(start, end);
-    expect(area).toContain("MI_SAME_AREA_TITLE");
+    /**
+     * 🔴🔴 WU-136 — **앵커를 갱신하고 «강화» 했다.** 그 영역의 제목 owner 가
+     *    `MI_SAME_AREA_TITLE` → **`MARKET_JUDGEMENT_TITLE`** 로 바뀌었다(CPO §A —
+     *    셀러의 1순위는 「동일상품인가」가 아니라 「팔아도 되는가」다).
+     * 🟢 이 계약이 지키는 성질(「참고가격 두 축이 **한 영역 안** 에 있다」)은 **그대로** 다.
+     * 🔴 **강화** — 제목이 **하나뿐** 임을 단언한다. 두 제목을 같이 그리면 셀러에게
+     *    영역이 둘로 읽히고, 그것이 이 계약이 애초에 막던 것이다.
+     */
+    expect(area).toContain("MARKET_JUDGEMENT_TITLE");
+    expect(area).not.toContain("MI_SAME_AREA_TITLE");
     /** 🔴 국내·해외가 **그 영역 안** 에서 갈린다(밖에 있으면 통합이 아니다). */
     expect(area).toContain("MI_SAME_DOMESTIC_HEADING");
     expect(area).toContain("MI_SAME_OVERSEAS_HEADING");

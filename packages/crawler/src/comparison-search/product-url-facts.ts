@@ -97,7 +97,57 @@ interface ShopifyProductJsonBody {
    *    해외 가격이 집계에서 빠졌다**(WU-108/109 실측 1건).
    * 🔴 **추가 HTTP 0** — 같은 응답을 다시 쓴다.
    */
-  variants?: { price?: string; price_currency?: string }[];
+  variants?: {
+    price?: string;
+    price_currency?: string;
+    /**
+     * 🔴🔴 WU-136 — **재고 칸은 「올 때만」 믿는다.**
+     *    실측(2026-10-20 · Shopify 공개 `/products/{handle}.json` · 호스트 9):
+     *    `inventory_management` 는 **9/9 가 `"shopify"`** 인데
+     *    `inventory_quantity` 는 **2곳만** 돌려준다(thefrontshop · junioredition).
+     * 🔴 그래서 운영 `isVariantAvailable`(shopify-product-json.ts:91)의
+     *    `inventory_quantity ?? 0` 을 이 경로에 그대로 쓰면 **7곳이 「품절」로 떨어진다** —
+     *    그 파일 주석이 금지한 「『모른다』를 『0이다』로 취급」 그 자체다.
+     * 🟢 그래서 아래 `shopifyVariantAvailability` 는 **boolean | null** 을 낸다.
+     */
+    inventory_management?: string | null;
+    inventory_policy?: string | null;
+    inventory_quantity?: number;
+  }[];
+}
+
+/**
+ * 🔴🔴 WU-136 — 후보의 **판매여부**. 모르면 `null` 이고 **품절로 만들지 않는다**.
+ *
+ * 🟢 판정 축은 운영 owner(`isVariantAvailable`)와 **같은 Shopify 공식** 이다 —
+ *    재고추적 안 함 / backorder 허용 / 실재고 > 0. 🔴 다른 것은 **하나** 다:
+ *    실재고 칸이 **없으면 `null`**(모른다)이고 `0` 으로 떨어지지 않는다.
+ *
+ * ```
+ * variants 없음                                     → null
+ * inventory_management 가 없는 variant 가 있다        → true  (재고추적 안 함 = 구매 가능)
+ * inventory_policy === "continue" 인 variant 가 있다  → true  (품절도 계속 판매)
+ * inventory_quantity > 0 인 variant 가 있다           → true
+ * 모든 variant 가 qty 를 «주고» 전부 0 이하           → false (품절)
+ * qty 를 주지 않는 variant 가 남아 있다               → null  (모른다)
+ * ```
+ * 🔴 **추가 HTTP 0** — 가격과 같은 응답을 다시 읽는다.
+ * 🔴 운영 `isVariantAvailable` 은 **고치지 않았다**(원상품 경로 불변).
+ */
+export function shopifyVariantAvailability(body: ShopifyProductJsonBody): boolean | null {
+  const variants = body.variants;
+  if (!variants || variants.length === 0) return null;
+  let sawUnknownQuantity = false;
+  for (const v of variants) {
+    if (!v.inventory_management) return true;
+    if (v.inventory_policy === "continue") return true;
+    if (typeof v.inventory_quantity === "number" && Number.isFinite(v.inventory_quantity)) {
+      if (v.inventory_quantity > 0) return true;
+    } else {
+      sawUnknownQuantity = true;
+    }
+  }
+  return sawUnknownQuantity ? null : false;
 }
 
 /**
@@ -240,6 +290,14 @@ export async function factsFromProductUrl(url: string): Promise<ProductUrlFactsR
          */
         price: shopifyVariantPrice(body),
         regularPrice: null,
+        /**
+         * 🔴🔴 WU-136 — **판매여부는 가격보다 먼저 쓰이는 축** 이다(셀러의 1순위 질문).
+         *    전까지 이 경로는 그 칸을 **아예 세우지 않아** 전건 `null` 이었고, 화면은
+         *    「품절만 제외」(`soldOut !== true`)라 **모르는 것을 판매중처럼** 보여줬다.
+         * 🔴 `shopifyVariantAvailability` 가 `null` 을 내면 그대로 `null` 이다 —
+         *    「모른다」를 「판매중」으로도 「품절」로도 만들지 않는다(CPO WU-136 §G).
+         */
+        soldOut: ((a) => (a == null ? null : !a))(shopifyVariantAvailability(body)),
         imageUrl: facts.imageUrls[0] ?? null,
         confidence: 0,
         brand: facts.brand ?? undefined,

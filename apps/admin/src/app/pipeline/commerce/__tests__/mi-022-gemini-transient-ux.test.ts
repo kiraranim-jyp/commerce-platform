@@ -248,7 +248,14 @@ describe("⑥ 🔴 판정·가격 계산에 손대지 않았다 — 소스 계�
      *    🔴 그래서 이름 하나가 아니라 **「그 파생이 `web` 에서 나온다」** 까지 잠근다 —
      *       이름만 보면 엉뚱한 배열을 넣어도 통과한다(WU-075 에서 당한 계열).
      */
-    expect(panel).toContain("<GeminiTransientCandidates evidence={webRest} />");
+    /**
+     * 🔴🔴 WU-136 — **앵커를 갱신하고 또 «강화» 했다.** 그 구역이 이제 **기본 접힘**
+     *    으로 그려진다(`collapsed`) — CPO §D 「유사·보류 후보는 셀러 시야에서 치운다」.
+     *    🟢 **배선 성질은 그대로** 다(입력도 `webRest` 그대로 · 행/버튼/저장 0 변경).
+     *    🔴 **강화** — 「접혔다」까지 단언한다. 접힘을 떼면 후보가 다시 펼쳐지고
+     *       그것이 2026-09-19 사고(「유력 후보 5건」)의 기전이다.
+     */
+    expect(panel).toMatch(/<GeminiTransientCandidates evidence=\{webRest\}\s+collapsed\s*\/>/);
     expect(panel).toContain("const webRest = (web ?? []).filter(");
     /**
      * 🔴 국내 구역도 **transient 입력에서만** 나온다(새 데이터 출처를 만들지 않았다).
