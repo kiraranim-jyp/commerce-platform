@@ -16,7 +16,9 @@ import {
   MI_SAME_EMPTY,
   MI_SAME_EXCLUSION_TEXT,
   MI_SAME_OVERSEAS_HEADING,
+  pendingNote,
   selectMiSameCandidates,
+  countPendingCandidates,
   type MiSameSelection,
 } from "./mi-same-candidates";
 import { priceText, stockText, type GeminiTransientRow } from "./GeminiTransientCandidates";
@@ -76,6 +78,11 @@ export function MarketPriceComparison({
 }: MarketPriceComparisonProps): JSX.Element | null {
   const domestic = selectMiSameCandidates(rows, "KR");
   const overseas = selectMiSameCandidates(rows, "OVERSEAS");
+  /**
+   * 🔴 WU-133 — **시장과 무관하게** 센다. 「국내/해외로 갈려서 안 보인다」가 아니라
+   *    「판정이 보류돼서 안 보인다」가 사실이고, 그 사실은 시장별로 나누면 흐려진다.
+   */
+  const pending = pendingNote(countPendingCandidates(rows));
 
   /**
    * 🔴🔴 **「조회가 돌았는가」가 렌더 조건이다**(WU-130 ② 가 세운 그 계약).
@@ -94,6 +101,23 @@ export function MarketPriceComparison({
       <p className="mt-0.5 text-[11px] text-text-tertiary">{MI_SAME_AREA_NOTE}</p>
       {/* 🔴 「유사상품은 여기 오지 않는다」를 영역이 **직접** 말한다(②의 절반). */}
       <p className="text-[11px] text-text-tertiary">{MI_SAME_AREA_SCOPE}</p>
+      {/**
+       * 🔴🔴🔴 WU-133 — **「비었다」로 끝내지 않는다.**
+       *
+       * 전수 추적(human SAME 13건)이 측정한 것: 판정까지 간 7건이 **전부 보류/충돌** 이고
+       * 그중 **6건은 가격까지 확보** 돼 있다. 🔴 그런데 WU-132 의 화면은 「동일상품으로
+       * 판정되고 가격까지 확인된 후보가 아직 없습니다」만 말했다 — **그 아래에 그 6건이
+       * 서 있는데** 말이다. 셀러에게는 「아무것도 못 찾았다」로 읽히고 그것은 **거짓** 이다.
+       *
+       * 🟢 그래서 **이미 계산된 보류 사유를 세어** 한 줄 적는다(집계 0 · 판정 0 · 완화 0).
+       * 🔴 「동일상품이다」라고 **단정하지 않는다** — 「판정이 보류됐다」가 정확한 말이고
+       *    판단은 셀러가 아래 검토 구역에서 사진으로 한다.
+       */}
+      {pending && (
+        <p data-testid="mi-same-pending" className="mt-1 text-[11px] text-warning">
+          {pending}
+        </p>
+      )}
 
       {/* 🔴 국내를 해외 «앞» 에 둔다 — 셀러의 질문 순서가 그렇다(WU-056 과 같은 이유). */}
       <div className="mt-2 grid gap-2 md:grid-cols-2">

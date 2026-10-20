@@ -6,6 +6,8 @@ import {
 } from "./match-display";
 import type { MatchTruth } from "@commerce/crawler/src/comparison-search/match-truth";
 import type { GeminiTransientRow } from "./GeminiTransientCandidates";
+/** 🔴 WU-133 — 축의 «말» 은 별 모듈이 소유한다(가드를 엄격하게 유지하기 위해 · 그 파일 머리 주석). */
+import { blockerText } from "./blocker-text";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -183,3 +185,78 @@ export const MI_SAME_EXCLUSION_TEXT: Record<Exclude<MiSameExclusion, "NOT_SAME">
   SOLD_OUT: "품절 — 현재 판매중이 아니라 가격 비교에서 제외했습니다",
   PRICE_UNCONFIRMED: "가격 확인 필요 — 상세 페이지에서 현재가를 확인하지 못했습니다",
 };
+
+/* ──────────────── 🔴🔴 WU-133 — 「왜 비었나」를 화면이 말한다 ────────────────
+ *
+ * WU-133 전수 추적이 찾은 것: 사람이 SAME 이라 확인한 13건 중 **판정까지 간 7건이
+ * 전부 보류(PRESUMED_SAME 5)/충돌(CONFLICT 2)** 이고, 그래서 가격비교가 **0건** 이다.
+ *
+ * 🔴 그런데 WU-132 의 화면은 「동일상품으로 판정되고 가격까지 확인된 후보가 아직
+ *    없습니다」만 말했다. **그 아래에 가격까지 확보된 후보 7건이 서 있는데** 말이다 —
+ *    셀러에게는 「아무것도 못 찾았다」로 읽히고, 그것은 **거짓** 이다.
+ * 🟢 그래서 **이미 계산된 보류 사유를 세어** 한 줄로 적는다. 🔴 집계 0 · 판정 0 ·
+ *    완화 0 — 읽어서 말하는 것이 전부다.
+ */
+
+export interface PendingSummary {
+  /** 가격까지 확보됐는데 **SAME 이 아니라서** 비교에 못 들어간 후보 수. */
+  count: number;
+  /** 사유별 건수 — 많은 것부터. 🔴 「없음」을 지어내지 않는다(빈 배열이면 사유 미기록). */
+  reasons: { text: string; n: number }[];
+}
+
+/**
+ * 🔴 **가격은 있는데 SAME 이 아닌 후보** 를 사유별로 센다.
+ *
+ * 🔴 함수 이름이 `summarize…` 가 **아닌 이유** — 이 저장소에서 `summarize` 는
+ *    **금액 집계** 의 어휘이고(`summarizeCandidateOverseasPrices` ·
+ *    `summarizeDomesticMarketSplit` · `summarizeFrom`), 가격 영역에 그 어휘가
+ *    들어오지 못하게 하는 계약(`wu-130 F-4`)이 있다. 🟢 이 함수는 **건수를 센다** —
+ *    돈을 더하지 않는다. 그래서 이름도 그렇게 둔다(가드를 느슨하게 하지 않는다).
+ *
+ * 🔴 `soldOut === true` 는 **세지 않는다** — 그건 「팔지 않는다」이고 「판정이 보류됐다」와
+ *    다른 사실이다(둘을 한 숫자로 뭉치면 셀러가 할 행동이 달라진다).
+ * 🔴 시장이 확정되지 않은 후보도 **센다** — 그 후보도 「아래에 서 있는데 비교에 없는」 것이다.
+ */
+export function countPendingCandidates(
+  rows: readonly GeminiTransientRow[] | null | undefined,
+): PendingSummary {
+  if (!rows || rows.length === 0) return { count: 0, reasons: [] };
+  const seen = new Set<string>();
+  const freq = new Map<string, number>();
+  let count = 0;
+  for (const row of rows) {
+    if (seen.has(row.discoveredUrl)) continue;
+    seen.add(row.discoveredUrl);
+    if (transientDisplayTier(row) === "SAME") continue;
+    if (!isNotSoldOut(row)) continue;
+    if (!isPriceConfirmed(row)) continue;
+    count += 1;
+    const tokens = [...(row.crossSellerBlockers ?? []), ...(row.crossSellerConflicts ?? [])];
+    for (const t of new Set(tokens.map(blockerText))) freq.set(t, (freq.get(t) ?? 0) + 1);
+  }
+  return {
+    count,
+    reasons: [...freq.entries()]
+      .map(([text, n]) => ({ text, n }))
+      .sort((a, b) => b.n - a.n || a.text.localeCompare(b.text)),
+  };
+}
+
+/**
+ * 🔴🔴 그 사실을 적는 문장. **「없다」로 끝내지 않는다.**
+ *
+ * 🔴 「동일상품」이라고 **단정하지 않는다** — 「판정이 보류됐다」가 정확한 말이고,
+ *    그 판단은 셀러가 아래 검토 구역에서 눈으로 한다(⑤ 의 입력이 그것이다).
+ */
+export function pendingNote(summary: PendingSummary): string | null {
+  if (summary.count === 0) return null;
+  const why =
+    summary.reasons.length > 0
+      ? ` 주요 사유 — ${summary.reasons.map((r) => `${r.text} ${r.n}`).join(" · ")}.`
+      : "";
+  return (
+    `가격까지 확인됐지만 동일상품 판정이 보류·충돌된 후보가 ${summary.count}건 있습니다 — ` +
+    `아래 후보 검토 구역에서 사진으로 확인하고 판단해 주세요.${why}`
+  );
+}
