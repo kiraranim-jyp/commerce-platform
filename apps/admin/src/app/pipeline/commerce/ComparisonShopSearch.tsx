@@ -22,14 +22,17 @@ import {
   tierGroupLabel,
   type MatchDisplayTier,
 } from "./match-display";
-// MI-MARKET-EVIDENCE-1 — 이 조회 결과를 MI 본문의 🌎 해외 시장 요약으로 옮기는
-// 유일한 함수. 개수·등급·가격대를 여기서 직접 만들지 않는다(요약 규칙이 두 벌이
-// 되면 요약과 이 표가 다른 말을 하게 된다).
-import {
-  buildOverseasMarketEvidence,
-  type MarketEvidenceSummary,
-  type OverseasMarketCandidateInput,
-} from "./market-evidence";
+/**
+ * 🔴🔴 WU-141-R3 C-5 — **`market-evidence` import 를 통째로 제거했다**(계약 계층에서 발견).
+ *
+ * 🔴 구현 단계가 `buildOverseasMarketEvidence({ candidates })` **호출** 과
+ *    `onEvidenceChange` **prop** 을 지웠는데 **import 세 심볼이 남아 있었다**
+ *    (참조 0 — 값 하나 + 타입 둘). 그 자리가 「이 패널이 자기 조회 결과로
+ *    **시장 가격 판단을 다시 만드는**」 배선의 입구다 ⟹ 입구까지 닫는다.
+ * 🟢 이 패널의 역할은 전략 Gate 기준으로 **검색 UI 하나** 다 — 결과 표는 그대로
+ *    그리고(원자료 드릴다운), 그 결과의 **판단 owner 는 「📊 시장 판매 판단」** 이다.
+ * 🟢 `market-evidence` 모듈 자체는 **살아 있다**(🇰🇷 요약 문자열의 owner · 계약 다수).
+ */
 // MI-UX-9 §10 — 검색 상태 5종(자동지원/수동필요/검색실패/결과없음/확인불가) 구분.
 import { searchSourceStatusDisplay } from "@/lib/search-source-status";
 import {

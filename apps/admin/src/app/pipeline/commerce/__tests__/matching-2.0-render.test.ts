@@ -337,6 +337,19 @@ describe("두 판매처의 같은 상품 가격이 한 화면에 선다", () => 
     };
     expect(at(ORIGIN_PRODUCT_LINK_LABEL)).toBeLessThan(at(GLOBAL_MARKET_HINT_LABEL));
     expect(at(GLOBAL_MARKET_HINT_LABEL)).toBeLessThan(at(SAME_PRODUCT_SELLERS_TITLE));
-    expect(at(SAME_PRODUCT_SELLERS_TITLE)).toBeLessThan(at(PRICE_SECTION_TITLE.DOMESTIC_COMPETITION));
+    /**
+     * 🔴🔴 WU-141-R3 — **마지막 비교의 기준점이 카드 밖으로 나갔다**(분류 B).
+     *
+     * 🔴 전에는 「동일상품 판매처 → 🇰🇷 국내 시장」 순서를 단언했다. R3 가 🇰🇷/🌎 를
+     *    결론 영역 「📊 시장 판매 판단」으로 올렸고 그 영역은 **격자 밖 최상단** 이라
+     *    이 카드 구간(`regionsOf(...).mi`)에 **존재하지 않는다** ⟹ 그 비교는 성립하지 않는다.
+     * 🟢 **읽는 순서 규칙은 깨지지 않았다 — 더 강해졌다.** 시장 결론이 판정 카드보다
+     *    **앞** 으로 갔으므로 전체 순서는 「📊 시장 판매 판단 → 원본 → 글로벌 →
+     *    동일상품 판매처」다. 🔴 그 «바깥» 순서를 보는 것은 격자 배치 계약이고
+     *    (`wu-140-market-first`), 「그 컨테이너 안에서 맨 위」와 「화면 맨 위」를
+     *    섞지 않는다는 WU-140-R1 의 교훈 그대로 **파일을 나눠** 둔다.
+     * 🔴 그래서 여기서는 **카드 안에 시장 블록이 없다** 만 단언한다.
+     */
+    expect(text).not.toContain(PRICE_SECTION_TITLE.DOMESTIC_COMPETITION);
   });
 });

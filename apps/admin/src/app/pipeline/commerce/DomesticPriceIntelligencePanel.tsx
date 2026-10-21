@@ -89,9 +89,9 @@ import {
 // MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — 본문으로 되돌아온 시장 요약 둘.
 // 개수와 등급을 한 묶음으로만 내보내는 규칙이 이 파일 하나에 있다(화면이 다시
 // 세지 않는다 — 세기 시작하면 요약이 드릴다운보다 강한 주장을 하게 된다).
+/** 🔴 WU-141-R3 — `buildOverseasMarketEvidence` 는 이 파일에서 **쓰지 않는다**(🌎 owner 는 ①). */
 import {
   buildDomesticMarketEvidence,
-  buildOverseasMarketEvidence,
   tierCountsText,
   type MarketEvidenceSummary,
 } from "./market-evidence";
@@ -3278,7 +3278,18 @@ export function MiPanelView({
     exactSellerCount: domesticMarketSplit.exact.sellerCount,
     comparisonSellerCount: domesticMarketSplit.comparison.sellerCount,
   });
-  const overseasEvidence = overseasMarketEvidence ?? buildOverseasMarketEvidence({ candidates: [] });
+  /**
+   * 🔴🔴 WU-141-R3 — **`overseasEvidence` 지역 변수를 제거했다**(계약 계층에서 발견).
+   *
+   * 🔴 구현 단계에서 🌎 블록과 `hasOverseasRange` 를 ① 로 넘기고도 이 줄이 남아
+   *    있었다 — **집계를 계산해 두고 아무도 읽지 않는** 상태였다(참조 0 · 주석만 2).
+   * 🔴 그것이 바로 「두 번째 가격 owner 가 다시 꽂힐 자리」다. `onEvidenceChange`
+   *    prop 을 **타입에서까지** 지운 것과 같은 이유로 지운다(생산자만 지우고 소비자
+   *    자리를 비워 두면 다음 사람이 거기에 다시 배선한다).
+   * 🟢 `buildOverseasMarketEvidence` 자체는 **지우지 않았다** — `market-evidence` 의
+   *    순수 함수이고 `product-tab-first-screen` 등이 **해외 요약 문자열의 owner** 로
+   *    직접 호출해 검사한다. 사라진 것은 **패널 안의 쓰이지 않는 사본** 하나다.
+   */
 
   /**
    * 🔴🔴🔴 WU-141-R3 §4 — **가격 판단의 owner 는 ① 하나다.**

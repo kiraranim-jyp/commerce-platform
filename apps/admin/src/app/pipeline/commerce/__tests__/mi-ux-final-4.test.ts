@@ -149,12 +149,15 @@ describe("블록 번호가 ①→③으로 건너뛰지 않는다", () => {
       expect(visibleText(mi)).not.toMatch(/[①②③④⑤]/);
       // 그리고 읽는 순서의 칸은 데이터 유무와 무관하게 같은 개수로 선다 —
       // 블록이 조건부로 사라지면 번호가 없어도 "한 칸이 비었다"가 남는다.
+      /**
+       * 🔴 WU-141-R3 — 「🇰🇷 국내 시장」·「🌎 해외 시장」이 **결론 영역으로 올라갔다**
+       *    (`MarketPriceComparison` · 격자 밖 최상단 · WU-140-R1). 🟢 이 계약이 지키는
+       *    성질은 **「데이터 유무와 무관하게 같은 개수로 선다」** 이고 그것은 그대로다.
+       */
       expect(headingsInOrder(mi)).toEqual([
         "Market Intelligence",
         "원본 상품",
         "ⓘ 글로벌 시장 가격",
-        "🇰🇷 국내 시장",
-        "🌎 해외 시장",
         "수익성",
         "ⓘ 가격 계산 기준",
         "왜 이렇게 판단했나요?",
@@ -180,12 +183,23 @@ describe("같은 사실이 한 화면에 두 번 서지 않는다", () => {
     // ① 예상 이익 — 수익성 사슬 한 줄뿐이다(되물음이 같은 숫자를 다시 적지 않는다).
     expect((mi.match(/예상 이익/g) ?? []).length).toBe(1);
     /**
-     * ② 국내 대표 가격 — 🔴🔴 WU-030(CPO 승인) 으로 **1 → 2** 로 갱신됐다.
-     *    상품 판단 요약(**결론**)과 🇰🇷 국내 시장 요약(**근거**)이 각각 한 번씩이다.
-     * 🔴 **셋은 여전히 금지** — 되물음·상세가 같은 숫자를 또 적으면 여기서 깨진다.
-     *    이 테스트는 되물음과 근거를 **전부 펼친 상태** 에서 세므로 그 성질이 유지된다.
+     * ② 국내 대표 가격 — 🔴🔴 **WU-141-R3 에서 `2 → 0` 이 됐다**(이 파일 기준).
+     *
+     * 이 계약의 숫자가 세 번째로 바뀌는 자리라 **이유를 전부 적는다**:
+     * ```
+     * WU-030 이전  1  — 🇰🇷 국내 시장 요약(근거) 하나
+     * WU-030       2  — + 상품 판단 요약(결론)            ← CPO 승인
+     * WU-141-R3    0  — 🔴 **둘 다 판정 카드에서 나갔다**
+     * ```
+     * 🔴 요약 카드의 금액은 **제거** 됐고(owner 가 아니다 · `wu-030-judgement-summary`),
+     *    🇰🇷/🌎 시장 요약은 **격자 밖 결론 영역으로 이동** 했다(`MarketPriceComparison`).
+     * 🟢 그래서 **전체 화면 기준으로는 여전히 「한 곳」** 이고, 규칙은 1 → 2 → **1** 로
+     *    돌아온 것이다 — 이 파일이 보는 구간(판정 카드)에 그 하나가 **없을** 뿐이다.
+     * 🔴🔴 **「0 이니까 아무것도 검사하지 않는다」가 되지 않게** 그 하나를 세는 계약을
+     *    `wu-141-r3-price-owner.test.ts` 가 **owner 를 직접 렌더해서** 가진다
+     *    (거기서 `toBe(1)`). 두 파일을 같이 읽어야 「정확히 한 번」이 증명된다.
      */
-    expect((mi.match(/₩116,600/g) ?? []).length).toBe(2);
+    expect((mi.match(/₩116,600/g) ?? []).length).toBe(0);
     // ③ 축 등급 — 레이더 그림(축 라벨)과 네 줄의 낱말이 서로 다른 층에 있고,
     //    별점 목록이 그림 아래 한 벌 더 붙지 않는다.
     expect(mi).not.toContain("★");
@@ -205,11 +219,71 @@ describe("같은 사실이 한 화면에 두 번 서지 않는다", () => {
     }
   });
 
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 WU-141-R3 §9 — **`hasOverseasRange` 의 owner 가 ③ 에서 ① 로 바뀌었다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 전에는 「아래 패널의 자기 집계」(`overseasMarketEvidence.figure != null`)가
+   *    그 입력이었다. R3 가 그 집계를 제거했으므로, 그대로 두면 문구가 **항상**
+   *    「🌎 해외 판매처 가격대는 확인되지 않았습니다」가 된다 —
+   *    🔴 「📊 시장 판매 판단」이 GBP 37 을 보여주는 화면에서도 그렇게 말한다.
+   *    **그것이 R3 가 만들 수 있었던 가장 위험한 거짓말이다.**
+   * 🟢 그래서 이제 입력은 **① 의 산출**(`buildPriceGuide(...,"OVERSEAS").pricedCount`)
+   *    이고, 아래 두 테스트가 **양방향으로** 잠근다:
+   * ```
+   * 후보 행 없음        → hasOverseasRange **false** → 「확인되지 않았습니다」  (정직)
+   * 가격 확인된 SAME 행 → hasOverseasRange **true**  → 「확인됐습니다」        (정직)
+   * ```
+   * 🔴 두 번째 테스트가 없으면 「언제나 false」인 구현도 통과한다 — 그래서 둘을 같이 둔다.
+   */
   it("되물음의 네 줄은 판정과 같은 입력에서 나온다 — 두 번째 판정이 아니다", async () => {
     await mount(BOTH_MARKETS);
     clickText("왜 이렇게 판단했나요?");
     const mi = visibleText(regionsOf(page().outerHTML).mi);
-    // withDomesticComparable은 CASE A · 동일상품 기준 · 해외 가격대 확인됨.
+    /**
+     * 🔴 `withDomesticComparable` 은 **국내 서버 집계** fixture 이고 **해외 후보 행이
+     *    없다** ⟹ ① 기준으로 해외 가격대는 **확인되지 않은 것이 맞다**(정직한 false).
+     */
+    for (const line of buildMiVerdictExplanation({
+      marketCase: "A",
+      hasComparable: true,
+      evidenceBasis: "EXACT",
+      hasOverseasRange: false,
+    })) {
+      expect(mi, `${line}이(가) 없다`).toContain(line);
+    }
+  });
+
+  it("🔴 가격이 확인된 해외 SAME 후보가 있으면 되물음이 「확인됐다」로 바뀐다", async () => {
+    await mount({
+      ...BOTH_MARKETS,
+      /** 🟢 ① 의 게이트를 그대로 통과하는 행 — tier SAME · 판매중 · `VERIFIED_CURRENT`. */
+      transientRows: [
+        {
+          source: "SELLER_URL",
+          domain: "junioredition.com",
+          title: "Bobo Choses Terry Bermuda Shorts",
+          imageUrl: null,
+          soldOut: false,
+          discoveredUrl: "https://junioredition.com/products/b226ac043",
+          matchTruth: "EXACT_IDENTIFIER",
+          priceTier: "EXACT",
+          crossSellerVerdict: "SAME",
+          confidence: 1,
+          matchReasons: [],
+          crossSellerBlockers: [],
+          crossSellerConflicts: [],
+          priceAmount: 37,
+          priceCurrency: "GBP",
+          priceStatus: "VERIFIED_CURRENT",
+          market: "OVERSEAS",
+          basis: "TLD",
+        } as never,
+      ],
+    });
+    clickText("왜 이렇게 판단했나요?");
+    const mi = visibleText(regionsOf(page().outerHTML).mi);
     for (const line of buildMiVerdictExplanation({
       marketCase: "A",
       hasComparable: true,
