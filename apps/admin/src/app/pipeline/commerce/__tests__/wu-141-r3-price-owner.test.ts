@@ -192,6 +192,54 @@ describe("C-1 seller-facing 가격 숫자의 owner 는 「📊 시장 판매 판
     expect(html).not.toContain("약 ");
   });
 
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 **변이 M-R3-09 가 기존 계약을 통과했다 — 그래서 이 계약을 새로 만들었다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 `selectMiSameCandidates` 의 `tier !== "SAME"` 게이트를 `=== "CONFLICT"` 로
+   *    **느슨하게** 바꿔 돌렸더니 `wu-136` · `wu-139` · `wu-140` **68건이 전부 통과** 했다.
+   *    원인은 그 세 파일의 fixture 에 **PRESUMED_SAME/SIMILAR 행이 가격을 들고 들어오는
+   *    모양이 없었다** 는 것이다 ⟹ 「보류 후보가 가격 참고로 샌다」를 **아무도 막고
+   *    있지 않았다.**
+   * 🔴 그런데 그것은 CPO 가 STEP 5 에서 **명시적으로 금지** 한 둘이다:
+   * ```
+   * SIMILAR → 가격비교            ❌
+   * PRESUMED_SAME → 최종 SAME     ❌
+   * ```
+   * 🟢 그리고 WU-123/125 가 실측했다 — **보류 4건이 전부 Human DIFFERENT** 였다.
+   *    즉 보류를 가격 축에 넣으면 **다른 상품의 가격** 이 셀러의 기준가가 된다.
+   * 🔴 MI 를 바꾸는 계약이 **아니다** — 이미 그렇게 동작하는 것을 **고정** 할 뿐이다.
+   */
+  it("C-1-d 🔴 보류·유사 후보는 가격이 확인돼도 가격 축에 들어가지 않는다", () => {
+    const pending = sameRow({
+      matchTruth: null,
+      crossSellerVerdict: "PRESUMED_SAME",
+      priceAmount: 21,
+      priceCurrency: "GBP",
+      discoveredUrl: "https://villagekids.co.uk/p/1",
+      domain: "villagekids.co.uk",
+    });
+    const similar = sameRow({
+      matchTruth: null,
+      crossSellerVerdict: "SIMILAR",
+      priceAmount: 19,
+      priceCurrency: "GBP",
+      discoveredUrl: "https://other.example/p/2",
+      domain: "other.example",
+    });
+    const html = renderOwner([pending, similar]);
+    /** 🔴 두 금액이 **어디에도** 서지 않는다 — 기준가로도, 범위의 끝으로도. */
+    expect(html).not.toContain("21");
+    expect(html).not.toContain("19");
+    /** 🟢 그런데 **버려지지도 않는다** — 보류가 몇 건인지는 말한다(WU-133 의 그 문장). */
+    expect(html).toContain(MARKET_JUDGEMENT_TITLE);
+    /** 🟢 SAME 행을 섞으면 그 가격만 선다 — 게이트가 «행 단위» 로 돈다는 증거다. */
+    const mixed = renderOwner([pending, similar, sameRow()]);
+    expect(mixed).toContain("37");
+    expect(mixed).not.toContain("21");
+  });
+
   it("C-1-c 조회가 돌지 않았으면 영역 자체가 서지 않는다 — 「후보 0」과 다른 사실이다", () => {
     expect(renderOwner(null)).toBe("");
     /** 🟢 돌았는데 0 건이면 영역은 **선다**(WU-130 ② 가 세운 그 구분). */
