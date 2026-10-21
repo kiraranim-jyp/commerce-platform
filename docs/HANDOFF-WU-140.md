@@ -87,6 +87,23 @@ STEP 10 후보 접기  🟢 WU-136 — 후보 구역 넷 + `▸ MI 상세 분석
 
 ## ④ 🟡 다음 세션이 **바로 구현할 것** (설계 확정 · 조사 불필요)
 
+### ⒜-0 🔴🔴 **이동의 «실제 구조» — 다음 세션이 먼저 볼 것** (2026-10-21 확인)
+```
+🔴 두 컴포넌트는 **형제가 아니다.**
+   3655  {snapshotId ? (
+   3656     <DomesticPriceIntelligencePanel …>        ← 조건부 블록 A
+   …(약 170줄)…
+   3818     {/* 주석 — 「**맨 위** 에 둔다」가 이미 적혀 있다(그런데 패널보다 뒤다) */}
+   3826     <MarketPriceComparison …/>                ← 접힘/앵커 블록 안쪽
+   3831     <DomesticShopSearch …/>
+   3847     <ComparisonShopSearch …/>
+🔴 그래서 「한 줄 이동」이 아니다 — **3826 의 JSX 를 잘라 3655 조건부 블록 «앞»
+   으로 옮겨야** 하고, 그 사이 구조(접힘 · 앵커 div · 조건)를 먼저 읽어야 한다.
+🟢 props 는 그대로다(`marketComparison?.rows` 등 · state 가 이미 CommerceWorkspace 에 있다).
+🔴 `PRICE_COMPARISON_ANCHOR_ID` div 와 `scrollIntoView`(:837)는 **그 자리에 남긴다.**
+🔴 3818 의 주석(「맨 위에 둔다」)도 **같이 옮긴다** — 안 옮기면 주석이 거짓말을 한다.
+```
+
 ### ⒜ 결론을 맨 위로 — **파일 1곳 · 이동 1건**
 ```
 CommerceWorkspace.tsx

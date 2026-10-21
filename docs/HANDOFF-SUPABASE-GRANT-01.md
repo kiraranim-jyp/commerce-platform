@@ -122,6 +122,56 @@ RLS ON · 정책 0 = 31/32  +  anon 에 **DELETE/UPDATE/TRUNCATE 까지** GRANT
 
 ---
 
+## ③-C 🟡 **PART D 완료 — `_prisma_migrations` 판정 = 「추가 확인 필요」**
+
+🔴 **변경 0** — REVOKE · RLS 토글 · POLICY · GRANT 변경을 **하나도 실행하지 않았다**(CPO 금지).
+
+### 실측
+```
+① Prisma 접속 — `schema.prisma:7·8` = `env("DATABASE_URL")` / `env("DIRECT_URL")`
+   ⟹ 🟢 **postgres direct connection** 이다. Data API(PostgREST)를 **쓰지 않는다**
+② 앱 코드가 `_prisma_migrations` 를 참조하는 곳 — **0건**(apps·packages 전수 · 테스트 제외)
+③ 🟢 `@prisma/client` 를 import 하는 **운영** 파일 — **0건**(테스트 2개뿐)
+   ⟹ 런타임은 Prisma 를 쓰지 않는다. Prisma 는 **migration/스크립트 도구** 다
+```
+
+### 🟡 판정 — **추가 확인 필요** (SAFE 로 올리지 않는다)
+```
+🟢 SAFE 쪽 근거 — ⒜ Data API 소비자 0 ⒝ 앱 참조 0 ⒞ Prisma 는 postgres 로 접속하므로
+   anon/authenticated GRANT 가 **필요하지 않다** ⟹ 그 둘을 revoke 해도 migration 은 돈다
+🔴 그래도 SAFE 로 **적지 않는 이유 둘**:
+   ⒜ Supabase 플랫폼이 그 테이블을 **자체적으로** 읽는지 확인하지 못했다
+      (Studio 의 migration 뷰 · Supabase CLI `db` 명령 · 플랫폼 내부 작업)
+   ⒝ 🔴 RLS OFF 를 **ON 으로 바꾸는 것** 은 더 위험하다 — Prisma 는 `postgres`(테이블
+      소유자)로 접속하고 소유자는 기본적으로 RLS 를 우회하지만, `FORCE ROW LEVEL
+      SECURITY` 나 소유자 변경이 끼면 **migration 이 멈춘다**. 🔴 그 조건을 실측하지 않았다
+⟹ 🔴 **KEEP AS-IS + 추가 확인 필요.** 확인해야 할 것은 「Supabase 플랫폼이 이 테이블에
+   anon/authenticated 로 접근하는가」 하나이고, 그것은 **Supabase 대시보드/지원 문서**
+   영역이다(CTO 가 읽을 수 없다) ⟹ CPO 판정 사안.
+🟢 🔴 그리고 이것은 **10/30 기한과 무관** 하다 — 기존 테이블이고 권한이 유지된다.
+```
+
+---
+
+## ③-D 🟡 **PART E 준비 — 10/30 검증은 «그 날» 한다**
+
+🔴 **production test table 을 만들지 않았다**(CPO 금지). 🟢 검증 절차만 고정한다:
+```
+그 날 할 것 (한 번 · 테스트 테이블 1개)
+  ① create table public.grant_probe_YYYYMMDD (id uuid primary key);
+  ② 즉시 `supabase-grant-audit.mjs` 재실행 → 그 테이블의 anon/auth/svc GRANT 를 읽는다
+  ③ 🔴 핵심 질문 — `postgres → public [r]` default ACL 이 **그 테이블에도 적용됐는가**
+  ④ drop table (cleanup)
+분기
+  Case A 자동 적용됨   → 현재 migration 계약 유지 · 추가 권한 변경 불필요
+  Case B 자동 부여 안 됨 → 🟢 **anon 은 그대로 두고**(소비자 0) authenticated/
+                          service_role 중 **실제 필요한 role 만** migration 에 명시
+  Case C 예상과 다름    → 🔴 **임의 수정 금지 · STOP + 증거 보고**
+```
+🟢 ②의 하니스는 **이미 커밋돼 있다** — 새로 만들 것이 없다.
+
+---
+
 ## ④ 🟡 다음 세션이 할 것 (CPO STEP 1~12 중 남은 것)
 
 ```
