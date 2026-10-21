@@ -237,3 +237,63 @@ B226AC010 🇰🇷  beaumonde — 🟢 **SAME 은 됐다**. 🔴 그런데 **가
    🔴 그 가드는 **이중 잠금의 한 겹**(WU-059 계약)이라 건드리면 다른 보호가 같이 열린다.
 ④ 🇰🇷 목표는 **MI 로 닫히지 않는다** — beaumonde 는 **가격**, biskuit 은 **축 수**다.
 ```
+
+---
+
+# 🔴🔴🔴 STEP 3 결과 — **네 변경을 전부 재고 전부 되돌렸다 (구현 0)**
+
+🟢 회귀 **621 files / 8,664 passed · 0 failed** · typecheck **0** · 운영 동작 **0 변화**
+(남긴 것은 **주석과 계약** 뿐 · `codeEvidence` 는 기존 호출을 hoist 한 것으로 동작 동일).
+
+## 2상품 GT 만 보면 전부 GO 로 보였다 — 🔴 그게 함정이었다
+```
+C1 AUDIENCE_LINE 비차단 + C2 MODEL_CODE 비충돌 + C3 품번 exact⟹brandOk
+   → recall **6/19 → 9/19** · DIFFERENT leak **0 / 0**
+C4 `.kr`+가격없음 ⟹ KR  → 🇰🇷 「동일상품 1곳 · 가격 확인 필요 1곳」 (CPO P2/P3 달성)
+```
+🔴🔴 **그런데 전체 회귀가 넷 다 막았다**:
+
+| 변경 | 전체 회귀 | 막은 것 | 판정 |
+|---|---|---|---|
+| **C1** AUDIENCE_LINE | 🔴 **13건** | `cross-seller-matching` 5쌍 negative fixture | 🔴 **NO-GO** |
+| **C3** 품번⟹brand | 🔴 **16건 / 12파일** | `wu-057` · **`wu-068`(GT 63)** · `wu-060` · `wu-069` · `wu-037` · `fit-normalization` | 🔴 **HOLD** |
+| **C4** 시장/가격 분리 | 🔴 **4건** | `mi-020` · **`wu-060`(알림 체인)** · `wu-063` · `wu-077` | 🔴 **HOLD** |
+| **C2** MODEL_CODE | — | CPO 명시 금지(전면 해제) | 🔴 **금지** |
+
+### 🔴🔴 C1 이 가장 중요한 발견이다 — **그 축은 BABY 만 막고 있지 않았다**
+```
+원상품 430632(아동) ↔ bobochoses **Mush Monster Duo** all over T-shirt   → SAME 이 됐다
+                    ↔ bobochoses **Softpaw Monster** all over T-shirt    → SAME 이 됐다
+                    ↔ junioredition **Juicy Tomatoes** All Over Baby Tee → SAME 이 됐다
+                    ↔ junioredition **Bobo Choses Color** All Over Baby  → SAME 이 됐다
+```
+🔴 그 넷은 **BABY판이 아니라 «다른 그래픽»** 이다. 「all over T-shirt」 공통 어휘로 제목·
+상품군·소재·대상 축이 맞아떨어지고, **가르던 유일한 축이 연령 라인** 이었다.
+⟹ 🔴 CPO 절대조건(DIFFERENT → SAME = 0) **위반** · false SAME **13건**.
+
+🟡 **CPO 정책(BABY=CHILD)은 폐기가 아니다 — 범위를 좁혀야 한다**(다음 WU · CPO 판정):
+> 「연령 라인이 달라도 **핵심 상품명 토큰이 사실상 동일** 할 때만 비차단」
+> 🟢 위 넷은 그래픽 **이름이 서로 다르다** ⟹ 그 조건이 넷을 가른다.
+> 🔴 단 **새 규칙** 이고 「사실상 동일」의 문턱 설계 + 표본이 선행이다.
+
+### 🔴 C4 가 막힌 이유 — 시장 자격이 **알림 체인의 입구** 다
+```
+wu-060 「CF-3 승격 5건 중 국내(KR) 시장 자격이 **0** 이다」  ← 그 0 이 알림 체인을 닫는다
+wu-063 「KRW 가 아니면 국내 시장이 되지 않는다(`.kr` 이어도 충돌)」
+```
+🔴 국내 축은 `computeMarketAlert → openAlertIfNotActive` 로 **영속 `price_alerts` 행** 을
+만들 수 있다(WU-039/059 계약). ⟹ 🔴 시장 자격을 넓히는 변경은 **그 체인 측정이 선행** 이다.
+🟡 그 측정은 `wu-059`/`wu-060` 이 이미 하니스를 갖고 있다 — 거기서 이어가면 된다.
+
+## 🟢 그래서 남긴 것 — 되돌린 «사실» 을 계약으로 잠갔다
+`packages/crawler/src/comparison-search/__tests__/wu-143-identity-expressiveness.test.ts`
+(**10건**) 이 ① 품번 exact 로 브랜드를 확인하지 않는다 ② BABY↔CHILD 보류가 **그대로 선다**
+③ MODEL_CODE 충돌이 **그대로다** 를 단언한다. 🔴 다음 사람이 같은 변경을 다시 넣으면
+**여기서 먼저 걸리고** 각 축 주석에서 **왜 막혔는지** 를 읽는다.
+
+## 🔴 그리고 이것이 이 WU 의 교훈이다
+```
+2상품 GT(19 SAME / 6 DIFFERENT)에서 leak 0  ≠  안전
+리포의 **목적성 negative fixture** 와 **precision 측정 계약(GT 63)** 이 전부 반대를 말했다
+⟹ 🔴 「내 표본에서 leak 0」을 GO 근거로 쓰지 않는다
+```
