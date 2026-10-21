@@ -748,6 +748,62 @@ export function compareCrossSellerProducts(
 
   /* ── 1. 강한 반증부터 모은다 ── */
 
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 WU-143 C3 — **브랜드 품번이 글자 그대로 같으면 브랜드가 «확인된» 것이다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 실측이 막힌 자리(WU-142/143 · 국내 human SAME 2건이 **같은 모양**):
+   * ```
+   * beaumonde.co.kr  품번 **B226AC010 exact** · 🔴 후보측 brand **공백**
+   *                  ⟹ brandKnown false ⟹ `BRAND_UNCONFIRMED` + brandOk false
+   *                  🔴 그런데 corePoints 는 **이미 5** 였다(품번 3 + 상품군 1 + 대상 1)
+   * biskuit.kr       품번 **B226AC009 exact** · 🔴 후보측 brand **"비스킷"**(샵 이름)
+   *                  ⟹ `BRAND_MISMATCH`
+   * ```
+   * 🔴🔴 **그리고 두 페이지에는 브랜드 신호가 «없다»**(WU-143 ② 실측 · HTTP 200 전수):
+   *    JSON-LD `Product.brand` · `Organization.name` · `og:site_name` ·
+   *    `meta product:brand` → beaumonde **0/4** · biskuit 은 있는 자리가 전부 **샵 이름**.
+   *    ⟹ 🔴 브랜드 **문자열** 로는 영구히 확인할 수 없다.
+   *
+   * 🟢 **그런데 더 강한 증거가 이미 있다** — 후보 페이지가 **원상품의 브랜드 품번을
+   *    글자 그대로** 들고 있다. 브랜드 품번은 그 브랜드의 코드 체계이고, 그것이 후보에
+   *    있다는 것은 **그 브랜드 상품을 판다는 뜻** 이다.
+   *    🟢 새 논리가 아니다 — `confirmBrandCodeInEvidence`(WU-004)가 품번을 title·url·sku
+   *       에서 찾는 것과 **같은 축** 이다.
+   *
+   * 🔴🔴 **금지축을 건드리지 않는다**:
+   * ```
+   * ❌ 「샵 이름 = 브랜드」   (CPO 금지 · biskuit 의 "비스킷" 을 브랜드로 쓰지 않는다)
+   * ❌ 「도메인 = 브랜드」     (WU-080 계약 `wu-080-brand-producer` 가 2 FAIL 로 잠근다)
+   * ❌ 브랜드 문자열 생성     — `x.brand`/`y.brand` 는 **한 글자도** 바뀌지 않는다
+   * ❌ threshold · 축 점수    — 바뀌는 것은 **boolean 둘** 뿐이다
+   * ```
+   * 🔴 `exact` 만 쓴다 — `partial` 은 **쓰지 않는다**(접두 공유·숫자 코어는 다른 상품에서도
+   *    난다 · `model-code.ts` 가 그 위험을 길게 적어 뒀다).
+   *
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 **그런데 구현하지 «않았다» — 전체 회귀가 12파일 16건을 잡았다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * `brandKnown`/`brandOk` 를 품번 exact 로 충족시켜 봤더니 아래가 전부 깨졌다:
+   * ```
+   * wu-057  「품번이 맞아도 브랜드 미확인이면 SAME 이 아니다」  ← WU-057 이 **의도한** 결정
+   * wu-037  「양쪽 brand 가 없으면 브랜드를 지어내지 않는다」
+   * wu-068  통합 GT **63쌍** precision 측정 · wu-060 False EXACT · wu-069 품번 충돌
+   * wu-059/063/064/077/081 · fit-normalization
+   * ```
+   * 🔴 즉 이 변경은 「의도된 계약 갱신 2건」이 아니라 **precision 측정 기준선 전체** 를
+   *    움직인다 ⟹ **독자적인 측정 주기(GT 63 재측정 + false SAME 전수)가 선행이다.**
+   * 🔴 그 측정 없이 밀면 CPO 절대조건(DIFFERENT → SAME = 0)을 **검증하지 못한 채** 바꾸는 것이다.
+   *
+   * 🟡 **그래서 `codeEvidence` 만 남겨 뒀다**(아래 MODEL_CODE 축이 그대로 쓴다) —
+   *    판정 동작은 **한 글자도 바뀌지 않았다.** 다음 WU 가 이 자리에서 바로 이어간다.
+   * 🔴 **알려진 의존(그때 반드시 측정할 것)** — `m.luxboy.com` 은 품번 **exact** 인데
+   *    human **DIFFERENT** 다. C3 를 켜면 그 쌍을 막는 것이 **`NO_TITLE_OVERLAP` 하나** 가
+   *    되므로, 그 축을 완화하는 변경과 **절대 같이** 가면 안 된다.
+   */
+  const codeEvidence = compareModelCode(x.brandModelCode, y.brandModelCode);
   const brandKnown = Boolean(x.brand && y.brand);
   const brandOk = brandKnown && brandsCompatible(x.brand!, y.brand!);
   if (brandKnown && !brandOk) {
@@ -817,7 +873,9 @@ export function compareCrossSellerProducts(
   // 여기서 다시 쓰면 같은 보호가 그대로 적용된다. 한쪽이라도 품번이 없으면
   // "unavailable"이고, 그건 충돌이 아니다 — 판매처가 서로 다른 SKU를 쓰는 것이
   // 정상이라는 이 작업의 출발점이 바로 그것이다.
-  const modelCode = compareModelCode(x.brandModelCode, y.brandModelCode);
+  /** 🟢 WU-143 — 위에서 이미 한 번 계산했다(C3). **두 번 부르지 않는다** — 같은 입력이
+   *  두 값을 내는 모양을 만들지 않는 것이 이 저장소의 반복 원칙이다. 판정 규칙은 불변. */
+  const modelCode = codeEvidence;
   if (modelCode === "conflict") {
     conflicts.push({ conflict: "MODEL_CODE", detail: `모델코드 ${x.brandModelCode} ↔ ${y.brandModelCode}` });
   }
@@ -930,6 +988,68 @@ export function compareCrossSellerProducts(
   // 충돌이 아니라 보류이고, 일치해도 점수를 주지 않는다 — compareAudienceLine
   // 주석의 두 이유(성인↔아동과 같은 강도를 줄 수 없다 · 기존 쌍의 점수를 한 점도
   // 움직이지 않는다) 그대로다.
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 WU-143 STEP 2 — **BABY/CHILD 는 동일상품이다** (CPO 확정 2026-10-22)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 위 `compareAudienceLine` 주석은 `MATCHING-3.2-B(CEO 지시, 2026-09-14)` 의 전제를
+   *    적어 뒀다 — 「같은 그래픽의 BABY판과 CHILD판은 **다른 상품이 맞지만** … SAME 으로
+   *    올라가는 것만 막는다」. **그 전제가 폐기됐다.**
+   *
+   * 🔴🔴 **CEO 육안 GT 가 반대를 말했다**(2026-10-19 · WU-112 · 실측 5건):
+   * ```
+   * B226AC010 ↔ **B226AB046**  "Booty Ghosts T-shirt"        제목 동일 → human **SAME**
+   * B226AC009 ↔ **B226AB040**  "Hug Hairy Monster T-shirt"   제목 동일 → human **SAME**
+   * junioredition "Hug Hairy Monster **Baby** T-Shirt"                 → human **SAME**
+   * billsstore    "… T-Shirt **Baby**"                                  → human **SAME**
+   * cissywears    "**Baby** Hug Hairy Monster T-Shirt"                  → human **SAME**
+   * ```
+   * 🟢 CPO 확정 — 「같은 그래픽의 BABY/CHILD 는 **MI 상 동일상품으로 취급** 한다.
+   *    재고/판매 대상 차이는 **상품 재고·판매 운영에서** 처리한다.」
+   *    ⟹ 이 축의 목적(시장가격 비교)에서 연령 라인은 **동일성을 가르지 않는다.**
+   *
+   * 🔴🔴 **그래서 보류를 «없앴다»** — 관측은 `reasons` 에 그대로 남긴다(아래 참고).
+   *
+   * 🟢🟢 **그러면 BABY 인 human DIFFERENT 는 무엇이 막는가 — 측정했다**:
+   * ```
+   * tinyapple "Bobo Choses **Baby** Booty Ghosts **sweatshirt**"  human DIFFERENT
+   *    → 🟢 `GARMENT_FORM`(SHIRT ↔ SWEATSHIRT)이 **독립적으로** 막는다(바로 아래 축)
+   * junioredition **B226AC141** "Booty Ghosts T-Shirt"            human DIFFERENT
+   *    → 🟢 `COLOR`(GREY ↔ BLUE) 충돌이 **독립적으로** 막는다
+   * ```
+   * ⟹ 🟢 CF 실측(2상품 · GT 19 SAME / 6 DIFFERENT): **DIFFERENT 누출 0 유지.**
+   * 🔴 **그래서 `GARMENT_FORM`·`COLOR` 방어를 건드리지 않았다** — 그 둘이 이 변경의 전제다.
+   * 🔴 `MODEL_CODE` 도 **건드리지 않았다**(CPO 명시 금지 — 전면 해제는 과적합 위험).
+   */
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 WU-143 STEP 2 — **되돌렸다. 이 보류를 없애면 false SAME 13건이 생긴다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🟢 CPO 정책은 맞다 — 「같은 그래픽의 BABY/CHILD 는 동일상품」(2026-10-22).
+   * 🔴🔴 **그런데 이 blocker 는 그 일만 하고 있지 않았다.** 제거하고 전체 회귀를 돌리니
+   *    `cross-seller-matching.test.ts` 의 **5쌍 negative fixture 가 13건 깨졌다**:
+   * ```
+   * 원상품 430632(아동) ↔ bobochoses **Mush Monster Duo** all over T-shirt   → SAME 이 됐다
+   *                     ↔ bobochoses **Softpaw Monster** all over T-shirt    → SAME 이 됐다
+   *                     ↔ junioredition **Juicy Tomatoes** All Over Baby Tee → SAME 이 됐다
+   *                     ↔ junioredition **Bobo Choses Color** All Over Baby  → SAME 이 됐다
+   * ```
+   * 🔴 그 후보들은 **BABY판이 아니라 «다른 그래픽»** 이다. 「all over T-shirt」라는 공통
+   *    어휘 때문에 제목·상품군·소재·대상 축이 맞아떨어지고, **그 쌍들을 가르던 유일한
+   *    축이 이 연령 라인** 이었다. ⟹ 없애면 **다른 상품이 동일상품 가격에 들어온다.**
+   *
+   * 🔴🔴 **CPO 절대조건 위반이다** — 「DIFFERENT → SAME 오판 = 0 · 단 한 건이라도 새면 실패」.
+   * 🟢 2상품 GT(19 SAME / 6 DIFFERENT)에서는 leak 0 이었다 — 🔴 **그 표본에 이 모양이
+   *    없었을 뿐** 이고, 리포의 **목적성 negative fixture 가 그것을 잡았다.**
+   *    ⟹ 「표본에서 leak 0」을 「안전」으로 읽지 않는다(이 트랙의 반복 교훈).
+   *
+   * 🟡 **그래서 CPO 정책을 구현하려면 범위를 좁혀야 한다**(다음 WU · CPO 판정 사안):
+   *    「연령 라인이 다르더라도 **핵심 상품명 토큰이 사실상 동일** 할 때만 비차단」 같은
+   *    조건이 필요하다 — 위 네 쌍은 그래픽 이름이 **서로 다르다**.
+   *    🔴 그것은 **새 규칙** 이고 표본 설계가 선행이다.
+   */
   const audienceLine = compareAudienceLine(x, y);
   if (audienceLine.outcome === "mismatch") {
     blockers.push({
@@ -967,6 +1087,9 @@ export function compareCrossSellerProducts(
    *    색상(COLOR·COLOR_VARIANT) · 모델(MODEL_CODE) · 구성(COMPOSITION) ·
    *    상품형태(GARMENT_FORM) · 연령라인(AUDIENCE_LINE) · 소재(MATERIAL) 는
    *    **전부 그대로** 막는다. 그것들이 CPO 정의의 「DIFFERENT」 쪽이다.
+   * 🔴🔴 **WU-143 이 `AUDIENCE_LINE` 을 이 목록에서 빼려다 되돌렸다** — 그 blocker 를
+   *    없애니 **다른 그래픽** 5쌍이 SAME 이 됐다(false SAME 13건 · 그 축의 주석 참고).
+   *    ⟹ 이 목록은 **여섯 그대로** 다.
    * 🟢 사실 자체는 버리지 않는다 — 아래 `reasons` 에 **관측으로 남긴다**.
    */
   const sizeLineNote = size.systemOutcome === "mismatch" ? size.detail : null;
