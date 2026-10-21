@@ -148,16 +148,30 @@ describe("🇰🇷 국내 시장은 비교 대상이 없어도 서고, 대신 �
 /* ───────────────────────── 본문에 남는 것 / 남지 않는 것 ───────────────────────── */
 
 describe("본문 최상위에는 판정 + 세 블록 + 바닥 한 줄뿐이다", () => {
-  it("네 블록이 전부 있고, 그 밖의 블록은 하나도 없다", () => {
-    // MI-MARKET-EVIDENCE-1 — 🌎 해외 시장이 본문의 네 번째 블록으로 들어왔다.
-    for (const block of [
-      "<OriginalPriceView",
-      "<GlobalMarketHint",
-      "<MarketComparisonView",
-      "<OverseasMarketEvidenceView",
-      "<PriceChainView",
-    ]) {
+  /**
+   * 🔴🔴 WU-141-R3 — **「네 블록」에서 시장 두 블록이 빠졌다**(분류 B → 그중 둘은 D).
+   *
+   * 🔴 과거 계약은 `<MarketComparisonView>`(🇰🇷)와 `<OverseasMarketEvidenceView>`(🌎)가
+   *    **판정 카드 본문에 있을 것** 을 요구했다. 그 요구는 2026-09-12 CEO 지시
+   *    (「판정이 근거 없는 숫자로 읽힌다 → 시장 두 칸을 본문에」)에서 나왔고 그때는 옳았다.
+   *
+   * 🟢 그 지시의 **근거가 다른 방식으로 충족됐다** — WU-140-R1 이 결론 영역
+   *    「📊 시장 판매 판단」을 **격자 밖 최상단** 으로 올렸다. 이제 셀러는 판정보다
+   *    **먼저** 시장 결론을 읽는다 ⟹ 판정 카드 안에 시장 칸을 **다시** 둘 이유가 없고,
+   *    두면 **같은 가격의 두 번째 owner** 가 된다(전략 Gate ②: owner 는 하나).
+   *
+   * 🔴 그래서 이 줄은 **positive 에서 negative 로 옮겨간다** — 「본문에 있어야 한다」가
+   *    「본문에 다시 서면 FAIL」이 된다. 🟢 두 컴포넌트 자체는 **지우지 않았다**
+   *    (아래 `MarketComparisonView` 를 직접 렌더하는 계약들이 그 성질을 계속 본다).
+   *    막는 것은 **운영 렌더 자리** 다.
+   */
+  it("세 블록이 전부 있고, 그 밖의 블록은 하나도 없다", () => {
+    for (const block of ["<OriginalPriceView", "<GlobalMarketHint", "<PriceChainView"]) {
       expect(bodyCode).toContain(block);
+    }
+    // 🔴 D — 시장 두 블록은 판정 카드 본문에 **없다**(owner 는 「📊 시장 판매 판단」).
+    for (const moved of ["<MarketComparisonView", "<OverseasMarketEvidenceView"]) {
+      expect(bodyCode, `${moved}이(가) 판정 카드 본문에 되살아났다`).not.toContain(moved);
     }
     // 판단 근거(축·레이더)는 전부 접힘 안이다.
     for (const moved of ["<MiAxisStars", "<MiRadar", "<MiRadarSummary", "<MiVerdictAxes"]) {

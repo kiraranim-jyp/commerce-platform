@@ -7,6 +7,8 @@ import {
   type PriceHistoryResponse,
 } from "../DomesticPriceIntelligencePanel";
 import { GLOBAL_MARKET_HINT_LABEL, GLOBAL_MARKET_UNAVAILABLE_NOTE } from "../global-market";
+/** 🔴 WU-141-R3 — 드릴다운 라벨의 owner 에서 읽는다(문자열을 손으로 적지 않는다). */
+import { DOMESTIC_MARKET_DRILL_DOWN, OVERSEAS_MARKET_DRILL_DOWN } from "../market-evidence";
 import { buildMiVerdictExplanation, MI_VERDICT_EVIDENCE_TOGGLE_LABEL } from "../mi-verdict-copy";
 import { PRICE_MEANING_LABEL, PRICE_SECTION_TITLE } from "../price-hierarchy";
 import { computeProfitabilityNumbers } from "../profitability";
@@ -370,7 +372,27 @@ describe("패널 전체를 렌더했을 때 첫 화면", () => {
   const html = renderPanel(baseData());
   const text = visibleText(html);
 
-  it("셀러가 보는 것은 판정 · 원본 상품 · 국내 시장 · 해외 시장 · 수익성 · 되물음 한 줄이다", () => {
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴 WU-141-R3 — **판정 카드에서 시장 두 블록이 빠졌다**(분류 C → 재작성)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 과거 계약은 셀러가 읽는 순서를 「원본 → 🇰🇷 국내 → 🌎 해외 → 수익성」으로
+   *    고정했고, 그 순서는 **판정 카드 안** 의 순서였다.
+   * 🟢 WU-140-R1 이 그 「🇰🇷 국내 / 🌎 해외」를 **격자 밖 최상단** 의 결론 영역
+   *    「📊 시장 판매 판단」으로 올렸다 ⟹ 읽는 순서는 **보존되고 더 앞으로 갔다**:
+   * ```
+   * 📊 시장 판매 판단(🇰🇷/🌎)   ← 격자 «밖» · 결론 · 가격 owner 하나
+   *   ↓
+   * 판정 · 원본 상품 · 수익성     ← 판정 카드(이 파일이 보는 구간)
+   * ```
+   * 🔴 그래서 이 계약은 **「카드 안에 시장 칸이 없다」로 뒤집힌다.** 전략 Gate ② 는
+   *    「국내/해외를 **하나의** 📊 에서」이고, 카드가 같은 사실을 또 적으면 owner 가 둘이다.
+   * 🟢 시장 결론 자체의 계약은 **`wu-140-market-first` · `wu-136-market-judgement-render`
+   *    · `wu-139-price-guide`** 가 그 owner 를 직접 렌더해서 본다 — 검증이 **사라지지 않고
+   *    자리를 옮겼다.**
+   */
+  it("셀러가 보는 것은 판정 · 원본 상품 · 수익성 · 되물음 한 줄이다", () => {
     // 판정
     expect(text).toContain("판매 추천");
     expect(text).toContain("대한민국 시장 기준");
@@ -378,13 +400,23 @@ describe("패널 전체를 렌더했을 때 첫 화면", () => {
     expect(text).toContain(PRICE_SECTION_TITLE.ORIGINAL);
     expect(text).toContain("€75.00");
     expect(text).toContain(`ⓘ ${GLOBAL_MARKET_HINT_LABEL}`);
-    // 🇰🇷 국내 시장 — 대표 가격은 언제나 근거의 두께와 **등급**을 달고 나온다.
-    expect(text).toContain(PRICE_SECTION_TITLE.DOMESTIC_COMPETITION);
-    expect(text).toContain("₩116,600");
+    /**
+     * 🔴 D — 시장 두 칸과 그 **대표 숫자** 가 카드에 없다. 🟢 데이터(`baseData()`)에는
+     *    그 값이 **그대로 있다** — 사라진 것은 데이터가 아니라 **두 번째 표시 자리** 다.
+     */
+    expect(text).not.toContain(PRICE_SECTION_TITLE.DOMESTIC_COMPETITION);
+    expect(text).not.toContain(PRICE_SECTION_TITLE.OVERSEAS_MARKET);
+    expect(text).not.toContain("₩116,600");
+    expect(text).not.toContain("🟢 동일상품 기준");
+    /**
+     * 🔴🔴 **이 계약이 내 과잉 단언을 잡았다 — 그 사실을 남긴다.**
+     *    1차에 `「비교 판매처 3곳」도 없다` 를 넣었는데 **FAIL** 했다. 그 문자열은
+     *    요약 카드의 **「비교 근거」** 줄(`domestic.scopeLabel`)이고 **금액이 아니다** —
+     *    전략 Gate ① 「MI 판단」에 속해 **남는 것이 맞다**.
+     * 🔴 ⟹ R3 가 지우는 것은 **「가격 숫자」** 이고 「시장 관련 모든 글자」가 아니다.
+     *    그 둘을 섞으면 셀러가 근거의 두께를 못 보게 된다(정보 손실).
+     */
     expect(text).toContain("비교 판매처 3곳");
-    expect(text).toContain("🟢 동일상품 기준");
-    // 🌎 해외 시장 — 조회 결과가 아직 없으면 숫자를 지어내지 않고 그 사실만 말한다.
-    expect(text).toContain(PRICE_SECTION_TITLE.OVERSEAS_MARKET);
     // 수익성 — 판정 한 줄 · 착지원가 · 권장 판매가 · 예상 이익 · ⓘ 기준
     expect(text).toContain(PRICE_SECTION_TITLE.PROFITABILITY);
     expect(text).toContain("설정 마진 기준 판매 가능");
@@ -443,12 +475,19 @@ describe("패널 전체를 렌더했을 때 첫 화면", () => {
     expect(html).not.toContain("<svg");
   });
 
-  it("펼침 없이 서는 것은 접힘 셋과 드릴다운 둘이고, 열린 것은 하나도 없다", () => {
+  /**
+   * 🔴 WU-141-R3 — 드릴다운 둘(`▸ 국내 가격 보기` · `▸ 해외 가격 보기`)은 시장 두
+   *    블록 **안에** 있었다 ⟹ 그 블록이 결론 영역으로 가면서 **같이 갔다**.
+   * 🟢 「도착하자마자 닫혀 있다」는 규칙은 **그대로** 다 — 숫자만 5 → 3 이다.
+   */
+  it("펼침 없이 서는 것은 접힘 셋이고, 열린 것은 하나도 없다", () => {
     // 접힘 셋: ⓘ 글로벌 시장 가격 · ⓘ 가격 계산 기준 · 왜 이렇게 판단했나요?
-    // 드릴다운 둘: ▸ 국내 가격 보기 · ▸ 해외 가격 보기(MI-MARKET-EVIDENCE-1).
     // 열림 캐럿(▾)이 하나도 없다는 것이 "도착하자마자 닫혀 있다"의 증거다.
     expect(html).not.toContain("▾");
-    expect((html.match(/▸/g) ?? []).length).toBe(5);
+    expect((html.match(/▸/g) ?? []).length).toBe(3);
+    /** 🔴 드릴다운이 카드로 되돌아오면 FAIL — 그 둘의 집은 「📊 시장 판매 판단」이다. */
+    expect(visibleText(html)).not.toContain(DOMESTIC_MARKET_DRILL_DOWN);
+    expect(visibleText(html)).not.toContain(OVERSEAS_MARKET_DRILL_DOWN);
   });
 });
 
@@ -466,10 +505,21 @@ describe("국내 비교상품이 없을 때", () => {
    * 게이트가 고르는 결과이지 "빈 칸을 두지 않는다"는 원칙이 아니다 — 빈 칸 대신
    * **정직한 빈 상태 한 칩**이 선다.
    */
-  it("블록은 서되 숫자도 범위도 없이 빈 상태만 말한다", () => {
-    expect(text).toContain(PRICE_SECTION_TITLE.DOMESTIC_COMPETITION);
-    expect(text).toContain("⚪ 검색 데이터 없음");
-    // 근거가 0건이면 개수도 등급도 말하지 않는다(없는 근거를 세지 않는다).
+  /**
+   * 🔴🔴 WU-141-R3 — **「빈 상태를 정직하게 말한다」는 규칙의 owner 가 바뀌었다**(분류 C).
+   *
+   * 🟢 규칙 자체는 **살아 있고 더 강해졌다** — 「후보가 있는데 가격이 없을 때
+   *    『후보 없음』으로 표현하지 않는다」는 R3 지시서 §⑤ 의 문장이고, 그 계약은
+   *    결론 영역의 owner 에서 본다(`wu-140-market-first` 의 `marketEmptyNote` ·
+   *    `marketUnresolvedNote` · `wu-139-price-guide` 의 `PRICE_GUIDE_EMPTY`).
+   * 🔴 여기서 단언할 수 있는 것은 **「판정 카드가 그 사실을 두 번 적지 않는다」** 다.
+   *    카드가 빈 상태 칩을 또 세우면 셀러는 같은 사실을 두 곳에서 읽고, 둘이
+   *    어긋나는 순간(한쪽은 「없음」·한쪽은 금액) 신뢰가 깨진다 — 그것이 R3 가 고친 것이다.
+   */
+  it("판정 카드는 국내 시장의 빈 상태를 다시 적지 않는다", () => {
+    expect(text).not.toContain(PRICE_SECTION_TITLE.DOMESTIC_COMPETITION);
+    expect(text).not.toContain("⚪ 검색 데이터 없음");
+    // 🟢 없는 근거를 세지 않는다는 원칙은 그대로 — 카드에 거짓 개수/등급이 없다.
     expect(text).not.toContain("동일상품 기준");
     expect(text).not.toContain("비교 판매처 0곳");
   });
@@ -536,10 +586,11 @@ describe("글로벌 시장 관측이 없을 때도 ⓘ 글로벌 시장 가격�
     expect(hint).not.toContain("if (summaryLine == null) return");
   });
 
-  it("접힘 수는 두 상태에서 같다 — 접힘 셋 + 드릴다운 둘, 전부 닫혀 있다", () => {
+  it("접힘 수는 두 상태에서 같다 — 접힘 셋, 전부 닫혀 있다", () => {
     // 관측이 있든 없든 어포던스의 개수가 같아야 한다. 개수가 상태에 따라
     // 달라지면 셀러는 "내가 뭘 안 해서 하나가 없나"를 묻게 된다.
-    expect((html.match(/▸/g) ?? []).length).toBe(5);
+    // 🔴 WU-141-R3 — 드릴다운 둘이 결론 영역으로 옮겨가 5 → 3 이다(규칙은 불변).
+    expect((html.match(/▸/g) ?? []).length).toBe(3);
     expect(html).not.toContain("▾");
   });
 

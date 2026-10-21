@@ -802,7 +802,18 @@ export function CommerceWorkspace({
    * 여기서 요약을 **만들지 않는다**. 패널이 완성한 값을 들고 있다가 MI로
    * 내려보내기만 한다(계산도 개수 세기도 없다).
    */
-  const [overseasMarketEvidence, setOverseasMarketEvidence] = useState<MarketEvidenceSummary | null>(null);
+  /**
+   * 🔴🔴🔴 WU-141-R3 C-5 — **이 state 는 더 이상 «채워지지» 않는다.**
+   *
+   * 🔴 전에는 `ComparisonShopSearch.onEvidenceChange` 가 **자기 검색** 으로 만든
+   *    해외 가격 집계(③)를 여기 넣고 MI 패널로 내려보냈다 ⟹ 「📊 시장 판매 판단」(①)
+   *    과 **게이트가 다른 두 번째 숫자** 가 화면에 섰다(CEO 가 본 그 불일치).
+   * 🟢 이제 해외 가격 판단의 owner 는 ① 하나이고, 그 패널이 필요한 것을
+   *    `buildMarketJudgement`/`buildPriceGuide` 로 **직접** 읽는다(사본 0).
+   * 🔴 **setter 를 남겨 두지 않는다** — 남기면 다음 사람이 그 배선을 다시 꽂는다.
+   *    🟢 state 자체는 `null` 상수로 두어 패널 prop 계약(기존 타입)을 깨지 않는다.
+   */
+  const overseasMarketEvidence: MarketEvidenceSummary | null = null;
   /**
    * 🔴🔴🔴 WU-132 ① — **MI 가 낸 후보/집계. 방향이 위와 «반대» 다.**
    *
@@ -3896,7 +3907,9 @@ export function CommerceWorkspace({
                     onRequestPriceReview={handleRequestPriceReview}
                     open={overseasEvidenceOpen}
                     onToggle={setOverseasEvidenceOpen}
-                    onEvidenceChange={setOverseasMarketEvidence}
+                    /* 🔴 WU-141-R3 C-5 — `onEvidenceChange` 배선을 **끊었다**(가격 owner 는 ① 하나).
+                       🔴 속성 위치의 주석은 `{/* … *\/}` 가 아니라 이 모양이어야 한다 —
+                          1차에 그렇게 써서 JSX 를 깨뜨렸고 typecheck 가 잡았다(WU-136 재발). */
                     originImageUrl={product.images[0] ? getSelectedImageUrl(product.images[0]) : null}
                     originPrice={product.priceValidity === "VALID" ? product.price.value : null}
                     /* P0-A.29-E ㉮ — 원상품 URL 이 고른 옵션. 후보에서 «같은 옵션» 의

@@ -22,14 +22,17 @@ import {
   tierGroupLabel,
   type MatchDisplayTier,
 } from "./match-display";
-// MI-MARKET-EVIDENCE-1 — 이 조회 결과를 MI 본문의 🌎 해외 시장 요약으로 옮기는
-// 유일한 함수. 개수·등급·가격대를 여기서 직접 만들지 않는다(요약 규칙이 두 벌이
-// 되면 요약과 이 표가 다른 말을 하게 된다).
-import {
-  buildOverseasMarketEvidence,
-  type MarketEvidenceSummary,
-  type OverseasMarketCandidateInput,
-} from "./market-evidence";
+/**
+ * 🔴🔴 WU-141-R3 C-5 — **`market-evidence` import 를 통째로 제거했다**(계약 계층에서 발견).
+ *
+ * 🔴 구현 단계가 `buildOverseasMarketEvidence({ candidates })` **호출** 과
+ *    `onEvidenceChange` **prop** 을 지웠는데 **import 세 심볼이 남아 있었다**
+ *    (참조 0 — 값 하나 + 타입 둘). 그 자리가 「이 패널이 자기 조회 결과로
+ *    **시장 가격 판단을 다시 만드는**」 배선의 입구다 ⟹ 입구까지 닫는다.
+ * 🟢 이 패널의 역할은 전략 Gate 기준으로 **검색 UI 하나** 다 — 결과 표는 그대로
+ *    그리고(원자료 드릴다운), 그 결과의 **판단 owner 는 「📊 시장 판매 판단」** 이다.
+ * 🟢 `market-evidence` 모듈 자체는 **살아 있다**(🇰🇷 요약 문자열의 owner · 계약 다수).
+ */
 // MI-UX-9 §10 — 검색 상태 5종(자동지원/수동필요/검색실패/결과없음/확인불가) 구분.
 import { searchSourceStatusDisplay } from "@/lib/search-source-status";
 import {
@@ -278,7 +281,6 @@ export function ComparisonShopSearch({
   onRequestPriceReview,
   open,
   onToggle,
-  onEvidenceChange,
   originImageUrl,
   originPrice,
   selectedOptionValues,
@@ -323,7 +325,11 @@ export function ComparisonShopSearch({
    * 요약은 **아래 표가 기본으로 보여주는 행들**로만 만든다(같은 필터·같은 등급
    * 판정). 요약이 표보다 넓은 집합을 세면 "요약은 5곳인데 열어보니 3줄"이 된다.
    */
-  onEvidenceChange?: (evidence: MarketEvidenceSummary | null) => void;
+  /**
+   * 🔴🔴 WU-141-R3 C-5 — **`onEvidenceChange` prop 을 없앴다.** 이 패널은 가격 집계를
+   *    만들지도 내보내지도 않는다. 🔴 타입에 남겨 두면 다음 사람이 그 배선을 다시
+   *    꽂고 「세 번째 가격 owner」가 되돌아온다(계약 C-5 가 그것을 FAIL 로 잡는다).
+   */
   /**
    * MI-UX-FINAL-4 — 이 패널이 어느 자리에 서 있는가(market-evidence-frame.ts).
    * FLAT은 「📊 시장 가격 비교」 안쪽이라 접힘을 한 겹 벗는다 — 이미 "시장 가격을
@@ -385,32 +391,26 @@ export function ComparisonShopSearch({
    * 숫자를 갖고, 나머지는 가격 없이 개수와 등급에만 들어간다(표의 PriceCell이
    * 숫자 대신 "가격 확인 필요"를 그리는 그 행들이다).
    */
-  const evidence = useMemo<MarketEvidenceSummary | null>(() => {
-    if (!results) return null;
-    const candidates: OverseasMarketCandidateInput[] = [];
-    for (const r of results) {
-      if (r.status !== "ok" || !Array.isArray(r.candidates)) continue;
-      for (const c of r.candidates) {
-        const tier = displayTierForCandidate(c);
-        if (!isDefaultVisibleTier(tier)) continue;
-        const status = c.priceStatus ?? "UNVERIFIED_SEARCH";
-        candidates.push({
-          shopId: r.shopId,
-          shopCountry: r.shopCountry ?? null,
-          tier,
-          price: isPriceDisplayable(status, c.price) ? c.price : null,
-        });
-      }
-    }
-    return buildOverseasMarketEvidence({ candidates });
-  }, [results]);
-
-  /** 콜백은 ref로 잡는다 — 부모가 매 렌더 새 함수를 넘겨도 보고가 무한히 돌지 않는다. */
-  const onEvidenceChangeRef = useRef(onEvidenceChange);
-  onEvidenceChangeRef.current = onEvidenceChange;
-  useEffect(() => {
-    onEvidenceChangeRef.current?.(evidence);
-  }, [evidence]);
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 WU-141-R3 C-5 — **이 패널은 «세 번째 가격 집계» 를 만들지 않는다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 여기 있던 `buildOverseasMarketEvidence({ candidates })` 는 **이 패널의 자기
+   *    검색 결과** 로 해외 가격대(min~max) · 판매처 수 · 국가 수를 **직접 만들었고**,
+   *    `onEvidenceChange` 로 MI 패널의 🌎 요약과 되물음 문구까지 들어갔다.
+   * 🔴🔴 그 게이트가 ① 과 **달랐다** — `isDefaultVisibleTier`(PRESUMED_SAME·SIMILAR
+   *    통과) 기반이고 **품절도 가격검증도 보지 않았다** ⟹ 같은 상품에 대해 화면이
+   *    서로 다른 숫자를 말할 수 있었다. 그것이 CEO 가 본 「어느 숫자를 믿지?」다.
+   *
+   * 🟢 이제 해외 가격 판단의 owner 는 **「📊 시장 판매 판단」(`mi-same-candidates`)
+   *    하나** 다(`/check` 의 MI rows → tier SAME + 품절 아님 + `VERIFIED_CURRENT`).
+   * 🔴 **데이터를 잃지 않는다** — 이 패널의 표(원자료 드릴다운)는 그대로이고
+   *    `buildOverseasMarketEvidence` 함수도 **지우지 않았다**(다른 소비자 없음 ·
+   *    되살릴 자리를 계약 C-5 가 잠근다).
+   * 🔴 `onEvidenceChange` prop 은 **타입에 남겨 두지 않는다** — 남기면 다음 사람이
+   *    그 배선을 다시 꽂는다(이 저장소에서 반복된 그 모양).
+   */
 
   return (
     // UX 2.3(CEO 지시, 2026-09-11) — 근거는 "위젯"이 아니라 "의미"로 묶는다.

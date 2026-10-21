@@ -45,6 +45,11 @@ import {
 } from "./GeminiTransientCandidates";
 // MATCHING-UNIFY-1 — 국내 가격비교 표와 같은 라벨을 쓰기 위한 공통 매핑.
 import { domesticEvidenceNote, domesticMatchDisplay } from "./match-display";
+/**
+ * 🔴🔴 WU-141-R3 §4 — **가격 판단 owner 는 「📊 시장 판매 판단」 하나다.**
+ *    되물음 문구의 「해외 가격이 있는가」도 **그 함수들** 에서 읽는다(사본 0).
+ */
+import { buildMarketJudgement, buildPriceGuide } from "./mi-same-candidates";
 // MI 2.0 PHASE 1 — 판매 판단의 근거를 4축으로 분해해 보여준다(새 판정 아님).
 import { computeRadar, type RadarSearchInterest, type RadarMatchTruth } from "@commerce/pricing";
 // MI-POLISH-2(CEO 지시, 2026-09-12) — MiVerdictAxes(판정 아래 축 세 줄)를 더
@@ -84,9 +89,9 @@ import {
 // MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — 본문으로 되돌아온 시장 요약 둘.
 // 개수와 등급을 한 묶음으로만 내보내는 규칙이 이 파일 하나에 있다(화면이 다시
 // 세지 않는다 — 세기 시작하면 요약이 드릴다운보다 강한 주장을 하게 된다).
+/** 🔴 WU-141-R3 — `buildOverseasMarketEvidence` 는 이 파일에서 **쓰지 않는다**(🌎 owner 는 ①). */
 import {
   buildDomesticMarketEvidence,
-  buildOverseasMarketEvidence,
   tierCountsText,
   type MarketEvidenceSummary,
 } from "./market-evidence";
@@ -3273,7 +3278,35 @@ export function MiPanelView({
     exactSellerCount: domesticMarketSplit.exact.sellerCount,
     comparisonSellerCount: domesticMarketSplit.comparison.sellerCount,
   });
-  const overseasEvidence = overseasMarketEvidence ?? buildOverseasMarketEvidence({ candidates: [] });
+  /**
+   * 🔴🔴 WU-141-R3 — **`overseasEvidence` 지역 변수를 제거했다**(계약 계층에서 발견).
+   *
+   * 🔴 구현 단계에서 🌎 블록과 `hasOverseasRange` 를 ① 로 넘기고도 이 줄이 남아
+   *    있었다 — **집계를 계산해 두고 아무도 읽지 않는** 상태였다(참조 0 · 주석만 2).
+   * 🔴 그것이 바로 「두 번째 가격 owner 가 다시 꽂힐 자리」다. `onEvidenceChange`
+   *    prop 을 **타입에서까지** 지운 것과 같은 이유로 지운다(생산자만 지우고 소비자
+   *    자리를 비워 두면 다음 사람이 거기에 다시 배선한다).
+   * 🟢 `buildOverseasMarketEvidence` 자체는 **지우지 않았다** — `market-evidence` 의
+   *    순수 함수이고 `product-tab-first-screen` 등이 **해외 요약 문자열의 owner** 로
+   *    직접 호출해 검사한다. 사라진 것은 **패널 안의 쓰이지 않는 사본** 하나다.
+   */
+
+  /**
+   * 🔴🔴🔴 WU-141-R3 §4 — **가격 판단의 owner 는 ① 하나다.**
+   *
+   * 「📊 시장 판매 판단」이 쓰는 그 함수들을 **그대로** 불러 같은 답을 얻는다
+   * (`buildMarketJudgement` → `buildPriceGuide`). 🔴 사본을 만들지 않는다 —
+   * 사본을 두면 「위는 가격이 있는데 문구는 없다고 말하는」 그 상태가 되돌아온다.
+   * 🟢 입력은 이 컴포넌트가 **이미 들고 있는** 네 출처 배열이고, 합치는 규칙은
+   *    `marketComparisonInput`(위쪽 `onMarketComparisonChange` 입력)과 **같다**.
+   */
+  const miJudgement = buildMarketJudgement([
+    ...(geminiEvidence ?? []),
+    ...(urlCandidateEvidence ?? []),
+    ...(overseasAutoEvidence ?? []),
+    ...(reviewedSameEvidence ?? []),
+  ]);
+  const miOverseasGuide = buildPriceGuide(miJudgement, "OVERSEAS");
 
   /**
    * MI-SIMPLIFY-1(CPO 지시, 2026-09-12) — ③ 수익성의 판정 배지.
@@ -3310,10 +3343,19 @@ export function MiPanelView({
     marketCase: recommendation?.marketCase ?? null,
     hasComparable: marketComparison.hasComparable,
     evidenceBasis: domesticMarketSplit.basis,
-    // 본문 🌎 해외 시장이 실제로 가격대를 보여주고 있는가. 화면과 되물음이 같은
-    // 값을 보므로 "본문에는 가격대가 있는데 되물음은 없다고 말하는" 상태가
-    // 생길 수 없다.
-    hasOverseasRange: overseasEvidence.figure != null,
+    /**
+     * 🔴🔴🔴 WU-141-R3 §12 — **이 입력의 owner 가 ③ 에서 ① 로 바뀌었다.**
+     *
+     * 🔴 전에는 `overseasEvidence.figure != null` 이었다. 그 `overseasEvidence` 는
+     *    **아래 패널의 «자기» 검색**(`ComparisonShopSearch` → `onEvidenceChange`)이
+     *    만든 ③ 산출이다 ⟹ ③ 을 제거하면 **항상 null** 이 되어
+     *    「🌎 해외 판매처 가격대는 확인되지 않았습니다」가 **거짓** 이 된다
+     *    (「📊 시장 판매 판단」은 GBP 37 · USD 58 을 보여주는데 말이다).
+     * 🟢 그래서 **① 의 산출을 그대로 읽는다** — 같은 게이트(tier SAME + 품절 아님 +
+     *    `VERIFIED_CURRENT`)이고, 그래서 화면과 문구가 **구조적으로** 같은 답을 한다.
+     * 🔴 새 집계·새 threshold **0** — `buildPriceGuide` 가 이미 낸 수를 읽기만 한다.
+     */
+    hasOverseasRange: miOverseasGuide.pricedCount > 0,
   });
 
   /** UX-1D — "가격 전략" 요약에 쓸 대표 국내 가격. 새로 계산하지 않는다.
@@ -3595,30 +3637,33 @@ export function MiPanelView({
                   바뀐 것은 게이트가 고르는 결과뿐이다: 비교상품이 0건이면
                   블록이 사라지는 것이 아니라 빈 상태 칩이 선다(CEO 지시 ③ —
                   숫자도 범위도 지어내지 않는다). */}
-              <MarketComparisonView
-                comparison={marketComparison}
-                context={marketContext}
-                evidence={domesticEvidence}
-                onDrillDown={onOpenDomesticEvidence}
-                stockNote={
-                  /* MI-STOCK-CLARITY-1(CPO 지시, 2026-09-10) — 국내 비교상품
-                     가격이 어떤 재고 상태 위에 서 있는지. UX 2.4.1에서 이 문장을
-                     그 가격 옆으로 옮겼다(전에는 카드 밑단에 혼자 있어서 어느
-                     숫자에 대한 단서인지 읽히지 않았다). 집계 방식은 그대로다. */
-                  (domesticCompetition.stockCounts?.unknown ?? 0) > 0 ? (
-                    <p className="mt-0.5 text-[10px] text-text-tertiary">
-                      {PRICE_MEANING_LABEL.DOMESTIC_COMPARABLE_PRICE} 가격은 재고 상태를 확인하지 못한{" "}
-                      {domesticCompetition.stockCounts?.unknown}건을 포함합니다
-                      {(domesticCompetition.stockCounts?.onSale ?? 0) > 0 &&
-                        ` (판매중 확인 ${domesticCompetition.stockCounts?.onSale}건)`}
-                      {(domesticCompetition.stockCounts?.soldOut ?? 0) > 0 &&
-                        ` · 품절 ${domesticCompetition.stockCounts?.soldOut}건은 제외됨`}.
-                    </p>
-                  ) : null
-                }
-              />
-
-              <OverseasMarketEvidenceView evidence={overseasEvidence} onDrillDown={onOpenOverseasEvidence} />
+              {/**
+               * ══════════════════════════════════════════════════════════════
+               * 🔴🔴🔴 WU-141-R3 C-3 — **판정 카드는 시장 «가격» 의 owner 가 아니다**
+               * ══════════════════════════════════════════════════════════════
+               *
+               * 🔴 CPO: 「판정 카드가 **국내/해외 가격 · 시장 가격 · 판매처 수** 를
+               *    다시 출력하지 않는다」. 🟢 그래서 여기 있던 두 요약
+               *    (`<MarketComparisonView>` 🇰🇷 · `<OverseasMarketEvidenceView>` 🌎)이
+               *    **빠졌다**. 그 둘이 `figure`(₩/£ 숫자) · 등급 칩 ·
+               *    `scopeLabel`(「판매처 N곳 · M개 국가」)을 냈다.
+               *
+               * 🔴🔴 **이것은 2026-09-12 CEO 지시(MI-MARKET-EVIDENCE-1 「시장 두 칸」)를
+               *    되돌리는 변경이다 — 숨기지 않는다.** 그 지시의 근거는 「두 칸이 ② 단계
+               *    베타 패널로 내려가서 **판정이 근거 없이 내려온 숫자로 읽혔다**」였다.
+               * 🟢 그 실패 조건은 사라졌다 — WU-140-R1 이 「📊 시장 판매 판단」을 이 패널
+               *    **위**(격자 밖 최상단)로 올렸다. 근거가 ② 로 «내려간» 것이 아니라
+               *    판정보다 **먼저** 온다 ⟹ 같은 숫자를 카드가 두 번 말할 이유가 없다.
+               *    🔴 CPO 가 그 충돌을 알고 승인했다(WU-141-R3).
+               *
+               * 🔴 **삭제가 아니다** — `buildDomesticMarketEvidence` ·
+               *    `buildOverseasMarketEvidence` · `domesticCompetition` · 서버 집계는
+               *    **그대로** 다. 바뀐 것은 **seller-facing 표시 owner 하나** 다.
+               * 🟢 판정 카드가 계속 담당하는 것 — 판매 가능성 · 마진/수익성 · 상품 상태 ·
+               *    MI 종합 판단(정성 문구). 🔴 담당하지 않는 것 — 가격 숫자 · 판매처 수.
+               * 🔴 재고 단서(`stockCounts`) 문장도 그 가격 숲자에 붙은 것이라 같이 내려갔다 —
+               *    재고 세 상태는 「📊 시장 판매 판단」의 판매처 표가 이미 말한다.
+               */}
 
               {/* ③ 수익성 — 착지원가 → 내 판매가격 → 예상 수익 → 예상 마진,
                   그리고 판정 한 줄. 네 줄이 답하는 것은 "내 원가 기준 얼마에

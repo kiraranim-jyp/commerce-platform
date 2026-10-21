@@ -308,18 +308,19 @@ describe("본문은 짧아졌고, 다음 추가는 툴팁·상세로 내려앉�
     expect(lines).toBeLessThanOrEqual(155);
   });
 
-  it("본문에 남는 것은 판정 · 원본 · 국내 · 해외 · 수익성뿐이다", () => {
-    // 판단 근거(별점·레이더)와 시장 신호·전략 가이드는 여전히 접힘 안이거나
-    // 판단 근거 안이다. 새 블록이 본문에 서면 여기서 먼저 걸린다.
-    // MI-MARKET-EVIDENCE-1 — 🌎 해외 시장이 본문 블록으로 들어왔다.
-    const blocks = [
-      "<OriginalPriceView",
-      "<GlobalMarketHint",
-      "<MarketComparisonView",
-      "<OverseasMarketEvidenceView",
-      "<PriceChainView",
-    ];
+  /**
+   * 🔴 WU-141-R3 — 시장 두 블록이 **판정 카드에서 「📊 시장 판매 판단」(격자 밖)으로**
+   *    옮겨 갔다. 전략 Gate ②(가격 owner 는 하나). 상세 사유는 `mi-polish.test.ts` 의
+   *    같은 계약 주석에 한 번만 적었다.
+   * 🟢 이 계약의 **목적은 그대로** 다 — 「새 블록이 본문에 서면 여기서 먼저 걸린다」.
+   *    목록이 느슨해진 것이 아니라 **두 칸이 negative 로 넘어갔다.**
+   */
+  it("본문에 남는 것은 판정 · 원본 · 수익성뿐이다", () => {
+    const blocks = ["<OriginalPriceView", "<GlobalMarketHint", "<PriceChainView"];
     for (const block of blocks) expect(bodyCode).toContain(block);
+    for (const moved of ["<MarketComparisonView", "<OverseasMarketEvidenceView"]) {
+      expect(bodyCode, `${moved}이(가) 판정 카드 본문에 되살아났다`).not.toContain(moved);
+    }
     expect(bodyCode).not.toContain("<MiRadar ");
     expect(bodyCode).not.toContain("<MiRadarSummary");
     expect(bodyCode).not.toContain("marketSignals.signals.map");

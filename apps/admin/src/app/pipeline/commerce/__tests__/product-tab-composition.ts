@@ -6,6 +6,8 @@ import type { CanonicalProduct, FieldSource, ProvenanceField } from "@commerce/s
 // 죽고 코드 경로 하나가 통째로 숨었던 적이 있다(이 파일 위쪽 주석 참고).
 import type { ComparisonSearchResult } from "@commerce/crawler/src/comparison-search/types";
 import type { MarketEvidenceSummary } from "../market-evidence";
+/** 🔴 WU-141-R3 — ① 「📊 시장 판매 판단」의 입력 타입(일시 후보 행). */
+import type { GeminiTransientRow } from "../GeminiTransientCandidates";
 import { MiPanelView, type DomesticCandidate, type PriceHistoryResponse } from "../DomesticPriceIntelligencePanel";
 import { ActionCenter } from "../ActionCenter";
 import { PriceCalculationDetail } from "../PriceCalculationDetail";
@@ -430,6 +432,17 @@ export interface TabOptions {
    * 값으로 덮인다(즉 이 옵션이 패널을 우회하지 않는다).
    */
   overseasMarketEvidence?: MarketEvidenceSummary | null;
+  /**
+   * 🔴🔴 WU-141-R3 — **일시 후보 행**(네 출처 중 「직접 입력」 자리).
+   *
+   * 🔴 왜 필요해졌나 — R3 가 `hasOverseasRange` 의 owner 를 ③(아래 패널의 자기
+   *    집계)에서 **①(`buildPriceGuide`)** 로 옮겼다. 그래서 「해외 가격대가
+   *    확인됐다」를 만드는 입력이 `overseasMarketEvidence` 가 아니라 **후보 행** 이다.
+   * 🟢 이 옵션이 없으면 「가격이 실제로 있는 화면」을 렌더로 검사할 수 없고,
+   *    그러면 §9 의 위험(「📊 는 GBP 37 을 보여주는데 문구는 『확인되지 않았다』」)을
+   *    **계약으로 막을 수 없다.** 🔴 기본값은 `undefined` 라 기존 계약은 **불변** 이다.
+   */
+  transientRows?: readonly GeminiTransientRow[];
 }
 
 const CHANNELS: RegistrationChannel[] = [
@@ -557,6 +570,8 @@ function ProductTab(options: TabOptions): ReactElement {
     // MI-MARKET-EVIDENCE-1 — 요약은 아래 패널이 올려보낸 값 그대로이고,
     // 드릴다운은 그 패널을 여는 일만 한다(표를 여기서 두 번째로 그리지 않는다).
     overseasMarketEvidence,
+    /** 🔴 WU-141-R3 — ① 의 입력. 넘기지 않으면 `undefined` 라 기존 계약은 불변이다. */
+    urlCandidateEvidence: options.transientRows ? [...options.transientRows] : undefined,
     onOpenDomesticEvidence: () => setDomesticEvidenceOpen(true),
     onOpenOverseasEvidence: () => setOverseasEvidenceOpen(true),
   });
@@ -594,7 +609,7 @@ function ProductTab(options: TabOptions): ReactElement {
         onRequestPriceReview: noop,
         open: overseasEvidenceOpen,
         onToggle: setOverseasEvidenceOpen,
-        onEvidenceChange: setOverseasMarketEvidence,
+        /* 🔴 WU-141-R3 C-5 — `onEvidenceChange` 는 **없어졌다**(③ 가격 집계 제거). */
         variant: marketEvidenceVariant,
       }),
     ),
