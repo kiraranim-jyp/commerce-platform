@@ -515,6 +515,15 @@ describe("WU-142 STEP 1 — 2상품 MI 실측", () => {
       for (const r of table.filter((x) => x.human === "SAME" && !x.inComparison)) {
         const raw = rawByUrl.get(loose(r.url));
         console.log(`\n   ── ${p.code} · ${r.domain} · 축 **${r.axis}**`);
+        /**
+         * 🔴 WU-143 STEP 1 — **축과 무관하게 전체 facts 를 먼저 적는다.**
+         *    1차 STEP C 는 축별로 다른 칸만 찍어서 `biskuit` 의 **품번을 못 봤다**
+         *    ⟹ 「제목에 품번이 있는데 MI 가 그것을 식별자로 쓰는가」를 답할 수 없었다.
+         */
+        console.log(
+          `      facts — ${pick(raw, "facts.brandModelCode", "facts.brand", "facts.colorText", "facts.urlSlug")}`,
+        );
+        console.log(`      verdict=${String(raw?.crossSellerVerdict)} · 축 근거=${JSON.stringify(raw?.crossSellerReasons ?? null)}`);
         switch (r.axis) {
           case "MODEL_CODE":
             /** 🔴 P0 — 「실제 식별 실패인가, 정상 방어인가」. **두 품번을 나란히** 적는다. */

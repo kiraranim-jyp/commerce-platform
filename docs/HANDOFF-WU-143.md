@@ -160,3 +160,80 @@ CF-4  CF-3 **+ GARMENT_FORM 은 그대로 둔다**                   ← tinyapp
 ⒞ 🔴 「소스 계약이 이 파일을 못 본다」고 과장했다 — `readSourceAt`+`includes()` 는 **정상 동작**
    하고 `git diff` 도 **정상** 이다(실측). 깨지는 것은 **`grep`/ripgrep 뿐** 이다.
 ```
+
+---
+
+# 🟢🟢 STEP 2 실행 완료 — **counterfactual 측정됐다 (GO 모양)** · 🔴 구현은 하지 않았다
+
+🔴 **운영 코드를 임시 변경해 «실제 엔진» 으로 쟀다**(복제식 0 · §5-B 위증 경로 제거).
+🟢 측정 후 **전부 되돌렸다** — `CF-MARKER-WU143` 잔재 0 · NUL 4 복구 · MI 테스트 714 passed.
+
+## 측정한 변경 셋 (CF-ALL · 셋 동시)
+```
+C1  AUDIENCE_LINE mismatch → blocker 를 **밀지 않는다**     (cross-seller.ts:934)
+C2  MODEL_CODE conflict    → conflict 를 **밀지 않는다**     (:821)
+C3  modelCode === "exact"  → **brandKnown/brandOk 를 충족**  (:751-752)
+    🔴 C3 의 근거 — 후보 페이지가 **원상품의 브랜드 품번을 글자 그대로** 들고 있으면
+       그것은 브랜드 문자열보다 **강한** 브랜드 증거다(`confirmBrandCodeInEvidence` 와 같은 축).
+       🔴 「샵 이름 = 브랜드」가 **아니다**(CPO 금지축을 건드리지 않는다).
+```
+
+## 결과
+```
+            recall      오포함(DIFFERENT 누출)
+baseline    **6/19**    **0 / 0**
+CF-ALL      **9/19**    **0 / 0**   🟢🟢 CPO 절대조건 충족
+```
+```
+S2 B226AC009 🌎 해외 SAME **3 → 5** · 가격확인 3 → 5
+   기준가 USD 58 → **GBP 33 · SGD 70 · USD 58**
+   새로 진입 — junioredition(AB040 · GBP 33) · kids21(샵 SKU · SGD 70)
+S1 B226AC010 beaumonde **SAME 이 됐다**(C3 발화) 🟢
+🟢 방어가 예측대로 독립적으로 버텼다 —
+   junioredition **AC141**(human DIFFERENT) → **COLOR 충돌** 이 막았다
+   tinyapple **Baby sweatshirt**(human DIFFERENT) → **GARMENT_FORM** 이 막았다
+🔴 새 깊이방어가 드러났다 — `bobochoses.com`(AB046/AB040)은 MODEL_CODE 가 사라지자
+   **`SAME_SELLER_DISTINCT_LISTING`** 이 대신 막았다(같은 판매처의 다른 리스팅 가드).
+   ⟹ CEO 가 SAME 이라 한 그 2건은 **여전히 SAME 이 아니다**
+```
+
+## 🔴🔴 그런데 CPO 의 성공 기준 「🇰🇷 SAME ≥ 1」은 **두 상품 모두 미달** 이고, 이유가 MI 밖이다
+```
+B226AC009 🇰🇷  biskuit — C3 로 BRAND_MISMATCH 는 사라졌다. 🔴 남은 것 둘:
+              ⒜ `NO_TITLE_OVERLAP` blocker (**CPO 금지축**)
+              ⒝ corePoints **4** < SAME_MIN_AXES **5**
+                 (품번 3 + 상품군 1 — 제목 겹침 0 · 색상 없음 · 소재 없음 · 대상 없음)
+              ⟹ 🔴 threshold 를 내리지 않으면 **구조적으로 불가** 하다
+B226AC010 🇰🇷  beaumonde — 🟢 **SAME 은 됐다**. 🔴 그런데 **가격이 없어** `.kr` + 통화없음 →
+              `classifyCandidateMarket` 가 **UNKNOWN** 을 낸다(WU-020 계약: 통화 단독 결정 금지)
+              ⟹ 🔴 `selectMiSameCandidates(rows,"KR")` 가 `market==="KR"` 을 요구해 **🇰🇷 에 안 선다**
+              ⟹ 막는 것은 **MI 가 아니라 가격 축** 이다(§00-B 보류)
+```
+🟢 즉 **MI recall 은 올라갔는데(6→9) 🇰🇷 블록은 0 이다.** 그 0 의 이유가 이번에 **둘로 갈렸다**:
+`biskuit` = 축 수 + 금지축 · `beaumonde` = **가격 부재**.
+
+## 🔴 그래서 CF-ALL 을 «그대로» 구현하지 않았다 (CTO 판단 아님 · 범위 문제)
+```
+🔴 C2 는 **MODEL_CODE conflict 전면 비활성화** 다 — CPO 가 승인한 것은
+   「품번이 다르더라도 전체 증거가 지지하면 SAME」이고, **「AC↔AB 한정」** 을 명시했다
+   (「`B226AC141` 같은 케이스는 반드시 DIFFERENT 방어로 유지」).
+🔴 전면 비활성화는 WU-069/070 이 **더 큰 GT(51·63쌍)에서 「품번 보호 해체」** 로 측정한 그것이고,
+   이번 분모는 **19 SAME / 6 DIFFERENT** 다 ⟹ 이 표본의 leak 0 으로 전면 해제를 정당화할 수 없다.
+🟢 **범위를 좁힌 C2' 가 필요하다** — 「같은 시즌 접두를 공유하고 **라인 문자에서** 갈리는
+   경우에만 conflict 를 내리지 않는다」(AC↔AB 는 index 5 에서 갈리고 AC010↔AC141 은 index 6).
+   🔴 그것은 `compareModelCode` 에 **라인 구조 해석을 새로 넣는 것** 이고,
+      WU-070 이 「라인 코드를 보는 코드는 없다」고 적은 자리다 ⟹ **새 규칙** 이다.
+```
+
+## 🟡 다음 세션이 준비 없이 이어갈 좌표
+```
+① C3 는 **단독으로 안전해 보인다** — beaumonde SAME · biskuit BRAND_MISMATCH 해소 · leak 0.
+   🔴 단 C3 단독 측정을 **따로 돌리지 않았다**(CF-ALL 로만 쟀다) ⟹ 먼저 C3 단독 CF 를 돌린다.
+   🔴 그리고 `m.luxboy`(품번 exact · human DIFFERENT)가 C3 로 brandOk 를 얻는다 —
+      이 표본에서는 `NO_TITLE_OVERLAP` 이 막았다. 그 의존을 계약으로 적어야 한다.
+② C2' (AC↔AB 한정)는 **설계가 필요하다** — 위 「index 에서 갈린다」가 유일한 관측 기준이고
+   표본은 **3건** 이다(AB046 · AB040 ×2). 🔴 과적합 위험을 CPO 가 판정해야 한다.
+③ `SAME_SELLER_DISTINCT_LISTING` — bobochoses 2건은 그 가드가 막는다.
+   🔴 그 가드는 **이중 잠금의 한 겹**(WU-059 계약)이라 건드리면 다른 보호가 같이 열린다.
+④ 🇰🇷 목표는 **MI 로 닫히지 않는다** — beaumonde 는 **가격**, biskuit 은 **축 수**다.
+```
