@@ -74,15 +74,61 @@ RLS ON · 정책 0 = 31/32  +  anon 에 **DELETE/UPDATE/TRUNCATE 까지** GRANT
 
 ---
 
+## ③-B 🟢🟢 **STEP 3 완료 — anon 클라이언트는 «테이블을 읽지 않는다»**
+
+🔴 문자열 `anon` 이 아니라 **실제 Data API 소비 경로** 로 찾았다(CPO ①).
+
+### Supabase 클라이언트 생성부 — 전수 **3곳**
+| 파일 | 생성 함수 | key |
+|---|---|---|
+| `lib/supabase-admin.ts:13` | `createClient` | **service-role** |
+| `lib/supabase-browser.ts:25` | `createBrowserClient` | **anon** |
+| `lib/supabase-server.ts:23` | `createServerClient` | **anon** |
+| `proxy.ts:106` | `createServerClient` | **anon** (미들웨어) |
+
+### anon 클라이언트 소비처 — 전수 **6곳** · 🔴 **테이블 접근 0**
+| 경로 | role | 대상 테이블 | 읽기/쓰기 | 용도 |
+|---|---|---|---|---|
+| `app/api/auth/event/route.ts` | anon | **없음** | — | `auth.*` |
+| `app/api/auth/logout/route.ts` | anon | **없음** | — | `auth.*` |
+| `app/api/auth/me/route.ts` | anon | **없음** | — | `auth.*` |
+| `app/auth/callback/route.ts` | anon | **없음** | — | `auth.*` |
+| `app/login/page.tsx` | anon | **없음** | — | `auth.*` |
+| `lib/auth/require-user.ts:67` | anon | **없음** | — | `auth.*` |
+| `proxy.ts:121` | anon | **없음** | — | `auth.getUser()` |
+| `lib/auth/require-user.ts:104~129` | 🟢 **service-role** | `workspace_members` · `workspaces` | 읽기 | 권한 확인 |
+
+```
+🟢🟢 **`.from(...)` / `.rpc(...)` 호출이 anon 경로에 «0건» 이다.**
+   그 넷은 전부 `auth.*`(세션/로그인)만 쓴다 — `auth` 스키마이고 `public` 이 아니다.
+🟢 `require-user.ts` 의 테이블 읽기 **4건은 `getSupabaseAdmin()`(service-role)** 이다
+   (:95·:104 가 admin 을 따로 만든다 · anon 클라이언트는 :67 에서 `auth` 전용).
+```
+
+### 🔴🔴 그래서 확정되는 것 둘
+```
+⒜ 🟢 **`public` 32개 테이블에 대한 anon 권한은 «현재 아무도 쓰지 않는다».**
+   ⟹ anon GRANT 축소의 «기능 위험» 은 이 코드베이스 안에서 **0 으로 측정됐다**
+⒝ 🔴 그래도 **이번에 축소하지 않는다** — 코드 밖 소비자를 배제하지 못했다:
+   Supabase Studio(Table Editor) · GraphiQL · 외부 도구 · 과거 스크립트 ·
+   Realtime 구독. 🔴 그 전수 확인은 **Supabase 대시보드/로그** 영역이고
+   CTO 가 읽을 수 없다(메모 `production-payload-is-unreachable` 계열).
+   ⟹ 🟡 **별도 보안 WU** 로 CPO 가 열 사안이다(CPO 가 적은 그 순서 그대로).
+```
+
+🟢 **그리고 이것이 ②(10/30 영향 0)의 근거를 하나 더 준다** — Data API 를 통해
+`public` 테이블을 읽는 운영 경로가 **코드에 없다**. 10/30 에 새 테이블이 노출되지
+않아도 **지금 기능은 영향이 없다**.
+
+---
+
 ## ④ 🟡 다음 세션이 할 것 (CPO STEP 1~12 중 남은 것)
 
 ```
 STEP 1 권한 dump            🟢 **완료**(위 ①) · 하니스 재실행으로 언제든 갱신
 STEP 2 migration CREATE TABLE 전수  🟡 **부분** — .sql 31개 중 `GRANT` **0건** 확인.
                             🔴 테이블별 CREATE/RLS/POLICY/GRANT 매핑은 **미완**
-STEP 3 Data API 실제 사용 매핑  🔴 **미완** — 🟢 단서: `supabase-js` 호출부가
-                            `getSupabaseAdmin()`(service-role) 중심이고 그 키가
-                            **로컬에 없다**. anon 클라이언트 사용처를 grep 해야 한다
+STEP 3 Data API 실제 사용 매핑  🟢 **완료**(③-B) — anon 경로의 `.from`/`.rpc` **0건**
 STEP 4 RLS/policy/GRANT 불일치  🟢 **최대 불일치는 ③ 하나** 로 확정(정책 0 + 전권)
 STEP 5 필요한 테이블만 명시 GRANT  🔴 **STEP 3 이 끝나기 전에 하지 않는다**
 STEP 6 신규 테이블 API E2E   🔴 **10/30 이후** 에 해야 의미가 있다(위 ② 미확정 항목)
