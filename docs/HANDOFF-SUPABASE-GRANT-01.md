@@ -1,0 +1,123 @@
+# 🔴🔴 SUPABASE-GRANT-01 — **권한 실측 완료 · 변경 0** (10/30 대응)
+
+> 🔴 CPO: 「메일의 `anon` CRUD 전부 GRANT 예시를 **그대로 적용하지 않는다.** 실제 접근
+> 경로와 RLS 를 확인한 뒤 **최소 권한** 으로 migration 에 명시. **기존 테이블 일괄
+> 재GRANT 금지** · default privilege 를 **임의로 revoke 하지 않는다.**」
+>
+> 🟢 **이 작업은 DB 를 한 글자도 바꾸지 않았다** — GRANT/REVOKE 0 · DDL 0 · 읽기만.
+> 🔴 하니스: `packages/database/scripts/supabase-grant-audit.mjs` (read-only · 재실행 가능)
+
+---
+
+## ① 🟢 실측 (2026-10-21 · `current_user = postgres`)
+
+```
+public 테이블 **32**개
+  anon           권한 보유 **32/32**  (DGIRSTU 전권)
+  authenticated  권한 보유 **32/32**  (DGIRSTU 전권)
+  service_role   권한 보유 **32/32**  (DGIRSTU 전권)
+
+🔴🔴 RLS ON · **정책 0** = **31/32**
+🔴   RLS OFF        = **1/32**  (`_prisma_migrations`) — 🔴 거기에도 anon 전권
+🔴   migration 31개 중 `GRANT` 문을 가진 파일 = **0건**
+
+pg_default_acl — 🔴 **`postgres → public [r]` 에 anon/authenticated/service_role
+                 arwdDxtm 전권** 이 이미 걸려 있다
+```
+
+---
+
+## ② 🟢🟢 **10/30 영향 평가 — 운영은 깨지지 않는다** (근거 둘)
+
+```
+⒜ Supabase 공지: **기존 테이블의 현재 권한은 유지** 된다 ⟹ 32개 테이블 영향 **0**
+⒝ 🟢 우리 앱은 Data API 를 거의 쓰지 않는다 — service-role 키가 **없고**
+   `DATABASE_URL`(postgres)로 직접 접근한다(메모 `production-secrets-are-write-only`
+   의 정정분). ⟹ anon/authenticated 경로 의존이 **낮다**
+```
+
+🔴 **그래서 지금 급하게 GRANT 를 덮어쓸 이유가 없다**(CPO 판단과 일치).
+
+### 🔴 단 하나 «미확정» 인 것 — 단정하지 않는다
+```
+`postgres → public [r]` default ACL 이 **현재는 있다** ⟹ 지금 `postgres` 로 만드는
+새 테이블은 anon/auth/svc 에 **자동으로** GRANT 된다.
+🔴 10/30 변경의 «구현 방식» 이 그 default ACL 을 **제거하는 것인지** 공지만으로는
+   확정할 수 없다. 🔴 그래서 「새 테이블도 괜찮다」로 **적지 않는다.**
+🟢 검증 방법은 하나다 — **10/30 이후에 테스트 테이블을 하나 만들어 실제로 확인한다**
+   (아래 ④-E2E). 그 전에 추측으로 migration 을 바꾸지 않는다.
+```
+
+---
+
+## ③ 🔴🔴 **더 중요한 발견 — 지금 안전한 이유가 GRANT 가 아니다**
+
+```
+RLS ON · 정책 0 = 31/32  +  anon 에 **DELETE/UPDATE/TRUNCATE 까지** GRANT
+⟹ 🟢 지금은 RLS 가 **모든 행을 차단** 하므로 anon 이 아무것도 못 한다
+⟹ 🔴🔴 그러나 **누군가 정책을 하나 추가하는 순간** anon 이 그 테이블에
+        **삭제·수정까지** 할 수 있다. 막고 있는 것은 **얇은 층 하나** 다
+```
+
+🔴 Supabase 공식 문서: **RLS 와 GRANT 는 서로 다른 보안 계층** 이고 **최소 권한**
+원칙을 쓰라고 명시한다. ⟹ 🔴 **이것이 10/30 보다 더 실질적인 위험이다.**
+
+🔴 **그런데 지금 고치지 않았다** — 이유 셋:
+```
+⒜ 🔴 운영 32개 테이블의 GRANT 를 줄이는 것은 **되돌리기 어려운 Production 변경** 이고
+   Data API 소비자를 전수 확인하기 전에는 **무엇이 깨질지 모른다**(§3 STOP 조건)
+⒝ 🔴 CPO 가 「기존 테이블 일괄 재GRANT 금지」를 명시했고, **일괄 revoke 도 같은 성질** 이다
+⒞ 🔴 `_prisma_migrations`(RLS OFF + anon 전권)만은 **단독 검토 대상** 이다 —
+   Prisma 내부 테이블이고 Data API 가 읽을 이유가 없다. 🔴 단 그것을 건드리면
+   migration 도구가 깨질 수 있어 **확인 전에 손대지 않았다**
+```
+
+---
+
+## ④ 🟡 다음 세션이 할 것 (CPO STEP 1~12 중 남은 것)
+
+```
+STEP 1 권한 dump            🟢 **완료**(위 ①) · 하니스 재실행으로 언제든 갱신
+STEP 2 migration CREATE TABLE 전수  🟡 **부분** — .sql 31개 중 `GRANT` **0건** 확인.
+                            🔴 테이블별 CREATE/RLS/POLICY/GRANT 매핑은 **미완**
+STEP 3 Data API 실제 사용 매핑  🔴 **미완** — 🟢 단서: `supabase-js` 호출부가
+                            `getSupabaseAdmin()`(service-role) 중심이고 그 키가
+                            **로컬에 없다**. anon 클라이언트 사용처를 grep 해야 한다
+STEP 4 RLS/policy/GRANT 불일치  🟢 **최대 불일치는 ③ 하나** 로 확정(정책 0 + 전권)
+STEP 5 필요한 테이블만 명시 GRANT  🔴 **STEP 3 이 끝나기 전에 하지 않는다**
+STEP 6 신규 테이블 API E2E   🔴 **10/30 이후** 에 해야 의미가 있다(위 ② 미확정 항목)
+STEP 11 10/30 이후 안전 증명  🔴 같은 이유로 **그 날 이후**
+```
+
+### 🟢 지금 바로 넣어도 안전한 것 — **migration 계약** (CPO STEP 3)
+```
+🔴 운영 DB 를 안 건드리고 **앞으로의 migration 규칙만** 고정하는 것이라 위험이 0 이다.
+🟢 새 public 테이블을 만드는 migration 은 **그 파일 안에서** 셋을 같이 적는다:
+
+   create table public.example (...);
+   alter table public.example enable row level security;
+   -- 🔴 실제 필요한 role 에만 · 🔴 anon 에 CRUD 전부를 주지 않는다
+   grant select on public.example to authenticated;
+
+🟢 그것을 **계약 테스트로 잠근다** — `migrations_manual/*.sql` 중 `create table public.`
+   을 포함하는 파일은 **같은 파일에 `enable row level security` 와 `grant` 가 있어야**
+   한다(없으면 FAIL). 🔴 기존 31개는 **예외 목록으로 고정**(소급 변경 금지 · 그 목록이
+   줄어드는 방향으로만 바뀐다).
+```
+
+---
+
+## ⑤ 🔴 이번에 하지 않은 것 (전수)
+```
+❌ grant ... on all tables in schema public to anon, authenticated, service_role
+❌ 기존 32개 테이블의 GRANT 변경(추가도 축소도)
+❌ pg_default_acl 의 revoke/alter
+❌ RLS 토글 · 정책 추가/삭제
+❌ `_prisma_migrations` 권한 변경
+❌ MI · 가격비교 · 등록 로직 · 기존 기능 변경
+```
+
+🟢 **작업트리 clean · 운영 DB 변경 0 · 추가된 것은 read-only 하니스 1개와 이 문서뿐.**
+
+🔴 **기한** — 2026-10-30. 🟢 **운영이 그날 깨지지 않는다**(②) ⟹ 남은 9일은
+**STEP 3(Data API 사용 매핑) → migration 계약 → 10/30 이후 E2E** 순서로 쓰면 된다.
