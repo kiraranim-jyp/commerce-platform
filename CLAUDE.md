@@ -525,14 +525,32 @@ productData 를 **칸 하나씩 손으로 옮기면서** `siteBrandName` 을 빠
 🔴 그 아래 WU 기록은 **막혔을 때만** 참조한다(종료된 결론 모음이다).
 ```
 
-### 🔴🔴 **현재 착수점 — R1 CEO 확인 «게이트» · 그 뒤 WU-141** (CPO 확정 2026-10-21)
+### 🔴🔴 **현재 착수점 — WU-141-R1 STEP 3+5** (CPO 확정 2026-10-21)
 
 🔴🔴 **진입은 `docs/START-HERE.md §1` 하나다.** 조사를 다시 하지 않는다.
 
+🟢 WU-140-R1 **CEO PASS**(상단 배치 닫힘) · 🟢 WU-141-R1 **STEP 4 완료·배포**.
+🔴 남은 것은 **STEP 3(결론 중복 통합) + STEP 5(후보 과다)** 이고 **한 묶음** 이다 —
+전문 `docs/HANDOFF-WU-141-R1.md`(①② 가 조사를 이미 닫았다).
+
 ```
-R1 CEO UI 확인  →  🟢 PASS ⟹ R1 닫고 **WU-141 시작**(`docs/HANDOFF-WU-141.md` §③ 부터)
-                →  🔴 FAIL ⟹ 국내 MI 작업 **시작하지 않고** UI 원인만 최소 수정
-🔴 그 전에 WU-141 **구현/측정에 들어가지 않는다**(CPO 명시).
+🟢🟢 STEP 4 — **후보 검토 저장이 WU-131 이후 «한 번도» 성공하지 못했다**(원인 확정)
+   079 의 유니크가 **부분 인덱스** 인데 코드가 `onConflict` upsert 를 썼다 ⟹
+   Postgres 가 부분 인덱스를 추론 못 해 **42P10**(운영 DB 실측 · 쓰기 0).
+   🔴 `recordSeenCandidates` 도 같은 결함 + throw 안 함 ⟹ 📚 이력이 **조용히** 비어 있었다.
+   🟢 schema 변경 **0** — 문장 모양만(`조회 → update(id) / insert` + `23505` 폴백) ·
+      부분 유니크 **방어 유지**(실측) · 실패 사유를 **더는 삼키지 않는다**(오류 코드 로그).
+   🟡 실제 버튼 저장은 **CEO 가 눌러야** 확정된다(service-role 키 없음 · 로그인 뒤 화면).
+
+🔴🔴 **위/아래 불일치의 원인 — 계산이 둘이 아니라 «집합과 게이트» 가 둘이다**
+   아래 `mayShowCandidate`(match-display.ts:248) — PRESUMED_SAME·SIMILAR 통과 ·
+        품절/가격검증 **안 봄** · 게다가 **자기 검색** 을 돌린다
+        (`DomesticShopSearch:188` · `ComparisonShopSearch:224` → **`/api/comparison/search`**)
+   위   tier **SAME** + 품절 아님 + **VERIFIED_CURRENT** (`/check` MI 산출)
+   ⟹ 🟢 아래에만 서는 것은 **「보류·유사·품절·가격미확인」** = **사람이 검토할 재료** 다
+      ⟹ 그래서 STEP 3 과 STEP 5 를 **같이** 설계한다
+🔴 `PRICE_COMPARISON_ANCHOR_ID` 와 `scrollIntoView`(:837) 소비자가 **살아 있다** —
+   접힘을 없애면 앵커의 주인이 사라진다(같이 설계할 것).
 ```
 
 🟢 **WU-141 = 국내 SAME 확보 경로 개선.** 🔴 목표는 **가격 수집이 아니다** —

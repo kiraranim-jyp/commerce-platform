@@ -6,28 +6,37 @@
 
 ---
 
-## 1. 지금 할 일 — **R1 CEO 확인 1회 대기 · 그 결과가 분기를 정한다**
+## 1. 지금 할 일 — **WU-141-R1 STEP 3+5 설계부터** (조사는 끝났다)
 
-🟢 **WU-140 + R1 구현 종료**(배포 `7b25d9b5` · 현재 Production `0d5d4e47`).
-🔴🔴 **CPO 가 다음 WU 를 이미 줬다 — 단 «게이트» 가 있다**(WU-141 지시 §0):
+🟢 WU-140-R1 **CEO PASS**(상단 배치 닫힘). 🟢 WU-141-R1 **STEP 4 완료·배포**
+(후보 검토 저장 실패 수정 — 원인 `42P10`).
+
+🔴🔴 **남은 것은 STEP 3 + 5 다. 한 묶음으로 설계한다** — 전문 `docs/HANDOFF-WU-141-R1.md`
+(①②가 데이터 소유권과 「위/아래가 다른 이유」를 **이미 코드 좌표로** 닫았다 · 재조사 금지).
 
 ```
-R1 CEO UI 확인  →  🟢 PASS  ⟹ R1 닫고 **WU-141 시작**(`docs/HANDOFF-WU-141.md` §③ 부터)
-                →  🔴 FAIL  ⟹ 국내 MI 작업 **시작하지 않고** UI 원인만 최소 수정
-🔴 그 전에 WU-141 **구현/측정에 들어가지 않는다**(CPO 명시).
+STEP 3  아래 「📊 시장 가격 비교」(StageBody.tsx:242) 를 **두 번째 결론 영역으로 두지 않는다**
+        🔴 삭제가 아니라 **유효 데이터를 📊 시장 판매 판단으로 승격**(CPO)
+STEP 5  후보 과다 — **판단이 필요한 후보 중심** 으로 재구성
+        🔴 threshold/SAME 완화 ❌ · 상위 N 자르기 ❌ (UI 접기 ≠ 판정 변경)
+🟢 둘은 **같은 묶음** 이다 — 아래에만 서는 후보가 곧 「사람이 검토할 재료」다(②⒜⒝⒞)
 ```
 
-🟢 WU-141 = **국내 SAME 확보 경로 개선**. 전문 `docs/HANDOFF-WU-141.md` —
-출발 표(2건)가 **이미 채워져 있고** 「다시 재지 않을 것 5건 · 아직 미측정 가설 1건」이
-갈려 있다. 🔴 조사를 처음부터 다시 하지 않는다.
-
-🔴🔴 **R1 의 교훈을 먼저 읽는다 — 「기둥 안에서 맨 위」는 「화면 맨 위」가 아니다**
+🔴🔴 **먼저 알아야 할 핵심 사실** — 위/아래 불일치는 계산이 둘이어서가 아니다:
 ```
-CommerceWorkspace 의 두 기둥 격자는 order 유틸리티를 쓴다(:3640 · :4353)
-   왼쪽(내용)      order-2 lg:order-1
-   오른쪽(Action)  order-1 lg:order-2   ⟹ **lg 미만에서 Action Center 가 먼저**
-🔴 그래서 「기둥 안 첫째」로는 최상단이 되지 않는다. 최상단 노출이 요구될 때는
-   **격자 밖** 에 두어야 한다. 🔴 격자의 order 를 뒤집어 고치지 않는다(기존 UX 결정).
+아래  `mayShowCandidate`(match-display.ts:248) — PRESUMED_SAME·SIMILAR 통과 ·
+      품절 **안 봄** · 가격검증 **안 봄** · 그리고 **자기 검색**을 돌린다
+      (DomesticShopSearch:188 → /api/domestic-price-sources/search ·
+       ComparisonShopSearch:224 → **/api/comparison/search**)
+위    tier **SAME** + 품절 아님 + priceStatus **VERIFIED_CURRENT**  (/check 의 MI 산출)
+⟹ 🔴 **집합과 게이트가 둘** 이다. 금액 계산은 하나다(아래는 서버 price 를 그린다).
+```
+
+🔴 **R1 의 교훈(남긴다) — 「기둥 안에서 맨 위」는 「화면 맨 위」가 아니다**
+```
+격자 order 유틸리티(:3640 왼쪽 `order-2 lg:order-1` · :4353 오른쪽 `order-1 lg:order-2`)
+⟹ `lg` 미만에서 Action Center 가 내용 기둥보다 먼저 온다.
+🔴 최상단 노출이 요구되면 **격자 밖** 에 둔다 · 격자 order 를 뒤집지 않는다.
 ```
 
 ```
@@ -115,7 +124,8 @@ Supabase  기존 권한 **변경 없음** · 신규 migration 계약 **PASS** ·
 
 | 상황 | 문서 |
 |---|---|
-| 🔴 **다음 WU(국내 SAME) — 출발 표 · 금지 레버 · 미측정 가설** | `docs/HANDOFF-WU-141.md` |
+| 🔴 **지금 작업(STEP 3+5) — 데이터 소유권 · 위/아래 차이 · 막을 계약** | `docs/HANDOFF-WU-141-R1.md` |
+| 그 다음(WU-142 국내 SAME) — 출발 표 · 금지 레버 · 미측정 가설 | `docs/HANDOFF-WU-141.md` |
 | WU-140 세부(이동 구조 · CPO 확정 순서 · R1 원인) | `docs/HANDOFF-WU-140.md` |
 | 국내 SAME 왜 0인가 / 완화를 왜 안 하나 | `docs/HANDOFF-WU-138.md` · `-DOMESTIC-GT.md` |
 | Supabase 10/30 · ③④ | `docs/HANDOFF-SUPABASE-GRANT-01.md` |
