@@ -334,14 +334,46 @@ describe("C. 🔴🔴 MI → 영역 공급 배선", () => {
    *    ⒞ 앵커 div 와 원자료 두 패널은 **그 뒤에 그대로 남아 있다** ·
    *    ⒟ 🔴 **커머스 탭 보호 게이트가 붙어 있다**(아래 C-3b).
    */
-  it("C-3 🔴🔴 영역은 **하나** 이고 **후보 패널보다 먼저** 온다(WU-140 ①)", () => {
+  /**
+   * 🔴🔴🔴 **WU-140-R1 — CEO UI FAIL 이 이 단언을 «강화» 시켰다**(2026-10-21).
+   *
+   * 1차 WU-140 은 결론 영역을 **왼쪽(내용) 기둥 안에서** 맨 위로 올렸고 이 계약은
+   * **통과했다**. 🔴 그런데 CEO 화면에서는 최상단이 아니었다 — 계약이 **기둥 안의
+   * 순서만** 보고 **기둥들 사이의 순서** 를 보지 않았기 때문이다:
+   * ```
+   * 왼쪽(내용)  order-2 lg:order-1
+   * 오른쪽(Act) order-1 lg:order-2   ⟹ **`lg` 미만에서 Action Center 가 먼저 온다**
+   * ```
+   * 🟢 그래서 이제 **「격자 밖·격자 위」** 를 단언한다 — 그러면 폭·탭·기둥 소유와
+   *    무관하게 첫 번째 판단 영역이 된다. 🔴 기둥 **안으로** 되돌리면 FAIL 한다.
+   */
+  it("C-3 🔴🔴 영역은 **하나** 이고 **격자 밖·맨 위** 에 선다(WU-140-R1)", () => {
     /** 🔴 좌표를 추측하지 않는다 — 전부 **위치로** 본다. */
     const anchor = WORKSPACE.indexOf("id={PRICE_COMPARISON_ANCHOR_ID}");
     const area = WORKSPACE.indexOf("<MarketPriceComparison");
     const panel = WORKSPACE.indexOf("<DomesticPriceIntelligencePanel");
     const domestic = WORKSPACE.indexOf("<DomesticShopSearch");
     const overseas = WORKSPACE.indexOf("<ComparisonShopSearch");
-    for (const i of [anchor, area, panel, domestic, overseas]) expect(i).toBeGreaterThan(-1);
+    /** 🔴 두 기둥의 좌표 — 이 둘보다 **앞** 이어야 폭과 무관하게 최상단이다. */
+    const contentCol = WORKSPACE.indexOf("order-2 min-w-0 space-y-4 lg:order-1");
+    const actionCol = WORKSPACE.indexOf('order-1 lg:order-2"');
+    const grid = WORKSPACE.indexOf('lg:grid-cols-[minmax(0,1fr)_300px]"');
+    for (const i of [anchor, area, panel, domestic, overseas, contentCol, actionCol, grid]) {
+      expect(i).toBeGreaterThan(-1);
+    }
+    /**
+     * 🔴🔴🔴 **이 세 줄이 CEO FAIL 을 막는다.** 격자(두 기둥) 전체보다 앞이어야
+     *    `order-1` 인 Action Center 가 좁은 폭에서 위로 올라와도 결론이 먼저다.
+     */
+    expect(area).toBeLessThan(grid);
+    expect(area).toBeLessThan(contentCol);
+    expect(area).toBeLessThan(actionCol);
+    /**
+     * 🟢 그러나 **내비게이션보다 위로는 올리지 않는다**(CPO: 「첫 번째 **판단** 영역」).
+     *    단계 표시(WorkflowPanel)는 화면의 유일한 진행 표시이고 그 위에 결론을 꽂으면
+     *    「지금 어느 단계인가」가 사라진다.
+     */
+    expect(area).toBeGreaterThan(WORKSPACE.indexOf("<WorkflowPanel"));
     /**
      * 🔴🔴 **이동이고 복제가 아니다.** 두 자리에 두면 셀러에게 가격비교 영역이 둘로
      *    보이고, 그것이 WU-128 이 지목한 중복 그 자체다.

@@ -3621,6 +3621,39 @@ export function CommerceWorkspace({
         )}
       </div>
 
+      {/**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔴🔴🔴 WU-140-R1 — **결론은 «격자 밖» 에 선다** (CEO FAIL 2026-10-21)
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * 🔴 1차 WU-140 은 이 영역을 **왼쪽 기둥 안에서** 맨 위로 올렸다. 그 기둥
+       *    «안» 에서는 첫째가 맞는데 **화면 최상단이 아니었다** ⟹ CEO UI FAIL.
+       *
+       * 🔴🔴 원인은 바로 아래 격자의 **order 유틸리티** 다(그 주석이 직접 말한다):
+       * ```
+       * 왼쪽(내용) 기둥   order-2 lg:order-1
+       * 오른쪽(Action)    order-1 lg:order-2   ← :4353
+       * ⟹ **`lg`(1024px) 미만에서는 Action Center 가 먼저 온다.**
+       *    그건 당시 의도였다(「결론과 행동이 스크롤 아래에 묻히지 않도록」) —
+       *    🔴 그러나 WU-140 의 기준은 **「판단 결론」이 먼저** 이고, 그 둘이 충돌한다.
+       * ```
+       * 🟢 그래서 격자의 order 를 **건드리지 않고**(그 UX 결정을 뒤집지 않는다)
+       *    결론 영역을 **격자 밖·격자 위** 로 꺼냈다 ⟹ **폭·탭·기둥 소유와 무관하게**
+       *    항상 첫 번째 「판단 영역」이다. 🔴 단계 표시·탭 줄·준비도 점은 **내비게이션**
+       *    이라 그 위로 올리지 않는다(CPO: 「첫 번째 **판단** 영역」).
+       *
+       * 🟢 바뀐 것은 **자리 하나** 다 — props·state·게이트·앵커 전부 그대로다.
+       * 🔴 `stageFocus.mi !== "HIDDEN"` 게이트는 **반드시 유지**: 커머스 탭에
+       *    「판매 판단」을 세우지 않는다(CEO 지시 · `stage-focus.ts`).
+       */}
+      {stageFocus.mi !== "HIDDEN" && (
+        <MarketPriceComparison
+          rows={marketComparison?.rows ?? null}
+          domesticReference={marketComparison?.domesticReference ?? null}
+          overseasReference={marketComparison?.overseasReference ?? null}
+        />
+      )}
+
       {/* ── UX 2.2(CEO 지시, 2026-09-11) — 하나의 작업 화면 ────────────────
           왼쪽 기둥은 "지금 단계가 시키는 일" 하나이고, 오른쪽 기둥은 화면 전체에
           단 하나뿐인 Action Center다. 탭 분기 안에 기둥을 따로 만들지 않는다 —
@@ -3654,46 +3687,15 @@ export function CommerceWorkspace({
               그때까지 자리를 미리 잡아두되 없는 값을 지어내지 않는다. */}
 
           {/**
-           * ══════════════════════════════════════════════════════════════════
-           * 🔴🔴🔴 WU-140 ① — **결론이 후보보다 «먼저» 온다** (CPO NO-GO 의 root cause)
-           * ══════════════════════════════════════════════════════════════════
+           * 🔴🔴 WU-140-R1 — **결론 영역은 이 기둥 안에 없다.** 격자 «위» 로 올라갔다
+           *    (그 자리의 주석이 이유를 들고 있다 — `lg` 미만에서 Action Center 가
+           *    먼저 오는 order 유틸리티 때문에 기둥 안에서는 최상단이 될 수 없다).
+           * 🔴 여기로 되돌리지 않는다 — 되돌리면 좁은 폭에서 **CEO FAIL 이 재발** 한다.
            *
-           * 🔴 CPO 판정(2026-10-21): 현재 화면 **NO-GO** — 「기술이 없어서가 아니라
-           *    **셀러가 원하는 답을 한눈에 얻을 수 없는 UX**」. 그 root cause 는 추측이
-           *    아니라 **이 파일의 실제 JSX 순서** 였다:
-           * ```
-           * 전   <DomesticPriceIntelligencePanel>   ← 후보 구역 넷 + 📚 검토 이력
-           *        … 약 170줄 …
-           *        <MarketPriceComparison/>         ← 결론이 그 «안쪽, 더 아래»
-           * ⟹ WU-136 이 후보 구역을 **접었지만 순서를 바꾸지 않았다** — 셀러는 접힌
-           *    후보 블록들을 지나서야 결론에 닿았다(CPO: 「우선순위가 거꾸로」).
-           * ```
-           * 🟢 **배선을 새로 만들지 않았다** — `marketComparison` state 는 패널이
-           *    `onMarketComparisonChange` 로 올려보내는 그 값이고 이 파일이 **이미**
-           *    들고 있었다. 그래서 패널 «앞» 으로 옮겨도 그대로 읽힌다.
-           * 🔴 첫 프레임에는 그 값이 `null` 이다(패널이 effect 로 올린다) — 그때 영역은
-           *    `checkRan === false` 로 **아예 렌더되지 않는다**(기존 계약 `wu-132 B-1`).
-           *    🟢 그것이 맞다: 「조회 전」에 빈 테두리를 세우면 「분석이 실패했나」로 읽힌다.
-           *
-           * 🔴🔴 **`stageFocus.mi !== "HIDDEN"` 게이트를 «반드시» 둔다.** 이 영역의 제목이
-           *    「📊 시장 판매 판단」이고, `HIDDEN` 은 두 자리에서 켜진다:
-           * ```
-           * ⒜ 커머스 탭(surface === "CHANNEL")  — CEO 지시: 「커머스 탭에 MI 를 표시하지
-           *    않는다」. 「등록하러 온 화면에서 처음 읽는 문장이 『팔아도 되는가』였다」가
-           *    그 지시의 이유다(stage-focus.ts). 게이트를 빼면 그 지시가 되돌아 깨진다.
-           * ⒝ ① 수집 중(stage === "COLLECTING") — 판단할 근거 자체가 아직 없다.
-           * ```
-           * 🔴 아래 `PRICE_COMPARISON_ANCHOR_ID` div 와 `scrollIntoView` 소비자는
-           *    **그 자리에 그대로 남는다** — 그 앵커는 「원자료 드릴다운」을 가리킨다.
+           * 🟢 데이터 배선은 그대로다 — 이 패널이 `onMarketComparisonChange` 로
+           *    `marketComparison` state 를 올려보내고, 격자 위의 그 영역이 **그 state 만**
+           *    읽는다. 🔴 첫 프레임은 `null` 이라 영역이 렌더되지 않는다(`wu-132 B-1`).
            */}
-          {stageFocus.mi !== "HIDDEN" && (
-            <MarketPriceComparison
-              rows={marketComparison?.rows ?? null}
-              domesticReference={marketComparison?.domesticReference ?? null}
-              overseasReference={marketComparison?.overseasReference ?? null}
-            />
-          )}
-
           {snapshotId ? (
             <DomesticPriceIntelligencePanel
               snapshotId={snapshotId}
