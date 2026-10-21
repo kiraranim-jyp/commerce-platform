@@ -525,6 +525,36 @@ productData 를 **칸 하나씩 손으로 옮기면서** `siteBrandName` 을 빠
 🔴 그 아래 WU 기록은 **막혔을 때만** 참조한다(종료된 결론 모음이다).
 ```
 
+### 🔴🔴 **현재 착수점 — R1 CEO 확인 «게이트» · 그 뒤 WU-141** (CPO 확정 2026-10-21)
+
+🔴🔴 **진입은 `docs/START-HERE.md §1` 하나다.** 조사를 다시 하지 않는다.
+
+```
+R1 CEO UI 확인  →  🟢 PASS ⟹ R1 닫고 **WU-141 시작**(`docs/HANDOFF-WU-141.md` §③ 부터)
+                →  🔴 FAIL ⟹ 국내 MI 작업 **시작하지 않고** UI 원인만 최소 수정
+🔴 그 전에 WU-141 **구현/측정에 들어가지 않는다**(CPO 명시).
+```
+
+🟢 **WU-141 = 국내 SAME 확보 경로 개선.** 🔴 목표는 **가격 수집이 아니다** —
+「실제로 존재하는 국내 SAME 을 MI 가 **안전하게** SAME 으로 확정하는 경로 확보」다.
+🔴 **recall 보다 false SAME 방지가 우선** · 「국내 SAME=0」을 풀려고 MI 를 약하게 만들지 않는다.
+
+```
+🟢 출발 표가 **이미 채워져 있다**(WU-138 + R1 세션 재현) — Discovery 문제가 **아니다**:
+   biskuit.kr    human SAME · 후보 O · 판정 O · PRESUMED_SAME · KR · KRW 88,000 ·
+                 blocker `BRAND_MISMATCH` · `NO_TITLE_OVERLAP`     ⟹ 🔴 **레버 없음**
+   beaumonde.co.kr human SAME · 후보 O · 판정 O · PRESUMED_SAME · market UNKNOWN ·
+                 가격 없음 · blocker `BRAND_UNCONFIRMED` 하나      ⟹ 🟡 **가설 1건**
+🔴 다시 재지 않을 레버 5 — NO_TITLE_OVERLAP 비차단(순손실) · BRAND_MISMATCH 제거(효과 0) ·
+   BRAND_UNCONFIRMED 단독 완화(FP +2) · 원상품 brand 메우기(악화) · threshold/8축(CLOSED)
+🟡 **미측정 가설 하나** — beaumonde 의 blocker 가 **후보측 brand null** 때문일 가능성.
+   WU-080 이 REJECT 한 것은 **원상품측** 공백이었다 ⟹ 후보측은 그 분모가 아니었을 수 있다.
+   🔴 **단정하지 않는다** — 확인이 먼저고, 페이지에 brand 가 없으면 **거기서 끝** 이다.
+🔴 「안전한 레버가 없다」도 **정당한 결론** 이다(WU-138 선례) — 그때는 구현 0 으로 종료.
+```
+
+---
+
 ### 🟢🟢 **WU-140 + R1 종료 — 결론이 «격자 밖» 최상단으로 왔다**(2026-10-21 · 배포 `7b25d9b5`)
 
 🟢 전문 `docs/HANDOFF-WU-140.md` **§⑨ 실행 완료 기록**. 🟡 남은 것은 **CEO 화면 확인 1회**
