@@ -31,6 +31,8 @@ import {
   /** 🔴 WU-132 — 재투입 구역의 머리 문구. 같은 owner 다. */
   REVIEWED_SAME_HEADING,
   DOMESTIC_REVIEW_HEADING,
+  /** 🔴 WU-141-R2 — 탐색 과정 전체를 덮는 하나의 접힘 라벨. */
+  JUDGEMENT_BASIS_LABEL,
   DOMESTIC_REVIEW_EMPTY,
   /** 🔴 WU-131 — 📚 이전에 확인한 후보 구역. owner 는 그 컴포넌트 파일이다. */
   ReviewHistorySection,
@@ -2452,7 +2454,13 @@ export function isSuppliedUrlInputVisible(): boolean {
  *    이 패널이 그 값을 **위로 올려보내고**(`onMarketComparisonChange`) 그 영역이 그린다.
  */
 
-function TransientCandidateSections({
+/**
+ * 🟢 WU-141-R2 — **테스트가 마운트할 수 있게 export 한다.** 이 패널 전체를 띄우면
+ *    fetch·타이머·훅이 전부 돌아 「접힘이 닫혀 있다」를 재려는 측정이 흐려진다
+ *    (`MiPanelView`·`MarketComparisonView` 를 export 한 그 이유와 같다).
+ * 🔴 호출부는 그대로 하나다 — 새 소비자를 만들지 않았다.
+ */
+export function TransientCandidateSections({
   web,
   supplied,
   overseasAuto,
@@ -2544,7 +2552,35 @@ function TransientCandidateSections({
    */
   if (!checkRan && !notice) return null;
   return (
-    <>
+    /**
+     * ══════════════════════════════════════════════════════════════════════════
+     * 🔴🔴🔴 WU-141-R2 STEP 2 — **탐색 과정을 «하나의» 접힘 뒤로 보낸다**
+     * ══════════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 CPO 판정(2026-10-21): 「지금 화면은 셀러용 상품등록 화면이 아니라 **MI 조사
+     *    로그 화면**」 · 「**탐색 과정이 결론보다 앞에 나와 있다**」.
+     *
+     * 🔴🔴 **WU-136 의 「구역별 접힘」으로는 부족했다 — 실측으로 확인한 이유 둘**:
+     * ```
+     * ⒜ 구역 여섯 중 **둘이 접혀 있지 않았다** —
+     *    🔎 웹 후보(인라인) · 📚 이전에 확인한 후보(`ReviewHistorySection`).
+     * ⒝ 🔴🔴 그리고 WU-141-R1 STEP 4 가 `recordSeenCandidates` 를 **되살렸다**
+     *    (그 전엔 42P10 으로 한 행도 안 들어갔다) ⟹ 이제 📚 가 **본 후보 전부로
+     *    채워진다** ⟹ 고치지 않으면 CEO 가 본 「조사 로그」가 **더 심해진다**.
+     * ```
+     * 🟢 그래서 **구역 전체를 `▸ 판단 근거 보기` 하나로 감싼다**.
+     *
+     * 🔴 **삭제가 아니다**(CPO STEP 2 명시) — DOM·데이터·API·저장 기능 **전부 그대로** 다.
+     *    React 는 `details` 가 닫혀 있어도 자식을 렌더하므로 기존 DOM 계약이 유지된다.
+     * 🔴 **`open` 을 붙이지 않는다** — 붙이면 다시 1차 화면이 되고, 그것이 2026-09-19
+     *    사고(「유력 후보 5건」)의 기전이다(WU-091 ①·WU-136 §E 와 같은 계약).
+     * 🔴 각 구역의 **머리 문구와 출처 축은 그대로** 둔다 — 「추가 검토 후보」 하나로
+     *    합치면 출처가 사라진다(WU-130 이 계약으로 잠근 축).
+     */
+    <details data-testid="judgement-basis" className="mt-3">
+      <summary className="cursor-pointer text-[11px] text-text-tertiary">
+        ▸ {JUDGEMENT_BASIS_LABEL}
+      </summary>
       {/**
        * 🔴🔴 WU-049 — **해외 참고가격.** MI 가 이미 계산한 값을 그린다.
        *    🟢 환산 0 · 통화별로만 · 「참고용 · 판매판정 미반영」을 구역이 직접 말한다.
@@ -2667,7 +2703,7 @@ function TransientCandidateSections({
        * 🔴 **현재 검색에 다시 걸리지 않았다고 사라지는 구조면 안 된다**(지시서 문장 그대로).
        */}
       <ReviewHistorySection rows={reviewHistory} />
-    </>
+    </details>
   );
 }
 
