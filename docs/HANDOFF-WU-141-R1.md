@@ -81,8 +81,27 @@ PostgREST → `ON CONFLICT (snapshot_id, candidate_url) DO UPDATE`
    (그것이 WU-132 가 찾은 그 구멍이고 **아직 남아 있다**)
 ⒠ 중복 URL — 위는 접는다(`seen` set) · 아래는 샵 단위로 나눠 그린다
 ```
-🟢 **아래 패널은 금액을 자체 계산하지 않는다**(서버 응답의 `price` 를 그린다) ⟹
-「계산이 둘」은 아니다. 🔴 **「집합과 게이트가 둘」** 이다 — 그것이 CEO 가 본 불일치다.
+🔴🔴🔴 **정정 — 「금액 계산은 하나다」는 틀렸다. 집계 owner 가 «셋» 이다.**
+처음 보고에서 「아래 패널은 서버 `price` 를 그릴 뿐」이라고 적었는데, **직접 읽어 보니
+아래 경로가 금액을 «계산» 한다.** 그 계산이 **MI 패널 요약으로 들어간다**:
+
+| # | 집계 owner | 입력 | 화면 | 게이트 |
+|---|---|---|---|---|
+| ① | `buildMarketJudgement` · `buildPriceGuide`<br/>`mi-same-candidates.ts:259·528` | `/check` MI | **📊 시장 판매 판단** | tier **SAME** + 품절 아님 + **VERIFIED_CURRENT** |
+| ② | 서버 참고가격(`summarizeCandidateOverseasPrices` 등) | `/check` | 상세 근거의 🇰🇷/🧾 참고가격 | tier `EXACT\|COMPARISON`(**유사 포함**) |
+| ③ | 🔴 `buildOverseasMarketEvidence`<br/>`market-evidence.ts:243` | 🔴 **아래 패널의 «자기» 검색**<br/>(`ComparisonShopSearch.tsx:405`) | 🔴 **MI 패널의 🌎 해외 시장 요약**<br/>(`…Panel.tsx:3240`) | `tier === "SAME" && price != null`<br/>🔴 **품절 안 봄 · priceStatus 안 봄** |
+
+```
+🔴🔴 ③ 이 «세 번째 답» 이다 — min~max 가격대 · 판매처 수 · 국가 수를 **직접 만들고**,
+   다중통화면 집계를 거부하는 **자기 규칙** 까지 있다. 그리고 그 산출이
+   `onEvidenceChange` → `overseasMarketEvidence` 로 **MI 패널에 들어간다**.
+🔴 비대칭도 여기서 나온다 — 🇰🇷 요약(`buildDomesticMarketEvidence`:181)은
+   **`/check` 의 seller count** 로 만들고, 🌎 요약은 **아래 패널 검색** 으로 만든다.
+🔴 그리고 ③ 의 입력은 `mi-verdict-copy.ts:58` 을 통해 **MI 판정 문구** 에도 닿는다
+   ⟹ 그냥 끊으면 **판정 문구가 바뀐다**(정책 영역 · 그래서 설계에 넣었다).
+```
+
+🟢 그래서 CEO 가 본 불일치의 정체는 **「집합 둘 + 게이트 셋 + 집계 셋」** 이다.
 
 ---
 
@@ -118,6 +137,64 @@ default-visible-tier · domestic-shop-search-tier           ← 두 패널의 �
 🟡 **설계 입력 하나(측정됨)** — 사람이 이미 판단한 후보는 이제 다시 꺼내 올 수 있다
 (`listCandidateReviews`). 🔴 그래서 「이미 DIFFERENT 로 확정된 후보 접기」는 **새 판정이
 아니라 저장된 사람 판단을 읽는 것** 으로 구현할 수 있다. 🔴 단 **MI verdict 를 덮지 않는다**.
+
+---
+
+## ④-B 🟢🟢 **설계 산출물** (CPO §7 ①~⑥ · 구현 전 필수) — 2026-10-21
+
+### ⑤ 중복되는 계산 — **세 벌이고, 둘은 없앨 수 있다**
+```
+① /check MI 집계            🟢 **남긴다** — 최종 결론의 유일한 owner
+② 서버 참고가격(유사 포함)    🟡 **상세 근거에 남긴다** — 분모가 다르다는 것을 화면이 이미 말한다
+                              (`MI_SAME_AREA_SCOPE` 마지막 문장 · WU-132)
+③ buildOverseasMarketEvidence 🔴 **제거 대상** — 아래 패널의 자기 검색으로 만든 «세 번째 답»
+```
+🔴🔴 **그리고 ③ 의 입력 자체가 중복이다** — `/check` 는 **이미** 같은 해외 검색을 돈다
+(WU-130 의 `__overseas_auto__` 가 `searchComparisonShops` 를 부른다). 헌장이 그 대가를
+적어 뒀다: 「지금 해외 검색이 **두 번** 돈다 … 한쪽 제거는 **owner 를 하나로 만들 때** 의 일이다」.
+🟢 **이번 WU 가 그 «때» 다.**
+
+### ⑥ 최종적으로 남길 source — **하나의 데이터 흐름**
+```
+원상품 → POST /check
+          ├─ 국내 등록부 검색 + 해외 자동 풀 + AI URL 풀 + 재투입   (후보 생산자 넷)
+          ├─ MI 판정(tier · 판매상태 · 가격검증)
+          └─ 응답: rows[] + 참고가격 집계 + seller counts
+                      │
+      ┌───────────────┴───────────────────────────────┐
+      ▼                                               ▼
+📊 시장 판매 판단 (유일한 결론)                  ▸ 상세 근거 (검토 재료)
+  🇰🇷 국내 / 🌎 해외                               ├─ MI 상세 · 참고가격(②)
+  SAME + 판매상태 + 확인가격 + 🔗                   ├─ 후보 목록 ← **같은 rows[]**
+  ← 집계 ①                                          ├─ 이미지
+                                                     └─ Human review / 이력 (candidate_reviews)
+🔴 아래 두 패널은 **자기 검색을 돌리지 않는다** — 같은 `rows[]` 를 받아 «검토 재료» 로만 그린다
+🔴 집계 ③ 은 사라진다 ⟹ 🌎 요약도 ①/② 에서 나온다(🇰🇷 와 **같은 축** 이 된다)
+```
+
+### 🔴 설계가 건드려야 하는 «정책» 둘 — CTO 가 임의로 정하지 않는다
+```
+⒜ `mi-verdict-copy.ts:58` 이 ③ 의 figure 유무로 **판정 문구** 를 고른다.
+   ③ 을 없애면 그 입력을 ①/② 로 갈아야 하고 **문구가 달라질 수 있다**.
+   🟡 CPO 확인 필요 — 「해외 가격 유무」의 새 기준을 ①(엄격) 로 할지 ②(참고 포함) 로 할지.
+   🔴 ① 로 하면 지금 「해외 가격 있음」이던 상품이 「없음」으로 바뀔 수 있다.
+⒝ `PRICE_COMPARISON_ANCHOR_ID` + `scrollIntoView`(`CommerceWorkspace:837`)의 **새 주인**.
+   🟢 CPO 지시대로 **📊 시장 판매 판단이 그 anchor 를 받는다** — scroll 동작은 유지.
+   🔴 그러면 그 anchor 는 격자 **밖** 으로 옮겨진다(WU-140-R1 이 영역을 거기 뒀다).
+```
+
+### 🟡 후보 분류(STEP 5) — **새 판정 0 · 전부 기존 값**
+```
+A SAME 확정        transientDisplayTier === "SAME"
+B SAME 보류        PRESUMED_SAME · UNKNOWN
+C SIMILAR          SIMILAR · SAME_MODEL_OPTION_DIFF
+D DIFFERENT 확정   CONFLICT  **또는** human_verdict === "DIFFERENT"  ← 🟢 STEP 4 가 되살린 값
+E 가격 확인 가능    isPriceConfirmed === true
+F 가격 확인 필요    isPriceConfirmed === false
+G 판매상태 UNKNOWN  saleState === "UNKNOWN"
+🟢 기본 노출 = **판단할 가치가 있는 것**(A·B·C) · D 는 접는다(**삭제 0** · 근거 보존)
+🔴 상위 N 절단 ❌ · threshold/SAME 완화 ❌ · D 를 SAME 으로 승격 ❌
+```
 
 ---
 

@@ -22,14 +22,22 @@ STEP 5  후보 과다 — **판단이 필요한 후보 중심** 으로 재구성
 🟢 둘은 **같은 묶음** 이다 — 아래에만 서는 후보가 곧 「사람이 검토할 재료」다(②⒜⒝⒞)
 ```
 
-🔴🔴 **먼저 알아야 할 핵심 사실** — 위/아래 불일치는 계산이 둘이어서가 아니다:
+🔴🔴 **먼저 알아야 할 핵심 사실 — 「집합 둘 + 게이트 셋 + 집계 «셋»」 이다**
 ```
 아래  `mayShowCandidate`(match-display.ts:248) — PRESUMED_SAME·SIMILAR 통과 ·
       품절 **안 봄** · 가격검증 **안 봄** · 그리고 **자기 검색**을 돌린다
       (DomesticShopSearch:188 → /api/domestic-price-sources/search ·
        ComparisonShopSearch:224 → **/api/comparison/search**)
 위    tier **SAME** + 품절 아님 + priceStatus **VERIFIED_CURRENT**  (/check 의 MI 산출)
-⟹ 🔴 **집합과 게이트가 둘** 이다. 금액 계산은 하나다(아래는 서버 price 를 그린다).
+
+🔴🔴 집계 owner 가 **셋** 이다(한 번 틀렸다가 코드 읽고 정정한 자리다):
+  ① mi-same-candidates(/check)        → 📊 시장 판매 판단
+  ② 서버 참고가격(/check · 유사 포함)   → 상세 근거
+  ③ 🔴 buildOverseasMarketEvidence(market-evidence.ts:243)
+     ← **아래 패널 자기 검색**(ComparisonShopSearch:405) → **MI 패널 🌎 요약**
+     게이트가 또 다르다(`tier==="SAME" && price!=null` · 품절/검증 **안 봄**)
+🔴 ③ 은 `mi-verdict-copy.ts:58` 로 **판정 문구** 에도 닿는다 ⟹ 그냥 끊으면 문구가 바뀐다
+🟢 설계안·정책 질문 둘은 `docs/HANDOFF-WU-141-R1.md` **④-B** 에 있다
 ```
 
 🔴 **R1 의 교훈(남긴다) — 「기둥 안에서 맨 위」는 「화면 맨 위」가 아니다**
