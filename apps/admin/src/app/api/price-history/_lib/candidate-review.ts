@@ -171,6 +171,53 @@ export async function listReviewedSameUrls(input: {
  * 🟢 `last_seen_at` 만 갱신한다 — 「언제 마지막으로 보였나」가 화면에 필요하다.
  * 🔴 실패해도 **throw 하지 않는다** — 이력 저장 실패가 가격확인 자체를 깨뜨리지 않는다.
  */
+/* ═══════ 🔴🔴🔴 WU-141-R1 STEP 4 — **「저장 실패」의 원인은 `ON CONFLICT` 였다** ═══════
+ *
+ * 🔴🔴 **운영 DB 실측(2026-10-21 · `scripts/wu-141-review-save-probe.mjs`)**:
+ * ```
+ * 079 의 유니크는 **부분(partial) 인덱스 둘** 이다 —
+ *   candidate_reviews_snapshot_url_key  on (snapshot_id, candidate_url) WHERE snapshot_id is not null
+ *   candidate_reviews_origin_url_key    on (origin_code, candidate_url) WHERE snapshot_id is null …
+ * 그런데 이 파일은 `.upsert(…, { onConflict: "snapshot_id,candidate_url" })` 를 썼다.
+ * PostgREST 는 그것을 `ON CONFLICT (snapshot_id, candidate_url) DO UPDATE` 로 번역하고,
+ * 🔴 Postgres 는 **부분 인덱스를 술어 없이 추론하지 못한다** ⟹ 실측 결과:
+ *    ⒜ 앱과 같은 문장               → **42P10** 「no unique or exclusion constraint
+ *                                     matching the ON CONFLICT specification」
+ *    ⒝ `… WHERE snapshot_id is not null` 을 같이 준 문장 → 🟢 성공
+ * ⟹ 🔴🔴 **쓰기 경로가 WU-131 이후 «한 번도» 성공하지 못했다.** 네 판단 전부 실패이고
+ *    (CEO 가 본 그것) 📚 이력(`recordSeenCandidates`)도 **조용히** 0 을 돌려주고 있었다
+ *    (그 함수는 throw 하지 않는다 ⟹ 화면이 아무 말도 하지 않았다).
+ * ```
+ * 🟢 **고치는 방법으로 schema 를 바꾸지 않았다.** 부분 유니크 둘은 WU-131 이 계약으로
+ *    잠근 설계이고(「UNIQUE 를 candidate_url 단독으로 두지 않는다」), 운영 schema 변경은
+ *    STOP 조건에 가깝다. 🔴 그래서 **문장 모양만** 바꿨다 —
+ *    `조회 → 있으면 update / 없으면 insert`, 그리고 **경쟁 삽입은 `23505` 로 받아 갱신**.
+ * 🟢 부분 유니크 인덱스의 **방어는 그대로 살아 있다**(무결성을 느슨하게 하지 않았다).
+ */
+const UNIQUE_VIOLATION = "23505";
+
+/**
+ * 그 스냅샷에서 같은 후보 URL 의 행 id. 🔴 **키 축은 `(snapshot_id, candidate_url)`** 이고
+ * 그것이 079 의 부분 유니크 인덱스와 같은 축이다(새 키를 만들지 않는다).
+ */
+async function findReviewId(
+  supabase: NonNullable<ReturnType<typeof getSupabaseAdmin>>,
+  snapshotId: string,
+  key: string,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("candidate_reviews")
+    .select("id")
+    .eq("snapshot_id", snapshotId)
+    .eq("candidate_url", key)
+    .maybeSingle();
+  if (error) {
+    console.warn(`[candidate-review] 기존 행 조회 실패(${error.code}):`, error.message);
+    return null;
+  }
+  return (data as { id?: string } | null)?.id ?? null;
+}
+
 export async function recordSeenCandidates(input: {
   snapshotId: string;
   originCode: string | null;
@@ -204,14 +251,51 @@ export async function recordSeenCandidates(input: {
     source: c.source,
     last_seen_at: now,
   }));
-  const { error } = await supabase
+  /**
+   * 🔴 같은 이유로 `upsert` 를 쓸 수 없다(위 블록의 42P10 실측). 🟢 **키 조회 한 번** 으로
+   *    기존/신규를 가른 뒤, 신규는 **한 번에 insert** 하고 기존만 갱신한다.
+   * 🔴🔴 갱신 payload 에 `human_verdict`/`human_note`/`reviewed_at` 이 **없다** —
+   *    이력 기록이 **셀러 판단을 덮지 않는다**(WU-131 의 가장 중요한 성질 · 계약으로 잠김).
+   */
+  const keys = rows.map((r) => r.candidate_url);
+  const { data: existing, error: lookupError } = await supabase
     .from("candidate_reviews")
-    .upsert(rows, { onConflict: "snapshot_id,candidate_url", ignoreDuplicates: false });
-  if (error) {
-    console.warn("[candidate-review] 이력 저장 실패:", error.message);
+    .select("id, candidate_url")
+    .eq("snapshot_id", input.snapshotId)
+    .in("candidate_url", keys);
+  if (lookupError) {
+    console.warn(`[candidate-review] 이력 조회 실패(${lookupError.code}):`, lookupError.message);
     return 0;
   }
-  return rows.length;
+  const idByKey = new Map<string, string>();
+  for (const r of (existing ?? []) as { id: string; candidate_url: string }[]) {
+    idByKey.set(r.candidate_url, r.id);
+  }
+
+  let written = 0;
+  const fresh = rows.filter((r) => !idByKey.has(r.candidate_url));
+  if (fresh.length > 0) {
+    const { error } = await supabase.from("candidate_reviews").insert(fresh);
+    if (error) {
+      /** 🔴 경쟁 삽입(`23505`)은 다음 조회에서 갱신되므로 이력 하나를 잃는 것이 전부다. */
+      console.warn(`[candidate-review] 이력 신규 저장 실패(${error.code}):`, error.message);
+    } else {
+      written += fresh.length;
+    }
+  }
+  for (const row of rows) {
+    const id = idByKey.get(row.candidate_url);
+    if (!id) continue;
+    /** 🔴 `workspace_id`/`snapshot_id`/`candidate_url` 는 키라서 **다시 쓰지 않는다**. */
+    const { workspace_id: _w, snapshot_id: _s, candidate_url: _u, ...observed } = row;
+    const { error } = await supabase.from("candidate_reviews").update(observed).eq("id", id);
+    if (error) {
+      console.warn(`[candidate-review] 이력 갱신 실패(${error.code}):`, error.message);
+      continue;
+    }
+    written += 1;
+  }
+  return written;
 }
 
 /**
@@ -232,27 +316,67 @@ export async function saveHumanVerdict(input: {
   const supabase = getSupabaseAdmin();
   if (!supabase) return null;
   const now = new Date().toISOString();
+  const key = reviewKey(input.candidateUrl);
+
+  /**
+   * 🔴 **셀러 판단만 쓴다** — `system_*` 칸은 **건드리지 않는다**(WU-131 양방향 계약).
+   *    insert 경로에서도 그 칸들을 넣지 않으므로 사람 판단이 MI 산출을 덮지 않는다.
+   */
+  const verdictFields = {
+    human_verdict: input.humanVerdict,
+    human_note: input.humanNote ?? null,
+    reviewed_at: now,
+    last_seen_at: now,
+  };
+
+  const existingId = await findReviewId(supabase, input.snapshotId, key);
+  if (existingId) {
+    const { data, error } = await supabase
+      .from("candidate_reviews")
+      .update(verdictFields)
+      .eq("id", existingId)
+      .select("*")
+      .maybeSingle();
+    if (error) {
+      console.warn(`[candidate-review] 판단 갱신 실패(${error.code}):`, error.message);
+      return null;
+    }
+    return data ? toRow(data) : null;
+  }
+
   const { data, error } = await supabase
     .from("candidate_reviews")
-    .upsert(
-      {
-        workspace_id: input.workspaceId,
-        snapshot_id: input.snapshotId,
-        origin_code: input.originCode,
-        candidate_url: reviewKey(input.candidateUrl),
-        human_verdict: input.humanVerdict,
-        human_note: input.humanNote ?? null,
-        source: input.source ?? "SELLER_URL",
-        reviewed_at: now,
-        last_seen_at: now,
-      },
-      { onConflict: "snapshot_id,candidate_url", ignoreDuplicates: false },
-    )
+    .insert({
+      workspace_id: input.workspaceId,
+      snapshot_id: input.snapshotId,
+      origin_code: input.originCode,
+      candidate_url: key,
+      source: input.source ?? "SELLER_URL",
+      ...verdictFields,
+    })
     .select("*")
     .maybeSingle();
-  if (error) {
-    console.warn("[candidate-review] 판단 저장 실패:", error.message);
-    return null;
+  if (!error) return data ? toRow(data) : null;
+
+  /**
+   * 🔴 **경쟁 삽입** — 조회와 삽입 사이에 `recordSeenCandidates` 가 같은 키를 넣었으면
+   *    부분 유니크 인덱스가 `23505` 로 막는다(그 방어는 **그대로 유지** 한다).
+   * 🟢 그때는 한 번 더 찾아 **갱신** 한다 — 셀러의 클릭을 잃지 않는다.
+   */
+  if (error.code === UNIQUE_VIOLATION) {
+    const raced = await findReviewId(supabase, input.snapshotId, key);
+    if (raced) {
+      const { data: updated, error: updateError } = await supabase
+        .from("candidate_reviews")
+        .update(verdictFields)
+        .eq("id", raced)
+        .select("*")
+        .maybeSingle();
+      if (!updateError) return updated ? toRow(updated) : null;
+      console.warn(`[candidate-review] 경쟁 삽입 후 갱신 실패(${updateError.code}):`, updateError.message);
+      return null;
+    }
   }
-  return data ? toRow(data) : null;
+  console.warn(`[candidate-review] 판단 저장 실패(${error.code}):`, error.message);
+  return null;
 }
