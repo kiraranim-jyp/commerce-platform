@@ -594,7 +594,7 @@ function ProductTab(options: TabOptions): ReactElement {
         onRequestPriceReview: noop,
         open: overseasEvidenceOpen,
         onToggle: setOverseasEvidenceOpen,
-        onEvidenceChange: setOverseasMarketEvidence,
+        /* 🔴 WU-141-R3 C-5 — `onEvidenceChange` 는 **없어졌다**(③ 가격 집계 제거). */
         variant: marketEvidenceVariant,
       }),
     ),
