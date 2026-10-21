@@ -18,6 +18,12 @@ import {
   MARKET_JUDGEMENT_NOTE,
   MARKET_JUDGEMENT_TITLE,
   MARKET_LABEL,
+  /** 🔴 WU-140 — 시장 블록이 «먼저» 서고, 그 시장이 빈 «이유» 를 말한다(CPO 확정 순서). */
+  MARKET_RESULT_HEADING,
+  countMarketCandidates,
+  countUnresolvedMarketCandidates,
+  marketEmptyNote,
+  marketUnresolvedNote,
   MARKET_TABLE_HEADERS,
   MARKET_VERDICT_TEXT,
   ON_SALE_SPLIT_PREFIX,
@@ -38,6 +44,7 @@ import {
   priceRangeText,
   selectMiSameCandidates,
   countPendingCandidates,
+  type MarketJudgement,
   type MiSameSelection,
 } from "./mi-same-candidates";
 import { priceText, stockText, type GeminiTransientRow } from "./GeminiTransientCandidates";
@@ -107,6 +114,8 @@ export function MarketPriceComparison({
    *    「판정이 보류돼서 안 보인다」가 사실이고, 그 사실은 시장별로 나누면 흐려진다.
    */
   const pending = pendingNote(countPendingCandidates(rows));
+  /** 🔴 WU-140 — 시장이 확정되지 않아 **두 블록 어디에도 안 들어간** 후보 수(실측 근거는 그 함수). */
+  const unresolvedNote = marketUnresolvedNote(countUnresolvedMarketCandidates(rows));
 
   /**
    * 🔴🔴 **「조회가 돌았는가」가 렌더 조건이다**(WU-130 ② 가 세운 그 계약).
@@ -125,15 +134,50 @@ export function MarketPriceComparison({
       <p className="mt-0.5 text-[11px] text-text-tertiary">{MARKET_JUDGEMENT_NOTE}</p>
 
       {/**
-       * 🔴🔴🔴 WU-136 §A — **최상단은 「팔아도 되는가」 하나다.**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔴🔴🔴 WU-140 ② — **시장 블록이 «먼저» 다** (CPO 확정 순서)
+       * ══════════════════════════════════════════════════════════════════════
        *
-       * 🔴 CPO 지적: 전까지 이 영역은 **판정 어휘(tier·blocker)부터** 말하고 가격을
-       *    먼저 보여줬다 — 「개발자/검증자에게는 유용하지만 셀러에게는 핵심이 뒤집혀
-       *    있다」. 🟢 그래서 **순서만** 뒤집었다. 새 영역·새 계산·새 데이터는 없다.
+       * 🔴 CPO 가 고정한 순서는 **🇰🇷 국내 → 🌎 해외 → 판매·가격 판단 결과 → 상세 근거**
+       *    다. 내 초안은 `verdict → 시장 블록` 이었고 **CPO 가 그것을 뒤집었다** —
+       *    셀러의 첫 질문은 「국내에 있나 / 해외에 있나」이고 `verdict` 는 그 **요약**
+       *    이기 때문이다. 요약을 먼저 읽히게 두면 셀러는 그 한 줄만 보고 판단한다.
+       *
+       * 🔴🔴 **성공 기준이 「위로 올라갔다」가 아니다**(CPO): 「페이지를 열었을 때 셀러가
+       *    **후보 목록을 읽지 않아도** 🇰🇷/🌎 의 동일상품 수 · 판매중 수 · 확인 가격 ·
+       *    가격 확인 필요 여부를 **먼저** 이해할 수 있는가」.
+       * 🟢 그래서 블록 **안쪽** 은 한 글자도 새로 계산하지 않는다 — `buildPriceGuide` 가
+       *    이미 내는 시장별 수치를 그 자리로 **옮긴** 것이다(집계 0 · 판정 0 · 환산 0).
+       */}
+      <div data-testid="market-blocks" className="mt-2 grid gap-2 md:grid-cols-2">
+        {(["KR", "OVERSEAS"] as const).map((mk) => (
+          <MarketBlock key={mk} market={mk} judgement={judgement} rows={rows} />
+        ))}
+      </div>
+      {/**
+       * 🔴🔴 **두 블록 어디에도 안 들어간 후보를 조용히 없애지 않는다.**
+       *    실측(B226AC010 · `beaumonde.co.kr`): 사람이 SAME 이라 한 `.kr` 후보가
+       *    **가격이 없어서** 시장 축 `UNKNOWN` 으로 남는다 ⟹ 그 상태로 두면 🇰🇷 블록이
+       *    「후보를 찾지 못했습니다」라고 **거짓** 을 말한다.
+       * 🔴 시장을 **지어내지 않는다**(UNKNOWN → KR 승격 금지 · WU-020 §4 유지).
+       */}
+      {unresolvedNote && (
+        <p data-testid="market-unresolved" className="mt-1 text-[11px] text-text-tertiary">
+          {unresolvedNote}
+        </p>
+      )}
+
+      {/**
+       * 🔴🔴 WU-136 §A — **「팔아도 되는가」 한 줄.** 🔴 WU-140 에서 이 구간이 시장 블록
+       *    «뒤» 로 내려왔다(CPO 확정). 🟢 **testid 는 전부 그대로** 다 —
+       *    `market-verdict` · `market-sale-counts` · `market-split` ·
+       *    `market-price-range` · `market-seller-table` 을 계약이 보고 있고,
+       *    이름을 바꾸면 그 계약들이 **조용히** 통과해 버린다.
        * 🔴 네 결론을 **다른 문장** 으로 적는다 — 「없다」로 뭉치면 셀러가 할 행동이
        *    달라지는데 화면이 같은 말을 한다(§G).
        */}
-      <div data-testid="market-judgement" className="mt-2 space-y-1">
+      <div data-testid="market-judgement" className="mt-3 space-y-1">
+        <p className="text-[11px] font-medium text-text-secondary">{MARKET_RESULT_HEADING}</p>
         <p data-testid="market-verdict" className="text-[12px] font-medium text-text-primary">
           {MARKET_VERDICT_TEXT[judgement.verdict]}
         </p>
@@ -235,51 +279,6 @@ export function MarketPriceComparison({
                 ))}
               </tbody>
             </table>
-
-            {/**
-             * 🔴🔴🔴 WU-139 — **확인된 가격 1~2개만 있어도 기준가를 안내한다**(CPO).
-             *
-             * 🔴 목적은 「모든 가격 수집」이 아니라 **「셀러가 판매가를 결정할 근거」** 다.
-             * 🔴🔴 **1건을 「시장 평균가」처럼 적지 않는다** — `basis` 가 SINGLE ↔ RANGE 를
-             *    가르고 **문장이 달라진다**(CPO 명시 금지).
-             * 🔴 **추천 판매가를 계산하지 않는다** — 그 수식은 원가·수수료 축이고
-             *    §00-B 가격 보류다. 지어내면 셀러가 그 숫자로 실제 가격을 정한다.
-             * 🔴 통화 **환산 0**.
-             */}
-            <div className="mt-2 grid gap-2 md:grid-cols-2">
-              {(["KR", "OVERSEAS"] as const).map((mk) => {
-                const g = buildPriceGuide(judgement, mk);
-                if (g.sameCount === 0) return null;
-                const head = priceGuideHeadline(g);
-                return (
-                  <div
-                    key={mk}
-                    data-testid={`price-guide-${mk === "KR" ? "domestic" : "overseas"}`}
-                    className="rounded border border-border/60 p-2"
-                  >
-                    <p className="text-[11px] font-medium text-text-primary">{PRICE_GUIDE_TITLE[mk]}</p>
-                    <p data-testid="price-guide-counts" className="text-[11px] text-text-secondary">
-                      {priceGuideCountNote(g)}
-                    </p>
-                    {head ? (
-                      <>
-                        <p data-testid="price-guide-headline" className="text-[12px] font-medium text-text-primary">
-                          {head}
-                        </p>
-                        {/* 🔴 표본이 하나면 그 사실을 **문장으로** 말한다. */}
-                        <p data-testid="price-guide-note" className="text-[11px] text-text-tertiary">
-                          {g.basis === "SINGLE" ? PRICE_GUIDE_SINGLE_NOTE : PRICE_GUIDE_RANGE_NOTE}
-                        </p>
-                      </>
-                    ) : (
-                      <p data-testid="price-guide-empty" className="text-[11px] text-text-tertiary">
-                        {PRICE_GUIDE_EMPTY}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
           </>
         )}
       </div>
@@ -346,6 +345,81 @@ export function MarketPriceComparison({
         </div>
       </details>
     </section>
+  );
+}
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴🔴 WU-140 ②③ — **한 시장의 결론 블록** (셀러가 «가장 먼저» 읽는 칸)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 CPO 가 요구한 것은 **네 상태를 셀러가 구분할 수 있는 것** 이다:
+ * ```
+ * ⒜ 검색 자체가 안 됨          후보 0            → 「후보를 찾지 못했습니다」
+ * ⒝ SAME 판정 대기·보류         후보 N · SAME 0   → 「N곳 찾았지만 …」 (+ 사유)
+ * ⒞ SAME 이지만 가격 확인 필요   → 건수 줄 + 🔗(판매처 표의 링크)
+ * ⒟ 가격 확인 완료             → 기준가 + SINGLE/RANGE 문장
+ * ```
+ * 🔴🔴 전까지 ⒜ 와 ⒝ 가 화면에서 **같은 빈 칸** 이었다 — 셀러가 할 행동이 전혀 다른데
+ *    (앞은 기다리는 것, 뒤는 **사진으로 직접 판단하는 것**) 화면이 같은 말을 했다.
+ *
+ * 🔴 **빈 틀을 만들지 않는다** — `sameCount === 0` 이면 가격 가이드(`price-guide-*`)를
+ *    **렌더하지 않는다**(기존 계약 `wu-139 C-4`). 그 자리에 들어가는 것은 **기준가가
+ *    아니라 이유** 다. 🔴 기준가를 **지어내지 않는다.**
+ * 🔴 통화 **환산 0** · 추천 판매가 **계산 0**(§00-B 가격 보류).
+ */
+function MarketBlock({
+  market,
+  judgement,
+  rows,
+}: {
+  market: "KR" | "OVERSEAS";
+  judgement: MarketJudgement;
+  rows?: readonly GeminiTransientRow[] | null;
+}): JSX.Element {
+  const g = buildPriceGuide(judgement, market);
+  const head = priceGuideHeadline(g);
+  const suffix = market === "KR" ? "domestic" : "overseas";
+  return (
+    <div
+      data-testid={`market-block-${suffix}`}
+      className="rounded border border-border/60 p-2"
+    >
+      {/* 🟢 라벨 owner 는 `MARKET_LABEL` 하나다 — 두 벌로 적지 않는다. */}
+      <p className="text-[11px] font-medium text-text-primary">{MARKET_LABEL[market]}</p>
+      {g.sameCount === 0 ? (
+        /**
+         * 🔴 ⒜ ↔ ⒝ 를 **가른다.** 🔴 「이 시장에 동일상품이 없다」로 적지 않는다 —
+         *    부재와 미발견은 다르다(WU-091 어휘 계약).
+         */
+        <p data-testid={`market-empty-${suffix}`} className="text-[11px] text-text-tertiary">
+          {marketEmptyNote(countMarketCandidates(rows, market), countPendingCandidates(rows, market))}
+        </p>
+      ) : (
+        <div data-testid={`price-guide-${suffix}`}>
+          <p className="text-[11px] font-medium text-text-secondary">{PRICE_GUIDE_TITLE[market]}</p>
+          {/* 🟢 ⒞ 와 ⒟ 를 가르는 건수 줄 — 「동일상품 확인」과 「가격 확인」을 따로 적는다. */}
+          <p data-testid="price-guide-counts" className="text-[11px] text-text-secondary">
+            {priceGuideCountNote(g)}
+          </p>
+          {head ? (
+            <>
+              <p data-testid="price-guide-headline" className="text-[12px] font-medium text-text-primary">
+                {head}
+              </p>
+              {/* 🔴 표본이 하나면 그 사실을 **문장으로** 말한다(1건 ≠ 시장 평균). */}
+              <p data-testid="price-guide-note" className="text-[11px] text-text-tertiary">
+                {g.basis === "SINGLE" ? PRICE_GUIDE_SINGLE_NOTE : PRICE_GUIDE_RANGE_NOTE}
+              </p>
+            </>
+          ) : (
+            <p data-testid="price-guide-empty" className="text-[11px] text-text-tertiary">
+              {PRICE_GUIDE_EMPTY}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 

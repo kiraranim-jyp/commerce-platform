@@ -3652,6 +3652,48 @@ export function CommerceWorkspace({
 
               MI-UI-1 — snapshotId는 최초 스냅샷 저장 응답이 와야 채워진다.
               그때까지 자리를 미리 잡아두되 없는 값을 지어내지 않는다. */}
+
+          {/**
+           * ══════════════════════════════════════════════════════════════════
+           * 🔴🔴🔴 WU-140 ① — **결론이 후보보다 «먼저» 온다** (CPO NO-GO 의 root cause)
+           * ══════════════════════════════════════════════════════════════════
+           *
+           * 🔴 CPO 판정(2026-10-21): 현재 화면 **NO-GO** — 「기술이 없어서가 아니라
+           *    **셀러가 원하는 답을 한눈에 얻을 수 없는 UX**」. 그 root cause 는 추측이
+           *    아니라 **이 파일의 실제 JSX 순서** 였다:
+           * ```
+           * 전   <DomesticPriceIntelligencePanel>   ← 후보 구역 넷 + 📚 검토 이력
+           *        … 약 170줄 …
+           *        <MarketPriceComparison/>         ← 결론이 그 «안쪽, 더 아래»
+           * ⟹ WU-136 이 후보 구역을 **접었지만 순서를 바꾸지 않았다** — 셀러는 접힌
+           *    후보 블록들을 지나서야 결론에 닿았다(CPO: 「우선순위가 거꾸로」).
+           * ```
+           * 🟢 **배선을 새로 만들지 않았다** — `marketComparison` state 는 패널이
+           *    `onMarketComparisonChange` 로 올려보내는 그 값이고 이 파일이 **이미**
+           *    들고 있었다. 그래서 패널 «앞» 으로 옮겨도 그대로 읽힌다.
+           * 🔴 첫 프레임에는 그 값이 `null` 이다(패널이 effect 로 올린다) — 그때 영역은
+           *    `checkRan === false` 로 **아예 렌더되지 않는다**(기존 계약 `wu-132 B-1`).
+           *    🟢 그것이 맞다: 「조회 전」에 빈 테두리를 세우면 「분석이 실패했나」로 읽힌다.
+           *
+           * 🔴🔴 **`stageFocus.mi !== "HIDDEN"` 게이트를 «반드시» 둔다.** 이 영역의 제목이
+           *    「📊 시장 판매 판단」이고, `HIDDEN` 은 두 자리에서 켜진다:
+           * ```
+           * ⒜ 커머스 탭(surface === "CHANNEL")  — CEO 지시: 「커머스 탭에 MI 를 표시하지
+           *    않는다」. 「등록하러 온 화면에서 처음 읽는 문장이 『팔아도 되는가』였다」가
+           *    그 지시의 이유다(stage-focus.ts). 게이트를 빼면 그 지시가 되돌아 깨진다.
+           * ⒝ ① 수집 중(stage === "COLLECTING") — 판단할 근거 자체가 아직 없다.
+           * ```
+           * 🔴 아래 `PRICE_COMPARISON_ANCHOR_ID` div 와 `scrollIntoView` 소비자는
+           *    **그 자리에 그대로 남는다** — 그 앵커는 「원자료 드릴다운」을 가리킨다.
+           */}
+          {stageFocus.mi !== "HIDDEN" && (
+            <MarketPriceComparison
+              rows={marketComparison?.rows ?? null}
+              domesticReference={marketComparison?.domesticReference ?? null}
+              overseasReference={marketComparison?.overseasReference ?? null}
+            />
+          )}
+
           {snapshotId ? (
             <DomesticPriceIntelligencePanel
               snapshotId={snapshotId}
@@ -3814,20 +3856,18 @@ export function CommerceWorkspace({
               marketEvidence={
                 <div id={PRICE_COMPARISON_ANCHOR_ID} className="scroll-mt-4 space-y-4">
                   {/**
-                   * 🔴🔴🔴 WU-132 ①②③ — **이 영역이 「동일상품 가격 비교」의 유일한 자리다.**
+                   * 🔴🔴 WU-140 ① — **「동일상품 가격 비교」 영역은 여기 있지 않다.**
                    *
-                   * 🟢 MI 가 판정한 후보(SAME + 현재 판매중 + 가격확인)를 🇰🇷/🌎 로 나눠
-                   *    보여주고, 그 안에 WU-130 ④ 에서 **옮겨 온** 두 참고가격 집계가 선다.
-                   * 🔴 아래 두 패널은 **원자료 드릴다운** 으로 남는다(그 제목이 이미
-                   *    「… 의 원자료」라고 말한다) — 가격비교 영역이 둘이 되는 것이 아니다.
-                   * 🔴 **맨 위** 에 둔다: 결론이 근거보다 먼저 와야 셀러가 표를 다 읽지
-                   *    않아도 판단할 수 있다(MI 요약 → 드릴다운과 같은 순서).
+                   * 🟢 그 결론 영역(`MarketPriceComparison`)은 이 파일 위쪽의
+                   *    `DomesticPriceIntelligencePanel` **앞** 으로 옮겨 갔다 — 결론이
+                   *    후보보다 먼저 와야 셀러가 후보 목록을 읽지 않고도 판단할 수 있다
+                   *    (CPO 확정 · 그 자리의 주석이 이유를 들고 있다).
+                   * 🔴 **영역이 둘이 된 것이 아니다** — 이동이고 복제가 아니다
+                   *    (`wu-130 F-3` · `wu-132 C-3` 이 「영역은 하나」를 잠근다).
+                   * 🔴 아래 두 패널은 **원자료 드릴다운** 으로 그대로 남는다(그 제목이 이미
+                   *    「… 의 원자료」라고 말한다). 🟢 이 앵커가 가리키는 것이 그 둘이고,
+                   *    `scrollIntoView` 소비자가 있으므로 **앵커 div 를 지우지 않는다.**
                    */}
-                  <MarketPriceComparison
-                    rows={marketComparison?.rows ?? null}
-                    domesticReference={marketComparison?.domesticReference ?? null}
-                    overseasReference={marketComparison?.overseasReference ?? null}
-                  />
                   <DomesticShopSearch
                     title={product.title.value}
                     brand={product.brand.value}

@@ -62,6 +62,8 @@ const AREA = strip(path.join(COMMERCE, "MarketPriceComparison.tsx"));
 const SELECTOR = strip(path.join(COMMERCE, "mi-same-candidates.ts"));
 const PANEL = strip(path.join(COMMERCE, "DomesticPriceIntelligencePanel.tsx"));
 const WORKSPACE = strip(path.join(COMMERCE, "..", "CommerceWorkspace.tsx"));
+/** 🔴 WU-140 — 「커머스 탭에 MI 를 표시하지 않는다」의 owner(CEO 지시 · 규칙 사본 금지). */
+const FOCUS = strip(path.join(COMMERCE, "stage-focus.ts"));
 
 /** 🟢 공통 기본값 — 각 테스트가 **보는 축만** 덮어쓴다(무엇을 재는지 흐려지지 않게). */
 const base: GeminiTransientRow = {
@@ -227,8 +229,13 @@ describe("B. 🔴 영역 (마운트 DOM)", () => {
      *    「📊 동일상품 가격 비교」 → **「📊 시장 판매 판단」** 으로 바뀌었다(CPO §A:
      *    셀러의 1순위는 「동일상품인가」가 아니라 **「팔아도 되는가」** 다).
      * 🟢 **영역은 여전히 «하나» 다** — 새로 만들지 않고 같은 영역의 순서를 뒤집었다.
-     * 🔴 **강화** — 이제 「제목이 있다」가 아니라 **「판매 결론이 제목 바로 뒤에 선다」**
-     *    까지 단언한다. 가격을 먼저 보여주는 배치로 되돌리면 FAIL 한다.
+     *
+     * 🔴🔴 **WU-140 에서 이 주석을 정정한다.** 전에는 「판매 결론이 **제목 바로 뒤에**
+     *    선다」고 적어 뒀는데, CPO 가 확정한 순서는 **🇰🇷 국내 → 🌎 해외 → 판매·가격
+     *    판단 결과** 다 ⟹ 결론은 이제 **시장 블록 뒤** 다. 🔴 주석이 코드와 어긋난
+     *    상태로 두면 다음 세션이 그 주석을 근거로 순서를 되돌린다.
+     * 🟢 이 단언이 지키는 성질(「제목과 결론 문장이 **둘 다** 선다」)은 **그대로** 이고,
+     *    **순서** 는 `wu-140-market-first` 가 마운트 DOM 으로 더 세게 잠근다.
      */
     expect(container.textContent).toContain(MARKET_JUDGEMENT_TITLE);
     expect(sec("market-verdict")?.textContent).toBe(MARKET_VERDICT_TEXT.NO_SAME);
@@ -309,15 +316,74 @@ describe("C. 🔴🔴 MI → 영역 공급 배선", () => {
     expect(area.slice(0, 400)).toContain("overseasReference={marketComparison?.overseasReference ?? null}");
   });
 
-  it("C-3 🔴🔴 그 영역이 **「📊 시장 가격 비교」 안** 에 선다(새 영역을 밖에 만들지 않았다)", () => {
-    /** 🔴 좌표를 추측하지 않는다 — 가격비교 앵커 div 안에 있는지 **위치로** 본다. */
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴 WU-140 ① — **앵커를 갱신하고 «강화» 했다**(약화 아님)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 1차 단언은 「영역이 **앵커 div 안쪽** 에 있다」(`area > anchor`)였다. WU-140 이
+   *    CPO 판정에 따라 그 영역을 **후보 패널 앞** 으로 옮겼으므로 그 좌표 단언은
+   *    **의도적으로** 깨졌다. 🟢 그런데 이 계약이 **지키려던 성질은 좌표가 아니다**:
+   * ```
+   * ① 가격비교 영역은 화면에 **하나** 다(복제 금지)
+   * ② **결론이 원자료보다 먼저** 온다
+   * ```
+   * 🟢 둘 다 그대로 유효하고, 이제 **더 세게** 단언한다 —
+   *    ⒜ 그 JSX 가 **정확히 한 번** 나온다(이동인지 복제인지를 숫자로 가른다) ·
+   *    ⒝ **후보 패널보다도 먼저** 온다(전에는 그 뒤였다 — 이것이 root cause 였다) ·
+   *    ⒞ 앵커 div 와 원자료 두 패널은 **그 뒤에 그대로 남아 있다** ·
+   *    ⒟ 🔴 **커머스 탭 보호 게이트가 붙어 있다**(아래 C-3b).
+   */
+  it("C-3 🔴🔴 영역은 **하나** 이고 **후보 패널보다 먼저** 온다(WU-140 ①)", () => {
+    /** 🔴 좌표를 추측하지 않는다 — 전부 **위치로** 본다. */
     const anchor = WORKSPACE.indexOf("id={PRICE_COMPARISON_ANCHOR_ID}");
     const area = WORKSPACE.indexOf("<MarketPriceComparison");
+    const panel = WORKSPACE.indexOf("<DomesticPriceIntelligencePanel");
     const domestic = WORKSPACE.indexOf("<DomesticShopSearch");
-    expect(anchor).toBeGreaterThan(-1);
-    expect(area).toBeGreaterThan(anchor);
-    /** 🟢 결론이 원자료보다 **먼저** 온다. */
+    const overseas = WORKSPACE.indexOf("<ComparisonShopSearch");
+    for (const i of [anchor, area, panel, domestic, overseas]) expect(i).toBeGreaterThan(-1);
+    /**
+     * 🔴🔴 **이동이고 복제가 아니다.** 두 자리에 두면 셀러에게 가격비교 영역이 둘로
+     *    보이고, 그것이 WU-128 이 지목한 중복 그 자체다.
+     */
+    expect(WORKSPACE.split("<MarketPriceComparison").length - 1).toBe(1);
+    /** 🔴🔴 **결론 → 후보 패널** 순서. 뒤집으면 CPO 가 NO-GO 한 그 화면으로 돌아간다. */
+    expect(area).toBeLessThan(panel);
+    /** 🟢 결론이 원자료(앵커 div · 두 드릴다운 패널)보다 **먼저** 온다. */
+    expect(anchor).toBeGreaterThan(area);
     expect(domestic).toBeGreaterThan(area);
+    expect(overseas).toBeGreaterThan(area);
+    /** 🔴 앵커를 **지우지 않았다** — `scrollIntoView` 소비자가 있다. */
+    expect(WORKSPACE).toContain("PRICE_COMPARISON_ANCHOR_ID");
+  });
+
+  /**
+   * 🔴🔴🔴 **커머스 탭에 「시장 판매 판단」이 서지 않는다** — CEO 지시(stage-focus.ts).
+   *
+   * 영역을 탭 분기 **밖** 으로 올렸으므로, 게이트가 없으면 스마트스토어·쿠팡·롯데ON
+   * 탭 본문 맨 위에 **「📊 시장 판매 판단」이 서 버린다.** 그것이 CEO 가 「MI 표시 =
+   * 제거」로 지운 그 모양이다(「등록하러 온 화면에서 처음 읽는 문장이 『팔아도
+   * 되는가』였다 — 등록을 막는 것이 판매 판단이라고 읽힐 수밖에 없다」).
+   * 🔴 그래서 **게이트가 그 JSX 바로 앞에 붙어 있는지** 를 단언한다. 떼면 FAIL 이다.
+   */
+  it("C-3b 🔴🔴 그 영역에 **커머스 탭/수집중 보호 게이트** 가 붙어 있다", () => {
+    const area = WORKSPACE.indexOf("<MarketPriceComparison");
+    expect(area).toBeGreaterThan(-1);
+    const gate = WORKSPACE.lastIndexOf('stageFocus.mi !== "HIDDEN"', area);
+    expect(gate).toBeGreaterThan(-1);
+    /** 🔴 **바로 앞** 이어야 한다 — 멀리 있는 다른 게이트를 내 근거로 쓰지 않는다. */
+    expect(area - gate).toBeLessThan(200);
+    /**
+     * 🟢 `HIDDEN` 의 owner 는 `resolveStageFocus` **하나** 다 — 이 파일이 그 규칙을
+     *    복제하지 않는다. 🔴 그 owner 에서 두 축 중 하나를 빼면 여기서 FAIL 한다.
+     */
+    const mi = FOCUS.slice(
+      FOCUS.indexOf("const mi: MiPresentation"),
+      FOCUS.indexOf("const bodyOwnsChecklist"),
+    );
+    expect(mi).toContain('surface === "CHANNEL"');
+    expect(mi).toContain('stage === "COLLECTING"');
+    expect(mi.match(/"HIDDEN"/g)?.length).toBe(2);
   });
 
   it("C-4 🔴 가격 **계산식** 을 건드리지 않았다 — 영역이 집계를 만들지 않는다", () => {

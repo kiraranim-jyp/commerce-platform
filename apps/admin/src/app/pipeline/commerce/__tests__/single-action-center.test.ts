@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { stripComments } from "./source-text";
 
 /**
  * UX 2.2(CEO 지시, 2026-09-11) — 화면에 Action Center는 **하나**다.
@@ -17,8 +18,24 @@ import { describe, expect, it } from "vitest";
  * 지우거나, 기존 Action Center를 그 자리에서 쓰게 만들어야 한다.
  */
 
+/**
+ * 🔴🔴 WU-140 — **주석을 벗기고 센다**(이 저장소에서 여덟 번 걸린 함정).
+ *
+ * 이 파일의 「JSX 사용처가 몇 개인가」는 **실제 렌더** 를 세려는 것이다. 그런데
+ * `readFileSync` 를 그대로 쓰면 **주석에 적힌 컴포넌트 이름까지 센다** — WU-140 이
+ * 결론 영역을 옮기면서 그 이유를 주석에 적었고(「전 `<DomesticPriceIntelligencePanel>`
+ * … 후 …」) 그 한 줄 때문에 **배치가 옳은데 테스트만 FAIL** 했다.
+ *
+ * 🟢 이 폴더에는 그 구분을 위한 공용 도구가 **이미 있다**(`source-text.ts` ·
+ *    「금지어가 주석에 등장하는 것은 정상이고, 막아야 하는 것은 실제 호출과
+ *    렌더뿐이다」). 🔴 **가드를 느슨하게 한 것이 아니다** — 세는 대상이
+ *    「문서까지 포함한 문자열」에서 **「실제 코드」로 정확해진 것** 이다.
+ * 🔴 그래서 이 파일의 의미(「기둥은 하나 · 패널은 한 번」)는 **그대로** 다.
+ */
 function read(relativeToRepoFile: string): string {
-  return readFileSync(fileURLToPath(new URL(relativeToRepoFile, import.meta.url)), "utf8");
+  return stripComments(
+    readFileSync(fileURLToPath(new URL(relativeToRepoFile, import.meta.url)), "utf8"),
+  );
 }
 
 const workspace = read("../../CommerceWorkspace.tsx");

@@ -408,16 +408,33 @@ export interface PendingSummary {
  *
  * 🔴 `soldOut === true` 는 **세지 않는다** — 그건 「팔지 않는다」이고 「판정이 보류됐다」와
  *    다른 사실이다(둘을 한 숫자로 뭉치면 셀러가 할 행동이 달라진다).
- * 🔴 시장이 확정되지 않은 후보도 **센다** — 그 후보도 「아래에 서 있는데 비교에 없는」 것이다.
+ * 🔴 시장이 확정되지 않은 후보도 **센다**(전역 호출일 때) — 그 후보도 「아래에 서 있는데
+ *    비교에 없는」 것이다.
+ *
+ * ── 🔴🔴 WU-140 — **`market` 인자가 생겼다. 이것은 「UI 수정」이 아니다** ───────────
+ * ```
+ * CPO: 「`countPendingCandidates` 에 market 인자를 추가하는 것은 단순 UI 수정이 아니라
+ *       **상태 의미를 정확히 만드는 핵심 수정**」.
+ * 🔴 전역으로만 셀 수 있던 동안 화면은 「🇰🇷 국내가 비었다」의 **이유를 말할 수 없었다** —
+ *    ⒜ 그 시장에서 후보를 못 찾은 것과 ⒝ 후보는 있는데 판정이 보류된 것이 **같은 빈 칸**
+ *    으로 보였다. 셀러가 할 행동이 전혀 다른데 화면이 같은 말을 한 것이다.
+ * 🟢 바뀐 것은 **필터 한 줄** 이다 — 집계 0 · 판정 0 · threshold 0 · 완화 0.
+ * 🔴 `market` 을 **주지 않으면 동작이 전과 똑같다**(전역 집계) — 기존 호출부 불변.
+ * 🔴 `market` 을 주면 `UNKNOWN` 시장 후보는 **어느 쪽에도 들어가지 않는다**(WU-020 §4 ·
+ *    「시장을 추측하지 않는다」). 그래서 전역 합계가 두 시장의 합보다 클 수 있고,
+ *    그것이 **정확한 상태** 다.
+ * ```
  */
 export function countPendingCandidates(
   rows: readonly GeminiTransientRow[] | null | undefined,
+  market?: "KR" | "OVERSEAS",
 ): PendingSummary {
   if (!rows || rows.length === 0) return { count: 0, reasons: [] };
   const seen = new Set<string>();
   const freq = new Map<string, number>();
   let count = 0;
   for (const row of rows) {
+    if (market != null && row.market !== market) continue;
     if (seen.has(row.discoveredUrl)) continue;
     seen.add(row.discoveredUrl);
     if (transientDisplayTier(row) === "SAME") continue;
@@ -434,6 +451,101 @@ export function countPendingCandidates(
       .sort((a, b) => b.n - a.n || a.text.localeCompare(b.text)),
   };
 }
+
+/**
+ * 🔴🔴 WU-140 — **그 시장에서 후보를 «몇 곳» 봤는가.** 판정·가격과 **무관** 하다.
+ *
+ * 🔴 이 숫자가 없으면 「후보를 못 찾았다」와 「후보는 봤는데 판정이 안 됐다」를 가를 수
+ *    없다. 🔴 그리고 `countPendingCandidates` 로는 **가를 수 없다** — 그 함수는
+ *    「가격까지 확인된」 후보만 세므로, 가격이 없는 보류 후보가 5곳 있어도 **0** 이다.
+ *    그 0 을 「후보 없음」으로 적으면 **거짓** 이다(그 거짓이 이 함수가 생긴 이유다).
+ * 🔴 URL 중복은 접는다 — 네 생산자가 같은 판매처를 낼 수 있다(선별기와 같은 규칙).
+ */
+export function countMarketCandidates(
+  rows: readonly GeminiTransientRow[] | null | undefined,
+  market: "KR" | "OVERSEAS",
+): number {
+  if (!rows || rows.length === 0) return 0;
+  const seen = new Set<string>();
+  for (const row of rows) {
+    if (row.market !== market) continue;
+    if (seen.has(row.discoveredUrl)) continue;
+    seen.add(row.discoveredUrl);
+  }
+  return seen.size;
+}
+
+/** 🔴 「이 시장에 동일상품이 없다」로 적지 않는다 — **부재와 미발견은 다르다**(WU-091 어휘 계약). */
+export const MARKET_EMPTY_NO_CANDIDATE = "아직 이 시장에서 비교할 후보를 찾지 못했습니다.";
+/** 🔴 판단의 주인은 셀러다 — 「동일상품이다/아니다」를 화면이 단정하지 않는다. */
+export const MARKET_EMPTY_REVIEW_HINT = "아래 후보 검토 구역에서 사진으로 확인해 주세요.";
+
+/**
+ * 🔴🔴🔴 WU-140 ③ — **그 시장이 빈 «이유» 를 말한다**(CPO: 네 상태를 구분해야 한다).
+ *
+ * ```
+ * ⒜ 검색 자체가 안 됨          후보 0          → MARKET_EMPTY_NO_CANDIDATE
+ * ⒝ SAME 판정 대기·보류         후보 N · SAME 0 → 「N곳을 찾았지만 …」 (+ 사유)
+ * ⒞ SAME 이지만 가격 확인 필요   → 가격 가이드가 말한다(`priceGuideCountNote` + 🔗)
+ * ⒟ 가격 확인 완료             → 가격 가이드가 말한다(`priceGuideHeadline`)
+ * ```
+ * 🔴 ⒞⒟ 는 이 함수가 말하지 않는다 — 그 둘은 **가격 가이드 블록의 소관** 이고,
+ *    여기서 또 적으면 같은 사실이 두 곳에서 갈린다.
+ * 🔴 사유를 **지어내지 않는다** — `reasons` 가 비면 사유 절을 **아예 쓰지 않는다**.
+ */
+export function marketEmptyNote(candidateCount: number, pending: PendingSummary): string {
+  if (candidateCount === 0) return MARKET_EMPTY_NO_CANDIDATE;
+  const why =
+    pending.count > 0 && pending.reasons.length > 0
+      ? ` — 주요 사유 ${pending.reasons.map((r) => `${r.text} ${r.n}`).join(" · ")}`
+      : "";
+  return (
+    `후보 ${candidateCount}곳을 찾았지만 아직 동일상품으로 판정된 곳이 없습니다${why}. ` +
+    MARKET_EMPTY_REVIEW_HINT
+  );
+}
+
+/**
+ * 🔴🔴🔴 WU-140 — **시장이 «확정되지 않은» 후보를 조용히 없애지 않는다.**
+ *
+ * ── 🔴 이것은 가정이 아니라 **실측** 이다 (WU-138 하니스 · 2026-10-21) ─────────
+ * ```
+ * B226AC010 의 `www.beaumonde.co.kr` 은 **사람이 SAME 이라 한 `.kr` 후보** 인데
+ * **가격이 없어서** 시장 축이 `UNKNOWN` 으로 남는다(WU-077 의 ⒞ 「가격 자체가 없다」).
+ * ⟹ 🔴 그 후보는 `buildPriceGuide` 의 두 시장 어디에도 **들어가지 않는다**
+ *    (WU-020 §4 · 「시장을 추측하지 않는다」 — 그 계약은 **옳고 유지한다**).
+ * 🔴 그런데 그러면 🇰🇷 블록이 「후보를 찾지 못했습니다」라고 말한다 — **한국 도메인
+ *    후보가 실재하는데** 말이다. 그것은 화면이 거짓말하는 것이다.
+ * ```
+ * 🟢 그래서 **한 문장** 을 더한다. 🔴 시장을 **지어내지 않고**(UNKNOWN 을 KR 로 올리지
+ *    않는다) 「세지 않았다」는 사실과 **어디서 볼 수 있는지** 를 말한다.
+ * 🔴 새 영역 **0** · 집계 **0** · 판정 **0** — 이미 있는 행을 **세어 적는** 것이 전부다.
+ */
+export function countUnresolvedMarketCandidates(
+  rows: readonly GeminiTransientRow[] | null | undefined,
+): number {
+  if (!rows || rows.length === 0) return 0;
+  const seen = new Set<string>();
+  for (const row of rows) {
+    /** 🔴 `KR`/`OVERSEAS` 가 **아닌 모든 것** 이다 — `UNKNOWN` · null · undefined 포함. */
+    if (row.market === "KR" || row.market === "OVERSEAS") continue;
+    if (seen.has(row.discoveredUrl)) continue;
+    seen.add(row.discoveredUrl);
+  }
+  return seen.size;
+}
+
+/** 🔴 「없다」와 「모른다」를 같은 말로 적지 않는다. */
+export function marketUnresolvedNote(n: number): string | null {
+  if (n <= 0) return null;
+  return (
+    `국내·해외 중 어디인지 확인하지 못한 후보 ${n}곳은 위 두 블록에 세지 않았습니다 — ` +
+    `아래 상세 근거와 후보 검토 구역에서 볼 수 있습니다.`
+  );
+}
+
+/** 🟢 ③ 구간의 머리. 🔴 결론(verdict)은 시장 블록의 **요약** 이므로 그 뒤에 온다(CPO 확정 순서). */
+export const MARKET_RESULT_HEADING = "판매·가격 판단 결과";
 
 /* ═══════════════ 🔴🔴 WU-136 — **판매여부가 1순위다** (CPO 재정의) ═══════════════
  *
