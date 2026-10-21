@@ -2,11 +2,32 @@
 
 > 🔴 이 파일만 읽고 **바로 작업 시작**. 다른 문서는 **막혔을 때만** 열어라.
 > 🔴 조사·설계를 다시 하지 않는다. 아래 1번을 먼저 읽는다.
-> 갱신 2026-10-21 · HEAD `4e7de9bd` · clean · 회귀 8,639 / 0 failed · tsc 0 · build 0
+> 갱신 2026-10-21 · main `e996bb30`(clean · 회귀 8,639 / 0 failed) · 🔴 진행 브랜치 `wu-141-r3-price-owner`
 
 ---
 
-## 1. 지금 할 일 — **WU-141-R2 STEP 1 부터** (좌표 확보됨 · 조사 금지)
+## 1. 지금 할 일 — 🔴🔴 **브랜치 `wu-141-r3-price-owner` 에서 «계약 30건» 갱신**
+
+```
+🟢 WU-141-R3 **구현은 끝났다**(가격 owner 단일화 · typecheck 0) — 단 **main 이 아니다**.
+   브랜치  wu-141-r3-price-owner   커밋 `7c02054c`   🔴 배포 0(main 만 트리거)
+🔴 남은 일 하나 — **기존 계약 30건 / 8파일** 이 «구 구조» 를 단언해서 FAIL 한다.
+   전부 **의도된 변경** 이므로 앵커를 갱신하고 **강화** 한다(약화 금지).
+     wu-030-judgement-summary · mi-polish · mi-simplify · mi-ux-final ·
+     product-tab-first-screen · product-tab-mounted ·
+     wu-055-e2e-chain · wu-072-domestic-color-and-sku
+🔴 그 뒤 — C-1~C-7 신규 계약 · M1~M9 변이 · 2상품 E2E · 회귀 · build → **main 머지**(=배포)
+🔴 CEO 테스트는 그 **전부** 가 끝난 뒤 딱 한 번(CPO §18).
+```
+
+🟢 **브랜치에서 이어가는 이유** — 구현을 버리지 않으면서 main 을 배포 가능한 녹색으로
+유지하기 위해서다(CPO §17 의 「오염 위험 → 복구 → clean → 안전 종료」를 브랜치로 수행).
+🔴 `git checkout wu-141-r3-price-owner` 로 바로 이어간다. **재구현 금지** — 커밋 메시지에
+무엇을 왜 바꿨는지(5개 지점)와 남은 일이 전부 적혀 있다.
+
+---
+
+## 1-OLD. [기록] WU-141-R2 STEP 1 좌표 (브랜치에서 이미 구현됨)
 
 🟢 WU-140-R1 CEO PASS · 🟢 WU-141-R1 **CLOSED**(STEP 4 저장 CEO PASS) ·
 🟢 WU-141-R2 **STEP 2 완료·배포**(`4e7de9bd` — 탐색을 `▸ 판단 근거 보기` 하나로 접었다).
