@@ -8,6 +8,8 @@ import {
   OVERSEAS_LOWEST_LABEL,
   OVERSEAS_LOWEST_PER_CURRENCY_NOTE,
   PRICE_BAND_UNDETERMINED,
+  /** 🔴 WU-149 — 가격 판단 상한(통화별 3). */
+  SAME_PRICE_CAP,
   buildMarketJudgement,
   buildPriceGuide,
   domesticBandText,
@@ -222,5 +224,66 @@ describe("C. 💡 판매 판단 — 시장별 해석", () => {
     mount([...KR_BAND, ...OS_MULTI]);
     expect(container.querySelectorAll('[data-testid="seller-decision"]').length).toBe(1);
     expect(container.querySelectorAll('[data-testid="market-price-comparison"]').length).toBe(1);
+  });
+});
+
+/* ═══════════ D. 🔴🔴 WU-149 — 가격 판단은 «통화별 3개» 까지 ═══════════ */
+
+describe("D. 가격 계산 상한 3 (WU-149 STEP 3/4)", () => {
+  /** 🟢 국내 **5곳** — 🔴 상한이 **실제로 발화하는** 분모다(3 이하면 측정이 안 된다). */
+  const KR_FIVE = [kr(89000, 1), kr(92000, 2), kr(95000, 3), kr(98000, 4), kr(105000, 5)];
+
+  it("🟢🟢 D-1 상한이 **발화한다** — 가격대가 하위 3곳 기준이 된다", () => {
+    const g = guide(KR_FIVE, "KR");
+    expect(SAME_PRICE_CAP).toBe(3);
+    const b = domesticPriceBand(g);
+    expect(b.n).toBe(SAME_PRICE_CAP);
+    /** 🟢 **최저가는 보존된다**(89000) · 🔴 상한 밖(98000·105000)은 가격대에 **안 들어간다**. */
+    expect(b.lowest).toBe(89000);
+    expect(b.highest).toBe(95000);
+    expect(domesticBandText(b)).not.toContain("105000");
+  });
+
+  it("🔴🔴 D-2 **건수는 자르지 않는다** — 관측된 사실을 숨기지 않는다(CPO STEP 10)", () => {
+    const g = guide(KR_FIVE, "KR");
+    /** 🔴 「동일상품 확인 5곳 · 가격 확인 5곳」은 **그대로** 다 — 상한은 «가격 계산» 전용이다. */
+    expect(g.sameCount).toBe(5);
+    expect(g.pricedCount).toBe(5);
+    mount(KR_FIVE);
+    expect(q("price-guide-counts")!.textContent).toContain("동일상품 확인 5곳");
+    expect(q("price-guide-counts")!.textContent).toContain("가격 확인 5곳");
+  });
+
+  it("🔴🔴🔴 D-3 상한은 **통화별** 이다 — 전역으로 자르면 통화 축이 사라진다", () => {
+    /**
+     * 🔴 USD 4곳 + GBP 1곳. **전역** 오름차순 3개로 자르면 GBP 37 이 1위가 되고
+     *    USD 가 두 개만 남거나 **통화 하나가 통째로 떨어질 수 있다**(환산 없는 숫자 비교).
+     * 🟢 통화별 상한이면 **두 통화의 최저가가 둘 다 살아남는다.**
+     */
+    const mixed = [
+      row({ domain: "u1.com", discoveredUrl: "https://u1.com/p", priceAmount: 58, priceCurrency: "USD", priceStatus: "VERIFIED_CURRENT" }),
+      row({ domain: "u2.com", discoveredUrl: "https://u2.com/p", priceAmount: 61, priceCurrency: "USD", priceStatus: "VERIFIED_CURRENT" }),
+      row({ domain: "u3.com", discoveredUrl: "https://u3.com/p", priceAmount: 64, priceCurrency: "USD", priceStatus: "VERIFIED_CURRENT" }),
+      row({ domain: "u4.com", discoveredUrl: "https://u4.com/p", priceAmount: 70, priceCurrency: "USD", priceStatus: "VERIFIED_CURRENT" }),
+      row({ domain: "g1.com", discoveredUrl: "https://g1.com/p", priceAmount: 37, priceCurrency: "GBP", priceStatus: "VERIFIED_CURRENT" }),
+    ];
+    const g = guide(mixed, "OVERSEAS");
+    const usd = g.byCurrency.find((c) => c.currency === "USD")!;
+    const gbp = g.byCurrency.find((c) => c.currency === "GBP")!;
+    /** 🟢 두 통화가 **둘 다 살아 있다** — 통화 축이 사라지지 않는다. */
+    expect(g.byCurrency).toHaveLength(2);
+    /** 🟢 각 통화의 **최저가가 보존된다**(USD 58 · GBP 37). */
+    expect(usd.lowest).toBe(58);
+    expect(gbp.lowest).toBe(37);
+    /** 🔴 USD 는 상한 3 으로 잘린다 — 70 은 가격 신호에 **안 들어간다**. */
+    expect(usd.n).toBe(3);
+    expect(usd.highest).toBe(64);
+    expect(overseasLowestText(g)).not.toContain("70");
+  });
+
+  it("🟢 D-4 상한 이하면 **동작이 전과 같다** — 기존 계약이 그대로 유효한 이유", () => {
+    const g = guide(KR_BAND, "KR");
+    expect(g.byCurrency[0].n).toBe(3);
+    expect(domesticPriceBand(g).highest).toBe(95000);
   });
 });

@@ -237,6 +237,15 @@ export const MARKET_LABEL: Record<"KR" | "OVERSEAS" | "UNKNOWN", string> = {
 /** 🔴 「없다 / 1건 기준 / 가격대」를 **다른 말** 로 적기 위한 축. */
 export type PriceGuideBasis = "NONE" | "SINGLE" | "RANGE";
 
+/**
+ * 🔴🔴 WU-149 — **가격 판단에 쓰는 동일상품 상한**(통화별).
+ *
+ * 🔴 CPO North Star: 「SAME 1개 = 최소 기준 · 2개 = 가격대 형성 · **3개 = 신뢰도 충분** ·
+ *    4·5·20개는 **비례 가치 없음**」. ⟹ 🟢 제품 목표가 **2~3개** 이므로 그 상한을 코드가 들고 있다.
+ * 🔴 **수집·판정에는 적용하지 않는다** — 이 상한은 **가격 계산** 전용이다(`buildPriceGuide`).
+ */
+export const SAME_PRICE_CAP = 3;
+
 export interface PriceGuide {
   market: "KR" | "OVERSEAS";
   /** 동일상품으로 판정된 판매처 수(가격 유무와 **무관**). */
@@ -259,24 +268,48 @@ export interface PriceGuide {
 export function buildPriceGuide(j: MarketJudgement, market: "KR" | "OVERSEAS"): PriceGuide {
   const mine = j.sellers.filter((s) => s.market === market);
   const priced = mine.filter((s) => s.price != null && s.sale !== "SOLD_OUT");
-  const byCurrencyMap = new Map<string, MarketPriceRange>();
+  /**
+   * ════════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 WU-149 STEP 3/4 — **가격 판단에 쓰는 동일상품은 «통화별 3개» 까지다**
+   * ════════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 CPO: 「4번째·5번째·10번째 SAME 을 찾는 것을 제품 목표로 삼지 않는다」 ·
+   *    「**출력/가격 계산의 상한을 3개로 둔다**」 · 🔴 「검색 오케스트레이션 자체를
+   *    뜯어고치지 않는다」(그것이 이 코드베이스에서 **가장 안전한 최소 변경** 이다).
+   *
+   * ── 🔴🔴 왜 «통화별» 인가 — 전역 3개로 자르면 **가격 신호가 틀어진다** ───────────
+   * ```
+   * 전역으로 금액 오름차순 3개를 고르면 **통화를 섞어 숫자를 비교** 하게 된다
+   * (GBP 37 < USD 58 ?). 그 비교는 환산 없이는 **무의미** 하고, 환산은 금지다.
+   * ⟹ 🔴 그러면 USD 축이 통째로 떨어져 「최저 확인가」가 **거짓** 이 될 수 있다.
+   * 🟢 그래서 **통화 안에서만** 오름차순 3개를 남긴다 — 각 통화의 **최저가가 항상 보존**
+   *    된다(🌎 「최저 확인가」의 전제). 🇰🇷 가격대는 **확인된 하위 3곳 기준** 이 된다.
+   * ```
+   * 🟢 「전체 시장 가격대가 아니다」는 이미 `PRICE_GUIDE_RANGE_NOTE` 가 말한다(WU-139) —
+   *    그래서 상한을 둬도 셀러가 그 범위를 시장 전체로 읽지 않는다.
+   * 🔴 **건수는 자르지 않는다** — `sameCount`·`onSaleCount`·`pricedCount`·`unpricedCount` 는
+   *    **관측된 사실** 이고 CPO STEP 10 이 「현재 결과를 숨기지 말고 정확히 표시」를 요구한다.
+   *    ⟹ 상한은 **가격 «계산»** 에만 적용된다(판정 0 · 수집 0 · MI 0).
+   */
+  const byCur = new Map<string, MarketSeller[]>();
   for (const s of priced) {
-    const p = s.price as { amount: number; currency: string };
-    const cur = byCurrencyMap.get(p.currency);
-    if (!cur) {
-      byCurrencyMap.set(p.currency, {
-        currency: p.currency,
-        lowest: p.amount,
-        highest: p.amount,
-        n: 1,
-        onSale: s.sale === "ON_SALE" ? 1 : 0,
-      });
-      continue;
-    }
-    cur.lowest = Math.min(cur.lowest, p.amount);
-    cur.highest = Math.max(cur.highest, p.amount);
-    cur.n += 1;
-    if (s.sale === "ON_SALE") cur.onSale += 1;
+    const cur = (s.price as { currency: string }).currency;
+    byCur.set(cur, [...(byCur.get(cur) ?? []), s]);
+  }
+  const byCurrencyMap = new Map<string, MarketPriceRange>();
+  for (const [currency, list] of byCur) {
+    /** 🔴 **통화 안에서만** 정렬한다 — 그래야 그 통화의 최저가가 반드시 남는다. */
+    const used = [...list]
+      .sort((a, b) => (a.price as { amount: number }).amount - (b.price as { amount: number }).amount)
+      .slice(0, SAME_PRICE_CAP);
+    const amounts = used.map((s) => (s.price as { amount: number }).amount);
+    byCurrencyMap.set(currency, {
+      currency,
+      lowest: Math.min(...amounts),
+      highest: Math.max(...amounts),
+      n: used.length,
+      onSale: used.filter((s) => s.sale === "ON_SALE").length,
+    });
   }
   const byCurrency = [...byCurrencyMap.values()].sort((a, b) => a.currency.localeCompare(b.currency));
   /**
