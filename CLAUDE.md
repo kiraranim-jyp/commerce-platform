@@ -516,18 +516,24 @@ productData 를 **칸 하나씩 손으로 옮기면서** `siteBrandName` 을 빠
 🟢 ⒝는 **목록 길이 == `missingCount`** 단언을 넣어 재발을 막았다.
 
 
-### 🔴🔴🔴 **새 세션은 `docs/START-HERE.md` 하나만 읽고 시작한다**
+### 🔴🔴🔴 **새 세션은 `docs/START-HERE.md` 하나만 읽고 시작한다 — 그것이 전부다**
 
 ```
 🔴 §12 의 아래 내용을 처음부터 읽지 않는다 — 그러다 인수인계에 1시간을 쓴다.
-🟢 `docs/START-HERE.md` 가 ① 지금 고칠 파일·줄번호 ② 깨질 계약 이름
-   ③ 금지 목록 ④ 현재 완료도 ⑤ 막혔을 때 열 문서 ⑥ 복붙 명령 을 담고 있다.
-🔴 그 아래 WU 기록은 **막혔을 때만** 참조한다(종료된 결론 모음이다).
+🟢 `docs/START-HERE.md` = **CTO CURRENT HANDOFF**(CPO 확정 양식 2026-10-22):
+   ① CURRENT STATE(commit·배포·회귀) ② NORTH STAR ③ MARKET RULE
+   ④ ABSOLUTE FREEZE ⑤ ALREADY DONE(재구현 금지) ⑥ NEXT WORK(좌표)
+   ⑦ EARLY STOP 범위 ⑧ 실행 순서 ⑨ CONTRACT/SAFETY 숫자 ⑩ STOP RULE
+   ⑪ REPORT RULE ⑫ CEO RULE ⑬ SESSION START ⑭ 복붙 명령
+🔴🔴 **진입 문서를 둘로 만들지 않는다** — `HANDOFF-CURRENT.md` 같은 두 번째 진입점을
+   만들면 둘이 **서로 다른 말** 을 하게 된다(이 트랙에서 실제로 났다). 🟢 좌표는 **하나**,
+   과거 WU 상세는 **막혔을 때만** 여는 `docs/HANDOFF-WU-*.md` 로 분리한다.
+🔴 아래 §12 WU 기록은 **작업 좌표가 아니다**(종료된 결론 모음이다).
 ```
 
-### 🔵 **현재 착수점 — WU-149 STEP 1 + STEP 3 하나**
+### 🔵 **현재 착수점 — WU-149 STEP 1 → 6 → 7 하나**
 
-🔴🔴 **진입은 `docs/START-HERE.md` §6 + `docs/HANDOFF-WU-149.md`.**
+🔴🔴 **진입은 `docs/START-HERE.md` 하나다**(상세 근거만 `docs/HANDOFF-WU-149.md`).
 
 ```
 🟢🟢 **절대조건 15 중 11 은 «이미» PASS** — 남은 것은 **1 · 4 · 11(절반)** 뿐이다
