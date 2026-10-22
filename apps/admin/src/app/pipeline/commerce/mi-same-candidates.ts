@@ -355,16 +355,130 @@ export const PRICE_GUIDE_TITLE: Record<"KR" | "OVERSEAS", string> = {
   OVERSEAS: `💰 해외 ${SAME_PRICE_LABEL}`,
 };
 
-/**
- * 🔴🔴 WU-145 ② — **「판매가격 판단」 한 줄.** 🔴 **추천 판매가가 아니라 «해석» 이다.**
+/* ═══════════ 🔴🔴🔴 WU-146 ② — **「💡 판매 판단」은 «상태별» 결론이다** ═══════════
  *
- * 🔴 원가·수수료·마진이 **없으므로**(§00-B 가격 보류) 「판매가는 ₩XX 로 설정하세요」류를
- *    **만들지 않는다** — 지어내면 셀러가 그 숫자로 실제 가격을 정한다.
- * 🔴 **확인된 가격이 하나라도 있을 때만** 쓴다. 가격이 0 인데 이 문장을 적으면
- *    「기준이 있다」는 거짓이 된다(호출부가 그 조건을 들고 있다).
+ * 🔴 CPO(2026-10-22): 「**동일상품 3곳 / 가격 USD 58** 만 보여주는 것은 «데이터 표시» 다.
+ *    우리가 필요한 것은 **셀러 판단을 돕는 결론**」.
+ * 🔴🔴 WU-145 의 한 줄은 **상태와 무관하게 같은 말** 이었다(「확인된 동일상품 가격을
+ *    기준으로 … 참고할 수 있습니다」) ⟹ 가격이 하나든 셋이든 국내가 0 이든 **똑같이** 적혔다.
+ *    그래서 그 문장은 결론이 아니라 **안내문** 이었다. 이 함수가 그것을 갈랐다.
+ *
+ * 🔴 **금지(CPO 명시)** — 「시장 평균」·「적정 판매가」·「권장 판매가」를 쓰지 않는다.
+ *    우리가 가진 것은 **시장 기준가격** 이고 셀러의 원가·수수료·마진이 **없다**(§00-B).
+ * 🔴 통화를 **환산해 하나로 합치지 않는다**(「GBP 37 / USD 58」로 **나란히** 적는다).
+ * 🔴 **가격 숫자를 새로 집계하지 않는다** — `j.byCurrency`(화면이 이미 쓰는 그 값)를
+ *    읽는다. 그래야 「seller-facing price owner = 1」(STEP 7-1)이 유지된다.
  */
-export const MARKET_PRICE_JUDGEMENT_NOTE =
-  `판매가격 판단: 확인된 ${SAME_PRICE_LABEL}을 기준으로 위 가격대를 시장 기준으로 참고할 수 있습니다.`;
+
+/**
+ * 🔴🔴🔴 **이름이 `sellerDecision` 이 «아닌» 이유 — 회귀가 잡았다.**
+ *
+ * 1차 구현을 `sellerDecision` 이라 불렀고 `wu-130` **F-4** 가 FAIL 했다:
+ * 「통합은 **표시만** 이다 — 집계/판정/알림 어휘가 그 영역에 없다」.
+ * 🔴 **그 가드가 맞았다** — `sellerDecision` 은 **이미 판매판정 owner 의 어휘** 다:
+ * ```
+ * market-intelligence.ts:846        const sellerDecision = buildSellerDecision({ … })  → finalVerdict
+ * packages/pricing/…/unified-price-decision.ts   sellerDecisionStateFromUnifiedDecision
+ * packages/pricing/representative-seller-decision.ts · seller-action.ts  computeSellerAction
+ * ```
+ * ⟹ 같은 이름이 **두 개의 다른 것**(실제 판매판정 ↔ 결론 «문장» 생성기)을 가리키면,
+ *    다음 사람이 이 표시 영역에서 **판정이 일어난다고 읽는다**. 그것이 그 가드가 막는 것이다.
+ * 🟢 그래서 **가드를 느슨하게 하지 않고 이름을 이 파일의 어휘 가족** 으로 옮겼다 —
+ *    `MARKET_JUDGEMENT_TITLE` · `MARKET_JUDGEMENT_NOTE` · `buildMarketJudgement` ·
+ *    `market-judgement` 가 이미 그 가족이다(WU-133 이 `blocker-text.ts` 를 따로 만든 그 선례).
+ * 🔴 **DOM 이름(`data-testid="seller-decision"`)은 그대로 둔다** — 그것은 셀러가 보는
+ *    「💡 판매 판단」의 이름이고 CPO 의 말이다. 가드가 보는 것은 **코드 어휘** 다.
+ */
+export type MarketDecisionKind = "NO_SAME" | "SAME_NO_PRICE" | "PRICED";
+
+export interface MarketDecisionLines {
+  kind: MarketDecisionKind;
+  /** 🔴 **문장 배열** 이다 — 한 문장에 몰아넣으면 셀러가 읽지 않는다(CPO 예시도 2줄). */
+  lines: string[];
+}
+
+/**
+ * 🔴 산문용 시장 이름. 🔴 `MARKET_LABEL` 과 **다른 자리** 인 이유 — 그쪽은 **뱃지**
+ *    (「🇰🇷 국내」)라 이모지를 들고 있고, 문장 안에 넣으면 「🇰🇷 국내에서 동일상품
+ *    판매가가 확인됩니다」가 된다. 🟢 두 쓰임이 달라서 둘이고, **둘 다 상수** 다.
+ */
+const MARKET_PLAIN_NAME: Record<"KR" | "OVERSEAS", string> = { KR: "국내", OVERSEAS: "해외" };
+
+/** 🔴 통화는 **나란히** — 환산 0 · 합계 0(`overseas-reference` 와 같은 축). */
+function decisionPriceText(j: MarketJudgement): string {
+  return j.byCurrency
+    .map((c) =>
+      c.n >= 2 && c.highest > c.lowest
+        ? `${c.currency} ${c.lowest} ~ ${c.highest}`
+        : `${c.currency} ${c.lowest}`,
+    )
+    .join(" / ");
+}
+
+/**
+ * 🔴🔴🔴 **셀러가 첫 화면에서 읽는 «결론».**
+ *
+ * 🔴 「동일상품이 없다」·「국내 판매처 없음」·「시장에 없음」을 **쓰지 않는다**(STEP 3).
+ *    `SAME = 0` 의 뜻은 **「현재 MI 가 동일상품으로 확정한 후보가 0 개」** 이고
+ *    **시장 부재가 아니다**(WU-091 어휘 계약 · 계약이 글자로 잠근다).
+ * 🔴 국내 0 의 「해외를 기준으로 참고」 문장은 **해외에 실제 가격이 있을 때만** 쓴다
+ *    (CPO 명시 — 없는데 쓰면 그것이 바로 「없는 데이터를 기준으로 만들기」다).
+ */
+export function marketDecisionLines(j: MarketJudgement): MarketDecisionLines {
+  /** 🟢 시장별 수치는 **기존 owner** 가 낸다 — 여기서 다시 세지 않는다. */
+  const kr = buildPriceGuide(j, "KR");
+  const os = buildPriceGuide(j, "OVERSEAS");
+
+  if (j.sellers.length === 0) {
+    return {
+      kind: "NO_SAME",
+      /** 🔴 「없다」로 끝내지 않는다 — **어디서 볼 수 있는지** 까지 말한다. */
+      lines: [
+        "아직 동일상품으로 확정된 판매처가 없습니다.",
+        "확인된 후보와 보류 사유는 아래 상세 근거에서 볼 수 있습니다.",
+      ],
+    };
+  }
+
+  if (j.byCurrency.length === 0) {
+    return {
+      kind: "SAME_NO_PRICE",
+      /** 🔴 가격을 **지어내지 않는다** — 링크로 보내는 것이 정확한 답이다(WU-139). */
+      lines: [
+        "동일상품은 확인됐지만 확인된 판매가가 아직 없습니다.",
+        "아래 판매처 목록의 링크에서 직접 확인할 수 있습니다.",
+      ],
+    };
+  }
+
+  /** 🟢 **어느 시장에서** 확인됐는가 — 지어내지 않고 가격이 «있는» 시장만 적는다. */
+  const priced = (["KR", "OVERSEAS"] as const).filter(
+    (m) => (m === "KR" ? kr : os).pricedCount > 0,
+  );
+  const where = priced.map((m) => MARKET_PLAIN_NAME[m]).join("·");
+  const multi = j.byCurrency.length >= 2 || j.byCurrency.some((c) => c.n >= 2 && c.highest > c.lowest);
+  const lines = multi
+    ? [`${where} 동일상품 가격이 확인됩니다.`, `확인된 가격은 ${decisionPriceText(j)} 수준입니다.`]
+    : [`${where}에서 동일상품 판매가가 확인됩니다.`, `확인된 기준가격은 ${decisionPriceText(j)} 수준입니다.`];
+
+  /** 🔴 **가격을 못 가져온 동일상품을 숨기지 않는다** — 그 사실도 결론의 일부다. */
+  const unpriced = kr.unpricedCount + os.unpricedCount;
+  if (unpriced > 0) {
+    lines.push("동일상품은 확인됐지만 일부 판매처의 가격은 직접 확인이 필요합니다.");
+  }
+
+  /**
+   * 🔴🔴 국내 0 의 말. **「국내 동일상품이 없습니다」가 아니다**(CPO 금지).
+   * 🔴 그리고 **해외에 실제 가격이 있을 때만** 이 문장을 쓴다 — 조건이 그 자리다.
+   */
+  if (kr.sameCount === 0 && os.pricedCount > 0) {
+    lines.push(
+      "현재 확인된 국내 동일상품 가격은 없습니다.",
+      "해외에서 확인된 동일상품 가격을 기준으로 참고할 수 있습니다.",
+    );
+  }
+  return { kind: "PRICED", lines };
+}
 /** 🔴 **1건을 시장 평균처럼 읽히게 두지 않는다**(CPO 명시 금지). */
 export const PRICE_GUIDE_SINGLE_NOTE = "확인 가능한 가격 1건 기준입니다 — 시장 평균가가 아닙니다.";
 export const PRICE_GUIDE_RANGE_NOTE = "현재 확인된 판매가 범위입니다 — 전체 시장 가격대가 아닙니다.";
@@ -603,8 +717,14 @@ export function marketUnresolvedNote(n: number): string | null {
   );
 }
 
-/** 🟢 ③ 구간의 머리. 🔴 결론(verdict)은 시장 블록의 **요약** 이므로 그 뒤에 온다(CPO 확정 순서). */
-export const MARKET_RESULT_HEADING = "판매·가격 판단 결과";
+/**
+ * 🟢 ③ 구간의 머리. 🔴 결론(verdict)은 시장 블록의 **요약** 이므로 그 뒤에 온다(CPO 확정 순서).
+ *
+ * 🔴 **WU-146 에서 문구가 바뀌었다** — 「판매·가격 판단 결과」는 **표의 제목처럼** 읽혔다.
+ *    CPO 가 고정한 말은 **「💡 판매 판단」** 이고, 그 아래가 «결론» 이다(데이터 표시가 아니다).
+ * 🟢 상수라 소비처(화면 1 · 계약 1)가 자동으로 따라온다.
+ */
+export const MARKET_RESULT_HEADING = "💡 판매 판단";
 
 /* ═══════════════ 🔴🔴 WU-136 — **판매여부가 1순위다** (CPO 재정의) ═══════════════
  *

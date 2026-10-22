@@ -18,8 +18,6 @@ import {
   MARKET_JUDGEMENT_NOTE,
   MARKET_JUDGEMENT_TITLE,
   MARKET_LABEL,
-  /** 🔴 WU-145 ② — 결론 한 줄. **추천가가 아니라 «해석»** 이다(§00-B 가격 보류 유지). */
-  MARKET_PRICE_JUDGEMENT_NOTE,
   /** 🔴 WU-140 — 시장 블록이 «먼저» 서고, 그 시장이 빈 «이유» 를 말한다(CPO 확정 순서). */
   MARKET_RESULT_HEADING,
   countMarketCandidates,
@@ -47,6 +45,8 @@ import {
   priceRangeScope,
   priceRangeText,
   selectMiSameCandidates,
+  /** 🔴 WU-146 ② — **상태별 결론.** 한 문장 안내문이 아니다(가격 0 / SAME 0 / 국내 0 을 가른다). */
+  marketDecisionLines,
   countPendingCandidates,
   type MarketJudgement,
   type MiSameSelection,
@@ -113,6 +113,12 @@ export function MarketPriceComparison({
    *    센다 — 셀러의 1순위 질문(「팔리고 있는가」)은 국내/해외로 갈리지 않는다.
    */
   const judgement = buildMarketJudgement(rows);
+  /**
+   * 🔴🔴 WU-146 ② — **셀러가 읽는 «결론» 하나.** 🔴 상태(SAME 0 / 가격 0 / 국내 0)에 따라
+   *    **다른 문장** 이 나온다 — 같은 말을 돌려쓰면 그것은 결론이 아니라 안내문이다.
+   * 🟢 집계·판정 **0** — `judgement` 와 `buildPriceGuide` 가 이미 낸 수치를 읽는다.
+   */
+  const decision = marketDecisionLines(judgement);
   /**
    * 🔴 WU-133 — **시장과 무관하게** 센다. 「국내/해외로 갈려서 안 보인다」가 아니라
    *    「판정이 보류돼서 안 보인다」가 사실이고, 그 사실은 시장별로 나누면 흐려진다.
@@ -196,7 +202,32 @@ export function MarketPriceComparison({
        */}
       <div data-testid="market-judgement" className="mt-3 space-y-1">
         <p className="text-[11px] font-medium text-text-secondary">{MARKET_RESULT_HEADING}</p>
-        <p data-testid="market-verdict" className="text-[12px] font-medium text-text-primary">
+        {/**
+         * ══════════════════════════════════════════════════════════════════════
+         * 🔴🔴🔴 WU-146 ② — **결론이 «머리 바로 뒤» 다** (CPO STEP 2)
+         * ══════════════════════════════════════════════════════════════════════
+         *
+         * 🔴 CPO: 「`💡 판매 판단` ↓ **셀러가 바로 이해할 수 있는 결론**」.
+         * 🔴🔴 그래서 `verdict`(네 상태 라벨) **앞** 이다. `verdict` 는 **분류어**
+         *    (「판매중인 동일상품이 있습니다」류)이고 셀러가 원하는 답은 **「그래서
+         *    얼마냐」** 다. 요약을 먼저 읽히게 두면 그 한 줄만 보고 판단한다(WU-140 교훈).
+         * 🔴 **결론 owner 는 하나다**(STEP 7-2) — `marketDecisionLines` 뿐이고, 아래 줄들은
+         *    전부 그 결론의 **근거 수치** 다(새 결론을 또 만들지 않는다).
+         * 🔴 가격 숫자를 **여기서 집계하지 않는다** — `judgement.byCurrency` 를 읽는다
+         *    (`market-price-range` 와 **같은 값** 이라 두 자리가 어긋날 수 없다 · STEP 7-1).
+         */}
+        <ul data-testid="seller-decision" className="space-y-0.5">
+          {decision.lines.map((line) => (
+            <li
+              key={line}
+              data-testid="seller-decision-line"
+              className="text-[12px] font-medium text-text-primary"
+            >
+              {line}
+            </li>
+          ))}
+        </ul>
+        <p data-testid="market-verdict" className="text-[11px] text-text-secondary">
           {MARKET_VERDICT_TEXT[judgement.verdict]}
         </p>
         {judgement.sellers.length > 0 && (
@@ -234,25 +265,15 @@ export function MarketPriceComparison({
               </ul>
             )}
             {/**
-             * ══════════════════════════════════════════════════════════════════
-             * 🔴🔴🔴 WU-145 ② — **「판매가격 판단」 한 줄** (CPO STEP 2/4)
-             * ══════════════════════════════════════════════════════════════════
+             * 🔴🔴🔴 **WU-146 — WU-145 의 `market-price-judgement` 한 줄이 여기서 사라졌다.**
              *
-             * 🔴 **추천 판매가가 아니다.** 원가·수수료·마진이 없으므로(§00-B 가격 보류)
-             *    「판매가는 ₩XX 로 하세요」를 **계산하지 않는다** — 지어내면 셀러가 그
-             *    숫자로 실제 가격을 정한다. 이 줄이 하는 일은 **위 숫자의 «해석»** 이다.
-             * 🔴🔴 **가격이 하나라도 확인됐을 때만 쓴다.** `byCurrency` 가 비었는데 이
-             *    문장을 적으면 「기준이 있다」는 **거짓** 이 된다(그 조건이 이 자리다).
-             * 🟢 그래서 `market-price-range` **바로 뒤** 다 — 해석은 근거 뒤에 온다.
+             * 🔴 그 줄은 **상태와 무관하게 같은 말** 이었다(「확인된 동일상품 가격을 기준으로
+             *    위 가격대를 … 참고할 수 있습니다」) ⟹ 결론이 아니라 **안내문** 이었고,
+             *    위의 `seller-decision` 과 함께 두면 **셀러가 읽는 결론이 «둘»** 이 된다.
+             * 🔴 STEP 7-2 의 계약이 그것을 금지한다 — **seller-facing final judgement = 1.**
+             * 🟢 그 문장이 하던 일(가격이 있으면 그 사실을 말한다)은 `marketDecisionLines` 의
+             *    `PRICED` 분기가 **더 정확하게** 한다(통화 수·국내 0·미확인까지 가른다).
              */}
-            {judgement.byCurrency.length > 0 && (
-              <p
-                data-testid="market-price-judgement"
-                className="text-[11px] font-medium text-text-secondary"
-              >
-                {MARKET_PRICE_JUDGEMENT_NOTE}
-              </p>
-            )}
             {/**
              * 🔴 WU-136 §C — **셀러가 읽는 네 칸.** 도메인·판매상태·현재가격까지
              *    한 줄에 있어야 「어디서 얼마에」가 한눈에 보인다.

@@ -525,10 +525,46 @@ productData 를 **칸 하나씩 손으로 옮기면서** `siteBrandName` 을 빠
 🔴 그 아래 WU 기록은 **막혔을 때만** 참조한다(종료된 결론 모음이다).
 ```
 
-### 🔵🔵 **현재 착수점 — WU-145 구현 하나** (CPO 작업지시 확정 2026-10-22)
+### 🟡 **현재 착수점 — 없다. WU-146 배포 완료 · CEO 화면 확인 1회 대기**
+
+🔴🔴🔴 **진입은 `docs/START-HERE.md` 하나다** — 그 파일이 **고정 10절**
+(North Star · 역할 · 전략 · Production 상태 · 금지 · 현재 WU · 닫힌 결정 ·
+Known Unknowns · CEO Action Rule · Next WU)로 재구성됐다. 🔴 **그 10절만 읽으면
+바로 실행 가능하다.** 아래 §12 본문을 처음부터 읽지 않는다(인수인계에 1시간을 쓴다).
 
 🔴🔴 **이 절이 §12 의 유일한 현재 상태다.** 아래 WU 기록에 「… 지금 여기」가 남아 있어도
-**이 절이 이긴다.** 🔴 진입은 `docs/START-HERE.md §1` 하나다.
+**이 절이 이긴다.**
+
+```
+🟢🟢 WU-146 `Seller Decision 완성` — 구현·배포 완료(전문 `docs/HANDOFF-WU-146.md`)
+   🔴 고친 것은 **「결론이 결론이 아니었다」** — WU-145 의 한 줄은 상태와 무관하게
+      늘 같아서 **안내문** 이었다 ⟹ 🟢 `marketDecisionLines` 상태 기계
+      (`NO_SAME` / `SAME_NO_PRICE` / `PRICED`) + 조건부 두 줄(가격 미확인 · 국내 0)
+   🔴 「해외를 기준으로 참고」는 **해외에 가격이 있을 때만** 쓴다(없으면 그것이
+      「없는 데이터를 기준으로 만들기」다 · 계약 4-d)
+   🔴 추천 판매가 **계산 0** · 환산 **0** · 「시장 평균/적정/권장/추천 판매가」 **0**
+   🟢 절대조건 7 + Q1~Q7 을 계약 **24건** 으로 · 변이 **N1~N7 전부 FAIL → 바이트 복구**
+   🟢 회귀 **8,717 passed · 0 failed** · typecheck 0 · build 0 · 운영 **2 파일**
+🔴 **MI core frozen 을 지켰다** — §12 §5 금지 목록(threshold·8축·Registry·price_alerts·
+   schema·등록·카테고리/채널) **전부 변경 0**
+🔴 **🇰🇷 국내 SAME 은 여전히 0 이고 그것이 정상이다** — 이 WU 는 그 0 을 열지 않았다
+```
+
+🔴🔴🔴 **이 WU 의 가장 중요한 기록 — 가드가 내 «이름» 을 막았고 가드가 맞았다**:
+```
+1차 구현을 `sellerDecision` 이라 불렀고 `wu-130 F-4`(「그 영역에 집계/판정 어휘 금지」)가
+**회귀에서 FAIL** 했다. 🔴 그 이름은 **이미 판매판정 owner 의 어휘** 였다 —
+`buildSellerDecision`(market-intelligence:846 · finalVerdict) ·
+`sellerDecisionStateFromUnifiedDecision` · `computeSellerAction`.
+⟹ 같은 이름이 **두 개의 다른 것**(실제 판매판정 ↔ 결론 문장 생성기)을 가리키면 다음
+   사람이 **이 표시 영역에서 판정이 일어난다고 읽는다**.
+🟢 **가드를 풀지 않고 이름을 옮겼다** → `marketDecisionLines`(이 파일의 어휘 가족).
+🔴 **DOM 이름 `seller-decision` 은 그대로** — 가드가 보는 것은 **코드 어휘** 다.
+```
+
+🔴 **그리고 같은 함정을 세 번째로 밟았다** — 「시장 평균」을 리터럴 금지로 넣었더니
+**필수 부정문**(「시장 평균가가 **아닙니다**」)이 FAIL 했다. 🟢 **「평균은 부정문으로만」**
+으로 바꿨다(WU-139·WU-144 가 이미 적어 둔 그 함정).
 
 ```
 🟢🟢 WU-145 `Seller Decision Screen Finalization` — **구현·배포 완료 · CLOSED**

@@ -5,7 +5,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { MarketPriceComparison } from "../MarketPriceComparison";
 import {
-  MARKET_PRICE_JUDGEMENT_NOTE,
+  /** 🔴 WU-146 — 결론 구간의 머리(「💡 판매 판단」). 리터럴로 적지 않는다(owner 가 상수다). */
+  MARKET_RESULT_HEADING,
   MI_SAME_AREA_SCOPE,
   PRICE_GUIDE_TITLE,
   SAME_CONFIRMED_COUNT_LABEL,
@@ -257,18 +258,35 @@ describe("B. ① 가격 어휘는 하나다", () => {
 
 /* ════════════ C. 🔴🔴 ② 결론 한 줄 — 해석이지 추천가가 아니다 ════════════ */
 
-describe("C. ② 「판매가격 판단」 한 줄", () => {
-  it("🟢 C-1 가격이 확인되면 **그 한 줄이 선다** — 1차 화면이다", () => {
+describe("C. ② 셀러가 읽는 결론", () => {
+  /**
+   * 🔴🔴 **WU-146 에서 owner 가 교체됐다** — WU-145 의 `market-price-judgement` 는
+   *    **상태와 무관하게 같은 한 줄** 이라 결론이 아니라 **안내문** 이었다.
+   *    🟢 이제 `seller-decision`(상태별 문장 배열)이 그 자리를 갖는다.
+   * 🔴 **상태 기계 자체는 `wu-146` 이 소유한다** — 이 파일은 ⒜ 결론이 **1차에 선다**
+   *    ⒝ 그 owner 가 **하나다** 만 본다(두 파일이 같은 것을 두 번 재지 않는다).
+   */
+  it("🟢 C-1 결론이 **1차 화면에 선다** · owner 는 **하나** 다", () => {
     mount(S1);
-    expect(q("market-price-judgement")?.textContent).toBe(MARKET_PRICE_JUDGEMENT_NOTE);
-    expect(firstScreenText()).toContain("판매가격 판단");
+    expect(container.querySelectorAll('[data-testid="seller-decision"]').length).toBe(1);
+    /** 🔴 WU-145 의 옛 owner 는 **사라졌다** — 두면 결론이 둘이 된다(STEP 7-2). */
+    expect(q("market-price-judgement")).toBeNull();
+    expect(firstScreenText()).toContain("동일상품");
+    /**
+     * 🔴 S1 은 **세 통화** 라 결론이 「확인된 **가격은** …」이다(「확인된 기준가격은」은
+     *    단일 통화 분기다). 🟢 1차에 쓴 단언이 그 분기를 혼동했고 FAIL 로 드러났다 —
+     *    문구를 **상태에 맞게** 고친다(상태 기계 자체는 `wu-146` 이 전수로 본다).
+     */
+    expect(firstScreenText()).toContain("CAD 64 / GBP 37 / USD 58");
   });
 
-  it("🔴🔴 C-2 확인된 가격이 **0 이면 그 줄을 만들지 않는다** — 「기준이 있다」는 거짓이 된다", () => {
+  it("🔴🔴 C-2 가격이 **0 이면 기준가격을 말하지 않는다** — 「기준이 있다」는 거짓이 된다", () => {
     /** 🔴 SAME 인데 가격이 **전건 없는** 모양(실측: trenbe 하나만 남은 경우). */
     mount([row({ domain: "global.trenbe.com", discoveredUrl: "https://global.trenbe.com/p/3" })]);
-    expect(q("market-price-judgement")).toBeNull();
-    expect(flat()).not.toContain("판매가격 판단");
+    /** 🟢 결론 자체는 **선다** — 「아무 말도 안 한다」가 아니라 **다른 말** 을 한다. */
+    expect(q("seller-decision")).not.toBeNull();
+    expect(flat()).not.toContain("기준가격");
+    expect(flat()).toContain("확인된 판매가가 아직 없습니다");
   });
 
   it("🔴🔴 C-3 **추천 판매가를 만들지 않는다**(§00-B 가격 보류 · CPO 명시)", () => {
@@ -379,7 +397,8 @@ describe("F. 1차 화면은 «결론» 이다", () => {
   it("🟢🟢 F-2 셀러가 1차에서 **동일상품 → 판매중 → 가격 → 판단** 을 순서대로 읽는다", () => {
     mount(S2);
     const first = firstScreenText();
-    const order = [`${SAME_CONFIRMED_COUNT_LABEL} 3곳`, "판매중 확인 1곳", "USD 58", "판매가격 판단"];
+    /** 🔴 WU-146 — 마지막 칸이 **「💡 판매 판단」** 으로 바뀌었다(결론 owner 교체). */
+    const order = [`${SAME_CONFIRMED_COUNT_LABEL} 3곳`, "판매중 확인 1곳", "USD 58", MARKET_RESULT_HEADING];
     let at = -1;
     for (const part of order) {
       const i = first.indexOf(part);
