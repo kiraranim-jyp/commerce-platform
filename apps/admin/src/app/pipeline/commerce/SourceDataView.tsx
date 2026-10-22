@@ -1,7 +1,17 @@
 "use client";
 
 import type { CanonicalProduct, FieldSource } from "@commerce/shared";
+import { buildProductIdentityDna } from "@commerce/shared";
 import { convertToKrw, formatKrw } from "@commerce/pricing";
+
+/**
+ * 🔴 WU-150 STEP 6 — 「브랜드 품번」 줄의 이름 owner.
+ *
+ * 🔴 「SKU」와 **다른 말** 이어야 한다 — 그 둘은 이 화면에서 나란히 서고 값도 둘 다
+ *    영문+숫자라, 이름이 비슷하면 셀러가 같은 값으로 읽는다(DELTA-B 가 「네이버 쇼핑
+ *    카탈로그 모델명」을 그렇게 가른 것과 같은 이유).
+ */
+export const BRAND_MODEL_CODE_LABEL = "브랜드 품번";
 import { InfoTip } from "./registration-fields";
 import { EditableText, EditableTextarea } from "./EditableField";
 import { OptionVariantEditor } from "./OptionVariantEditor";
@@ -114,6 +124,12 @@ export function SourceDataView({
   exchangeRates?: { rates: Record<string, number> } | null;
 }) {
   const krw = convertToKrw(product.price.value.amount, product.price.value.currency, exchangeRates?.rates);
+  /**
+   * 🔴 WU-150 STEP 6 — **MI 가 쓰는 그 값을 그대로 읽는다**(새로 계산하지 않는다).
+   * `buildProductIdentityDna` 는 순수 함수이고 HTTP 0 이다. 🔴 여기서 품번을 **추정하지
+   * 않는다** — 그 함수가 못 찾으면 화면도 「확인되지 않음」이라고 말한다.
+   */
+  const brandModelCode = buildProductIdentityDna(product).brandModelCode || null;
   return (
     // UX 2.2(CEO 지시, 2026-09-11) — 이 편집기는 이제 자기 카드 껍데기를 갖지
     // 않는다. 두 자리에서 쓰이는데(③ 등록 준비의 펼친 작업면 / 그 외 단계의
@@ -199,6 +215,34 @@ export function SourceDataView({
                   두지 않으면 셀러는 계속 같은 값으로 읽는다. */}
               <p className="mt-1 text-[11px] leading-relaxed text-text-tertiary">
                 └─ 판매자 상품관리번호 — 판매처 자신의 재고번호입니다.
+              </p>
+            </Row>
+            {/**
+             * ══════════════════════════════════════════════════════════════════
+             * 🔴🔴🔴 WU-150 STEP 6 — **「브랜드 품번」이 화면에 없었다**
+             * ══════════════════════════════════════════════════════════════════
+             *
+             * 🔴 CEO 지적: 「Source Data 에 SKU 가 없다」. 실측하니 둘은 **다른 값** 이었다:
+             * ```
+             * product.sku.value   ""            ← 판매처 자신의 재고번호(이 상품엔 없다)
+             * brandModelCode      "B226AC009"   ← 🟢 **브랜드 품번 — 살아 있다**
+             * ```
+             * 🔴 즉 **데이터가 사라진 것이 아니라 그 값을 보여주는 «줄» 이 없었다.**
+             * 🟢 그리고 이 값이 **MI 가 동일상품을 가르는 데 실제로 쓰는 식별자** 다
+             *    (WU-150 실측 — 보몽드·주니어에디션 후보 **둘 다** `facts.brandModelCode`
+             *     가 `B226AC009` 로 일치했고 MI 가 「근거: 브랜드 품번 일치」를 적었다).
+             *
+             * 🔴 **읽기 전용** 이다 — 저장된 칸이 아니라 상품명/URL/SKU 에서 파생된다
+             *    (`buildProductIdentityDna`). 고치는 칸을 새로 만들면 「원본 사실」과
+             *    「사람이 적은 값」이 한 줄에서 섞인다.
+             * 🔴 MI 판정 · 검색 · 가격 **변경 0** — 이미 계산되던 값을 **보여주기만** 한다.
+             */}
+            <Row label={BRAND_MODEL_CODE_LABEL} field={product.title}>
+              <span className="text-sm">
+                {brandModelCode ?? <span className="text-text-tertiary">확인되지 않음</span>}
+              </span>
+              <p className="mt-1 text-[11px] leading-relaxed text-text-tertiary">
+                └─ 브랜드가 붙인 품번 — 국내/해외 동일상품을 찾을 때 쓰는 기준입니다.
               </p>
             </Row>
             {/* REWORK-8 ①(CEO 지시, 2026-09-15) — **빠져 있던 입력 자리를 만든다.**

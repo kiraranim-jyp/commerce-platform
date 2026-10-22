@@ -7,7 +7,7 @@ import { PLATFORM_ADAPTERS } from "@commerce/marketplace";
 import { UNRESOLVED_CATEGORY } from "@commerce/category";
 import { buildNaverProductPayload, resolveManufacturer, validateNaverPayload } from "@commerce/listing";
 import { PlatformPreview } from "../PlatformPreview";
-import { SourceDataView, CATALOG_MODEL_NAME_LABEL } from "../SourceDataView";
+import { SourceDataView, BRAND_MODEL_CODE_LABEL, CATALOG_MODEL_NAME_LABEL } from "../SourceDataView";
 import { MissingFieldsBulkPanel } from "../MissingFieldsBulkPanel";
 import { computeNaverPayloadReadiness } from "../readiness";
 
@@ -423,7 +423,7 @@ async function clickLabelContaining(scope: HTMLElement, needle: string): Promise
 }
 
 describe("DELTA-B ① — 이름이 «어느 모델명인가»를 말한다(라벨 전수)", () => {
-  it("🔴 「Source Data」 줄 전수 — SKU 다음 칸의 이름이 「네이버 쇼핑 카탈로그 모델명」이다", async () => {
+  it("🔴 「Source Data」 줄 전수 — 식별 칸 셋이 **서로 다른 이름** 으로 나란히 선다", async () => {
     await renderSource(makeProduct());
     const labels = Array.from(container.querySelectorAll("tbody tr")).map((tr) =>
       (tr.querySelector("td")?.textContent ?? "").trim(),
@@ -435,6 +435,21 @@ describe("DELTA-B ① — 이름이 «어느 모델명인가»를 말한다(라�
       "브랜드",
       "가격",
       "SKU",
+      /**
+       * 🔴🔴🔴 **WU-150 STEP 6 — 「브랜드 품번」이 둘 사이에 «새로» 섰다**(2026-10-22).
+       *
+       * 🔴 이 파일이 지키는 성질은 **「식별 칸들이 서로 다른 이름으로 구별된다」** 이고,
+       *    그 성질은 **더 세졌다** — 이제 셋이다:
+       * ```
+       * SKU                      판매처 자신의 재고번호   (payload: sellerManagementCode)
+       * 브랜드 품번               브랜드가 붙인 품번        (MI 가 동일상품을 가르는 기준)
+       * 네이버 쇼핑 카탈로그 모델명  네이버 카탈로그 식별용    (payload: naverShoppingSearchInfo)
+       * ```
+       * 🔴 CEO 지적(「Source Data 에 SKU 가 없다」)의 실체는 **둘이 다른 값** 이라는 것이었다
+       *    — 실측: `sku=""` · `brandModelCode="B226AC009"`. 값은 살아 있었고 **줄이 없었다.**
+       * 🔴 세 줄이 **붙어 있어야** 구별이 읽힌다(DELTA-B 가 둘을 붙여 둔 그 이유 그대로).
+       */
+      BRAND_MODEL_CODE_LABEL,
       "네이버 쇼핑 카탈로그 모델명",
       /* 🔴 P5.6 재작업(CEO 실측, 2026-10-09) — 여기 있던 "옵션" 을 지웠다.
          그 칸은 `product.options`(deprecated · 축 이름 문자열)였고, 바로 아래

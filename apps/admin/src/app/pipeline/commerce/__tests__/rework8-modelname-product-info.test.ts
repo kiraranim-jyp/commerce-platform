@@ -7,7 +7,7 @@ import { PLATFORM_ADAPTERS } from "@commerce/marketplace";
 import { UNRESOLVED_CATEGORY } from "@commerce/category";
 import { buildNaverProductPayload, validateNaverPayload } from "@commerce/listing";
 import { StageBody } from "../StageBody";
-import { SourceDataView } from "../SourceDataView";
+import { BRAND_MODEL_CODE_LABEL, SourceDataView } from "../SourceDataView";
 import { MissingFieldsBulkPanel } from "../MissingFieldsBulkPanel";
 import { computeNaverPayloadReadiness } from "../readiness";
 import { resolveStageFocus } from "../stage-focus";
@@ -470,6 +470,19 @@ describe("REWORK-8 ① — 전체 사슬 9단계(상품정보에서 끝까지)",
       "브랜드",
       "가격",
       "SKU",
+      /**
+       * 🔴🔴🔴 **WU-150 STEP 6 — 「브랜드 품번」이 SKU 바로 다음에 «새로» 섰다.**
+       *
+       * 🔴 CEO 지적(2026-10-22): 「Source Data 에 SKU 가 없다」. 실측하니 둘은 **다른 값**
+       *    이었다 — `product.sku.value` 는 **""**(판매처 재고번호 · 이 상품엔 없다)이고
+       *    `brandModelCode` 는 **"B226AC009"** 로 **살아 있었다.**
+       * 🟢 즉 데이터가 사라진 것이 아니라 **그 값을 보여주는 줄이 없었다.**
+       * 🔴 자리가 SKU **바로 다음** 인 이유는 이 파일이 모델명을 그 자리에 세운 이유와
+       *    같다 — 세 값(SKU · 브랜드 품번 · 카탈로그 모델명)이 **서로 다른 것** 임이
+       *    나란히 서야 읽힌다. 떨어뜨리면 셀러가 다시 하나로 읽는다.
+       * 🔴 **읽기 전용** 이다(파생값) · MI/검색/가격 변경 **0**.
+       */
+      BRAND_MODEL_CODE_LABEL,
       CATALOG_MODEL_NAME,
       /* 🔴 P5.6 재작업(CEO 실측, 2026-10-09) — 여기 있던 "옵션" 을 지웠다.
          그 칸은 `product.options`(deprecated · 축 이름 문자열)였고, 바로 아래
