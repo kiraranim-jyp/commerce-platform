@@ -105,6 +105,42 @@ const TARGETS = [
     url: "https://m.luxboy.com/product/detail.html?product_no=103477",
     kind: "상세" as const,
   },
+  /**
+   * ══════════════════════════════════════════════════════════════════════════════
+   * 🔴🔴 WU-156 — **CPO/CEO 가 직접 검색해 준 URL 전수**(2026-10-22 · 줄이지 않았다)
+   * ══════════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 **지어내지 않았다** — 받은 표의 URL 그대로다(`utm_source` 는 뗐다 —
+   *    `canonicalizeProductUrl` 이 떼는 추적 파라미터이고, 남기면 같은 상품이
+   *    두 후보로 세어진다).
+   * 🔴 **모양으로 미리 거르지 않았다**(CPO 조건) — 목록·검색·홈도 **그대로** 넣는다.
+   *    거르는 것은 우리 파이프라인의 일이고, 그 결과가 이 측정의 산출물이다.
+   */
+  { label: "보몽드(목록)", url: "https://www.beaumonde.co.kr/goods/goods_list.php?brandCd=070031", kind: "목록" as const },
+  {
+    label: "롯데ON(검색)",
+    url: "https://www.lotteon.com/csearch/search/search?mallId=1&platform=pc&q=%EB%B3%B4%EB%B3%B4%EC%87%BC%EC%A6%8826&render=search",
+    kind: "검색" as const,
+  },
+  {
+    label: "롯데홈쇼핑",
+    url: "https://m.lotteimall.com/goods/viewGoodsDetail.lotte?goods_no=1287736300",
+    kind: "상세" as const,
+  },
+  {
+    label: "이마트몰(검색)",
+    url: "https://emart.ssg.com/search.ssg?query=%EB%B3%B4%EB%B3%B4%EC%87%BC%EC%A6%88%ED%8B%B0%EC%85%94%EC%B8%A0",
+    kind: "검색" as const,
+  },
+  { label: "도노키즈(홈)", url: "https://donokids.com/", kind: "홈" as const },
+  {
+    label: "주니어에디션(글로벌)",
+    url: "https://www.junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+    kind: "상세" as const,
+  },
+  { label: "라쿠텐", url: "https://item.rakuten.co.jp/little-lemonade/60980/", kind: "상세" as const },
+  { label: "LL-Days(목록)", url: "https://ll-days.com/?gid=1607574&mode=grp&page=10", kind: "목록" as const },
+  { label: "보보재팬(목록)", url: "https://bobochoses.co.jp/collections/all-kids?page=1", kind: "목록" as const },
 ] as const;
 
 const loose = (u: string) => String(u).trim().toLowerCase().replace(/[?#].*$/, "").replace(/\/+$/, "");
@@ -354,6 +390,6 @@ describe("WU-150 STEP 1 — B226AC009 국내 URL 전수 funnel", () => {
     console.log("\n  🔴 측정불가 — 11번가 · POSTY: **URL 이 제공되지 않았다**(0 으로 세지 않는다)");
 
     /** 🔴 이 테스트는 **측정** 이다 — 통과/실패를 단언하지 않는다(숫자를 만들지 않기 위해). */
-    expect(TARGETS.length).toBe(9);
+    expect(TARGETS.length).toBe(18);
   }, 600_000);
 });
