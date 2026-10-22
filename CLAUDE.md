@@ -531,23 +531,38 @@ productData 를 **칸 하나씩 손으로 옮기면서** `siteBrandName` 을 빠
 🔴 아래 §12 WU 기록은 **작업 좌표가 아니다**(종료된 결론 모음이다).
 ```
 
-### 🔵 **현재 착수점 — WU-149 STEP 1 → 6 → 7 하나**
+### 🟢🟢 **WU-149 CLOSED — 셀러 화면이 「후보 조사」에서 「가격 판단」이 됐다**(2026-10-22 · `d929a0e9`)
 
 🔴🔴 **진입은 `docs/START-HERE.md` 하나다**(상세 근거만 `docs/HANDOFF-WU-149.md`).
+🟡 남은 것은 **CEO 화면 확인 1회** 다. 🔴 **CTO 가 할 코드 작업이 없다** — 다음 범위는 CPO 지정.
 
 ```
-🟢🟢 **절대조건 15 중 11 은 «이미» PASS** — 남은 것은 **1 · 4 · 11(절반)** 뿐이다
-   ⟹ WU-149 는 **STEP 1(레거시 패널 제거) + STEP 3(조기 종료)** 둘로 줄어든다
-   🔴 STEP 2·5·6·7·8·9 는 **이미 구현돼 있다**(WU-145~148 · 재구현 금지)
-🔴 STEP 1 파장(실측) — `CommerceWorkspace.tsx:3884·3900` 제거 시 미사용 심볼
-   `handleRequestPriceReview` **9** · `marketEvidence` **7** ·
-   `PRICE_COMPARISON_ANCHOR_ID` **4**(🔴 보존 계약) · 그 외 넷 ·
-   깨질 계약 **다섯**(wu-056r1 · mi-022 · wu-130 F-3 + 예상 둘)
-🔴🔴 STEP 3 은 **flag 가 아니다** — SAME 은 **수집 뒤** 결정되므로 「3개면 수집 중단」은
-   수집↔판정을 교대로 돌리는 **오케스트레이터 재구조화** 다. 🟢 같은 취지 조기 종료가
-   **이미 둘** 있고(샵 내 SAME break · `foundVeryHighInP0`) 🔴 **현재 효과는 0** 이다
-🔴 🇰🇷 국내 가격대는 **이 WU 로 열리지 않는다** — tier SAME 0(WU-138) ⟹ ① 공급(CPO 결정) 뒤다
+🟢 STEP 1  seller surface 에서 후보 연구 UI 제거 — `<DomesticShopSearch>` ·
+           `<ComparisonShopSearch>` · `marketEvidence` 슬롯 + 죽은 배선 **7**
+           (domesticEvidenceOpen · overseasEvidenceOpen · marketEvidenceRequest ·
+            openMarketEvidence() · marketEvidenceVariant · onOpen*Evidence ·
+            marketCategoryProfileId) + `StageFocus.marketEvidence` 칸
+🟢 STEP 6  가격 owner 단일화 — StageBody 의 **중복** 「📊 시장 가격 비교」 접힘 제거
+           🔴 ② 를 **빈 단계로 두지 않았다**(「결론은 화면 맨 위」 한 줄 · `wu-058`)
+🟢 STEP 7  `SAME_PRICE_CAP` **재구현 0** — 통화별 상한·건수 불변은 `wu-148 D` 그대로
+🔴🔴 **엔진은 한 줄도 지우지 않았다** — 컴포넌트 파일 둘 · backend API 둘 · 수집/보강 ·
+   MI · SAME 판정 · 판매상태 · 가격 추출 · 후보 검토 이력(📚) · 앵커(보존 계약)
+🟢🟢 **부수 효과(실측)** — 셀러 화면의 후보 검색 HTTP **2 → 0**. WU-130 이 「지금 해외
+   검색이 **두 번** 돈다」고 적어 둔 그 중복이 이것으로 **하나가 됐다**(서버 `/check` 는
+   같은 수집을 그대로 돈다 ⟹ 셀러가 잃은 데이터는 **없다**)
+🟢 계약 신규 **17** · 기존 **7 파일 방향 전환**(「있다」 → 「없다」 **+** 「엔진은 살아 있다」)
+🟢 변이 **8종**(M1-a·M1-b·M2~M7) 전부 FAIL → **바이트 복구** · 흔적 0
+🟢 회귀 **627 files / 8,750 passed / 0 failed** · typecheck 0 · build 0
+🔴 🇰🇷 국내 SAME = **0 은 그대로다**(tier SAME 0 · WU-138) — 이 WU 는 그 0 을 **열지 않았다**.
+   다음은 **① 공급** 이고 Registry/어댑터 ↔ Gemini 중 하나를 여는 **CPO 정책 결정** 이다
+🔴 **STEP 3(진짜 조기 종료)은 CPO 가 범위에서 뺐다** — 수집↔판정 교대 구조 변경이고
+   현재 데이터에서 **효과가 0** 이다(해외 SAME 이 이미 3)
 ```
+
+🔴 **내가 틀린 것 둘** — ⒜ 속성 위치에 `{/* */}` 주석(그 자리가 금지한 모양 · **세 번째**)
+⒝ E2E 에서 `not.toContain("약 ₩")` 로 단언해 **FAIL**(그 글자는 「원본 상품」 줄의 환산이고
+**WU-056-R1 이 「정상」으로 닫은 값** 이다 ⟹ 🔴 **내 단언이 틀렸고 코드가 맞았다**).
+🟢 ⒝ 는 **개수(=1)** 로 범위를 좁혀 잠갔다 — 시장 가격 축이 환산을 시작하면 FAIL 한다.
 
 ---
 

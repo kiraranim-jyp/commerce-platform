@@ -207,3 +207,81 @@ DB schema · 추천 판매가 · 환산 · Gemini/API · 새 검색 알고리즘
 
 🔴 **그러므로 다음 세션의 단일 작업은 STEP 1/6/7 이다** — 좌표는 위 §STEP 1 의 실행 순서
 7단계 그대로이고 **조사는 끝나 있다.**
+
+---
+
+## 🟢🟢 실행 완료 기록 — **STEP 1/6/7 구현·배포 (2026-10-22 · `d929a0e9`)**
+
+🔴 **STEP 0 동결 전수 준수** — MI 판정축 · threshold · precision · discovery · scoring ·
+candidate orchestration · producer · collection strategy · Registry · 어댑터 ·
+`price_alerts` · DB schema · Gemini · 추천 판매가 · 마진 · 환산 · 새 알고리즘 — **전부 0.**
+🔴 **국내 SAME = 0 을 열지 않았다**(별도 supply WU).
+
+```
+운영 4 파일   CommerceWorkspace.tsx · StageBody.tsx · stage-focus.ts · page.tsx
+계약          신규 1 파일(17) · 기존 7 파일 **방향 전환**
+회귀          627 files / 8,750 passed / 0 failed   (baseline 626 / 8,734)
+typecheck 0 · build 0
+```
+
+### 제거한 것 — **표시 층 하나**
+
+```
+🔴 CommerceWorkspace  `<DomesticShopSearch>` · `<ComparisonShopSearch>` + `marketEvidence` 슬롯
+🔴 같이 죽은 배선 7   domesticEvidenceOpen · overseasEvidenceOpen · marketEvidenceRequest ·
+                     openMarketEvidence() · marketEvidenceVariant ·
+                     onOpenDomesticEvidence/onOpenOverseasEvidence · marketCategoryProfileId
+🔴 StageBody         중복 「📊 시장 가격 비교」 접힘 · openMarketEvidenceRequest · marketEvidenceOpen
+🔴 stage-focus       `StageFocus.marketEvidence` 칸(남기면 배선이 되살아난다)
+```
+
+🟢 **보존 — 엔진은 한 줄도 지우지 않았다**: 두 컴포넌트 파일 · backend API 둘 ·
+후보 수집/보강 · MI · SAME 판정 · 판매상태 · 가격 추출 · 후보 검토 이력(📚) ·
+`PRICE_COMPARISON_ANCHOR_ID`(이제 **가격 owner 영역** 을 감싼다).
+
+### 🟢 실측으로 드러난 부수 효과 — **셀러 화면의 후보 검색 HTTP 2 → 0**
+
+```
+전  진입 시 `POST /api/domestic-price-sources/search` 1 + `POST /api/comparison/search` 1
+후  **0 · 0**  (탭 왕복 · 재진입 · 트리 재생성 전부 0 — 마운트 DOM 으로 측정)
+🟢 WU-130 이 「지금 해외 검색이 **두 번** 돈다」고 적어 둔 그 중복이 이것으로 **하나가 됐다**
+   (서버는 `/check` 에서 같은 수집을 그대로 돈다 ⟹ 셀러가 잃은 데이터는 **없다**)
+```
+
+### 🔴 변이 8종 전부 FAIL → 바이트 복구
+
+```
+M1-a 패널을 StageBody 에 되살림        3 FAIL (마운트 축)
+M1-b 패널을 Workspace 에 되살림        3 FAIL (소스 축)
+M2   후보 등급 행 + 판정 버튼 노출      4 FAIL
+M3   두 번째 가격 영역 신설            5 FAIL
+M4   통화별 → 전역 상한               1 FAIL (`wu-148 D-3` · 재구현 0)
+M5   SAME 건수 절단                   1 FAIL (`wu-148 D-2` · 재구현 0)
+M6   앵커 div 삭제                    3 FAIL
+M7   backend API + 컴포넌트 삭제        3 FAIL
+```
+
+### 🔴 내가 틀린 것 둘(둘 다 적는다)
+
+```
+⒜ 속성 위치에 `{/* … */}` 주석을 썼다 — 그 자리의 주석이 **금지한 모양** 이고 이번이
+   세 번째다(WU-136·WU-141-R3). 🟢 즉시 블록 주석으로 고쳤다.
+⒝ E2E 단언을 `not.toContain("약 ₩")` 로 써서 **FAIL 했다.** 그 글자는 「원본 상품」 줄의
+   환산이고 **WU-056-R1 이 CEO 확인까지 거쳐 「정상」으로 닫은 값** 이다 ⟹ 🔴 내 단언이
+   틀렸고 코드가 맞았다. 🟢 **개수(=1)** 로 범위를 좁혀 잠갔다(시장 가격 축이 환산을
+   시작하면 FAIL). 🔴 「평균」 리터럴 함정(WU-139·144·146)과 **같은 계열 네 번째** 다.
+```
+
+### 🔴🔴 측정불가 / 넘겨 읽지 않을 것
+
+```
+⒜ 🔴 실제 따져 화면은 CTO 가 볼 수 없다(로그인 뒤) ⟹ 화면 축은 **마운트 DOM** 이다.
+   「Production UI PASS」로 적지 않는다 — **CEO 확인 1회로만** 닫힌다
+⒝ 🔴 🇰🇷 국내 가격대는 **이 WU 로 열리지 않는다** — tier SAME **0**(WU-138 확정)
+⒞ 🔴 「가격대 확정 불가」 문구의 owner 는 `MarketPriceComparison`(WU-148)이고 이번에
+   **건드리지 않았다** — 2-product E2E 의 그 축은 wu-146/148 계약이 본다
+⒟ 🟡 `DomesticPriceIntelligencePanel` 은 **통째로 지우지 않았다**(지시서 §5 의 그 이름) —
+   그 패널이 `▸ 판단 근거` · 📚 검토 이력 · **후보 검토 저장 경로**(WU-131/141-R1)를
+   들고 있고 §6/§15 가 그것을 **보존** 하라고 적었다 ⟹ 제거한 것은 **그 안의 research
+   구역과 두 패널** 이다(두 지시가 둘 다 지켜지는 유일한 읽기)
+```

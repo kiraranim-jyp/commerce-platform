@@ -10,18 +10,17 @@
 ## 1. CURRENT STATE
 
 ```
-현재 WU     WU-149  (남은 범위 = STEP 1 · 6 · 7)
-코드 baseline  f152f927      ← 이 숫자를 보고서의 「변경 전」 으로 쓴다
-HEAD           e7b2fe66      ← 그 위의 **문서 전용** 커밋(코드 0)
-main        clean · origin 0 / 0 · 배포 Ready
+현재 WU     **WU-149 CLOSED** — STEP 1·6·7 구현·배포 완료
+HEAD        d929a0e9      (운영 4 파일 · 계약 8 파일)
+main        clean · origin 0 / 0 · 배포 완료
 HTTP        /  200   ·  인증 라우트 307(정상)
 typecheck   PASS (0)
 build       PASS (0)
-regression  626 files / 8,734 passed / 0 failed
+regression  627 files / 8,750 passed / 0 failed
 ```
 
-🔴 지시서의 「HEAD: f152f927」은 **코드 baseline** 을 가리킨다 — 작업트리 HEAD 는
-`e7b2fe66`(문서 전용)이다. 🟢 코드 기준선은 **같다**(그 사이 코드 변경 0).
+🟡 **남은 것은 CEO 화면 확인 1회 뿐이다**(§12 의 요청 형식 그대로). 🔴 CTO 가 할 코드
+작업은 **없다** — 다음 범위는 **CPO 가 지정** 한다(🔴 선제적으로 WU 를 만들지 않는다).
 
 **CEO Action: 없음.** 배포 후 실제 상품 UI 최종 테스트가 필요한 시점에만 **1회** 요청한다.
 
@@ -113,9 +112,26 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
-## 6. NEXT WORK — ONLY THIS
+## 6. NEXT WORK — **없다**(CPO 지정 대기)
 
-> **STEP 1 → STEP 6 → STEP 7.** 그 외는 하지 않는다.
+> 🟢🟢 **WU-149 STEP 1·6·7 은 끝났다**(`d929a0e9` · 배포 완료 · 전문 `docs/HANDOFF-WU-149.md`).
+> 🔴 **CTO 가 할 코드 작업이 없다.** 아래 §6-A 는 **완료된 기록** 이다 — 다시 구현하지 않는다.
+
+```
+🟢 제거됨   seller surface 의 후보 연구 UI(두 패널 + 슬롯 + 배선 7) ·
+            중복 「📊 시장 가격 비교」 접힘 · `StageFocus.marketEvidence`
+🟢 보존됨   컴포넌트 파일 둘 · backend API 둘 · 수집/MI/SAME/판매상태/가격추출 ·
+            후보 검토 이력(📚) · `PRICE_COMPARISON_ANCHOR_ID`
+🟢 부수효과 셀러 화면의 후보 검색 HTTP **2 → 0**(WU-130 이 적어 둔 중복 해소)
+🔴 열지 않음 🇰🇷 국내 SAME = 0 (tier SAME 0 · WU-138) ⟹ **공급 WU · CPO 결정축**
+```
+
+🔵 **그 다음 후보는 하나다** — 🇰🇷 **국내 동일상품 «공급»**. 🔴 그것은 Registry/어댑터
+확대 ↔ Gemini flag 중 하나를 여는 **정책 결정** 이고 **CTO 가 열지 않는다**(§4 freeze).
+
+---
+
+## 6-A. [완료 기록] STEP 1 → 6 → 7 이 무엇이었나
 
 ### STEP 1 — seller surface 에서 **legacy candidate research UI 제거**
 
@@ -365,19 +381,20 @@ npx vercel ls --yes | grep -A1 "Age "
 
 ---
 
-## 16. 완료 정의 — 이 **19개가 전부 체크될 때만** WU-149 를 닫는다
+## 16. 완료 정의 — **19/19 체크됨**(CEO 화면 확인 1회만 남았다)
 
 ```
-[ ] legacy seller candidate UI 제거        [ ] internal candidate pipeline 보존
-[ ] SIMILAR/DIFFERENT/UNDECIDED 노출 제거  [ ] Seller Decision 단일 가격 owner
-[ ] 중복 market price UI 제거              [ ] SAME_PRICE_CAP 기존 구현 유지
-[ ] 통화별 상한 유지                        [ ] SAME 건수 불변
-[ ] 🇰🇷 가격대 규칙 유지                     [ ] 🌎 최저 확인가 규칙 유지
-[ ] 환산 없음                              [ ] 추천가 없음
-[ ] 계약 업데이트(우회 아님)                [ ] mutation M1~M7 PASS
-[ ] 2-product E2E PASS                    [ ] full regression PASS
-[ ] typecheck PASS                        [ ] build PASS
-[ ] deploy 완료 + production 확인 완료
+[x] legacy seller candidate UI 제거        [x] internal candidate pipeline 보존
+[x] SIMILAR/DIFFERENT/UNDECIDED 노출 제거  [x] Seller Decision 단일 가격 owner
+[x] 중복 market price UI 제거              [x] SAME_PRICE_CAP 기존 구현 유지(재구현 0)
+[x] 통화별 상한 유지                        [x] SAME 건수 불변
+[x] 🇰🇷 가격대 규칙 유지(변경 0)             [x] 🌎 최저 확인가 규칙 유지(변경 0)
+[x] 환산 없음                              [x] 추천가 없음
+[x] 계약 업데이트(우회 아님 · 방향 전환)     [x] mutation M1~M7 PASS(8종 FAIL→복구)
+[x] 2-product E2E PASS                    [x] full regression PASS (8,750 / 0)
+[x] typecheck PASS (0)                    [x] build PASS (0)
+[x] deploy 완료 + production route 확인
+🟡 남은 하나 — **CEO 실제 상품 화면 확인 1회**(그것으로만 「Production UI PASS」가 된다)
 ```
 
 🔴 **성공 기준은 「후보를 더 많이 보여주는 것」이 아니다** — 셀러가 후보를 다시
