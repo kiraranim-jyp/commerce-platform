@@ -134,7 +134,21 @@ describe("시장 분석 패널은 탭과 무관하게 한 번만 마운트된다
 
   it("표현 무게는 단계가 정한 값을 그대로 넘긴다", () => {
     // 화면이 stage === "..." 를 직접 세기 시작하면 같은 판단이 여러 벌로 흩어진다.
-    expect(workspace).toContain("presentation={stageFocus.mi}");
+    /**
+     * 🔴🔴🔴 **WU-152 — MI 패널만 예외다. 「단계가 정한 값」을 받지 않는다**(2026-10-22).
+     *
+     * 🔴 CEO 육안 FAIL: 「Market Intelligence 가 또 하나의 거대한 판단 화면으로 남아
+     *    있다」. 그래서 셀러 화면에서 이 패널은 단계와 **무관하게 언제나 HIDDEN** 이다.
+     * 🟢 **계산은 그대로 돈다** — `presentation === "HIDDEN"` 은 훅을 전부 돌린 뒤의
+     *    `return null` 이고, 그래서 `onMarketComparisonChange` 가 발화해
+     *    「📊 시장 판매 판단」에 값을 계속 공급한다.
+     * 🔴 `presentation={stageFocus.mi}` 로 **되돌리면 FAIL** 이다(그 구조가 CEO FAIL 이다).
+     * 🟢 나머지 둘(체크리스트·채널)은 **그대로** — 이 계약의 원래 성질은 유지된다.
+     */
+    expect(workspace).toContain('presentation="HIDDEN"');
+    expect(workspace, "🔴 MI 패널이 다시 단계값을 받으면 CEO FAIL 구조가 돌아온다").not.toContain(
+      "presentation={stageFocus.mi}",
+    );
     expect(workspace).toContain("checklistMode={stageFocus.actionCenter.checklist}");
     expect(workspace).toContain("channelsMode={stageFocus.actionCenter.channels}");
   });

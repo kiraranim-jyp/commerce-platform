@@ -3651,7 +3651,17 @@ export function CommerceWorkspace({
        *    `DomesticPriceIntelligencePanel` 이 그 상수를 계속 export 한다.
        * 🔴 앵커를 지우는 변이는 FAIL 해야 한다(`wu-149 M6`).
        */}
-      {stageFocus.mi !== "HIDDEN" && (
+      {/**
+       * 🔴🔴🔴 WU-152 — **게이트를 `stageFocus.mi` 에서 «탭» 으로 바꿨다.**
+       *
+       * 🔴 지키려던 성질은 그대로다 — **커머스 탭에 「시장 판매 판단」을 세우지 않는다**
+       *    (CEO 지시 · `wu-132 C-3b`). 전에는 그것을 `stageFocus.mi !== "HIDDEN"` 으로
+       *    표현했는데, WU-152 가 **상품정보 탭에서도 MI 패널을 HIDDEN 으로** 만들면서
+       *    그 식이 결론 영역까지 같이 지워 버린다.
+       * 🟢 그래서 **보호의 «원래 축» 인 탭** 으로 직접 적는다(`surface === "CHANNEL"` 은
+       *    `stage-focus.ts` 가 `mi = HIDDEN` 을 정하는 그 조건 자체다 — 같은 규칙이다).
+       */}
+      {workSurface !== "CHANNEL" && (
         <div id={PRICE_COMPARISON_ANCHOR_ID} className="scroll-mt-4">
           <MarketPriceComparison
             rows={marketComparison?.rows ?? null}
@@ -3728,7 +3738,30 @@ export function CommerceWorkspace({
               profitability={profitability}
               autoChecking={priceCheckPriming}
               autoCheckResult={autoCheckResult}
-              presentation={stageFocus.mi}
+              /**
+               * ══════════════════════════════════════════════════════════════
+               * 🔴🔴🔴 WU-152 — **이 패널은 셀러 화면에서 «렌더하지 않는다»**
+               * ══════════════════════════════════════════════════════════════
+               *
+               * 🔴 CEO 육안 FAIL(2026-10-22): 「Market Intelligence 가 또 하나의 거대한
+               *    판단 화면으로 남아 있다」 · 「후보 연구 화면이 아직 살아 있다」.
+               *    WU-149 가 격자 밖에서 후보 표 둘을 지웠지만, **이 패널 안쪽** 에
+               *    여전히 ⒜ 조건부 판매 카드 ⒝ 수익성/환산 숫자 ⒞ 후보 구역들
+               *    ⒟ 📚 검토 이력 ⒠ 판단 근거가 전부 서 있었다.
+               *
+               * 🟢🟢 **지우지 않고 «HIDDEN» 으로 둔다** — 이 값은 이 저장소가 이미
+               *    쓰는 그 장치다(`stage-focus.ts` 가 커머스 탭에 쓰던 그 값):
+               * ```
+               * presentation === "HIDDEN"  →  **훅을 전부 돌린 뒤** `return null`
+               *                               (그 파일 :2328 · 훅/effect 는 그 위)
+               * ```
+               * 🔴 그래서 **계산도 공급도 멈추지 않는다** — 특히
+               *    `onMarketComparisonChange`(:2022 effect)가 그대로 발화해서
+               *    위 「📊 시장 판매 판단」이 **데이터를 계속 받는다.**
+               *    🔴 이 사실이 이 WU 의 전제다. 공급이 렌더 뒤로 가면 결론이 빈다.
+               * 🔴 backend·API·후보 수집·MI·검토 저장 경로 **변경 0**(CPO STEP 4/5).
+               */
+              presentation="HIDDEN"
               onOpenDetail={openMarketDetail}
               // 되돌아갈 길은 "펼쳐 둔 상태"일 때만 준다 — ②가 현재 단계일 때
               // MI는 접을 수 있는 곁가지가 아니라 그 단계의 일 자체다.
@@ -3776,7 +3809,10 @@ export function CommerceWorkspace({
               originTitle={product.title.value}
             />
           ) : (
-            stageFocus.mi !== "HIDDEN" && <MarketIntelligenceSkeleton />
+            /* 🔴 WU-152 — 패널이 셀러 화면에서 HIDDEN 이므로 그 **자리표시자도** 세우지
+               않는다. 세우면 「Market Intelligence」 제목이 스냅샷 저장 전 한 프레임
+               동안 다시 떠서 CEO 가 지적한 그 구조가 되돌아온다. */
+            null
           )}
 
           {tab === "source" && (

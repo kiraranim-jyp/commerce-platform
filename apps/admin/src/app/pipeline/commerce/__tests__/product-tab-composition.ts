@@ -561,6 +561,21 @@ function ProductTab(options: TabOptions): ReactElement {
     data,
     candidates: [] as DomesticCandidate[],
     snapshotOriginPrice: { amount: 50, currency: "EUR" },
+    /**
+     * 🔴🔴🔴 **WU-152 — 이 하니스는 「MI 패널이 화면에서 사라졌는가」를 측정할 수 없다.**
+     *
+     * 실측(2026-10-22):
+     * ```
+     * 프로덕션   <DomesticPriceIntelligencePanel>  ← outer · `HIDDEN` → **return null**
+     * 이 하니스  <MiPanelView>                     ← inner · **그 게이트를 건너뛴다**
+     * ```
+     * ⟹ 🔴 프로덕션이 셀러 화면에서 그 패널을 HIDDEN 으로 두어도 **이 트리는 계속
+     *    그린다.** 그것이 CEO 육안 FAIL(「Market Intelligence 가 또 하나의 판단 화면」)이
+     *    계약에 **한 번도 잡히지 않은 이유** 다(WU-110 교훈의 UI 판).
+     * 🟢 그래서 그 축은 **owner 를 직접 마운트** 해서 본다(`wu-149 G-1`).
+     * 🔴 여기를 `"HIDDEN"` 으로 바꾸지 않는다 — 이 트리를 보는 기존 계약 수십 개가
+     *    **MI 패널 내용** 을 단언하고 있고, 그 계약들은 패널 «자체» 의 계약이라 유효하다.
+     */
     presentation: focus.mi,
     priceCalculationDetail,
     profitability: PROFIT,

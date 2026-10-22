@@ -1,7 +1,11 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { JSDOM } from "jsdom";
+import { act, createElement } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { DomesticPriceIntelligencePanel } from "../DomesticPriceIntelligencePanel";
 import { productTabElement, regionsOf, visibleText, type TabOptions } from "./product-tab-composition";
 import { readSourceAt, stripComments } from "./source-text";
 
@@ -207,6 +211,111 @@ describe("E. 🔴🔴 M7 — internal candidate engine 을 지우지 않았다",
     expect(RUNNER).toContain("searchDomesticShops");
     expect(RUNNER).toContain("collectOverseasAutoPool");
     expect(RUNNER).toContain("judgeDomesticCandidate");
+  });
+});
+
+/* ───────────── G. WU-152 — CEO 육안 FAIL 이 만든 계약(seller surface) ───────────── */
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴🔴 **WU-152 — CEO 육안 FAIL(2026-10-22)이 이 구역을 만들었다**
+ * ════════════════════════════════════════════════════════════════════════════════
+ *
+ * WU-149 는 격자 밖의 **후보 표 둘** 을 지웠다. 🔴 그런데 CEO 화면에는 여전히
+ * **「Market Intelligence」 패널 안쪽** 이 통째로 서 있었다 — 조건부 판매 카드 ·
+ * 수익성/환산 숫자 · 후보 구역들 · 📚 검토 이력 · 판단 근거.
+ * ⟹ 🔴 「Seller Decision 하나」가 **육안 기준으로 달성되지 않았다**(CEO 판정 FAIL).
+ *
+ * 🟢 WU-152 의 수정은 **한 줄** 이다 — 그 패널을 셀러 화면에서 `HIDDEN` 으로 둔다.
+ *    `presentation === "HIDDEN"` 은 **훅을 전부 돌린 뒤** `return null` 이므로
+ *    계산·공급(`onMarketComparisonChange`)은 **그대로 산다**(엔진 보존).
+ */
+describe("G. 🔴🔴 WU-152 — seller surface 에 판단 영역이 **하나** 다", () => {
+  /** 🔴 CPO STEP 9 — 이 글자들이 셀러 1차 화면에 있으면 FAIL 이다. */
+  const FORBIDDEN = [
+    "국내 비교상품",
+    "글로벌 시장 · 해외 판매처 가격",
+    "가격비교 다시 검색",
+    "Market Intelligence",
+  ];
+
+  /**
+   * ══════════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 **1차에 틀렸고 그 과정에서 «구조적 사실» 을 찾았다** — 그대로 적는다.
+   * ══════════════════════════════════════════════════════════════════════════════
+   *
+   * 처음에는 이 단언을 `product-tab-composition` 하니스로 쓰려 했고 **FAIL 했다.**
+   * 🔴 원인은 내 코드가 아니라 **하니스의 구조** 였다:
+   * ```
+   * 프로덕션   <DomesticPriceIntelligencePanel>   ← outer · 여기에 HIDDEN → return null
+   * 하니스     <MiPanelView>                      ← inner · **그 게이트를 건너뛴다**
+   * ```
+   * ⟹ 🔴 **하니스는 「MI 패널이 화면에서 사라졌는가」를 측정할 수 없다.** 그것이
+   *    CEO 육안 FAIL 이 계약에 한 번도 잡히지 않은 이유다(WU-110 교훈의 UI 판).
+   * 🟢 그래서 **owner 를 직접 마운트** 한다 — `wu-056r1` 이 쓰는 그 방식 그대로다.
+   * 🔴 하니스는 **건드리지 않았다**(기존 계약 수십 개가 그 트리를 본다).
+   */
+  it("G-1 🔴🔴 MI 패널은 `HIDDEN` 에서 **아무것도 그리지 않는다**(owner 직접 마운트)", async () => {
+    const dom = new JSDOM("<!doctype html><div id=root></div>");
+    const g = globalThis as unknown as Record<string, unknown>;
+    /** 🔴 `navigator` 는 getter-only 라 건드리지 않는다(1차에 TypeError 가 났다). */
+    const prev = { window: g.window, document: g.document };
+    g.window = dom.window;
+    g.document = dom.window.document;
+    g.IS_REACT_ACT_ENVIRONMENT = true;
+    try {
+      const container = dom.window.document.getElementById("root")!;
+      const root = createRoot(container);
+      await act(async () => {
+        root.render(createElement(DomesticPriceIntelligencePanel, { snapshotId: "wu152", presentation: "HIDDEN" }));
+      });
+      /** 🔴 **빈 DOM** 이어야 한다 — 「Market Intelligence」도 후보 구역도 서지 않는다. */
+      expect(container.innerHTML, "🔴 HIDDEN 인데 MI 패널이 무언가를 그렸다").toBe("");
+      for (const needle of FORBIDDEN) {
+        expect(container.textContent ?? "", `🔴 "${needle}" 이 남아 있다`).not.toContain(needle);
+      }
+      await act(async () => root.unmount());
+    } finally {
+      g.window = prev.window;
+      g.document = prev.document;
+    }
+  });
+
+  /** 🔴 StageBody 축 — 단계 본문에도 그 글자가 없다(후보 연구 UI 제거 · WU-149). */
+  it("G-1b 🔴 단계 본문에도 금지 문자열이 없다(② · ③)", () => {
+    for (const [label, options] of [
+      ["② 시장 판단", MARKET_STAGE],
+      ["③ 등록 준비", PREPARE_STAGE],
+    ] as const) {
+      const stage = visibleText(regionsOf(renderToStaticMarkup(productTabElement(options))).stage);
+      for (const needle of FORBIDDEN) {
+        expect(stage, `${label}: 🔴 "${needle}" 이 단계 본문에 있다`).not.toContain(needle);
+      }
+    }
+  });
+
+  /** 🔴 소스 축 — 패널이 다시 단계값을 받으면 CEO FAIL 구조가 그대로 돌아온다. */
+  it("G-2 🔴 MI 패널이 셀러 화면에서 **HIDDEN 고정** 이다", () => {
+    expect(WORKSPACE).toContain('presentation="HIDDEN"');
+    expect(WORKSPACE).not.toContain("presentation={stageFocus.mi}");
+  });
+
+  /**
+   * 🔴🔴 **엔진 보존 — 패널을 «지운» 것이 아니다.**
+   *    마운트가 사라지면 `onMarketComparisonChange` 공급이 끊겨 결론 영역이 **빈다**.
+   */
+  it("G-3 🟢 패널은 여전히 **마운트된다**(공급선 보존)", () => {
+    expect(WORKSPACE).toContain("<DomesticPriceIntelligencePanel");
+    expect((WORKSPACE.match(/<DomesticPriceIntelligencePanel/g) ?? []).length).toBe(1);
+    expect(WORKSPACE).toContain("onMarketComparisonChange={setMarketComparison}");
+  });
+
+  /** 🔴 커머스 탭 보호는 **그대로** 다 — 축만 `stageFocus.mi` → 탭으로 바뀌었다. */
+  it("G-4 🔴 결론 영역에 커머스 탭 보호 게이트가 붙어 있다", () => {
+    const area = WORKSPACE.indexOf("<MarketPriceComparison");
+    const gate = WORKSPACE.lastIndexOf('workSurface !== "CHANNEL"', area);
+    expect(gate).toBeGreaterThan(-1);
+    expect(area - gate).toBeLessThan(200);
   });
 });
 

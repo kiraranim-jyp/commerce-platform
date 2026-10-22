@@ -172,7 +172,17 @@ describe("C-1 seller-facing 가격 숫자의 owner 는 「📊 시장 판매 판
      */
     const site = workspace.slice(workspace.indexOf("<MarketPriceComparison"));
     const before = workspace.slice(0, workspace.indexOf("<MarketPriceComparison"));
-    expect(before).toContain('stageFocus.mi !== "HIDDEN"');
+    /**
+     * 🔴🔴 **WU-152 — 게이트의 «식» 이 바뀌었고 «성질» 은 같다**(2026-10-22).
+     * ```
+     * 전  stageFocus.mi !== "HIDDEN"      후  workSurface !== "CHANNEL"
+     * ```
+     * 🔴 WU-152 가 상품정보 탭에서도 MI 패널을 HIDDEN 으로 만들었으므로 옛 식은
+     *    **결론 영역까지 같이 지운다**. 🟢 그래서 보호의 **원래 축(탭)** 으로 직접 적는다 —
+     *    `stage-focus.ts` 가 `mi = HIDDEN` 을 정하던 그 조건(`surface === "CHANNEL"`)과
+     *    **같은 규칙** 이다(약화가 아니다 · 커머스 탭 보호는 그대로다).
+     */
+    expect(before).toContain('workSurface !== "CHANNEL"');
     expect(site).toContain("rows={");
     /** 🔴 패널 쪽에 그 영역이 생기면 영역이 둘이 된다(WU-132 가 잠근 그 성질). */
     expect(panel).not.toContain("<MarketPriceComparison");

@@ -444,7 +444,18 @@ describe("C. 🔴🔴 MI → 영역 공급 배선", () => {
   it("C-3b 🔴🔴 그 영역에 **커머스 탭/수집중 보호 게이트** 가 붙어 있다", () => {
     const area = WORKSPACE.indexOf("<MarketPriceComparison");
     expect(area).toBeGreaterThan(-1);
-    const gate = WORKSPACE.lastIndexOf('stageFocus.mi !== "HIDDEN"', area);
+    /**
+     * 🔴🔴 **WU-152 — 게이트의 «식» 이 바뀌었다. 지키는 성질은 그대로다**(2026-10-22).
+     * ```
+     * 전  stageFocus.mi !== "HIDDEN"      후  workSurface !== "CHANNEL"
+     * ```
+     * 🔴 WU-152 가 **상품정보 탭에서도** MI 패널을 HIDDEN 으로 만들었다(CEO 육안 FAIL:
+     *    「Market Intelligence 가 또 하나의 판단 화면으로 남아 있다」). 그러면 옛 식은
+     *    **결론 영역까지 같이 지운다** — 그래서 보호의 **원래 축(탭)** 으로 직접 적는다.
+     * 🟢 아래 「`HIDDEN` 의 owner 는 `resolveStageFocus` 하나」 단언은 **그대로 유지** 한다 —
+     *    그 규칙이 여전히 커머스 탭에서 MI 를 끄고, 이 게이트는 그 조건과 **같은 축** 이다.
+     */
+    const gate = WORKSPACE.lastIndexOf('workSurface !== "CHANNEL"', area);
     expect(gate).toBeGreaterThan(-1);
     /** 🔴 **바로 앞** 이어야 한다 — 멀리 있는 다른 게이트를 내 근거로 쓰지 않는다. */
     expect(area - gate).toBeLessThan(200);
