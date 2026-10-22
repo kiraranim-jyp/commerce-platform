@@ -139,6 +139,60 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 > Gemini prompt 수정 ❌ · Gemini 를 검색 공급원으로 ❌ · Adapter/Registry 우회 ❌
 > 🔴 아래 「6-D」의 Gemini 좌표는 **폐기된 기록** 이다 — 그 방향으로 가지 않는다.
 
+### 🔴🔴🔴 WU-164 — **두 축 다 NO-GO · 그리고 헌장의 한 줄이 반증됐다**(코드 0)
+
+> 🔴 CPO 규칙대로 **한 축씩** 쟀고 **동시에 완화하지 않았다**. 🟢 반사실은 **운영 함수에
+> 입력만 바꿔** 넣었다(코드 0 · WU-134 STEP-2 방식).
+
+#### 🔴🔴 CF-A (`BRAND_MISMATCH` 단독) — **leakage 0 인데 회수도 0**
+
+```
+🔴🔴 **먼저 헌장을 정정한다** — WU-138 은 「제거 수단도 있다(`extractSiteBrandName`)」로
+   적었다. **호출해 보니 `null` 이다.** 그 함수는 `og:site_name == JSON-LD Organization.name`
+   을 요구하고 **사이트 이름** 을 낸다 ⟹ 비스킷에서는 그것이 **틀린 브랜드** 다.
+🟢 실제로 쓸 수 있는 증거는 **WU-151 이 이미 배포한** `lookupBrandByAliasInTitle` 이다 —
+   og:title `[보보쇼즈] 허그 헤어리 몬스터 티셔츠 B226AC009 - 비스킷` → **"Bobo Choses"**
+
+CF-A = 후보 facts 의 **브랜드 칸 하나만** 그 값으로 바꾼다(제목·품번·색상·소재 **전부 그대로**)
+분모 13 = WU-112 GT 의 B226AC009 **12**(SAME 10 · DIFFERENT 2) + 비스킷 신규 **1**
+
+                    human      baseline   CF-A
+biskuit.kr(신규)     SAME       SIMILAR  → **SIMILAR**   🔴 변화 없음
+m.luxboy.com        DIFFERENT  SIMILAR  → SIMILAR      🟢 열리지 않았다
+(나머지 11건 전부 불변)
+baseline SAME∩humanSAME 3 · humanDIFFERENT **0**
+CF-A     SAME∩humanSAME 3 · humanDIFFERENT **0**   ⟹ 🟢 **leakage 증가 0**
+🔴 그러나 **회수 0** — 비스킷 blockers 가 `[BRAND_MISMATCH, NO_TITLE_OVERLAP]` →
+   **`[NO_TITLE_OVERLAP]`** 으로 줄었을 뿐 verdict 가 안 바뀐다
+⟹ 🔴 **CF-A 단독 NO-GO**(이 축만으로는 열리지 않는다)
+```
+
+🔴 **분모 한계를 같이 적는다** — DIFFERENT 가 **2** 다. 「leakage 0」을 강한 방어 증거로
+쓰지 않는다. 🔴 B226AC010 쪽 DIFFERENT 4 는 **원상품 URL 을 지어내지 않으려** 제외했다.
+🔴 그리고 이 표의 `baseline` 은 `compareCrossSellerProducts.verdict`(상류)이고
+WU-163 이 적은 `PRESUMED_SAME` 은 `domesticMatchDisplay(matchTruth).tier`(하류)다 —
+**다른 층이라 같은 칸으로 비교하지 않는다.**
+
+#### 🔴 CF-B (`NO_TITLE_OVERLAP` 단독) — **돌리지 않았다**(조사로 닫았다)
+
+CPO §2 가 물은 「기존 금지축을 건드리지 않고 쓸 수 있는 **이미 존재하는 alias/normalized
+title 증거**」 ⟹ 🔴 **없다**:
+```
+· 발화 조건 = `jaccard(distinctive(coreTitleTokens)) === 0`(cross-seller.ts:922·929)
+· `coreTitleTokens` 는 **brand-alias 를 쓰지 않는다**(전수 grep **0**)
+· `brand-alias` 소비처는 **`product-url-facts.ts:248` 하나** 이고 **브랜드 축 전용** 이다
+· 음역 축은 **WU-078 에서 CPO 가 종료** 했다(회수 0 · DIFFERENT 를 열 위험)
+⟹ 🔴 새 유사도/느슨한 토큰 매칭 없이는 성립하지 않는다 = **CPO 금지** ⟹ **측정하지 않았다**
+```
+
+🔴🔴 **그래서 남은 것은 코드가 아니다** — 공급은 WU-163 에서 열렸고(KRW 88,000 · KR),
+마지막 한 칸은 **`NO_TITLE_OVERLAP`(한글 제목 ↔ 영문 원상품)** 하나이며 그 축을 여는
+수단이 **금지 범위 안에 없다.** 🔴 **CPO 결정 사안** 이고 CTO 가 열지 않았다.
+
+🟢 하니스 `wu-164-blocker-counterfactual.test.ts`(`WU_164_PROBE=1`).
+
+---
+
 ### 🟢🟢🟢 WU-163 — **공급이 열렸다. 목표 상품을 찾아 가격까지 수집했다**(코드 0)
 
 > 🟢🟢🟢 **이 트랙에서 처음으로 「국내 동일상품 후보를 시스템이 스스로 찾아」 가격까지
