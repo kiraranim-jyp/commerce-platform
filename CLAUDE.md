@@ -525,7 +525,27 @@ productData 를 **칸 하나씩 손으로 옮기면서** `siteBrandName` 을 빠
 🔴 그 아래 WU 기록은 **막혔을 때만** 참조한다(종료된 결론 모음이다).
 ```
 
-### 🔵 **현재 착수점 — WU-148 STEP 6/10 (레거시 패널 둘 제거) 하나**
+### 🔵 **현재 착수점 — WU-149 STEP 1 + STEP 3 하나**
+
+🔴🔴 **진입은 `docs/START-HERE.md` §6 + `docs/HANDOFF-WU-149.md`.**
+
+```
+🟢🟢 **절대조건 15 중 11 은 «이미» PASS** — 남은 것은 **1 · 4 · 11(절반)** 뿐이다
+   ⟹ WU-149 는 **STEP 1(레거시 패널 제거) + STEP 3(조기 종료)** 둘로 줄어든다
+   🔴 STEP 2·5·6·7·8·9 는 **이미 구현돼 있다**(WU-145~148 · 재구현 금지)
+🔴 STEP 1 파장(실측) — `CommerceWorkspace.tsx:3884·3900` 제거 시 미사용 심볼
+   `handleRequestPriceReview` **9** · `marketEvidence` **7** ·
+   `PRICE_COMPARISON_ANCHOR_ID` **4**(🔴 보존 계약) · 그 외 넷 ·
+   깨질 계약 **다섯**(wu-056r1 · mi-022 · wu-130 F-3 + 예상 둘)
+🔴🔴 STEP 3 은 **flag 가 아니다** — SAME 은 **수집 뒤** 결정되므로 「3개면 수집 중단」은
+   수집↔판정을 교대로 돌리는 **오케스트레이터 재구조화** 다. 🟢 같은 취지 조기 종료가
+   **이미 둘** 있고(샵 내 SAME break · `foundVeryHighInP0`) 🔴 **현재 효과는 0** 이다
+🔴 🇰🇷 국내 가격대는 **이 WU 로 열리지 않는다** — tier SAME 0(WU-138) ⟹ ① 공급(CPO 결정) 뒤다
+```
+
+---
+
+### 🟡 [직전] WU-148 배포 완료 — 가격 해석 분리
 
 🔴🔴 **진입은 `docs/START-HERE.md` §6 하나다** — 전문 `docs/HANDOFF-WU-148.md`.
 
