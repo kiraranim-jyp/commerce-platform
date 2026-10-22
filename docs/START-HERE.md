@@ -10,17 +10,26 @@
 ## 1. CURRENT STATE
 
 ```
-현재 WU     **WU-149 CLOSED** — STEP 1·6·7 구현·배포 완료
-HEAD        d929a0e9      (운영 4 파일 · 계약 8 파일)
-main        clean · origin 0 / 0 · 배포 완료
+현재 WU     **WU-150** — STEP 1·2·6 구현·배포 (WU-149 는 CLOSED)
+HEAD        40cb2a1a      배포 확인(빌드 로그 Commit: 40cb2a1)
+main        clean · origin 0 / 0
 HTTP        /  200   ·  인증 라우트 307(정상)
-typecheck   PASS (0)
-build       PASS (0)
-regression  627 files / 8,750 passed / 0 failed
+typecheck   PASS (0)      build PASS (0)
+regression  628 files / 8,755 passed / 0 failed
 ```
 
-🟡 **남은 것은 CEO 화면 확인 1회 뿐이다**(§12 의 요청 형식 그대로). 🔴 CTO 가 할 코드
-작업은 **없다** — 다음 범위는 **CPO 가 지정** 한다(🔴 선제적으로 WU 를 만들지 않는다).
+🔴🔴 **WU-150 이 3일짜리 질문에 답했다** — 전문 `docs/HANDOFF-WU-150.md`:
+```
+「국내 SAME 0」은 MI 문제가 **아니다.** B226AC009 국내 URL 7개 중
+  **5개는 우리가 페이지를 읽을 수 없고**(403 ×2 · SPA ×1 · 목록 ×2)
+  읽히는 1개(보몽드)는 **품번까지 맞춰 놓고 「brand 칸 하나」로 보류** 된다.
+🟢 SKU 는 사라지지 않았다 — `brandModelCode="B226AC009"` 가 MI 까지 정상 전달된다.
+```
+
+🟡 **CPO 판정 대기 둘**(CTO 가 열지 않았다 · 둘 **다** 열려야 국내 가격대가 선다):
+⒜ 후보측 `brand` null 일 때의 `BRAND_UNCONFIRMED` ⒝ 고도몰 `set_goods_price` 판매가 필드.
+
+🟡 **CEO 화면 확인** — WU-149(결론 단일화) + WU-150(브랜드 품번 줄) **한 번에**.
 
 **CEO Action: 없음.** 배포 후 실제 상품 UI 최종 테스트가 필요한 시점에만 **1회** 요청한다.
 
