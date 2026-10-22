@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type JSX } from "react";
+import type { JSX } from "react";
 import { OverseasReferencePrice } from "./OverseasReferencePrice";
 import {
   DOMESTIC_REFERENCE_NOTE,
@@ -100,36 +100,12 @@ export interface MarketPriceComparisonProps {
   domesticReference?: OverseasPriceSummary | null;
   /** 🔴 MI 가 이미 낸 해외 참고가격 집계. 여기서 계산하지 않는다. */
   overseasReference?: OverseasPriceSummary | null;
-  /**
-   * ══════════════════════════════════════════════════════════════════════════════
-   * 🔴🔴🔴 WU-154-A — **「동일상품 URL 추가」 한 칸**(공급 전용 · CPO 확정 ⒜)
-   * ══════════════════════════════════════════════════════════════════════════════
-   *
-   * 🔴 **후보 목록이 돌아오는 것이 아니다.** 입력 **한 칸 + 버튼 하나** 이고,
-   *    후보 행·개수·등급·판정 버튼은 **하나도 서지 않는다**(WU-149/152 계약 유지).
-   * 🔴🔴 **URL 은 「공급」일 뿐이다** — 이 컴포넌트는 판정을 만들지 않는다.
-   *    SAME/DIFFERENT 는 서버의 기존 MI 가 **처음부터 다시** 낸다(CPO 조건).
-   * 🟢 왜 필요한가 — 현재 국내 자동 공급이 부족하고(WU-153 측정: 어댑터 없음 ·
-   *    403 · SPA · robots 전면차단) 그 복구 입구가 **없으면** 셀러가 손쓸 방법이 없다.
-   * 🟢 그리고 **한 번만** 하면 된다 — 그 URL 이 SAME 으로 확정되면 `candidate_reviews`
-   *    이력이 되어 다음 분석부터 **자동 재투입** 된다(`listReviewedSameUrls` · WU-132 ⑥).
-   * 🔴 넘기지 않으면 **칸을 그리지 않는다**(기존 호출부 호환 · 이 저장소의 규약).
-   */
-  onAddSameUrl?: (url: string) => void;
-  /** 🔴 요청이 도는 동안 true — 버튼을 잠그고 「확인 중」을 말한다(지어내지 않는다). */
-  addingSameUrl?: boolean;
 }
-
-/** 🔴 WU-154-A — 이 영역의 어휘 owner. 「후보」·「검색」 어휘를 쓰지 않는다. */
-export const ADD_SAME_URL_LABEL = "동일상품 URL 추가";
-export const ADD_SAME_URL_HINT = "같은 상품을 파는 판매처 주소를 넣으면 시스템이 확인합니다";
 
 export function MarketPriceComparison({
   rows,
   domesticReference,
   overseasReference,
-  onAddSameUrl,
-  addingSameUrl = false,
 }: MarketPriceComparisonProps): JSX.Element | null {
   const domestic = selectMiSameCandidates(rows, "KR");
   const overseas = selectMiSameCandidates(rows, "OVERSEAS");
@@ -442,13 +418,6 @@ export function MarketPriceComparison({
         />
         </div>
       </details>
-      {/**
-       * 🔴🔴 WU-154-A — **맨 아래 한 칸.** 결론을 먼저 읽고, 필요할 때만 쓴다.
-       *    🔴 접힘(`▸ MI 상세 분석`) **안** 에 넣지 않는다 — 공급이 막힌 지금은
-       *       셀러가 찾을 수 없으면 입구가 없는 것과 같다.
-       *    🔴 그러나 **결론 위** 로도 올리지 않는다 — 셀러의 첫 줄은 판단이어야 한다.
-       */}
-      {onAddSameUrl && <AddSameUrlRow onAdd={onAddSameUrl} busy={addingSameUrl} />}
     </section>
   );
 }
@@ -625,49 +594,6 @@ function MarketColumn({
           ))}
         </ul>
       )}
-    </div>
-  );
-}
-
-/**
- * ════════════════════════════════════════════════════════════════════════════════
- * 🔴🔴 WU-154-A — **입력 한 칸.** 후보 목록이 아니다.
- * ════════════════════════════════════════════════════════════════════════════════
- *
- * 🔴 여기서 **판정하지 않는다** — URL 을 위로 올려보낼 뿐이다. 「SAME 으로 추가」가
- *    아니라 **「확인해 달라」** 다(라벨도 그렇게 적는다).
- * 🔴 URL 모양이 아니면 **보내지 않는다**(서버 400 을 셀러에게 보여주지 않는다).
- */
-function AddSameUrlRow({ onAdd, busy }: { onAdd: (url: string) => void; busy: boolean }): JSX.Element {
-  const [value, setValue] = useState("");
-  const url = value.trim();
-  const looksLikeUrl = /^https?:\/\/\S+$/i.test(url);
-  return (
-    <div data-testid="mi-add-same-url" className="mt-1 space-y-1 border-t border-border/60 pt-2">
-      <p className="text-[11px] font-medium text-text-secondary">{ADD_SAME_URL_LABEL}</p>
-      <p className="text-[11px] text-text-tertiary">{ADD_SAME_URL_HINT}</p>
-      <div className="flex items-center gap-1.5">
-        <input
-          type="url"
-          inputMode="url"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder="https://…"
-          aria-label={ADD_SAME_URL_LABEL}
-          className="min-w-0 flex-1 rounded border border-border bg-background px-2 py-1 text-[11px] focus:border-primary focus:outline-none"
-        />
-        <button
-          type="button"
-          disabled={!looksLikeUrl || busy}
-          onClick={() => {
-            onAdd(url);
-            setValue("");
-          }}
-          className="shrink-0 rounded-md bg-primary px-2 py-1 text-[11px] font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-border disabled:text-text-tertiary"
-        >
-          {busy ? "확인 중…" : "확인"}
-        </button>
-      </div>
     </div>
   );
 }

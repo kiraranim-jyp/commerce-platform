@@ -1758,17 +1758,6 @@ export function DomesticPriceIntelligencePanel({
   onOpenDomesticEvidence,
   onOpenOverseasEvidence,
   openPriceDetailRequest = 0,
-  /**
-   * 🔴🔴🔴 WU-154-A — **셀러가 넣은 동일상품 URL 이 들어오는 입구.**
-   *
-   * 🔴 이 패널은 셀러 화면에서 `HIDDEN` 이라(WU-152) 자기 입력칸을 그리지 않는다.
-   *    그런데 **공급 경로의 owner 는 여전히 이 패널** 이다(`recheckNow` 가 POST 한다).
-   * 🟢 그래서 바깥의 「동일상품 URL 추가」 한 칸이 이 prop 으로 **요청만** 보낸다 —
-   *    `openPriceDetailRequest` 와 **같은 카운터 패턴** 이다(새 패턴을 만들지 않았다).
-   * 🔴 `nonce` 가 바뀔 때만 발화한다 — 같은 URL 을 두 번 넣어도 두 번 돈다.
-   * 🔴🔴 **판정을 넣는 통로가 아니다** — URL 만 간다. SAME/DIFFERENT 는 서버 MI 가 낸다.
-   */
-  suppliedUrlRequest = null,
   /** 🔴 WU-132 ① — MI 산출을 「📊 시장 가격 비교」 영역으로 올려보낸다. */
   onMarketComparisonChange,
   /** 🔴 WU-132 ④ — 검토 구역의 원본 ↔ 후보 육안 비교용. */
@@ -1888,8 +1877,6 @@ export function DomesticPriceIntelligencePanel({
    * 번째 클릭에서 값이 그대로라 아무 일도 일어나지 않는다.
    */
   openPriceDetailRequest?: number;
-  /** 🔴 WU-154-A — 셀러가 넣은 동일상품 URL(공급 전용 · 판정 아님). `nonce` 로 발화한다. */
-  suppliedUrlRequest?: { url: string; nonce: number } | null;
   /**
    * 🔴🔴🔴 WU-132 ① — **MI 산출을 「📊 시장 가격 비교」 영역으로 올려보내는 통로.**
    *
@@ -2034,27 +2021,6 @@ export function DomesticPriceIntelligencePanel({
   useEffect(() => {
     onMarketComparisonChangeRef.current?.(marketComparisonInput);
   }, [marketComparisonInput]);
-
-  /**
-   * ════════════════════════════════════════════════════════════════════════════
-   * 🔴🔴🔴 WU-154-A — **바깥의 「동일상품 URL 추가」가 여기서 발화한다**
-   * ════════════════════════════════════════════════════════════════════════════
-   *
-   * 🔴 이 패널은 셀러 화면에서 `HIDDEN` 이지만(WU-152) **훅은 전부 돈다** — 그래서
-   *    이 effect 도 산다. 공급 경로의 owner 가 이 패널이라는 사실이 그대로 유지된다.
-   * 🔴 `nonce` 로만 발화한다(`openPriceDetailRequest` 와 같은 패턴) — 값이 같으면
-   *    다시 렌더돼도 요청이 **두 번 나가지 않는다**.
-   * 🔴 `recheckNow` 는 **기존 함수 그대로** 다 — 새 fetch 경로를 만들지 않았다.
-   */
-  const suppliedUrlNonce = suppliedUrlRequest?.nonce ?? 0;
-  const [syncedSuppliedUrlNonce, setSyncedSuppliedUrlNonce] = useState(suppliedUrlNonce);
-  const recheckNowRef = useRef<((overrideUrl?: string) => void) | null>(null);
-  useEffect(() => {
-    if (suppliedUrlNonce === syncedSuppliedUrlNonce) return;
-    setSyncedSuppliedUrlNonce(suppliedUrlNonce);
-    const url = suppliedUrlRequest?.url?.trim();
-    if (url) recheckNowRef.current?.(url);
-  }, [suppliedUrlNonce, syncedSuppliedUrlNonce, suppliedUrlRequest]);
 
   /** 🔴 제외된 URL 을 **조용히 버리지 않는다** — 서버가 낸 이유를 그대로 한 줄로 적는다. */
   const [urlCandidateNotice, setUrlCandidateNotice] = useState<string | null>(null);
@@ -2230,20 +2196,7 @@ export function DomesticPriceIntelligencePanel({
    * 그대로 문장으로 옮긴다. 새 판정을 만들지 않는다 — 서버가 이미 낸 결론을
    * 화면에 정직하게 보여주기만 한다(가짜 진행률 애니메이션을 만들지 않는다
    * — 실제로는 서버가 한 번에 처리하는 요청이다). */
-  /**
-   * ════════════════════════════════════════════════════════════════════════════
-   * 🔴🔴🔴 WU-154-A — `overrideUrl` 은 **밖에서 들어오는 공급 입구** 다
-   * ════════════════════════════════════════════════════════════════════════════
-   *
-   * 🔴 WU-152 가 이 패널을 셀러 화면에서 `HIDDEN` 으로 두면서 이 함수가 읽는
-   *    `candidateUrlsText` 입력칸도 **같이 화면에서 사라졌다** ⟹ 셀러가 URL 을
-   *    공급할 길이 끊겼다(CEO 가 본 「국내 0곳」의 공급 쪽 원인 하나).
-   * 🟢 그래서 **새 요청 경로를 만들지 않고** 인자 하나를 더한다 — POST 본문 ·
-   *    API 경계(`candidateUrls`) · 파서 · 후보 풀은 **전부 그대로** 다.
-   * 🔴🔴 **URL 은 「공급」일 뿐이다** — SAME/DIFFERENT 는 서버의 기존 MI 가
-   *    **처음부터 다시** 낸다. 이 함수는 판정을 한 글자도 만들지 않는다(CPO 조건).
-   */
-  async function recheckNow(overrideUrl?: string) {
+  async function recheckNow() {
     if (rechecking) return; // 중복 클릭 방지 — 버튼도 disabled지만 방어적으로 한 번 더 막는다.
     setRechecking(true);
     setRecheckResult(null);
@@ -2266,8 +2219,7 @@ export function DomesticPriceIntelligencePanel({
        *    AI 답변에는 `(https://…)` · `https://…,` 같은 모양이 흔하고, 토큰 전체를
        *    `^https?://…$` 로 검사하면 그 링크가 **조용히 사라진다**.
        */
-      /** 🔴 WU-154-A — 밖에서 온 URL 이 있으면 그것을 쓴다. **파서는 같은 것** 이다. */
-      const suppliedUrls = (overrideUrl && overrideUrl.trim().length > 0 ? overrideUrl : candidateUrlsText)
+      const suppliedUrls = candidateUrlsText
         .split(/\s+/)
         .map((s) => s.match(/https?:\/\/[^\s)\]}>,"']+/i)?.[0] ?? "")
         .filter(Boolean);
@@ -2372,14 +2324,6 @@ export function DomesticPriceIntelligencePanel({
   //
   // UX 2.2 — 아래 세 갈래(진행 중 / 못 불러옴 / 결과)는 표현 무게마다 모양이
   // 다르다. 판정은 하나도 달라지지 않는다 — 같은 사실을 한 줄로 줄일 뿐이다.
-  /**
-   * 🔴🔴 WU-154-A — **`return null` «앞» 에서 ref 를 채운다.**
-   *    이 줄이 아래로 내려가면 `HIDDEN`(= 셀러 화면)에서 ref 가 비고,
-   *    바깥의 「동일상품 URL 추가」가 **조용히 아무 일도 하지 않게** 된다.
-   *    🔴 그 조용한 실패가 이 저장소가 여러 번 겪은 모양이라 좌표로 고정한다.
-   */
-  recheckNowRef.current = recheckNow;
-
   // HIDDEN은 훅이 전부 돈 뒤에 화면만 비운다(위 presentation 주석 참고).
   if (presentation === "HIDDEN") return null;
 

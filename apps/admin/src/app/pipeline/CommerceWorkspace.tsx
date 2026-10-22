@@ -824,20 +824,6 @@ export function CommerceWorkspace({
    */
   const [marketComparison, setMarketComparison] = useState<MarketComparisonInput | null>(null);
   /**
-   * ══════════════════════════════════════════════════════════════════════════
-   * 🔴🔴🔴 WU-154-A — **셀러가 넣은 동일상품 URL 의 통로**(공급 전용)
-   * ══════════════════════════════════════════════════════════════════════════
-   *
-   * 🔴 이 파일은 값을 **만들지도 판정하지도 않는다** — 들고 있다가 MI 패널에 넘긴다
-   *    (`overseasMarketEvidence`·`marketComparison` 과 **같은 규약**).
-   * 🔴 `nonce` 로 발화한다 — 같은 URL 을 두 번 넣어도 두 번 돌아야 한다.
-   * 🟢 fetch 는 **패널이 이미 갖고 있는 `recheckNow`** 가 한다(새 요청 경로 0).
-   */
-  const [suppliedUrlRequest, setSuppliedUrlRequest] = useState<{ url: string; nonce: number } | null>(null);
-  function handleAddSameUrl(url: string) {
-    setSuppliedUrlRequest((prev) => ({ url, nonce: (prev?.nonce ?? 0) + 1 }));
-  }
-  /**
    * 🔴🔴 WU-149 STEP 1 — **여기 있던 넷을 지웠다**: `domesticEvidenceOpen` ·
    * `overseasEvidenceOpen` · `marketEvidenceRequest` · `openMarketEvidence()`.
    *
@@ -3681,12 +3667,6 @@ export function CommerceWorkspace({
             rows={marketComparison?.rows ?? null}
             domesticReference={marketComparison?.domesticReference ?? null}
             overseasReference={marketComparison?.overseasReference ?? null}
-            /**
-             * 🔴🔴 WU-154-A — 셀러가 넣은 URL 을 **MI 패널로 넘긴다**(그 패널이 공급 owner).
-             *    🔴 여기서 fetch 하지 않는다 — 요청 경로가 둘이 되면 같은 질문에 두 경로가 생긴다.
-             */
-            onAddSameUrl={handleAddSameUrl}
-            addingSameUrl={priceCheckPriming}
           />
         </div>
       )}
@@ -3819,8 +3799,6 @@ export function CommerceWorkspace({
                * `ComparisonShopSearch.onEvidenceChange`(→ `overseasMarketEvidence`)와 **같다**.
                * 🔴 이 파일은 값을 **만들지 않는다** — 들고만 있는다(그 규약과 동일).
                */
-              /** 🔴 WU-154-A — 위 「동일상품 URL 추가」가 보낸 요청. 공급 전용(판정 0). */
-              suppliedUrlRequest={suppliedUrlRequest}
               onMarketComparisonChange={setMarketComparison}
               /**
                * 🔴 WU-132 ④ — 후보 검토 구역의 **원본 ↔ 후보** 육안 비교용. 아래 두
