@@ -4,6 +4,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { MarketPriceComparison } from "../MarketPriceComparison";
 import { MI_SAME_EMPTY } from "../mi-same-candidates";
+/** 🔴 WU-145 — 사유 어휘의 owner 는 `blocker-text.ts` 다. 테스트가 그 표를 **전수로** 돈다. */
+import { KNOWN_BLOCKER_TOKENS, blockerText } from "../blocker-text";
 import type { GeminiTransientRow } from "../GeminiTransientCandidates";
 
 /**
@@ -72,14 +74,46 @@ const mount = async (props: Record<string, unknown>) => {
 };
 
 describe("WU-133 — 보류 사유가 화면에 선다 (마운트 DOM)", () => {
-  it("🔴🔴 가격까지 있는데 보류된 후보가 있으면 **그 사실과 사유를 적는다**", async () => {
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 WU-145 ① 에서 **갱신·강화됨** — 「사유를 1차에 적는다」가 뒤집혔다
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 CPO STEP 3(2026-10-22): 「MI blocker 는 **기본 노출 없음** · 후보 조사는
+   *    **2차 근거로 격리**」. ⟹ 1차의 사유 어휘(「브랜드 미확인 5 · 품번 충돌 2」)는
+   *    `▸ MI 상세 분석` 안으로 **옮겨졌다**.
+   * 🔴🔴 **그래서 이 계약을 느슨하게 하지 않는다 — «양방향» 으로 강화한다**:
+   * ```
+   * ① 1차는 **건수를 말한다**(WU-133 이 고친 거짓말이 되돌아오지 않는다)
+   * ② 1차에 **사유 어휘가 하나도 없다**  ← 새로 잠근 축(전에는 검사하지 않았다)
+   * ③ 2차에 **그 사유가 그대로 있다**    ← 「지우지 않았다」를 기계가 확인한다
+   * ④ 2차는 **접혀 있다**(`open` 없음)   ← 2차로 내렸다는 말이 참이어야 한다
+   * ```
+   * 🔴 ②③ 이 **같이** 있어야 의미가 있다 — ② 만 있으면 「지워도 통과」하고
+   *    ③ 만 있으면 「1차에도 있어도 통과」한다.
+   */
+  it("🔴🔴 1차는 **건수만** · 사유는 **2차에 그대로** 있다 (이동 · 삭제 아님)", async () => {
     await mount({ rows: [pendingRow()] });
     const el = container.querySelector('[data-testid="mi-same-pending"]');
     expect(el).not.toBeNull();
+    /** ① 건수는 1차에 남는다. */
     expect(el!.textContent).toContain("1건");
-    expect(el!.textContent).toContain("브랜드 미확인");
+    /** ② 🔴 1차에 **사유 어휘가 없다** — 셀러의 첫 화면이 MI 내부 축 이름으로 채워지지 않는다. */
+    for (const token of KNOWN_BLOCKER_TOKENS) {
+      expect(el!.textContent, `1차에 사유 토큰이 남았다: ${token}`).not.toContain(blockerText(token));
+    }
     /** 🔴 내부 토큰을 **그대로 노출하지 않는다**(WU-056 의 `EXCLUDED` 누출 재발 방지). */
     expect(el!.textContent).not.toContain("BRAND_UNCONFIRMED");
+    /** ③ 🟢 **2차에는 그 사유가 있다** — CPO 지시는 「옮긴다」이고 「지운다」가 아니다. */
+    const reasons = container.querySelector('[data-testid="mi-same-pending-reasons"]');
+    expect(reasons).not.toBeNull();
+    expect(reasons!.textContent).toContain("브랜드 미확인");
+    expect(reasons!.textContent).not.toContain("BRAND_UNCONFIRMED");
+    /** ④ 🔴 그 2차가 **접혀 있다** — 안 접혀 있으면 「2차로 내렸다」가 거짓이다. */
+    const fold = container.querySelector('[data-testid="mi-detail-fold"]');
+    expect(fold).not.toBeNull();
+    expect(fold!.contains(reasons!)).toBe(true);
+    expect(fold!.hasAttribute("open")).toBe(false);
     /** 🟢 「동일상품 0건」 문장도 **같이** 선다 — 둘 다 사실이다. */
     expect(container.textContent).toContain(MI_SAME_EMPTY);
   });

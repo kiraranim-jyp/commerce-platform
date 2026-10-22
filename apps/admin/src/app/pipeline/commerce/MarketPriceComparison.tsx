@@ -18,6 +18,8 @@ import {
   MARKET_JUDGEMENT_NOTE,
   MARKET_JUDGEMENT_TITLE,
   MARKET_LABEL,
+  /** 🔴 WU-145 ② — 결론 한 줄. **추천가가 아니라 «해석»** 이다(§00-B 가격 보류 유지). */
+  MARKET_PRICE_JUDGEMENT_NOTE,
   /** 🔴 WU-140 — 시장 블록이 «먼저» 서고, 그 시장이 빈 «이유» 를 말한다(CPO 확정 순서). */
   MARKET_RESULT_HEADING,
   countMarketCandidates,
@@ -40,6 +42,8 @@ import {
   buildMarketJudgement,
   onSaleCountNote,
   pendingNote,
+  /** 🔴 WU-145 ① — 사유 분포는 **2차** 가 말한다(1차에서 «이동» · 삭제 아님). */
+  pendingReasonNote,
   priceRangeScope,
   priceRangeText,
   selectMiSameCandidates,
@@ -113,7 +117,21 @@ export function MarketPriceComparison({
    * 🔴 WU-133 — **시장과 무관하게** 센다. 「국내/해외로 갈려서 안 보인다」가 아니라
    *    「판정이 보류돼서 안 보인다」가 사실이고, 그 사실은 시장별로 나누면 흐려진다.
    */
-  const pending = pendingNote(countPendingCandidates(rows));
+  const pendingSummary = countPendingCandidates(rows);
+  const pending = pendingNote(pendingSummary);
+  /**
+   * 🔴🔴 WU-145 ① — **1차에서 내려온 사유 분포가 여기서 산다**(삭제가 아니라 이동).
+   *
+   * 🔴 **왜 `▸ 판단 근거`(패널) 가 아니라 `▸ MI 상세 분석`(이 영역) 인가** — CPO 지시의
+   *    말은 「2차 근거로 격리」이고, 그 두 접힘은 **둘 다 2차** 다. 그런데 사유의 입력은
+   *    `rows`(이 컴포넌트의 prop)이고 `▸ 판단 근거` 는 **다른 컴포넌트**
+   *    (`DomesticPriceIntelligencePanel`)가 소유한다. 거기로 보내려면 **같은 집계를
+   *    두 곳에서** 하거나 prop 을 새로 뚫어야 한다 ⟹ 🔴 같은 숫자의 owner 가 둘이 된다.
+   * 🟢 `▸ MI 상세 분석` 은 **이 영역의 2차 접힘이고 이름 그대로 «MI 상세»** 다 —
+   *    보류 축의 사유 분포가 사는 자리로 정확하다(새 prop 0 · 집계 0 · 중복 0).
+   * 🔴 1차 노출 금지라는 **정책은 그대로 지켜진다** — 바뀐 것은 「어느 2차냐」뿐이다.
+   */
+  const pendingReasons = pendingReasonNote(pendingSummary);
   /** 🔴 WU-140 — 시장이 확정되지 않아 **두 블록 어디에도 안 들어간** 후보 수(실측 근거는 그 함수). */
   const unresolvedNote = marketUnresolvedNote(countUnresolvedMarketCandidates(rows));
 
@@ -214,6 +232,26 @@ export function MarketPriceComparison({
                   </li>
                 ))}
               </ul>
+            )}
+            {/**
+             * ══════════════════════════════════════════════════════════════════
+             * 🔴🔴🔴 WU-145 ② — **「판매가격 판단」 한 줄** (CPO STEP 2/4)
+             * ══════════════════════════════════════════════════════════════════
+             *
+             * 🔴 **추천 판매가가 아니다.** 원가·수수료·마진이 없으므로(§00-B 가격 보류)
+             *    「판매가는 ₩XX 로 하세요」를 **계산하지 않는다** — 지어내면 셀러가 그
+             *    숫자로 실제 가격을 정한다. 이 줄이 하는 일은 **위 숫자의 «해석»** 이다.
+             * 🔴🔴 **가격이 하나라도 확인됐을 때만 쓴다.** `byCurrency` 가 비었는데 이
+             *    문장을 적으면 「기준이 있다」는 **거짓** 이 된다(그 조건이 이 자리다).
+             * 🟢 그래서 `market-price-range` **바로 뒤** 다 — 해석은 근거 뒤에 온다.
+             */}
+            {judgement.byCurrency.length > 0 && (
+              <p
+                data-testid="market-price-judgement"
+                className="text-[11px] font-medium text-text-secondary"
+              >
+                {MARKET_PRICE_JUDGEMENT_NOTE}
+              </p>
             )}
             {/**
              * 🔴 WU-136 §C — **셀러가 읽는 네 칸.** 도메인·판매상태·현재가격까지
@@ -318,6 +356,20 @@ export function MarketPriceComparison({
         </summary>
         {/* 🔴 「유사상품은 비교에 쓰지 않는다」를 영역이 **직접** 말한다(②의 절반). */}
         <p className="mt-1 text-[11px] text-text-tertiary">{MI_SAME_AREA_SCOPE}</p>
+        {/**
+         * 🔴🔴🔴 WU-145 ① — **1차에서 내려온 보류 사유 분포.** 「지우지 않는다」의 구현부다.
+         *
+         * 🔴 CPO: 「그 문장을 `▸ 판단 근거` 안으로 **옮긴다** · **지우지 않는다**(MI
+         *    추적용이다)」. ⟹ 🟢 **한 건도 줄이지 않았다** — 정렬·건수·어휘 전부 그대로다.
+         * 🔴 1차에 남은 것은 **건수 한 줄**(`mi-same-pending`)이고, 축의 **이름**
+         *    (브랜드 미확인 · 품번 충돌 …)은 **이 접힘 안에서만** 보인다.
+         * 🔴 사유가 없으면 **줄을 만들지 않는다** — 그 함수가 `null` 을 낸다(없는 말 금지).
+         */}
+        {pendingReasons && (
+          <p data-testid="mi-same-pending-reasons" className="mt-1 text-[11px] text-text-tertiary">
+            {pendingReasons}
+          </p>
+        )}
         {/* 🔴 국내를 해외 «앞» 에 둔다 — 셀러의 질문 순서가 그렇다(WU-056 과 같은 이유). */}
         <div className="mt-2 grid gap-2 md:grid-cols-2">
         <MarketColumn

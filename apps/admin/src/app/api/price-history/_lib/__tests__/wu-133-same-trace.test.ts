@@ -56,6 +56,8 @@ import { REVIEWED_SAME_SHOP_ID, REVIEWED_SAME_SHOP_NAME } from "../transient-can
 import { BLOCKER_OTHER_TEXT } from "../../../../pipeline/commerce/blocker-text";
 import {
   pendingNote,
+  /** 🔴 WU-145 ① — 사유는 **2차** 가 말한다(1차에서 이동 · 삭제 아님). */
+  pendingReasonNote,
   selectMiSameCandidates,
   countPendingCandidates,
   transientDisplayTier,
@@ -596,11 +598,29 @@ describe("WU-133 C. 보류 요약 (순수 + 마운트 DOM)", () => {
       { text: "브랜드 미확인", n: 2 },
       { text: "품번 충돌", n: 1 },
     ]);
+    /**
+     * 🔴🔴 **WU-145 ① 에서 갱신·강화됨** — 「한 문장에 건수와 사유를 같이」가 갈렸다.
+     *
+     * 🔴 CPO STEP 3(2026-10-22): 「MI blocker 는 **기본 노출 없음** · 후보 조사는
+     *    **2차 근거로 격리**」 ⟹ `pendingNote`(1차)는 **건수만**, 사유는
+     *    `pendingReasonNote`(2차 · `▸ MI 상세 분석`)가 **그대로** 들고 간다.
+     * 🟢 집계(`countPendingCandidates`)는 **한 글자도 바뀌지 않았다** — 위 `s.reasons`
+     *    단언이 그 증거다(사유는 계산되고 있고, 달라진 것은 **어느 층이 그리는가** 다).
+     * 🔴 그래서 이 단언을 **양방향** 으로 둔다 — 「1차에 사유 없음」 **그리고**
+     *    「2차에 사유 있음」. 하나만 두면 삭제도 통과한다.
+     */
     const note = pendingNote(s)!;
     expect(note).toContain("3건");
-    expect(note).toContain("브랜드 미확인 2");
+    /** ① 1차에는 사유가 **없다**(그 말은 2차의 몫이다). */
+    expect(note).not.toContain("브랜드 미확인");
+    expect(note).not.toContain("주요 사유");
+    /** ② 2차에는 사유가 **그대로** 있다 — 「지우지 않는다」(CPO 명시). */
+    const reasons = pendingReasonNote(s)!;
+    expect(reasons).toContain("브랜드 미확인 2");
+    expect(reasons).toContain("품번 충돌 1");
     /** 🔴 「동일상품」이라고 **단정하지 않는다**. */
     expect(note).not.toMatch(/동일상품이 ?있/);
+    expect(reasons).not.toMatch(/동일상품이 ?있/);
   });
 
   it("C-2 🔴 SAME 후보는 **세지 않는다**(그건 이미 비교에 들어갔다)", () => {

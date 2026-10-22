@@ -611,9 +611,29 @@ export function ReviewHistorySection({
   if (!rows) return null;
   return (
     <section data-testid={testId} className="mt-3 rounded-md border border-border bg-surface/40 p-2">
-      <p className="text-[11px] font-medium text-text-secondary">
-        {REVIEW_HISTORY_HEADING} {rows.length}건
-      </p>
+      {/**
+       * ════════════════════════════════════════════════════════════════════════
+       * 🔴🔴🔴 WU-145 ③ — **구역은 두고 그 «안» 을 접는다** (CPO 작업지시)
+       * ════════════════════════════════════════════════════════════════════════
+       *
+       * 🔴 CPO: 「`▸ 판단 근거` 그 안에서도 **전체 후보를 기본 노출하지 않는다**」 ·
+       *    「1차 화면에 후보 URL·이미지·blocker 목록을 **펼쳐 놓지 않는다**」.
+       *
+       * 🔴🔴 **이 구역이 그 지시에 걸린 «유일한» 자리였다**(실측): 같은 접힘 안의 다섯
+       *    구역은 전부 `GeminiTransientCandidates … collapsed` 라 **이미 `Fold` 를 쓰는데**
+       *    (`candidate-fold`) 이 구역만 `<ul>` 을 **인라인으로** 그렸다 ⟹ `▸ 판단 근거` 를
+       *    열면 **📚 이력 전부**(URL · 가격 · 두 판단 · 날짜)가 한꺼번에 펼쳐졌다.
+       * 🔴 그리고 WU-141-R1 STEP 4 가 `recordSeenCandidates` 를 되살린 뒤 이 구역은
+       *    **본 후보 전부로 채워진다** ⟹ 가장 길어질 구역이 **유일하게 안 접혀 있었다**.
+       *
+       * 🟢 그래서 **같은 `Fold` 를 쓴다** — 새 컴포넌트 0 · 새 라벨 체계 0 ·
+       *    `open` **없음**(기본 접힘이 계약이다 · WU-091 ①).
+       * 🔴 **출처 축을 없애지 않았다**(WU-130 계약) — 머리 문구 `REVIEW_HISTORY_HEADING` 이
+       *    접힘 **라벨로** 그대로 간다(「추가 검토 후보」 하나로 합치면 출처가 사라진다).
+       * 🔴 행·데이터·testid(`rh-*`)는 **한 글자도 바뀌지 않았다** — React 는 `details` 가
+       *    닫혀 있어도 자식을 렌더하므로 `wu-131` 의 DOM 계약이 그대로 유효하다.
+       */}
+      <Fold collapsed label={`${REVIEW_HISTORY_HEADING} ${rows.length}건`}>
       {rows.length === 0 ? (
         <p className="mt-0.5 text-[11px] text-text-tertiary">{REVIEW_HISTORY_EMPTY}</p>
       ) : (
@@ -659,6 +679,7 @@ export function ReviewHistorySection({
           ))}
         </ul>
       )}
+      </Fold>
     </section>
   );
 }

@@ -8,12 +8,16 @@ import {
   MARKET_EMPTY_REVIEW_HINT,
   MARKET_JUDGEMENT_TITLE,
   MARKET_RESULT_HEADING,
+  /** 🔴 WU-145 ② — 「동일상품 확인 N곳」 축의 owner. 두 벌로 적지 않는다. */
+  SAME_CONFIRMED_COUNT_LABEL,
   countMarketCandidates,
   countPendingCandidates,
   countUnresolvedMarketCandidates,
   marketEmptyNote,
   marketUnresolvedNote,
 } from "../mi-same-candidates";
+/** 🔴 WU-145 ① — 1차에 사유 어휘가 없음을 **표 전수** 로 확인한다. */
+import { KNOWN_BLOCKER_TOKENS, blockerText } from "../blocker-text";
 import type { GeminiTransientRow } from "../GeminiTransientCandidates";
 
 /**
@@ -129,22 +133,46 @@ describe("A. 🔴🔴 countPendingCandidates 의 market 인자 (CPO: 상태 의�
 describe("B. 🔴🔴 marketEmptyNote — ⒜ 검색 실패 ↔ ⒝ 판정 보류", () => {
   const none = { count: 0, reasons: [] };
 
+  /**
+   * 🔴🔴 **WU-145 에서 갱신·강화됨** — 두 축이 더해졌다:
+   * ```
+   * ① 머리에 **「동일상품 확인 0곳」** 이 붙는다(CPO ② 1차 레이아웃) — 전까지 이
+   *    블록은 `sameCount === 0` 일 때 건수 줄 자체가 없어서 셀러가 **0 이라는
+   *    숫자를 못 봤다**(빈 칸과 0 은 다른 사실이다)
+   * ② 🔴 **사유 어휘가 1차에서 빠졌다**(CPO STEP 3 「blocker 기본 노출 없음」) —
+   *    건수는 남고 사유는 2차(`mi-same-pending-reasons`)로 **이동** 했다
+   * ```
+   * 🔴 `toBe` → `toContain` 으로 **느슨해진 것이 아니다** — 빠진 `toBe` 의 자리에
+   *    **더 센 단언 둘**(0곳 머리 · 사유 어휘 전수 부재)이 들어왔다.
+   */
   it("🔴 B-1 후보가 0 이면 ⒜ 다 — 「동일상품이 없다」로 **적지 않는다**", () => {
     const note = marketEmptyNote(0, none);
-    expect(note).toBe(MARKET_EMPTY_NO_CANDIDATE);
+    expect(note).toContain(MARKET_EMPTY_NO_CANDIDATE);
+    /** 🔴 WU-145 ② — **0 을 숫자로 말한다.** */
+    expect(note).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0곳`);
     /** 🔴 부재와 미발견은 다르다(WU-091 어휘 계약). */
     expect(note).toContain("찾지 못했습니다");
     expect(note).not.toMatch(/없습니다|없다/);
   });
 
-  it("🔴🔴 B-2 후보가 있으면 ⒝ 이고 **문장이 완전히 다르다**", () => {
+  it("🔴🔴 B-2 후보가 있으면 ⒝ 이고 **문장이 완전히 다르다** · 🔴 사유는 1차에 없다", () => {
     const note = marketEmptyNote(3, { count: 2, reasons: [{ text: "브랜드 미확인", n: 2 }] });
     expect(note).toContain("후보 3곳");
-    expect(note).toContain("브랜드 미확인 2");
+    /** 🟢 **건수는 남는다** — 그것이 ⒜ 와 ⒝ 를 가르는 사실이다. */
+    expect(note).toContain("2곳");
+    /**
+     * 🔴🔴 WU-145 ① — **사유 어휘는 1차에 들어오지 않는다.** 표를 **전수로** 돈다 —
+     *    「브랜드 미확인」 하나만 검사하면 다른 축이 조용히 되돌아올 수 있다.
+     */
+    for (const token of KNOWN_BLOCKER_TOKENS) {
+      expect(note, `1차 시장 블록에 사유 토큰이 남았다: ${token}`).not.toContain(blockerText(token));
+    }
+    expect(note).not.toContain("주요 사유");
     /** 🟢 셀러가 할 **행동** 을 말한다 — ⒜ 는 기다리는 것, ⒝ 는 사진으로 판단하는 것. */
     expect(note).toContain(MARKET_EMPTY_REVIEW_HINT);
     /** 🔴🔴 둘이 **같은 빈 칸** 이 되면 이 WU 가 고친 것이 되돌아간다. */
     expect(note).not.toBe(MARKET_EMPTY_NO_CANDIDATE);
+    expect(note).not.toBe(marketEmptyNote(0, none));
   });
 
   it("🔴 B-3 사유를 **지어내지 않는다** — 없으면 사유 절이 아예 없다", () => {
@@ -238,7 +266,10 @@ describe("D. 🔴🔴 시장이 비었을 때 — 네 상태가 화면에서 갈
   it("🔴🔴 D-1 ⒜ 후보 0 인 시장은 「찾지 못했습니다」라고 적는다", async () => {
     /** 🔴 국내 실측이 이 모양이다 — tier SAME **0**(WU-138 에서 원인 확정 · 완화 REJECT). */
     await mount({ rows: [sameRow()] });
-    expect(q("market-empty-domestic")?.textContent).toBe(MARKET_EMPTY_NO_CANDIDATE);
+    const krEmpty = q("market-empty-domestic")?.textContent ?? "";
+    expect(krEmpty).toContain(MARKET_EMPTY_NO_CANDIDATE);
+    /** 🔴 WU-145 ② — 빈 칸이 아니라 **「동일상품 확인 0곳」** 이라는 숫자를 말한다. */
+    expect(krEmpty).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0곳`);
     /** 🔴 빈 틀을 만들지 않는다 — 기준가 블록은 **렌더되지 않는다**(wu-139 C-4). */
     expect(q("price-guide-domestic")).toBeNull();
     expect(q("price-guide-overseas")).toBeTruthy();
@@ -277,8 +308,19 @@ describe("D. 🔴🔴 시장이 비었을 때 — 네 상태가 화면에서 갈
   it("🟢 D-4 두 시장이 다 비어도 **영역은 선다** — 「조회했다」와 「후보 없음」은 다르다", async () => {
     await mount({ rows: [] });
     expect(q("market-price-comparison")).toBeTruthy();
-    expect(q("market-empty-domestic")?.textContent).toBe(MARKET_EMPTY_NO_CANDIDATE);
-    expect(q("market-empty-overseas")?.textContent).toBe(MARKET_EMPTY_NO_CANDIDATE);
+    for (const id of ["market-empty-domestic", "market-empty-overseas"]) {
+      const t = q(id)?.textContent ?? "";
+      expect(t).toContain(MARKET_EMPTY_NO_CANDIDATE);
+      /** 🔴 WU-145 ② — 두 블록이 **같은 축의 말** 로 0 을 말한다. */
+      expect(t).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0곳`);
+    }
+    /**
+     * 🔴🔴 WU-145 ② — **금지 문구 셋이 어디에도 없다**(CPO 명시 · 국내 0 일 때가
+     *    정확히 그 문구들이 나올 자리다). 🔴 「시장 부재」로 단정하지 않는다.
+     */
+    for (const bad of ["국내에서는 판매되지 않습니다", "국내 시장 가격이 없습니다", "국내는 USD"]) {
+      expect(container.textContent, `금지 문구가 나왔다: ${bad}`).not.toContain(bad);
+    }
   });
 
   it("🔴 D-5 조회가 돌지 않았으면 아무것도 그리지 않는다(기존 계약 유지)", async () => {
@@ -330,8 +372,12 @@ describe("E. 🔴🔴🔴 시장을 확인하지 못한 후보를 «조용히 �
     /** 🟢 어디서 볼 수 있는지까지 말한다 — 「사라졌다」가 아니다. */
     expect(note!.textContent).toMatch(/상세 근거|검토 구역/);
     /** 🔴 시장을 승격하지 않았다 — 두 블록은 여전히 「찾지 못했습니다」다. */
-    expect(q("market-empty-domestic")?.textContent).toBe(MARKET_EMPTY_NO_CANDIDATE);
-    expect(q("market-empty-overseas")?.textContent).toBe(MARKET_EMPTY_NO_CANDIDATE);
+    for (const id of ["market-empty-domestic", "market-empty-overseas"]) {
+      const t = q(id)?.textContent ?? "";
+      expect(t).toContain(MARKET_EMPTY_NO_CANDIDATE);
+      /** 🔴 WU-145 ② — 승격하지 않았으므로 **0 곳** 이라고 적는다(숫자를 지어내지 않는다). */
+      expect(t).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0곳`);
+    }
   });
 
   it("🔴 E-4 미확정이 0 이면 **그 줄을 만들지 않는다**(없는 말을 적지 않는다)", async () => {

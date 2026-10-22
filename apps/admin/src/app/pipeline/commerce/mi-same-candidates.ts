@@ -296,9 +296,20 @@ export function buildPriceGuide(j: MarketJudgement, market: "KR" | "OVERSEAS"): 
   };
 }
 
+/**
+ * 🔴 **동일상품 «수» 의 말.** 🔴 WU-145 — owner 를 상수로 뺐다. 이 말은 두 곳이 쓴다
+ *    (`priceGuideCountNote` · `marketEmptyNote` 의 0곳 머리) ⟹ 손으로 두 벌 적으면
+ *    한쪽만 고치는 날이 오고, 그때 셀러는 **같은 축을 다른 이름으로** 보게 된다.
+ */
+export const SAME_CONFIRMED_COUNT_LABEL = "동일상품 확인";
+
 /** 🔴 그 숫자들을 **셀러의 말** 로. 「동일상품 확인」과 「가격 확인」을 가른다. */
 export function priceGuideCountNote(g: PriceGuide): string {
-  const parts = [`동일상품 확인 ${g.sameCount}곳`, `판매중 확인 ${g.onSaleCount}곳`, `가격 확인 ${g.pricedCount}곳`];
+  const parts = [
+    `${SAME_CONFIRMED_COUNT_LABEL} ${g.sameCount}곳`,
+    `판매중 확인 ${g.onSaleCount}곳`,
+    `가격 확인 ${g.pricedCount}곳`,
+  ];
   if (g.unpricedCount > 0) parts.push(`가격 확인 필요 ${g.unpricedCount}곳`);
   return parts.join(" · ");
 }
@@ -320,10 +331,40 @@ export function priceGuideHeadline(g: PriceGuide): string | null {
     .join(" · ");
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴🔴 WU-145 ① — **셀러 화면의 가격 어휘는 «하나» 다** (CPO 확정 2026-10-22)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 **「시장 참고가격」을 쓰지 않는다**(CPO 명시 금지). 이유는 취향이 아니라 **충돌** 이다:
+ * ```
+ * `MI_SAME_AREA_SCOPE` 가 「참고가격」을 **이미 다른 뜻** 으로 쓴다 —
+ * 그쪽은 **유사상품까지 포함한 참고 축**(`domestic-reference` · `🧾 해외 동일상품
+ * 참고가격`)이고, 그 블록들의 제목은 `wu-056r1` 계약이 **글자로 잠그고 있다**.
+ * ⟹ 1차 결론에 「시장 참고가격」을 쓰면 **같은 말이 두 뜻** 이 된다.
+ * ```
+ * 🟢 그래서 1차 결론의 말은 **「동일상품 확인 가격」** 하나로 고정하고, 2차(`mi-detail-fold`)
+ *    안의 **참고가격 블록은 한 글자도 건드리지 않는다** — 두 말을 **섞지 않는다**.
+ *
+ * 🔴 라벨 owner 를 **상수 하나** 로 둔다 — 두 시장 제목을 손으로 두 벌 적으면
+ *    한쪽만 고치는 날이 온다(`MARKET_LABEL` 이 생긴 그 이유).
+ */
+export const SAME_PRICE_LABEL = "동일상품 확인 가격";
 export const PRICE_GUIDE_TITLE: Record<"KR" | "OVERSEAS", string> = {
-  KR: "💰 국내 확인 가격",
-  OVERSEAS: "💰 해외 확인 가격",
+  KR: `💰 국내 ${SAME_PRICE_LABEL}`,
+  OVERSEAS: `💰 해외 ${SAME_PRICE_LABEL}`,
 };
+
+/**
+ * 🔴🔴 WU-145 ② — **「판매가격 판단」 한 줄.** 🔴 **추천 판매가가 아니라 «해석» 이다.**
+ *
+ * 🔴 원가·수수료·마진이 **없으므로**(§00-B 가격 보류) 「판매가는 ₩XX 로 설정하세요」류를
+ *    **만들지 않는다** — 지어내면 셀러가 그 숫자로 실제 가격을 정한다.
+ * 🔴 **확인된 가격이 하나라도 있을 때만** 쓴다. 가격이 0 인데 이 문장을 적으면
+ *    「기준이 있다」는 거짓이 된다(호출부가 그 조건을 들고 있다).
+ */
+export const MARKET_PRICE_JUDGEMENT_NOTE =
+  `판매가격 판단: 확인된 ${SAME_PRICE_LABEL}을 기준으로 위 가격대를 시장 기준으로 참고할 수 있습니다.`;
 /** 🔴 **1건을 시장 평균처럼 읽히게 두지 않는다**(CPO 명시 금지). */
 export const PRICE_GUIDE_SINGLE_NOTE = "확인 가능한 가격 1건 기준입니다 — 시장 평균가가 아닙니다.";
 export const PRICE_GUIDE_RANGE_NOTE = "현재 확인된 판매가 범위입니다 — 전체 시장 가격대가 아닙니다.";
@@ -492,15 +533,33 @@ export const MARKET_EMPTY_REVIEW_HINT = "아래 후보 검토 구역에서 사�
  * 🔴 ⒞⒟ 는 이 함수가 말하지 않는다 — 그 둘은 **가격 가이드 블록의 소관** 이고,
  *    여기서 또 적으면 같은 사실이 두 곳에서 갈린다.
  * 🔴 사유를 **지어내지 않는다** — `reasons` 가 비면 사유 절을 **아예 쓰지 않는다**.
+ *
+ * ── 🔴🔴🔴 WU-145 ①② — **숫자는 남기고 «사유 어휘» 를 2차로 내린다** ──────────────
+ * ```
+ * 🔴 CPO STEP 3: 「MI blocker 는 **기본 노출 없음** · 후보 조사는 **2차 근거로 격리**」.
+ *    전까지 이 문장이 1차 화면에 **「주요 사유 — 브랜드 미확인 5 · 품번 충돌 2」** 를 찍었다.
+ * 🔴🔴 그런데 **지우면 WU-133 이 고친 거짓말이 되돌아온다** — 「아무것도 못 찾았다」로
+ *    읽히는 그 화면이다. ⟹ 🟢 **삭제가 아니라 «이동» 이다**(CPO 명시):
+ *      1차  보류 **건수** 까지                      ← 지금 이 함수
+ *      2차  사유 분포(`pendingReasonNote`)          ← `▸ MI 상세 분석` 안
+ * 🔴 그리고 **머리에 「동일상품 확인 0곳」을 붙인다**(CPO ② 1차 레이아웃). 전까지 이
+ *    블록은 `sameCount === 0` 일 때 **건수 줄 자체가 없어서**(가격 가이드가 안 선다)
+ *    셀러가 「0 곳」이라는 **숫자를 못 봤다** — 빈 칸과 0 은 다른 사실이다.
+ * ```
+ * 🔴 **금지 문구 셋은 여기서도 쓰지 않는다** — 「국내에서는 판매되지 않습니다」·
+ *    「국내 시장 가격이 없습니다」·「국내는 USD 58 정도입니다」(CPO ② · 계약이 잠근다).
  */
 export function marketEmptyNote(candidateCount: number, pending: PendingSummary): string {
-  if (candidateCount === 0) return MARKET_EMPTY_NO_CANDIDATE;
-  const why =
-    pending.count > 0 && pending.reasons.length > 0
-      ? ` — 주요 사유 ${pending.reasons.map((r) => `${r.text} ${r.n}`).join(" · ")}`
-      : "";
+  /** 🔴 **0 을 숫자로 말한다** — 「동일상품 확인 N곳」 축을 두 블록이 **같은 말** 로 쓴다. */
+  const head = `${SAME_CONFIRMED_COUNT_LABEL} 0곳`;
+  if (candidateCount === 0) return `${head} — ${MARKET_EMPTY_NO_CANDIDATE}`;
+  /**
+   * 🔴 **건수는 1차에 남긴다**(그것이 ⒜ 와 ⒝ 를 가르는 사실이다) · **사유 어휘는 2차로**.
+   * 🔴 사유를 지어내지 않듯 **보류 0 이면 그 절도 쓰지 않는다**.
+   */
+  const held = pending.count > 0 ? ` 그중 판정 보류·충돌 ${pending.count}곳입니다.` : "";
   return (
-    `후보 ${candidateCount}곳을 찾았지만 아직 동일상품으로 판정된 곳이 없습니다${why}. ` +
+    `${head} — 후보 ${candidateCount}곳을 찾았지만 아직 동일상품으로 판정된 곳이 없습니다.${held} ` +
     MARKET_EMPTY_REVIEW_HINT
   );
 }
@@ -711,12 +770,32 @@ export function buildMarketJudgement(
  */
 export function pendingNote(summary: PendingSummary): string | null {
   if (summary.count === 0) return null;
-  const why =
-    summary.reasons.length > 0
-      ? ` 주요 사유 — ${summary.reasons.map((r) => `${r.text} ${r.n}`).join(" · ")}.`
-      : "";
+  /**
+   * 🔴🔴🔴 WU-145 ① — **사유 어휘가 이 문장에서 빠졌다. 지워진 것이 «아니다».**
+   *
+   * 🔴 CPO STEP 3: 「MI blocker 는 **기본 노출 없음**」. 전까지 이 한 줄이 1차 화면에
+   *    **「주요 사유 — 브랜드 미확인 5 · 품번 충돌 2」** 까지 찍었고, 그래서 셀러가 가장
+   *    먼저 읽는 영역이 **MI 내부 축의 이름** 으로 채워졌다.
+   * 🟢 사유는 `pendingReasonNote` 가 **그대로** 들고 2차(`▸ MI 상세 분석`)에 선다 —
+   *    **건수와 「어디서 보는지」는 1차에 남긴다**(그래야 WU-133 이 고친 거짓말,
+   *    즉 「아무것도 못 찾았다」로 읽히는 화면이 되돌아오지 않는다).
+   */
   return (
     `가격까지 확인됐지만 동일상품 판정이 보류·충돌된 후보가 ${summary.count}건 있습니다 — ` +
-    `아래 후보 검토 구역에서 사진으로 확인하고 판단해 주세요.${why}`
+    `아래 판단 근거와 후보 검토 구역에서 사진으로 확인하고 판단해 주세요.`
   );
+}
+
+/**
+ * 🔴🔴 WU-145 ① — **2차(MI 상세)에서 그 «사유 분포» 를 말한다.**
+ *
+ * 🔴 이 함수가 생긴 이유는 「사유를 지우지 않기 위해서」다 — CPO 지시는 **이동** 이고
+ *    삭제가 아니다. 🔴 MI 추적용 정보라 **한 건도 줄이지 않는다**(정렬·건수 그대로).
+ * 🔴 사유를 **지어내지 않는다** — `reasons` 가 비면 **null**(없는 말을 적지 않는다).
+ * 🟢 내부 토큰은 들어오지 않는다 — `blockerText` 가 이미 셀러의 말로 바꿨다
+ *    (WU-056 의 `EXCLUDED` 누출 재발 방지 · `blocker-text.ts` 가 그 owner 다).
+ */
+export function pendingReasonNote(summary: PendingSummary): string | null {
+  if (summary.count === 0 || summary.reasons.length === 0) return null;
+  return `주요 사유 — ${summary.reasons.map((r) => `${r.text} ${r.n}`).join(" · ")}`;
 }
