@@ -124,39 +124,73 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
-## 6. NEXT WORK — 🔴🔴 **CTO 작업 없음 · 「Gemini 크레딧 승인」 대기**(CPO 확정 2026-10-22)
+## 6. NEXT WORK — 🔴🔴 **Gemini 축 폐기 · 「외부검색 → candidateUrls」 연결부가 좌표다**
 
-> 🔴🔴 **코드를 만지지 않는다.** 다음 단계는 개발이 아니라 **비용 승인** 이다.
-> 🟡 CEO 액션 **없음** · CTO 추가 작업 **없음**.
+> 🔴🔴🔴 **CPO 가 WU-157 방향을 정정했다**(2026-10-22) — 「우리가 만들려는 구조는
+> **Gemini API 를 우리 서버에서 호출해서 검색하는 구조가 아니다**」.
+>
+> ```
+> 외부 검색(GPT Search) → 국내/해외 동일상품 후보 URL
+>   → 우리 시스템에 후보 URL 전달 → 우리 Fetch/Extractor
+>   → MI 가 SAME/DIFFERENT → **SAME 만** 가격 추출 → 시장가격 판단
+> ```
+>
+> 🔴 **전부 폐기** — Gemini 크레딧 확보 ❌ · `MI_GEMINI_DISCOVERY_ENABLED` ON ❌ ·
+> Gemini prompt 수정 ❌ · Gemini 를 검색 공급원으로 ❌ · Adapter/Registry 우회 ❌
+> 🔴 아래 「6-D」의 Gemini 좌표는 **폐기된 기록** 이다 — 그 방향으로 가지 않는다.
 
-### 🔴 CPO 가 고정한 순서 — 건너뛰지 않는다
-
-```
-① 크레딧 확보(CEO 비용 승인)
-② **검증용** prompt / 후보 상한 최소 변경   ← 🔴 지금 하지 않는다(별도 작업지시로 온다)
-③ B226AC009 **1회** 측정
-④ CPO 판정
-⑤ 그때 비로소 **운영 ON 여부** 결정
-🔴 `MI_GEMINI_DISCOVERY_ENABLED=true` 는 **아직 금지** — 전역 스위치라
-   `/today` 일괄이 잔액을 한 번에 태운다
-```
-
-### 🔴 ② 가 열릴 때 바꿀 자리 — **좌표만** 적어 둔다(재조사 금지)
+### 🟢🟢 연결부는 **이미 전부 있다**(코드 실측 · 신규 개발 0)
 
 ```
-prompt       packages/crawler/src/discovery-core/google-discovery.ts:188 `buildPrompt`
-             🔴 현재 「최대 3개까지」 + **「국내/한국/Korea」가 한 글자도 없다**
-             추가할 지시(CPO 문장) — 「국내/한국 판매처를 **우선** 조사하고 실제 상품
-             상세 페이지 URL 만 반환한다 · 검색결과/홈/카테고리/기획전 제외 ·
-             **가능한 한 많은 서로 다른 판매처** 를 찾는다」
-후보 상한     apps/admin/src/app/api/price-history/_lib/run-domestic-price-check.ts
-             :1237 `maxCandidates: 3` · :1238 `targetUsable: 3`  → **3 → 최소 10**
-             (🔴 :1247 `maxQueries: 1` 은 **호출 수** 다 — 섞지 않는다)
-검증 하니스   apps/admin/.../__tests__/wu-157-gemini-supply.test.ts (`WU_157_PROBE=1`)
-             🟢 **이미 있다** — 운영 함수를 그대로 부르고 KPI 까지 센다. 새로 만들지 않는다
+외부 검색 산출(산문 또는 URL 목록)
+ → `extractCandidateUrlsFromAiAnswer`  (url-candidate-pool.ts · **순수 · HTTP 0** · URL 모양만)
+ → POST `/api/price-history/check`  body.`candidateUrls[]`
+      인증 `requireUser()`(check/route.ts:39) · payload 상한 **50**(`MAX_SUPPLIED_CANDIDATE_URLS * 5`)
+ → `runDomesticPriceCheck` → `collectUrlCandidatePool({ maxUrls: **10** })`
+ → `factsFromProductUrl` → `withConfidence` → `enrichCandidatePrices`
+ → `judgeDomesticCandidate` → `classifyCandidateMarket` → MI → SAME → 가격 → 시장가격
 ```
 
-### 🔴🔴 WU-157 결론 — **「측정불가」이고 NO-GO 가 아니다**(CPO 정정)
+🔴 **빠진 것은 「누가 그 칸을 채우는가」 하나다.** 파이프라인은 WU-150/151 에서
+**끝까지 도는 것이 실증됐다**(보몽드 → SAME · KRW 83,600 · market KR).
+
+### 🔴🔴🔴 그래서 CPO 가 가를 것 하나 — **첫 화살표의 주인**
+
+CPO 가 미리 못을 박은 그 전제(「서버가 GPT Search 를 자동 호출할 수 있다고
+전제해서도 안 된다」)를 **코드로 확인했고, 부를 수 없다**:
+
+```
+운영 코드 전수 — 웹 검색 클라이언트 **0**
+  🔴 `packages/image/.../openai.provider.ts` 는 **이미지 분류기** 다
+     (`gpt-4o-mini` + `image_url` · `tools` **없음** · 웹검색 능력 0)
+  🔴 외부 검색 endpoint 는 **Gemini 하나** 뿐이고 그것이 폐기 축이다
+⟹ 🔴 **GPT Search 는 CTO/CPO 의 «도구» 이고 제품 서버의 «능력» 이 아니다**
+```
+
+그러면 `candidateUrls` 를 채울 주체가 셋인데 **셋 다 닫혀 있다**:
+
+```
+⒜ 셀러가 넣는다      🔴 **CPO 가 WU-154 에서 폐기** ("셀러 조사 업무를 돌려주는 것")
+                        입력칸은 `isSuppliedUrlInputVisible()` false 뒤에 보존돼 있다
+⒝ 서버가 외부 AI 를 부른다  🔴 **§12-0 「외부 AI/검색 API 전면 제외」와 정면**
+                        (약관 축 포함 · 메모 `no-external-ai-api-and-no-subscription-routing`)
+⒞ 어댑터/Registry     🔴 **CPO 가 이번에 다시 닫았다**
+```
+
+🔴🔴 **이것이 제품의 진짜 교차점이고 CTO 가 고를 수 없다.** 🟢 다만 **지금 쓸 수 있는
+형태가 하나 있다** — CPO/CTO 가 조사 세션에서 URL 을 넣어 **GT 를 쌓는** 것.
+🔴 그것은 **제품 기능이 아니다**(셀러 화면에 서지 않는다) ⟹ 그 구분을 섞지 않는다.
+
+### 🟡 ⒝ 가 열릴 때 만나는 상한 둘 — **좌표만**(지금 바꾸지 않는다)
+
+```
+`maxUrls: 10`  run-domestic-price-check.ts:1131 (`MAX_SUPPLIED_CANDIDATE_URLS` :163)
+   🔴 「최대한 많이」가 **10 에서 잘린다** — WU-132 가 「재투입 13 중 3건 미열람」으로
+      이미 겪은 그 상수다. 🔴 붙여넣기 경로와 **공유** 하므로 혼자 올리지 않는다
+payload 상한 50  check/route.ts:24
+```
+
+### 🔴🔴 [폐기된 결론 기록] WU-157 — **「측정불가」였고 NO-GO 가 아니었다**
 
 > 「Gemini 가 국내 후보를 못 찾는다」가 **아니라** 「Gemini 의 국내 후보 공급 능력을
 > **아직 측정하지 못했다**」. 🔴 그래서 **NO-GO 를 내리지 않는다.**
