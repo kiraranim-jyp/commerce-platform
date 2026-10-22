@@ -124,7 +124,57 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
-## 6. NEXT WORK — **WU-154(UI/UX) · CPO 지정 대기 · CEO 확인이 게이트**
+## 6. NEXT WORK — **WU-156 = NO-GO / Case C 로 닫혔다 · 다음은 CPO 지정**
+
+### 🔴🔴🔴 WU-156 결론 — **검색어를 바꿔도 국내 상세 URL 은 열리지 않는다**(코드 0)
+
+> 🟡 CPO 가설(「검색어 자체를 바꾸는 게 1차적으로 맞다」)을 **5개 질의로 측정했고
+> 지지되지 않았다.** 🔴 그러므로 **prompt/query 변경을 구현하지 않았다**(CPO §12 Case C).
+
+```
+🔴🔴 **Query C 는 «이미 운영 상태» 다** — buildPrimaryQuery 를 호출해 확인했다:
+   level = **L1_MODEL_CODE** · text = **"Bobo Choses B226AC009"**
+   ⟹ 「품번 중심으로 바꾸자」는 바꿀 것이 없다(A 와 C 는 **같은 질의** 다)
+
+단계                        A/C    B    D    E      (동일 조건 · AI 단계 축소 0)
+① raw 검색결과 URL            9   10   10   10
+②   그중 🇰🇷 도메인            4    1    4    1
+③ URL 모양 PRODUCT_PAGE       4    5    1    0
+④ 🔴 **🇰🇷 실제 동일상품 상세**  0    0    0    0   ← **KPI · 전 질의 0**
+⑥ usable(fetch 성공)         3    5    0    0
+⑧ SAME                      3    3    0    0
+⑨ 🇰🇷 SAME                   0    0    0    0
+🔴 **GO 기준(≥3) 미달 ⟹ NO-GO.**
+```
+
+🔴 **④ 의 「0」을 만든 정체를 추측하지 않고 찍었다**(1차 읽기를 정정했다):
+```
+A/C 의 🇰🇷 후보 4 = beaumonde.co.kr **홈** · trenbe **×2**(`.com`+USD ⟹ 운영 분류 OVERSEAS) ·
+                   gmarket **검색결과**  ⟹ 한국 샵의 «읽을 수 있는 상세» **0**
+D 의 유일한 PRODUCT_PAGE = **feelway.com 의 몽클레어 상품**(완전히 무관 · fetch 실패)
+🟢 `shop.coupang.com/beaumondekr` 는 **UNKNOWN_PAGE** 다 — 🔴 내가 「오통과」로 읽었다가
+   분류기를 **직접 호출해** 정정했다(WU-073 오통과 가족이 **아니다**)
+```
+
+🔴🔴 **가장 중요한 한 줄 — 가격은 오는데 URL 이 오지 않는다**:
+```
+Query D(판매처명+품번)가 스니펫에 **88,000 / 89,540 / 66,000 원** 을 적어 줬다.
+그런데 링크는 **샵 홈 · 검색결과 · 위키백과** 였고 **후보 0** 이다.
+⟹ 🔴 「AI Search 가 국내 후보를 공급한다」는 **채널명·가격까지만** 참이다.
+```
+
+🔴 **Case C 의 범위를 넘겨 적지 않는다** — 쓴 공급원은 `cto-websearch` 이고
+**운영 Gemini grounding 과 엔진이 다르다**. 「Gemini 라면 다를까」는 **측정불가**
+(flag OFF · 비용 HOLD)이고 **CTO 가 도입 여부를 결정하지 않았다**(CPO §12).
+
+🟡 **고치지 않고 적어 두는 분류기 관측 1건** — `item.rakuten.co.jp/{shop}/{id}/` 가
+`UNKNOWN_PAGE` 다(WU-155 측정에서 발견 · WU-073 의 SSG 오차단과 **같은 가족**).
+🔴 **URL 분류기 수정 금지**(CPO §2)라 손대지 않았다.
+
+🟢 하니스 `wu-156-query-variants.test.ts`(`WU_156_PROBE=1`) · 운영 코드 **0** ·
+회귀 **630 files / 8,786 passed · 0 failed** · typecheck **0** · 배포 **0** · CEO 액션 **없음**.
+
+---
 
 > 🟢 **데이터 엔진 축은 CPO 가 동결했다**(2026-10-22). WU-149~153 으로 닫혔다:
 > ```
