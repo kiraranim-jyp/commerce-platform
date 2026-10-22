@@ -224,7 +224,7 @@ function stageBodyElement(input: WorkflowInput) {
     workflow,
     channels: CHANNELS,
     onGoToChannel: () => {},
-    marketEvidence: createElement("div", null, "시장 근거 노드"),
+    /* 🔴 WU-149 STEP 1 — `marketEvidence` 슬롯이 StageBody 에서 사라졌다(후보 연구 UI 제거). */
     archive: createElement("div", null, "기록 노드"),
     surfaces: {
       source: createElement("div", null, "SOURCE 편집기"),

@@ -68,20 +68,24 @@ export function StageBody({
   focus,
   workflow,
   surfaces,
-  marketEvidence,
   archive,
   channels,
   onGoToChannel,
   commerceSelector,
   commerceRunner,
   openPriceSurfaceRequest = 0,
-  openMarketEvidenceRequest = 0,
 }: {
   focus: StageFocus;
   workflow: Workflow;
   surfaces: StageSurfaces;
-  /** 국내/해외 가격비교 — ②의 본문이자 나머지 단계의 접힌 근거. */
-  marketEvidence: React.ReactNode;
+  /* 🔴🔴 WU-149 STEP 1/6 — 여기 있던 `marketEvidence` 슬롯과
+     `openMarketEvidenceRequest` 카운터를 **지웠다**.
+
+     그 슬롯이 들고 있던 것은 `DomesticShopSearch`·`ComparisonShopSearch` 둘,
+     즉 **셀러에게 후보 연구 과정을 보여주는 화면** 이었다. 그리고 그 둘을 감싼
+     「📊 시장 가격 비교」 접힘은 「📊 시장 판매 판단」과 **같은 시장 가격을 두 번째로**
+     말하는 영역이었다 ⟹ 가격 owner 가 둘이 된다(CPO §9).
+     🟢 셀러가 보는 가격/판단 영역은 이제 **「📊 시장 판매 판단」 하나** 다. */
   /** 변경 이력·백로그처럼 단계와 무관한 기록. 항상 맨 아래 접힘. */
   archive: React.ReactNode;
   channels: RegistrationChannel[];
@@ -110,17 +114,6 @@ export function StageBody({
    * 두 번째 클릭에서 값이 그대로라 아무 일도 일어나지 않는다.
    */
   openPriceSurfaceRequest?: number;
-  /**
-   * MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — MI의 [▸ 국내/해외 가격 보기]가
-   * 올 때마다 1씩 올라가는 값.
-   *
-   * ②에서는 근거가 본문에 그대로 있어 이 값이 필요 없지만, ③④에서는 같은
-   * 패널들이 「📊 시장 가격 비교」 접힘 **안쪽**에 있다. 그 바깥 접힘을 열어주지
-   * 않으면 드릴다운이 조용히 실패한다 — 요약은 "보기"라고 말하는데 눌러도
-   * 아무 일이 없는 상태가, 이번 작업이 없애려는 불신과 정확히 같은 종류다.
-   * 카운터인 이유는 openPriceSurfaceRequest와 같다(같은 요청이 두 번 온다).
-   */
-  openMarketEvidenceRequest?: number;
 }) {
   /**
    * ③에서 지금 펼쳐 작업 중인 항목. **이 상태가 여기 있는 이유**는 아래 접힘
@@ -151,13 +144,7 @@ export function StageBody({
     setPickedKey("price");
   }
 
-  /** MI-MARKET-EVIDENCE-1 — 위와 같은 렌더 중 동기화. 접는 것은 셀러만 한다. */
-  const [marketEvidenceOpen, setMarketEvidenceOpen] = useState(false);
-  const [syncedMarketEvidenceRequest, setSyncedMarketEvidenceRequest] = useState(openMarketEvidenceRequest);
-  if (openMarketEvidenceRequest !== syncedMarketEvidenceRequest) {
-    setSyncedMarketEvidenceRequest(openMarketEvidenceRequest);
-    setMarketEvidenceOpen(true);
-  }
+  /* 🔴 WU-149 STEP 6 — 여기 있던 `marketEvidenceOpen` 동기화를 지웠다(열 접힘이 없다). */
 
   const prepareSubSteps = focus.main === "PREPARE" ? workflow.current.subSteps : [];
   const activePrepareKey =
@@ -172,7 +159,7 @@ export function StageBody({
     <div className="space-y-4">
       {focus.main === "COLLECTION" && <CollectionStage workflow={workflow} images={surfaces.images} />}
 
-      {focus.main === "MARKET" && <MarketStage marketEvidence={marketEvidence} />}
+      {focus.main === "MARKET" && <MarketStage />}
 
       {/* 🔴 ③의 본문. 새 Stepper 를 만들지 않았으므로 단계 전환이 그대로
           이 본문을 고른다 — 화면에 진행 표시가 둘이 되지 않는다. */}
@@ -232,23 +219,15 @@ export function StageBody({
             {surfaces.price}
           </CollapsibleSection>
         )}
-        {/* UX 2.4.1(CEO 지시, 2026-09-11) — "가격 비교 근거"에서 "📊 시장 가격
-            비교"로. 이 묶음이 실제로 들고 있는 것은 두 시장의 관측이다:
-            국내 경쟁 판매자와 해외 판매처. 제목이 "비교 근거"라고만 하면
-            무엇과 무엇을 비교한 것인지 열어봐야 알 수 있고, 판단 카드 안의
-            ② 한국 시장 경쟁가격과 이름으로 이어지지도 않는다. */}
-        {focus.marketEvidence === "COLLAPSED" && (
-          <CollapsibleSection
-            title="📊 시장 가격 비교"
-            summary="🇰🇷 국내 경쟁 판매자 · 🌎 해외 판매처에서 관측된 가격"
-            /* MI-MARKET-EVIDENCE-1 — MI의 [▸ 국내/해외 가격 보기]가 여는 바깥 접힘.
-               제어 모드로 바꾼 것뿐이고 셀러가 직접 여닫는 동작은 그대로다. */
-            open={marketEvidenceOpen}
-            onToggle={setMarketEvidenceOpen}
-          >
-            {marketEvidence}
-          </CollapsibleSection>
-        )}
+        {/**
+         * 🔴🔴🔴 WU-149 STEP 6 — **여기 있던 「📊 시장 가격 비교」 접힘을 제거했다.**
+         *
+         * 🔴 그 접힘은 「📊 시장 판매 판단」(결론 영역)과 **같은 시장 가격을 두 번째로**
+         *    말했다 — 열면 국내/해외 후보 표가 서고 셀러는 그 숫자와 위 결론 중 어느
+         *    것이 진짜인지 알 수 없었다. 그것이 CPO §9 가 지목한 **중복 가격 영역** 이다.
+         * 🟢 가격 owner 는 이제 하나다 — `MarketPriceComparison`(「📊 시장 판매 판단」).
+         * 🔴 **여기에 두 번째 가격/후보 영역을 다시 만들지 않는다**(`wu-149 M3`).
+         */}
         {/* ③에서 이미지 항목을 펼쳐 작업 중이면 여기 또 두지 않는다 —
             같은 편집기가 한 화면에 두 번 뜨면 어느 쪽이 진짜인지 알 수 없다. */}
         {focus.main !== "COLLECTION" && expandedSurface !== "IMAGES" && (
@@ -375,19 +354,31 @@ function CollectionStage({ workflow, images }: { workflow: Workflow; images: Rea
  * 머리말에서 직접 말한다. 내용·컴포넌트·데이터는 한 줄도 바뀌지 않는다 —
  * 바뀌는 것은 이 덩어리가 자기를 무엇이라고 소개하는가뿐이다.
  */
-function MarketStage({ marketEvidence }: { marketEvidence: React.ReactNode }) {
+/**
+ * 🔴🔴🔴 WU-149 STEP 1/6 — **이 단계의 본문에서 후보 연구 UI 가 사라졌다.**
+ *
+ * 🔴 전에는 이 자리에 `marketEvidence` 슬롯(국내/해외 후보 표 둘)이 있었다. 그래서
+ *    ② 시장 판단 단계의 본문이 **후보 조사 화면** 이었고, 셀러는 결론을 읽은 뒤 다시
+ *    후보를 하나씩 보며 **스스로 판단** 해야 했다(CPO 가 지목한 그 구조).
+ * 🟢 이제 이 단계의 결론·근거는 **화면 맨 위 「📊 시장 판매 판단」 하나** 에 모여 있다
+ *    (동일상품 수 · 판매상태 · 가격 · 🇰🇷 시장 가격대 / 🌎 통화별 최저 확인가).
+ * 🔴 **여기에 가격 숫자나 후보 목록을 다시 세우지 않는다** — 세우는 순간 가격 owner 가
+ *    둘이 되고 그것이 이 WU 가 없앤 상태다(`wu-149 M1`·`M3`).
+ * 🟢 단 **빈 단계로 두지 않는다**(`wu-058` 「단계마다 본문 하나」) — 이 패널은 결론이
+ *    어디 있는지 한 줄로 말한다.
+ */
+function MarketStage() {
   return (
     <StagePanel
       index={2}
       title="시장 판단"
-      headline="결론은 위 판단 카드 하나입니다 — 아래는 그 판단이 어떤 가격 위에 세워졌는지 보여주는 근거입니다"
-      badge="근거"
+      headline="결론은 화면 맨 위 「📊 시장 판매 판단」 하나입니다"
+      badge="결론"
     >
       <div className="rounded-md border border-dashed border-border bg-background/40 p-2">
-        <p className="mb-2 text-[11px] text-text-tertiary">
-          🔎 판단 근거 — 여기 있는 가격은 결론이 아니라 위 판단이 읽은 원본입니다
+        <p className="text-[11px] text-text-tertiary">
+          동일상품 여부는 시스템이 판단합니다 — 셀러가 확인할 것은 위 영역의 판매상태와 가격 근거입니다
         </p>
-        {marketEvidence}
       </div>
     </StagePanel>
   );

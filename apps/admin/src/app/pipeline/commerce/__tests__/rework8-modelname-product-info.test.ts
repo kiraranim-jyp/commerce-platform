@@ -223,7 +223,7 @@ function Harness({ initial }: { initial: CanonicalProduct }) {
     workflow,
     channels: [],
     onGoToChannel: () => {},
-    marketEvidence: createElement("div", null, "시장 근거"),
+    /* 🔴 WU-149 STEP 1 — `marketEvidence` 슬롯이 StageBody 에서 사라졌다. */
     archive: createElement("div", null, "기록"),
     surfaces: {
       source: createElement(SourceDataView, {

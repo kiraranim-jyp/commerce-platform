@@ -1192,9 +1192,12 @@ export default function PipelinePage() {
         <div className="mt-6 space-y-6">
           <CommerceWorkspace
             product={product}
-            // GOLF-01-WIRE — 빈 문자열("미선택")은 undefined로 보낸다. 그래야
-            // 라우트가 기존 자동추정 폴백을 그대로 탄다(레거시 스냅샷 무회귀).
-            marketCategoryProfileId={marketCategoryId || undefined}
+            /* 🔴 WU-149 STEP 1 — 여기 있던 `marketCategoryProfileId` prop 을 **뺐다**.
+               그 값을 받던 유일한 소비자가 셀러 화면의 `ComparisonShopSearch`(해외 후보
+               연구 표)였고 그 표를 제거했다.
+               🟢 **엔진 경로는 그대로다** — 같은 값이 위 스냅샷 저장 payload
+               (`marketCategoryProfileId: marketCategoryId || undefined`)로 서버에 가고,
+               서버가 `resolveMarketCategoryScopes` 로 조사 대상을 거른다. */
             onUpdateProduct={updateProduct}
             items={items}
             thumbnails={thumbnails}

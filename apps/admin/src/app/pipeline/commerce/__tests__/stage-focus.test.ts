@@ -105,17 +105,34 @@ describe("본문의 주인공은 현재 단계 하나다", () => {
   });
 
   it("끝난 단계의 섹션은 본문을 차지하지 않는다", () => {
-    // ③ 등록 준비에서: ②의 근거(가격비교)와 ①의 산물(이미지)은 전부 접힌다.
+    // ③ 등록 준비에서: ①의 산물(이미지)과 MI 는 접히고 요약만 남는다.
     const prepare = focus("REGISTRATION_PREPARING");
     expect(prepare.main).toBe("PREPARE");
-    expect(prepare.marketEvidence).toBe("COLLAPSED");
     expect(prepare.mi).toBe("SUMMARY");
 
     // ④ 커머스 등록도 마찬가지 — 앞 단계의 작업면이 하나도 펼쳐지지 않는다.
     const register = focus("COMMERCE_REGISTERING");
     expect(register.main).toBe("REGISTER");
-    expect(register.marketEvidence).toBe("COLLAPSED");
     expect(register.mi).toBe("SUMMARY");
+  });
+
+  /**
+   * 🔴🔴🔴 **WU-149 STEP 1/6 — 방향을 뒤집은 계약이다**(약화가 아니다).
+   *
+   * 전까지 이 파일은 `marketEvidence` 가 ②에서 `MAIN`, 나머지에서 `COLLAPSED`
+   * 임을 단언했다. 🔴 그 칸이 정하던 것은 **셀러에게 보여주던 후보 연구 표 둘**
+   * (`DomesticShopSearch`·`ComparisonShopSearch`)의 자리였고, 그 표가 셀러 화면에서
+   * **제거** 됐으므로 칸 자체가 사라졌다.
+   *
+   * 🟢 그래서 이제 **「그 칸이 없다」** 를 단언한다 — 칸을 되살리면 다음 사람이 그
+   *    배선을 다시 꽂고, 셀러 화면에 후보 조사 화면이 되돌아온다.
+   * 🔴 이것은 **표시 층** 계약이다 — MI 판정 · 가격 계산 · 후보 수집은 변경 **0** 이다.
+   */
+  it("🔴🔴 WU-149 — `marketEvidence` 칸이 **없다**(후보 연구 표의 자리가 사라졌다)", () => {
+    for (const stage of BIG_STEP_ORDER) {
+      const f = focus(stage);
+      expect(Object.keys(f), `${stage} 에 marketEvidence 칸이 되살아났다`).not.toContain("marketEvidence");
+    }
   });
 
   it("Source Data는 어느 단계에서도 펼쳐진 채로 시작하지 않는다", () => {

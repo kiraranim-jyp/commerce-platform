@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -352,15 +352,30 @@ describe("C. 🔴🔴 MI → 영역 공급 배선", () => {
     const anchor = WORKSPACE.indexOf("id={PRICE_COMPARISON_ANCHOR_ID}");
     const area = WORKSPACE.indexOf("<MarketPriceComparison");
     const panel = WORKSPACE.indexOf("<DomesticPriceIntelligencePanel");
-    const domestic = WORKSPACE.indexOf("<DomesticShopSearch");
-    const overseas = WORKSPACE.indexOf("<ComparisonShopSearch");
     /** 🔴 두 기둥의 좌표 — 이 둘보다 **앞** 이어야 폭과 무관하게 최상단이다. */
     const contentCol = WORKSPACE.indexOf("order-2 min-w-0 space-y-4 lg:order-1");
     const actionCol = WORKSPACE.indexOf('order-1 lg:order-2"');
     const grid = WORKSPACE.indexOf('lg:grid-cols-[minmax(0,1fr)_300px]"');
-    for (const i of [anchor, area, panel, domestic, overseas, contentCol, actionCol, grid]) {
+    for (const i of [anchor, area, panel, contentCol, actionCol, grid]) {
       expect(i).toBeGreaterThan(-1);
     }
+    /**
+     * ══════════════════════════════════════════════════════════════════════════
+     * 🔴🔴🔴 **WU-149 STEP 1 — 원자료 두 패널이 셀러 화면에서 «사라졌다»**
+     * ══════════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 전까지 이 계약은 ⒞ 로 「앵커 div 와 원자료 두 패널은 **그 뒤에 그대로 남아
+     *    있다**」를 단언했다(`domestic > area` · `overseas > area`). WU-149 가 그 둘을
+     *    **셀러 화면에서 제거** 했으므로 그 좌표 단언은 **의도적으로** 깨졌다.
+     * 🟢 지키려던 성질 둘(①영역은 하나 ②결론이 먼저)은 **그대로 유효** 하고, 이제
+     *    방향을 뒤집어 **「그 둘이 아예 없다」** 를 단언한다 — 되살리면 FAIL 이다.
+     * 🔴 **약화가 아니다**: 아래 C-3c 가 「backend/API 와 컴포넌트 파일은 **살아
+     *    있다**」를 같이 단언한다(제거는 **렌더 트리** 하나다).
+     */
+    expect(WORKSPACE, "🔴 국내 후보 연구 표가 셀러 화면에 되살아났다").not.toContain("<DomesticShopSearch");
+    expect(WORKSPACE, "🔴 해외 후보 연구 표가 셀러 화면에 되살아났다").not.toContain("<ComparisonShopSearch");
+    /** 🔴 슬롯 자체도 없다 — 슬롯만 되살려 두면 다음 사람이 거기에 표를 다시 꽂는다. */
+    expect(WORKSPACE, "🔴 `marketEvidence` 슬롯이 되살아났다").not.toContain("marketEvidence={");
     /**
      * 🔴🔴🔴 **이 세 줄이 CEO FAIL 을 막는다.** 격자(두 기둥) 전체보다 앞이어야
      *    `order-1` 인 Action Center 가 좁은 폭에서 위로 올라와도 결론이 먼저다.
@@ -379,14 +394,42 @@ describe("C. 🔴🔴 MI → 영역 공급 배선", () => {
      *    보이고, 그것이 WU-128 이 지목한 중복 그 자체다.
      */
     expect(WORKSPACE.split("<MarketPriceComparison").length - 1).toBe(1);
-    /** 🔴🔴 **결론 → 후보 패널** 순서. 뒤집으면 CPO 가 NO-GO 한 그 화면으로 돌아간다. */
+    /** 🔴🔴 **결론 → MI 패널** 순서. 뒤집으면 CPO 가 NO-GO 한 그 화면으로 돌아간다. */
     expect(area).toBeLessThan(panel);
-    /** 🟢 결론이 원자료(앵커 div · 두 드릴다운 패널)보다 **먼저** 온다. */
-    expect(anchor).toBeGreaterThan(area);
-    expect(domestic).toBeGreaterThan(area);
-    expect(overseas).toBeGreaterThan(area);
-    /** 🔴 앵커를 **지우지 않았다** — `scrollIntoView` 소비자가 있다. */
+    /**
+     * 🔴🔴 **WU-149 — 앵커는 이제 «그 영역 자신» 을 감싼다.**
+     *
+     * 🔴 전에는 앵커가 **원자료 두 패널** 을 감쌌고(`anchor > area`) 그래서 「결론이
+     *    원자료보다 먼저」를 그 좌표로 쟀다. 그 두 패널이 사라졌으므로 앵커가 가리킬
+     *    곳은 **가격의 유일한 owner** 인 이 영역이다 ⟹ 좌표 관계가 뒤집힌다.
+     * 🟢 그래서 **앵커가 영역 바로 앞** 임을 단언한다(감싸고 있다는 뜻).
+     * 🔴 앵커를 **지우지 않았다** — WU-141-R3 보존 계약이고 `wu-149 M6` 이 잠근다.
+     */
+    expect(anchor).toBeLessThan(area);
+    expect(area - anchor, "🔴 앵커가 그 영역을 감싸지 않는다(사이에 다른 것이 들어왔다)").toBeLessThan(200);
     expect(WORKSPACE).toContain("PRICE_COMPARISON_ANCHOR_ID");
+  });
+
+  /**
+   * 🔴🔴🔴 **WU-149 STEP 1 — 「셀러 화면에서 제거」와 「엔진 삭제」를 가른다.**
+   *
+   * 🔴 위 C-3 이 「두 패널이 셀러 화면에 없다」를 단언하므로, 그 단언만 두면 다음
+   *    사람이 **컴포넌트 파일과 backend API 를 지워도 통과** 한다. 그것은 이 WU 가
+   *    명시적으로 금지한 방향이다(CPO §6 「INTERNAL ENGINE 은 절대 제거하지 않는다」).
+   * 🟢 그래서 **반대 방향 단언을 같이** 둔다 — `wu-149 M7` 이 그 삭제를 FAIL 로 잠근다.
+   */
+  it("C-3c 🔴🔴 엔진은 **살아 있다** — 컴포넌트 파일과 backend API 를 지우지 않았다", () => {
+    for (const f of ["DomesticShopSearch.tsx", "ComparisonShopSearch.tsx"]) {
+      expect(existsSync(path.join(COMMERCE, f)), `🔴 ${f} 가 삭제됐다(엔진 제거 금지)`).toBe(true);
+    }
+    /** `__dirname` = `…/api/price-history/_lib/__tests__` ⟹ 셋 올라가면 `…/api` 다. */
+    const apiRoot = path.join(__dirname, "..", "..", "..");
+    for (const route of [
+      path.join(apiRoot, "domestic-price-sources", "search", "route.ts"),
+      path.join(apiRoot, "comparison", "search", "route.ts"),
+    ]) {
+      expect(existsSync(route), `🔴 backend API 가 삭제됐다: ${route}`).toBe(true);
+    }
   });
 
   /**

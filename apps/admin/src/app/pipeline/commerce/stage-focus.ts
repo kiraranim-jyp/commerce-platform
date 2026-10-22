@@ -129,8 +129,10 @@ export interface StageFocus {
   main: StageMain;
   mi: MiPresentation;
   images: ImageRole;
-  /** 국내/해외 가격비교 — ②에서만 본문이고 나머지 단계에서는 접힌 근거다. */
-  marketEvidence: SectionWeight;
+  /* 🔴🔴 WU-149 STEP 1/6 — 여기 있던 `marketEvidence: SectionWeight` 를 **지웠다**.
+     그 칸이 정한 것은 「국내/해외 후보 표 둘이 ②의 본문인가, 접힌 근거인가」였다.
+     🟢 그 표(= 셀러용 후보 연구 UI)가 화면에서 사라졌으므로 정할 것이 없다.
+     🔴 칸만 남겨 두면 다음 사람이 그 배선을 다시 꽂는다(이 저장소의 선례 그대로). */
   /**
    * Source Data는 어느 단계에서도 주인공이 아니다 — 원본이 무엇이었는지는
    * 확인하고 싶을 때 여는 근거지, 매번 읽어야 하는 작업이 아니다.
@@ -248,7 +250,6 @@ export function resolveStageFocus(input: StageFocusInput): StageFocus {
     main: MAIN_BY_STAGE[stage],
     mi,
     images: IMAGE_ROLE_BY_STAGE[stage],
-    marketEvidence: stage === "MARKET_JUDGING" ? "MAIN" : "COLLAPSED",
     sourceData: "COLLAPSED",
     actionCenter: {
       // 채널 화면에서는 오른쪽 기둥의 주인이 바뀐다(그 화면이 직접 세운다).

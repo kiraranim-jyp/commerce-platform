@@ -64,7 +64,9 @@ import {
 import { resolveCategoryCacheAction } from "./category-cache-hydrate";
 import { AIContentPanel } from "./commerce/AIContentPanel";
 import { BacklogPanel } from "./commerce/BacklogPanel";
-import { ComparisonShopSearch } from "./commerce/ComparisonShopSearch";
+/* 🔴 WU-149 STEP 1 — `ComparisonShopSearch` / `DomesticShopSearch` import 를 **뺐다**.
+   두 컴포넌트 파일과 그 backend API 는 **그대로 있다**(엔진 보존 · `wu-149 M7`) —
+   사라진 것은 **셀러 화면이 그것을 렌더하는 배선** 하나다. */
 import {
   DomesticPriceIntelligencePanel,
   FINAL_VERDICT_COPY,
@@ -83,9 +85,6 @@ import { resolveSellVerdict, type ScopedSellVerdict } from "./commerce/sell-verd
 import { applyChannelNoticeOverride, type ChannelNoticeOverrideEdit } from "@commerce/listing";
 import { ActionCenter, type ChecklistItem } from "./commerce/ActionCenter";
 import { AuditLogPanel } from "./commerce/AuditLogPanel";
-import { DomesticShopSearch } from "./commerce/DomesticShopSearch";
-// MI-UX-FINAL-4 — 가격비교 패널이 서는 자리(드릴다운 / 접힘 안쪽 평면).
-import type { MarketEvidenceVariant } from "./commerce/market-evidence-frame";
 // MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — 해외 가격비교 패널이 만든 요약을
 // MI로 옮기는 통로. 이 파일은 요약을 **만들지 않는다**(값을 들고만 있는다) —
 // 만들기 시작하면 같은 조회 결과에 대한 요약 규칙이 두 벌이 된다.
@@ -263,7 +262,6 @@ const TAB_LABELS: Record<"source" | "content", string> = {
  */
 export function CommerceWorkspace({
   product,
-  marketCategoryProfileId,
   onUpdateProduct,
   items,
   thumbnails,
@@ -290,13 +288,11 @@ export function CommerceWorkspace({
   autoCheckResult,
 }: {
   product: CanonicalProduct;
-  /**
-   * GOLF-01-WIRE — 셀러가 상품 검색을 시작할 때 고른 조사 카테고리
-   * (`workspace.marketCategoryProfileId`). 해외 가격비교가 이 값으로 조사
-   * 대상을 거른다. 국내 경로는 스냅샷 저장 때 이미 같은 값을 넘기고 있다 —
-   * 두 경로가 «같은 한 값»을 보도록 여기서 다시 추정하지 않는다.
-   */
-  marketCategoryProfileId?: string;
+  /* 🔴 WU-149 STEP 1 — 여기 있던 `marketCategoryProfileId?: string` 를 **지웠다**.
+     GOLF-01-WIRE 가 그 값을 흘린 목적지는 셀러 화면의 `ComparisonShopSearch` 하나였고
+     그 표가 제거됐다 ⟹ 이 컴포넌트에는 그 값을 쓸 곳이 없다.
+     🟢 조사 카테고리 자체는 **엔진에서 그대로 살아 있다** — `page.tsx` 가 스냅샷 저장
+     payload 에 싣고 서버가 `resolveMarketCategoryScopes` 로 거른다(국내·해외 공통). */
   onUpdateProduct: (updater: (prev: CanonicalProduct) => CanonicalProduct) => void;
   items: WorkspaceItem[];
   thumbnails: Record<string, string>;
@@ -827,28 +823,22 @@ export function CommerceWorkspace({
    *    두면 화면과 집계가 언젠가 다른 말을 한다.
    */
   const [marketComparison, setMarketComparison] = useState<MarketComparisonInput | null>(null);
-  const [domesticEvidenceOpen, setDomesticEvidenceOpen] = useState(false);
-  const [overseasEvidenceOpen, setOverseasEvidenceOpen] = useState(false);
-  const [marketEvidenceRequest, setMarketEvidenceRequest] = useState(0);
   /**
-   * [▸ 국내 가격 보기] / [▸ 해외 가격 보기] — 요약이 선 근거의 원자료를 연다.
+   * 🔴🔴 WU-149 STEP 1 — **여기 있던 넷을 지웠다**: `domesticEvidenceOpen` ·
+   * `overseasEvidenceOpen` · `marketEvidenceRequest` · `openMarketEvidence()`.
    *
-   * handleRequestPriceReview와 완전히 같은 모양이다: 탭 전환 + 접힘 펼침 +
-   * 스크롤. 표를 여기서 새로 그리지 않고 **이미 있는 그 패널**을 여는 것이
-   * 핵심이다 — 같은 시장 사실이 화면에 두 벌 생길 자리를 만들지 않는다.
+   * 🔴 넷 다 **원자료 두 패널의 접힘을 여는 장치** 였다. 그 패널이 셀러 화면에서
+   *    사라졌으므로 열 대상이 없다.
+   * 🔴 그리고 그 드릴다운은 **이미 호출자를 잃은 상태** 였다 — WU-141-R3 이 결론
+   *    영역을 올리면서 MI 카드의 `onOpenDomesticEvidence`/`onOpenOverseasEvidence`
+   *    를 **아무 데서도 부르지 않게** 됐다(패널 안 호출 지점 **0** · 실측).
+   * 🟢 그래서 이 파일에서 그 props 도 넘기지 않는다 — 이 저장소의 선례를 따른다
+   *    (바로 아래 주석: 「부를 곳이 없는 이동 함수를 남겨 두면 다음 사람이 그
+   *    문장을 되살린다」). 🔴 패널의 **prop 선언은 건드리지 않았다**(그 파일은
+   *    이 WU 의 대상이 아니다 · optional 이라 타입도 안전하다).
+   * 🟢 `PRICE_COMPARISON_ANCHOR_ID` 는 **살아 있다** — 위 「📊 시장 판매 판단」
+   *    영역을 감싼다(`wu-149 M6` 이 그 삭제를 FAIL 로 잠근다).
    */
-  function openMarketEvidence(which: "DOMESTIC" | "OVERSEAS") {
-    setTab("source");
-    if (which === "DOMESTIC") setDomesticEvidenceOpen(true);
-    else setOverseasEvidenceOpen(true);
-    // ③④에서는 두 패널이 「📊 시장 가격 비교」 접힘 안쪽에 있다 — 바깥도 함께 연다.
-    setMarketEvidenceRequest((n) => n + 1);
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        document.getElementById(PRICE_COMPARISON_ANCHOR_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 50);
-    });
-  }
 
   /* MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 여기 있던 handleOpenMarketComparison을
      지웠다. 그 함수가 존재한 이유는 상세 계산 안의 "다른 나라 판매가·한국 시장
@@ -2293,16 +2283,9 @@ export function CommerceWorkspace({
    */
   const channelOwnsPillar = stageFocus.actionCenter.pillar === "CHANNEL_REGISTRATION";
 
-  /**
-   * MI-UX-FINAL-4(CEO 지시, 2026-09-13) — 가격비교 두 패널이 어느 자리에 서는가.
-   *
-   * COLLAPSED는 "두 패널이 「📊 시장 가격 비교」 접힘 **안쪽**에 있다"는 뜻이다
-   * (StageBody 참고). 그 안에서는 자기 접힘을 또 갖지 않는다 — 바깥을 열고 다시
-   * 국내/해외를 눌러야 했던 두 번째 클릭이 아무 질문에도 답하지 않기 때문이다.
-   * ②에서는 그대로 드릴다운이다(MI 요약이 결론이고 표가 그 원자료다).
-   */
-  const marketEvidenceVariant: MarketEvidenceVariant =
-    stageFocus.marketEvidence === "COLLAPSED" ? "FLAT" : "DRILL_DOWN";
+  /* 🔴 WU-149 STEP 1 — 여기 있던 `marketEvidenceVariant` 를 지웠다. 그 값이 고르던
+     것은 「원자료 두 패널이 자기 접힘을 갖는가」였고, 그 패널들이 셀러 화면에서
+     사라졌으므로 고를 것이 없다(`stageFocus.marketEvidence` 도 같이 사라진다). */
 
   /** 채널 목록은 한 번만 만든다 — 오른쪽 Action Center와 ④ 본문이 같은 배열을
    * 본다(둘이 각자 만들면 준비 상태가 두 벌 계산되어 서로 다른 말을 한다). */
@@ -3657,12 +3640,25 @@ export function CommerceWorkspace({
        * 🔴 `stageFocus.mi !== "HIDDEN"` 게이트는 **반드시 유지**: 커머스 탭에
        *    「판매 판단」을 세우지 않는다(CEO 지시 · `stage-focus.ts`).
        */}
+      {/**
+       * 🔴🔴 WU-149 STEP 1/6 — **앵커가 「원자료 두 패널」에서 이 영역으로 왔다.**
+       *
+       * 🔴 전에는 `PRICE_COMPARISON_ANCHOR_ID` 가 아래 StageBody 안의
+       *    `DomesticShopSearch`·`ComparisonShopSearch`(셀러가 후보를 하나씩 보던
+       *    **연구 UI**)를 감싸고 있었다. 그 둘을 seller surface 에서 제거했으므로
+       *    앵커가 가리킬 곳은 **가격의 유일한 owner** 인 이 영역이다.
+       * 🟢 **지우지 않았다** — WU-141-R3 이 「앵커는 보존 계약」이라 적었고(`wu-132 C-3`),
+       *    `DomesticPriceIntelligencePanel` 이 그 상수를 계속 export 한다.
+       * 🔴 앵커를 지우는 변이는 FAIL 해야 한다(`wu-149 M6`).
+       */}
       {stageFocus.mi !== "HIDDEN" && (
-        <MarketPriceComparison
-          rows={marketComparison?.rows ?? null}
-          domesticReference={marketComparison?.domesticReference ?? null}
-          overseasReference={marketComparison?.overseasReference ?? null}
-        />
+        <div id={PRICE_COMPARISON_ANCHOR_ID} className="scroll-mt-4">
+          <MarketPriceComparison
+            rows={marketComparison?.rows ?? null}
+            domesticReference={marketComparison?.domesticReference ?? null}
+            overseasReference={marketComparison?.overseasReference ?? null}
+          />
+        </div>
       )}
 
       {/* ── UX 2.2(CEO 지시, 2026-09-11) — 하나의 작업 화면 ────────────────
@@ -3750,13 +3746,15 @@ export function CommerceWorkspace({
                  고칠 때마다 MI를 다시 돌릴 배선이 생긴다. 노드는 이미 완성된
                  화면이라 패널이 그 안의 값을 읽을 수 없다. */
               priceCalculationDetail={priceCalculationDetail}
-              /* MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — 🌎 해외 시장 요약과
-                 두 드릴다운. 요약은 아래 해외 가격비교 패널이 자기 조회 결과로
-                 만든 값 그대로이고, 드릴다운은 그 패널을 여는 일만 한다 —
-                 MI는 해외 가격을 조회하지도 표를 그리지도 않는다. */
+              /* MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — 🌎 해외 시장 요약.
+                 🔴 WU-141-R3 C-5 이후 이 값은 상수 `null` 이다(가격 owner 는 ① 하나).
+
+                 🔴 WU-149 STEP 1 — 여기 있던 `onOpenDomesticEvidence` /
+                 `onOpenOverseasEvidence` 두 드릴다운 props 를 **뺐다**. 열 대상(원자료
+                 두 패널)이 셀러 화면에서 사라졌고, 그 props 는 **패널 안에서 한 번도
+                 호출되지 않는다**(실측 호출 지점 0 — WU-141-R3 이 결론 영역을 올리면서
+                 호출자를 잃었다). 🟢 패널의 prop 선언은 그대로 둔다(optional). */
               overseasMarketEvidence={overseasMarketEvidence}
-              onOpenDomesticEvidence={() => openMarketEvidence("DOMESTIC")}
-              onOpenOverseasEvidence={() => openMarketEvidence("OVERSEAS")}
               openPriceDetailRequest={priceDetailRequest}
               /**
                * 🔴🔴🔴 WU-132 ① — **MI 산출을 「📊 시장 가격 비교」 영역으로 넘긴다.**
@@ -3850,80 +3848,32 @@ export function CommerceWorkspace({
               /* UX 2.5 — 바깥(판단 카드·해외 가격비교·상단 Flow)에서 온 "가격 좀
                  보자"는 요청. 카운터가 올라가면 StageBody가 가격 작업면을 펼친다. */
               openPriceSurfaceRequest={priceSurfaceRequest}
-              /* MI-MARKET-EVIDENCE-1 — MI의 [▸ 국내/해외 가격 보기]가 ③④에서
-                 바깥 「📊 시장 가격 비교」 접힘까지 열 수 있게 하는 요청. */
-              openMarketEvidenceRequest={marketEvidenceRequest}
-              /* 국내(한국 시장)를 해외보다 먼저 둔다 — 판매 판단이 한국 기준이라
-                 근거도 한국부터 읽혀야 한다. 컴포넌트도 데이터도 그대로다.
+              /* 🔴 WU-149 STEP 6 — 여기 있던 `openMarketEvidenceRequest` 를 뺐다.
+                 그 카운터가 열던 「📊 시장 가격 비교」 접힘은 **중복 가격 영역** 이라
+                 StageBody 에서 같이 제거했다(가격 owner 는 하나 · `wu-149 M3`). */
+              /* ════════════════════════════════════════════════════════════════
+                 🔴🔴🔴 WU-149 STEP 1 — 여기 있던 `marketEvidence` 슬롯을 제거했다
+                 ════════════════════════════════════════════════════════════════
 
-                 MI-MARKET-EVIDENCE-1 — 두 패널은 이제 MI 요약의 드릴다운 대상이라
-                 기본 접힘이고, 여는 주체는 위 요약의 버튼이다(open을 여기서
-                 들고 있는 이유). 조회는 접힌 상태에서도 그대로 돈다 — 접힌 것은
-                 표이지 데이터가 아니고, 요약이 그 데이터 위에 서 있다.
+                 🔴 그 슬롯에는 `DomesticShopSearch`·`ComparisonShopSearch` 둘이 있었다.
+                    그 둘은 셀러에게 **후보 연구 과정** 을 보여주는 화면이다 — 자기 검색을
+                    돌려(`/api/domestic-price-sources/search` · `/api/comparison/search`)
+                    `mayShowCandidate` 로 거른 목록을 SIMILAR/보류까지 포함해 늘어놓고,
+                    셀러가 후보를 하나씩 보며 **다시 판단하게** 만들었다.
+                 🔴 그것이 CPO 가 지목한 모양이다 — 「후보를 많이 보여주는 것이 목적이
+                    아니다. MI 가 판단하고 셀러는 **최종 가격 판단만** 한다」.
+                 🟢 그래서 셀러가 보는 가격/판단 영역은 위 「📊 시장 판매 판단」 하나다.
 
-                 MI-UX-FINAL-4(CEO 지시, 2026-09-13) — 두 패널의 **모양**이 자리에
-                 따라 갈린다. ②에서는 위 MI 요약이 결론이라 표는 드릴다운으로
-                 접혀 있고, ③④에서는 이 둘이 「📊 시장 가격 비교」 접힘 안쪽이라
-                 접힘을 한 겹 벗는다 — 이미 시장 가격을 보겠다고 들어온 자리에서
-                 다시 국내/해외를 눌러야 했던 두 번째 클릭이 그 겹이었다. */
-              marketEvidence={
-                <div id={PRICE_COMPARISON_ANCHOR_ID} className="scroll-mt-4 space-y-4">
-                  {/**
-                   * 🔴🔴 WU-140 ① — **「동일상품 가격 비교」 영역은 여기 있지 않다.**
-                   *
-                   * 🟢 그 결론 영역(`MarketPriceComparison`)은 이 파일 위쪽의
-                   *    `DomesticPriceIntelligencePanel` **앞** 으로 옮겨 갔다 — 결론이
-                   *    후보보다 먼저 와야 셀러가 후보 목록을 읽지 않고도 판단할 수 있다
-                   *    (CPO 확정 · 그 자리의 주석이 이유를 들고 있다).
-                   * 🔴 **영역이 둘이 된 것이 아니다** — 이동이고 복제가 아니다
-                   *    (`wu-130 F-3` · `wu-132 C-3` 이 「영역은 하나」를 잠근다).
-                   * 🔴 아래 두 패널은 **원자료 드릴다운** 으로 그대로 남는다(그 제목이 이미
-                   *    「… 의 원자료」라고 말한다). 🟢 이 앵커가 가리키는 것이 그 둘이고,
-                   *    `scrollIntoView` 소비자가 있으므로 **앵커 div 를 지우지 않는다.**
-                   */}
-                  <DomesticShopSearch
-                    title={product.title.value}
-                    brand={product.brand.value}
-                    sourceUrl={product.sourceUrl}
-                    sku={product.sku.value || undefined}
-                    description={product.description.value || undefined}
-                    /* P0-A.29-C — 육안 비교용. 상품정보가 «이미 갖고 있는» 대표 이미지와
-                       원본 가격을 그대로 넘긴다(새로 만들거나 계산하지 않는다).
-                       🔴 가격은 priceValidity 가 VALID 일 때만 넘긴다 — 못 읽은 가격을
-                          0 으로 그리지 않기 위해서다(N-3.54 와 같은 원칙). */
-                    originImageUrl={product.images[0] ? getSelectedImageUrl(product.images[0]) : null}
-                    originPrice={product.priceValidity === "VALID" ? product.price.value : null}
-                    open={domesticEvidenceOpen}
-                    onToggle={setDomesticEvidenceOpen}
-                    variant={marketEvidenceVariant}
-                  />
-                  <ComparisonShopSearch
-                    title={product.title.value}
-                    brand={product.brand.value}
-                    sourceUrl={product.sourceUrl}
-                    sku={product.sku.value || undefined}
-                    description={product.description.value || undefined}
-                    marketCategoryProfileId={marketCategoryProfileId}
-                    onRequestPriceReview={handleRequestPriceReview}
-                    open={overseasEvidenceOpen}
-                    onToggle={setOverseasEvidenceOpen}
-                    /* 🔴 WU-141-R3 C-5 — `onEvidenceChange` 배선을 **끊었다**(가격 owner 는 ① 하나).
-                       🔴 속성 위치의 주석은 `{/* … *\/}` 가 아니라 이 모양이어야 한다 —
-                          1차에 그렇게 써서 JSX 를 깨뜨렸고 typecheck 가 잡았다(WU-136 재발). */
-                    originImageUrl={product.images[0] ? getSelectedImageUrl(product.images[0]) : null}
-                    originPrice={product.priceValidity === "VALID" ? product.price.value : null}
-                    /* P0-A.29-E ㉮ — 원상품 URL 이 고른 옵션. 후보에서 «같은 옵션» 의
-                       가격을 고르는 데 쓴다. 찾지 못한 경우(NOT_FOUND)는 넘기지
-                       않는다 — 없는 기준으로 후보 가격을 맞추면 안 된다. */
-                    selectedOptionValues={
-                      product.selectedVariant?.status === "NOT_FOUND"
-                        ? undefined
-                        : product.selectedVariant?.optionValues
-                    }
-                    variant={marketEvidenceVariant}
-                  />
-                </div>
-              }
+                 🔴🔴 엔진은 한 줄도 지우지 않았다(그것이 이 WU 의 핵심 구분이다):
+                   보존 — 두 컴포넌트 파일 · backend API 둘 · 후보 수집/보강 · MI ·
+                          SAME 판정 · 판매상태 · 가격 추출 · 후보 검토 이력(📚)
+                   제거 — 셀러 화면의 **렌더 트리** 하나
+                 🔴 backend API 를 지우는 변이는 FAIL 해야 한다(`wu-149 M7`).
+                 🔴 이 슬롯을 되살리는 변이도 FAIL 해야 한다(`wu-149 M1`).
+
+                 🔴 속성 위치의 주석은 `{/* … *\/}` 가 아니라 **이 모양** 이어야 한다 —
+                    1차 구현에서 그렇게 써서 JSX 를 깨뜨렸다(WU-136·WU-141-R3 가 같은
+                    자리에 같은 경고를 남겼고 이번이 세 번째다). */
               surfaces={{
                 source: (
                   <SourceDataView

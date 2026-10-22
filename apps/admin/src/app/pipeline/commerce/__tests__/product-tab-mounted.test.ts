@@ -216,10 +216,23 @@ function clickAnywhere(label: string): void {
  * 🟡 **보고 대상** — `openMarketEvidence`(+`PRICE_COMPARISON_ANCHOR_ID` 스크롤)는
  *    이제 **호출자가 없다.** 지우지 않았다(앵커 보존 계약) · CPO 판정 사안이다.
  */
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴🔴 **WU-149 STEP 1 — 그 두 패널이 셀러 화면에서 «사라졌다»**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 위 주석(WU-141-R3)은 「원자료를 여는 길이 **패널 자신의 헤더** 로 바뀌었다」
+ *    까지였다. 🔴 그런데 **열 수 있다는 것 자체가 문제** 였다 — 셀러는 결론을 읽고도
+ *    그 표를 열어 후보를 하나씩 다시 판단했다(CPO 가 지목한 「후보 조사 화면」).
+ * 🟢 WU-149 는 그 두 표를 **셀러 화면에서 제거** 했다. 그래서 이 파일의 두 상수와
+ *    여는 함수도 **같이 지웠다** — 남겨 두면 다음 사람이 그 표를 되살린다.
+ * 🔴 아래 계약들은 그만큼 **더 세졌다**: 전에는 「수집이 한 번」이었고 이제는
+ *    **「셀러 화면이 그 두 검색을 한 번도 부르지 않는다」**(0) 다.
+ * 🟢 **엔진은 그대로다** — 두 컴포넌트 파일과 backend API 둘은 살아 있고
+ *    (`wu-132 C-3c` 가 삭제를 FAIL 로 잠근다) 서버는 `/check` 에서 같은 수집을 돈다.
+ */
 const DOMESTIC_RAW_PANEL = "🇰🇷 한국 시장 · 국내 비교상품 (베타)";
 const OVERSEAS_RAW_PANEL = "🌎 글로벌 시장 · 해외 판매처 가격 (베타)";
-const openDomesticRaw = (): void => clickAnywhere(DOMESTIC_RAW_PANEL);
-const openOverseasRaw = (): void => clickAnywhere(OVERSEAS_RAW_PANEL);
 
 /**
  * MI-COLLECTION-GUARD-1(CEO 지시, 2026-09-13) — **수집은 상품 하나에 한 번이다.**
@@ -234,15 +247,24 @@ const openOverseasRaw = (): void => clickAnywhere(OVERSEAS_RAW_PANEL);
  * 접고, 펴고, 뒤로 갔다 다시 들어온다. 그리고 매번 **엔드포인트별 호출 수**를
  * 본다. 기대값은 전부 "더 늘지 않았다"이다.
  */
-describe("수집은 상품 하나에 한 번 — 화면 이동은 크롤링을 부르지 않는다", () => {
-  it("최초 진입 1회 · 탭 왕복 0 · 접기/펼치기 0 · 재진입 0", async () => {
+describe("🔴🔴 WU-149 — 셀러 화면은 후보 검색을 **한 번도** 부르지 않는다", () => {
+  /**
+   * 🔴 전 계약은 「최초 진입 1회 · 탭 왕복 0 · 재진입 0」이었다. 그 **1회** 는
+   *    제거된 두 패널이 `useCollectOnce` 로 돌린 **클라이언트 자기 검색** 이었다.
+   * 🟢 이제 그 1회도 **0** 이다 — 더 센 단언이다(0 은 1 보다 세다).
+   * 🔴🔴 **이것이 「셀러가 데이터를 잃었다」는 뜻이 아니다**: 같은 수집을 서버가
+   *    `/check` 에서 돌리고(WU-130 해외 자동풀 · 국내 등록부) 그 결과가 MI →
+   *    「📊 시장 판매 판단」으로 온다. 🟢 WU-130 이 「지금 해외 검색이 **두 번**
+   *    돈다」고 적어 둔 그 중복이 이 제거로 **하나가 됐다.**
+   */
+  it("🔴 진입 · MI 이동 · 탭 왕복 · 재진입 — 두 검색 API 호출이 전부 **0** 이다", async () => {
     const counts = countingFetch();
 
-    // ① 상품 최초 진입 — 국내/해외 각 1회씩. 이게 "분석할 때의 1회"다.
+    // ① 상품 최초 진입 — 전에는 여기서 국내/해외 각 1회가 나갔다.
     await mount();
     expect(collectCounts(counts)).toEqual({
-      "POST /api/domestic-price-sources/search": 1,
-      "POST /api/comparison/search": 1,
+      "POST /api/domestic-price-sources/search": 0,
+      "POST /api/comparison/search": 0,
     });
     const afterEntry = { ...counts };
 
@@ -252,24 +274,18 @@ describe("수집은 상품 하나에 한 번 — 화면 이동은 크롤링을 �
     click("ⓘ 가격 계산 기준");
     expect(counts).toEqual(afterEntry);
 
-    // ③ 원자료 — 두 패널을 **자기 헤더로** 여닫는다(접기/펼치기). 🔴 WU-141-R3.
-    openDomesticRaw();
-    openOverseasRaw();
-    expect(counts).toEqual(afterEntry);
-
-    // ④ 다른 탭으로 — 단계 본문이 통째로 언마운트되는 그 경계다.
+    // ③ 다른 탭으로 — 단계 본문이 통째로 언마운트되는 그 경계다.
     await act(async () => clickAnywhere(TAB_LABEL.smartstore));
     expect(counts).toEqual(afterEntry);
 
-    // ⑤ 상품정보로 재진입 — 두 패널이 새로 마운트된다. 예전에는 여기서 두 번
-    //    더 크롤링이 나갔다.
+    // ④ 상품정보로 재진입 — 마운트 경계를 넘어도 그대로 0 이다.
     await act(async () => clickAnywhere(TAB_LABEL.source));
     expect(collectCounts(counts)).toEqual({
-      "POST /api/domestic-price-sources/search": 1,
-      "POST /api/comparison/search": 1,
+      "POST /api/domestic-price-sources/search": 0,
+      "POST /api/comparison/search": 0,
     });
 
-    // ⑥ 탭을 여러 번 왕복해도 같다 — 한 번의 예외가 아니라 성질이라는 뜻이다.
+    // ⑤ 탭을 여러 번 왕복해도 같다 — 한 번의 예외가 아니라 성질이라는 뜻이다.
     for (let i = 0; i < 3; i += 1) {
       await act(async () => clickAnywhere(TAB_LABEL.smartstore));
       await act(async () => clickAnywhere(TAB_LABEL.source));
@@ -277,12 +293,7 @@ describe("수집은 상품 하나에 한 번 — 화면 이동은 크롤링을 �
     expect(counts).toEqual(afterEntry);
   });
 
-  /**
-   * 뒤로가기 후 재진입 — 트리를 통째로 버리고 새 root에 다시 그린다. 컴포넌트
-   * 인스턴스는 하나도 살아남지 않는다. 그래도 0이어야 한다: "이 상품은 이미
-   * 수집했다"는 사실의 수명은 컴포넌트가 아니라 **상품**이기 때문이다.
-   */
-  it("뒤로가기 후 재진입 — 트리가 통째로 새로 태어나도 0이다", async () => {
+  it("🔴 뒤로가기 후 재진입 — 트리가 통째로 새로 태어나도 0이다", async () => {
     const counts = countingFetch();
     await mount();
     const afterEntry = { ...counts };
@@ -295,111 +306,26 @@ describe("수집은 상품 하나에 한 번 — 화면 이동은 크롤링을 �
     await mount();
 
     expect(counts).toEqual(afterEntry);
-    // 돌아온 화면이 비어 있지도 않다 — 결과가 그 자리에 남아 있다. 예전에는
-    // 언마운트가 results까지 지워서 "빈 표 → 재조회 → 다시 채워짐"을 반복했다.
-    openDomesticRaw();
-    expect(visibleText(stageElement().outerHTML)).toContain("🕒");
-    expect(counts).toEqual(afterEntry);
+    expect(collectCounts(counts)["POST /api/comparison/search"]).toBe(0);
   });
 
   /**
-   * ③④의 「📊 시장 가격 비교」 접힘. 여기가 CollapsibleSection이 children을
-   * 통째로 언마운트하는 자리라, 접었다 펴는 것만으로 두 패널이 다시 태어난다.
+   * 🔴🔴 **제거의 «범위» 를 단언한다** — 두 표와 그 재검색 버튼이 셀러 화면의
+   *    어디에도 없다. 🔴 ③④ 단계(등록 준비/커머스 등록)까지 본다: 전에는 그 둘이
+   *    「📊 시장 가격 비교」 접힘 **안쪽** 에 있어 거기서만 열렸다.
    */
-  it("「📊 시장 가격 비교」를 접었다 펴도 추가 수집이 없다", async () => {
-    const counts = countingFetch();
-    // marketDone: true → ③ 등록 준비. 두 패널은 이 접힘 **안쪽**에 있다.
-    await mount({ marketDone: true });
-    // 접혀 있는 동안에는 패널이 마운트되지 않으므로 아직 0이다.
-    expect(collectCounts(counts)).toEqual({
-      "POST /api/domestic-price-sources/search": 0,
-      "POST /api/comparison/search": 0,
-    });
-
-    await act(async () => clickAnywhere("📊 시장 가격 비교"));
-    expect(collectCounts(counts)).toEqual({
-      "POST /api/domestic-price-sources/search": 1,
-      "POST /api/comparison/search": 1,
-    });
-    const afterOpen = { ...counts };
-
-    for (let i = 0; i < 3; i += 1) {
-      await act(async () => clickAnywhere("📊 시장 가격 비교")); // 접기
-      await act(async () => clickAnywhere("📊 시장 가격 비교")); // 펼치기
-    }
-    expect(counts).toEqual(afterOpen);
-  });
-
-  /**
-   * 다시 수집하는 길은 셀러가 직접 누르는 것뿐이다. 이 줄이 없으면 위 여섯
-   * 개의 0은 "수집이 아예 안 된다"와 구분되지 않는다.
-   */
-  it("[가격비교 다시 검색]을 누르면 — 그때만 — 다시 나간다", async () => {
-    const counts = countingFetch();
-    await mount();
-    expect(collectCounts(counts)["POST /api/comparison/search"]).toBe(1);
-
-    // 버튼은 두 패널 **안**에 있으므로 먼저 연다(여는 것은 수집이 아니다).
-    openDomesticRaw();
-    openOverseasRaw();
-    expect(collectCounts(counts)["POST /api/comparison/search"]).toBe(1);
-
-    const buttons = Array.from(stageElement().querySelectorAll("button")).filter((b) =>
-      (b.textContent ?? "").includes("가격비교 다시 검색"),
-    );
-    // 국내 · 해외 두 패널이 각자 자기 버튼을 갖는다.
-    expect(buttons).toHaveLength(2);
-    for (const button of buttons) {
-      await act(async () => {
-        button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      });
-    }
-    expect(collectCounts(counts)).toEqual({
-      "POST /api/domestic-price-sources/search": 2,
-      "POST /api/comparison/search": 2,
-    });
-  });
-});
-
-/**
- * MI-UX-FINAL-4 지시 ② — 「📊 시장 가격 비교」에 들어가면 바로 내용이 보인다.
- */
-describe("「📊 시장 가격 비교」는 두 번째 클릭을 요구하지 않는다", () => {
-  it("펼치면 국내·해외가 둘 다 펼쳐진 채로 서고 안쪽 접힘이 없다", async () => {
+  it("🔴🔴 두 후보 표 · 「📊 시장 가격 비교」 접힘 · [가격비교 다시 검색] 이 **없다**", async () => {
     countingFetch();
-    await mount({ marketDone: true });
-    await act(async () => clickAnywhere("📊 시장 가격 비교"));
-
-    // 「📊 시장 가격 비교」 섹션 **안쪽**만 본다 — 단계 본문의 다른 접힘
-    // (판매가격 확정 · 이미지 · Source Data)이 섞이면 무엇을 센 것인지 알 수 없다.
-    const section = Array.from(stageElement().querySelectorAll("section")).find((s) =>
-      (s.textContent ?? "").includes("📊 시장 가격 비교"),
-    );
-    if (!section) throw new Error("「📊 시장 가격 비교」 섹션을 찾지 못했다");
-    const text = visibleText(section.outerHTML);
-    // 두 블록의 제목이 둘 다 있고 —
-    expect(text).toContain("🇰🇷 한국 시장 · 국내 비교상품 (베타)");
-    expect(text).toContain("🌎 글로벌 시장 · 해외 판매처 가격 (베타)");
-    // 안쪽에 열고 닫을 것이 남아 있지 않다. 바깥 하나만 "접기 ▲"를 갖는다.
-    expect((text.match(/펼치기 ▼/g) ?? []).length).toBe(0);
-    expect((text.match(/접기 ▲/g) ?? []).length).toBe(1);
-    // 그리고 내용이 실제로 그 자리에 있다(조회 결과 표).
-    expect(section.querySelector("table")).not.toBeNull();
-  });
-
-  it("관측이 0건인 시장은 빈 상태 한 줄로 말한다 — 숫자를 지어내지 않는다", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn((input: unknown) =>
-        String(input).includes("/api/exchange-rates")
-          ? Promise.resolve({ ok: true, json: () => Promise.resolve({ rates: {}, source: "fallback" }) })
-          : Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true, results: [] }) }),
-      ),
-    );
-    await mount({ marketDone: true });
-    await act(async () => clickAnywhere("📊 시장 가격 비교"));
-    const text = visibleText(stageElement().outerHTML);
-    expect((text.match(new RegExp(MARKET_EVIDENCE_EMPTY, "g")) ?? []).length).toBe(2);
+    for (const options of [{}, { marketDone: true }]) {
+      await mount(options);
+      const text = visibleText(container.innerHTML);
+      expect(text, "🔴 국내 후보 표가 되살아났다").not.toContain(DOMESTIC_RAW_PANEL);
+      expect(text, "🔴 해외 후보 표가 되살아났다").not.toContain(OVERSEAS_RAW_PANEL);
+      expect(text, "🔴 중복 가격 영역이 되살아났다").not.toContain("📊 시장 가격 비교");
+      expect(text, "🔴 셀러에게 재검색 버튼이 되살아났다").not.toContain("가격비교 다시 검색");
+      /** 🔴 표 자체도 없다 — 제목만 지우고 표를 남기는 길을 막는다. */
+      expect(stageElement().querySelector("table"), "🔴 후보 표가 남아 있다").toBeNull();
+    }
   });
 });
 
@@ -633,48 +559,48 @@ describe("해외 조회 결과는 원자료에만 서고 판정 카드로 올라
   });
 
   /**
-   * 드릴다운 — 누르기 전에는 원자료가 화면에 없고, 누르면 그 자리에서 나온다.
-   * 그리고 나온 행은 **행마다 매칭 상태를 달고 있다**: 개수만 보여주고 근거를
-   * 숨기는 것이 이 작업이 없애려는 신뢰 실패이기 때문이다.
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 **WU-149 — 「누르면 나온다」가 「누를 것이 없다」로 뒤집혔다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 전 세 테스트는 드릴다운을 **열어서** ⒜ 표의 열 이름 ⒝ 행마다 등급 배지
+   *    ⒞ 한 번에 하나만 열림 을 단언했다. 그 「열 수 있음」이 WU-149 가 없앤 것이다.
+   * 🟢 **잃지 않은 것** — 이 구역의 핵심 명제(「조회 결과가 **판정 카드로 올라오지
+   *    않는다**」)는 위 두 테스트가 그대로 지킨다(WU-141-R3 C-5 · 가격 owner 하나).
+   * 🔴 그리고 아래 한 줄이 **더 센 형태** 로 그것을 잠근다 — 조회가 돌아도 셀러
+   *    화면 **어디에도** 후보 표가 서지 않는다(판정 카드든 원자료든).
    */
-  it("해외 패널을 열어야 판매처 · 국가 · 상품 · 가격 · 매칭상태가 나온다", async () => {
+  it("🔴🔴 WU-149 — 조회가 돌아도 셀러 화면에 **후보 표가 서지 않는다**", async () => {
     stubOverseasSearch(overseasResults());
     await mount();
-    // 누르기 전 — 원자료 표가 한 개도 없다(같은 사실이 두 곳에 서지 않는다).
-    // 접힘 요약 한 줄이 열 이름과 같은 낱말을 쓰므로 표 자체를 센다.
-    expect(stageElement().querySelector("table")).toBeNull();
-
-    openOverseasRaw();
-    const table = stageElement().querySelector("table");
-    expect(table, "드릴다운을 눌렀는데 표가 없다").not.toBeNull();
-    const headers = Array.from(table!.querySelectorAll("th")).map((th) => th.textContent?.trim());
-    expect(headers).toEqual(["판매처", "판매처 국가", "상품", "원본 통화 가격 · 원화 환산", "매칭상태"]);
+    /** 표가 **한 개도** 없다 — 열 드릴다운도, 올라올 판정 카드 표도 없다. */
+    expect(stageElement().querySelector("table"), "🔴 후보 표가 되살아났다").toBeNull();
     const stage = visibleText(stageElement().outerHTML);
-    // 행마다 판매처·국가·가격이 실제로 있다(요약이 센 그 세 곳 그대로다).
-    for (const cell of ["Smallable", "Childrensalon", "Kidsroom", "FR", "GB", "DE", "€45.00", "€52.00"]) {
-      expect(stage, `${cell}이(가) 원자료에 없다`).toContain(cell);
+    /** 🔴 후보 표의 열 이름·판매처 이름이 화면에 **없다**(제목만 지우는 길 차단). */
+    for (const cell of ["판매처 국가", "매칭상태", "Smallable", "Childrensalon", "Kidsroom"]) {
+      expect(stage, `🔴 "${cell}" 이(가) 셀러 화면에 남아 있다`).not.toContain(cell);
     }
-    // 그리고 행마다 매칭 등급 배지가 붙는다 — 개수의 근거가 행 단위로 보인다.
-    expect((stage.match(/🟢 동일상품/g) ?? []).length).toBeGreaterThanOrEqual(3);
+    /** 🔴 등급 배지(🟢 동일상품 / 🟡 동일상품 추정)도 이 단계 본문에 없다. */
+    expect(stage).not.toContain("🟡 동일상품 추정");
   });
 
-  it("등급이 섞인 조회에서는 원자료 행이 서로 다른 등급을 그대로 보여준다", async () => {
+  it("🔴 등급이 섞인 조회에서도 같다 — 단계 본문에 등급 행이 없다", async () => {
     stubOverseasSearch(overseasResultsMixedTier());
     await mount();
-    openOverseasRaw();
     const stage = visibleText(stageElement().outerHTML);
-    expect(stage).toContain("🟢 동일상품");
-    expect(stage).toContain("🟡 동일상품 추정");
+    expect(stage).not.toContain("🟡 동일상품 추정");
+    expect(stageElement().querySelector("table")).toBeNull();
   });
 
-  it("국내 패널을 열면 국내 표만 열린다 — 해외 표는 그대로 접혀 있다", async () => {
+  /**
+   * 🟢🟢 **엔진 보존의 마운트 축** — 국내 검색 설정 안내문은 그 패널의 글자다.
+   * 🔴 셀러 화면에서 사라졌다는 것이 「설정 화면이 사라졌다」가 아니다 —
+   *    `설정 > 국내 가격비교` 화면은 이 WU 가 **건드리지 않았다**.
+   */
+  it("🔴 국내 후보 표의 안내문도 셀러 화면에 없다", async () => {
     stubOverseasSearch(overseasResults());
     await mount();
-    openDomesticRaw();
     const stage = visibleText(stageElement().outerHTML);
-    // 국내 표는 조회가 막혀 있어 행이 없지만, 열린 것은 국내 쪽이다.
-    expect(stage).toContain("검색 대상은 설정 > 국내 가격비교에서 관리합니다.");
-    // 해외 원자료는 여전히 접혀 있다 — 한 번에 하나만 열린다.
-    expect(stageElement().querySelector("table")).toBeNull();
+    expect(stage).not.toContain("검색 대상은 설정 > 국내 가격비교에서 관리합니다.");
   });
 });

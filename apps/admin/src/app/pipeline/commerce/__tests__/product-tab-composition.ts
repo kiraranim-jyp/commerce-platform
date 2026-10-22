@@ -14,12 +14,12 @@ import { PriceCalculationDetail } from "../PriceCalculationDetail";
 import { PriceEditor } from "../PriceEditor";
 import { SourceDataView } from "../SourceDataView";
 import { MissingFieldsBulkPanel } from "../MissingFieldsBulkPanel";
-import { DomesticShopSearch } from "../DomesticShopSearch";
-import { ComparisonShopSearch } from "../ComparisonShopSearch";
+/* 🔴 WU-149 STEP 1 — `DomesticShopSearch` · `ComparisonShopSearch` ·
+   `MarketEvidenceVariant` import 를 뺐다. 🟢 **그 파일들은 그대로 있다**(엔진 보존) —
+   이 하니스가 그것을 **셀러 화면 트리에 더 이상 세우지 않는다**는 뜻이다. */
 import { BacklogPanel } from "../BacklogPanel";
 import { ImageInlineEditor } from "../../ImageInlineEditor";
 import { StageBody } from "../StageBody";
-import type { MarketEvidenceVariant } from "../market-evidence-frame";
 import { resolveStageFocus } from "../stage-focus";
 import { resolveWorkflow } from "../workflow";
 
@@ -487,8 +487,7 @@ function ProductTab(options: TabOptions): ReactElement {
   const [overseasMarketEvidence, setOverseasMarketEvidence] = useState<MarketEvidenceSummary | null>(
     options.overseasMarketEvidence ?? null,
   );
-  const [domesticEvidenceOpen, setDomesticEvidenceOpen] = useState(false);
-  const [overseasEvidenceOpen, setOverseasEvidenceOpen] = useState(false);
+  /* 🔴 WU-149 STEP 1 — 후보 표 둘의 접힘 state 를 지웠다(그 표가 화면에 없다). */
   /**
    * MI-COLLECTION-GUARD-1(CEO 지시, 2026-09-13) — **탭이 여기 있어야 하는 이유.**
    *
@@ -543,9 +542,9 @@ function ProductTab(options: TabOptions): ReactElement {
     marketDetailOpen: options.marketDetailOpen ?? false,
   });
 
-  /** MI-UX-FINAL-4 — CommerceWorkspace가 같은 한 줄로 정하는 그 값 그대로. */
-  const marketEvidenceVariant: MarketEvidenceVariant =
-    focus.marketEvidence === "COLLAPSED" ? "FLAT" : "DRILL_DOWN";
+  /* 🔴🔴 WU-149 STEP 1 — 여기 있던 `marketEvidenceVariant` 가 사라졌다.
+     `StageFocus.marketEvidence` 칸 자체가 없어졌기 때문이고, 그 칸이 정하던
+     「후보 표 둘의 접힘 모양」은 **그 표가 셀러 화면에서 제거돼** 정할 것이 없다. */
 
   /** 제품 전체에서 단 하나뿐인 상세 계산 노드. MI의 접힘 슬롯으로 내려간다. */
   const priceCalculationDetail: ReactNode = createElement(PriceCalculationDetail, {
@@ -572,8 +571,8 @@ function ProductTab(options: TabOptions): ReactElement {
     overseasMarketEvidence,
     /** 🔴 WU-141-R3 — ① 의 입력. 넘기지 않으면 `undefined` 라 기존 계약은 불변이다. */
     urlCandidateEvidence: options.transientRows ? [...options.transientRows] : undefined,
-    onOpenDomesticEvidence: () => setDomesticEvidenceOpen(true),
-    onOpenOverseasEvidence: () => setOverseasEvidenceOpen(true),
+    /* 🔴 WU-149 STEP 1 — `onOpenDomesticEvidence`/`onOpenOverseasEvidence` 를 뺐다.
+       프로덕션도 넘기지 않는다(열 대상이 없고, 패널 안 호출 지점이 **0** 이다). */
   });
 
   const stageBody = createElement(StageBody, {
@@ -587,32 +586,14 @@ function ProductTab(options: TabOptions): ReactElement {
        프로덕션과 갈라진다. */
     onGoToChannel: noop,
     openPriceSurfaceRequest: 0,
-    marketEvidence: createElement(
-      "div",
-      null,
-      createElement(DomesticShopSearch, {
-        title: product.title.value,
-        brand: product.brand.value,
-        sourceUrl: product.sourceUrl,
-        sku: product.sku.value,
-        description: product.description.value,
-        open: domesticEvidenceOpen,
-        onToggle: setDomesticEvidenceOpen,
-        variant: marketEvidenceVariant,
-      }),
-      createElement(ComparisonShopSearch, {
-        title: product.title.value,
-        brand: product.brand.value,
-        sourceUrl: product.sourceUrl,
-        sku: product.sku.value,
-        description: product.description.value,
-        onRequestPriceReview: noop,
-        open: overseasEvidenceOpen,
-        onToggle: setOverseasEvidenceOpen,
-        /* 🔴 WU-141-R3 C-5 — `onEvidenceChange` 는 **없어졌다**(③ 가격 집계 제거). */
-        variant: marketEvidenceVariant,
-      }),
-    ),
+    /* 🔴🔴🔴 WU-149 STEP 1 — 여기 있던 `marketEvidence` 슬롯(= `DomesticShopSearch` +
+       `ComparisonShopSearch` 두 후보 연구 표)을 **지웠다.**
+
+       🔴 이 하니스의 규칙은 「프로덕션(`CommerceWorkspace`)이 넘기는 prop 만 넘긴다」
+          이고(바로 위 주석), 프로덕션이 그 슬롯을 더 이상 넘기지 않는다.
+       🟢 그래서 이 하니스를 마운트하는 모든 계약이 **실제 셀러 화면과 같은 트리** 를
+          보게 된다 — 여기서 슬롯을 되살리면 하니스가 프로덕션과 갈라지고, 「후보 표가
+          사라졌다」는 계약이 **거짓으로 통과** 한다. */
     surfaces: {
       source: createElement(SourceDataView, {
         product,
