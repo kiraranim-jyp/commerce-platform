@@ -404,15 +404,102 @@ export interface MarketDecisionLines {
  */
 const MARKET_PLAIN_NAME: Record<"KR" | "OVERSEAS", string> = { KR: "국내", OVERSEAS: "해외" };
 
-/** 🔴 통화는 **나란히** — 환산 0 · 합계 0(`overseas-reference` 와 같은 축). */
-function decisionPriceText(j: MarketJudgement): string {
-  return j.byCurrency
-    .map((c) =>
-      c.n >= 2 && c.highest > c.lowest
-        ? `${c.currency} ${c.lowest} ~ ${c.highest}`
-        : `${c.currency} ${c.lowest}`,
-    )
-    .join(" / ");
+/* ═══════ 🔴🔴🔴 WU-148 — **시장이 다른 것은 «검색» 이 아니라 «가격 해석» 이다** ═══════
+ *
+ * 🔴 CPO(2026-10-22): 「국내와 해외의 차이는 **검색 시스템이 아니라 가격 해석** 이다」
+ * ```
+ * 🇰🇷 국내   «시장 가격대»     — 89,000 ~ 95,000 ⟹ 「대략 9만원대에 형성돼 있다」
+ * 🌎 해외   «최저 확인가»     — 어디에서 얼마에 가장 싸게 팔리는가
+ * ```
+ * 🔴 **1개를 가격대라고 부르지 않는다**(STEP 4 명시) — 「가격대 확정 불가」로 적는다.
+ * 🔴 **환산 0** — 통화를 섞어 하나의 숫자로 만들지 않는다.
+ */
+
+/** 🔴 국내 가격 신호의 **상태**. 1건과 가격대를 **다른 말** 로 적기 위한 축이다. */
+export type PriceBandKind = "NONE" | "SINGLE" | "BAND";
+
+export interface DomesticPriceBand {
+  kind: PriceBandKind;
+  /** 🔴 통화를 **지어내지 않는다** — 국내라고 KRW 로 단정하지 않는다(관측값을 쓴다). */
+  currency: string | null;
+  lowest: number | null;
+  highest: number | null;
+  n: number;
+}
+
+/**
+ * 🔴🔴 **국내는 「최저가 하나」가 아니라 «가격대» 다**(CPO STEP 4).
+ *
+ * 🔴 **새 집계를 만들지 않는다** — `buildPriceGuide(j,"KR")` 가 이미 낸 `byCurrency` 를 읽는다.
+ * 🔴🔴 **통화가 둘 이상이면 «가격대를 만들지 않는다»** — 그러려면 환산이 필요하고
+ *    환산은 금지다(`overseas-reference` 계약). 그 경우 **가장 건수가 많은 통화** 도
+ *    고르지 않는다 — 🟢 **단일 통화일 때만** 가격대를 말한다(정직한 상한).
+ */
+export function domesticPriceBand(g: PriceGuide): DomesticPriceBand {
+  if (g.byCurrency.length !== 1) {
+    return { kind: "NONE", currency: null, lowest: null, highest: null, n: 0 };
+  }
+  const c = g.byCurrency[0];
+  /** 🔴 **같은 금액 둘은 가격대가 아니다**(WU-139 B-2 와 같은 규칙). */
+  const kind: PriceBandKind = c.n >= 2 && c.highest > c.lowest ? "BAND" : "SINGLE";
+  return { kind, currency: c.currency, lowest: c.lowest, highest: c.highest, n: c.n };
+}
+
+/** 🔴 「가격대 확정 불가」를 **글자로** 말한다 — 1건을 가격대처럼 읽히게 두지 않는다. */
+export const PRICE_BAND_UNDETERMINED = "가격대 확정 불가";
+export const DOMESTIC_BAND_LABEL = "국내 시장 가격대";
+
+export function domesticBandText(b: DomesticPriceBand): string | null {
+  if (b.kind === "NONE" || b.currency == null || b.lowest == null) return null;
+  if (b.kind === "SINGLE") return `${b.currency} ${b.lowest} · ${PRICE_BAND_UNDETERMINED}`;
+  return `${b.currency} ${b.lowest} ─ ${b.highest}`;
+}
+
+/**
+ * 🔴🔴🔴 **해외는 «최저 확인가» 다** — 그런데 **통화가 섞이면 최저를 고를 수 없다.**
+ *
+ * 🔴 CPO 예시(「최저 USD 58」)는 **단일 통화 가정** 이다. 🔴 그러나 실측 S1 은
+ *    **CAD 64 · GBP 37 · USD 58 세 통화** 다 — 거기서 「GBP 37 이 최저」라고 적으면
+ *    **거짓** 이다(비교하려면 환산이 필요하고 환산은 금지다).
+ * 🟢 그래서 **통화별 최저** 를 적는다. 통화가 하나면 그것이 곧 「최저 확인가」다.
+ * 🔴 **새 집계 0** — `byCurrency[].lowest` 가 이미 그 값이다.
+ */
+export const OVERSEAS_LOWEST_LABEL = "최저 확인가";
+export const OVERSEAS_LOWEST_PER_CURRENCY_NOTE =
+  "통화가 여러 개라 하나의 최저가로 합치지 않습니다 — 통화별 최저 확인가입니다.";
+
+export function overseasLowestText(g: PriceGuide): string | null {
+  if (g.byCurrency.length === 0) return null;
+  return g.byCurrency.map((c) => `${c.currency} ${c.lowest}`).join(" · ");
+}
+
+/** 🟢 통화가 하나일 때만 「최저 확인가 X」라고 **단정** 할 수 있다. */
+export function overseasHasSingleCurrency(g: PriceGuide): boolean {
+  return g.byCurrency.length === 1;
+}
+
+/**
+ * 🔴🔴 **시장 블록의 가격 한 줄 — owner 하나.**
+ *
+ * 🔴 전까지 두 시장이 `priceGuideHeadline`(통화별 범위) **하나** 를 같이 썼다 ⟹
+ *    국내에도 「범위」가, 해외에도 「범위」가 나왔다. 🔴 CPO 가 가른 해석
+ *    (국내=가격대 · 해외=최저 확인가)이 **화면에 반영되지 않았다**.
+ * 🟢 이 함수가 그 분기를 **한 곳에서** 소유한다 — 호출부(MarketBlock)는 분기하지 않는다.
+ * 🔴 가격이 없으면 `null` — 호출부가 「확인된 가격이 아직 없습니다」를 쓴다(기존 계약).
+ */
+export function marketPriceHeadline(g: PriceGuide): string | null {
+  if (g.market === "KR") return domesticBandText(domesticPriceBand(g));
+  const lowest = overseasLowestText(g);
+  return lowest == null ? null : `${OVERSEAS_LOWEST_LABEL} ${lowest}`;
+}
+
+/** 🔴 그 한 줄이 **무엇인지** 를 셀러에게 말한다 — 숫자만 두면 「최저」인지 「가격대」인지 모른다. */
+export function marketPriceHeadlineLabel(g: PriceGuide): string | null {
+  if (g.market === "KR") {
+    const b = domesticPriceBand(g);
+    return b.kind === "BAND" ? DOMESTIC_BAND_LABEL : null;
+  }
+  return overseasHasSingleCurrency(g) ? null : OVERSEAS_LOWEST_PER_CURRENCY_NOTE;
 }
 
 /**
@@ -451,15 +538,54 @@ export function marketDecisionLines(j: MarketJudgement): MarketDecisionLines {
     };
   }
 
-  /** 🟢 **어느 시장에서** 확인됐는가 — 지어내지 않고 가격이 «있는» 시장만 적는다. */
-  const priced = (["KR", "OVERSEAS"] as const).filter(
-    (m) => (m === "KR" ? kr : os).pricedCount > 0,
-  );
-  const where = priced.map((m) => MARKET_PLAIN_NAME[m]).join("·");
-  const multi = j.byCurrency.length >= 2 || j.byCurrency.some((c) => c.n >= 2 && c.highest > c.lowest);
-  const lines = multi
-    ? [`${where} 동일상품 가격이 확인됩니다.`, `확인된 가격은 ${decisionPriceText(j)} 수준입니다.`]
-    : [`${where}에서 동일상품 판매가가 확인됩니다.`, `확인된 기준가격은 ${decisionPriceText(j)} 수준입니다.`];
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 WU-148 — **시장별로 «다른 해석» 을 말한다** (CPO STEP 1/4/5/9)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 전까지는 두 시장을 **한 문장** 으로 뭉쳐(「{국내·해외} 동일상품 가격이
+   *    확인됩니다」) **같은 해석** 을 적었다. 🔴 그런데 셀러가 두 시장에서 묻는 질문이
+   *    **다르다**(CPO):
+   * ```
+   * 🇰🇷 국내  「이 상품은 국내에서 대략 얼마에 형성돼 있나」  → **시장 가격대**
+   * 🌎 해외  「어디에서 얼마에 가장 싸게 팔리나」            → **최저 확인가**
+   * ```
+   * 🟢 그래서 **시장마다 한 줄씩** 적는다. 🔴 집계는 **하나도 새로 만들지 않았다** —
+   *    `buildPriceGuide` 가 이미 낸 `byCurrency` 를 두 해석기가 읽는다.
+   * 🔴 **「약 9만원대」를 만들지 않았다** — 그 말은 금액을 만원 단위로 **버림** 해야
+   *    나오고, 가격대가 89,000~105,000 이면 **거짓** 이 된다(새 반올림 규칙 = 새 정책).
+   *    🟢 그래서 **관측된 숫자를 그대로** 적는다.
+   */
+  const lines: string[] = [];
+
+  if (kr.pricedCount > 0) {
+    const band = domesticPriceBand(kr);
+    const text = domesticBandText(band);
+    if (band.kind === "BAND") {
+      lines.push(`${MARKET_PLAIN_NAME.KR} ${DOMESTIC_BAND_LABEL}는 ${text} 로 확인됩니다.`);
+    } else if (band.kind === "SINGLE") {
+      /** 🔴 **1개를 가격대라고 부르지 않는다**(CPO STEP 4 명시). */
+      lines.push(`${MARKET_PLAIN_NAME.KR}는 ${text} 입니다 — 확인된 가격이 1건이라 가격대를 말하지 않습니다.`);
+    } else {
+      /** 🔴 통화가 섞였다 — **환산해서 가격대를 만들지 않는다.** */
+      lines.push(`${MARKET_PLAIN_NAME.KR} 확인 가격의 통화가 여러 개라 하나의 가격대로 합치지 않았습니다.`);
+    }
+  }
+
+  if (os.pricedCount > 0) {
+    const lowest = overseasLowestText(os);
+    if (overseasHasSingleCurrency(os)) {
+      lines.push(`${MARKET_PLAIN_NAME.OVERSEAS} ${OVERSEAS_LOWEST_LABEL}는 ${lowest} 입니다.`);
+    } else {
+      /**
+       * 🔴🔴 **통화가 섞이면 「최저」를 하나로 고를 수 없다.** 실측 S1 은 CAD 64 ·
+       *    GBP 37 · USD 58 세 통화이고, 거기서 「GBP 37 이 최저」라고 적으면 **거짓**
+       *    이다(비교에 환산이 필요하고 환산은 금지다). 🟢 통화별로 적는다.
+       */
+      lines.push(`${MARKET_PLAIN_NAME.OVERSEAS} ${OVERSEAS_LOWEST_LABEL}는 통화별로 ${lowest} 입니다.`);
+      lines.push(OVERSEAS_LOWEST_PER_CURRENCY_NOTE);
+    }
+  }
 
   /** 🔴 **가격을 못 가져온 동일상품을 숨기지 않는다** — 그 사실도 결론의 일부다. */
   const unpriced = kr.unpricedCount + os.unpricedCount;

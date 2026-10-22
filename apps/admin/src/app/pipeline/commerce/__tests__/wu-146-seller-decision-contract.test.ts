@@ -6,6 +6,9 @@ import { MarketPriceComparison } from "../MarketPriceComparison";
 import {
   MARKET_RESULT_HEADING,
   SAME_CONFIRMED_COUNT_LABEL,
+  /** 🔴 WU-148 — 🌎 해외는 «최저 확인가» 다(통화가 섞이면 하나로 고르지 않는다). */
+  OVERSEAS_LOWEST_LABEL,
+  OVERSEAS_LOWEST_PER_CURRENCY_NOTE,
   buildMarketJudgement,
   marketDecisionLines,
 } from "../mi-same-candidates";
@@ -205,7 +208,13 @@ describe("1·2. seller-facing price owner = 1 · final judgement = 1", () => {
   it("🔴 1-c 결론이 **1차 화면** 에 있다 — 접힘 뒤로 숨지 않는다", () => {
     mount(S2);
     expect(firstScreenText()).toContain(MARKET_RESULT_HEADING);
-    expect(firstScreenText()).toContain("확인된 기준가격");
+    /**
+     * 🔴 **WU-148 에서 갱신** — 결론 문구가 **시장별 해석** 으로 갈렸다
+     *    (🇰🇷 「시장 가격대」 · 🌎 「최저 확인가」) ⟹ 「확인된 기준가격」이라는
+     *    **시장 공통 문구가 사라졌다.** 🟢 S2 는 해외 단일 통화라 그 해석이 나온다.
+     */
+    expect(firstScreenText()).toContain(OVERSEAS_LOWEST_LABEL);
+    expect(firstScreenText()).toContain("USD 58");
   });
 });
 
@@ -427,8 +436,15 @@ describe("순수 함수 — sellerDecision 상태 기계", () => {
     expect(one).toContain("USD 58");
     expect(one).not.toContain("58 ~ 58");
     expect(one).not.toMatch(/평균|적정|권장/);
+    /**
+     * 🔴🔴 **WU-148 에서 갱신·강화됨** — 통화가 섞이면 **최저가를 하나로 고르지 않는다.**
+     *    S1 은 CAD 64 · GBP 37 · USD 58 세 통화고, 거기서 「GBP 37 이 최저」라고 적으면
+     *    **거짓** 이다(비교에 환산이 필요하고 환산은 금지다). 🟢 통화별로 나란히 적고
+     *    **그 사실을 문장으로도** 말한다 ⟹ 단언이 하나 늘었다.
+     */
     const many = marketDecisionLines(buildMarketJudgement(S1)).lines.join(" ");
-    expect(many).toContain("CAD 64 / GBP 37 / USD 58");
+    for (const n of ["CAD 64", "GBP 37", "USD 58"]) expect(many).toContain(n);
+    expect(many).toContain(OVERSEAS_LOWEST_PER_CURRENCY_NOTE);
   });
 
   it("🔴 **금지 표현이 결론 문장에 없다**(순수 축에서도)", () => {

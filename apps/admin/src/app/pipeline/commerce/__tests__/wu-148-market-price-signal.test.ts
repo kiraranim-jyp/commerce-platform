@@ -1,0 +1,226 @@
+// @vitest-environment jsdom
+import { act, createElement } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { MarketPriceComparison } from "../MarketPriceComparison";
+import {
+  DOMESTIC_BAND_LABEL,
+  OVERSEAS_LOWEST_LABEL,
+  OVERSEAS_LOWEST_PER_CURRENCY_NOTE,
+  PRICE_BAND_UNDETERMINED,
+  buildMarketJudgement,
+  buildPriceGuide,
+  domesticBandText,
+  domesticPriceBand,
+  marketDecisionLines,
+  marketPriceHeadline,
+  overseasLowestText,
+} from "../mi-same-candidates";
+import type { GeminiTransientRow } from "../GeminiTransientCandidates";
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * WU-148 — **Market Price Signal** (CPO 2026-10-22)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🎯 **North Star** — 「후보를 많이 찾는 시스템이 아니라, 신뢰할 수 있는 동일상품
+ *    2~3개의 가격으로 **시장가격을 만들어주는** 시스템」.
+ *
+ * 🔴🔴 **이 WU 가 가른 것은 «검색» 이 아니라 «가격 해석» 이다**(CPO 문장):
+ * ```
+ * 🇰🇷 국내   «시장 가격대»   — 89,000 ~ 95,000  ⟹ 「대략 9만원대에 형성돼 있다」
+ * 🌎 해외   «최저 확인가»   — 어디에서 얼마에 가장 싸게 팔리는가
+ * ```
+ * 🔴 **MI frozen** — threshold · 8축 · SAME 기준 **조회 0**. Discovery · Registry ·
+ *    어댑터 **변경 0**. 이 파일의 단언 중 그것을 요구하는 것이 **하나도 없다**.
+ *
+ * ── 🔴 CPO 가 글자로 금지한 것 ──────────────────────────────────────────────
+ * ```
+ * ❌ 1개를 「가격대」라고 부르기            (STEP 4 — 「1개를 가격대라고 부르지 않습니다」)
+ * ❌ 통화를 환산해 하나의 숫자로 만들기      (STEP 5 — 「환산하지 않습니다」)
+ * ❌ 추천 판매가 / 적정가 / 권장가 계산      (「현재 데이터로 말할 수 있는 것은 시장 가격대」)
+ * ```
+ */
+
+const row = (over: Partial<GeminiTransientRow>): GeminiTransientRow =>
+  ({
+    source: "OVERSEAS_AUTO",
+    domain: "a.example",
+    title: "t",
+    imageUrl: null,
+    soldOut: null,
+    discoveredUrl: "https://a.example/p/1",
+    matchTruth: "EXACT_IDENTIFIER",
+    priceTier: "EXACT",
+    crossSellerVerdict: "SAME",
+    confidence: 1,
+    matchReasons: [],
+    crossSellerBlockers: [],
+    crossSellerConflicts: [],
+    priceAmount: null,
+    priceCurrency: null,
+    priceStatus: null,
+    market: "OVERSEAS",
+    basis: "TLD",
+    ...over,
+  }) as GeminiTransientRow;
+
+const kr = (amount: number, i: number): GeminiTransientRow =>
+  row({
+    market: "KR",
+    domain: `k${i}.kr`,
+    discoveredUrl: `https://k${i}.kr/p/${i}`,
+    priceAmount: amount,
+    priceCurrency: "KRW",
+    priceStatus: "VERIFIED_CURRENT",
+  });
+
+/** 🟢 CPO STEP 9 의 예시 그대로 — 국내 3곳이 **가격대** 를 만든다. */
+const KR_BAND = [kr(89000, 1), kr(92000, 2), kr(95000, 3)];
+/** 🟢 국내 1곳 — 🔴 **가격대가 아니다.** */
+const KR_ONE = [kr(89000, 1)];
+/** 🟢 S1 실측(WU-144) — 🌎 **세 통화** ⟹ 최저를 하나로 고를 수 없다. */
+const OS_MULTI = [
+  row({ domain: "kolkid.ca", discoveredUrl: "https://kolkid.ca/p/1", priceAmount: 64, priceCurrency: "CAD", priceStatus: "VERIFIED_CURRENT" }),
+  row({ domain: "cissywears.com", discoveredUrl: "https://cissywears.com/p/2", priceAmount: 37, priceCurrency: "GBP", priceStatus: "VERIFIED_CURRENT" }),
+  row({ domain: "www.tinyapple.net", discoveredUrl: "https://www.tinyapple.net/p/3", priceAmount: 58, priceCurrency: "USD", priceStatus: "VERIFIED_CURRENT" }),
+];
+/** 🟢 S2 실측 — 🌎 **단일 통화** ⟹ 「최저 확인가 USD 58」을 단정할 수 있다. */
+const OS_SINGLE = [
+  row({ domain: "a.com", discoveredUrl: "https://a.com/p/1", priceAmount: 58, priceCurrency: "USD", priceStatus: "VERIFIED_CURRENT" }),
+  row({ domain: "b.com", discoveredUrl: "https://b.com/p/2", priceAmount: 64, priceCurrency: "USD", priceStatus: "VERIFIED_CURRENT" }),
+];
+
+let container: HTMLDivElement;
+let root: Root;
+beforeEach(() => {
+  // @ts-expect-error — act() 안의 업데이트를 동기 처리하게 하는 전역 플래그.
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  container = document.createElement("div");
+  document.body.appendChild(container);
+  root = createRoot(container);
+});
+afterEach(() => {
+  act(() => root.unmount());
+  container.remove();
+});
+const mount = (rows: GeminiTransientRow[]): void => {
+  act(() => root.render(createElement(MarketPriceComparison, { rows })));
+};
+const q = (id: string) => container.querySelector(`[data-testid="${id}"]`);
+const flat = (): string => (container.textContent ?? "").replace(/\s+/g, " ").trim();
+const guide = (rows: GeminiTransientRow[], m: "KR" | "OVERSEAS") =>
+  buildPriceGuide(buildMarketJudgement(rows), m);
+
+/* ═══════════ A. 🇰🇷 국내 = 시장 가격대 ═══════════ */
+
+describe("A. 🇰🇷 국내는 «시장 가격대» 다", () => {
+  it("🟢🟢 A-1 3곳이면 **가격대** 를 만든다 — 최저가 하나로 줄이지 않는다", () => {
+    const b = domesticPriceBand(guide(KR_BAND, "KR"));
+    expect(b.kind).toBe("BAND");
+    expect(b.lowest).toBe(89000);
+    expect(b.highest).toBe(95000);
+    expect(domesticBandText(b)).toContain("89000");
+    expect(domesticBandText(b)).toContain("95000");
+    /** 🔴 1곳 문구가 **섞이지 않는다**. */
+    expect(domesticBandText(b)).not.toContain(PRICE_BAND_UNDETERMINED);
+  });
+
+  it("🔴🔴 A-2 **1개를 「가격대」라고 부르지 않는다**(CPO STEP 4 명시)", () => {
+    const b = domesticPriceBand(guide(KR_ONE, "KR"));
+    expect(b.kind).toBe("SINGLE");
+    const t = domesticBandText(b)!;
+    expect(t).toContain("89000");
+    expect(t).toContain(PRICE_BAND_UNDETERMINED);
+    /** 🔴 범위 기호(`─`)를 쓰지 않는다 — 그것이 「가격대」의 표식이다. */
+    expect(t).not.toContain("─");
+  });
+
+  it("🔴🔴 A-3 통화가 섞이면 **가격대를 만들지 않는다** — 환산 금지의 귀결", () => {
+    const mixed = [kr(89000, 1), row({ market: "KR", domain: "x.kr", discoveredUrl: "https://x.kr/p", priceAmount: 70, priceCurrency: "USD", priceStatus: "VERIFIED_CURRENT" })];
+    const b = domesticPriceBand(guide(mixed, "KR"));
+    expect(b.kind).toBe("NONE");
+    expect(domesticBandText(b)).toBeNull();
+  });
+
+  it("🟢 A-4 화면 — 가격대일 때만 **「국내 시장 가격대」** 라벨이 선다", () => {
+    mount(KR_BAND);
+    expect(q("price-guide-headline")!.textContent).toContain("89000");
+    expect(q("price-guide-headline-label")?.textContent).toBe(DOMESTIC_BAND_LABEL);
+    mount(KR_ONE);
+    /** 🔴 1건이면 그 라벨을 **만들지 않는다** — 헤드라인이 이미 「확정 불가」를 말한다. */
+    expect(q("price-guide-headline-label")).toBeNull();
+    expect(q("price-guide-headline")!.textContent).toContain(PRICE_BAND_UNDETERMINED);
+  });
+});
+
+/* ═══════════ B. 🌎 해외 = 최저 확인가 ═══════════ */
+
+describe("B. 🌎 해외는 «최저 확인가» 다", () => {
+  it("🟢🟢 B-1 단일 통화면 **최저 확인가를 단정** 한다", () => {
+    const g = guide(OS_SINGLE, "OVERSEAS");
+    expect(overseasLowestText(g)).toBe("USD 58");
+    expect(marketPriceHeadline(g)).toBe(`${OVERSEAS_LOWEST_LABEL} USD 58`);
+    /** 🔴 **최고가를 최저가로 적지 않는다**(64 가 아니다). */
+    expect(marketPriceHeadline(g)).not.toContain("64");
+  });
+
+  it("🔴🔴🔴 B-2 통화가 섞이면 **하나의 최저가를 고르지 않는다** — 환산이 필요하다", () => {
+    const g = guide(OS_MULTI, "OVERSEAS");
+    const t = overseasLowestText(g)!;
+    /** 🟢 셋을 **나란히** 적는다. */
+    for (const n of ["CAD 64", "GBP 37", "USD 58"]) expect(t).toContain(n);
+    /**
+     * 🔴🔴 **「GBP 37 이 최저」로 적으면 거짓이다** — 세 통화는 비교할 수 없다
+     *    (비교에 환산이 필요하고 환산은 `overseas-reference` 계약이 금지한다).
+     * 🟢 그래서 화면이 **그 사실을 문장으로** 말한다.
+     */
+    mount(OS_MULTI);
+    expect(q("price-guide-headline-label")?.textContent).toBe(OVERSEAS_LOWEST_PER_CURRENCY_NOTE);
+    expect(flat()).not.toContain("₩");
+    expect(flat()).not.toContain("약 ");
+  });
+
+  it("🟢 B-3 국내 해석을 해외에 쓰지 않는다(그 반대도) — owner 가 시장으로 분기한다", () => {
+    expect(marketPriceHeadline(guide(KR_BAND, "KR"))).not.toContain(OVERSEAS_LOWEST_LABEL);
+    expect(marketPriceHeadline(guide(OS_SINGLE, "OVERSEAS"))).not.toContain(DOMESTIC_BAND_LABEL);
+  });
+});
+
+/* ═══════════ C. 💡 결론이 시장별로 다른 말을 한다 ═══════════ */
+
+describe("C. 💡 판매 판단 — 시장별 해석", () => {
+  it("🟢🟢 C-1 국내는 **가격대로**, 해외는 **최저 확인가로** 말한다", () => {
+    const lines = marketDecisionLines(buildMarketJudgement([...KR_BAND, ...OS_SINGLE])).lines.join(" ");
+    expect(lines).toContain(DOMESTIC_BAND_LABEL);
+    expect(lines).toContain("89000");
+    expect(lines).toContain(OVERSEAS_LOWEST_LABEL);
+    expect(lines).toContain("USD 58");
+  });
+
+  it("🔴 C-2 국내 1건이면 결론도 **가격대를 말하지 않는다**", () => {
+    const lines = marketDecisionLines(buildMarketJudgement(KR_ONE)).lines.join(" ");
+    expect(lines).toContain("89000");
+    expect(lines).toContain("1건");
+    expect(lines).not.toContain(DOMESTIC_BAND_LABEL);
+  });
+
+  it("🔴🔴 C-3 **추천 판매가를 만들지 않는다**(원가·수수료·마진 0 · §00-B)", () => {
+    for (const rows of [KR_BAND, KR_ONE, OS_MULTI, OS_SINGLE, [...KR_BAND, ...OS_MULTI]]) {
+      mount(rows);
+      for (const bad of ["추천 판매가", "권장 판매가", "적정 판매가", "로 설정하세요", "예상 마진"]) {
+        expect(flat(), `추천가 어휘가 나왔다: ${bad}`).not.toContain(bad);
+      }
+      /** 🔴 「평균」은 **부정문으로만**(WU-139/144/146 과 같은 규칙 · 세 번 밟은 함정). */
+      for (const m of flat().match(/[^.。]*평균[^.。]*/g) ?? []) {
+        expect(m, `평균이 긍정문에 쓰였다: ${m}`).toMatch(/아닙니다|아니다/);
+      }
+    }
+  });
+
+  it("🟢 C-4 결론 owner 는 **하나** 다 — 시장이 둘이어도 영역은 하나다", () => {
+    mount([...KR_BAND, ...OS_MULTI]);
+    expect(container.querySelectorAll('[data-testid="seller-decision"]').length).toBe(1);
+    expect(container.querySelectorAll('[data-testid="market-price-comparison"]').length).toBe(1);
+  });
+});

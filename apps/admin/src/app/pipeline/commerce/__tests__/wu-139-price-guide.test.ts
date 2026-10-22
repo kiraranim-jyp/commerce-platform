@@ -14,6 +14,8 @@ import {
   buildPriceGuide,
   priceGuideCountNote,
   priceGuideHeadline,
+  /** 🔴 WU-148 — 🇰🇷 국내는 **가격대** 다. 1건이면 가격대가 아니라고 **글자로** 말한다. */
+  PRICE_BAND_UNDETERMINED,
 } from "../mi-same-candidates";
 import type { GeminiTransientRow } from "../GeminiTransientCandidates";
 
@@ -218,7 +220,14 @@ describe("C. 화면 (마운트 DOM)", () => {
   it("🔴🔴 C-2 가격 1건이면 기준가와 «1건 기준» 문장이 같이 선다", async () => {
     await mount({ rows: [row({ soldOut: false })] });
     expect(q("price-guide-domestic")).toBeTruthy();
-    expect(q("price-guide-headline")?.textContent).toBe("KRW 88000");
+    /**
+     * 🔴🔴 **WU-148 에서 갱신·강화됨** — CPO STEP 4: 「**1개를 가격대라고 부르지
+     *    않는다**」. 🇰🇷 국내 해석이 「시장 가격대」이므로 1건일 때 금액 **뒤에**
+     *    「가격대 확정 불가」가 붙는다 ⟹ 🟢 「금액이 있다」 **그리고** 「가격대가 아니다」
+     *    를 **둘 다** 단언한다(`toBe` 하나보다 세다 · 약화가 아니다).
+     */
+    expect(q("price-guide-headline")?.textContent).toContain("KRW 88000");
+    expect(q("price-guide-headline")?.textContent).toContain(PRICE_BAND_UNDETERMINED);
     expect(q("price-guide-note")?.textContent).toBe(PRICE_GUIDE_SINGLE_NOTE);
     expect(q("price-guide-counts")?.textContent).toContain("가격 확인 1곳");
   });

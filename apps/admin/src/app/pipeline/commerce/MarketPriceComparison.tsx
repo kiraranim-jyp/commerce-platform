@@ -35,7 +35,8 @@ import {
   PRICE_LINK_TEXT,
   buildPriceGuide,
   priceGuideCountNote,
-  priceGuideHeadline,
+  marketPriceHeadline,
+  marketPriceHeadlineLabel,
   SALE_STATE_TEXT,
   buildMarketJudgement,
   onSaleCountNote,
@@ -451,7 +452,14 @@ function MarketBlock({
   rows?: readonly GeminiTransientRow[] | null;
 }): JSX.Element {
   const g = buildPriceGuide(judgement, market);
-  const head = priceGuideHeadline(g);
+  /**
+   * 🔴🔴 WU-148 — **시장별 해석.** 전까지 두 시장이 `priceGuideHeadline`(통화별 범위)
+   *    **하나** 를 같이 써서 국내에도 「범위」가 나왔다. 🟢 이제 owner 가 분기를 갖는다 —
+   *    🇰🇷 **시장 가격대**(1건이면 「가격대 확정 불가」) · 🌎 **최저 확인가**.
+   * 🔴 호출부는 **분기하지 않는다**(그 규칙이 두 벌이 되면 한쪽만 고치는 날이 온다).
+   */
+  const head = marketPriceHeadline(g);
+  const headLabel = marketPriceHeadlineLabel(g);
   const suffix = market === "KR" ? "domestic" : "overseas";
   return (
     <div
@@ -480,6 +488,18 @@ function MarketBlock({
               <p data-testid="price-guide-headline" className="text-[12px] font-medium text-text-primary">
                 {head}
               </p>
+              {/**
+               * 🔴🔴 WU-148 — **그 숫자가 «무엇인지» 를 말한다.** 숫자만 두면 셀러가
+               *    「최저가인가 가격대인가」를 모른다. 🟢 🇰🇷 가격대일 때 「국내 시장
+               *    가격대」 · 🌎 통화가 섞였을 때 「하나의 최저가로 합치지 않습니다」.
+               * 🔴 라벨이 없는 상태(1건 국내 · 단일 통화 해외)는 **헤드라인 자체가**
+               *    그 사실을 말하므로 줄을 **만들지 않는다**(없는 말을 적지 않는다).
+               */}
+              {headLabel && (
+                <p data-testid="price-guide-headline-label" className="text-[11px] text-text-tertiary">
+                  {headLabel}
+                </p>
+              )}
               {/* 🔴 표본이 하나면 그 사실을 **문장으로** 말한다(1건 ≠ 시장 평균). */}
               <p data-testid="price-guide-note" className="text-[11px] text-text-tertiary">
                 {g.basis === "SINGLE" ? PRICE_GUIDE_SINGLE_NOTE : PRICE_GUIDE_RANGE_NOTE}
