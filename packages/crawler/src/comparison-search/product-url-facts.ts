@@ -1,4 +1,6 @@
 import { CRAWLER_USER_AGENT } from "../utils/user-agent";
+/** 🔴 WU-151 — 브랜드 표기 등록부(실측 전용 · 브랜드당 1개). 새 사전을 만들지 않았다. */
+import { lookupBrandByAliasInTitle } from "./brand-alias";
 import { decodeHtmlEntities } from "./html-entities";
 import { productFactsFromListing, productFactsFromShopifyProduct } from "./seller-facts";
 import { classifyUrlShape, toCrawlerUrl } from "./url-shape";
@@ -208,12 +210,43 @@ const BRAND_PATTERNS: RegExp[] = [
   /"brand"\s*:\s*\{[^}]*?"name"\s*:\s*"([^"]+)"/i,
 ];
 
-function brandFromHtml(html: string): string | null {
+/**
+ * ════════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴🔴 WU-151 — **네 번째 자리: 상품명이 말하는 브랜드 표기**(국내/해외 공통)
+ * ════════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 위 세 자리(og:brand · product:brand · JSON-LD brand)는 **영문권 마크업 전제** 다.
+ *    국내 판매처 실측(2026-10-22 · B226AC009):
+ * ```
+ * beaumonde.co.kr  세 자리 **전부 없음** · og:title 「**보보쇼즈** 26FW … B226AC009」
+ * ⟹ facts.brand = null ⟹ MI `BRAND_UNCONFIRMED` ⟹ 품번이 exact 인데도 **보류**
+ *    (그 후보의 MI 근거에 「**브랜드 품번 일치**」가 이미 적혀 있었다)
+ * ```
+ * 🟢 브랜드는 그 페이지에 **실제로 있다.** 없는 것을 지어내는 것이 아니라 읽는 것이다
+ *    (바로 위 `BRAND_PATTERNS` 주석이 세운 그 원칙 그대로).
+ *
+ * ── 🔴 안전 조건 셋(CPO 금지 3·4 를 지키는 방식) ────────────────────────────
+ * ```
+ * ① **등록부에 실측으로 올라온 표기만** 인식한다(`brand-alias.ts` · 브랜드당 1개)
+ * ② **상품명(og:title)만** 본다 — 본문을 보면 「추천 브랜드」를 상품 브랜드로 오인한다
+ * ③ 표기 **앞뒤 경계** 를 요구한다 — 「보보쇼즈st」 같은 유사품 표기를 읽지 않는다
+ * ```
+ * 🔴 **마지막 자리** 다 — 구조화 데이터가 있으면 그쪽이 언제나 이긴다(추가 전용).
+ * 🔴 도메인 분기 **0** — 보몽드 전용 예외가 아니다.
+ */
+/** 🔴 WU-151 — 계약 테스트가 **직접 부른다**(네트워크 없이 네 자리를 전부 단언하기 위해).
+ *    이 저장소의 기존 패턴과 같다(`brandFromTitleByClause` 도 같은 이유로 export 돼 있다). */
+export function brandFromHtml(html: string): string | null {
   for (const re of BRAND_PATTERNS) {
     const hit = re.exec(html)?.[1];
     if (!hit) continue;
     const clean = decodeHtmlEntities(hit).replace(/\s+/g, " ").trim();
     if (clean) return clean;
+  }
+  const ogTitle = OG_TITLE_RE.exec(html)?.[1];
+  if (ogTitle) {
+    const viaAlias = lookupBrandByAliasInTitle(decodeHtmlEntities(ogTitle).replace(/\s+/g, " ").trim());
+    if (viaAlias) return viaAlias;
   }
   return null;
 }
@@ -383,7 +416,12 @@ async function htmlPath(
   const micro = extractMicrodataFromHtml(html);
   const brand = brandFromHtml(html) ?? micro?.brand ?? null;
   const facts = productFactsFromListing({ title, url: crawlerUrl, brand });
-  const priced = priceFromJsonLd(html) ?? micro?.price ?? null;
+  /**
+   * 🔴 WU-151 — 고도몰 **판매가** 필드가 **마지막 자리** 다(추가 전용).
+   *    구조화 데이터(JSON-LD · microdata)가 값을 주면 그쪽이 언제나 이긴다 ⟹
+   *    기존 후보의 가격은 **한 글자도 바뀌지 않는다**.
+   */
+  const priced = priceFromJsonLd(html) ?? micro?.price ?? priceFromGodoSaleField(html) ?? null;
   return {
     status: "OK",
     crawlerUrl,
@@ -451,4 +489,50 @@ function priceFromJsonLd(html: string): { amount: number; currency: string } | n
   const currency = price.currency?.trim().toUpperCase();
   if (!currency) return null;
   return { amount: price.amount, currency };
+}
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴🔴 WU-151 STEP 10/11 — **고도몰 계열의 «판매가» 필드**(사이트 전용 아님)
+ * ════════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 **WU-079 가 REJECT 한 것과 다른 축이다.** 그때 거부된 것은 ⒜ generic 숫자 parser
+ *    (「N원」을 아무 데서나 줍는다 · 성공군 **5/9 오추출**) ⒝ 사이트 전용 adapter 다.
+ * 🟢 이것은 **플랫폼(고도몰)이 자기 폼에 쓰는 «이름 있는» 필드** 를 읽는다 —
+ *    도메인 분기 **0** · 숫자 줍기 **0**.
+ *
+ * ── 🔴 WU-059 의 HOLD 근거가 «부분 반증» 됐다(실측 2026-10-22) ────────────────
+ * ```
+ * WU-059: 「유일한 구조화 후보가 `set_goods_fixedPrice`(= **정가**) ⟹ 가격 오인 위험」
+ * 🟢 실측: 그 페이지에는 **둘 다** 있다
+ *      set_goods_price       83600      ← **판매가**(셀러가 실제로 파는 값)
+ *      set_goods_fixedPrice  88000.00   ← 정가
+ * ⟹ 🔴 **판매가 필드만 읽고 정가는 «절대» 읽지 않는다**(CPO STEP 10 명시).
+ * ```
+ *
+ * ── 🔴 통화를 지어내지 않는다(이 저장소의 통화 가드) ───────────────────────────
+ * 고도몰이 통화를 적지 않으므로 **두 번째 독립 출처의 동의** 를 요구한다 —
+ * 같은 금액이 페이지에 **「…원」** 으로도 적혀 있을 때만 `KRW` 로 확정한다.
+ * 🔴 동의가 없으면 **null** 이다(가격을 만들지 않는다).
+ */
+const GODO_SALE_PRICE_RE = /<input[^>]+name=["']set_goods_price["'][^>]+value=["']([0-9]+(?:\.[0-9]+)?)["']/i;
+
+export function priceFromGodoSaleField(html: string): { amount: number; currency: string } | null {
+  const raw = GODO_SALE_PRICE_RE.exec(html)?.[1];
+  if (!raw) return null;
+  const amount = Number(raw);
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  /**
+   * 🔴 두 번째 출처 — 같은 금액이 「원」 표기로도 나타나는가(천단위 쉼표 유무 둘 다).
+   *
+   * 🔴 **태그를 벗기고 본다.** 1차 구현은 raw HTML 에서 `83,600\s*원` 을 찾았고
+   *    **실패했다** — 실제 마크업이 `<strong>83,600</strong><span>원</span>` 이라
+   *    숫자와 「원」 사이에 태그가 들어간다. 🟢 그래서 금액 주변만 텍스트로 만든다.
+   */
+  const text = html.replace(/<[^>]*>/g, " ").replace(/&nbsp;/gi, " ");
+  const plain = String(Math.round(amount));
+  const grouped = plain.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const hasKrwEvidence = new RegExp(`(?:${plain}|${grouped})\\s*원`).test(text);
+  if (!hasKrwEvidence) return null;
+  return { amount, currency: "KRW" };
 }

@@ -91,10 +91,24 @@ describe("B. 배선 경계", () => {
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .replace(/\/\/.*$/gm, "");
 
-  /** 🔴 JSON-LD 가 **먼저** 다 — 순서가 뒤집히면 기존 결과가 바뀐다. */
+  /**
+   * 🔴 JSON-LD 가 **먼저** 다 — 순서가 뒤집히면 기존 결과가 바뀐다.
+   *
+   * 🔴🔴 **WU-151 — 계약의 «성질» 은 그대로이고 사슬의 꼬리만 길어졌다**(2026-10-22).
+   *    그 WU 가 가격에 **세 번째 자리**(고도몰 판매가)를 더했다. 🟢 **추가 전용** 이라
+   *    구조화 둘이 값을 주면 **그 값이 그대로 이긴다** — 기존 후보의 가격은 불변이다.
+   *    🔴 새 자리를 **앞으로** 옮기면 이 단언이 FAIL 한다(그것이 이 계약의 목적이다).
+   */
   it("🔴 JSON-LD 가 microdata 보다 우선한다", () => {
-    expect(src).toContain("priceFromJsonLd(html) ?? micro?.price ?? null");
+    expect(src).toMatch(/priceFromJsonLd\(html\)\s*\?\?\s*micro\?\.price\s*\?\?/);
     expect(src).toContain("brandFromHtml(html) ?? micro?.brand ?? null");
+    /** 🔴 구조화 둘이 **앞** 이라는 사실을 좌표로도 잠근다. */
+    const jsonLdAt = src.indexOf("priceFromJsonLd(html)");
+    const microAt = src.indexOf("micro?.price");
+    const godoAt = src.indexOf("priceFromGodoSaleField(html)");
+    expect(jsonLdAt).toBeGreaterThan(-1);
+    expect(microAt).toBeGreaterThan(jsonLdAt);
+    if (godoAt > -1) expect(godoAt, "🔴 새 가격 자리가 구조화보다 앞으로 왔다").toBeGreaterThan(microAt);
   });
 
   /** 🔴🔴 **sku 를 올리지 않는다** — identity 를 바꾸지 않겠다는 계약이다. */

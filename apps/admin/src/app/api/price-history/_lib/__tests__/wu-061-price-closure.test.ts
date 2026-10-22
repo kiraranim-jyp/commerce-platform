@@ -51,19 +51,52 @@ describe("② 가격 증거 우선순위", () => {
    * 🔴 후보 경로는 **두 층** 만 본다. OpenGraph 층(`extractFromOpenGraph`)은 리포에
    *    존재하지만 **원상품 경로 전용** 이고, 후보 경로에 넣으면 §② 불일치가 들어온다.
    */
-  it("🔴 후보 가격 경로가 JSON-LD → microdata 둘뿐이다 (meta 층 미사용)", () => {
+  /**
+   * ══════════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 **WU-151 — 「둘뿐이다」가 「셋이고, 셋째는 조건이 둘이다」로 바뀌었다**
+   * ══════════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 **WU-061 이 거부한 것은 「meta 층」이고 그 금지는 그대로 유효하다** — 근거도
+   *    그대로다(증분 회수 **0** 인데 mustit 226,000 ↔ 233,000 불일치가 들어온다).
+   * 🟢 WU-151 이 더한 것은 **다른 축** 이다(CPO STEP 11 이 지시한 「일반화 가능한 필드」):
+   * ```
+   * 거부된 축   meta/og:price · generic 「N원」 줍기   ← 어디서 왔는지 모르는 숫자
+   * 더한 축     고도몰 **이름 있는 폼 필드** `set_goods_price`(판매가)
+   *             **+ 두 번째 독립 출처**(화면의 「…원」 표기)가 동의할 때만 KRW 확정
+   * ```
+   * 🔴 그리고 **정가(`set_goods_fixedPrice`)는 읽지 않는다** — WU-059 가 경고한 그 칸이다.
+   * 🔴 **실측 증분**(2026-10-22 · B226AC009): beaumonde **KRW 83,600** 회수 ·
+   *    tier SAME · market **KR** ⟹ WU-061 이 적은 「증분 회수 0」이 이 축에서는 **아니다**.
+   *
+   * 🔴🔴 그래서 **금지는 약화하지 않는다** — 아래가 그 금지를 더 정확하게 잠근다.
+   */
+  it("🔴 후보 가격 경로 — 구조화 둘 + 「이름 있는 필드」 하나(meta 층·generic parser 금지 유지)", () => {
     const src = readFileSync(
       path.join(__dirname, "../../../../../../../../packages/crawler/src/comparison-search/product-url-facts.ts"),
       "utf8",
     )
       .replace(/\/\*[\s\S]*?\*\//g, "")
       .replace(/\/\/.*$/gm, "");
-    expect(src).toContain("const priced = priceFromJsonLd(html) ?? micro?.price ?? null");
-    /** 🔴 OpenGraph 를 후보 경로에 끌어오지 않는다. */
+    /** 🔴 순서 — 구조화 둘이 **먼저** 다(추가 전용). */
+    expect(src).toMatch(
+      /const priced = priceFromJsonLd\(html\) \?\? micro\?\.price \?\? priceFromGodoSaleField\(html\) \?\? null/,
+    );
+    /** 🔴 OpenGraph 를 후보 경로에 끌어오지 않는다(WU-061 의 그 금지 — 유지). */
     expect(src).not.toContain("extractFromOpenGraph");
-    /** 🔴 generic body 숫자 파서를 만들지 않는다(CPO 금지). */
-    expect(src).not.toMatch(/원\s*['"`]/);
-    expect(src).not.toContain("fixedPrice");
+    /** 🔴🔴 **정가를 읽지 않는다** — 코드에 그 칸 이름이 없어야 한다. */
+    expect(src).not.toContain("set_goods_fixedPrice");
+    /**
+     * 🔴🔴 **generic 숫자 파서 금지 — 더 정확하게 잠근다.**
+     *    「원」은 금액의 **출처가 될 수 없고** 오직 **통화 확인용** 이어야 한다:
+     *    ⒜ 금액은 **이름 있는 필드** 에서만 온다(`name="set_goods_price"` 캡처)
+     *    ⒝ 「원」 정규식은 **`.test(`** 로만 쓰인다(캡처해서 금액으로 쓰지 않는다)
+     */
+    expect(src).toMatch(/name=\[["'\\\]]*set_goods_price/);
+    const wonUse = src.match(/[^\n]*원[^\n]*/g) ?? [];
+    expect(wonUse.length, "「원」이 쓰인 코드 줄이 예상보다 많다").toBeLessThanOrEqual(2);
+    for (const line of wonUse) {
+      expect(line, `🔴 「원」이 금액 «출처» 로 쓰였다: ${line.trim()}`).toMatch(/\.test\(|RegExp\(/);
+    }
   });
 
   /** 🔴 가격 신뢰도 owner 는 하나다 — `priceSource === "detail"` 하나로만 승격된다. */
