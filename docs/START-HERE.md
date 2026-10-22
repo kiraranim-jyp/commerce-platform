@@ -124,7 +124,58 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
-## 6. NEXT WORK — **WU-156 = NO-GO / Case C 로 닫혔다 · 다음은 CPO 지정**
+## 6. NEXT WORK — 🔴🔴 **CTO 작업 없음 · 「Gemini 크레딧 승인」 대기**(CPO 확정 2026-10-22)
+
+> 🔴🔴 **코드를 만지지 않는다.** 다음 단계는 개발이 아니라 **비용 승인** 이다.
+> 🟡 CEO 액션 **없음** · CTO 추가 작업 **없음**.
+
+### 🔴 CPO 가 고정한 순서 — 건너뛰지 않는다
+
+```
+① 크레딧 확보(CEO 비용 승인)
+② **검증용** prompt / 후보 상한 최소 변경   ← 🔴 지금 하지 않는다(별도 작업지시로 온다)
+③ B226AC009 **1회** 측정
+④ CPO 판정
+⑤ 그때 비로소 **운영 ON 여부** 결정
+🔴 `MI_GEMINI_DISCOVERY_ENABLED=true` 는 **아직 금지** — 전역 스위치라
+   `/today` 일괄이 잔액을 한 번에 태운다
+```
+
+### 🔴 ② 가 열릴 때 바꿀 자리 — **좌표만** 적어 둔다(재조사 금지)
+
+```
+prompt       packages/crawler/src/discovery-core/google-discovery.ts:188 `buildPrompt`
+             🔴 현재 「최대 3개까지」 + **「국내/한국/Korea」가 한 글자도 없다**
+             추가할 지시(CPO 문장) — 「국내/한국 판매처를 **우선** 조사하고 실제 상품
+             상세 페이지 URL 만 반환한다 · 검색결과/홈/카테고리/기획전 제외 ·
+             **가능한 한 많은 서로 다른 판매처** 를 찾는다」
+후보 상한     apps/admin/src/app/api/price-history/_lib/run-domestic-price-check.ts
+             :1237 `maxCandidates: 3` · :1238 `targetUsable: 3`  → **3 → 최소 10**
+             (🔴 :1247 `maxQueries: 1` 은 **호출 수** 다 — 섞지 않는다)
+검증 하니스   apps/admin/.../__tests__/wu-157-gemini-supply.test.ts (`WU_157_PROBE=1`)
+             🟢 **이미 있다** — 운영 함수를 그대로 부르고 KPI 까지 센다. 새로 만들지 않는다
+```
+
+### 🔴🔴 WU-157 결론 — **「측정불가」이고 NO-GO 가 아니다**(CPO 정정)
+
+> 「Gemini 가 국내 후보를 못 찾는다」가 **아니라** 「Gemini 의 국내 후보 공급 능력을
+> **아직 측정하지 못했다**」. 🔴 그래서 **NO-GO 를 내리지 않는다.**
+
+```
+실측  운영 `collectGeminiCandidatePool` 1회 → **402 Payment Required**(선불 크레딧)
+🔴 하니스가 1차에 「후보 0 → NO-GO」를 찍었고 **그것이 거짓 결론이었다** ⟹
+   `outcomes.OK === 0` 이면 **판정을 거부하는 게이트** 를 박았다(WU-133 형태)
+🟢🟢 그 전에 코드로 확정된 사실 셋 — 🔴 **다시 조사하지 않는다**
+   ① 실제 Google Search grounding 을 쓴다(`tools: [{ google_search: {} }]`)
+   ② **`candidateUrls` 를 요구하지 않는다** ⟹ 자동 `/check`(body `{ snapshotId }` 뿐)에서
+      **닿는 유일한** 국내 공급 생산자다(AI URL 풀은 입력이 없어 영원히 안 돈다)
+   ③ prompt 에 국내 지시 **0** · 후보 상한 **3**(국내·해외를 **합친** 수)
+⟹ 🟢 「제대로 검색되기만 하면 원하는 구조에 상당히 가깝다」(CPO 문장)
+```
+
+---
+
+## 6-C. [완료 기록] WU-156 — Case C / NO-GO
 
 ### 🔴🔴🔴 WU-156 결론 — **검색어를 바꿔도 국내 상세 URL 은 열리지 않는다**(코드 0)
 
