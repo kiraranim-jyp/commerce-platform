@@ -124,7 +124,85 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
-## 6. NEXT WORK — 🟡 **WU-169: GO 조건 충족 · 최소 수정은 «건초더미 한 줄»**
+## 6. NEXT WORK — 🔴 **WU-170: 변경은 «발화했지만» SAME 에 1점 부족 · 되돌렸다**
+
+> 🔴🔴 **CPO 성공조건 미충족 ⟹ 배포하지 않았고 운영 코드를 되돌렸다.**
+> 조건은 「Biskuit 이 운영 MI 에서 **SAME** 으로 회수 **+** 전체 regression **green**」이었다.
+
+### 🟢🟢 변경은 **실제로 발화했다**(운영 경로 실측)
+
+```
+비스킷 후보 —  품번확인 🔴 → **🟢**  ·  축 합계 **1 → 4**  ·  verdict **SIMILAR → PRESUMED_SAME**
+🟢 트렌비 **SAME 유지**(7점) · 🟢 luxboy **미회수 유지**(DIFFERENT 방어)
+🟢 baseline precision **불변** — 통합 GT 64: EXACT 16 · SAME 14 · **False SAME 2** · 87.5%
+```
+
+### 🔴 그런데 **SAME 에 1점 부족하다**(`SAME_MIN_AXES = 5` · 비스킷 4점)
+
+```
+🔴 브랜드까지 고쳐도(WU-164 CF-A **재측정**) blocker 가 **`NO_TITLE_OVERLAP` 하나** 남고
+   점수는 **그대로** 다 ⟹ 남은 1점은 **TITLE 축** 이고 그것이 **한글 제목 문제**(WU-166/167)
+⟹ 🔴🔴 **두 병목은 «더해져야» 한다** — WU-170 은 그중 **하나** 를 닫는다
+```
+
+### 🔴 그리고 기존 CF 측정 기록 **4건** 이 움직였다
+
+```
+🟢 WU-063 — 금지된 완화(CF-4)가 Human DIFFERENT **C23·C24** 를 **더는 올리지 않는다**
+            ⟹ **방어가 강해졌다**(안전한 방향)
+🟢 WU-064 — 결론 방향 동일(tier 변화 없음)
+🔴 WU-065 / WU-068 — **C47(= biskuit · Human SAME)의 CF 승격이 사라졌다**
+   🔴 baseline 은 **불변** 이고 C47 의 행도 **글자 그대로 같다**(토글로 대조 확인)
+   🔴 **기전 미규명** ⟹ 그 상태로 앵커를 갱신하지 않았다
+```
+
+🟢 대조 방법 — `urlCodeHaystacks` 유무를 소스로 감지하는 토글로 **전/후를 같은 세션에서**
+돌렸다(`WU170_OFF=1`). 🟢 그 토글은 **보고 후 제거** 했다(디버그 스위치 잔존 금지).
+
+### 🟢 계약은 **되돌린 상태에서도 살아 있다**(쿠팡 고시 선례)
+
+`wu-170-url-code-segments.test.ts` — `urlCodeHaystacks` 유무를 **스스로 감지** 한다:
+```
+🔴 Z-1  **현재 결함을 고정** 한다 — URL 에 `b226ac009` 가 분명히 있는데 **못 찾는다**
+        🟢 수정이 들어가면 그 단언이 **FAIL 로 뒤집히고 그것이 수정의 증거** 다
+🟢 Z-2  마지막 세그먼트는 **지금도** 찾는다(결함 범위를 좁혀 둔다)
+🟢 Z-3  luxboy 방어는 **수정 전/후 둘 다** 지켜야 한다
+🟢 Z-4  비교 규칙·문턱 상수가 그대로다(수정 범위 밖임을 잠근다)
+🟢 A·D  **적용되면 자동으로 켜진다** — 특히 **D(세그먼트 경계)** 가 핵심 안전장치다
+```
+
+### 🔵 적용할 **정확한 변경**(다음 WU 가 그대로 쓴다 · 재설계 금지)
+
+`packages/crawler/src/comparison-search/cross-seller.ts` — `slugCarriesCode`(:679)
+```
+slug 하나 대신 **건초더미 목록** 을 돌린다
+  needle = normalizeFactText(code).replace(/[^a-z0-9]/g, "")   ← 비교 규칙 그대로
+  for (const hay of urlCodeHaystacks(facts))
+      if (hay.replace(/[^a-z0-9]/g,"").includes(needle)) return true
+
+새 함수 `urlCodeHaystacks(facts)` —
+  ① `facts.urlSlug ?? extractUrlSlug(facts.sourceUrl)` 를 **먼저** 넣는다(기존 동작 포함)
+  ② `decodeURIComponent(new URL(sourceUrl).pathname).split("/")` 의 **각 세그먼트** 를
+     `normalizeFactText` 로 넣는다
+🔴 **`pathname` 을 통째로 이어붙이지 않는다**(음성대조 M2 가 3 FAIL 로 잠근다)
+```
+🟢 음성 대조 실측 — **M1**(세그먼트 스캔 제거) **2 FAIL** · **M2**(pathname 이어붙이기)
+**3 FAIL**(거짓 일치 2 + 소스 앵커 1) → **바이트 복구**.
+
+### 🔵 CPO 결정 사안 둘
+
+```
+① **PRESUMED_SAME 까지만 올리는 것을 받아들일 것인가** — 그러면 WU-170 을 적용하고
+   움직인 CF 기록 4건의 앵커를 갱신한다(🔴 단 C47 기전 규명이 선행돼야 한다)
+② **TITLE 축(한글 제목)을 함께 열 것인가** — 그래야 비스킷이 **SAME** 에 닿는다
+   🔴 그 축은 WU-166/167 이 「기존 자산으로 성립하지 않는다」로 닫아 둔 자리다
+```
+
+🟢 운영 코드 **0**(되돌렸다) · 배포 **0** · 회귀 **631 files / 8,790 passed · 0 failed** · typecheck **0**.
+
+---
+
+## 6-T. [종료] WU-169 — URL 품번 회수 가능성 GO
 
 > 🟢🟢 **통제군 3/3 기대 일치 · DIFFERENT 오회수 0 · 잃은 것 0 · 숫자-only 가드 유지.**
 > 🔴 단 분모 39 · 원상품 소수 ⟹ **HOLD 요소를 같이 적는다**(아래 ⑦).
