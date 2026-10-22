@@ -154,7 +154,81 @@ GT URL
 
 ---
 
-## 🟡 다음 세션 — STEP 4/5 라이브 하니스 (설계 완료 · 조사 불필요)
+## 🟢🟢 STEP 4/5 — **측정 완료.** 그리고 전제가 «또» 뒤집혔다 (2026-10-22)
+
+🟢 하니스 `wu-147-discovery-divergence.test.ts` — **HTTP 0 · DB 0 · 게이트 없이 항상 돈다**
+(`findPriceSourceAdapter` 는 순수 Map 룩업이다 · GT 는 fixture 에서 **직접 읽는다**).
+
+🔴🔴 **기존 funnel 하니스가 이 칸을 못 쟀던 이유를 먼저 적는다** —
+`wu-138-domestic-funnel` · `wu-138-same-funnel` 은 GT URL 을 `collectUrlCandidatePool`
+(= **AI URL 풀**)로 넣는다 ⟹ 그 경로는 **등록부·어댑터를 거치지 않는다**(URL 을 직접 받으니까).
+그래서 그 하니스들은 **MI 축만** 쟀고 「등록부 검색이 그 판매처를 뒤질 수 있었는가」는
+**한 번도 측정되지 않았다.** 🟢 이번에 그 칸을 처음 쟀다.
+
+```
+GT **36건**(고유 URL · wu-112 + wu-125) · human SAME **24** · DIFFERENT **10**
+
+DOMESTIC  human SAME  **2**  → 어댑터 O **0** · X 2   (beaumonde.co.kr · biskuit.kr)
+OVERSEAS  human SAME **22**  → 어댑터 O **3** · X 19
+   🟢 O 는 `junioredition.com` **3건뿐**
+   ⚠ `bobochoses.com` **2건** 은 **다른 catalog 에 어댑터가 있다**(DOMESTIC) ⟹ 단일 키가 막았다
+human DIFFERENT 10 → 그중 어댑터 O **1** (🔴 어댑터를 늘리면 이쪽도 같이 들어온다)
+등록부 전수 — DOMESTIC **8** · OVERSEAS **13**
+```
+
+🔴🔴🔴 **그래서 어댑터 게이트는 «국내/해외 divergence 지점이 아니다»**:
+```
+국내 0/2 (0%)   해외 3/22 (13.6%)
+⟹ 🔴 **어댑터 ceiling 은 양쪽을 거의 같게 막는다.** 「해외는 별도 검색기가 후보를
+   만들어 주고 국내는 제약이 많다」는 전제가 **이 숫자로 반증된다.**
+🟢 해외가 화면에 후보를 많이 내는 이유는 **등록부 검색이 아니다** —
+   **AI URL 풀 + `__overseas_auto__` transient** 다.
+🔴 그리고 그 비대칭은 **WU-118 이 이미 측정** 했다 —
+   AI 답변 URL 중 **국내 6개·4개** vs **해외 30개·25개.** ⟸ **이것이 진짜 공급 비대칭** 이다
+```
+
+### 🔴 STEP 6 Case A — **성립하지 않는다**(측정으로 기각)
+
+CPO 가 고정한 우선순위를 **순서대로** 대조했다:
+```
+① 기존 adapter 가 그 domain 을 처리할 수 있는가
+   🔴 아니다 — 등록된 8개는 **전부 사이트 전용 파서**(`searchLooxloo`·`searchRulii` …).
+      biskuit.kr(Cafe24) · beaumonde.co.kr(`goods_view.php`)용 파서는 **없다**
+② 동일 계열 adapter 재사용 가능한가
+   🔴 아니다 — Cafe24/고도몰 **generic 파서가 등록부에 0개** 다(전부 도메인 1:1)
+③ 기존 generic discovery 경로가 있는가
+   🟢🟢 **있다 — `collectUrlCandidatePool`(AI URL 풀).** 그리고 그 경로가 **이미 이 GT 2건을
+      MI 까지 올린다**(WU-138 이 전수로 측정했다: biskuit 는 PRESUMED_SAME · KRW 88,000 ·
+      beaumonde 는 PRESUMED_SAME · market UNKNOWN)
+⟹ 🔴🔴 **어댑터를 만들어도 이 GT SAME 2건은 «이미 도달해 있다»** — 어댑터 때문에
+   사라지는 것이 아니다. ⟹ **Case A 의 「최소 확장」조차 불필요하다**
+④ 그래서 최소 discovery 확장을 **하지 않았다**(CPO 금지: domain별 개별 예외 ·
+   26개 일괄 생성 · Registry 대량 확장 — 2 도메인 전용 어댑터는 ①에 해당한다)
+```
+
+🔴 **`bobochoses.com` ⚠ 는 «수정 대상이 아니다»** — 그 호스트는 **원상품 자신** 이고
+`isSelfReferenceCandidate` 가 올바르게 제외한다(WU-103/104 가 같은 것을 관측했다:
+「bobochoses.com/ko-kr/… → 자기참조 제외」). 🟢 단일 catalog 키가 실재한다는 **구조적
+사실은 계약으로 고정** 했고, **그 2건을 살리는 수정은 하지 않았다**(살려도 자기참조다).
+
+### 🔴🔴 STEP 5 — 첫 divergence 확정 (국내는 «두 군데», 그 앞에 «하나» 가 더 있다)
+
+```
+① 🔴 **공급(AI URL)**        국내 6·4 : 해외 30·25  (WU-118 측정)   ← **첫 divergence**
+② 🔴 **어댑터 게이트**        국내 0/2 : 해외 3/22    (이번 측정)     ← 양쪽 공통 · divergence 아님
+③ 🔴 **MI 축**              국내 SAME 0(BRAND_* · NO_TITLE_OVERLAP · 분모 2 · 완화 REJECT)
+🟢 ①②③ 사이의 모든 단계(canonical · withConfidence · judgeDomesticCandidate ·
+   classifyCandidateMarket · sale · price · 집계 · 화면)는 **국내/해외가 동일** 하다
+```
+
+🔴🔴 **그러므로 이번 WU 에서 운영 코드를 바꾸지 않은 것이 결론이다** —
+「첫 divergence 만 최소 수정」의 그 지점이 **① 공급** 이고, 공급을 늘리는 수단은
+**AI 정책(Gemini flag · 비용) 또는 Registry 확대** 뿐이며 **둘 다 CPO 결정축** 이다.
+🔴 **threshold 를 낮추거나 어댑터를 지어 국내 SAME 을 만들지 않았다**(CPO 명시 금지).
+
+---
+
+## 🟡 [기록] STEP 4/5 설계 (위에서 실행 완료)
 
 🔴 **새 상품으로 테스트하지 않는다**(CPO) · **새 fixture 0** · GT 는 이미 있다:
 ```

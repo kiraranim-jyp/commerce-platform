@@ -87,10 +87,11 @@ MI 문제면 **별도 WU** 다. 이번 WU 에서 **몰래 고치지 않는다.**
 
 ---
 
-## 6. Current WU — 🔵 **WU-147 STEP 4/5 (라이브 측정)**
+## 6. Current WU — 🟡 **WU-147 측정 완료 · CPO 결정 대기 (CTO 코드 작업 없음)**
 
-🔴🔴 **전문 `docs/HANDOFF-WU-147.md` 하나만 열면 된다 — 조사 단계가 «없다».**
-🔴 **CEO 테스트를 요청하지 않는다**(CPO 명시 · WU-147 이 끝나기 전에는).
+🔴🔴 **전문 `docs/HANDOFF-WU-147.md`.** 🔴 **CEO 테스트를 요청하지 않는다**(CPO 명시).
+🔴🔴 **CPO 가 열어야 하는 것 하나 — ① 공급(AI URL)** 이고 수단이 둘뿐이다:
+**⒜ Gemini flag(비용 승인) ⒝ Registry/어댑터 확대.** 🔴 **둘 다 CTO 가 열지 않았다.**
 
 🟢🟢 **STEP 0~3 조사 완료 — CPO 전제가 반쯤 반증됐다**(운영 코드 변경 0):
 ```
@@ -109,19 +110,27 @@ MI 문제면 **별도 WU** 다. 이번 WU 에서 **몰래 고치지 않는다.**
    ⟹ 「위 숫자와 아래 숫자가 다르다」의 원인이 **다른 집합 · 다른 게이트** 임이 확정됐다
 ```
 
-🔵 **다음 세션이 할 것 — STEP 4/5 라이브 funnel 표 하나**
+🟢🟢 **STEP 4/5 측정 완료 — 어댑터 게이트는 «divergence 지점이 아니었다»**
+(하니스 `wu-147-discovery-divergence.test.ts` · **HTTP 0 · DB 0 · 항상 돈다**)
 ```
-🟢 기존 하니스 재사용 — `wu-138-same-funnel` · `wu-138-domestic-funnel`(`WU_138_PROBE=1`)
-🟢 GT 도 이미 있다 — `fixtures/wu-112-human-gt.json` · `wu-125-human-gt.json`(URL 키)
-🔴 새 상품 · 새 fixture **0**(CPO 명시) · 🔴 호출 순서를 운영에서 베낀다(§5-B)
-🔴 **열화 게이트 필수** — 해외 샵 `outcomes.error > 0` 이면 funnel 을 내지 말고 FAIL
-표  | 단계 | KR | OVERSEAS |  ← 🔴 「등록부 진입(어댑터 O)」 줄이 이번 WU 의 핵심 숫자
+GT 36(고유 URL) · human SAME 24
+DOMESTIC  SAME  2 → 어댑터 O **0**         OVERSEAS  SAME 22 → 어댑터 O **3**(13.6%)
+⟹ 🔴 **양쪽을 거의 같게 막는다** ⟹ 「해외는 검색기가 후보를 만들어 준다」는 **반증됐다**
+🟢 해외가 후보를 많이 내는 이유는 등록부가 아니라 **AI URL 풀 + `__overseas_auto__`** 다
+🔴 Case A(어댑터 최소 확장)도 **기각** — biskuit·beaumonde 는 **어댑터 없이도 이미 MI 까지
+   도달한다**(WU-138 측정) ⟹ 어댑터 때문에 사라지는 것이 아니다 ⟹ **구현 0 이 답이다**
+⚠ `bobochoses.com` 2건은 단일 catalog 키가 막지만 **원상품 자신**(자기참조) ⟹ 수정 대상 아님
 ```
 
-🔴🔴 **국내는 «두 군데» 에서 막힌다 — 하나로 적지 않는다**:
+🔴🔴 **그래서 국내가 막히는 곳은 «셋» 이고 첫 divergence 는 ① 이다**:
 ```
-⒜ 등록부에 없어서 **후보가 안 생긴다**(26/34 · 어댑터 부재 · WU-115 반사실 증명)
-⒝ 생긴 후보는 **MI 축** 에서 막힌다(BRAND_* · NO_TITLE_OVERLAP · 분모 2 · 완화 REJECT)
+① 🔴 **공급(AI URL)**   국내 6·4 : 해외 30·25  (WU-118 측정)  ← **첫 divergence**
+② 🔴 어댑터 게이트       국내 0/2 : 해외 3/22    (WU-147 측정)  ← 양쪽 공통 · divergence 아님
+③ 🔴 MI 축             국내 SAME 0(BRAND_* · NO_TITLE_OVERLAP · 분모 2 · 완화 REJECT)
+🟢 그 사이 모든 단계는 국내/해외가 **동일** 하다(canonical · withConfidence ·
+   judgeDomesticCandidate · classifyCandidateMarket · sale · price · 집계 · 화면)
+🔴🔴 ① 을 여는 수단은 **AI 정책(Gemini flag·비용) 또는 Registry 확대** 뿐이고
+   **둘 다 CPO 결정축** 이다 ⟹ CTO 가 열지 않았다
 ```
 
 🟡 **보류된 CEO 확인 1회**(WU-147 뒤에 CPO 가 한 번에 전달) —
