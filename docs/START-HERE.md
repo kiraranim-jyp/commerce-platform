@@ -10,14 +10,18 @@
 ## 1. CURRENT STATE
 
 ```
-현재 WU     WU-149
-commit      f152f927
+현재 WU     WU-149  (남은 범위 = STEP 1 · 6 · 7)
+코드 baseline  f152f927      ← 이 숫자를 보고서의 「변경 전」 으로 쓴다
+HEAD           e7b2fe66      ← 그 위의 **문서 전용** 커밋(코드 0)
 main        clean · origin 0 / 0 · 배포 Ready
 HTTP        /  200   ·  인증 라우트 307(정상)
 typecheck   PASS (0)
 build       PASS (0)
 regression  626 files / 8,734 passed / 0 failed
 ```
+
+🔴 지시서의 「HEAD: f152f927」은 **코드 baseline** 을 가리킨다 — 작업트리 HEAD 는
+`e7b2fe66`(문서 전용)이다. 🟢 코드 기준선은 **같다**(그 사이 코드 변경 0).
 
 **CEO Action: 없음.** 배포 후 실제 상품 UI 최종 테스트가 필요한 시점에만 **1회** 요청한다.
 
@@ -149,8 +153,25 @@ review/history/MI 배선은 **보존** 한다(§6 의 「review/history 는 손�
 ```
 
 🔴 **숨긴다**: SIMILAR · DIFFERENT · UNDECIDED · 유사상품 목록 · 후보 수를 강조하는
-연구 UI · 「후보 24건 / 25건」류 legacy 목록 · 별도 시장가격 비교 **중복 영역** ·
-셀러가 직접 후보를 판정해야 하는 UI.
+연구 UI · 「후보 24건 / 25건」류 legacy 목록 · 자동검색 후보 목록 · 이전 확인 후보 목록 ·
+후보별 판단 과정 · 셀러가 직접 후보를 판정해야 하는 UI.
+
+### STEP 6 — 가격 owner 는 **하나** 다
+
+```
+Seller Decision
+  └─ Market Price Evidence        ← 가격 숫자의 **유일한** owner
+🔴 같은 정보를 보여주는 **별도 「시장가격 비교」 영역** 이 남아 있으면 제거한다
+🔴 두 번째 가격 판단 영역을 **새로 만들지 않는다**
+```
+
+### 🔴 가격이 **없는** SAME 후보 — 지우지 않는다
+
+```
+🟢 SAME 판정은 **유지** 한다 — 가격이 없다는 이유로 후보를 버리지 않는다
+🟢 그 자리에 🔗 **원본 상품 확인** 링크를 준다
+⟹ SAME + 판매상태 + (가격 있으면 가격 / 없으면 원본 링크)
+```
 
 ---
 
@@ -174,13 +195,17 @@ review/history/MI 배선은 **보존** 한다(§6 의 「review/history 는 손�
 3  legacy seller candidate UI 제거
 4  내부 candidate pipeline 보존 확인
 5  SIMILAR/DIFFERENT/UNDECIDED seller 노출 제거
-6  Seller Decision 단일 owner 확인
-7  영향 계약 업데이트
-8  mutation test
-9  2-product E2E (B226AC009 · B226AC010)
-10 full regression   11 typecheck   12 build
-13 deploy            14 production route check   15 최종 보고 1회
+6  Seller Decision 단일 가격 owner 확인 · 중복 가격 영역 제거
+7  영향 계약 업데이트(방향을 뒤집어 다시 쓴다 · 삭제로 우회 금지)
+8  **targeted tests**        ← 🔴 전체 회귀보다 먼저
+9  **mutation test** M1~M7
+10 **2-product E2E** (B226AC009 · B226AC010)
+11 **full regression**   12 typecheck   13 build
+14 deploy                15 production check   16 최종 보고 1회
 ```
+
+🔴 순서를 뒤집지 않는다 — targeted → mutation → E2E → full regression → typecheck → build.
+전체 회귀를 먼저 돌리면 **내 계약이 틀렸는지, 기존 계약이 깨졌는지** 를 가를 수 없다.
 
 ---
 
@@ -198,8 +223,40 @@ PRICE_COMPARISON_ANCHOR_ID   4 refs   🔴 WU-141-R3 **보존 계약** — 지�
 🔴 계약 다섯은 **그 구역의 «존재» 를 글자로 단언** 한다 ⟹ 제거하면 **「없다」로 방향을
 뒤집어** 다시 써야 한다. 🔴 약화가 아니다 — 「seller 화면에 없다」 **그리고**
 「backend/API·review 경로는 **살아 있다**」를 **같이** 단언한다.
+🔴🔴 **계약을 지워서 테스트를 통과시키지 않는다.** 계약의 «목적» 을 현재 구조에 맞춘다.
 
-🔴 **변이에 반드시 넣는다** — ⒜ 패널을 되살린다 ⒝ 앵커 div 를 지운다 ⒞ backend API 를 지운다.
+### MUTATION — M1~M7 · 전부 **FAIL 해야** 한다 (실행 후 바이트 복구)
+
+```
+M1  legacy candidate UI 를 seller surface 에 되살린다            → FAIL
+M2  SIMILAR / DIFFERENT / UNDECIDED 를 seller 기본 화면에 노출   → FAIL
+M3  Seller Decision 밖에 **두 번째 가격 owner** 를 만든다        → FAIL
+M4  통화별 상한을 **전역 상한** 으로 바꾼다                       → FAIL
+M5  **SAME 건수** 를 가격 상한 때문에 3개로 잘라 숨긴다           → FAIL
+M6  `PRICE_COMPARISON_ANCHOR_ID` 앵커 div 를 지운다              → FAIL  (보존 계약)
+M7  backend API 둘을 지운다                                      → FAIL  (엔진 보존)
+```
+
+🔴 M4·M5 계약은 **이미 있다**(`wu-148-market-price-signal` D) — **재구현하지 말고 재사용** 한다.
+
+### 2-PRODUCT E2E — 무엇을 보는가
+
+```
+A  SAME 있음        → 판매상태 → 가격 → Seller Decision 한 줄까지
+B  SAME 부족/가격 없음 → 「가격대 확정 불가」 **또는** 🔗 원본 확인 링크
++  mixed currency 가 있으면 **USD 와 GBP 가 섞이지 않고 각각 유지** 되는지
+```
+
+### ACCEPTANCE — 셀러 화면이 이걸 전부 만족해야 PASS
+
+```
+Seller Decision 이 최상위 판단 영역 · 판단 근거는 **동일상품만** ·
+SIMILAR/DIFFERENT/UNDECIDED **없음** · 후보 연구 목록 **없음** ·
+중복 시장가격 영역 **없음** · 가격 owner **하나** ·
+🇰🇷 2개 이상에서만 «가격대» · 🇰🇷 1개는 「참고」(가격대 아님) ·
+🌎 통화별 최저 확인가 · 환산 **없음** · 추천가 **없음** · 마진 **없음** ·
+가격 없는 SAME 에 원본 링크 **가능** · 🔴 SAME **건수는 상한 때문에 숨지 않는다**
+```
 
 ---
 
@@ -216,29 +273,62 @@ business/security policy 승인 필요 · 기존 freeze 를 깨야만 해결 가
 
 ---
 
-## 11. REPORT RULE
+## 11. DEPLOY → PRODUCTION CHECK
 
-중간 진행보고를 하지 않는다. **최종 보고 1회** 에만 아래를 간결하게 적는다:
 ```
-변경 파일 · 핵심 변경 · 계약 · mutation · E2E · regression ·
-typecheck · build · deploy · production check · 현재 commit · CEO Action
+배포 후 확인  /  ·  인증 redirect  ·  Seller Decision route  ·  상품 상세/판단 화면
+🔴 그리고 Production 에서 **legacy candidate UI 가 실제로 사라졌는지** 확인한다
+🔴 「Deployment successful」만 적지 않는다(§9 헌장) · 🔴 401/307 을 route 증거로 쓰지 않는다
 ```
 
 ---
 
-## 12. CEO RULE
+## 12. REPORT RULE — 중간 보고 없음 · 최종 1회
 
-CEO 는 코드를 검토하지 않는다. CEO 가 할 일은 **배포 완료 후 실제 상품 UI 최종 테스트 1회** 뿐이다.
-🔴 작업 중 다음을 **묻지 않는다**: 「이렇게 할까요?」 「A/B 중 무엇을?」
-「계약을 어떻게 바꿀까요?」 「다시 확인해 주세요」 「중간 UI 를 테스트해 주세요」.
-🟢 현재 전략과 WU 범위는 **이미 확정** 돼 있다.
+```
+[WU-149 STEP 1/6/7 완료]
+
+HEAD:
+변경 파일:
+제거한 seller UI:
+보존한 internal pipeline:
+
+계약:          mutation:      E2E:
+Regression:    Typecheck:     Build:
+
+Deploy:        Production check:
+
+국내 SAME:     해외 SAME:
+
+CEO Action:
+```
 
 ---
 
-## 13. SESSION START
+## 13. CEO RULE
+
+CEO 는 코드·계약·commit 을 검토하지 않는다. **배포 전에는 아무것도 요청하지 않는다.**
+배포가 끝난 뒤 **최종 테스트 1회** 만 요청하고, 그때 형식은 **넷** 이다:
 
 ```
-CURRENT   WU-149 · commit f152f927 · clean/deployed
+테스트 URL:      테스트 상품:      테스트 순서:      예상 결과:
+```
+
+🔴🔴 **작업 중 아래를 묻지 않는다 — 전부 이미 결정된 범위다**:
+```
+「legacy UI 를 제거할까요?」      「flag 로 숨길까요?」
+「A/B 중 어떤 방식이?」          「국내 SAME 문제도 같이 고칠까요?」
+「Registry 를 늘릴까요?」        「adapter 를 추가할까요?」
+「Gemini 를 다시 켤까요?」       「early stop 을 진짜 구현할까요?」
+「CEO 가 중간 테스트해볼까요?」  「계약을 어떻게 바꿀까요?」
+```
+
+---
+
+## 14. SESSION START
+
+```
+CURRENT   WU-149 · 코드 baseline f152f927 · clean/deployed
 NEXT      STEP 1 → STEP 6 → STEP 7
 
 DO NOT REINVESTIGATE
@@ -254,7 +344,7 @@ CEO
   배포 전 요청 금지 · 최종 테스트 1회만
 ```
 
-## 14. 실행 명령 (복붙)
+## 15. 실행 명령 (복붙)
 
 ```bash
 # 회귀 — 🔴 출력을 파일로 받는다(실패 이름을 놓치지 않기 위해)
@@ -272,6 +362,27 @@ npx vercel ls --yes | grep -A1 "Age "
 「통과」로 읽힌 적이 있다 · 적용 여부를 `grep -c` 로 확인한다).
 🔴 **미커밋 구현을 `git checkout` 으로 되돌리지 않는다** — 백업 복사 후 **바이트 대조** 로 확인한다.
 🔴 소스 문자열 검사는 **주석을 벗기고** 한다. 🔴 화면은 **마운트한 DOM** 으로만 완료 선언한다.
+
+---
+
+## 16. 완료 정의 — 이 **19개가 전부 체크될 때만** WU-149 를 닫는다
+
+```
+[ ] legacy seller candidate UI 제거        [ ] internal candidate pipeline 보존
+[ ] SIMILAR/DIFFERENT/UNDECIDED 노출 제거  [ ] Seller Decision 단일 가격 owner
+[ ] 중복 market price UI 제거              [ ] SAME_PRICE_CAP 기존 구현 유지
+[ ] 통화별 상한 유지                        [ ] SAME 건수 불변
+[ ] 🇰🇷 가격대 규칙 유지                     [ ] 🌎 최저 확인가 규칙 유지
+[ ] 환산 없음                              [ ] 추천가 없음
+[ ] 계약 업데이트(우회 아님)                [ ] mutation M1~M7 PASS
+[ ] 2-product E2E PASS                    [ ] full regression PASS
+[ ] typecheck PASS                        [ ] build PASS
+[ ] deploy 완료 + production 확인 완료
+```
+
+🔴 **성공 기준은 「후보를 더 많이 보여주는 것」이 아니다** — 셀러가 후보를 다시
+판단하지 않고도 **SAME 상품의 가격 근거만으로** 시장가격을 판단할 수 있는
+**단일 Seller Decision 화면** 으로 정리되는 것이다.
 
 ---
 
