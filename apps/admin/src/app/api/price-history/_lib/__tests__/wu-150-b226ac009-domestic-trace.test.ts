@@ -16,7 +16,7 @@ import { judgeDomesticCandidate } from "../run-domestic-price-check";
 import { priceTierFromLink } from "../../../domestic-price-sources/_lib/domestic-product-link";
 import { REVIEWED_SAME_SHOP_ID, REVIEWED_SAME_SHOP_NAME } from "../transient-candidates";
 import { classifyCandidateMarket } from "../candidate-market";
-import { buildMarketJudgement, saleState, isPriceConfirmed } from "../../../../pipeline/commerce/mi-same-candidates";
+import { buildMarketJudgement, buildPriceGuide, saleState, isPriceConfirmed } from "../../../../pipeline/commerce/mi-same-candidates";
 import { domesticMatchDisplay } from "../../../../pipeline/commerce/match-display";
 import type { GeminiTransientRow } from "../../../../pipeline/commerce/GeminiTransientCandidates";
 
@@ -83,6 +83,26 @@ const TARGETS = [
   {
     label: "주니어에디션(en-kr)",
     url: "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+    kind: "상세" as const,
+  },
+  /**
+   * 🔴🔴 WU-153 — **기존 fixture 의 국내 URL 둘을 되살린다**(CPO STEP 3 ②번 우선순위).
+   *    🔴 새로 지어낸 URL 이 **아니다** — `wu-138-domestic-funnel` 의 그 URL 그대로다.
+   * ```
+   * biskuit.kr    human **SAME**      · KRW 88,000 보유(WU-138 실측) ← 두 번째 국내 SAME 후보
+   * m.luxboy.com  human **DIFFERENT** · KRW 59,000                  ← 🔴 **FP 대조군**
+   * ```
+   * 🔴 대조군을 **같이** 넣는다 — 두 번째 SAME 을 얻으려다 DIFFERENT 가 같이 열리면
+   *    그것이 이 트랙에서 여덟 번 측정된 그 실패다(완화 = Human DIFFERENT 동반 개방).
+   */
+  {
+    label: "비스킷(human SAME)",
+    url: "https://biskuit.kr/product/%EB%B3%B4%EB%B3%B4%EC%87%BC%EC%A6%88-%ED%97%88%EA%B7%B8-%ED%97%A4%EC%96%B4%EB%A6%AC-%EB%AA%AC%EC%8A%A4%ED%84%B0-%ED%8B%B0%EC%85%94%EC%B8%A0-b226ac009/8891/category/367/display/1/",
+    kind: "상세" as const,
+  },
+  {
+    label: "럭스보이(human DIFF)",
+    url: "https://m.luxboy.com/product/detail.html?product_no=103477",
     kind: "상세" as const,
   },
 ] as const;
@@ -319,9 +339,21 @@ describe("WU-150 STEP 1 — B226AC009 국내 URL 전수 funnel", () => {
       `\n  📊 최종 — verdict ${judgement.verdict} · 판매중 ${judgement.onSaleCount}` +
         ` · 🇰🇷 ${judgement.domesticOnSale} · 🌎 ${judgement.overseasOnSale}`,
     );
+    /**
+     * 🔴🔴 WU-153 — **「🇰🇷 0곳」과 「국내 가격 근거 0」은 다른 말이다.**
+     *    `domesticOnSale` 은 **판매중이 «확인된»** 수다. 국내 후보는 Shopify 가
+     *    아니라 재고 신호가 없어 `UNKNOWN` 이고(WU-136 계약 — 모르는 것을 판매중으로
+     *    세지 않는다) 그래서 0 으로 나온다. 🟢 그러나 **가격 축은 그것과 별개** 다.
+     */
+    const guide = buildPriceGuide(judgement, "KR");
+    console.log(
+      `\n  🇰🇷 국내 가격 축 — sameCount ${guide.sameCount} · onSale ${guide.onSaleCount}` +
+        ` · priced ${guide.pricedCount} · unpriced ${guide.unpricedCount} · basis ${guide.basis}` +
+        ` · byCurrency ${JSON.stringify(guide.byCurrency)}`,
+    );
     console.log("\n  🔴 측정불가 — 11번가 · POSTY: **URL 이 제공되지 않았다**(0 으로 세지 않는다)");
 
     /** 🔴 이 테스트는 **측정** 이다 — 통과/실패를 단언하지 않는다(숫자를 만들지 않기 위해). */
-    expect(TARGETS.length).toBe(7);
+    expect(TARGETS.length).toBe(9);
   }, 600_000);
 });
