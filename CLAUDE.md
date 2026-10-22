@@ -525,7 +525,37 @@ productData 를 **칸 하나씩 손으로 옮기면서** `siteBrandName` 을 빠
 🔴 그 아래 WU 기록은 **막혔을 때만** 참조한다(종료된 결론 모음이다).
 ```
 
-### 🟡 **현재 착수점 — 없다. WU-146 배포 완료 · CEO 화면 확인 1회 대기**
+### 🔵 **현재 착수점 — WU-147 STEP 4/5 (라이브 측정) 하나**
+
+🔴🔴 **진입은 `docs/START-HERE.md` §6 하나다** — 전문 `docs/HANDOFF-WU-147.md`.
+🔴 **CEO 테스트를 요청하지 않는다**(CPO 명시 · WU-147 이 끝나기 전에는).
+
+```
+🟢🟢 WU-147 STEP 0~3 조사 완료 — **CPO 전제가 반쯤 반증됐다**(운영 코드 변경 0)
+① 🟢 「국내/해외가 서로 다른 discovery pipeline」은 **사실이 아니다** — 두 함수가
+   **같은 파일**(`comparison-search/index.ts` 해외 :232 · 국내 :406)에서 같은 단계·
+   같은 `ComparisonCandidate` 계약·같은 `withConfidence` 를 쓰고, MI 입력도 **한 배열** 이다
+   ⟹ 🔴 **STEP 2(계약 통일)는 구현할 것이 없다** — 새로 만들면 하나를 둘로 쪼갠다
+② 🔴 갈리는 **단 하나의 구조적 지점** = `price-source-adapter.ts:480·482`
+   `ADAPTER_BY_DOMAIN` 이 **domain → 단일 catalog** 다 ⟹ `market` 이 candidate
+   property 가 아니라 **등록부 키** 이고, 한 도메인은 한 시장만 가진다
+   실측 **OVERSEAS 13(실효 12) : DOMESTIC 8(아동 실효 6)** · 국내 34 중 **26 어댑터 없음**
+   🟢 WU-115 가 이미 반사실로 증명했다 — MANUAL 에 AUTO_SCRAPE 를 세워도 후보 **0**
+③ 🔴🔴 **CEO 가 본 화면 중복은 MI 산출이 아니다** — `CommerceWorkspace.tsx:3884·3900`
+   의 **자기 검색 패널 둘**(`/api/domestic-price-sources/search` · `/api/comparison/search`)
+   이 **자기 게이트**(`mayShowCandidate`)로 렌더한 숫자다(다른 집합 · 다른 게이트)
+   🔴 제거는 계약 셋(`wu-056r1`·`mi-022`·`wu-130 F-3`) 동시 갱신 ⟹ **CPO 범위 결정**
+🔴🔴 **국내는 «두 군데» 에서 막힌다 — 하나로 적지 않는다**:
+   ⒜ 등록부 밖이라 **후보가 안 생긴다**(26/34)  ⒝ 생긴 후보는 **MI 축**(BRAND_* ·
+   NO_TITLE_OVERLAP · 분모 2 · 완화 REJECT)에서 막힌다
+🔴 **STEP 4/5 라이브 측정은 하지 않았다**(용량 판단 §4-C) — 다음 세션이 기존 하니스
+   (`wu-138-same-funnel` · `-domestic-funnel`)에 표 한 줄을 더하면 끝난다(새 fixture 0)
+🔴 Registry 확장 **0** · 어댑터 신설 **0** · MI 변경 **0** · UI 변경 **0** · 배포 **0**
+```
+
+---
+
+### 🟡 **[직전] WU-146 배포 완료 · CEO 화면 확인은 WU-147 뒤로 보류**
 
 🔴🔴🔴 **진입은 `docs/START-HERE.md` 하나다** — 그 파일이 **고정 10절**
 (North Star · 역할 · 전략 · Production 상태 · 금지 · 현재 WU · 닫힌 결정 ·
