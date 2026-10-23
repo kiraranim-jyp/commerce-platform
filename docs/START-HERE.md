@@ -124,7 +124,88 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
-## 6. NEXT WORK — 🟡 **CORE-2E 완료 · 해외 PASS · 국내는 손실 지점 특정**
+## 6. NEXT WORK — 🟢🟡 **CORE-2F 완료 · 공급은 열렸다 · 막힌 칸은 «하나»**
+
+### 🟢🟢🟢 다음 세션은 이 문단만 읽고 시작한다
+
+```
+🟢🟢 **1-hop 이 작동한다 — 국내 상세 URL 공급이 열렸다**(실측 B226AC009):
+   `miniboutique.co.kr` → 공식 **`sitemap.xml`**(HTTP **2회**) → loc **2,718** 중 품번 일치 **1**
+     🇰🇷 `https://miniboutique.co.kr/product/bobo-chosest-shirt-b226ac009/28043/`
+   → Fetch 🟢 → Extract 🟢 → **KRW 88,000** · market **KR**(`basis=KR_TLD_AND_KRW`) ·
+     `VERIFIED_CURRENT` 🟢
+🔴🔴 **그리고 막힌 칸이 «하나» 로 확정됐다 — ④ MI SAME**:
+   `tier=PRESUMED_SAME` · `matchTruth=TEXT_CONFIRMED` ·
+   **`blockers = [NO_TITLE_OVERLAP]` 하나뿐** · `conflicts = []` **0**
+   제목: `[BOBO CHOSES]T-Shirt - B226AC009 - 미니부띠끄 miniboutique`
+   ⟹ 🔴 **그 축은 CPO 가 동결했다**(WU-138/164 · MI 완화 금지) ⟹ **SAME 0 · 가격 0**
+🟡 그래서 §10 의 「국내 가격 2~3개」는 **미달** 이다 — 🔴 그러나 **원인이 공급이 아니다.**
+   공급은 열렸고 **마지막 한 칸이 정책으로 닫혀 있다.**
+```
+
+### 🟢 1-hop 의 안전 경계(실측 · robots 를 **먼저** 봤다)
+
+```
+`donokids.com`       robots **Allow: /** 🟢 · 🔴 sitemap **없음** · 목록 href **183** 중
+                     품번 일치 **0** ⟹ 목록에 품번이 안 적혀 있다(상세를 열어야 안다)
+                     🟡 페이지네이션 **4페이지** 가 있다 — 🔴 이번 범위(1-hop)에서 안 따라갔다
+`miniboutique.co.kr` robots 🟢(관리·주문·**`search.html`** 만 금지) · 🟢 **sitemap 있음**
+                     🔴 그래서 **`search.html` 을 쓰지 않았다** — robots 가 막는 경로다
+🔴 보몽드(`Disallow: /`)는 **건드리지 않았다**(WU-154 가 폐기한 그 축)
+```
+
+### 🔴 URL 을 «지어내지» 않았다 — 출처가 둘뿐이다
+
+```
+⒜ 공식 `sitemap.xml`(sitemaps.org 표준) ⒝ 진입 페이지의 실제 `href`
+🔴 경로 조합(`/product/<code>`) **금지** · 🔴 샵 내부 검색 **구현 0**
+🔴 **목록을 전부 밀어넣지 않는다** — 품번이 **slug 에 있는** 것만 고른다
+   (WU-121 이 측정한 함정: 목록 href 를 그대로 쓰면 SNS·기프트카드가 섞인다)
+🟢 fetch owner 는 **기존 `fetchPlainHtml` 하나** — SSRF/DNS 가드(WU-025/026)와
+   429 폴백(WU-084)을 그대로 지난다(새 fetch 스택 0)
+🔴 **운영 호출부 0** — `query-planner` 선례다. 배선은 **CPO 결정** 이다
+```
+
+### 🔴🔴 변이가 **내 코드의 실제 결함** 을 찾았다 — robots 주석
+
+```
+M3(전면금지 무시)이 **1차에 통과했다** ⟹ 🔴 「통과」를 「잠겼다」로 읽지 않고 계약 A-7 을
+추가했고, **그 계약이 내 파서의 결함을 잡았다**:
+   `Disallow: /  # block all` → `trim()` 이 `"/  # block all"` ⟹ `=== "/"` **false**
+   ⟹ 🔴🔴 **전면 금지를 「허용」으로 읽는다**(건드리면 안 되는 사이트를 긁는 방향)
+🟢 RFC 9309 는 값 뒤 주석을 허용한다 ⟹ **주석을 벗기도록 고쳤다**(`split("#")[0]`)
+```
+
+### 🔵 CPO 결정 — **하나로 좁혀졌다**
+
+```
+🔵 `NO_TITLE_OVERLAP` 를 열 것인가 — 🔴 **CTO 가 열지 않았다**(동결 유지).
+   🟢 이번 케이스의 모양은 **역대 가장 안전한 쪽** 이다:
+     · `conflicts = []` **0**(색상·품번·상품군 충돌 **없음**)
+     · 후보 제목에 **품번 `B226AC009` 가 그대로** 있다
+     · market **KR** · 가격 **VERIFIED_CURRENT KRW 88,000**
+   🔴 그래도 WU-138 의 반사실(**DIFFERENT 방어 4/4 → 3/4** · `m.luxboy.com` 누출)이
+      그 축을 닫아 둔 근거다 ⟹ **CPO 판정 사안** 이다
+🟡 그리고 **공급을 더 열 축이 둘 남았다**(이번 범위 밖 · 측정만 했다):
+   ⒜ `donokids` **페이지네이션 4페이지**(1-hop → 2-hop) ⒝ 다른 국내 전문몰 sitemap
+🔴 `p54c1` 리다이렉트는 **별도 기록** 이고 이번 작업에 섞지 않았다(CPO 명시)
+```
+
+### 🟢 CORE-2F 게이트
+
+```
+신규 `domestic-listing-hop.ts`(운영 호출부 **0**) · 계약 **8**(네트워크 0 + 실측 1)
+변이 **M1~M4** — M1 품번선별 제거 **2F** · M2 짧은품번 가드 제거 **1F** ·
+   M3 robots 전면금지 무시 **1F**(🔴 계약 추가 후) · M4 중복제거 제거 **1F**
+   → 🟢 **바이트 동일 복구** · 흔적 **0** · 변이마다 **적용 확인**
+MI/SAME/threshold/가격 로직 **0** · Gemini/OpenAI/Naver/유료API/계정 **0** ·
+Adapter/Registry **0** · Seller URL 입력 **0** · bookmarklet 요구 **0**
+typecheck **0** · build **exit 0** · 회귀 **637 files / 8,886 passed / 1 failed**(`p54c1`)
+```
+
+---
+
+## 6-F. [종료] CORE-2E — 가격 목적 재정의
 
 ### 🟢🟢🟢 다음 세션은 이 문단만 읽고 시작한다
 
