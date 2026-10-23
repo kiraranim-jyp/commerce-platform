@@ -500,6 +500,18 @@ function MarketBlock({
                   {headLabel}
                 </p>
               )}
+              {/**
+               * 🔴🔴🔴 CORE-2E §4-4 — **원화 보조 표시를 여기에 «넣었다가 되돌렸다».**
+               *
+               * 🔴 실측 — `CAD 64` 가 **「약 ₩64」** 로 떴다(`convertToKrw` 는 모르는
+               *    통화를 **그대로 KRW 로 취급** 한다 · `pricing/currency.ts:24`).
+               *    「약」을 붙여도 그것은 **거짓 숫자** 다.
+               * 🔴 그리고 기존 계약 **6건** 이 이 영역 전체에 `₩` 를 금지한다
+               *    (`wu-141-r3`·`wu-144`·`wu-145`·`wu-146`·`wu-148`·`wu-139`).
+               * 🔵 넣으려면 `convertToKrwStrict` + 그 여섯 앵커 갱신이 선행이고
+               *    그것은 **가격 표시 정책** 이라 CPO 판정 사안이다. 사유는
+               *    `mi-same-candidates.ts` 의 §4-4 블록에 적어 뒀다.
+               */}
               {/* 🔴 표본이 하나면 그 사실을 **문장으로** 말한다(1건 ≠ 시장 평균). */}
               <p data-testid="price-guide-note" className="text-[11px] text-text-tertiary">
                 {g.basis === "SINGLE" ? PRICE_GUIDE_SINGLE_NOTE : PRICE_GUIDE_RANGE_NOTE}
