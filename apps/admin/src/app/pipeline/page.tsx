@@ -25,6 +25,8 @@ import { MARKET_SIGNAL_NOT_STARTED, resolveWorkflow } from "./commerce/workflow"
 import { isStaleSnapshotResponse, resolveSnapshotSaveAction } from "./snapshot-save-guard";
 /** 🔴 CORE-2C — 북마크 1클릭 핸드오프. 규칙 owner 는 그 파일 하나다(사본 금지). */
 import { parseSuppliedUrlsParam, SUPPLIED_URL_PARAM } from "./supplied-url-handoff";
+/** 🔴 CORE-2D — 그 북마크릿을 셀러에게 전달하는 최소 UI(검색 UI 0 · 후보 목록 0). */
+import { SmartSearchBookmarklet } from "./SmartSearchBookmarklet";
 import type { PipelineProgressEvent, PipelineResponse, TabKey, WorkspaceItem } from "./types";
 import { WorkspaceTabs } from "./WorkspaceTabs";
 import { downloadWorkspaceZip, resizeToSquare } from "./zip";
@@ -1276,6 +1278,17 @@ export default function PipelinePage() {
             priceCheckPriming={priceCheckPriming}
             autoCheckResult={autoCheckResult}
           />
+
+          {/*
+            🔴🔴 CORE-2D — **북마크릿 전달 UI**(CPO 지시 · 새 검색 UI 0 · 후보 목록 0).
+
+            🔴 **자리를 `CommerceWorkspace` «뒤» 로 둔다.** 앞에 두면 셀러가 화면을
+               열 때 가장 먼저 보는 것이 「판단 결과」가 아니라 「도구」가 된다 —
+               WU-140-R1 에서 CEO 가 FAIL 로 돌려보낸 그 모양이다(결론이 최상단).
+            🔴 `snapshotId` 가 없으면 컴포넌트가 **스스로 아무것도 렌더하지 않는다**
+               (상품을 모르면 북마크릿을 만들지 않는다 — 상품 간 후보 혼선 금지).
+          */}
+          <SmartSearchBookmarklet snapshotId={snapshotId} productTitle={product.title?.value} />
 
           {/* P0-UI Epic 1 — JSON/ZIP/원본 URL/처리 리포트 등은 판매자가 매일 볼
            * 필요가 없는 개발자 정보다. Developer Mode를 껐으면 이 섹션 자체가

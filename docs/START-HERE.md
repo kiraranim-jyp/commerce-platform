@@ -124,7 +124,84 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
-## 6. NEXT WORK — 🟢🟢 **CORE-2C 구현 완료 · 남은 것은 CPO 배포 판단 하나**
+## 6. NEXT WORK — 🟢🟢 **CORE-2D 완료 · 셀러가 쓸 수 있는 상태가 됐다**
+
+### 🟢🟢🟢 다음 세션은 이 문단만 읽고 시작한다
+
+```
+🟢 **Track B 가 제품에서 «사용 가능» 해졌다**(CORE-2C 배선 + CORE-2D 전달 UI):
+   상품 분석 → `/pipeline` 하단 **「🔎 AI 검색으로 후보 찾기」** 섹션 →
+   상품별 북마크릿을 **북마크바로 드래그** → AI/검색에서 검색 → **북마크 1클릭** →
+   `/pipeline?resume=…&candidateUrls=…` → 기존 `/check` → 기존 MI/가격
+🟢 운영 파일 — `SmartSearchBookmarklet.tsx`(신규) · `page.tsx`(렌더 1줄 + import)
+🔵 **남은 것은 CPO 배포 판단 + 그 뒤 CEO 실브라우저 1회** 다
+```
+
+### 🔴🔴🔴 이 WU 의 핵심 발견 — **React 19 가 북마크릿을 조용히 죽인다**
+
+```
+`react-dom@19.2.4` `sanitizeURL`(react-dom-client.development.js:**3166**) 실측:
+  isJavaScriptProtocol.test(url)
+    ? "javascript:throw new Error('React has blocked a javascript: URL as a
+       security precaution.')"
+⟹ 🔴 JSX 로 `href={bookmarklet}` 을 주면 **그 차단 코드가 북마크에 등록된다.**
+   셀러는 등록에 성공한 것처럼 보이고 누르면 **아무 일도 일어나지 않는다**
+🟢 그래서 **마운트 후 `setAttribute("href", …)`** 로 넣는다(sanitize 를 지나지 않는다)
+🔴 `href` **prop 을 주지 않는다** — D-1 이 소스로 잠근다
+🔴🔴 **행동 축으로는 잡을 수 없다** — `href` prop 을 추가하는 변이에서 A-1·A-2 가
+   **통과했다**(effect 가 sanitize 뒤에 덮어쓴다) ⟹ 🟢 그래서 **D-1 소스 앵커 +
+   A-2b CONTROL**(React 가 실제로 막는 것을 증명) **둘** 로 지킨다.
+   🔴 「변이가 통과했다」를 「계약이 충분하다」로 읽지 않았다
+```
+
+### 🟢 CORE-2D 구현 — CPO 금지 전수 준수
+
+```
+🟢 UI 는 **네 조각** 뿐 — 제목 「🔎 AI 검색으로 후보 찾기」 · 한 문단 설명 ·
+   사용법 **1·2·3**(`<li>` **정확히 3개**) · 드래그용 버튼 하나
+🔴 **검색 결과·후보 URL 목록 0** — 표 0 · `tbody` 0 · 외부 링크 0 · `img` 0 ·
+   「동일상품/유사상품/최저가/가격비교/₩/원」 **0**(마운트 DOM 으로 단언)
+🔴 **입력 요소 0** — `input`/`textarea`/`form` 전부 0(셀러 URL 입력 부활 금지)
+🔴 **검색 실행 0** — `fetch`/XHR 0 · 외부 요청 0
+🔴 `snapshotId` 가 없으면 **아무것도 렌더하지 않는다** ⟹ 상품 간 혼선 **구조적으로 불가**
+🟢 상품별 — `resume=snap-A` ↔ `resume=snap-B` 가 **다르다**(A-4)
+🔴 **클릭 실행을 막는다**(`e.preventDefault()`) — 페이지 안 `javascript:` 클릭은
+   브라우저가 막을 수 있고 그러면 셀러가 **고장으로 오해** 한다. 정상 경로는 **북마크 실행**
+🔴 자리는 `CommerceWorkspace` **뒤** — 도구가 판단 결과보다 먼저 서면 WU-140-R1 의 FAIL 모양
+```
+
+### 🟢 CORE-2D 게이트
+
+```
+계약 신규 **24**(마운트 DOM 축 + 소스 앵커 + **CONTROL 1**) — CPO 10항 전부 커버:
+  ① 생성 A-1 ② snapshotId A-3·A-4 ③ 추출 B-5 ④ navigation B-1 ⑤ 잘못된 URL B-3
+  ⑥ 중복 B-4 ⑦ 상한 50 B-2 ⑧ 비-HTTP B-3 ⑨ `/check` 연결 D-5 ⑩ 중복 실행 방지 D-6
+음성 대조 **5종** — M1 href prop **1F**(D-1) · M2 effect 제거 **5F** ·
+  M3 snapshotId 가드 제거 **1F** · M4 draggable 제거 **1F** · M5 자리 앞으로 **1F**
+  → 🟢 **바이트 동일 복구**(diff -q) · 변이 흔적 **0**
+🔴 변이 둘이 **적용 실패** 했고 둘 다 사전에 잡았다 — ⒜ 쉘 정규식 이스케이프
+   ⒝ **CRLF**(`\n` 앞에 `\r` 이라 문자열 검색이 빗나갔다) ⟹ **Edit 로** 적용했다
+🔴 내 단언이 **두 번 틀렸고 코드가 맞았다** — ⒜ 「판매처」 전면 금지(설명문의 **일반 명사**
+   하나다 ⟹ 🟢 **개수 ≤1 + 구조**(표·외부링크·img 0)로 바꿨다) ⒝ `.test.tsx` 로 썼다가
+   **수집조차 되지 않았다**(vitest `include` 는 `*.test.ts` 뿐 ⟹ `createElement` 로 재작성)
+typecheck **0** · build **exit 0** · 회귀 **635 files / 8,860 passed / 1 failed**
+   🔴 그 1건은 **외부 사이트 변화**(`p54c1-grounding-redirect` · 6세션 연속 동일)
+```
+
+### 🔵 CEO 테스트(배포 뒤 · CPO 가 전달)
+
+```
+① 상품 분석(예: B226AC009) → 화면 하단 「🔎 AI 검색으로 후보 찾기」 확인
+② 그 버튼을 **북마크바로 드래그**
+③ 쓰시는 AI/검색에서 「Bobo Choses B226AC009」 검색
+④ 검색 결과 화면에서 **그 북마크 1클릭** → 따져로 돌아온다
+⑤ **그 상품** 의 국내/해외 후보가 늘어나는지 확인
+🔴 FAIL 기준 — 다른 상품에 붙는다 · 북마크가 눌려도 아무 일 없다 · 후보가 안 늘어난다
+```
+
+---
+
+## 6-H. [종료] CORE-2C — 핸드오프 배선
 
 ### 🟢🟢🟢 다음 세션은 이 문단만 읽고 시작한다
 
