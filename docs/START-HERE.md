@@ -124,7 +124,87 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
-## 6. NEXT WORK — 🟢🟡 **CORE-2F 완료 · 공급은 열렸다 · 막힌 칸은 «하나»**
+## 6. NEXT WORK — 🟢🟡 **CORE-2G 완료 · 판정 B · 국내 가격 2곳이 «문 앞» 에 있다**
+
+### 🟢🟢🟢 다음 세션은 이 문단만 읽고 시작한다
+
+```
+🟢🟢 **2-hop 성공 — 도노키즈 상세 URL 을 확보했다**(실측):
+   목록 4페이지(fetch **4회**) → 블록 188 → 품번 일치 **1** →
+   🇰🇷 `donokids.com/shop/shopdetail.html?branduid=3362785`
+   → Fetch 🟢 → Extract 🟢 → **KRW 88,000** · `VERIFIED_CURRENT`
+   🔴 **상세 전수 Fetch 를 하지 않았다** — 188개 중 **1개** 만 열었다(CPO 금지 준수)
+🟢🟢 **국내 가격 증거가 «2곳» 이 됐다** — 도노키즈 ₩88,000 · 미니부띠끄 ₩88,000
+🔴🔴 **그런데 둘이 «서로 다른 축» 에서 막힌다** — 이것이 이 WU 의 핵심 발견이다:
+   `donokids.com`      tier=PRESUMED_SAME · market **UNKNOWN**(`KRW_WITHOUT_DOMAIN_EVIDENCE`)
+                       blockers **[BRAND_UNCONFIRMED]** · conflicts **0**
+                       제목 「[보보쇼즈] Hug Hairy Monster T-shirt #226AC009」
+   `miniboutique.co.kr` tier=PRESUMED_SAME · market **KR**(`KR_TLD_AND_KRW`)
+                       blockers **[NO_TITLE_OVERLAP]** · conflicts **0**
+⟹ 🔴 **「하나의 레버」가 없다**(WU-138 이 국내에서 적은 그 문장이 재현됐다)
+   도노키즈는 ⒜ `.com` 이라 market 축 ⒝ 브랜드 축 **둘** 이 막고,
+   미니부띠끄는 **제목 축** 하나가 막는다
+⟹ 🟡 **CPO 판정 B** — 상세 URL + 가격은 찾았고 MI 에서 SAME 이 아니다
+```
+
+### 🔴🔴 CORE-2F 가 도노키즈에서 0 을 낸 **진짜 원인 둘**(이번에 밝혀졌다)
+
+```
+⒜ 목록 URL 이 `shopdetail.html?branduid=3362785` — **품번이 URL 에 없다**
+   ⟹ slug 기반 선별기(CORE-2F)는 **구조적으로 0** 이다
+⒝ 🔴🔴 그리고 도노키즈는 품번을 **`#226AC009`**(선행 `B` **없이**) 로 적는다
+   ⟹ `B226AC009` 로만 찾으면 **영원히 0** 이다
+🟢 목록 **HTML 텍스트** 에는 있었다 —
+   `<li class="dsc">[보보쇼즈] Hug Hairy Monster T-shirt  #226AC009`
+🟢 그래서 `codeVariants` 는 **두 꼴만** 만든다(원형 · 선행 영문자 1개 제거).
+   🔴 그 외 변형은 **만들지 않는다** — 오탐이 곧 「다른 상품을 국내 가격대에 넣기」다
+```
+
+### 🔴🔴 하니스가 **또 거짓 0 을 낼 뻔했다** — 이번엔 실측이 잡았다
+
+```
+1차 실행이 **품번 일치 0** 을 찍었다. 🔴 그런데 curl 로는 같은 페이지에 `226AC009` 가
+**2회** 있었다 ⟹ 메모대로 **하니스부터 의심** 했고 거리를 쟀다:
+   code@58173 → 가장 가까운 href 거리 **470자**(창 1200 안)
+🔴🔴 원인 — 도노키즈는 한 상품을 **두 번** 링크한다(썸네일 + 이름 · **같은 href**).
+   내 코드가 **블록 단계에서 href 를 dedupe** 해서 **이른 썸네일 위치만** 남겼고
+   그 창에는 **상품명이 없다**.
+🟢 고침 — 블록은 **등장마다** 만들고 중복 제거는 `pickByListingText` 가 한다.
+   ⟹ 블록 60 → **120** · 품번 일치 0 → **1**
+🔴 그대로 보고했으면 「도노키즈에서 상세 URL 을 못 찾는다」는 **거짓 결론** 이었다
+```
+
+### 🔵 CPO 결정 — **판정 B 의 다음 갈래**
+
+```
+🔴 CTO 는 `NO_TITLE_OVERLAP` 도 `BRAND_UNCONFIRMED` 도 **열지 않았다**(동결 유지).
+🔵 그리고 이번 실측이 **새 사실 하나** 를 더했다 — 두 샵의 blocker 가 **다르다**.
+   ⟹ 「제목 축 하나만 열면 국내 가격 2곳」이 **아니다**:
+     미니부띠끄는 제목 축만 열면 SAME 이 될 **가능성** 이 있지만(market 이 이미 KR),
+     도노키즈는 **brand 축 + market 축** 둘을 열어야 한다
+   🔴 그 셋 모두 CPO 가 닫아 둔 축이다(WU-077 market · WU-080 brand · WU-138/164 title)
+🟡 그래서 다음 선택지는 **둘** 이고 **CPO 가 고른다**:
+   ⒜ 국내 SAME 을 열기 위한 **counterfactual 전용 WU**(세 축을 **하나씩** · leakage 측정)
+   ⒝ 「국내 SAME 0」을 **정상으로 확정** 하고 해외 최저 소싱가만으로 진행
+🔴 `p54c1` 은 이번 작업에 섞지 않았다(CPO 명시 · 별도 WU)
+```
+
+### 🟢 CORE-2G 게이트
+
+```
+신규 `domestic-listing-hop-2.ts`(🔴 **운영 호출부 0**) · 계약 **9**(네트워크 0 + 실측 1)
+변이 **M1~M4** — M1 품번변형 제거 **3F** · M2 블록 dedupe 되돌림 **1F** ·
+   M3 품번일치 제거(전수투입) **1F** · M4 페이지 상한 제거 **1F**
+   → 🟢 **바이트 동일 복구** · 흔적 **0** · 변이마다 **적용 확인**
+🔴 robots 를 먼저 봤다 — `donokids.com` **Allow: /** 🟢 · 보몽드는 **건드리지 않았다**
+🔴 다른 사이트/Adapter/Registry/Search API **0** · MI/SAME/threshold **0** ·
+   Gemini/OpenAI/Naver **0** · 「국내니까 KRW」 우회 **0** · 상세 전수 Fetch **0**
+typecheck **0** · build **exit 0** · 회귀 **638 files / 8,895 passed / 1 failed**(`p54c1`)
+```
+
+---
+
+## 6-E. [종료] CORE-2F — 국내 1-hop 공급
 
 ### 🟢🟢🟢 다음 세션은 이 문단만 읽고 시작한다
 
