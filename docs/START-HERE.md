@@ -124,7 +124,91 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
-## 6. NEXT WORK — 🔵🔵 **CORE-1D 완료 · 실행경로는 «Gemini 크레딧 $5» 다**
+## 6. NEXT WORK — 🔵🔵 **CORE-2 완료 · 막는 것은 「무료 키 1개」 다**
+
+### 🔴🔴🔴 다음 세션은 이 문단만 읽고 시작한다
+
+```
+CPO 지시 — 비용 0 이 **1순위 제약** · Gemini/OpenAI 결제 ❌ · Naver ❌ ·
+소비자 AI 웹앱 자동화 ❌ · 「실제로 B226AC009 를 검색해 URL 을 받아왔는가」로 판정.
+
+🔴🔴 **TRACK A 의 구조적 벽 — 「무료」는 많은데 «키 없이» 되는 것이 없다**
+   키 없이 호출 가능하다고 명시한 **FreeSerp** → 🔴 **HTTP 523**(origin 도달 불가 · 실측)
+   **FreeSea** → 🔴 키 필요(「It will ask you for a key first」 · 실측)
+   나머지 전부(Tavily·Exa·Decodo·Context.dev·TinyFish·LangSearch·You.com) → **키 발급 필요**
+   🔴 **CTO 는 계정을 만들 수 없다**(이메일·약관 동의 = CEO 행위)
+⟹ 🔵 **그래서 막는 것은 「돈」이 아니라 「무료 키 1개 발급」** 이다.
+
+🟢🟢 **TRACK B 의 답은 «이미 제품 안에 있다»**
+   「사용자 브라우저 → AI Search → 결과 붙여넣기 → `candidateUrls[]` → Fetch/Extract/MI」
+   경로가 **전부 구현돼 있고** `NEXT_PUBLIC_MI_SUPPLIED_URL_INPUT=true` **한 줄** 로 돌아온다
+   (owner `isSuppliedUrlInputVisible()` · `DomesticPriceIntelligencePanel.tsx:2441`).
+   🟢 WU-086 이 그것을 **이미 측정** 했다 — 산문 붙여넣기 → **11 발견 → 8 통과**
+   🔴 방식 A·B(우리 페이지가 검색 결과 DOM 을 읽는다)는 **CORS 로 구조적 불가** 다 —
+      cross-origin `window.open()` 의 `document` 접근은 same-origin policy 위반이고
+      **서버 설정으로 바꿀 수 없다**(상대 사이트가 CORS 헤더를 주지 않는다)
+   🟡 방식 C(확장)는 기술적으로 가능하나 CWS 정책 + 대상 사이트 약관이 남는다
+```
+
+### 🟢 TRACK A — 후보표(🔴 **내가 1차자료로 확인한 것만** 🟢 로 적었다)
+
+| 후보 | 무료 한도 | 카드 | 고갈 시 | 국가/언어 | 저장 약관 | 실측 | 판정 |
+|---|---|---|---|---|---|---|---|
+| **Tavily** | 🟢 **1,000/월** | 🟢 **불필요** | 🟢 **하드 스톱**(자동과금 0) | ❔ | 🟡 미판독 | 🟢 문서 확인 | 🟢🟢 **1순위** |
+| **Decodo** | 🟢 **10K recurring** | 🟢 **불필요** | 🔴 **문서에 없음** | 🟢🟢 **geo+language 195개국** | 🔴 페이지에 없음 | 🟢 문서 확인 | 🟢 **2순위**(KR 손잡이) |
+| **Exa** | 🟢 $10/월(~2,500) | 🟢 **결제수단 불필요** | 🔴 미명시 | ❔ | 🔴 **약관이 PDF · 판독 불가**(과거 §4.2(a) 저장 금지) | 🟢 문서 확인 | 🟡 **보류** |
+| **Perplexity** | 🔴 무료 한도 미확인 | ❔ | ❔ | ❔ | 🟢🟢 **「Customer owns all Output」** · 저장 금지 **없음** | 🟢 ToS 확인 | 🟡 **후보** |
+| **Brave** | 🟡 $20/월 상당 | 🔴 **필요**(「To prevent abuse」) | ❔ | 🟢 | 🔴 **저장은 유료 플랜만**("storage rights") | 🟢 문서 확인 | 🔴 **NO** |
+| **FreeSerp** | 🟢 키 불필요 주장 | 🟢 | — | ❔ | ❔ | 🔴 **HTTP 523 다운** | 🔴 **NO(가용성)** |
+| **FreeSea** | 🟡 | 🟢 | ❔ | ❔ | 🟡 | 🔴 **키 필요** | 🟡 후보 |
+| LangSearch · TinyFish · You.com · Context.dev · Andi | 🟡 **CPO 제시값** | 🟡 | 🟡 | 🟡 | 🟡 | 🔴 **CTO 미확인** | 🟡 표만 |
+| `html.duckduckgo.com` | 🟢 키 0 · 결제 0 | 🟢 | — | 🟢 `kl=kr-kr` | 🟡 금지 조항 **없음**(robots `Allow: /`) | 🔴🔴 **운영자가 차단** | 🔴 **NO** |
+
+### 🔴🔴 실제 검색 실행 결과 — **유효 측정 1건 · 나머지 측정불가**
+
+```
+🟢🟢 **1차 실행의 유효한 1건** — KR 지역 `"Bobo Choses" "B226AC009"` → 결과 5 중
+   🇰🇷 **`lfmall.co.kr/app/product/DNSVXX00636`** = **한국 몰 상품 상세 URL**
+   🟢🟢 **CORE-1B 의 US-only 검색에서는 나오지 않았다** ⟹ **「KR 색인에는 있다」의
+      첫 직접 증거**(🔴 N=1 · 일반화 금지)
+   🔴 그런데 운영 파이프라인에서 **DROPPED** — LF몰은 **9KB SPA shell**(WU-160 실측)이라
+      Fetch 는 되는데 **Extract 가 안 된다**(가격 0)
+🔴🔴 **그 뒤 전부 차단** — `HTTP 202` + 본문 `anomaly`. 60초 간격에도 **유효 응답 0/6**
+   ⟹ 🔴 KR/US 비교 숫자를 **KPI 로 내보내지 않는다**(「측정불가 ≠ 0」)
+🔴🔴 **내가 또 `ok` 를 잘못 읽었다** — 차단 페이지가 **202** 로 와서 `res.ok === true` 였고
+   1차 실행이 「15 질의 0 결과」를 **정상 측정처럼** 찍었다. 🔴 WU-105 의 **재발** 이다.
+   🟢 `status !== 200 || /anomaly/` 게이트를 박아 그 거짓을 **FAIL 로 뒤집었다**
+```
+
+### 🔵 CPO/CEO 결정 — **하나**
+
+```
+🔵🔵 **무료 키 1개 발급**(비용 0 · 카드 0):
+   1순위 **Tavily** — 🟢 카드 불필요 · 🟢 고갈 시 **하드 스톱**(자동 과금 **구조적으로 없다**)
+   2순위 **Decodo** — 🟢 10K recurring · 🟢🟢 **geo=KR + language=ko** (국내 색인 손잡이)
+   🟢 둘 다 키만 있으면 **CTO 가 즉시 B226AC009 전 KPI 를 측정** 한다(구현 전)
+🟡 그리고 **TRACK B 는 결정 하나로 열린다** — `NEXT_PUBLIC_MI_SUPPLIED_URL_INPUT=true`
+   🔴 단 WU-154 의 교훈을 지켜야 한다 — 「셀러가 URL 을 **찾아** 넣는다」는 CPO 가 폐기했다.
+      🟢 이 경로는 「셀러가 **AI 답변 하나를 붙여넣는다**」이고 **파서가 URL 을 뽑는다**
+         (`extractCandidateUrlsFromAiAnswer`) ⟹ **다른 UX** 다
+🔴 CTO 는 아무것도 열지 않았다 — 키 발급 0 · 계정 0 · 결제 0 · flag 0 · 코드 0
+```
+
+### 🟢 CORE-2 게이트
+
+```
+비용               🟢 **$0**(키 0 · 계정 0 · 결제 0)
+운영 코드 변경      **0** — MI 0 · Price 0 · UI 0 · Adapter/Registry 0 · threshold 0 ·
+                   MODEL_CODE 0 · synonym 0 · Seller 입력 0 · 수동 injection 0 · DB 0
+typecheck          0
+회귀                632 files / **8,812 passed** / 1 failed(외부 사이트 변화 ·
+                   `p54c1-grounding-redirect` · 3세션 연속 같은 실패 · 내 변경과 무관)
+하니스              `core-2-free-discovery`(`CORE2_FREE=1` · 차단 판별 게이트 포함)
+```
+
+---
+
+## 6-K. [종료] CORE-1D — AI Search 실행경로 비교
 
 ### 🔴🔴🔴 먼저 — **내 CORE-1B 결론을 «내가» 약화시킨다**
 
