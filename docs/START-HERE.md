@@ -124,7 +124,76 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
-## 6. NEXT WORK — 🔵 **WU-FINAL 1·2·3 종료 · CPO 가 DEPLOY/최소수정/STOP 판정**
+## 6. NEXT WORK — 🔵 **CORE-1 전반부 완료 · 후반부(Search 실행)는 capability 0**
+
+### 🔴🔴🔴 Q1 — **Production runtime 의 AI Search capability = 0**(전수 확인)
+
+```
+외부 «검색» endpoint 전수 = `generativelanguage.googleapis.com` **둘** 뿐
+   · `vision-evidence.ts:167`(이미지 Vision)
+   · `google-discovery.ts:53`(Gemini grounding) ← 🔴 **CPO 가 폐기한 그것**
+🔴 그 외 검색 provider endpoint **0** · 검색 API 키 **0**
+🔴 `NAVER_SEARCH_CLIENT_ID` 는 **주석뿐** —
+   `run-price-check.ts:31` 「제거했다 — 실제로 **한 번도 설정된 적이** 없다」
+🔴 `packages/image/.../openai.provider.ts` 는 **이미지 분류기**(`tools` 없음 · 웹검색 0)
+⟹ 🔴🔴 **CORE-1 의 「Search 실행」은 현재 금지 집합 안에 수단이 0 이다**
+   (⒝ 외부 검색 API = §12-0 전면 제외 · ⒞ Gemini = CPO NO-GO)
+```
+
+### 🟢🟢 Q2~Q4 — **Query Planner 는 구현했다**(순수 · MI 경계 잠금)
+
+🟢 `packages/crawler/src/discovery-core/query-planner.ts` — `buildDiscoveryQuerySet(identity)`
+```
+상품당 질의 **8개**(고정 N 이 아니다 — 증거가 없으면 그 축을 **만들지 않는다**)
+  BRAND_CODE       "Bobo Choses" "B226AC009"
+  BRAND_CODE_KO    "보보쇼즈" "B226AC009"          ← 🟢 **운영 질의에 없던 축**
+  CODE_ONLY        "B226AC009"
+  BRAND_DESIGN     "Bobo Choses" "Hug Hairy Monster T-shirt"
+  BRAND_DESIGN_KO  "보보쇼즈" "Hug Hairy Monster T-shirt"  ← 🟢 **혼합**(브랜드만 한글)
+  PURCHASE_KO      "보보쇼즈" "B226AC009" 구매
+  PRICE_KO         "보보쇼즈" "B226AC009" 가격
+  SHOP_EN          "Bobo Choses" "B226AC009" shop
+🔴 **새 사전 0** — 쓰는 자산은 둘뿐이다: `lookupBrandAlias`(기존) ·
+   `buildPrimaryQuery(...).tokens`(기존 denylist)
+🔴 **한글 디자인명 음역 축은 만들지 않았다** — 그 자산이 0 이고, 만들면 그것이 바로
+   CPO 가 FINAL-2 에서 **추가하지 않기로 한** 사전이다
+🟢 계약 **14** — 특히 **C-1/C-2 가 「Search↔MI」 경계를 양방향으로 잠근다**
+   (planner 가 MI 를 import 하지 않고 · MI 가 planner 를 import 하지 않는다)
+🟢 B-2 는 **소스의 한글 리터럴을 전수** 로 보고 `"구매"`·`"가격"` **둘만** 허용한다
+   ⟹ 🔴 다음 사람이 음역 사전을 몰래 넣으면 **FAIL 한다**
+```
+
+🔴🔴 **계약이 내 설계 결함을 잡았다** — D-4 가 1차에서 FAIL 했다. 품번이 있으면
+`buildPrimaryQuery` 가 `L1_MODEL_CODE` 로 가서 `tokens` 가 **[브랜드, 품번]** 이 되고
+**디자인명이 안 나온다.** 🟢 규칙을 복제하지 않고 **같은 owner 를 품번만 비워** 불러 고쳤다.
+
+### 🔴 Q5 — **질의를 넓혀도 국내 상세 URL 은 0**(아홉 번째 재현)
+
+```
+`"보보쇼즈" "B226AC009" 구매`(= 운영에 없던 PURCHASE_KO 축) 실측 —
+   스니펫은 **쿠팡 89,540 · 보몽드 88,000 · 번장 66,000** 을 적는다
+   🔴 그런데 링크는 **샵 홈 · 검색결과 · 위키백과 · eBay** ⟹ 국내 **상세 URL 0**
+⟹ 🔴🔴 **병목은 planner 가 아니라 executor 다** — WU-156/158/159/161 과 합쳐
+   **질의 9종+** 에서 같은 모양이 재현됐다
+```
+
+### 🔵 CORE-1 판정 — **전반부 PASS · 후반부 BLOCKED**
+
+```
+🟢 Query Planner        구현·계약 완료(MI 변경 0 · 새 사전 0 · HTTP 0)
+🔴 Search 실행           **capability 0** ⟹ CORE-1 PASS 조건(3상품 자동 SAME) **미충족**
+🔴 그 수단을 여는 것은 **CPO 가 닫아 둔 두 축**(⒝ 외부 검색 API · ⒞ Gemini) 뿐이다
+🔴 CTO 는 둘 중 아무것도 열지 않았고, 자기 검색 도구를 **「Production capability」로
+   쓰지 않았다**(그것은 CTO 도구이고 서버의 능력이 아니다 · WU-157 에서 확정)
+```
+
+🟢 운영 코드 — **planner 1파일 신설**(MI·가격·UI·Registry·Adapter **0**) · 배포는 CPO 판정 뒤.
+🟢 typecheck **0** · 회귀 **8,812 passed / 1 failed**(🔴 외부 간헐 ·
+`p54c1-grounding-redirect` · `www.junioredition.com` · 실패→통과→실패→실패 **4회 관측**).
+
+---
+
+## 6-O. [종료] WU-FINAL 1·2·3
 
 ### 🟢🟢 FINAL-1 — **배포 완료**(`ce3a42ca`) · brand 복구 **20% → 93%**
 
