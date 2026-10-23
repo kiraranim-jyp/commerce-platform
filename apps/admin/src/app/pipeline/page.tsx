@@ -23,6 +23,8 @@ import { readPipelineSSEStream } from "./sse";
 import { WorkflowPanel } from "./commerce/WorkflowPanel";
 import { MARKET_SIGNAL_NOT_STARTED, resolveWorkflow } from "./commerce/workflow";
 import { isStaleSnapshotResponse, resolveSnapshotSaveAction } from "./snapshot-save-guard";
+/** 🔴 CORE-2C — 북마크 1클릭 핸드오프. 규칙 owner 는 그 파일 하나다(사본 금지). */
+import { parseSuppliedUrlsParam, SUPPLIED_URL_PARAM } from "./supplied-url-handoff";
 import type { PipelineProgressEvent, PipelineResponse, TabKey, WorkspaceItem } from "./types";
 import { WorkspaceTabs } from "./WorkspaceTabs";
 import { downloadWorkspaceZip, resizeToSquare } from "./zip";
@@ -268,6 +270,53 @@ export default function PipelinePage() {
             // 카테고리로 조사했는지 그대로 복원한다(없으면 이 기능 이전 스냅샷).
             setMarketCategoryId(ws.marketCategoryProfileId ?? "");
             setHydrated(true);
+            /**
+             * ════════════════════════════════════════════════════════════════
+             * 🔴🔴 CORE-2C — **북마크 1클릭으로 넘어온 후보 URL 을 여기서 받는다**
+             * ════════════════════════════════════════════════════════════════
+             *
+             * CPO 채택(2026-10-23). CORE-2B 가 상품 3개에서
+             * 「사용자 브라우저 검색 → `candidateUrls[]` → 서버 수신」을 증명했고,
+             * 빠진 것이 **이 한 곳** 이었다.
+             *
+             * 🔴 **자리가 여기인 이유** — 북마크릿은 **새 탭** 에 착지하고 그 탭의
+             *    `sessionStorage` 는 비어 있다. 그래서 `?resume={id}` 로 스냅샷이
+             *    복원된 **직후** 여야 `snapshotId` 를 안다.
+             * 🔴 **`resume` 없이 `candidateUrls` 만 오면 아무것도 하지 않는다** —
+             *    「최근 상품」으로 넘겨짚으면 엉뚱한 상품에 가격 후보가 붙는다.
+             * 🟢 호출 모양은 **기존 자동 1회차와 같다**(:478) — 새 API·새 state 0.
+             *    응답도 같은 `setAutoCheckResult` 로 흘려보낸다(WU-082 가 깐 길).
+             * 🔴 **새 UI 0 · 셀러 입력칸 복구 0 · MI/가격/threshold 변경 0.**
+             */
+            const suppliedUrls = parseSuppliedUrlsParam(window.location.search);
+            if (suppliedUrls.length > 0) {
+              /** 🔴 한 번 쓰고 **URL 에서 지운다** — 새로고침 때 같은 조사를 또 돌리지 않는다.
+               *  🟢 `resume` 을 지우는 기존 패턴과 같은 모양이다(resetWorkspace 참고). */
+              try {
+                const current = new URL(window.location.href);
+                current.searchParams.delete(SUPPLIED_URL_PARAM);
+                window.history.replaceState(null, "", current.toString());
+              } catch {
+                /* no-op — URL 정리에 실패해도 아래 조사는 그대로 진행한다. */
+              }
+              setPriceCheckPriming(true);
+              void fetch("/api/price-history/check", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ snapshotId: data.snapshot.id, candidateUrls: suppliedUrls }),
+              })
+                .then(async (checkRes) => {
+                  if (!checkRes.ok) return;
+                  const checkJson: unknown = await checkRes.json();
+                  setAutoCheckResult(checkJson);
+                })
+                .catch(() => {
+                  /* 실패해도 화면 동작에 영향 없다 — 기존 「다시 분석」으로 재시도 가능하다. */
+                })
+                .finally(() => {
+                  setPriceCheckPriming(false);
+                });
+            }
             return;
           }
         }

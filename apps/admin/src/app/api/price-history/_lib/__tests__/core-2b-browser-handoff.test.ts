@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { classifyUrlShape } from "@commerce/crawler/src/comparison-search/url-shape";
 import { collectUrlCandidatePool } from "../url-candidate-pool";
 import { GEMINI_VIRTUAL_SHOP_ID, GEMINI_VIRTUAL_SHOP_NAME } from "../transient-candidates";
+/** 🟢 CORE-2C — 로직 owner 는 운영 모듈 하나다. 하니스가 사본을 들고 있지 않는다. */
+import { buildBookmarkletForSnapshot, collectFromResultLinks } from "../../../../pipeline/supplied-url-handoff";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════════
@@ -38,64 +40,16 @@ import { GEMINI_VIRTUAL_SHOP_ID, GEMINI_VIRTUAL_SHOP_NAME } from "../transient-c
  *   ⒟ 서버 코드·CORS·인증 **변경 0**
  * ```
  *
- * 🔴 **이 PoC 가 «하지 않은» 것** — 페이지가 `?candidateUrls=` 를 읽는 배선은
- *    **UI 변경** 이라 CPO 가 금지했다. ⟹ 증명한 것은 **전송 경로와 데이터 경계** 까지다.
+ * 🟢🟢 **CORE-2C 에서 배선이 들어왔다** — 페이지가 `?candidateUrls=` 를 읽는 자리는
+ *    `pipeline/page.tsx` 의 `?resume=` 복원 **직후** 다. 그래서 이 파일의 로직 사본을
+ *    지우고 **운영 모듈 `pipeline/supplied-url-handoff.ts`** 를 import 한다
+ *    (owner 를 둘로 만들면 테스트가 증명하는 것과 실제가 갈라진다).
  *
  * 🔴 MI 0 · Price 0 · UI 0 · Adapter/Registry 0 · Seller 입력 부활 0 · 외부 계정 0 · 배포 0.
  */
 
-/**
- * 🟢🟢 **bookmarklet 본체**(PoC 산출물). 🔴 운영 번들에 들어가지 않는다 — 문자열이다.
- *
- * 🔴 `fetch` 를 **쓰지 않는다**(위 ②) · 🔴 `uddg` 래퍼를 푼다 ·
- * 🔴 검색 서비스 자신의 링크를 **제외** 한다 · 🔴 URL 길이 때문에 **상한 50**.
- */
-export const BOOKMARKLET_SOURCE = `javascript:(function(){
-  var origin = location.origin, seen = {}, out = [];
-  var links = document.querySelectorAll('a[href]');
-  for (var i = 0; i < links.length; i++) {
-    var raw = links[i].href;
-    if (!/^https?:/i.test(raw)) continue;
-    try {
-      var u = new URL(raw);
-      var wrapped = u.searchParams.get('uddg');
-      if (wrapped) { raw = decodeURIComponent(wrapped); u = new URL(raw); }
-      if (u.origin === origin) continue;
-      if (seen[raw]) continue;
-      seen[raw] = 1; out.push(raw);
-    } catch (e) {}
-  }
-  location.href = TTAEJYO_ORIGIN + '/pipeline?candidateUrls=' + encodeURIComponent(out.slice(0, 50).join('\\n'));
-})();`;
-
-/**
- * 🟢 bookmarklet 추출 로직의 **순수 사본**(테스트 가능한 형태).
- * 🔴 운영 코드가 아니다 — 이 PoC 가 「무엇을 보낼지」를 증명하기 위한 것이다.
- */
-export function collectFromResultLinks(hrefs: readonly string[], pageOrigin: string): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const href of hrefs) {
-    if (!/^https?:/i.test(href)) continue;
-    let raw = href;
-    let u: URL;
-    try {
-      u = new URL(raw);
-      const wrapped = u.searchParams.get("uddg");
-      if (wrapped) {
-        raw = decodeURIComponent(wrapped);
-        u = new URL(raw);
-      }
-    } catch {
-      continue;
-    }
-    if (u.origin === pageOrigin) continue;
-    if (seen.has(raw)) continue;
-    seen.add(raw);
-    out.push(raw);
-  }
-  return out.slice(0, 50);
-}
+/** 🟢 상품 하나에 묶인 북마크릿 — 운영 함수가 만든 **그 문자열** 을 검사한다. */
+const BOOKMARKLET = buildBookmarkletForSnapshot("https://ttaejyo.vercel.app", "snap-1");
 
 /**
  * 🔴 **실제 검색이 돌려준 URL 원문 그대로** — 상품 3개(CPO 요구).
@@ -151,9 +105,9 @@ const LIVE = process.env.CORE2B_POC === "1";
 
 describe("CORE-2B — 브라우저 핸드오프 PoC(계약 · 네트워크 0)", () => {
   it("A-1 🟢 bookmarklet 은 `fetch` 를 쓰지 않는다(CSP `connect-src` 를 피한다)", () => {
-    expect(BOOKMARKLET_SOURCE).not.toContain("fetch(");
-    expect(BOOKMARKLET_SOURCE).not.toContain("XMLHttpRequest");
-    expect(BOOKMARKLET_SOURCE, "🔴 내비게이션으로 넘겨야 CORS·CSP·쿠키 셋을 모두 피한다").toContain(
+    expect(BOOKMARKLET).not.toContain("fetch(");
+    expect(BOOKMARKLET).not.toContain("XMLHttpRequest");
+    expect(BOOKMARKLET, "🔴 내비게이션으로 넘겨야 CORS·CSP·쿠키 셋을 모두 피한다").toContain(
       "location.href",
     );
   });

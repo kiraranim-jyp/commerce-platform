@@ -124,7 +124,81 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
-## 6. NEXT WORK — 🟢🟢 **CORE-2B 완료 · 브라우저 핸드오프가 3/3 성공했다**
+## 6. NEXT WORK — 🟢🟢 **CORE-2C 구현 완료 · 남은 것은 CPO 배포 판단 하나**
+
+### 🟢🟢🟢 다음 세션은 이 문단만 읽고 시작한다
+
+```
+🟢 **배선이 들어왔다**(운영 **2 파일** · 신규 모듈 **1**):
+   `pipeline/supplied-url-handoff.ts`(신규 · 순수 · HTTP 0)
+     · `SUPPLIED_URL_PARAM` = **`candidateUrls`**  · `MAX_HANDOFF_URLS` = **50**
+     · `parseSuppliedUrlsParam(search)`      파라미터 → URL 배열(http(s) 만 · 중복 제거 · 상한)
+     · `collectFromResultLinks(hrefs, origin)` 북마크릿과 **같은 로직 owner**(사본 0)
+     · `buildBookmarkletForSnapshot(origin, snapshotId)` **상품에 묶인** 북마크릿
+   `pipeline/page.tsx` — `?resume=` 복원 **직후** 에 그 파라미터를 읽어
+     기존 `POST /api/price-history/check` 에 **`candidateUrls` 를 실어** 보내고
+     응답을 기존 `setAutoCheckResult` 로 흘린다(WU-082 가 깐 길 · 새 API/state **0**)
+🔴 **CPO 금지 전수 준수** — MI 0 · SAME/threshold 0 · Price 0 · Adapter/Registry 0 ·
+   검색 API 0 · Gemini/OpenAI/Naver 0 · **Seller URL 입력 복구 0**(flag 기본 false 불변) ·
+   DB 0 · **새 UI 0** · **후보를 셀러에게 새로 노출 0**
+🔵 **남은 것 — CPO 배포 판단 + 그 뒤 CEO 실브라우저 3/3**(CTO 는 push 하지 않았다)
+```
+
+### 🔴🔴 설계가 «강제된» 이유 — 세 제약을 동시에 피하는 길이 하나다
+
+```
+① CORS   `html.duckduckgo.com` 은 Origin 헤더를 보내면 **403**
+② CSP    DDG 는 `connect-src` 를 자기 도메인으로 제한 ⟹ bookmarklet `fetch()` 차단
+         (🟢 andisearch·you.com 은 CSP 가 **없다** — 서비스마다 달라 **어디선가 깨진다**)
+③ 쿠키   우리 세션 쿠키 **`sameSite: "lax"`** ⟹ cross-site **POST** 에 안 실린다
+🟢 ⟹ **top-level GET 내비게이션** 하나가 셋을 동시에 피한다
+   (CORS 무관 · connect-src 무관 · 🟢 **Lax 는 top-level 내비게이션에 쿠키를 싣는다**)
+🔴 그래서 북마크릿이 `fetch` 를 **쓰지 않는다** — 계약 B-2 가 그것을 잠근다
+```
+
+### 🔴 추측하지 않은 자리 하나
+
+```
+🔴 `candidateUrls` 만 오고 **`resume` 이 없으면 아무것도 하지 않는다.**
+   🔴 북마크릿은 **새 탭** 에 착지하고 그 탭의 `sessionStorage` 는 비어 있다
+      (복원 순서 실측: `?resume` → sessionStorage) ⟹ 스냅샷을 **URL 로만** 안다
+   🔴 「최근 상품」으로 넘겨짚으면 **엉뚱한 상품에 가격 후보가 붙는다** ⟹ 안 했다
+🟡 그래서 북마크릿은 **상품마다 다르다** — `buildBookmarkletForSnapshot` 가 만든다.
+   🔵 그것을 **화면에 어떻게 내보일지는 CPO 결정** 이다(UI 변경이라 CTO 가 안 했다)
+```
+
+### 🟢 CORE-2C 게이트
+
+```
+계약 신규 **19**(파서 6 · 북마크릿 4 · **배선 소스 앵커 8** · owner 단일성 1)
+음성 대조 **6종** — M1 배선 끊기 1F · M2 빈목록 가드 제거 1F · M3 URL 정리 제거 1F ·
+   M4 북마크릿을 fetch 로 2F · M5 비-HTTP 거부 제거 1F · M6 상한 갈라놓기 1F
+   → 🟢 **바이트 동일 복구**(diff -q) · 변이 흔적 **0**
+🔴🔴 **M5 가 1차에 「통과」했고 그것은 «적용 실패» 였다** — 쉘로 정규식을 편집해
+   패턴이 안 맞았다. 🟢 **적용 확인** 을 넣고 Edit 로 다시 변이해 **1F** 를 받았다
+   (메모 `정규식을 쉘/파이썬으로 편집하지 않는다` 의 재발 · 이번엔 사전에 잡았다)
+🔴 기존 계약 **1건 FAIL → 갱신·강화** — `wu-082` 의 「check POST 는 1개」가
+   **의도된 변경** 으로 깨졌다. 🟢 「개수」가 아니라 **성질**(둘이 **상호 배타적 블록**
+   에 있고 빈 목록이면 안 돈다)로 바꿨다 — 세 번째가 생기면 FAIL 한다
+typecheck **0** · build **exit 0**(`✓ Compiled successfully`) ·
+회귀 **634 files / 8,836 passed / 1 failed**
+   🔴 그 1건은 **외부 사이트 변화**(`p54c1-grounding-redirect` · 5세션 연속 동일)
+```
+
+### 🔴 CTO 가 할 수 «없는» 것 — CEO 테스트가 그 자리다
+
+```
+🔴 **실제 브라우저 3/3 E2E 를 CTO 가 못 돌렸다** — `/pipeline` 은 Supabase 인증 뒤이고
+   로컬에 그 자격증명이 없다(service-role 키 부재 · `ADMIN_*` 는 Production Sensitive).
+🟢 대신 증명한 것 — ⒜ 헤더 기반 기술 제약(CORS/CSP/쿠키) ⒝ 파서·북마크릿 **계약 19**
+   ⒞ **배선 소스 앵커 8 + 변이 6종** ⒟ CORE-2B 의 **상품 3개 서버 수신 7·3·1**
+🔵 CEO 는 배포 뒤 **한 번** — 상품 분석 → 검색 → 북마크 클릭 → `/pipeline` 복귀 →
+   국내/해외 후보가 **늘어나는지**(상품 3개)
+```
+
+---
+
+## 6-I. [종료] CORE-2B — 브라우저 핸드오프 PoC
 
 ### 🟢🟢🟢 다음 세션은 이 문단만 읽고 시작한다
 

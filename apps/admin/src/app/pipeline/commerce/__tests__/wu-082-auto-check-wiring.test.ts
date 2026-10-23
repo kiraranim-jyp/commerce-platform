@@ -67,9 +67,36 @@ describe("WU-082 — 자동 1회차 응답이 화면까지 간다", () => {
     }
   });
 
-  it("🔴 **새 호출을 만들지 않았다** — page.tsx 의 check POST 는 여전히 1개다", () => {
+  /**
+   * 🔴🔴 **CORE-2C 에서 이 계약이 FAIL 했고 «의도된 변경» 이라 갱신·강화했다.**
+   *
+   * 1차 단언은 「check POST 가 **1개**」였다. CORE-2C 가 **두 번째** 를 만들었다 —
+   * 북마크 1클릭으로 넘어온 `?candidateUrls=` 를 `?resume=` 복원 **직후** 에 보내는
+   * 호출이다. 🔴 「개수」가 아니라 이 계약이 **지키려던 성질** 로 바꾼다:
+   *
+   * ```
+   * 🟢 지키려던 것 — **중복 조사/과금을 만들지 않는다**
+   * 🟢 그 성질은 유지된다 — 두 호출은 **서로 다른 블록** 에 있고 **상호 배타** 다:
+   *      ① 자동 1회차   `isFirstInsert` 블록(최초 스냅샷 **생성** 시에만)
+   *      ② 핸드오프     `?resume=` **복원** 블록(이미 있는 스냅샷을 열 때)
+   *    ⟹ 한 번의 마운트에서 **둘 중 하나만** 돈다
+   * 🔴 그래서 상한을 **2** 로 올리되 **둘의 자리를 같이 단언** 한다 —
+   *    세 번째가 생기거나 자리가 바뀌면 FAIL 한다
+   * ```
+   */
+  it("🔴 check POST 는 **둘** 이고 서로 **배타적인 블록** 에 있다(중복 조사 금지)", () => {
     const calls = page.match(/fetch\("\/api\/price-history\/check"/g) ?? [];
-    expect(calls).toHaveLength(1);
+    expect(calls, "🔴 세 번째 호출이 생겼다 — 중복 조사 위험을 직접 확인해야 한다").toHaveLength(2);
+    /** 🟢 ② 핸드오프는 `?resume=` 파싱 **뒤** 여야 스냅샷을 안다. */
+    const resumeRead = page.indexOf('get("resume")');
+    const handoff = page.indexOf("parseSuppliedUrlsParam(window.location.search)");
+    /** 🟢 ① 자동 1회차는 `isFirstInsert` 가 만든 **다른 블록** 이다. */
+    const firstInsert = page.indexOf("const isFirstInsert");
+    expect(resumeRead).toBeGreaterThan(-1);
+    expect(handoff, "🔴 핸드오프가 resume 파싱 뒤에 없다 — 스냅샷을 모른다").toBeGreaterThan(resumeRead);
+    expect(firstInsert, "🔴 두 호출의 자리가 섞였다").toBeGreaterThan(handoff);
+    /** 🔴 핸드오프 호출은 **빈 목록이면 돌지 않는다** — 쓸데없는 조사를 만들지 않는다. */
+    expect(page).toContain("if (suppliedUrls.length > 0)");
   });
 
   it("🔴 자동 1회차 응답이 **판정/집계 어휘와 같은 줄에 서지 않는다**", () => {
