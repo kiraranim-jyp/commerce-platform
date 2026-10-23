@@ -124,7 +124,88 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
-## 6. NEXT WORK — 🔵🔵 **CORE-2 완료 · 막는 것은 「무료 키 1개」 다**
+## 6. NEXT WORK — 🟢🟢 **CORE-2B 완료 · 브라우저 핸드오프가 3/3 성공했다**
+
+### 🟢🟢🟢 다음 세션은 이 문단만 읽고 시작한다
+
+```
+🟢🟢 **사용자 브라우저 → candidateUrls[] → 서버 수신** 이 **상품 3개 전부** 성공했다
+   (운영 `collectUrlCandidatePool` 경계로 측정 · 외부 계정 0 · 비용 0):
+     B226AC009  검색결과 10 → 핸드오프 10 → accepted 7 → usable 7 → **miEligible 7**
+                후보 호스트 7 — bobochoses · tinyapple · global.trenbe · **lfmall.co.kr** ·
+                thefrontshop · cissywears · m.bunjang
+     B226AC010  8 → 8 → 5 → 3 → **miEligible 3**(bobochoses · eraldo · tinyapple)
+     B226AC117  7 → 7 → 1 → 1 → **miEligible 1**(kihanan.com)
+   🔴 측정 범위는 **Discovery 성공 여부까지** 다 — MI/SAME/가격은 재지 않았다(CPO 지시)
+🔵 **남은 것은 UI 한 줄** — 페이지가 `?candidateUrls=` 를 읽는 배선. 🔴 UI 변경이라 **안 했다**
+```
+
+### 🔴🔴 설계를 «결정한» 기술 증명 — 셋을 동시에 피하는 길이 하나뿐이다
+
+```
+① CORS   `html.duckduckgo.com` 은 **Origin 헤더를 보내면 403**(브라우저 origin 능동 거부) ·
+         `api.duckduckgo.com` 은 `ACAO: *` 인데 **Instant Answer** 라 검색 목록이 아니다 ·
+         `s.jina.ai` 는 **CORS 를 반사** 하지만 **401**(키 필요)
+         ⟹ 🔴 **확장 없이 브라우저가 검색 API 를 직접 때리는 길은 없다**
+② CSP    `html.duckduckgo.com`·`duckduckgo.com` 은 `connect-src` 를 **자기 도메인으로 제한**
+         ⟹ bookmarklet 의 `fetch()` 가 우리 서버로 **못 간다**
+         🟢 반면 **`andisearch.com`·`you.com` 은 CSP 가 아예 없다** ⟹ 서비스마다 **다르다**
+         ⟹ 🔴 `fetch` 에 의존하는 설계는 **어디선가 깨진다**
+③ 우리 서버  세션 쿠키 **`sameSite: "lax"`**(`login/route.ts:30`) · **CORS 헤더 코드 0**(전수 grep)
+         ⟹ 🔴 **cross-origin 「인증된 POST」는 구조적으로 불가**(Lax 는 cross-site POST 에
+            쿠키를 싣지 않는다)
+🟢🟢 ⟹ **내비게이션 핸드오프** 가 유일해가 된다 — `location.href = 우리페이지?candidateUrls=…`
+   ⒜ CORS **무관** ⒝ `connect-src` **무관**(내비게이션은 fetch 가 아니다)
+   ⒞ 🟢 **`SameSite=Lax` 가 top-level GET 내비게이션에는 쿠키를 싣는다** ⟹ **인증 유지**
+   ⒟ 🟢 **서버 코드·CORS·인증 변경 0**
+```
+
+### 🟢 TRACK B 네 방식 판정
+
+| 방식 | 기술 가능 | 약관 | 사용자 행위 | CWS 등록 | 판정 |
+|---|---|---|---|---|---|
+| **① bookmarklet + 내비게이션** | 🟢🟢 **가능**(CSP 무관) | 🟢 사용자 직접 실행 · 자동화 0 | 🟡 북마크 1클릭 | 🟢 **불필요** | 🟢🟢 **1순위** |
+| **② 확장(content script)** | 🟢 가능(`apps/*` workspace 라 설정 변경 0) | 🟡 CWS 정책 + 대상 약관 | 🟢 설치 1회 후 1클릭 | 🟡 **개발자 모드 PoC 는 불필요** | 🟡 **2순위** |
+| **③ 브라우저가 검색 API 직접 fetch** | 🔴 **불가**(위 ①) | — | — | — | 🔴 **NO** |
+| **④ 소비자 AI 웹앱 자동 로그인/백그라운드** | 🟡 | 🔴🔴 **robots/AUP 금지** | — | — | 🔴 **NO**(CPO 금지) |
+
+🟢 **CPO 지적이 맞았다 — CORS 하나로 TRACK B 를 닫은 것은 범위가 틀렸다.** 막히는 것은
+**③ 하나** 이고 ①②는 **열려 있다**(①은 **지금 측정으로 증명됐다**).
+
+### 🟢 PoC 산출물(운영 번들에 들어가지 않는다)
+
+```
+`core-2b-browser-handoff.test.ts` 안의 **`BOOKMARKLET_SOURCE`** 문자열 + 순수 함수
+`collectFromResultLinks(hrefs, pageOrigin)`
+🔴 성질 — `fetch` **안 쓴다** · `uddg` 래퍼 **푼다** · 검색 서비스 자신의 링크 **제외** ·
+   중복 **제거** · 상한 **50**(URL 길이) · 비-HTTP **버린다**
+🟢 계약 **5건**(A-1~A-5 · 네트워크 0)이 그 다섯 성질을 잠근다
+```
+
+### 🔵 CPO 결정 — **하나**
+
+```
+🔵 「페이지가 `?candidateUrls=` 를 읽는 배선을 넣을 것인가」 — **UI 변경** 이라 CTO 가 안 했다
+   🟢 그 한 줄이면 **사용자 브라우저 검색 → 우리 MI** 가 **외부 계정·비용 0 으로** 닫힌다
+   🔴 WU-154 와 구분된다 — 셀러가 URL 을 **찾는** 것이 아니라 **검색 결과 페이지에서
+      북마크를 한 번 누르는** 것이다(URL 수집은 **코드가** 한다)
+🟡 그 다음 선택 — ② 확장으로 「1클릭」을 더 줄일 것인가(🔴 CWS 정책 검토 필요)
+🔴 CTO 는 둘 다 열지 않았다 — UI 0 · 확장 0 · 외부 계정 0 · 배포 0
+```
+
+### 🟢 CORE-2B 게이트
+
+```
+비용 **$0** · 외부 계정 **0** · 자동 로그인 **0** · 백그라운드 자동화 **0**
+운영 코드 **0** — MI 0 · Price 0 · UI 0 · Adapter/Registry 0 · Seller 입력 부활 0 · DB 0
+typecheck **0** · 회귀 **633 files / 8,817 passed / 1 failed**
+  🔴 그 1건은 **외부 사이트 변화**(`p54c1-grounding-redirect` · 4세션 연속 동일 · 내 변경 무관)
+하니스 `core-2b-browser-handoff`(계약 5 + `CORE2B_POC=1` 실측)
+```
+
+---
+
+## 6-J. [종료] CORE-2 — 무과금 외부 Search 후보 조사
 
 ### 🔴🔴🔴 다음 세션은 이 문단만 읽고 시작한다
 
