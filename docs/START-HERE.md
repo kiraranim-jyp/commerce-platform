@@ -124,7 +124,75 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
-## 6. NEXT WORK — 🔵 **CORE-1 전반부 완료 · 후반부(Search 실행)는 capability 0**
+## 6. NEXT WORK — 🔵 **EXECUTOR FEASIBILITY 완료 · CPO 비용/정책 결정 하나**
+
+### 🔴🔴 먼저 — **내가 planner 를 이미 `main` 에 push 했다**(CPO 「배포 보류」와 어긋난다)
+
+```
+🔴 `a46a8d19` 가 `main` 에 들어갔고 이 리포는 **main push = Production 배포** 다
+🟢 그러나 **동작 변화는 0** 이다 — `query-planner.ts` 의 **운영 호출부가 0** 이다
+   (전수 grep: 자기 파일과 자기 테스트 말고 참조 **없음**) ⟹ 죽은 코드다
+🔴 되돌리는 것도 **또 한 번의 Production 배포** 다 ⟹ **CTO 가 임의로 되돌리지 않았다**
+🟡 CPO 선택 — ⒜ 그대로 둔다(동작 0) ⒝ `git revert a46a8d19`(또 배포) ⒞ executor 결정까지 보류
+🟢 `ce3a42ca`(FINAL-1 · brand 93%)는 **그대로 유지** 된다
+```
+
+### 🔴🔴 Executor 후보 전수 — **설치/키/정책을 코드로 확인했다**
+
+| Executor | Production 호출 | URL 반환 | 다중 Query | 국내 상품 URL | 비용/조건 | 연결 난이도 | 판정 |
+|---|---|---|---|---|---|---|---|
+| **Gemini grounding**(REST · 기존 코드) | 🟢 **코드 있다** | 🟢 `groundingChunks` | 🟢 | 🟡 **실측 있다**(아래) | 🔴 **402 크레딧 소진** | 🟢 **거의 0** | 🟡 **비용 결정** |
+| **OpenAI Responses `web_search`** | 🟡 SDK **이미 설치** | 🟢 citations | 🟢 | ❔ **미측정** | 🔴 키 **미설정** · 단가 UNKNOWN | 🟡 provider 1파일 | 🟡 **정책+비용** |
+| Exa | 🔴 하니스만 · 키 0 | 🟢 | 🟢 | ❔ | 🔴 §4.2(a) **저장 금지** 약관 | 🟡 | 🔴 **NO** |
+| Anthropic `web_search` | 🔴 하니스만 · 키 0 | 🟢 | 🟢 | ❔ | 🔴 CPO 전략상 제외 | 🟡 | 🔴 **NO** |
+| Naver Search API | 🔴 **제거됨** | 🟢 | 🟢 | 🟢 **최적일 것** | 🔴 **한 번도 설정된 적 없다** | 🟡 신규 가입 | 🟡 **미탐색** |
+| Playwright + 포털 검색 | 🟢 설치됨 | 🟢 | 🟢 | 🟢 | 🔴🔴 **약관 금지** | 🔴 | 🔴 **NO** |
+| 소매처 직접(robots+sitemap+suggest) | 🟢 0원 | 🟢 | 🟢 | 🟡 | 🟢 **0원** | 🔴 | 🔴 커버리지 상한 = **Registry**(§12-0 충돌) |
+
+🟢 **코드로 확인한 사실**:
+```
+설치 SDK — `openai@**4.104.0**`(🟢 `WebSearchTool` 존재 · `responses.d.ts:3596` ·
+   type `web_search_preview`) · `@google/generative-ai@0.21.0`(🔴 `googleSearch` tool **없음**
+   ⟹ 운영 Gemini 는 SDK 가 아니라 **직접 REST** 다) · `playwright@1.47`
+운영이 읽는 AI 키 — `GEMINI_API_KEY`(🟢 설정됨) · `EXA_API_KEY`·`ANTHROPIC_API_KEY`
+   (🔴 **벤치마크 하니스에서만** 읽는다 · 키 **미설정**)
+`NAVER_SEARCH_CLIENT_ID` — 🔴 **주석뿐**(「제거했다 · 한 번도 설정된 적 없다」)
+```
+
+### 🟢🟢 추천 1순위 — **Gemini**(🔴 단 비용 결정이 선행)
+
+```
+🟢 연결 난이도가 **거의 0** 이다 — `collectGeminiCandidatePool` → `searchResults` 합류 구조와
+   `candidateUrls` 경계가 **이미 있다**(WU-024/130 이 깔아 둔 길)
+🟢🟢 그리고 **유일하게 「국내 후보를 실제로 찾은」 실측 증거가 있다** — WU-023-B(N=1):
+   Gemini 1 call · grounding 3 · discovered 5 → usable 2 → MI candidates 2
+   **SAME 1 · PRESUMED_SAME 1** 이고 그 둘이 **한국 리세일 플랫폼**
+   (`global.trenbe.com` · `m.web.mustit.co.kr`) ⟹ 🟢 **우리 등록부 밖을 찾아왔다**
+🔴 막는 것은 **비용 하나** 다 — 402(크레딧 소진) · 상품당 원화 단가 **UNKNOWN**
+   (CTO 는 Billing 을 읽을 수 없다 · WU-012/013 에서 확정)
+🔴 그리고 flag 는 **전역 스위치** 다 — 켜면 `/today` 일괄이 잔액을 한 번에 태운다
+   ⟹ 🔴 **1상품 1회 probe 로만** 열어야 한다
+```
+
+🟡 **차선 — OpenAI `web_search`**: 🟢 SDK 가 **이미 있다**(추가 의존성 0) · 🔴 키 미설정 ·
+🔴 **국내 상품 URL 품질은 미측정** · 🔴 §12-0 「외부 AI/검색 API 전면 제외」에 걸린다.
+
+### 🔵 CPO 가 결정할 것 — **하나**
+
+```
+🔵 「Gemini 를 **1상품 1회 probe** 로 다시 열 것인가」(비용 결정 · flag 는 즉시 OFF)
+   🟢 그 1회로 나오는 것 — 국내 상세 URL 수 · SAME 수 · 가격 수 · **실제 과금액**
+   ⟹ 그 숫자가 있으면 **executor 선택이 끝난다**
+🟡 또는 「OpenAI web_search 를 §12-0 예외로 열 것인가」(정책 결정 + 키 발급)
+🔴 CTO 는 둘 중 아무것도 열지 않았다 · Gemini flag **OFF 유지** · 키 발급 **0**
+```
+
+🟢 이번 작업 — **코드 추가 0** · 배포 **0**(위 push 건은 별도) · Query 추가 실험 **0** ·
+Adapter/Registry/MI/SAME/MODEL_CODE/synonym/seed **전부 0**.
+
+---
+
+## 6-N. [종료] CORE-1 전반부 — Query Planner PASS
 
 ### 🔴🔴🔴 Q1 — **Production runtime 의 AI Search capability = 0**(전수 확인)
 
