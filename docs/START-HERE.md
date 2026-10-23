@@ -124,7 +124,61 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
-## 6. NEXT WORK — 🔴🔴 **CORE-2H 완료 · 세 축 중 «열 가치가 있는 축이 없다»**
+## 6. NEXT WORK — 🟢🟢🟢 **CORE-2I 완료 — 국내 SAME 이 «처음으로» 났다(threshold 변경 0)**
+
+🔴🔴 **진입은 이 절 하나다.** 운영 코드 **0** · 배포 **0** · **push 안 함**.
+전문 하니스 `apps/admin/src/app/api/price-history/_lib/__tests__/core-2i-identity-vs-seller-data.test.ts`.
+
+🔴🔴🔴 **CORE-2H 의 「세 축 중 열 가치가 있는 축이 없다」를 «정정한다»** — 그 결론은
+**축 수(threshold)** 를 병목으로 봤지만, **진짜 병목은 「Identity 칸이 비어 있다」** 였다.
+
+```
+🟢🟢🟢 donokids.com  PRESUMED_SAME → **SAME / STRONG_IDENTIFIER**
+   축 ["TITLE","MODEL_CODE","CATEGORY"] = 2+2+1 = **정확히 5점** · blockers **[]**
+   🔴🔴 **`SAME_MIN_AXES = 5` 를 한 글자도 안 건드렸다** — 품번이 `partial`(2점)로
+      들어오자 **기존 threshold 그대로** SAME 에 닿았다
+   발화 조건 **둘 동시** — ⒜ 브랜드 복구(`brand-alias`) ⒝ **페이지에 적힌 품번**(`226AC009`)
+🟢 **CF-BOTH SAME 4** · 그중 human DIFFERENT **0** · NEG-BOTH SAME **0/13**
+```
+
+🔴🔴 **병목의 실체 — 숫자 셋**
+```
+품번 칸이 **비어 있는** 후보            **11 / 13**
+그런데 **페이지에는 품번이 있는** 후보     **4 / 13**
+🔴 **둘 다**(= 읽을 수 있는데 안 읽는다)   **4** — biskuit · stockmann · m.luxboy · donokids
+🔴 품번 칸이 **판매처 자체 SKU/다른 라인** 인 후보 **2** — kids21 `700005621LBL` ·
+   junioredition `B226AB040` ⟹ 둘 다 **human SAME 인데 CONFLICT**
+   🟢 그 칸을 **비우면 2/2 가 CONFLICT 를 탈출** 한다(→ PRESUMED_SAME)
+```
+
+🟢🟢 **Seller-managed 데이터는 SAME 축에 «없다»**(소스 전수 · 주석 제거 후) —
+`PRICE` · `SKU` · `MARKET` · `URL` · `OPTION` 이 `axes.push` 에 **0건**.
+🟢 고유 축 **9** = TITLE(2/1) · MODEL_CODE(**3**/2) · CATEGORY · COLOR · MATERIAL ·
+FIT · AUDIENCE · SIZE · IMAGE(각 1). 🔴 품번 `exact` 는 **3점** 이고 혼자서 5 에 못 닿는다(설계).
+
+🔴🔴🔴 **그러나 「Brand+Code 는 최강 증거」에 대한 실측 반례가 «우리 분모 안에» 있다**
+```
+m.luxboy.com  **human DIFFERENT** 인데 페이지에 `B226AC009` 가 있어 품번 **exact**
+   🟢 막는 것은 **이중 잠금** 이다 —
+      M3 단독(`crossSellerReserved` 제거)        변화 **0**
+      M4 단독(`NO_TITLE_OVERLAP` 관측차이 제거)   변화 **0**
+      **M3+M4** → **STRONG_IDENTIFIER = EXACT tier = 「동일상품 가격」** 🔴 누출
+🔴 ⟹ **품번 exact 단독 승격 경로를 새로 만들면 틀린 가격이 동일상품 가격이 된다.**
+🟢 CPO 가 CORE-2F/2G 에서 「`NO_TITLE_OVERLAP` 은 그대로 닫음」이라 한 그 결정이
+   **이 측정으로 처음 직접 정당화됐다**.
+```
+
+🔴 **측정불가** — `miniboutique.co.kr` 이 **2회 연속 `UNREACHABLE`**(CORE-2H 에서는 읽혔다) ⟹
+그 후보는 **0 이 아니라 측정불가** 다. 🔴 human DIFFERENT 분모 **2** 로 「leakage 0」을 강한
+방어 증거로 쓰지 않는다.
+
+🔵 **CPO 결정 대기(CTO 는 축을 고르지 않았다)** — ① **품번 추출**(Layer A 를 채우는 일 ·
+threshold 와 무관) ② **Layer C 오염 제거**(판매처 SKU 가 Identity 칸을 점령하는 것)
+③ 품번 **표기 변형**(선행 영문자 누락 = `partial`) ④ 식별자 단독 경로는 🔴 **위 반례 때문에 위험**.
+
+---
+
+## 6-C. [종료] CORE-2H — MI 3축 Counterfactual
 
 ### 🔴🔴🔴 다음 세션은 이 문단만 읽고 시작한다
 
