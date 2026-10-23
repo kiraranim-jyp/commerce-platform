@@ -124,7 +124,102 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
-## 6. NEXT WORK — 🔵 **EXECUTOR FEASIBILITY 완료 · CPO 비용/정책 결정 하나**
+## 6. NEXT WORK — 🔴🔴 **CORE-1B 완료 · 병목이 executor 가 «아니었다»**
+
+### 🔴🔴🔴 이 한 문단이 결론이다 — 다음 세션은 이것만 읽고 시작한다
+
+```
+CPO 가 지정한 executor 둘은 **둘 다 자격증명에서 막혔다**(실측):
+  Gemini  → 🔴 **402 Payment Required**(1 call · grounding 0 · URL 0 · 운영 owner 로 측정)
+  OpenAI  → 🔴 키가 **로컬·Production 모두 없다**(Production env 28개 전수 · OpenAI 계열 0)
+🔴 그래서 **과금 0** 인 검색으로 planner 8축을 돌려 **「돈을 쓸 가치가 있는가」** 를 직접 쟀다.
+🔴🔴 **답 — 병목은 executor 가 아니다**:
+   국내 호스트 **12** → 운영 모양 게이트 **4** → fetch **3** → MI 판정 **3**
+     global.trenbe.com  SAME · 🔴 market **OVERSEAS**(USD 80 · basis FOREIGN_CURRENCY_AND_NO_KR_EVIDENCE)
+     tinyapple.net      SAME · OVERSEAS(USD 58)
+     m.bunjang.co.kr    🟢 **DROPPED** — 중고 리스팅을 MI 가 거부했다(누출 0)
+   ⟹ 🔴 **국내 SAME = 0** 이고 그 이유가 **MI 도 executor 도 아니다**.
+      신품 국내 판매처(보몽드·쿠팡·롯데ON·크로켓·럭서스베이비·OCO·신세계·GS)의
+      **상품 상세 URL 이 검색 색인에 없다** — 홈·브랜드·컬렉션·검색 페이지만 걸린다.
+```
+
+🔴🔴 **그리고 planner 의 한글 축이 «발화하지 않았다»** — 이것이 CORE-1 의 가설을 반증한다:
+
+| planner 축 | 국내 상세 URL | 실제로 걸린 것 |
+|---|---|---|
+| `BRAND_CODE`(영문) | **1** | `global.trenbe.com/products/…b226ac009…` |
+| `CODE_ONLY` | 1(중복) | 같은 trenbe · 나머지는 위키백과·eBay 소음 |
+| `BRAND_DESIGN` | 1(중복) | 같은 trenbe · 나머지는 해외 Shopify |
+| `SHOP_EN` | 1(중복) | 같은 trenbe |
+| `BRAND_CODE_KO`(한글) | **0** | 쿠팡 **shop** · 보몽드 **홈** · 번개장터 keywords |
+| `BRAND_DESIGN_KO` | **0** | donokids **홈** · 해외 Shopify 다수 |
+| `PURCHASE_KO` | **1** | ocokorea `brand_view`(🔴 모양만 PRODUCT_PAGE · **UNREACHABLE**) |
+| `PRICE_KO` | **1** | 번개장터 `products/99927762`(🔴 **중고**) |
+
+```
+🟢 고유 국내 상세 **4** — trenbe(신품·USD) · ocokorea(UNREACHABLE) · 번개장터(중고) · 당근(중고·다른상품)
+🔴 ⟹ **신품 국내 판매처의 상세 URL 은 1건도 못 얻었다.**
+🟢 검색 «답변 텍스트» 는 가격을 안다(쿠팡 89,540 · 보몽드 88,000) —
+   🔴 그러나 그것은 snippet 이고 **CPO 가 성공으로 세지 말라고 한 것** 이다
+🔴 WU-116/156/158 이 적은 「샵 이름은 나오는데 상세 URL 이 검색 결과에 없다」가
+   **planner 의 8축으로도 재현** 됐다 ⟹ 질의를 더 만들어 풀리는 문제가 아니다
+```
+
+🟡 **그래도 Gemini 를 「무가치」로 적지 않는다** — WU-023-B(N=1)에서 Gemini 는
+`global.trenbe.com`(SAME) + `m.web.mustit.co.kr`(PRESUMED_SAME · KRW 74,000)을 찾았다.
+🔴 **그런데 그 둘은 이번 무료 검색이 찾은 것과 «같은 부류»**(한국 **리세일** 플랫폼)이고,
+trenbe 는 통화 때문에 **OVERSEAS** 이며 mustit 은 `UNVERIFIED_SEARCH` 로 운영 게이트를 못 지났다.
+⟹ 🔴 **유료 executor 를 열어도 「국내 SAME」이 생긴다는 증거가 없다.**
+
+### 🔵 CPO 가 결정할 것 — 축이 **바뀌었다**
+
+```
+🔴 전 세션의 「Gemini 비용을 열까 / OpenAI 키를 발급할까」는 **1순위가 아니다** —
+   둘 다 **같은 웹 색인** 을 보고, 그 색인에 국내 신품 상세 URL 이 **없다**.
+🔵 실제로 남은 축은 **셋** 이고 전부 **CPO 정책** 이다:
+   ⒜ **포털/오픈마켓 공식 API** — 🟡 Production env 에 `NAVER_DATALAB_CLIENT_ID/SECRET`(50d) ·
+      `NAVER_API_ACCESS_KEY/SECRET_KEY`(37d)가 **실재한다**(이름 확인 · 값은 CTO 가 못 읽는다)
+      🔴 `run-price-check.ts:31` 의 「네이버 검색 자격증명은 한 번도 설정된 적 없다」는
+         **다른 키 이름**(`NAVER_SEARCH_CLIENT_ID`)에 대한 말이다 ⟹ **그 둘을 섞지 않는다**
+      🔴 쇼핑 검색 API 권한 보유 여부 **미확인** · 반환 `link` 가 몰 상세인지 **미측정**
+   ⒝ **1-hop 목록→상세**(WU-162 가 20 상세 URL · 가격 7/8 로 **이미 측정**)
+      🔴 WU-052/073 HOLD 와 정면으로 만난다 ⟹ CPO 가 열어야 한다
+   ⒞ **국내 SAME 0 을 «정상» 으로 확정**(§3 MARKET RULE 이 이미 그 모양이다)
+🔴 CTO 는 셋 중 아무것도 열지 않았다 — Adapter 0 · Registry 0 · robots 우회 0 · 키 발급 0
+```
+
+### 🟢 CORE-1B 게이트
+
+```
+Gemini flag        🟢 **한 번도 ON 하지 않았다** — 운영 owner 는 flag 를 보지 않는다
+                      (호출부가 본다) ⟹ 「probe 뒤 OFF」보다 안전하다. 계약으로 단언했다
+실제 과금           🔴 **UNKNOWN** — CTO 는 Billing 을 읽을 수 없다(402 라 0 일 가능성이 크지만 **단정 안 함**)
+운영 코드 변경      **0** · Adapter/Registry/MI/SAME/MODEL_CODE/가격/UI/seed **전부 0**
+typecheck          0
+회귀                632 files / **8,812 passed** / 1 failed
+                   🔴 그 1건은 **외부 사이트 변화** 다 — `p54c1-grounding-redirect` 가
+                      `www.junioredition.com` 을 기대하는데 그 사이트가 더 이상 `www.` 로
+                      리다이렉트하지 않는다(내 변경과 무관 · 직전 세션에도 같은 실패)
+하니스              `core-1b-executor-probe`(`CORE1B_PROBE=1`) · `core-1b-free-executor`(`CORE1B_FREE=1`)
+```
+
+### 🔴🔴 부수 발견 — **FINAL-1 의 원인 진단이 반증됐다**(고치지 않았다)
+
+```
+FINAL-1 은 brand 복구 실패를 「사이트가 429 로 거부한다」로 적었다. 🔴 **둘 다 반증했다**:
+  ⒜ 「고정 429」 ❌ — 같은 HTML 을 **단독으로 받으면 856,663B 성공**(3/3)
+  ⒝ 「products.json 직후라서」 ❌ — 즉시 HTML 이 **성공** 한 실행도 있다
+🟢 실제는 **간헐적 거부** 다 — 같은 실행에서 즉시 🟢 · +3s 🔴 · +18s 🟢
+🔴 그래서 **프로세스의 첫 시도** 는 여전히 노출돼 있다(memo 는 1회 성공 뒤에만 돕는다).
+   이번 두 측정에서 brand 복구가 **1회·2회·4회** 째에 성공했다(실측).
+🔴🔴 **그 영향이 작지 않다** — brand 가 비면 planner 가 `CODE_ONLY` **1축** 으로 쪼그라든다
+   (1차 실행에서 실제로 그랬다). ⟹ 🔵 **CPO 판정 사안**(FINAL-1 은 CPO 가 GO/수용으로 닫았다)
+🟢 하니스는 **운영 함수를 재시도** 해서 확보했다 — 값을 지어내지 않았다
+```
+
+---
+
+## 6-M. [종료] EXECUTOR FEASIBILITY — 🔴 아래 추천 1순위는 **CORE-1B 가 정정했다**
 
 ### 🔴🔴 먼저 — **내가 planner 를 이미 `main` 에 push 했다**(CPO 「배포 보류」와 어긋난다)
 
