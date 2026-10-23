@@ -90,11 +90,55 @@ async function fillRejectedBrand(
   /** 🔴 이미 채워져 있으면 다시 받지 않는다(다른 전략이 넣었을 수 있다). */
   if (result.productData.siteBrandName) return result;
 
+  /**
+   * 🟢🟢 WU-FINAL-1 — **그 상점에서 한 번 알아낸 값을 다시 받지 않는다.**
+   *
+   * 실측(WU-173 · 3상품 × 5회): 이 추가 fetch 가 **429** 로 막혀 brand 복구가
+   * **3/15(20%)** 였다. 🔴 그리고 `fetchWithDomainRateLimit` 는 **이미**
+   * 429 재시도 1회 + `node:https` 폴백까지 한다 ⟹ 그 셋을 거쳐도 429 다
+   * (= **사이트가 거부한다** · 우리 fetch 결함이 아니다).
+   *
+   * 🟢 결정적 비대칭 — 같은 실행에서 `products.json` 은 **항상** 성공하고 **HTML 만**
+   *    막힌다. 그리고 `og:site_name` == JSON-LD `Organization.name` 은
+   *    **상점 단위 상수** 다(그 가게의 모든 상품에 같은 값). ⟹ 그 상점에서
+   *    **한 번만** 성공하면 된다.
+   *
+   * 🔴 **새 판정 규칙이 아니다** — 쓸지 말지는 `canonical-product.ts` 가 여전히
+   *    「vendor 가 거부됐을 때만」으로 정한다(게이트 불변). 여기서는 **같은 값을
+   *    다시 받지 않는 것** 뿐이다.
+   * 🔴 **도메인을 브랜드로 쓰는 것이 아니다**(WU-080 금지) — 캐시 키가 호스트일 뿐,
+   *    값은 그 상점이 **두 자리에 같은 이름을 적어 둔 사실** 에서만 나온다.
+   * 🔴 음성 캐시는 **하지 않는다** — 실패(429)를 기억하면 영구히 포기하게 된다.
+   */
+  const host = hostOf(url);
+  const memo = host ? SITE_BRAND_BY_HOST.get(host) : undefined;
+  if (memo) return { ...result, productData: { ...result.productData, siteBrandName: memo } };
+
   const html = await fetchPlainHtml(url);
   if (!html) return result;
   const site = extractSiteBrandName(html);
   if (!site) return result;
+  if (host) SITE_BRAND_BY_HOST.set(host, site.value);
   return { ...result, productData: { ...result.productData, siteBrandName: site.value } };
+}
+
+/**
+ * 🟢 상점 단위 기억. 🔴 **성공한 값만** 담는다(실패를 담으면 영구 포기가 된다).
+ * 🔴 프로세스 수명 동안만 산다 — DB·디스크에 **쓰지 않는다**.
+ */
+const SITE_BRAND_BY_HOST = new Map<string, string>();
+
+function hostOf(url: string): string | null {
+  try {
+    return new URL(url).hostname.replace(/^www\./i, "").toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+/** 🔴 테스트가 상태를 격리할 수 있어야 한다 — 운영 호출부는 **없다**. */
+export function __resetSiteBrandMemoForTests(): void {
+  SITE_BRAND_BY_HOST.clear();
 }
 
 /**
