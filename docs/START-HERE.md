@@ -124,7 +124,103 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
-## 6. NEXT WORK — 🟢🟡 **CORE-2G 완료 · 판정 B · 국내 가격 2곳이 «문 앞» 에 있다**
+## 6. NEXT WORK — 🔴🔴 **CORE-2H 완료 · 세 축 중 «열 가치가 있는 축이 없다»**
+
+### 🔴🔴🔴 다음 세션은 이 문단만 읽고 시작한다
+
+```
+CPO 요구 표(운영 코드 변경 **0** · 반사실은 **입력만** 바꿨다 · WU-134/164 방식):
+  실험      SAME(human SAME)   🔴 DIFFERENT leakage   conflicts
+  BASE            3                   0                  9
+  TITLE           3                   0                  9   ← **변화 0**
+  BRAND           3                   0                  7   ← **변화 0**(blocker 만 7로)
+🟢 leakage **전부 0** — 🔴 단 **DIFFERENT 분모가 2** 다(parkette.ca · m.luxboy.com)
+   ⟹ 「leakage 0」을 **강한 방어 증거로 쓰지 않는다**(WU-164 와 같은 한계)
+```
+
+### 🔴🔴🔴 **결정적 숫자는 leakage 가 아니라 «축 수» 다**
+
+```
+미니부띠끄  base axes = **["CATEGORY"]** → 축 **1**
+           H1 1 · H2 1 (🔴 **둘 다 변화 0**)
+           blockers 는 끝까지 `[NO_TITLE_OVERLAP]`
+도노키즈    base axes = **["TITLE","CATEGORY"]** → 축 **2**
+           🟢🟢 H2 에서 **blockers = [] 0 이 됐다**(복구된 brand `"Bobo Choses"`)
+           🔴 **그런데 verdict 는 여전히 `PRESUMED_SAME`** 이고 축은 **2 그대로** 다
+⟹ 🔴🔴 **SAME 은 `SAME_MIN_AXES = 5` 를 요구한다**(기존 계약).
+   축이 **1·2** 인데 blocker 를 없애도 **SAME 이 될 수 없다.**
+⟹ 🔴 「blocker 를 열면 국내 SAME 이 생긴다」는 **사실이 아니다** —
+   그 둘을 SAME 으로 만들려면 **threshold(축 수)를 내려야** 하고 그것은 CPO 금지축이다
+```
+
+### 🟢🟢 H-3 MARKET 만 «구조적으로 안전» 하다 — 그런데 그것도 SAME 을 만들지 못한다
+
+```
+도노키즈   market **UNKNOWN**(`KRW_WITHOUT_DOMAIN_EVIDENCE`) → 등록부에 있다면 **KR**
+🟢🟢 leakage **0/8** — 외화 후보 **8건 전수** 가 `UNKNOWN`(충돌)으로 막힌다
+   (tinyapple·trenbe·stockmann·thefrontshop·bobochoses·junioredition·kids21·parkette)
+   ⟹ 🟢 WU-020 ④ 충돌 규칙이 그 축을 **구조적으로** 방어한다. 분모가 **8** 이라
+      위 TITLE/BRAND 의 분모 2 보다 **훨씬 강한 증거** 다
+🔴 **그러나** tier 는 여전히 `PRESUMED_SAME` 이라 `buildMarketJudgement`(SAME 만 센다)가
+   그 가격을 **가격대에 넣지 않는다** ⟹ **국내 가격대는 그대로 0** 이다
+🟡 그래서 MARKET 축은 「안전하지만 **단독으로는 효과 0**」 이다
+```
+
+### 🔴 H-1 TITLE 이 변화 0 인 «이유» — 게이트 탓이 아니다
+
+```
+원상품     coreTitleTokens = ["hug","hairy","monster","shirt"]
+미니부띠끄  coreTitleTokens = ["shirt","b226ac009","미니부띠끄","miniboutique"]
+⟹ 공통은 **`shirt` 하나** 이고 그것은 **카테고리 토큰** 이라 `distinctive` 가 제거한다
+⟹ 🔴 **두 제목에 공통 distinctive 토큰이 «실제로» 없다.** 게이트가 과한 것이 아니다
+🔴 열려면 **새 유사도 규칙**(품번 토큰을 제목 축으로 인정 · 느슨한 매칭)이 필요하고
+   그것은 CPO 금지이며 WU-164 가 이미 같은 결론으로 닫았다(이번엔 **미니부띠끄 증거** 로 재확인)
+```
+
+### 🔵 CPO 결정 — **판단 재료가 정리됐다**
+
+```
+🔴 CTO 는 **아무 축도 열지 않았다** · 다음 축을 **고르지 않는다**.
+🔵 측정이 말하는 것:
+   ⒜ **TITLE** — 🔴 입력으로 열 수 없다(공통 토큰이 실제로 없다) · 새 규칙 = 금지
+   ⒝ **BRAND** — 🟢 blocker 를 **실제로 없앤다**(도노키즈 `[]`) · leakage 0 ·
+        🔴 그런데 **SAME 을 만들지 못한다**(축 2 < 5)
+   ⒞ **MARKET** — 🟢🟢 **가장 안전하다**(leakage 0/8 · 분모 8) ·
+        🔴 그런데 **단독 효과 0**(tier 가 안 바뀐다)
+🔴🔴 ⟹ **세 축 중 어느 하나도 국내 SAME 을 만들지 못한다.** 공통 병목은
+   **`SAME_MIN_AXES = 5`** 이고 그것은 **threshold** 다(CPO 가 닫아 둔 축).
+🟡 그래서 남은 선택지는 **둘** 이고 **CPO 가 고른다**:
+   ⒟ **threshold 축을 열 것인가**(🔴 역대 모든 WU 가 금지해 온 그 축)
+   ⒠ 「국내 SAME 0」을 **정상으로 확정** 하고 해외 최저 소싱가로 진행
+🟢 그리고 **BRAND·MARKET 둘은 「국내 가격 증거의 질」을 올린다** — SAME 이 아니어도
+   도노키즈가 **KR** 이 되고 blocker 가 **0** 이 된다. 🔵 그 둘만 여는 것도 선택지다
+```
+
+### 🟢 CORE-2H 게이트
+
+```
+🔴 운영 코드 변경 **0** — 반사실을 **입력으로만** 했다(코드 패치 0 · 복구 불필요)
+🔴 MI 완화 0 · threshold 0 · synonym 0 · alias 추가 0 · market rule 0 ·
+   Adapter 0 · Search API 0 · Gemini/OpenAI/Naver 0 · Seller UI 0 · 가격대 강제 투입 0
+🟢 측정 대상 **14**(WU-112 GT 12 + 신규 2) · 외화 leakage 분모 **8**
+typecheck **0** · build **exit 0** · 회귀 **638 files / 8,895 passed / 1 failed**(`p54c1`)
+```
+
+### 🔴 내가 두 번 틀렸고 둘 다 사전에 잡았다
+
+```
+⒜ 1차 H-2 가 **`og:title` «만»** 봤다. 도노키즈 `og:title` 이 **빈 문자열** 이라
+   alias 가 발화하지 못했고 **「변화 0」** 이 나왔다. 🔴 그런데 그 후보의
+   `coreTitleTokens` 에는 **「보보쇼즈」가 이미 있었다** ⟹ 「브랜드를 복구할 수단이
+   없다」가 **거짓** 이었다. 🟢 제목 출처를 **셋**(og:title → facts.title →
+   coreTitleTokens)으로 넓혀 다시 재니 **blockers = [] 0** 이 됐다
+⒝ 마지막 실행에서 brand 복구가 **3/3 실패** 해 게이트가 **측정을 거부** 했다
+   🟢 그 거부가 맞다 — 열화된 숫자를 보고하지 않았다. 다른 WU 와 같은 보강을 넣고 다시 쟀다
+```
+
+---
+
+## 6-D. [종료] CORE-2G — Dono Kids 2-hop
 
 ### 🟢🟢🟢 다음 세션은 이 문단만 읽고 시작한다
 
