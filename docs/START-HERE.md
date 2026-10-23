@@ -124,9 +124,118 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
-## 6. NEXT WORK — 🔴🔴 **CORE-1B 완료 · 병목이 executor 가 «아니었다»**
+## 6. NEXT WORK — 🔵🔵 **CORE-1D 완료 · 실행경로는 «Gemini 크레딧 $5» 다**
 
-### 🔴🔴🔴 이 한 문단이 결론이다 — 다음 세션은 이것만 읽고 시작한다
+### 🔴🔴🔴 먼저 — **내 CORE-1B 결론을 «내가» 약화시킨다**
+
+```
+CORE-1B 는 「국내 신품 상세 URL 이 검색 색인에 없다 ⟹ 병목은 executor 가 아니다」로 닫았다.
+🔴🔴 그 측정에 쓴 무료 검색 도구가 **US-only 색인** 이다(도구 명세 원문: 「US-only」).
+⟹ 🔴 **「색인에 없다」가 「US 색인에 없다」일 수 있다.** 한국 몰은 KR 지역화 검색에서
+   훨씬 잘 걸릴 수 있고, 그 축은 **측정하지 않았다**.
+🟢🟢 그리고 바로 그 축의 손잡이가 **OpenAI 에 타입으로 존재한다** —
+   `WebSearchTool.user_location = { type:"approximate", country:"KR", city, region, timezone }`
+🔴 운영 Gemini 경로에는 **지역/언어 파라미터가 없다**(`preferredDomains` 를 프롬프트에
+   적는 것뿐 · `google-discovery.ts:188·217`) ⟹ 지역은 Google 서버가 정한다.
+⟹ 🔵 **그래서 executor 를 여는 것이 여전히 가치가 있다.** CORE-1B 의 숫자를 폐기하지는
+   않되(그 측정은 유효하다) **「전수 결론」으로 쓰지 않는다**.
+```
+
+### 🟢🟢 Executor 비교표 — **1차자료로 채웠다**
+
+| 방식 | AI Search | 실제 URL | 국내 상품 | Production | 비용 | 정책 | 구현 | 판정 |
+|---|---|---|---|---|---|---|---|---|
+| **Gemini Grounding** | 🟢 O | 🟢 `groundingChunks` **구조화** | 🟡 과거 trenbe·mustit(리세일) | 🔴 **402**(prepay $0) | 🟢🟢 **$14/1k + 월 5,000 무료** · 재개 **최소 $5** | 🟢 이미 운영 · 저장 금지 없음 | 🟢 **거의 0** | 🟢🟢 **1순위** |
+| **OpenAI web search** | 🟢 O | 🟢 **`sources` 목록** + `url_citation` | 🟢🟢 **`user_location.country="KR"`** | 🔴 키 **없다** | 🟡 **$10/1k**(reasoning) · **$25/1k**(non-reasoning) | 🟢 **저장/DB 금지 조항 없음** | 🔴 **SDK 업그레이드 필요** | 🟡 **2순위** |
+| **Perplexity Search API** | 🟢 O | 🟡 「raw web search results」(모양 미확인) | ❔ | 🔴 키 없다 | 🟢🟢 **$1/1k**(fast) · $5/1k | 🟢🟢 **「Customer owns all Output」** · 저장 금지 **없음** | 🟡 provider 1파일 | 🟡 **3순위 후보** |
+| **Playwright → AI Search 웹 UI** | 🟢 | 🟢 DOM | 🟡 | 🟢🟢 **런타임 실재** | 🟢 0원 | 🔴🔴 **robots 금지** | 🔴 | 🔴 **NO** |
+| Exa / Brave | 🟢 | 🟢 | ❔ | 🔴 키 0 | — | 🔴 **DB 구축 금지 약관** | — | 🔴 **NO** |
+
+### 🟢🟢 ① Gemini — **402 의 정체가 확정됐다**(같은 키로 반사실 측정)
+
+```
+같은 키 · grounding **없이** 호출        → 🔴 **402**
+같은 키 · `google_search` tool 포함      → 🔴 **402**
+`gemini-3.8-flash`(최신 권장 모델)       → 🔴 **402**
+본문: 「Your prepayment credits are depleted … ai.studio/projects … billing#prepay」
+⟹ 🟢 **키는 유효하다**(401/403 아님) · 🟢 **grounding 전용 문제가 아니다** ·
+   🟢 **모델 문제가 아니다** ⟹ 🔴 **원인은 「선불 크레딧 $0」 하나다**
+```
+
+🔴🔴 **그리고 공식 billing 문서가 길을 좁혔다**(1차자료 인용):
+```
+「Prepay 잔액이 $0 이면 **그 billing account 에 묶인 모든 프로젝트의 모든 API 키가
+  동시에 멈춘다**」 · 「**무료 티어로 자동 강등되지 않는다**」
+🔴🔴 「**Prepay → Postpay 전환은 지원되지 않는다**」 ⟹ 종량제로 바꿀 수 없다
+🟢 유일한 길 — **크레딧 구매**(최소 **$5** · 최대 $5,000)
+🟡 우회 하나 — **Free Tier 는 billing account 가 필요 없다**(새 프로젝트/새 키).
+   🔴 단 Free Tier 는 「Content used to improve our products」다 ⟹ **제품 데이터 정책 결정**
+   이고 grounding 포함 여부도 **미확인** ⟹ CTO 가 열지 않았다
+```
+
+🟢🟢 **비용이 처음으로 «숫자» 가 됐다**(그동안 UNKNOWN 이었다):
+```
+Grounding with Google Search  **$14 / 1,000 requests**
+                              🟢 **월 5,000 무료**(「shared across all Gemini 3 and newer models」)
+planner 8축 = 상품당 8 requests ⟹ 🟢 **월 625 상품까지 무료 할당 안** 이다
+             (현재 스냅샷 498 → 8축 전수면 3,984 requests/월 ⟹ **무료 범위**)
+🔴 그 무료 할당이 **prepay $0 상태에서도 나가는지는 미확인** — 실측이 402 다.
+   🔴 그래서 「$5 만 넣으면 사실상 공짜」로 **단정하지 않는다**
+```
+
+### 🟡 ② OpenAI — 🔴 **「SDK 가 이미 있다」는 내 직전 보고를 정정한다**
+
+```
+설치본 `openai@**4.104.0**` 실측 — `sources` 칸 **0** · `'web_search'`(비-preview) **없음** ·
+  모델 목록이 `gpt-4o-search-preview` 세대 · 최신은 **7.43.0**(메이저 **3단계** 뒤)
+공식 문서 실측 — 현행은 `web_search` 이고 **`sources` 필드로 URL 전체 목록** 을 준다 ·
+  지원 모델 `gpt-6-astra`·`gpt-5.5`(Responses) · `gpt-5-search-api`(Chat) ·
+  `web_search_preview` 계열은 **legacy/deprecated**
+⟹ 🔴 **「타입이 있다 = 호출 가능」이 아니다**(CPO 가 경고한 그 함정) — **SDK 업그레이드 선행**
+🟢 유리한 점 둘 — ⒜ **`user_location.country="KR"`**(국내 축의 유일한 명시적 손잡이)
+   ⒝ **저장·DB 구축 금지 조항이 없다**(Exa/Brave 와 다르다)
+🔴 키는 **로컬·Production 모두 없다** ⟹ 확보 경로 = platform.openai.com 결제 등록 +
+   project API key 발급 ⟹ **CEO 비용/계정 결정**
+🟢 참고 — `packages/image/src/providers/classifier/openai.provider.ts:27` 이 이미
+   `new OpenAI({ apiKey: process.env.OPENAI_API_KEY })` 를 쓴다(패턴은 있다)
+```
+
+### 🔴 ③ 브라우저 기반 AI Search — **런타임은 되고 정책이 막는다**
+
+```
+🟢🟢 런타임 전제는 **충족** 된다 — `apps/admin/next.config.ts` 가 `playwright-core` ·
+   `@sparticuz/chromium` 을 `serverExternalPackages` + 번들 포함으로 **명시 패키징** 한다
+   ⟹ 「서버에서 브라우저를 못 띄운다」는 **사실이 아니다**
+🔴🔴 그런데 **대상 서비스가 전부 자동화를 금지한다**(robots 원문 실측):
+   `chatgpt.com/robots.txt`      → 공개 랜딩만 Allow 하고 마지막이 **`Disallow: /`**
+                                   (대화·검색 경로 전부 차단)
+   `gemini.google.com/robots.txt` → `Disallow: /app/` · **`Disallow: /chat/`**
+🔴 그리고 Anthropic AUP 는 「**services that route requests through consumer
+   subscriptions**」를 **글자로** 금지한다(메모 `no-external-ai-api-and-no-subscription-routing`)
+🟡 CPO 조건(「공식적으로 자동화를 허용하는 경우만 후보」)을 충족하는 AI Search 웹 UI를
+   **찾지 못했다** — 공식 자동화 경로를 가진 곳은 전부 **API 를 내놓는다**(= ①②③ 축)
+⟹ 🔴 **축 3 는 NO.** 🔴 단 「브라우저 자동화라서」가 아니라 **「대상이 금지해서」** 다
+```
+
+### 🔵 CPO/CEO 결정 — **하나로 좁혀졌다**
+
+```
+🔵🔵 **Gemini billing 에 크레딧 $5 를 넣을 것인가**(≈ ₩7,000 · 최소 단위)
+   🟢 그러면 **코드 변경 0 으로** 즉시 실행경로가 열린다(`collectGeminiCandidatePool` 이 있다)
+   🟢 월 5,000 무료 검색이 유효하면 **실사용 비용이 토큰뿐** 일 수 있다(🔴 미확인)
+   🔴 flag 는 **전역 스위치** 다 ⟹ 1상품 1회 probe 로만 열고 즉시 OFF
+🟡 차선 — OpenAI 키 발급 + **SDK 7.43 업그레이드**
+   🟢 그 축만이 **`country="KR"`** 를 준다 ⟹ CORE-1B 의 US-only 한계를 **직접** 깬다
+   🔴 비용이 Gemini 보다 비싸고(무료 할당 없음) SDK 메이저 3단계 업그레이드가 선행
+🟡 3순위 — Perplexity Search API(**$1/1k** 최저 · Output 소유권 Customer) · 🔴 AUP 미판독
+🔴 CTO 는 셋 중 아무것도 열지 않았다 — 키 발급 0 · 결제 0 · SDK 업그레이드 0 · 구현 0
+```
+
+---
+
+## 6-L. [종료] CORE-1B — 🔴 결론은 위 §6 이 **US-only 한계로 약화시켰다**
+
+### 🔴🔴🔴 이 한 문단이 CORE-1B 의 결론이다
 
 ```
 CPO 가 지정한 executor 둘은 **둘 다 자격증명에서 막혔다**(실측):
