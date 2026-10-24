@@ -1,4 +1,5 @@
 import type { CrossSellerBlocker, CrossSellerConflict } from "./cross-seller";
+import type { MarketEvidence } from "./market-evidence";
 import type { ProductFacts } from "@commerce/shared";
 
 export interface ComparisonCandidate {
@@ -79,6 +80,18 @@ export interface ComparisonCandidate {
    * 파서가 채울 수 있으면 채우고, 못 채우면 undefined다(그 경우 판정은 기존
    * 텍스트 경로만 쓴다 — 하위호환). */
   facts?: ProductFacts;
+  /**
+   * 🔴🔴 CORE-2R-4 STEP 3 — **판매처/사이트 축의 사실.** `facts`(상품 축)와 **가른다.**
+   *
+   * 🔴 `ProductFacts` 에 넣지 않은 이유(CPO 가 타입 설계를 수정했다): 그 타입은
+   *    **상품 identity/evidence** 용이고, 시장 정보를 섞으면 「상품 ↔ 판매자/사이트
+   *    ↔ 시장」이 다시 뒤섞인다.
+   * 🔴 **판정이 아니다** — boolean 다섯 칸이고 market 은 `classifyCandidateMarket`
+   *    이 **증거를 종합해서** 낸다(신호 하나로 KR 을 만들 수 없다 · WU-063 유지).
+   * 🔴 HTML 을 받은 경로에서만 채워진다(추가 HTTP **0**). Shopify JSON 경로는
+   *    본문을 받지 않으므로 `undefined` 다 — 「해외다」가 아니라 **「모른다」** 다.
+   */
+  marketEvidence?: MarketEvidence | null;
   /** 양쪽 facts가 다 있을 때만 채워지는 교차판매처 판정. 이 값이 있으면
    * 화면 표시와 가격 정책이 이 값을 우선한다 — confidence/matchLevel은 그대로
    * 두고(기존 계산을 건드리지 않는다) 판정만 얹는 기존 계층 분리 패턴 그대로다. */

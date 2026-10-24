@@ -72,6 +72,27 @@ export const REVIEWED_SAME_SHOP_ID = "__reviewed_same__";
 export const REVIEWED_SAME_SHOP_NAME = "이전 확인 후보(일시)";
 
 /**
+ * 🔴🔴 CORE-2R-4 — **다섯 번째 일시 샵.** 국내 판매처의 **목록/브랜드 페이지에서
+ *    상세 URL 을 찾아낸** 후보다(1-hop/2-hop · `domestic-listing-pool.ts`).
+ *
+ * ── 왜 또 가르는가 ─────────────────────────────────────────────────────────
+ * ```
+ * 저장 차단에는 아무 일시 id 나 써도 된다. 가르는 이유는 **출처 보존** 하나다 —
+ * 「셀러가 붙여넣었다」·「해외 등록부를 자동으로 뒤졌다」·「이전에 동일상품이라
+ * 판단해 둔 것을 되돌렸다」와 **또 다른 사실** 이다: 우리가 **국내 판매처 목록을
+ * 직접 뒤져 상세 URL 을 찾아냈다**. 한 칸에 담으면 그 사실이 보고에서 사라진다.
+ * ```
+ * 🔴🔴 그리고 **등록부 id 를 쓰지 않는 이유가 여기서는 더 직접적이다** — 이 후보의
+ *    호스트는 **실제로 `domestic_price_sources` 에 있는 샵** 이다. 등록부 uuid 를
+ *    그대로 달면 `upsertDomesticProductLink` 가 **진짜로 쓰기에 성공** 하고(FK 가
+ *    맞으므로 오류도 안 난다) 일시 후보가 **영구 링크/가격 이력** 이 된다.
+ *    🟢 일시 id 를 달아 `isTransientShopId` 가 upsert 앞에서 끊는다.
+ * 🔴 `domain` 은 **실제 판매처 그대로** 다(품번 추출기·샵 대표 선택이 그 값으로 분기).
+ */
+export const DOMESTIC_LISTING_SHOP_ID = "__domestic_listing__";
+export const DOMESTIC_LISTING_SHOP_NAME = "국내 목록 탐색(일시)";
+
+/**
  * 🔴🔴 **저장 차단의 유일한 기준.** 두 호출부(`recordDomesticSourceCheckAttempt`
  *    래퍼 · `upsertDomesticProductLink` 앞 가드)가 **같은 술어** 를 본다.
  *
@@ -85,12 +106,16 @@ export const REVIEWED_SAME_SHOP_NAME = "이전 확인 후보(일시)";
  *    잊으면 그 후보가 **DB 로 흘러간다** — 그래서 술어를 하나로 모아 두는 것이 계약이다.
  * 🔴🔴 WU-132 — **넷** 이 됐다. 계약 테스트가 이 집합을 **전수 순회** 하므로 숫자만
  *    고쳐 통과시키는 길이 없다(생산자를 더하고 여기에 빼먹으면 그 테스트가 FAIL 한다).
+ * 🔴🔴 CORE-2R-4 — **다섯** 이 됐다. 🔴 이번 생산자는 **등록부에 실재하는 국내 호스트**
+ *    를 다루므로, 여기에 빼먹으면 upsert 가 **오류 없이 성공** 해 일시 후보가 영구
+ *    링크가 된다(앞의 넷보다 **조용히 틀린다**).
  */
 export const TRANSIENT_SHOP_IDS: ReadonlySet<string> = new Set([
   GEMINI_VIRTUAL_SHOP_ID,
   TRANSIENT_URL_SHOP_ID,
   OVERSEAS_AUTO_SHOP_ID,
   REVIEWED_SAME_SHOP_ID,
+  DOMESTIC_LISTING_SHOP_ID,
 ]);
 
 export function isTransientShopId(shopId: string): boolean {

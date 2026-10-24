@@ -138,6 +138,12 @@ export async function POST(request: Request) {
       candidateUrls,
       /** 🔴 WU-132 ⑥ — 비어 있으면 그 경로도 **한 줄도 돌지 않는다**(기존 동작 유지). */
       reviewedSameUrls: reviewedSameUrls.length > 0 ? reviewedSameUrls : undefined,
+      /**
+       * 🔴🔴 CORE-2R-4 STEP 2 — **여기서만 켠다.** 셀러가 「지금 확인 / 🔄 다시 분석」을
+       *    누른 경로다. 🔴 일괄 cron(`trigger-domestic-price-check`)은 **켜지 않는다** —
+       *    그쪽은 전 상품을 매일 돌아 사이트당 HTTP 가 상품 수만큼 곱해진다.
+       */
+      domesticListingHop: true,
     });
   } catch (error) {
     domesticShop = {
@@ -210,16 +216,23 @@ export async function POST(request: Request) {
      *    동일상품으로 확인한 판매처의 가격이 집계에 **영원히 못 들어간다** —
      *    그것이 이 재투입의 목적이다. 🟢 저장 0 · 환산 0 · 새 계산 0(위 셋과 동일).
      */
+    /**
+     * 🔴🔴 CORE-2R-4 — **국내 목록 탐색 후보도 같은 자리로 넘긴다.** 그러지 않으면
+     *    우리가 직접 찾아낸 국내 판매처의 가격이 집계에 **영원히 못 들어간다** —
+     *    그것이 이 생산자의 목적이다. 🟢 저장 0 · 환산 0 · 새 계산 0(위 넷과 동일).
+     */
     const transientEvidence =
       domesticShop.geminiEvidence ||
       domesticShop.urlCandidateEvidence ||
       domesticShop.overseasAutoEvidence ||
-      domesticShop.reviewedSameEvidence
+      domesticShop.reviewedSameEvidence ||
+      domesticShop.domesticListingEvidence
         ? [
             ...(domesticShop.geminiEvidence ?? []),
             ...(domesticShop.urlCandidateEvidence ?? []),
             ...(domesticShop.overseasAutoEvidence ?? []),
             ...(domesticShop.reviewedSameEvidence ?? []),
+            ...(domesticShop.domesticListingEvidence ?? []),
           ]
         : null;
     intelligence = await computeMarketIntelligence(
@@ -277,6 +290,16 @@ export async function POST(request: Request) {
    * 🔴 그래서 **쓰지 않는다**(새 enum 값 추가 = migration 이고 이번 범위 밖이다).
    * 🟢 화면에서 잃는 것은 없다 — 그 후보는 이번 조회의 「🔁 이전 확인 후보」 구역에
    *    **새 판정과 함께** 서고, 📚 이력 구역에도 그 행이 그대로 있다.
+   */
+  /**
+   * 🔴🔴 CORE-2R-4 — **`domesticListingEvidence` 도 여기에 «넣지 않는다».**
+   *
+   * 이유는 WU-132 와 **같다** — 079 migration 의 `source` check constraint 가
+   * 다섯 값(`OVERSEAS_AUTO` · `DOMESTIC_REGISTRY` · `SELLER_URL` · `GEMINI` ·
+   * `GT_IMPORT`)뿐이고 `DOMESTIC_LISTING` 이 **없다**. 🔴 기존 값으로 적으면
+   * 「이 후보가 어디서 처음 왔는가」가 **영구히 거짓** 이 된다(upsert 가 덮는다).
+   * 🔴 새 enum 값 추가는 **migration** 이고 이번 범위 밖이다(CPO 가 schema 를 닫았다).
+   * 🟢 화면에서 잃는 것은 없다 — 그 후보는 이번 조회의 후보 구역에 **새 판정과 함께** 선다.
    */
   try {
     const dna = buildProductIdentityDna(product);

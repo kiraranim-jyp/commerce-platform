@@ -594,14 +594,25 @@ describe("E. 🔴🔴 feedback 재활용 (CPO ⑥)", () => {
 
   it("E-5 🟢 **새 생산자 코드를 만들지 않았다** — WU-024 pool 을 그대로 쓴다", () => {
     expect(POOL).toContain("input.shopId ?? TRANSIENT_URL_SHOP_ID");
-    /** 🔴 기본값이 기존 값이라 기존 호출부는 **한 줄도 바뀌지 않는다**. */
-    expect(RUNNER.match(/collectUrlCandidatePool\(\{/g) ?? []).toHaveLength(2);
+    /**
+     * 🔴 기본값이 기존 값이라 기존 호출부는 **한 줄도 바뀌지 않는다**.
+     * 🔴 CORE-2R-4 — 호출부가 **셋** 이 됐다(붙여넣기 · 재투입 · **국내 목록 탐색**).
+     *    🟢 계약의 뜻은 그대로다 — 생산자가 늘어도 **후보 생성기는 이 함수 하나** 이고
+     *       새 fetch/판정 사본이 없다(셋 다 `shopId` 만 갈아 끼운다).
+     */
+    expect(RUNNER.match(/collectUrlCandidatePool\(\{/g) ?? []).toHaveLength(3);
+    expect(RUNNER).toContain("shopId: DOMESTIC_LISTING_SHOP_ID");
   });
 
   it("E-6 🔴 중복은 **HTTP 를 쓰지 않는다** — 이미 찾은 후보면 건너뛴다", () => {
+    /**
+     * 🔴 CORE-2R-4 — 슬라이스 끝을 **그 블록의 바로 다음 생산자** 로 좁힌다.
+     *    전에는 `isGeminiDiscoveryEnabled()` 까지 잘랐는데 그 사이에 새 생산자가
+     *    들어오면 **엉뚱한 블록의 문자열로 통과** 한다(이 트랙의 함정 ⑤).
+     */
     const block = RUNNER.slice(
       RUNNER.indexOf("if (input.reviewedSameUrls"),
-      RUNNER.indexOf("if (isGeminiDiscoveryEnabled())"),
+      RUNNER.indexOf("if (input.domesticListingHop)"),
     );
     expect(block).toContain("existingCanonicalUrls: alreadyCanonical");
     expect(block).toContain("[...searchResults, ...transientPools]");

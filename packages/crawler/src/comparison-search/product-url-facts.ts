@@ -2,6 +2,8 @@ import { CRAWLER_USER_AGENT } from "../utils/user-agent";
 /** 🔴 WU-151 — 브랜드 표기 등록부(실측 전용 · 브랜드당 1개). 새 사전을 만들지 않았다. */
 import { lookupBrandByAliasInTitle } from "./brand-alias";
 import { decodeHtmlEntities } from "./html-entities";
+/** 🔴 CORE-2R-4 STEP 3 — **이미 받은 HTML** 에서만 읽는 순수 파서(추가 HTTP 0). */
+import { extractMarketEvidence } from "./market-evidence";
 import { productFactsFromListing, productFactsFromShopifyProduct } from "./seller-facts";
 import { classifyUrlShape, toCrawlerUrl } from "./url-shape";
 import { extractShopifyHandle, fetchPlainHtmlWithFinalUrl } from "../shopify-product-json";
@@ -465,6 +467,16 @@ async function htmlPath(
       /** 🟢 성공 규약을 `enrichCandidatePrices`(price-source-adapter.ts:275)와 맞춘다. */
       priceStatus: priced ? "VERIFIED_CURRENT" : "PRICE_UNAVAILABLE",
       facts,
+      /**
+       * 🔴🔴 CORE-2R-4 STEP 3 — **시장 증거를 같은 HTML 에서 읽는다**(추가 HTTP **0**).
+       *
+       * 🔴 `facts`(상품 축)와 **다른 칸** 이다 — 섞으면 「상품 ↔ 판매자/사이트 ↔ 시장」이
+       *    다시 뒤섞인다(CPO 가 타입 설계를 그렇게 수정했다).
+       * 🔴 **판정하지 않는다** — boolean 다섯 칸이고, KR/OVERSEAS/UNKNOWN 은
+       *    `classifyCandidateMarket` 이 **통화와 함께 종합해서** 낸다.
+       * 🔴 Shopify JSON 경로에는 본문이 없으므로 이 칸이 **서지 않는다**(= 「모른다」).
+       */
+      marketEvidence: extractMarketEvidence(html),
     },
     httpCalls: calls,
     fetchPath: "PLAIN_HTML",

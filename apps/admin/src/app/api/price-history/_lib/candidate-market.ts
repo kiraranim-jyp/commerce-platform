@@ -32,6 +32,8 @@
  *    (가격 없는 후보 자체는 **버리지 않는다** — WU-020 §6. identity evidence 로 남는다.)
  */
 
+import { hasCompositeKrSellerEvidence, type MarketEvidence } from "@commerce/crawler";
+
 /** 🔴 `KR` 과 `OVERSEAS` 는 «증거가 일치할 때만» 쓴다. 나머지는 전부 UNKNOWN 이다. */
 export type CandidateMarket = "KR" | "OVERSEAS" | "UNKNOWN";
 
@@ -40,6 +42,13 @@ export type CandidateMarketBasis =
   | "KR_TLD_AND_KRW"
   /** 국내 등록부 샵에서 KRW 가 관찰됐다(둘이 일치). */
   | "REGISTERED_SHOP_AND_KRW"
+  /**
+   * 🔴🔴 CORE-2R-4 STEP 4 — **사이트가 스스로 적은 한국 사업자 증거 «둘 이상» + KRW.**
+   *    등록부와 무관하게 성립한다(그것이 이 축을 만든 이유다).
+   */
+  | "KR_SELLER_EVIDENCE_AND_KRW"
+  /** 🔴 한국 사업자 증거 ↔ 외화 **충돌**. 국내로도 해외로도 쓰지 않는다. */
+  | "CONFLICT_KR_SELLER_EVIDENCE_WITH_FOREIGN_CURRENCY"
   /** 외화 + KR 도메인 증거 **없음** + 등록부 **밖**. */
   | "FOREIGN_CURRENCY_AND_NO_KR_EVIDENCE"
   /** 🔴 등록부 소속 ↔ 외화 **충돌**(Bobo Choses 사례). 국내로도 해외로도 쓰지 않는다. */
@@ -58,6 +67,15 @@ export interface CandidateMarketInput {
   currency: string | null;
   /** 그 host 가 국내 판매처 등록부에 있는가. 🔴 KR 근거가 아니라 **충돌 감지용** 이다. */
   isRegisteredDomesticShop: boolean;
+  /**
+   * 🔴🔴 CORE-2R-4 STEP 3/4 — **그 상품 페이지가 스스로 적은 판매자 사실.**
+   *
+   * 🔴 안 넘기면(`undefined`) 아래 분기가 **한 줄도 돌지 않는다** — 기존 동작 100% 유지.
+   * 🔴 이 칸 하나로 KR 을 만들지 않는다 — **강한 증거 2개 이상 «그리고» KRW** 가
+   *    함께일 때만 발화한다(= 사실 셋). CPO 가 금지한 「단독 신호 KR」이 **구조적으로
+   *    불가능** 하다.
+   */
+  marketEvidence?: MarketEvidence | null;
 }
 
 export interface CandidateMarketResult {
@@ -78,6 +96,12 @@ function hasKrTld(domain: string): boolean {
 export function classifyCandidateMarket(input: CandidateMarketInput): CandidateMarketResult {
   const currency = input.currency?.trim().toUpperCase() ?? null;
   const krTld = hasKrTld(input.domain);
+  /**
+   * 🔴🔴 CORE-2R-4 STEP 4 — **「여러 증거를 종합한다」가 여기 한 줄이다.**
+   *    `hasCompositeKrSellerEvidence` 는 **강한 증거 2개 이상** 일 때만 참이고,
+   *    아래에서 **통화 증거와 다시 교차** 하므로 KR 확정에는 **사실 셋** 이 필요하다.
+   */
+  const krSellerEvidence = hasCompositeKrSellerEvidence(input.marketEvidence);
 
   /** ① 통화가 없으면 **판정하지 않는다.** 가격 귀속이 이 판정의 유일한 목적이다. */
   if (!currency) return { market: "UNKNOWN", basis: "NO_PRICE_EVIDENCE" };
@@ -85,6 +109,15 @@ export function classifyCandidateMarket(input: CandidateMarketInput): CandidateM
   if (currency === "KRW") {
     /** ② KR 도메인 증거와 KRW 가 **함께** 있을 때만 KR 이다. */
     if (krTld) return { market: "KR", basis: "KR_TLD_AND_KRW" };
+    /**
+     * 🔴🔴 ②-b CORE-2R-4 — **등록부 «앞» 에 둔다.** CPO 지시가 「`domestic_price_sources`
+     *    를 국내 판정의 **권위 있는 근거로 쓰지 않는다**」이므로, 사이트가 스스로 적은
+     *    증거가 있으면 **그것이 판정의 이유** 여야 한다(`basis` 가 그 사실을 말한다).
+     * 🟢 등록부 분기는 **지우지 않았다**(아래 ②-c) — 증거가 없는 기존 후보의 동작이
+     *    한 글자도 바뀌지 않게 하기 위해서다(CPO: DB 행도 삭제하지 않는다).
+     */
+    if (krSellerEvidence) return { market: "KR", basis: "KR_SELLER_EVIDENCE_AND_KRW" };
+    /** ②-c 기존 경로 — 증거를 못 읽은 후보는 **여기서 그대로** 판정된다. */
     if (input.isRegisteredDomesticShop) return { market: "KR", basis: "REGISTERED_SHOP_AND_KRW" };
     /** 🔴 ③ 통화 단독으로 결정하지 않는다(CPO §4). */
     return { market: "UNKNOWN", basis: "KRW_WITHOUT_DOMAIN_EVIDENCE" };
@@ -95,6 +128,14 @@ export function classifyCandidateMarket(input: CandidateMarketInput): CandidateM
     return { market: "UNKNOWN", basis: "CONFLICT_REGISTERED_SHOP_WITH_FOREIGN_CURRENCY" };
   }
   if (krTld) return { market: "UNKNOWN", basis: "CONFLICT_KR_TLD_WITH_FOREIGN_CURRENCY" };
+  /**
+   * 🔴 ④-b CORE-2R-4 — 한국 사업자 증거 + **외화** 도 같은 성질의 충돌이다.
+   *    (실측 선례: 등록부 「Bobo Choses Korea(공식)」의 가격 증거가 **EUR** 였다)
+   *    🔴 기존 두 충돌 «뒤» 에 둔다 — 기존 후보의 `basis` 를 바꾸지 않기 위해서다.
+   */
+  if (krSellerEvidence) {
+    return { market: "UNKNOWN", basis: "CONFLICT_KR_SELLER_EVIDENCE_WITH_FOREIGN_CURRENCY" };
+  }
 
   /** ⑤ 외화 + KR 증거 없음 → 해외. */
   return { market: "OVERSEAS", basis: "FOREIGN_CURRENCY_AND_NO_KR_EVIDENCE" };

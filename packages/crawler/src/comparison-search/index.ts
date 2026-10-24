@@ -51,6 +51,20 @@ export { extractRuliiOptions } from "./rulii";
 export { searchLittleluna } from "./littleluna";
 export { factsFromProductUrl } from "./product-url-facts";
 export type { ProductUrlFactsResult, ProductUrlFactsStatus } from "./product-url-facts";
+/**
+ * 🔴 CORE-2R-4 STEP 2 — 브랜드 **한글 표기 등록부**(실측 전용 · 브랜드당 1개).
+ *    🔴 새 사전이 아니다 — `brand-alias.ts` 가 이미 소유하고 국내 검색이 쓰는 값이다.
+ */
+export { lookupBrandAlias } from "./brand-alias";
+/** 🔴 CORE-2R-4 STEP 3 — 판매처/사이트 축의 **사실**(판정 아님 · 추가 HTTP 0). */
+export {
+  countStrongKrSellerSignals,
+  EMPTY_MARKET_EVIDENCE,
+  extractMarketEvidence,
+  hasCompositeKrSellerEvidence,
+  MIN_STRONG_KR_SELLER_SIGNALS,
+} from "./market-evidence";
+export type { MarketEvidence } from "./market-evidence";
 export { extractLooxlooOptions } from "./looxloo";
 export { extractDeuxbebeOptions } from "./deuxbebe";
 /** N-4.18-Q3 PART H-3-4 — dHash 이미지 교차비교(Evidence 저장까지만, confidence/

@@ -138,6 +138,15 @@ export interface ListingHopResult {
   httpCalls: number;
   /** 🔴 막혔으면 **어디서** 막혔는지 적는다(조용히 0 을 돌려주지 않는다). */
   note: string | null;
+  /**
+   * 🔴🔴 CORE-2R-4 — **이미 받은 진입 페이지 HTML 을 돌려준다**(추가 필드 · 기존 칸 불변).
+   *
+   * 왜: 2-hop(목록 **텍스트** 선별)은 같은 HTML 을 다시 봐야 하는데, 호출부가
+   * 그것을 **한 번 더 fetch** 하면 사이트마다 HTTP 가 1회씩 더 늘어난다.
+   * 🟢 이 칸은 **아무 판정도 하지 않는다** — 이미 쓴 응답을 버리지 않을 뿐이다.
+   * 🔴 진입 페이지를 받지 못했거나 sitemap 에서 끝났으면 `null` 이다.
+   */
+  entryHtml: string | null;
 }
 
 /**
@@ -154,7 +163,7 @@ export async function expandDomesticListing(entryUrl: string, code: string | nul
     host = u.hostname.replace(/^www\./i, "").toLowerCase();
     origin = u.origin;
   } catch {
-    return { host: "", robotsAllowed: null, source: "NONE", linkCount: 0, detailUrls: [], httpCalls: 0, note: "ENTRY_URL_INVALID" };
+    return { host: "", robotsAllowed: null, source: "NONE", linkCount: 0, detailUrls: [], httpCalls: 0, note: "ENTRY_URL_INVALID", entryHtml: null };
   }
 
   let httpCalls = 0;
@@ -163,7 +172,7 @@ export async function expandDomesticListing(entryUrl: string, code: string | nul
   const robots = await fetchPlainHtml(`${origin}/robots.txt`);
   const robotsAllowed = robots == null ? null : robotsAllowsAll(robots);
   if (robotsAllowed === false) {
-    return { host, robotsAllowed, source: "NONE", linkCount: 0, detailUrls: [], httpCalls, note: "ROBOTS_DISALLOW_ALL — 이 사이트는 건드리지 않는다" };
+    return { host, robotsAllowed, source: "NONE", linkCount: 0, detailUrls: [], httpCalls, note: "ROBOTS_DISALLOW_ALL — 이 사이트는 건드리지 않는다", entryHtml: null };
   }
 
   /** ② sitemap 먼저 — 🟢 HTTP **1회** 로 그 샵의 상품 URL 전체를 본다. */
@@ -173,14 +182,24 @@ export async function expandDomesticListing(entryUrl: string, code: string | nul
     const locs = extractSitemapLocs(sitemap);
     const picked = pickDetailUrlsForCode(locs, code);
     if (picked.length > 0) {
-      return { host, robotsAllowed, source: "SITEMAP", linkCount: locs.length, detailUrls: picked, httpCalls, note: null };
+      return { host, robotsAllowed, source: "SITEMAP", linkCount: locs.length, detailUrls: picked, httpCalls, note: null, entryHtml: null };
     }
     /** 🔴 sitemap 은 있는데 품번이 없다 — 그 사실을 적는다(「상세 URL 0」의 **이유**). */
     const note = `SITEMAP_HAS_NO_CODE — loc ${locs.length}건 중 품번 일치 0`;
     /** 🟢 그래도 ③ 을 시도한다 — 목록 HTML 에는 있을 수 있다. */
     httpCalls += 1;
     const html = await fetchPlainHtml(entryUrl);
-    if (!html) return { host, robotsAllowed, source: "SITEMAP", linkCount: locs.length, detailUrls: [], httpCalls, note: `${note} · LISTING_UNREACHABLE` };
+    if (!html)
+      return {
+        host,
+        robotsAllowed,
+        source: "SITEMAP",
+        linkCount: locs.length,
+        detailUrls: [],
+        httpCalls,
+        note: `${note} · LISTING_UNREACHABLE`,
+        entryHtml: null,
+      };
     const hrefs = extractHrefs(html, entryUrl);
     const picked2 = pickDetailUrlsForCode(hrefs, code);
     return {
@@ -191,6 +210,7 @@ export async function expandDomesticListing(entryUrl: string, code: string | nul
       detailUrls: picked2,
       httpCalls,
       note: picked2.length > 0 ? note : `${note} · LISTING_HREF ${hrefs.length}건 중에도 품번 일치 0`,
+      entryHtml: html,
     };
   }
 
@@ -198,7 +218,16 @@ export async function expandDomesticListing(entryUrl: string, code: string | nul
   httpCalls += 1;
   const html = await fetchPlainHtml(entryUrl);
   if (!html) {
-    return { host, robotsAllowed, source: "NONE", linkCount: 0, detailUrls: [], httpCalls, note: "NO_SITEMAP · LISTING_UNREACHABLE" };
+    return {
+      host,
+      robotsAllowed,
+      source: "NONE",
+      linkCount: 0,
+      detailUrls: [],
+      httpCalls,
+      note: "NO_SITEMAP · LISTING_UNREACHABLE",
+      entryHtml: null,
+    };
   }
   const hrefs = extractHrefs(html, entryUrl);
   const picked = pickDetailUrlsForCode(hrefs, code);
@@ -213,5 +242,6 @@ export async function expandDomesticListing(entryUrl: string, code: string | nul
       picked.length > 0
         ? null
         : `NO_SITEMAP · LISTING_HREF ${hrefs.length}건 중 품번 일치 0 — 목록에 품번이 적혀 있지 않다(상세를 열어야 안다)`,
+    entryHtml: html,
   };
 }
