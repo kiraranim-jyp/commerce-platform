@@ -124,7 +124,68 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
-## 6. NEXT WORK — 🔴🔴 **CORE-2J 완료 — CORE-2I 의 「국내 SAME」을 정정한다**
+## 6. NEXT WORK — 🟢🟢 **CORE-2K 완료 — 운영 «코드 1줄» 로 Identity 칸을 정화했다**
+
+🔴🔴 **진입은 이 절 하나다.** 🔴 **push 0 · deploy 0**(`662df3be`·`d04cd768` 포함) · CEO 액션 **없음**.
+전문 하니스 `apps/admin/src/app/api/price-history/_lib/__tests__/core-2k-seller-sku-purity.test.ts`.
+
+🟢🟢 **운영 변경이 정확히 «코드 1줄» 이다**(`git diff` 34줄 중 33줄이 주석):
+```
+packages/shared/src/product-facts.ts  `extractCodeLikeSlugSegment`
+   + if (/^[0-9]/.test(first)) return null;     ← **숫자로 시작하면 판매처 재고번호다**
+🟢 새 정책이 아니다 — 그 함수 주석이 **원래 그것을 약속** 하고 있었고
+   (「판매처 재고번호가 여기 걸리지 않는다」) `kids21 700005621lbl` 로 깨져 있었다.
+🟢 판별축도 **WU-071 이 이미 측정하고 보류** 한 그것이다(진짜 품번 전부 글자 시작 ·
+   샵 SKU 전부 숫자 시작 · N=13 · 잃는 것 0). 🔴 WU-072 는 **recall** 목적이라 REJECT 했고
+   CORE-2K 는 **Identity field purity** 목적이다 — **같은 축, 다른 질문**.
+```
+
+🟢 **CPO 6 KPI (분모 13 · 🔴 `miniboutique` UNREACHABLE = 측정불가 1)**
+```
+Seller-SKU pollution       1 → **0**        False CONFLICT            1 → **0**
+Human SAME recovery        3 → **3**(변화 0 · 🟢 CPO 가 「0 이어도 PASS」 명시)
+Different-Code leakage     **0** 유지        m.luxboy identifier leak  **0** 유지
+Negative fixture leakage   **0** 유지
+```
+
+🟢 **CPO 요구 3건 개별 판정 — 전부 PASS**
+```
+kids21         `700005621LBL` → **null** · unavailable · CONFLICT → **PRESUMED_SAME/TEXT_CONFIRMED**
+               🔴 **SAME 이 된 것은 아니다**(CPO 가정 금지 준수)
+junioredition  `B226AB040` **유지** · **conflict 유지** · **CONFLICT 유지** 🟢 안전장치 산다
+m.luxboy       품번 **exact** 인데 **PRESUMED_SAME/TEXT_CONFIRMED** —
+               🟢 `NO_TITLE_OVERLAP` + `crossSellerReserved` **이중 잠금이 승격을 막는다**
+```
+
+🟢🟢 **최대 위험 통과** — 원상품 slug 도 같은 함수를 지나는데 **`B226AC009` 가 살아 있다**
+(사라지면 확인 경로의 입력이 없어져 전체가 망가진다 ⟹ 계약으로 잠갔다).
+
+🔴 **금지 축 전부 0**(소스 단언으로 잠금) — `SAME_MIN_AXES` · threshold · CATEGORY · TITLE ·
+COLOR · **code normalization**(`226AC009` 는 여전히 `partial`) · `crossSellerReserved` ·
+`NO_TITLE_OVERLAP` · `EXACT_IDENTIFIER` 승격조건 · MI verdict · 검색 · Adapter ·
+Gemini/OpenAI/Naver · **데이터 모델 확장**(`ShopifyProductLike` 에 `sku` 칸 추가 0).
+
+🟢 변이 **K1**(가드 무력화) **3 FAIL** · **K2**(과잉 — 숫자가 「있으면」 거부) **3 FAIL**
+⟹ **양방향 잠금**(지우면 오염 복귀 · 넓히면 원상품 품번 소실). 바이트 복구 확인.
+
+🔴🔴 **기존 계약 2건이 FAIL 했고 «의도된 변경» 이라 갱신·강화했다**:
+```
+`wu-071-l4-risk-shape` — 그 테스트가 **「둘을 가를 수 없다」** 고 적고 있었다.
+   🟢🟢 CORE-2K 가 정확히 그것을 갈랐고, 이제 **양방향**(SKU 거부 + 품번 유지)으로 잠근다
+`core-2j-identity-field-purity` — **결함 동작을 고정** 해 둔 줄이 뒤집혔다(설명은 보존)
+```
+
+🟢 게이트 — typecheck **0** · build **exit 0** · 회귀 **641 files / 8,906 passed / 1 failed**
+(`p54c1` · CPO 가 합산 제외 명시 · `packages/crawler` 무관).
+
+🔵 **CPO 결정 대기** — CPO 가 정한 다음 순서는 「**CORE-2K 결과 재판정 → 그때 `stockmann`
+본문 탐색 여부 결정**」이다. 🔴 정규화와 identifier-only 승격은 **계속 닫혀 있다**.
+
+---
+
+## 6-B. [종료] CORE-2J — Identity 칸 순수성 조사
+
+🔴🔴 **CORE-2J 완료 — CORE-2I 의 「국내 SAME」을 정정한다**
 
 🔴🔴 **진입은 이 절 하나다.** 운영 코드 **0** · 배포 **0** · **push 안 함**(`662df3be` 포함).
 전문 하니스 `apps/admin/src/app/api/price-history/_lib/__tests__/core-2j-identity-field-purity.test.ts`.

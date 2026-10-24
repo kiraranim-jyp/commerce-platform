@@ -202,9 +202,18 @@ describe("WU-071 — L4 위험 형태 (GT 캐시 필요)", () => {
       const it = items.find((x) => x.id === id && x.src !== "DERIVED")!;
       for (const [m] of MODES) expect(run(it, m).tier, `${id}/${m}`).toBe("EXACT");
     }
-    /** 🔴 ⑤ — kids21 의 **샵 자체 SKU** 가 slug 추출기를 통과한다(원인 고정). */
-    expect(extractCodeLikeSlugSegment("700005621lbl")).toBe("700005621LBL");
-    /** 🟢 그리고 브랜드 공식몰의 진짜 품번도 같은 함수로 들어온다 — **둘을 가를 수 없다**. */
+    /**
+     * ── 🟢🟢 **CORE-2K(2026-10-24)에서 이 단언이 «뒤집혔다» — 그것이 수정의 증거다** ──
+     *
+     * WU-071 이 여기 적어 둔 문장은 「**둘을 가를 수 없다**」였다. 그리고 같은 WU 가
+     * 「안전 후보 1 — 진짜 품번은 전부 글자 시작 · 샵 SKU 는 전부 숫자 시작(N=13 ·
+     * 잃는 것 0)」을 **보류** 했다. 🟢 CORE-2K 가 CPO 결정으로 그 보류를 해제했다.
+     *
+     * 🔴 그래서 기대값을 **바꾸되 약하게 만들지 않는다** — 「샵 SKU 는 거부」와
+     *    「진짜 품번은 유지」를 **둘 다** 단언해 **양방향으로** 잠근다.
+     *    (가드를 지우면 첫 줄이 FAIL · 과잉으로 넓히면 둘째 줄이 FAIL)
+     */
+    expect(extractCodeLikeSlugSegment("700005621lbl"), "🔴 샵 자체 SKU 는 품번으로 승격되지 않는다").toBeNull();
     expect(extractCodeLikeSlugSegment("b226ac114-bobo-choses-bolder-half-zipped-sweatshirt")).toBe("B226AC114");
   });
 });

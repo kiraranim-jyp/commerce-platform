@@ -765,6 +765,35 @@ export function extractLabeledProductCode(text: string | null | undefined): stri
  * 오인한다. 그리고 판매처 재고번호가 여기 걸리지 않는지가 중요한데, 실측한 두
  * 형태 모두 안전하게 빠진다 — Smallable 슬러그의 첫 조각은 "bobo"(숫자 없음),
  * 마지막 조각은 "430701"(글자 없음)이라 어느 쪽도 조건을 못 넘는다.
+ *
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴🔴 CORE-2K(CPO 결정, 2026-10-24) — **바로 위 문단의 약속이 깨져 있었다.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 「판매처 재고번호가 여기 걸리지 않는다」는 전제가 **실측으로 반증됐다**:
+ * ```
+ * kids21.com  /products/**700005621lbl**  → 승격 `700005621LBL`
+ *   🔴 숫자 9자리 뒤에 `lbl` 이 붙어 「글자도 있고 숫자도 있다」를 통과한다
+ *   ⟹ `compareModelCode("B226AC009", "700005621LBL")` = **conflict**
+ *   ⟹ 🔴 **human SAME 후보가 CONFLICT 로 떨어진다**(CORE-2J 실측)
+ *   ⟹ 🔴 그리고 그 칸이 채워져 `match.ts` 의 **확인 경로(`=== null`)가 돌지 않는다**
+ * ```
+ *
+ * 🔴 고치는 것은 **「품번이 아닌 값을 품번으로 넣는 것」** 하나다. `conflict` 자체는
+ *    **정상적인 안전장치** 이므로 건드리지 않는다(CPO 명시) — 그래서 「다른 상품의
+ *    공식 품번」(`junioredition B226AB040`)은 **그대로 남아 conflict 를 유지한다**.
+ *
+ * 🟢 판별축을 **지어내지 않았다** — WU-071 이 **이미 측정하고 보류** 해 둔 그 축이다:
+ *    「승격 13건에서 **진짜 품번은 전부 글자 시작 · 샵 SKU 는 전부 숫자 시작**
+ *     (N=13 · 잃는 것 0)」. 🔴 WU-072 가 그것을 「효과 0」으로 REJECT 했지만 그때의
+ *    목적은 **recall** 이었다. 이번 목적은 **Identity field purity** 이고 CPO 가
+ *    「SAME 회복 0 이어도 PASS」라고 명시했다 — **같은 축, 다른 질문** 이다.
+ *
+ * 🔴 **데이터 모델을 넓히지 않았다**(CPO 명시). 「판매처가 스스로 `sku` 칸에 적은 값과
+ *    같은가」로 판별하는 길도 있었지만 `ShopifyProductLike` 에 **`sku` 칸이 없어서**
+ *    그것은 타입 확장을 요구한다 ⟹ 채택하지 않았다.
+ *
+ * 🔴 **정규화는 한 글자도 바꾸지 않았다** — `226AC009 → B226AC009` 보정 **없음**.
  */
 const MIN_SLUG_CODE_LENGTH = 6;
 const MAX_SLUG_CODE_LENGTH = 20;
@@ -776,5 +805,10 @@ export function extractCodeLikeSlugSegment(slug: string | null | undefined): str
   if (first.length < MIN_SLUG_CODE_LENGTH || first.length > MAX_SLUG_CODE_LENGTH) return null;
   if (!/^[a-z0-9]+$/.test(first)) return null;
   if (!/[a-z]/.test(first) || !/[0-9]/.test(first)) return null;
+  /**
+   * 🔴 **숫자로 시작하면 판매처 재고번호다** — 공식 품번은 브랜드 코드로 시작한다.
+   *    모르는 것을 품번으로 적지 않고 **`null`(UNKNOWN)** 로 둔다(CPO 「모르면 UNKNOWN」).
+   */
+  if (/^[0-9]/.test(first)) return null;
   return first.toUpperCase();
 }

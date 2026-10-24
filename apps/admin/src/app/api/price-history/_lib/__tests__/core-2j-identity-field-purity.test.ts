@@ -457,8 +457,14 @@ describe("CORE-2J — Product Code Extraction / Identity Field Purity (운영 �
   it("E — 판매처 SKU/상품번호가 공식 품번 칸에 들어오면 무엇이 되는가", () => {
     console.log("\n═══ E. 생산자 단위 Negative(순수 함수) ═══");
     /** 🔴 실측된 오염값 둘 — kids21 · 숫자 상품번호. */
+    /**
+     * 🟢🟢 **CORE-2K 에서 kids21 줄이 «뒤집혔다» — 그것이 수정의 증거다.**
+     * 🔴 CORE-2J 는 **결함 동작을 고정** 했고(「이 모양은 승격된다(현재 동작)」),
+     *    CORE-2K 가 CPO 결정으로 그것을 **`null`(UNKNOWN)** 로 바꿨다.
+     * 🔴 기대값만 바꾸고 **설명을 지우지 않는다** — 다음 사람이 왜 바뀌었는지 알아야 한다.
+     */
     const cases: { label: string; slug: string; expectPromote: boolean }[] = [
-      { label: "kids21 판매처 SKU", slug: "700005621lbl", expectPromote: true },
+      { label: "kids21 판매처 SKU", slug: "700005621lbl", expectPromote: false },
       { label: "숫자만 상품번호", slug: "4117", expectPromote: false },
       { label: "공식 품번 slug", slug: "b226ac009-hug-hairy-monster-t-shirt", expectPromote: true },
     ];
@@ -471,9 +477,9 @@ describe("CORE-2J — Product Code Extraction / Identity Field Purity (운영 �
       if (c.expectPromote) expect(promoted, "🔴 이 모양은 승격된다(현재 동작)").toBeTruthy();
       else expect(promoted, "🟢 숫자만인 세그먼트는 식별자가 아니다(WU-095)").toBeNull();
     }
-    console.log("    🔴🔴 `700005621lbl` 이 **승격되고** compareModelCode 가 **conflict** 를 낸다");
-    console.log("       ⟹ 🔴 **human SAME 이 CONFLICT 로 떨어진다**(CORE-2I 실측 kids21)");
-    console.log("       🟢 그리고 그 칸이 채워져 있어 **확인 경로(=== null)가 돌지 않는다**");
+    console.log("    🟢🟢 **CORE-2K 에서 고쳐졌다** — `700005621lbl` 은 더 이상 승격되지 않는다(null)");
+    console.log("       🔴 CORE-2J 측정 당시에는 승격돼 compareModelCode 가 **conflict** 를 냈고,");
+    console.log("          그래서 **human SAME 이 CONFLICT 로 떨어졌다**(그것이 CORE-2K 의 근거다)");
 
     /** 🔴 라벨 추출기는 **라벨이 있을 때만** 쓴다 — 라벨 없는 숫자열을 품번으로 쓰지 않는다. */
     expect(extractLabeledProductCode("상품번호 4117 가격 88,000원")).not.toBe("88000");
