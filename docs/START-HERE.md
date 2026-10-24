@@ -150,7 +150,38 @@ Production `/` **200** · `/pipeline` 307 · `/api/price-history/check` 401(정�
       ⒝ `shopId` 를 등록부 uuid 로 넣지 않는다 ⒞ `GeminiTransientEvidence.source` 를
       **새 값으로 가른다** ⒟ 국내 등록부 후보는 sink 로 보내지 않는다(이중 집계)
 
-③ **Registry 의존 제거**(CPO 가 이번에 새로 지시한 축)
+③ **Registry 의존 제거** — 🟢 **CPO 가 WU-063 충돌을 정리했다(2026-10-24)**
+```
+🟢 WU-063 은 **유지** 된다 · `mi-020` 도 **폐기하지 않는다**
+🔴 금지 — 신호 «하나» 로 KR 강제: `lang=ko` 단독 · 사업자등록 단독 ·
+   `.com+KRW` 단독 · **registry 등록 단독**
+🟢 허용 — TLD · currency · URL/domain · 기존 Extract · shipping · customs ·
+   payment · business information · footer · address · 판매조건을 **종합**
+🟢 부족하면 **최소 추가 evidence** · 그래도 불명확하면 **UNKNOWN**
+🔵 그래서 ③ 의 첫 일은 「**KR 판정용 composite evidence gate 가 현재 데이터로
+   가능한가**」를 **측정** 하는 것이다(CPO 문장 그대로).
+```
+
+🔴🔴 **그 첫 질문의 답은 이미 나왔다(2026-10-24 코드 전수 확인)**:
+```
+`ProductFacts`(packages/shared) · `ComparisonCandidate`(crawler types) ·
+`product-data-extractor` 전수 grep —
+  businessRegistration · 사업자 · 통신판매 · mailOrder · bizNo ·
+  companyAddress · customsCode · 통관   ⟹ **칸이 하나도 없다(0건)**
+🟢 `ProductFacts` 의 실제 칸은 14개다 — urlSlug · brand · brandModelCode ·
+   sellerSku · title · coreTitleTokens · categoryText · colorText · materialText ·
+   fitText · ageRangeText · sizeLabels · audienceSignals · imageUrls
+⟹ 🔴🔴 **composite gate 는 「현재 데이터」로 불가능하다** — 종합할 증거 칸이 없다.
+   🟢 그러므로 ③ 은 **「최소 추가 evidence 수집」이 선행** 이고(CPO 가 허용한 그 축),
+      그 수집은 **본문 1회 fetch 로 가능** 하다(`fetchPlainHtml` 이 이미 HTML 을 받는다 ·
+      WU-053/CORE-2L 선례 — 추가 HTTP **0** 으로 순수 파서를 더하는 모양).
+   🔴 단 **그 칸을 추가하는 것** 이 운영 타입 변경이므로 CPO 범위 확인이 필요하다
+      (CPO §7 「허용 — **필요한 최소 market evidence extraction/gate**」에 해당한다고 읽힌다).
+```
+
+🔴 **옛 ③ 메모(아래)는 CPO 정리 이전 버전이다 — 위 블록이 이긴다.**
+
+③-old **Registry 의존 제거**(CPO 가 이번에 새로 지시한 축)
    🔴 현재 `classifyCandidateMarket` 의 `REGISTERED_SHOP_AND_KRW` 가 KR 근거다
       (`run-domestic-price-check.ts:1574` ← `registeredDomains`)
    🔴 CPO: 「`domestic_price_sources` 를 국내 판정의 **권위 있는 근거로 쓰지 않는다**」
