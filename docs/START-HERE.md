@@ -124,7 +124,61 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
-## 6. NEXT WORK — 🟡 **CORE-2L 완료 — 본문 확대는 «안전하지만 이득이 0.5건» 이다**
+## 6. NEXT WORK — 🟡 **CORE-2M 완료 — 육안 판정 화면 준비됨 · CEO 판정 1회 대기**
+
+🔴🔴 **진입은 이 절 하나다.** 운영 코드 **0** · 배포 **0** · **push 0**.
+🟡 **CEO 액션 — 아래 화면에서 10건 판정 1회**(15~25분).
+
+```
+화면   https://claude.ai/code/artifact/dbdb6d4e-a58c-45a3-bc80-582c683dffda
+파일   docs/core-2m-visual-review.html (6.30MB · 자립형 · 원격 이미지 0)
+생성기 apps/.../__tests__/core-2m-visual-review-build.test.ts
+```
+
+🟢 **방향이 바뀌었다**(CPO 2026-10-24) — MI 가 **결론을 내는 것이 아니라** CEO 가 판단할
+수 있게 **비교 재료를 압축해 보여준다**. CEO 판정이 **MI 의 정답 데이터** 가 된다.
+
+```
+검토 대상            **10**   (MI 가 SAME 을 확정하지 못한 후보 전부)
+MI 확정 SAME(제외)    **3**    tinyapple · trenbe · thefrontshop → 가격 근거로 바로 간다
+측정불가(제외)        **1**    miniboutique.co.kr(4회 연속 UNREACHABLE)
+🟢🟢 이미지 확보      **10 / 10**
+```
+
+🔴 **3단 점진 공개** — 처음부터 20개 항목을 보여주지 않는다(CPO 명시).
+`핵심(브랜드·품번·상품명·유형·핵심어) + 사진` → `▸ 추가(색상·소재·핏·대상·사이즈)`
+→ `▸ 기타(판매처 SKU·URL·상세설명 발췌·추가 이미지)`. CEO 는 **동일 / 유사 / 판단불가** 셋 중 하나.
+
+🟢 **계약으로 잠근 것 다섯**(생성기 테스트)
+```
+① MI 내부 토큰 노출 **0** — `NO_TITLE_OVERLAP`·`PRESUMED_SAME`·`matchLevel`·
+   `confidence`·`SAME_MIN_AXES` 등 **전수 단언**(CPO 「축 이름·점수 보여줄 필요 없다」)
+② **원격 이미지 0** — 전부 `data:` URI(WU-093 에서 사진이 안 떠 12건이 측정불가가 됐다)
+③ **미리 선택된 칸 0** — CTO 가 판정하지 않았다
+④ 1단은 **펼쳐져** 있고 2·3단은 `details` 안이며 **핵심 표가 접힘보다 앞** 에 온다
+⑤ 원상품 패널 **sticky** · 후보당 3택
+```
+
+🔴 **값을 지어내지 않았다** — `ProductFacts` 에 **패턴/디테일 칸이 없다** ⟹ 화면이
+「수집하는 칸이 없습니다 — 사진으로 보셔야 합니다」라고 **직접 말한다**.
+🔴 그리고 **「표기 같음 / 표기 다름」 칩은 «글자» 비교** 이고 상품 동일성 판정이 아니라고
+화면에 **적었다**(그 구분을 안 적으면 CEO 가 시스템 판정으로 읽는다).
+
+🔴 **이미지 보충을 숨기지 않았다** — 4건이 `imageUrls` 가 **애초에 비어 있었고**(그중 셋이
+CPO 핵심 fixture) WU-100 선례대로 `og:image` → JSON-LD `Product.image`(둘 다 **표준 칸** ·
+사이트별 규칙 0 · 운영 추출기 변경 0)로 보충했다. 🟢 그 사실을 **사진 밑에 적는다**.
+
+🟡 **CEO 판정 뒤의 분류**(CPO 확정) — 동일 → **SAME fixture** · 유사 → **SAME 제외** ·
+판단불가 → **추가 데이터 필요 사례로 분리**.
+
+🔵 **CTO 가 할 코드 작업은 없다.** 🔴 정규화·identifier-only 승격·threshold·CATEGORY 는
+**계속 닫혀 있다**.
+
+---
+
+## 6-B. [종료] CORE-2L — 본문 확대 반사실
+
+🟡 **CORE-2L — 본문 확대는 «안전하지만 이득이 0.5건» 이다**
 
 🔴🔴 **진입은 이 절 하나다.** 운영 코드 **0** · **push 0 · deploy 0** · CEO 액션 **없음**.
 전문 하니스 `apps/admin/src/app/api/price-history/_lib/__tests__/core-2l-body-evidence-cf.test.ts`.
@@ -183,7 +237,7 @@ CORE-2L 에서는 `SHOPIFY_JSON`(품번 **B226AB040** → **conflict/CONFLICT**)
 
 ---
 
-## 6-B. [종료] CORE-2K — seller SKU 오염 제거(운영 1줄)
+## 6-C. [종료] CORE-2K — seller SKU 오염 제거(운영 1줄)
 
 🟢🟢 **CORE-2K — 운영 «코드 1줄» 로 Identity 칸을 정화했다**
 
@@ -244,7 +298,7 @@ Gemini/OpenAI/Naver · **데이터 모델 확장**(`ShopifyProductLike` 에 `sku
 
 ---
 
-## 6-C. [종료] CORE-2J — Identity 칸 순수성 조사
+## 6-D. [종료] CORE-2J — Identity 칸 순수성 조사
 
 🔴🔴 **CORE-2J 완료 — CORE-2I 의 「국내 SAME」을 정정한다**
 
@@ -322,7 +376,7 @@ donokids.com  전 자리(JSON-LD·`<title>`·본문)가 **「선행문자없음�
 
 ---
 
-## 6-D. [종료] CORE-2I — Identity / Seller-data 분리
+## 6-E. [종료] CORE-2I — Identity / Seller-data 분리
 
 🟢🟢🟢 **CORE-2I — 국내 SAME 이 났다(단 위 ⒝ 정정을 같이 읽는다)**
 
@@ -378,7 +432,7 @@ threshold 와 무관) ② **Layer C 오염 제거**(판매처 SKU 가 Identity �
 
 ---
 
-## 6-E. [종료] CORE-2H — MI 3축 Counterfactual
+## 6-F. [종료] CORE-2H — MI 3축 Counterfactual
 
 ### 🔴🔴🔴 다음 세션은 이 문단만 읽고 시작한다
 
@@ -474,7 +528,7 @@ typecheck **0** · build **exit 0** · 회귀 **638 files / 8,895 passed / 1 fai
 
 ---
 
-## 6-F. [종료] CORE-2G — Dono Kids 2-hop
+## 6-G. [종료] CORE-2G — Dono Kids 2-hop
 
 ### 🟢🟢🟢 다음 세션은 이 문단만 읽고 시작한다
 
@@ -554,7 +608,7 @@ typecheck **0** · build **exit 0** · 회귀 **638 files / 8,895 passed / 1 fai
 
 ---
 
-## 6-G. [종료] CORE-2F — 국내 1-hop 공급
+## 6-H. [종료] CORE-2F — 국내 1-hop 공급
 
 ### 🟢🟢🟢 다음 세션은 이 문단만 읽고 시작한다
 
@@ -635,7 +689,7 @@ typecheck **0** · build **exit 0** · 회귀 **637 files / 8,886 passed / 1 fai
 
 ---
 
-## 6-H. [종료] CORE-2E — 가격 목적 재정의
+## 6-I. [종료] CORE-2E — 가격 목적 재정의
 
 ### 🟢🟢🟢 다음 세션은 이 문단만 읽고 시작한다
 
@@ -720,7 +774,7 @@ typecheck **0** · build **exit 0** · 회귀 **636 files / 8,880 passed / 1 fai
 
 ---
 
-## 6-I. [종료] CORE-2D — 북마크릿 전달 UX
+## 6-J. [종료] CORE-2D — 북마크릿 전달 UX
 
 ### 🟢🟢🟢 다음 세션은 이 문단만 읽고 시작한다
 
@@ -797,7 +851,7 @@ typecheck **0** · build **exit 0** · 회귀 **635 files / 8,860 passed / 1 fai
 
 ---
 
-## 6-J. [종료] CORE-2C — 핸드오프 배선
+## 6-K. [종료] CORE-2C — 핸드오프 배선
 
 ### 🟢🟢🟢 다음 세션은 이 문단만 읽고 시작한다
 
@@ -871,7 +925,7 @@ typecheck **0** · build **exit 0**(`✓ Compiled successfully`) ·
 
 ---
 
-## 6-K. [종료] CORE-2B — 브라우저 핸드오프 PoC
+## 6-L. [종료] CORE-2B — 브라우저 핸드오프 PoC
 
 ### 🟢🟢🟢 다음 세션은 이 문단만 읽고 시작한다
 
@@ -952,7 +1006,7 @@ typecheck **0** · 회귀 **633 files / 8,817 passed / 1 failed**
 
 ---
 
-## 6-L. [종료] CORE-2 — 무과금 외부 Search 후보 조사
+## 6-M. [종료] CORE-2 — 무과금 외부 Search 후보 조사
 
 ### 🔴🔴🔴 다음 세션은 이 문단만 읽고 시작한다
 
@@ -1036,7 +1090,7 @@ typecheck          0
 
 ---
 
-## 6-M. [종료] CORE-1D — AI Search 실행경로 비교
+## 6-N. [종료] CORE-1D — AI Search 실행경로 비교
 
 ### 🔴🔴🔴 먼저 — **내 CORE-1B 결론을 «내가» 약화시킨다**
 
@@ -1145,7 +1199,7 @@ planner 8축 = 상품당 8 requests ⟹ 🟢 **월 625 상품까지 무료 할�
 
 ---
 
-## 6-N. [종료] CORE-1B — 🔴 결론은 위 §6 이 **US-only 한계로 약화시켰다**
+## 6-O. [종료] CORE-1B — 🔴 결론은 위 §6 이 **US-only 한계로 약화시켰다**
 
 ### 🔴🔴🔴 이 한 문단이 CORE-1B 의 결론이다
 
@@ -1240,7 +1294,7 @@ FINAL-1 은 brand 복구 실패를 「사이트가 429 로 거부한다」로 �
 
 ---
 
-## 6-O. [종료] EXECUTOR FEASIBILITY — 🔴 아래 추천 1순위는 **CORE-1B 가 정정했다**
+## 6-P. [종료] EXECUTOR FEASIBILITY — 🔴 아래 추천 1순위는 **CORE-1B 가 정정했다**
 
 ### 🔴🔴 먼저 — **내가 planner 를 이미 `main` 에 push 했다**(CPO 「배포 보류」와 어긋난다)
 
@@ -1308,7 +1362,7 @@ Adapter/Registry/MI/SAME/MODEL_CODE/synonym/seed **전부 0**.
 
 ---
 
-## 6-P. [종료] CORE-1 전반부 — Query Planner PASS
+## 6-Q. [종료] CORE-1 전반부 — Query Planner PASS
 
 ### 🔴🔴🔴 Q1 — **Production runtime 의 AI Search capability = 0**(전수 확인)
 
@@ -1377,7 +1431,7 @@ Adapter/Registry/MI/SAME/MODEL_CODE/synonym/seed **전부 0**.
 
 ---
 
-## 6-Q. [종료] WU-FINAL 1·2·3
+## 6-R. [종료] WU-FINAL 1·2·3
 
 ### 🟢🟢 FINAL-1 — **배포 완료**(`ce3a42ca`) · brand 복구 **20% → 93%**
 
@@ -1457,7 +1511,7 @@ B226AC117 → A (비스킷 ₩258,000 · 머스트잇 ₩233,000 **추출됐지�
 
 ---
 
-## 6-R. [종료] WU-173 — brand 실패 원인은 추가 fetch 의 429
+## 6-S. [종료] WU-173 — brand 실패 원인은 추가 fetch 의 429
 
 > 🟢🟢 원인이 **한 지점으로** 좁혀졌다. 🔴 그리고 **운영에 이미 그 장치가 있다** —
 > 그래서 「코드로 못 고친다」가 아니라 **「그 장치가 이 경로에서 부족하다」** 다.
@@ -1528,7 +1582,7 @@ B226AC117 → A (비스킷 ₩258,000 · 머스트잇 ₩233,000 **추출됐지�
 
 ---
 
-## 6-S. [종료] WU-172 — 국내 가격비교 E2E HOLD
+## 6-T. [종료] WU-172 — 국내 가격비교 E2E HOLD
 
 > 🟢🟢 **처음으로 국내 SAME 이 실제로 섰다**(2상품 · `tier=SAME · market=KR · KRW 83,600`).
 > 🔴 그런데 그것이 **실행마다 흔들린다** — 원인을 찾았다.
@@ -1600,7 +1654,7 @@ Q6 DIFFERENT 를 다시 노출하는가    🟢 **오염 0** · 🟢 셀러 화�
 
 ---
 
-## 6-T. [종료] WU-171 — 증거별 가치표
+## 6-U. [종료] WU-171 — 증거별 가치표
 
 > 🟢🟢 CPO 가 물은 것(「상품명에 몇 주를 더 투자할 가치가 있는가」)에 **답이 나왔다.**
 
@@ -1663,7 +1717,7 @@ COMPOSITION  DIFFERENT 차단 0/6 · 🔴 SAME 오차단 1/19            ⟹ �
 
 ---
 
-## 6-U. [종료] WU-170 — 품번 회수는 발화하지만 1점 부족
+## 6-V. [종료] WU-170 — 품번 회수는 발화하지만 1점 부족
 
 > 🔴🔴 **CPO 성공조건 미충족 ⟹ 배포하지 않았고 운영 코드를 되돌렸다.**
 > 조건은 「Biskuit 이 운영 MI 에서 **SAME** 으로 회수 **+** 전체 regression **green**」이었다.
@@ -1741,7 +1795,7 @@ slug 하나 대신 **건초더미 목록** 을 돌린다
 
 ---
 
-## 6-V. [종료] WU-169 — URL 품번 회수 가능성 GO
+## 6-W. [종료] WU-169 — URL 품번 회수 가능성 GO
 
 > 🟢🟢 **통제군 3/3 기대 일치 · DIFFERENT 오회수 0 · 잃은 것 0 · 숫자-only 가드 유지.**
 > 🔴 단 분모 39 · 원상품 소수 ⟹ **HOLD 요소를 같이 적는다**(아래 ⑦).
@@ -1816,7 +1870,7 @@ slug 하나 대신 **건초더미 목록** 을 돌린다
 
 ---
 
-## 6-W. [종료] WU-168 — 병목은 URL 품번 추출 범위다
+## 6-X. [종료] WU-168 — 병목은 URL 품번 추출 범위다
 
 > 🟢🟢🟢 **이 트랙에서 가장 중요한 발견이다.** WU-164~167 이 다섯 번 두드린 벽이
 > **`NO_TITLE_OVERLAP` 이 아니었다.** 🔴 비스킷의 **품번 축이 안 선다**.
@@ -1876,7 +1930,7 @@ luxboy — URL 에 품번 **없음**     · 제목에만 품번 있음 · human 
 
 ---
 
-## 6-X. [종료] WU-167 — 한글 토큰화 자산 검토
+## 6-Y. [종료] WU-167 — 한글 토큰화 자산 검토
 
 > 🟢🟢 **그리고 「띄어쓰기로 축이 죽는다」의 «정확한 기전» 이 밝혀졌다** — 이것이
 > 이 WU 의 핵심이다. 🔴 원인은 음역이 아니라 **토큰화 + `includes` 조합** 이다.
@@ -1951,7 +2005,7 @@ luxboy — URL 에 품번 **없음**     · 제목에만 품번 있음 · human 
 
 ---
 
-## 6-Y. [종료] WU-166 — 음역 CF 세 개 전부 미발화
+## 6-Z. [종료] WU-166 — 음역 CF 세 개 전부 미발화
 
 > 🔴🔴🔴 **「leakage 0」을 안전 증거로 쓰지 않는다.** 분모가 **참여하지 못했다.**
 
@@ -2010,7 +2064,7 @@ CF-2 음역 + **품번 동반**  열림 **1** (SAME 1 · DIFFERENT 0)
 
 ---
 
-## 6-Z. [종료] WU-165 동의어 전수조사
+## 6-AA. [종료] WU-165 동의어 전수조사
 
 > 🔴🔴 **CPO 가 WU-164 의 동결을 정정했다**(2026-10-22) — 「**WU-078 의 «음역 축 종료»
 > 를 «동의어 검토 전체 종료» 로 잘못 해석했다. 그건 다른 얘기다**」.
@@ -2090,7 +2144,7 @@ CF-2 음역 + **품번 동반**  열림 **1** (SAME 1 · DIFFERENT 0)
 
 ---
 
-## 6-AA. [참고] WU-164 시점의 동결 판단 — 🔴 **CPO 가 위와 같이 정정했다**
+## 6-AB. [참고] WU-164 시점의 동결 판단 — 🔴 **CPO 가 위와 같이 정정했다**
 
 > 🔴🔴🔴 **「공급이 안 된다」가 아니다.** 🟢 **공급은 해결됐고**, 남은 한 칸은
 > **제품 정책** 이다. 🔴 그 정책이 **class C**(위)이고 **조사까지 끝났다**.
@@ -2133,7 +2187,7 @@ CF-2 음역 + **품번 동반**  열림 **1** (SAME 1 · DIFFERENT 0)
 
 ---
 
-## 6-AB. [종료된 결론] WU-155~164 — 🔴 재측정 금지
+## 6-AC. [종료된 결론] WU-155~164 — 🔴 재측정 금지
 
 > 🔴🔴🔴 **CPO 가 WU-157 방향을 정정했다**(2026-10-22) — 「우리가 만들려는 구조는
 > **Gemini API 를 우리 서버에서 호출해서 검색하는 구조가 아니다**」.
@@ -2528,7 +2582,7 @@ payload 상한 50  check/route.ts:24
 
 ---
 
-## 6-AC. [완료 기록] WU-156 — Case C / NO-GO
+## 6-AD. [완료 기록] WU-156 — Case C / NO-GO
 
 ### 🔴🔴🔴 WU-156 결론 — **검색어를 바꿔도 국내 상세 URL 은 열리지 않는다**(코드 0)
 
@@ -2620,7 +2674,7 @@ packages/pricing/src/currency.ts  `convertToKrw(amount, currency, liveRates)`
 
 ---
 
-## 6-AD. [참고] 그 전의 좌표 — WU-149 STEP 1·6·7
+## 6-AE. [참고] 그 전의 좌표 — WU-149 STEP 1·6·7
 
 > 🟢🟢 **WU-149 STEP 1·6·7 은 끝났다**(`d929a0e9` · 배포 완료 · 전문 `docs/HANDOFF-WU-149.md`).
 > 🔴 **CTO 가 할 코드 작업이 없다.** 아래 §6-A 는 **완료된 기록** 이다 — 다시 구현하지 않는다.
@@ -2639,7 +2693,7 @@ packages/pricing/src/currency.ts  `convertToKrw(amount, currency, liveRates)`
 
 ---
 
-## 6-AE. [완료 기록] STEP 1 → 6 → 7 이 무엇이었나
+## 6-AF. [완료 기록] STEP 1 → 6 → 7 이 무엇이었나
 
 ### STEP 1 — seller surface 에서 **legacy candidate research UI 제거**
 
