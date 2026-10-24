@@ -1937,6 +1937,17 @@ export function DomesticPriceIntelligencePanel({
    */
   const [reviewedSameEvidence, setReviewedSameEvidence] = useState<GeminiTransientRow[] | null>(null);
   /**
+   * 🔴🔴🔴 CORE-2R-5 UI FIX — **다섯 번째 출처(국내 목록 탐색)가 여기 없었다.**
+   *
+   * CORE-2R-4 가 `domesticListingEvidence` 를 만들어 **MI 입력(check/route)에는** 넘겼는데
+   * **이 패널이 그 칸을 읽지 않았다** ⟹ 국내 후보 둘(도노키즈 · 미니부띠끄 · 각 KRW 88,000)이
+   * `marketComparisonInput.rows` 에 **한 번도 들어가지 못했다** ⟹ 🇰🇷 블록이
+   * 「후보를 찾지 못했습니다」만 말하고 후보 수·판매처 수가 전부 0 으로 보였다.
+   * 🔴 생산자를 늘릴 때 **읽는 쪽 다섯 자리**(응답 타입 2 · setter 2 · rows/deps)를 같이
+   *    고쳐야 한다 — 하나라도 빠지면 **조용히** 사라진다(계약이 이제 그것을 문다).
+   */
+  const [domesticListingEvidence, setDomesticListingEvidence] = useState<GeminiTransientRow[] | null>(null);
+  /**
    * 🔴🔴 WU-049 — **해외 참고가격.** MI 가 이미 계산한 집계를 받는다.
    *    🟢 이 값은 **이번 확인에만** 산다 — GET 경로는 transient 를 넘기지 않아
    *       항상 비어 있다(설계). 그래서 상태로 들고 다른 값을 덮어쓰지 않는다.
@@ -1968,6 +1979,8 @@ export function DomesticPriceIntelligencePanel({
         overseasAutoEvidence?: GeminiTransientRow[] | null;
         /** 🔴 WU-132 ⑥ — 이전 판단을 재투입한 결과. 자동 1회차에서도 채워진다. */
         reviewedSameEvidence?: GeminiTransientRow[] | null;
+        /** 🔴 CORE-2R-4 — 국내 목록 탐색이 찾아낸 후보. **자동 1회차에서도 채워진다.** */
+        domesticListingEvidence?: GeminiTransientRow[] | null;
       } | null;
     };
     setOverseasReference(j.overseasReference ?? null);
@@ -1976,6 +1989,8 @@ export function DomesticPriceIntelligencePanel({
     setUrlCandidateEvidence(j.domesticShop?.urlCandidateEvidence ?? null);
     setOverseasAutoEvidence(j.domesticShop?.overseasAutoEvidence ?? null);
     setReviewedSameEvidence(j.domesticShop?.reviewedSameEvidence ?? null);
+    /** 🔴 CORE-2R-5 UI FIX — 이 줄이 없어서 국내 후보가 화면에 **한 번도** 서지 못했다. */
+    setDomesticListingEvidence(j.domesticShop?.domesticListingEvidence ?? null);
   }, [autoCheckResult]);
   /**
    * ══════════════════════════════════════════════════════════════════════════
@@ -1995,7 +2010,9 @@ export function DomesticPriceIntelligencePanel({
       geminiEvidence != null ||
       urlCandidateEvidence != null ||
       overseasAutoEvidence != null ||
-      reviewedSameEvidence != null;
+      reviewedSameEvidence != null ||
+      /** 🔴 CORE-2R-5 UI FIX — 다섯 번째 출처. 빠지면 국내 후보가 화면에서 사라진다. */
+      domesticListingEvidence != null;
     return {
       rows: anyEvidence
         ? [
@@ -2003,6 +2020,7 @@ export function DomesticPriceIntelligencePanel({
             ...(urlCandidateEvidence ?? []),
             ...(overseasAutoEvidence ?? []),
             ...(reviewedSameEvidence ?? []),
+            ...(domesticListingEvidence ?? []),
           ]
         : null,
       domesticReference,
@@ -2013,6 +2031,7 @@ export function DomesticPriceIntelligencePanel({
     urlCandidateEvidence,
     overseasAutoEvidence,
     reviewedSameEvidence,
+    domesticListingEvidence,
     domesticReference,
     overseasReference,
   ]);
@@ -2260,6 +2279,8 @@ export function DomesticPriceIntelligencePanel({
             overseasAutoEvidence?: GeminiTransientRow[] | null;
             /** 🔴 WU-132 ⑥ — 이전 판단(`human_verdict='SAME'`)을 재투입한 결과. */
             reviewedSameEvidence?: GeminiTransientRow[] | null;
+            /** 🔴 CORE-2R-4 — 국내 목록 탐색이 찾아낸 후보(「🔄 다시 분석」 경로). */
+            domesticListingEvidence?: GeminiTransientRow[] | null;
             urlCandidateMetrics?: {
               suppliedUrls: number;
               acceptedUrls: number;
@@ -2279,6 +2300,8 @@ export function DomesticPriceIntelligencePanel({
         setUrlCandidateEvidence(json.domesticShop?.urlCandidateEvidence ?? null);
         setOverseasAutoEvidence(json.domesticShop?.overseasAutoEvidence ?? null);
         setReviewedSameEvidence(json.domesticShop?.reviewedSameEvidence ?? null);
+        /** 🔴 CORE-2R-5 UI FIX — 「🔄 다시 분석」 경로에도 같은 줄이 빠져 있었다. */
+        setDomesticListingEvidence(json.domesticShop?.domesticListingEvidence ?? null);
         setUrlCandidateNotice(describeUrlCandidateMetrics(json.domesticShop?.urlCandidateMetrics ?? null));
         setOverseasReference(json.overseasReference ?? null);
         setDomesticReference(json.domesticReference ?? null);

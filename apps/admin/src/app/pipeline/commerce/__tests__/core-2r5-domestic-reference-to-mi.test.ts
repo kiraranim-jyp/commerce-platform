@@ -256,3 +256,45 @@ describe("CORE-2R-5 C — byCurrency 최고가(추가 칸)", () => {
     expect(s.byPriceTier.EXCLUDED).toBe(1);
   });
 });
+
+/* ══════ D. 🔴🔴 생산자를 늘릴 때 «읽는 쪽» 을 빠뜨리지 않는다 (CORE-2R-5 UI FIX) ══════ */
+
+describe("CORE-2R-5 D — 다섯 출처가 전부 seller-facing rows 로 온다", () => {
+  const PANEL = strip(readFileSync(join(COMMERCE, "DomesticPriceIntelligencePanel.tsx"), "utf8"));
+  const SOURCES = [
+    "geminiEvidence",
+    "urlCandidateEvidence",
+    "overseasAutoEvidence",
+    "reviewedSameEvidence",
+    "domesticListingEvidence",
+  ] as const;
+
+  /**
+   * 🔴🔴 **CEO Production FAIL 의 원인이 정확히 이것이었다.** CORE-2R-4 가 다섯 번째
+   *    출처를 만들어 MI 입력에는 넘겼는데 **패널이 그 칸을 읽지 않아** 국내 후보 둘
+   *    (각 KRW 88,000)이 `rows` 에 한 번도 들어가지 못했다 ⟹ 🇰🇷 블록이
+   *    「후보를 찾지 못했습니다」만 말했다.
+   * 🟢 그래서 **다섯 자리를 전수로** 문다 — 숫자를 세지 않고 **이름마다** 단언한다.
+   */
+  it("D-1 🔴 자동 1회차 응답에서 다섯 배열을 **전부** state 로 읽는다", () => {
+    for (const s of SOURCES) {
+      expect(PANEL, `${s} 를 자동 1회차에서 읽지 않는다`).toContain(`j.domesticShop?.${s} ?? null`);
+    }
+  });
+
+  it("D-2 🔴 「🔄 다시 분석」 응답에서도 다섯 배열을 **전부** 읽는다", () => {
+    for (const s of SOURCES) {
+      expect(PANEL, `${s} 를 다시 분석 경로에서 읽지 않는다`).toContain(`json.domesticShop?.${s} ?? null`);
+    }
+  });
+
+  it("D-3 🔴 다섯 배열이 **전부** `rows` 로 합쳐지고 deps 에도 있다", () => {
+    const at = PANEL.indexOf("const marketComparisonInput");
+    expect(at).toBeGreaterThan(0);
+    const block = PANEL.slice(at, PANEL.indexOf("onMarketComparisonChangeRef", at));
+    for (const s of SOURCES) {
+      expect(block, `${s} 가 rows 에 안 들어간다`).toContain(`...(${s} ?? [])`);
+      expect(block, `${s} 가 「조회가 돌았는가」 판정에 안 들어간다`).toContain(`${s} != null`);
+    }
+  });
+});
