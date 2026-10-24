@@ -26,9 +26,25 @@
 --   🔴 그리고 `MANUAL` 은 이 표에서 「수집 불가」가 아니라 **「아직 조사하지 않았다」**
 --      는 뜻이다(`domestic-price-source.ts:261` 주석 · 추정 금지 원칙).
 --
--- ── 🔴 멱등이다 ───────────────────────────────────────────────────────────
---   `domain` 이 **unique**(029:15) 이므로 `on conflict (domain) do nothing` 으로
---   **여러 번 적용해도 한 행** 이다. 🔴 기존 행을 **덮지 않는다**(이미 있으면 그대로).
+-- ── 🔴🔴 멱등 — 단 `on conflict (domain)` 은 «적용되지 않는다»(실측) ──────
+--   029 DDL 은 `domain text not null unique` 라고 적지만 **Production 은 다르다**:
+--   ```
+--   domestic_price_sources_owner_domain_key
+--     UNIQUE INDEX ON (COALESCE(workspace_id, '00000000-…'::uuid), **domain**)
+--   ```
+--   🔴 `domain` **단독** 유니크가 아니라 **복합** 이라 Postgres 가 추론하지 못하고
+--      **42P10**(`there is no unique or exclusion constraint matching the ON CONFLICT
+--      specification`)이 난다. 🔴 1차 적용이 **그 오류로 거부됐다**.
+--   🔴🔴 이것은 이 트랙이 이미 겪은 함정의 **재발** 이다 — WU-141-R1 의
+--      `candidate_reviews` 부분 유니크 42P10 과 같은 계열이고, 교훈은 하나다:
+--      **DDL 파일이 적는 제약과 실제 Production 제약이 다를 수 있다**
+--      (`migrations_manual` 은 사람이 적용하므로 drift 가 생긴다).
+--
+--   🟢 그래서 **타깃을 생략한 `on conflict do nothing`** 으로 고쳤다 —
+--      ⒜ 인덱스 식을 베껴 적지 않아도 되고(그 식이 또 바뀌면 같은 오류가 난다)
+--      ⒝ **모든** 유니크 위반을 무시하므로 **여러 번 적용해도 한 행** 이고
+--      ⒞ `do nothing` 이라 기존 행을 **절대 덮지 않는다**(CPO 조건 그대로).
+--   🔴 적용 전 실측 — `donokids` 행 **0** · 전체 **34**(중복 위험 없음).
 --
 -- 🔴 이 파일은 `migrations_manual` 이다 — **사람이 손으로 적용** 한다(029/030 과 같은 방식).
 -- ════════════════════════════════════════════════════════════════════════════════
@@ -38,4 +54,5 @@
 insert into domestic_price_sources (name, domain, url, currency, category_scope, priority, collection_strategy, status, source, enabled)
 values
   ('도노키즈', 'donokids.com', 'https://www.donokids.com', 'KRW', array['KIDS_FASHION'], 'P1', 'MANUAL', 'ACTIVE', 'SYSTEM', true)
-on conflict (domain) do nothing;
+-- 🔴 타깃을 **생략** 한다(위 주석의 42P10 실측 참고). 🟢 멱등 · 덮어쓰기 0.
+on conflict do nothing;
