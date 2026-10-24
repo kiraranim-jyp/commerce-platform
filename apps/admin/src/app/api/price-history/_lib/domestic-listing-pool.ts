@@ -41,8 +41,32 @@ import {
  * ```
  */
 
-/** 🔴 한 번의 확인에서 **목록을 뒤질 사이트 수** 상한. 초과분은 metrics 에 남긴다. */
-export const MAX_LISTING_HOP_SITES = 6;
+/**
+ * 🔴 한 번의 확인에서 **목록을 뒤질 사이트 수** 상한. 초과분은 metrics 에 남긴다.
+ *
+ * 🔴🔴 CORE-2R-7 — **6 이 정답 샵을 잘랐다**(CEO Production FAIL 의 실제 원인).
+ *    운영 등록부 실측: 아동 scope 대상 19곳을 `(priority, domain)` 으로 정렬하면
+ *    데이터가 있는 유일한 샵 `donokids.com`(P1)이 **10번째** 라 상한 밖이었다 ⟹
+ *    그 샵을 **한 번도 방문하지 않았고** 국내 후보가 구조적으로 0 이었다.
+ * 🟢 CPO 승인(⒝) — 무작정 전수로 늘리지 않고 **포털/오픈마켓을 제외한 전문몰** 만
+ *    전수로 본다(아래 `isListingHopTarget`). 실측 대상 수는 **12~13** 이라 이 상한은
+ *    **백스톱** 으로만 남는다(발화하면 metrics 에 남고, 남으면 그 사실이 보고된다).
+ */
+export const MAX_LISTING_HOP_SITES = 14;
+
+/**
+ * 🔴🔴 CORE-2R-7 — **포털/오픈마켓은 목록 탐색 대상이 아니다.**
+ *
+ * 🟢 **새 분류 규칙을 만들지 않았다** — 등록부가 이미 들고 있는 `sourceType` 을 읽는다.
+ *    그리고 그 판단은 메모 `portal-scraping-blocked-by-terms` 가 이미 확정한 것이다
+ *    (「자동수집은 포털이 아니라 **판매처** 로 늘린다」 · robots 허용 ≠ 약관 허용).
+ * 🔴 **허용 목록이 아니라 거부 목록이다.** `sourceType` 이 `null` 인 행은 「분류되지
+ *    않음」이지 「포털」이 아니다(그 타입의 주석이 그렇게 적어 뒀다) — allowlist 로
+ *    짜면 `donokids.com`(실측 `source_type = NULL`)이 **다시 잘린다**.
+ */
+export function isListingHopTarget(source: { sourceType: string | null }): boolean {
+  return source.sourceType !== "MARKETPLACE";
+}
 /** 🔴 사이트당 **목록/페이지 fetch** 상한(robots·진입 페이지는 hop-1 이 따로 센다). */
 export const MAX_LISTING_FETCHES_PER_SITE = 4;
 /** 🔴 한 사이트에서 열어 볼 **목록 URL** 수 상한. */

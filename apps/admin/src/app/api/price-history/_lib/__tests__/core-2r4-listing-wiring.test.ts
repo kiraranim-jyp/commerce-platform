@@ -291,7 +291,14 @@ describe("CORE-2R-4 B — 목록 탐색 생산자(네트워크 0)", () => {
 
   /** 🔴 상한이 **상수로 존재** 하고 전수 크롤링이 되지 않는다. */
   it("B-9 🔴 상한 셋이 작은 값으로 고정돼 있다", () => {
-    expect(MAX_LISTING_HOP_SITES).toBeLessThanOrEqual(8);
+    /**
+     * 🔴🔴 CORE-2R-7 — **6 → 14 로 올렸고 그 이유를 적는다.** 6 은 운영 등록부에서
+     *    **정답 샵(`donokids.com` · P1 · 실효 10번째)을 잘랐고** 그것이 CEO Production
+     *    FAIL 의 실제 원인이었다. 🟢 전수로 늘린 것이 **아니다** — 포털/오픈마켓을
+     *    `isListingHopTarget` 로 먼저 빼고(13곳) 그 위에 **백스톱** 으로만 남긴다.
+     * 🔴 그래도 상한은 **작게** 유지한다 — 전수 크롤링이 되면 안 된다(아래 E-4 가 짝이다).
+     */
+    expect(MAX_LISTING_HOP_SITES).toBeLessThanOrEqual(16);
     expect(MAX_LISTING_URLS_PER_SITE).toBeLessThanOrEqual(3);
     expect(MAX_DETAIL_URLS_PER_SITE).toBeLessThanOrEqual(10);
   });
@@ -459,5 +466,89 @@ describe("CORE-2R-4 D — composite market gate", () => {
     expect(at).toBeGreaterThan(0);
     const block = RUNNER_CODE.slice(at, at + 400);
     expect(block).toContain("marketEvidence: best.marketEvidence");
+  });
+});
+
+/* ═══ E. 🔴🔴 CORE-2R-7 — 상한·정렬이 «정답 샵» 을 자르지 않는다(운영 등록부 실측 재현) ═══ */
+
+import { isBatchSurveyTarget } from "../run-domestic-price-check";
+import { isListingHopTarget } from "../domestic-listing-pool";
+
+/**
+ * 🔴🔴 **CEO Production FAIL 의 실제 원인이 여기였다.** 운영 등록부(아동 scope · enabled ·
+ *    ACTIVE · 접근가능) **19곳** 을 `(priority, domain)` 으로 정렬하면 데이터가 있는 유일한
+ *    샵 `donokids.com`(P1)이 **10번째** 라 `MAX_LISTING_HOP_SITES = 6` 밖이었다 ⟹
+ *    **한 번도 방문하지 않았고** 국내 후보가 구조적으로 0 이었다.
+ * 🟢 아래 19행은 **운영 DB 실측값 그대로** 다(2026-10-24 · `source_type` 포함 · 지어낸 값 0).
+ */
+const REGISTRY_SNAPSHOT: { domain: string; priority: "P0" | "P1" | "P2"; sourceType: string | null }[] = [
+  { domain: "29cm.co.kr", priority: "P1", sourceType: "MARKETPLACE" },
+  { domain: "danawa.com", priority: "P0", sourceType: "MARKETPLACE" },
+  { domain: "musinsa.com", priority: "P1", sourceType: "MARKETPLACE" },
+  { domain: "shoppinghow.kakao.com", priority: "P1", sourceType: "MARKETPLACE" },
+  { domain: "ssfshop.com", priority: "P0", sourceType: "MARKETPLACE" },
+  { domain: "wconcept.co.kr", priority: "P2", sourceType: "MARKETPLACE" },
+  /** 🔴 080 이 `source_type` 을 세우지 않아 **NULL** 이다 — allowlist 로 짜면 여기서 잘린다. */
+  { domain: "donokids.com", priority: "P1", sourceType: null },
+  { domain: "chocoel.co.kr", priority: "P0", sourceType: "RETAILER" },
+  { domain: "chouchouenfant.kr", priority: "P1", sourceType: "RETAILER" },
+  { domain: "coconjennie.com", priority: "P1", sourceType: "RETAILER" },
+  { domain: "deuxbebe.com", priority: "P1", sourceType: "RETAILER" },
+  { domain: "foretforet.com", priority: "P0", sourceType: "RETAILER" },
+  { domain: "karymarket.com", priority: "P1", sourceType: "RETAILER" },
+  { domain: "littleluna.co.kr", priority: "P1", sourceType: "RETAILER" },
+  { domain: "looxloo.com", priority: "P0", sourceType: "RETAILER" },
+  { domain: "nokimore.com", priority: "P1", sourceType: "RETAILER" },
+  { domain: "ocokorea.com", priority: "P1", sourceType: "RETAILER" },
+  { domain: "rulii.co.kr", priority: "P0", sourceType: "RETAILER" },
+  { domain: "kidikidi.elandmall.co.kr", priority: "P1", sourceType: "VERTICAL" },
+];
+
+/** 🟢 운영 `hopSites` 유도를 **그대로** 재현한다(손으로 사이트를 넣지 않는다 · §5-B). */
+function hopSites(produced: string[]): string[] {
+  return REGISTRY_SNAPSHOT.filter((s) => !produced.includes(s.domain))
+    .filter((s) => isListingHopTarget(s))
+    .sort((a, b) => a.priority.localeCompare(b.priority) || a.domain.localeCompare(b.domain))
+    .slice(0, MAX_LISTING_HOP_SITES)
+    .map((s) => s.domain);
+}
+
+describe("CORE-2R-7 E — 정답 샵이 상한에 잘리지 않는다", () => {
+  /** 🔴🔴 이 단언 하나가 이번 FAIL 의 재발을 막는다. */
+  it("E-1 🟢🟢 `donokids.com` 이 실제 `hopSites` 에 **들어간다**", () => {
+    const sites = hopSites(["looxloo.com"]);
+    expect(sites, "🔴 정답 샵이 상한/정렬에서 잘렸다 — CEO FAIL 이 재발한다").toContain("donokids.com");
+  });
+
+  /** 🔴 포털/오픈마켓은 **빠진다**(메모 `portal-scraping-blocked-by-terms` 의 기존 판단). */
+  it("E-2 🔴 MARKETPLACE 6곳은 대상에서 빠진다", () => {
+    const sites = hopSites([]);
+    for (const portal of ["29cm.co.kr", "danawa.com", "musinsa.com", "shoppinghow.kakao.com", "ssfshop.com", "wconcept.co.kr"]) {
+      expect(sites, `${portal} 는 포털이라 목록 탐색 대상이 아니다`).not.toContain(portal);
+    }
+  });
+
+  /** 🔴 `sourceType = null` 은 「분류되지 않음」이지 「포털」이 아니다 — allowlist 금지. */
+  it("E-3 🔴 분류되지 않은 행(null)은 **남는다**", () => {
+    expect(isListingHopTarget({ sourceType: null })).toBe(true);
+    expect(isListingHopTarget({ sourceType: "RETAILER" })).toBe(true);
+    expect(isListingHopTarget({ sourceType: "VERTICAL" })).toBe(true);
+    expect(isListingHopTarget({ sourceType: "MARKETPLACE" })).toBe(false);
+  });
+
+  /** 🔴 상한은 **백스톱** 으로만 남는다 — 실제 대상 수를 자르지 않는다. */
+  it("E-4 🟢 전문몰 전수가 상한 안에 들어간다", () => {
+    const eligible = REGISTRY_SNAPSHOT.filter((s) => isListingHopTarget(s));
+    expect(eligible.length).toBe(13);
+    expect(eligible.length).toBeLessThanOrEqual(MAX_LISTING_HOP_SITES);
+    expect(hopSites(["looxloo.com"]).length).toBe(12);
+  });
+
+  /** 🟢 운영 판정 함수를 **그대로** 쓴다는 것을 같이 잠근다(사본 0). */
+  it("E-5 🔴 `isBatchSurveyTarget` 은 그대로다 — 이번에 바꾸지 않았다", () => {
+    const base = { enabled: true, status: "ACTIVE" as const, accessStatus: null, categoryScope: ["KIDS_FASHION"] };
+    expect(isBatchSurveyTarget(base, ["KIDS_FASHION"])).toBe(true);
+    expect(isBatchSurveyTarget({ ...base, enabled: false }, ["KIDS_FASHION"])).toBe(false);
+    expect(isBatchSurveyTarget({ ...base, accessStatus: "BLOCKED" }, ["KIDS_FASHION"])).toBe(false);
   });
 });

@@ -54,6 +54,7 @@ import { collectOverseasAutoPool, type OverseasAutoPoolMetrics } from "./oversea
  */
 import {
   collectDomesticListingUrls,
+  isListingHopTarget,
   MAX_LISTING_HOP_SITES,
   type DomesticListingPoolMetrics,
 } from "./domestic-listing-pool";
@@ -1269,6 +1270,14 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     }
     const hopSites = allSources
       .filter((s) => !producedCandidates.has(s.domain.trim().toLowerCase()))
+      /**
+       * 🔴🔴 CORE-2R-7 — **포털/오픈마켓을 뺀 전문몰만 본다**(CPO 승인 ⒝).
+       *    🟢 새 분류 규칙 0 — 등록부의 `sourceType` 과 메모
+       *       `portal-scraping-blocked-by-terms` 의 **기존 판단** 을 그대로 쓴다.
+       *    🔴 이 한 줄이 없으면 상한이 포털 6곳을 먼저 먹고 **정답 샵이 잘린다**
+       *       (그것이 CEO Production FAIL 의 실제 원인이었다).
+       */
+      .filter((s) => isListingHopTarget(s))
       .filter((s) => s.url && /^https?:\/\//i.test(s.url))
       /** 🔴 **결정적 순서** — 같은 입력이면 같은 사이트를 본다(P0 → P1 → P2 → 도메인). */
       .sort((a, b) => a.priority.localeCompare(b.priority) || a.domain.localeCompare(b.domain))
