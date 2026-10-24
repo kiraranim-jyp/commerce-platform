@@ -133,7 +133,54 @@ Production `/` **200** · `/pipeline` 307 · `/api/price-history/check` 401(정�
 🔴🔴 **CORE-2R 은 OPEN.** CEO 화면 FAIL 의 원인은 **A 단계** 로 확정됐다 —
 `donokids` 후보가 **운영에서 생성되지 않는다**(게이트 둘 · 아래 ②).
 
-### 🔴 다음 세션이 할 일 — ②③ 하나로 묶인다(조사는 끝났다)
+### 🔵🔵 **CPO 최종 확정(2026-10-24) — 다음 세션은 «STEP 2 구현» 부터다**
+
+🔴 **재조사 금지.** 아래 순서 ①~⑨ 가 CPO 확정이고 조사는 전부 끝나 있다.
+
+```
+① 기존 WU-149 **코드/계약** 확인   🔴 Production UI PASS 로 주장하지 않는다(화면 못 봄)
+② **2-hop production wiring**     ← 🟢 **여기부터 구현**
+③ **별도 `marketEvidence`** 최소 추출 구조 추가
+④ evidence **composite** 로 KR / OVERSEAS / UNKNOWN 판정
+⑤ B226AC009 → Dono **₩88,000** 실제 연결
+⑥ `domestic.exact.averagePriceKrw` → 기존 MI
+⑦ seller UI / 중복 / 다시 분석 확인
+⑧ 회귀 + clean + 배포
+⑨ 그때 **CEO 최종 1회** 테스트
+🔴 그리고 **하니스 결과를 E2E 라고 부르지 않는다**(CPO 명시 · 내가 틀린 자리).
+```
+
+🔴🔴 **③ 의 타입 설계가 수정됐다 — `ProductFacts` 에 넣지 않는다**
+```
+❌ `ProductFacts` 14칸에 시장정보를 **추가하지 않는다** — 그 타입은 **상품
+   identity/evidence 용** 이고, 섞으면 「상품 ↔ 판매자/사이트 ↔ 시장」이 다시 뒤섞인다
+🟢 **별도 구조** 로 붙인다:
+     ComparisonCandidate
+       ├─ productFacts
+       └─ **marketEvidence**
+🟢 추출은 **이미 Fetch 한 HTML** 에서 한다 — **추가 HTTP 원칙적으로 0**
+   (`fetchPlainHtml` 이 본문을 이미 받는다 · WU-053 microdata reader 와 같은 모양)
+```
+
+🔵 **③ 최소 범위(CPO 고정) — 처음부터 전부 구조화하지 않는다**
+```
+강한 증거  businessRegistration · mailOrderRegistration · businessAddress ·
+          customs / import-duty / customs-clearance 신호
+보조 증거  shipping · payment · 기존 TLD / currency / domain
+판정       기존 데이터 → marketEvidence → **복수 증거 종합** → KR / OVERSEAS / UNKNOWN
+🔴 **어느 한 필드 하나만으로 KR 을 확정하면 안 된다**(WU-063 이 금지한 그 모양) —
+   🟢 WU-063 과 **충돌하지 않는다**: 그것이 막은 것은 「단일 신호를 결정자로」이고
+      이번은 「여러 증거를 모으는 구조」다(CPO 정리).
+```
+
+🔵 **⑤ 첫 운영 대상은 하나다** — `donokids.com / B226AC009 / ₩88,000`.
+🟢 `costPriceKrw = null` 이라 **UNKNOWN 으로 끝나도 PASS** 다(원가/마진 시스템을 만드는 일이 아니다).
+
+🔴 **CLOSED 유지(건드리지 않는다)** — SAME 기준 · product-code weighting ·
+`crossSellerReserved` · MI threshold · 가격 계산 · `computeSellability` · 추천 판매가 ·
+마진 · 검색엔진 · AI API · 신규 adapter · 국내 가격소스 대량 등록.
+
+### 🔴 좌표 상세 — ②③ 하나로 묶인다(조사는 끝났다)
 
 ```
 ② **2-hop 수집기 운영 배선**(새 검색 0 · 새 어댑터 0 · donokids 하드코딩 금지)
