@@ -1738,6 +1738,14 @@ export interface MarketComparisonInput {
   rows: GeminiTransientRow[] | null;
   domesticReference: OverseasPriceSummary | null;
   overseasReference: OverseasPriceSummary | null;
+  /**
+   * 🔴🔴 CORE-2S §5-⑤ — **셀러가 입력한 매입 원가.** 결론 영역이 「수익성 판단 보류 ·
+   *    원가 입력 필요」를 말하기 위해서만 읽는다(계산 0 · 추천가 0 · 마진 0).
+   * 🟢 **새 API·새 계산이 없다** — 이 패널이 이미 받은
+   *    `PriceHistoryResponse.currentPrice.costPriceKrw` 그대로다.
+   * 🔴 `null` 은 **「아직 없다」** 이고 **실패가 아니다**(그 구분이 §5-⑤ 의 전부다).
+   */
+  costPriceKrw: number | null;
 }
 
 export function DomesticPriceIntelligencePanel({
@@ -2025,6 +2033,11 @@ export function DomesticPriceIntelligencePanel({
         : null,
       domesticReference,
       overseasReference,
+      /**
+       * 🔴 CORE-2S §5-⑤ — **이미 받은 응답의 칸 하나를 같이 올려보낸다.**
+       *    🔴 지어내지 않는다 — 응답에 없으면 `null`(= 「아직 없다」)이다.
+       */
+      costPriceKrw: data?.currentPrice?.costPriceKrw ?? null,
     };
   }, [
     geminiEvidence,
@@ -2034,6 +2047,8 @@ export function DomesticPriceIntelligencePanel({
     domesticListingEvidence,
     domesticReference,
     overseasReference,
+    /** 🔴 deps 에 빠지면 원가를 입력해도 결론이 **보류로 남는다**(CORE-2R-5 의 그 함정). */
+    data?.currentPrice?.costPriceKrw,
   ]);
   const onMarketComparisonChangeRef = useRef(onMarketComparisonChange);
   onMarketComparisonChangeRef.current = onMarketComparisonChange;

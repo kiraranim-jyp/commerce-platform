@@ -496,7 +496,18 @@ describe("F. ③④ 화면 구조 (WU-130)", () => {
     expect(area).toContain("MI_SAME_DOMESTIC_HEADING");
     expect(area).toContain("MI_SAME_OVERSEAS_HEADING");
     expect(area).toContain('testId: "domestic-reference"');
-    expect(area).toContain("reference={overseasReference}");
+    /**
+     * 🔴🔴🔴 **CORE-2S §5-④ 에서 앵커의 «모양» 이 바뀌었다 — 약해지지 않았다.**
+     *
+     * 🔴 전 앵커는 2차 칸의 `reference={overseasReference}` 를 봤다. 그런데 해외 집계도
+     *    **1차 🌎 블록으로 올라가면서**(🇰🇷 와의 비대칭 제거 · CPO §5-④) 두 시장이
+     *    **같은 prop**(`reference`)을 쓰게 됐다 ⟹ 그 문자열이 더 이상 존재하지 않는다.
+     * 🟢 이 계약이 지키는 성질(「참고가격 **두 축이 한 영역 안** 에 있다」)은 **그대로** 다 —
+     *    둘 다 `market-price-comparison` 안이고, 이제 **둘 다 1차** 다.
+     * 🔴 **강화** — 두 집계가 **같은 영역의 같은 소비자** 로 들어가는 것을 직접 단언한다.
+     *    한쪽만 올려 비대칭으로 되돌리면 이 줄에서 바로 잡힌다.
+     */
+    expect(area).toContain('reference={mk === "KR" ? domesticReference : overseasReference}');
     expect(area).toContain("DOMESTIC_REFERENCE_TITLE");
     /** 🔴🔴 **패널에는 더 이상 그 영역이 없다** — 둘이 되면 FAIL 이다. */
     expect(PANEL).not.toContain("unified-price-comparison");

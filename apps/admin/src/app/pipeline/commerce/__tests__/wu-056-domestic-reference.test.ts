@@ -185,8 +185,19 @@ describe("B. 배선", () => {
      * 🔴 **복제가 아니다** — 2차는 `reference={null}` 로 껐고, 「영역에 하나뿐」은
      *    마운트 DOM 으로 `core-2r5-domestic-reference-to-mi` A-2 가 단언한다.
      */
-    expect(AREA).toContain("domesticReference={domesticReference}");
-    expect(AREA).toContain('testId="domestic-reference"');
+    /**
+     * 🔴🔴🔴 **CORE-2S §5-④ 에서 이 앵커의 «모양» 이 바뀌었다 — 약해지지 않았다.**
+     *
+     * 🔴 전 앵커는 `domesticReference={domesticReference}` 라는 **prop 이름** 을 봤다.
+     *    그런데 해외 집계도 **1차로 올라가면서**(비대칭 제거) 두 시장이 **같은 prop**
+     *    (`reference`)을 쓰게 됐다 — 이름이 국내에 묶여 있으면 해외가 올라갈 자리가 없다.
+     * 🟢 그래서 지키는 성질을 **그대로** 적는다: 🇰🇷 블록이 **국내 집계를 받아** 1차에서
+     *    그린다. ⟹ 배선을 끊거나 해외 집계를 국내 자리에 넣으면 FAIL 한다.
+     */
+    expect(AREA).toContain('reference={mk === "KR" ? domesticReference : overseasReference}');
+    expect(AREA).toContain('testId: "domestic-reference"');
+    /** 🔴 1차 🇰🇷 블록이 그 집계의 소비자여야 한다 — `MarketBlock` 이 `reference` 를 받는다. */
+    expect(AREA).toContain("reference?: OverseasPriceSummary | null");
     /** 🔴🔴 **옮긴 것이 맞다** — 패널이 그 블록을 더 이상 그리지 않는다(둘이 되면 FAIL). */
     expect(PANEL).not.toContain('testId="domestic-reference"');
   });

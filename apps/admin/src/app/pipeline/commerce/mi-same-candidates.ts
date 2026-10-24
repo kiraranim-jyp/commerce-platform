@@ -6,6 +6,12 @@ import {
 } from "./match-display";
 import type { MatchTruth } from "@commerce/crawler/src/comparison-search/match-truth";
 import type { GeminiTransientRow } from "./GeminiTransientCandidates";
+/**
+ * 🔴 CORE-2S — **타입만** 가져온다. 이 파일은 참고가격을 **계산하지 않는다** —
+ *    MI 가 이미 낸 집계(`candidateDomesticPrice` · `candidateOverseasPrice`)를
+ *    「있는가 / 몇 곳인가 / 통화가 몇 개인가」로 **읽기만** 한다(환산 0 · 합산 0).
+ */
+import type { OverseasPriceSummary } from "./overseas-reference";
 /** 🔴 WU-133 — 축의 «말» 은 별 모듈이 소유한다(가드를 엄격하게 유지하기 위해 · 그 파일 머리 주석). */
 import { blockerText } from "./blocker-text";
 
@@ -173,8 +179,13 @@ export const MI_SAME_AREA_NOTE =
  *    있는데 SAME 판정은 0건이었다). 🔴 그 차이를 화면이 말하지 않으면 셀러는
  *    **그 숫자를 「동일상품 가격」으로 읽는다** — 그것이 2026-09-19 사고의 기전이다.
  */
+/**
+ * 🔴 CORE-2S §5-⑥ — **「눈으로 확인하세요」를 지웠다**(`pendingNote` 와 같은 이유).
+ *    🟢 **두 번째 문장은 한 글자도 바꾸지 않았다** — 그 문장이 「참고가격과 이 목록의
+ *       건수가 다를 수 있다」를 말하고, 그것이 2026-09-19 사고를 막는 핵심이다.
+ */
 export const MI_SAME_AREA_SCOPE =
-  "유사상품·판단보류 후보는 이 비교에 쓰지 않습니다 — 아래 검토 구역에서 눈으로 확인하세요. 각 시장의 「참고가격」은 유사상품까지 포함한 참고 축이라 이 목록과 건수가 다를 수 있습니다.";
+  "유사상품·판단보류 후보는 이 비교에 쓰지 않습니다 — 아래 검토 구역에 그대로 남아 있습니다. 각 시장의 「참고가격」은 유사상품까지 포함한 참고 축이라 이 목록과 건수가 다를 수 있습니다.";
 export const MI_SAME_DOMESTIC_HEADING = "🇰🇷 국내";
 export const MI_SAME_OVERSEAS_HEADING = "🌎 해외";
 /** 🔴 「국내에 동일상품이 없다」로 적지 않는다 — 부재와 미발견은 다르다(WU-091 어휘 계약). */
@@ -422,7 +433,20 @@ export const PRICE_GUIDE_TITLE: Record<"KR" | "OVERSEAS", string> = {
  * 🔴 **DOM 이름(`data-testid="seller-decision"`)은 그대로 둔다** — 그것은 셀러가 보는
  *    「💡 판매 판단」의 이름이고 CPO 의 말이다. 가드가 보는 것은 **코드 어휘** 다.
  */
-export type MarketDecisionKind = "NO_SAME" | "SAME_NO_PRICE" | "PRICED";
+/**
+ * 🔴🔴🔴 CORE-2S §5-② — **`NO_SAME_WITH_REFERENCE` 가 새로 생겼다. 그 이유를 적는다.**
+ *
+ * 🔴 전까지 상태가 셋이라, 「SAME 0」이면 참고가격이 **있어도** 결론이
+ *    「아직 동일상품으로 확정된 판매처가 없습니다」로 끝났다. ⟹ CEO 화면의 바로 그 모양이다 —
+ *    **🇰🇷 블록에 `KRW 88,000` 이 떠 있는데 결론은 그 숫자를 한 글자도 말하지 않았다.**
+ * 🔴🔴 그것이 §2 가 지목한 모순이다: 「국내 참고가격 **1곳**」 ↔ 「동일상품 확정 **0곳**」은
+ *    **모순이 아니라 서로 다른 두 축** 이고, 결론이 그 둘을 **같이** 말해야 한다.
+ * 🟢 **판정을 바꾸지 않았다** — `PRESUMED_SAME → SAME` 승격 0 · threshold 0 · 집계 0.
+ *    바뀐 것은 **이미 만든 참고가격 집계의 «존재» 를 결론이 읽는다** 는 것뿐이다.
+ * 🔴 그리고 그 상태는 `PRICED`(= SAME 가격 확인)와 **반드시 달라야** 한다 —
+ *    참고가격은 **확정 가격이 아니다**(유사상품까지 포함한 참고 축 · `MI_SAME_AREA_SCOPE`).
+ */
+export type MarketDecisionKind = "NO_SAME" | "NO_SAME_WITH_REFERENCE" | "SAME_NO_PRICE" | "PRICED";
 
 export interface MarketDecisionLines {
   kind: MarketDecisionKind;
@@ -570,18 +594,88 @@ export function marketPriceHeadlineLabel(g: PriceGuide): string | null {
  * 🔴 국내 0 의 「해외를 기준으로 참고」 문장은 **해외에 실제 가격이 있을 때만** 쓴다
  *    (CPO 명시 — 없는데 쓰면 그것이 바로 「없는 데이터를 기준으로 만들기」다).
  */
-export function marketDecisionLines(j: MarketJudgement): MarketDecisionLines {
+/**
+ * 🔴 MI 가 이미 낸 **두 참고가격 집계**(`candidateDomesticPrice` ·
+ *    `candidateOverseasPrice`). 🔴 이 파일은 그것을 **계산하지 않는다** —
+ *    「있는가 · 몇 곳인가 · 통화가 몇 개인가」만 읽는다(금액을 꺼내지 않는다).
+ */
+export interface MarketReferencePrices {
+  domestic?: OverseasPriceSummary | null;
+  overseas?: OverseasPriceSummary | null;
+}
+
+/**
+ * 🔴 **`count > 0` 만 보고 「가격이 있다」로 적지 않는다.** 통화 칸이 비어 있으면
+ *    화면의 참고가격 블록도 **렌더되지 않는다**(`buildOverseasReference` 가 `null`) ⟹
+ *    결론만 「가격이 확인됐습니다」라고 말하면 **없는 숫자를 가리키는 거짓** 이 된다.
+ * 🟢 그래서 그 컴포넌트와 **같은 조건** 을 쓴다(술어를 두 벌로 두지 않는다).
+ */
+export function hasReferencePrice(s?: OverseasPriceSummary | null): boolean {
+  return !!s && s.count > 0 && Object.keys(s.byCurrency ?? {}).length > 0;
+}
+
+/** 🔴 참고가격이 선 **시장 이름**. 순서는 화면과 같다(🇰🇷 국내 → 🌎 해외). */
+export function referenceMarkets(refs?: MarketReferencePrices): string[] {
+  const out: string[] = [];
+  if (hasReferencePrice(refs?.domestic)) out.push(MARKET_PLAIN_NAME.KR);
+  if (hasReferencePrice(refs?.overseas)) out.push(MARKET_PLAIN_NAME.OVERSEAS);
+  return out;
+}
+
+/** 🔴 통화 **개수** 만 센다 — 금액을 꺼내지 않는다(그 숫자 owner 는 참고가격 블록이다). */
+export function referenceCurrencyCount(refs?: MarketReferencePrices): number {
+  const cur = new Set<string>();
+  for (const s of [refs?.domestic, refs?.overseas]) {
+    if (!hasReferencePrice(s)) continue;
+    for (const c of Object.keys((s as OverseasPriceSummary).byCurrency)) cur.add(c);
+  }
+  return cur.size;
+}
+
+/** 🟢 그 집계가 **몇 곳** 기준인가 — 「한 곳뿐이라 가격대가 아니다」를 말하기 위해서다. */
+export function referenceSellerCount(s?: OverseasPriceSummary | null): number {
+  return hasReferencePrice(s) ? (s as OverseasPriceSummary).count : 0;
+}
+
+/**
+ * 🔴🔴 CORE-2S — **`refs` 는 «옵셔널» 이다.** 주지 않으면 **동작이 전과 똑같다**
+ *    (WU-140 이 `countPendingCandidates(rows, market?)` 에 쓴 그 선례 그대로) ⟹
+ *    기존 호출부·계약이 한 줄도 바뀌지 않는다.
+ */
+export function marketDecisionLines(
+  j: MarketJudgement,
+  refs?: MarketReferencePrices,
+): MarketDecisionLines {
   /** 🟢 시장별 수치는 **기존 owner** 가 낸다 — 여기서 다시 세지 않는다. */
   const kr = buildPriceGuide(j, "KR");
   const os = buildPriceGuide(j, "OVERSEAS");
 
   if (j.sellers.length === 0) {
+    /**
+     * 🔴🔴🔴 **여기가 CEO 화면의 모순이 살던 자리다.**
+     *    SAME 0 이면 참고가격이 **있어도** 결론이 「없습니다」로 끝났다 —
+     *    바로 위 🇰🇷 블록에 `KRW 88,000` 이 떠 있는데 말이다.
+     * 🟢 이제 **그 둘을 한 결론에서 같이** 말한다. 🔴 승격 0 · 집계 0 · 금액 출력 0
+     *    (금액은 참고가격 블록이 **유일한 owner** 다 — 여기서 숫자를 또 적으면
+     *    「가격 숫자 중복 금지」 계약을 깬다).
+     */
+    const markets = referenceMarkets(refs);
+    if (markets.length === 0) {
+      return {
+        kind: "NO_SAME",
+        /** 🔴 「없다」로 끝내지 않는다 — **어디서 볼 수 있는지** 까지 말한다. */
+        lines: [
+          "아직 동일상품으로 확정된 판매처가 없습니다.",
+          "확인된 후보와 보류 사유는 아래 상세 근거에서 볼 수 있습니다.",
+        ],
+      };
+    }
+    const where = markets.join("·");
     return {
-      kind: "NO_SAME",
-      /** 🔴 「없다」로 끝내지 않는다 — **어디서 볼 수 있는지** 까지 말한다. */
+      kind: "NO_SAME_WITH_REFERENCE",
       lines: [
-        "아직 동일상품으로 확정된 판매처가 없습니다.",
-        "확인된 후보와 보류 사유는 아래 상세 근거에서 볼 수 있습니다.",
+        `동일상품으로 확정된 판매처는 아직 없지만, ${where}에서 같은 상품으로 보이는 판매처의 가격은 확인됐습니다.`,
+        `지금의 시장가격 판단 근거는 위 ${where} 블록의 참고가격입니다 — 확정된 동일상품 가격은 아닙니다.`,
       ],
     };
   }
@@ -817,8 +911,31 @@ export function countMarketCandidates(
 
 /** 🔴 「이 시장에 동일상품이 없다」로 적지 않는다 — **부재와 미발견은 다르다**(WU-091 어휘 계약). */
 export const MARKET_EMPTY_NO_CANDIDATE = "아직 이 시장에서 비교할 후보를 찾지 못했습니다.";
-/** 🔴 판단의 주인은 셀러다 — 「동일상품이다/아니다」를 화면이 단정하지 않는다. */
-export const MARKET_EMPTY_REVIEW_HINT = "아래 후보 검토 구역에서 사진으로 확인해 주세요.";
+/**
+ * 🔴🔴🔴 CORE-2S §5-⑥ — **셀러에게 «조사 업무» 를 돌려주지 않는다.**
+ *
+ * 🔴 전 문구는 「**아래 후보 검토 구역에서 사진으로 확인해 주세요**」였다 — 그것은
+ *    셀러에게 **동일상품 판정을 시키는 말** 이고, 이 제품의 North Star 와 정면으로
+ *    충돌한다(START-HERE §2: 「셀러가 직접 SAME/SIMILAR 를 판단하지 않는다 — MI 가 한다」).
+ *    🔴 WU-154 가 같은 이유로 「URL 을 찾아 넣는」 입력칸을 폐기했는데, **같은 요구가
+ *    문장으로 남아 있었다**(그 계약은 `MarketPriceComparison.tsx` 소스만 보므로
+ *    이 상수 파일의 문장을 잡지 못했다).
+ * 🟢 그래서 「**어디서 볼 수 있는지**」만 말한다 — WU-133 이 고친 거짓말(「아무것도
+ *    못 찾았다」로 읽히는 화면)은 그대로 막히고, 일을 떠넘기는 말만 사라진다.
+ * 🔴 상수 owner 는 하나다 — 계약(`wu-140`)이 이 상수를 import 해서 보므로 문구를
+ *    두 벌로 적으면 그 계약이 조용히 통과한다.
+ */
+export const MARKET_EMPTY_REVIEW_HINT = "확인한 후보와 보류 사유는 아래 「MI 상세 분석」에 있습니다.";
+/**
+ * 🔴🔴🔴 CORE-2S §5-② — **「동일상품 확인」은 «가격» 과 다른 축이다.**
+ *
+ * 🔴 CEO 화면의 핵심 혼동이 이것이다 — 「국내 참고가격 **1곳**」과 「동일상품 확정
+ *    **0곳**」이 **모순이 아닌데** 한 블록에 수식어 없이 나란히 서면 셀러가
+ *    「0 이니까 가격도 없는 것」으로 읽는다.
+ * 🟢 그래서 블록 안에서 **축의 이름을 붙여** 가른다 — 위는 돈(💰/🇰🇷/🧾), 아래는 판정(🔎).
+ * 🔴 판정을 **새로 만들지 않는다** — 라벨 한 줄이고 숫자는 기존 `marketEmptyNote` 가 낸다.
+ */
+export const SAME_CHECK_HEADING = "🔎 동일상품 확인";
 
 /**
  * 🔴🔴🔴 WU-140 ③ — **그 시장이 빈 «이유» 를 말한다**(CPO: 네 상태를 구분해야 한다).
@@ -1085,9 +1202,19 @@ export function pendingNote(summary: PendingSummary): string | null {
    *    **건수와 「어디서 보는지」는 1차에 남긴다**(그래야 WU-133 이 고친 거짓말,
    *    즉 「아무것도 못 찾았다」로 읽히는 화면이 되돌아오지 않는다).
    */
+  /**
+   * 🔴🔴🔴 CORE-2S §5-⑥ — **「사진으로 확인하고 판단해 주세요」를 지웠다.**
+   *
+   * 🔴 그 꼬리는 셀러에게 **동일상품 판정을 시키는 말** 이고, WU-154 가 입력칸을
+   *    폐기한 것과 **같은 종류의 요구** 다(「시스템이 동일상품을 찾아서 판단해주는
+   *    시스템」 — CPO). 🔴 그 계약은 `MarketPriceComparison.tsx` **소스만** 봤기 때문에
+   *    상수 파일에 있던 이 문장을 **잡지 못했다**(`MARKET_EMPTY_REVIEW_HINT` 와 같은 자리).
+   * 🟢 **건수는 그대로 남는다** — 그것이 WU-133 이 고친 거짓말(「아무것도 못 찾았다」)을
+   *    막는 사실이고, 바뀐 것은 **「어디서 볼 수 있는지」만 말한다** 는 것뿐이다.
+   */
   return (
     `가격까지 확인됐지만 동일상품 판정이 보류·충돌된 후보가 ${summary.count}건 있습니다 — ` +
-    `아래 판단 근거와 후보 검토 구역에서 사진으로 확인하고 판단해 주세요.`
+    `사유와 후보 목록은 아래 「MI 상세 분석」에 있습니다.`
   );
 }
 
@@ -1103,4 +1230,112 @@ export function pendingNote(summary: PendingSummary): string | null {
 export function pendingReasonNote(summary: PendingSummary): string | null {
   if (summary.count === 0 || summary.reasons.length === 0) return null;
   return `주요 사유 — ${summary.reasons.map((r) => `${r.text} ${r.n}`).join(" · ")}`;
+}
+
+/* ═══════ 🔴🔴🔴 CORE-2S §5-③ — **「그 가격이 왜 그 가격인가」를 화면이 말한다** ═══════
+ *
+ * 🔴 CPO: 「셀러가 **『이 가격이 왜 나온 거지?』라는 질문을 하지 않아도** 되도록
+ *    출처/기준을 이해할 수 있어야 한다」(§8 PASS 5).
+ * 🔴🔴 지금 화면에는 그 영역이 **없다.** 가격 숫자와 「동일상품 0곳」만 있어서, 셀러는
+ *    **그 숫자가 어떤 집합의 가격인지** 를 알 수 없다(그것이 2026-09-19 사고의 기전과
+ *    같은 모양이다 — 숫자는 보이는데 그 숫자의 **성질** 이 화면에 없다).
+ *
+ * ── 🔴 세 가지를 «하지 않는다» ────────────────────────────────────────────────
+ * ```
+ * ❌ 금액을 적지 않는다      — 금액 owner 는 참고가격 블록/가격 가이드 **하나** 다
+ *                              (적으면 `core-2r5 A-2`「KRW 88,000 은 화면에 1회」가 깨진다)
+ * ❌ 내부 토큰을 적지 않는다  — `COMPARISON`·`PRESUMED_SAME`·`EXACT`·tier·blocker 0
+ * ❌ 상태와 무관한 안내문을 만들지 않는다 — WU-146 이 지운 그 모양이다. 아래 네 줄은
+ *                              **전부 조건부** 이고, 조건이 없으면 영역 자체가 서지 않는다
+ * ```
+ * 🔴 그리고 **「가격 계산 기준」과 다른 이름** 이다 — 그 말은 ③ 수익성의
+ *    `ⓘ 가격 계산 기준`(`DomesticPriceIntelligencePanel:3767`)이 **이미 소유** 하고
+ *    있다. 두 구역이 같은 이름을 쓰면 셀러가 한 구역으로 읽는다(`wu-056r1` 의 기전).
+ */
+export const PRICE_BASIS_HEADING = "💡 가격 판단 기준";
+
+/** 🟢 가격의 **출처**. 🔴 「검색 목록의 표시가가 아니다」가 이 줄의 핵심이다. */
+export const PRICE_BASIS_SOURCE_LINE =
+  "이 화면의 가격은 판매처 상세 페이지에서 확인한 금액입니다 — 검색 목록의 표시가가 아닙니다.";
+/** 🟢 SAME 가격이 있을 때 — 가장 강한 근거다. */
+export const PRICE_BASIS_SAME_LINE = "동일상품으로 판정된 판매처의 가격을 기준으로 씁니다.";
+/**
+ * 🔴🔴 SAME 이 없을 때 — **이 줄이 CEO 화면의 「왜 88,000 인가」에 답한다.**
+ *    🔴 「유사상품」이라는 등급 어휘를 쓰지 않는다(`TIER_LABEL` 의 말이고 내부 축이다) —
+ *       셀러의 말로 **「같은 상품으로 보이는」** 이라고 적는다.
+ */
+export const PRICE_BASIS_REFERENCE_LINE =
+  "동일상품으로 확정된 판매처가 없을 때는, 같은 상품으로 보이는 판매처에서 확인한 가격을 참고가격으로 씁니다.";
+/** 🔴 환산 금지를 **셀러에게도** 말한다 — 안 적으면 두 통화를 비교해도 되는 줄 안다. */
+export const PRICE_BASIS_CURRENCY_LINE =
+  "통화가 다른 가격은 환산하지 않고 통화별로 따로 적습니다.";
+/**
+ * 🔴 **한 곳을 가격대로 읽히게 두지 않는다**(`PRICE_BAND_UNDETERMINED` 와 같은 축).
+ * 🔴 **국내 전용** 이다 — 「가격대」는 🇰🇷 의 해석이고 🌎 는 「최저 확인가」다
+ *    (START-HERE §3 MARKET RULE). 두 시장 판매처를 합쳐 세면 그 규칙이 섞인다.
+ */
+export const PRICE_BASIS_SINGLE_SELLER_LINE =
+  "국내는 확인된 판매처가 한 곳이라 가격대가 아니라 참고가격 한 건입니다.";
+
+/**
+ * 🔴 **가격이 하나도 없으면 빈 배열** 이다 — 호출부가 영역을 **아예 세우지 않는다**.
+ *    (없는 기준을 설명하는 칸을 만들지 않는다 · 이 저장소가 반복해 막아 온 「빈 틀」)
+ */
+export function priceBasisLines(
+  j: MarketJudgement,
+  refs?: MarketReferencePrices,
+): string[] {
+  const sameHasPrice = j.byCurrency.length > 0;
+  const refMarkets = referenceMarkets(refs);
+  if (!sameHasPrice && refMarkets.length === 0) return [];
+
+  const lines = [PRICE_BASIS_SOURCE_LINE];
+  lines.push(sameHasPrice ? PRICE_BASIS_SAME_LINE : PRICE_BASIS_REFERENCE_LINE);
+
+  /** 🔴 통화 개수는 **두 축을 합쳐** 센다 — SAME 축과 참고 축이 다른 통화일 수 있다. */
+  const currencies = new Set<string>(j.byCurrency.map((c) => c.currency));
+  for (const s of [refs?.domestic, refs?.overseas]) {
+    if (!hasReferencePrice(s)) continue;
+    for (const c of Object.keys((s as OverseasPriceSummary).byCurrency)) currencies.add(c);
+  }
+  if (currencies.size >= 2) lines.push(PRICE_BASIS_CURRENCY_LINE);
+
+  /**
+   * 🔴 「한 곳뿐」은 **참고 축에서만** 적는다 — SAME 축의 1건은
+   *    `PRICE_GUIDE_SINGLE_NOTE`(「… 시장 평균가가 아닙니다」)가 **이미** 말한다.
+   *    두 곳에서 같은 사실을 적으면 그것이 중복이다.
+   */
+  if (!sameHasPrice && referenceSellerCount(refs?.domestic) === 1) {
+    lines.push(PRICE_BASIS_SINGLE_SELLER_LINE);
+  }
+  return lines;
+}
+
+/* ═══ 🔴🔴🔴 CORE-2S §5-⑤ — **「원가가 없다」를 「데이터가 없다」로 보이게 두지 않는다** ═══
+ *
+ * 🔴 CPO: 「원가 없으면 **『수익성 판단 보류 · 원가 입력 필요』** · 🔴 「데이터 없음」처럼
+ *    보이지 않게 한다(**UNKNOWN ≠ 실패**)」(§5-⑤).
+ * 🔴🔴 지금 화면은 시장가격을 다 찾아 놓고도 최종 판단이 `UNKNOWN` 으로 끝난다 —
+ *    셀러에게는 「아무것도 못 했다」로 읽히는데 **사실은 한 칸만 비어 있다**.
+ *
+ * 🔴 **계산하지 않는다** — 추천 판매가 · 마진 · 예상 수익을 만들지 않는다(§3 금지).
+ *    이 함수가 하는 일은 **「무엇이 비어 있는지」 한 줄로 말하는 것** 이 전부다.
+ * 🔴 그리고 **가격이 있을 때만** 말한다 — 가격도 없는 상태에서 「원가를 입력하세요」는
+ *    순서가 틀린 요구다(그때의 결론은 `marketDecisionLines` 가 이미 말한다).
+ */
+export const NEXT_STEP_HEADING = "🧾 현재 판단";
+export const COST_REQUIRED_NOTE =
+  "수익성 판단 보류 — 매입 원가를 입력하면 위 시장가격을 기준으로 예상 수익을 계산합니다.";
+/** 🔴🔴 **이 줄이 「실패로 보이는 것」을 막는다.** 지우면 UNKNOWN 이 다시 실패로 읽힌다. */
+export const COST_REQUIRED_SCOPE =
+  "시장가격을 찾지 못한 것이 아닙니다 — 원가가 아직 없어서 수익 계산만 남은 상태입니다.";
+
+/** 🟢 가격이 있고 원가가 없을 때만 두 줄. 그 외에는 **빈 배열**(칸을 만들지 않는다). */
+export function nextStepLines(
+  hasMarketPrice: boolean,
+  costPriceKrw?: number | null,
+): string[] {
+  if (!hasMarketPrice) return [];
+  if (costPriceKrw != null) return [];
+  return [COST_REQUIRED_NOTE, COST_REQUIRED_SCOPE];
 }

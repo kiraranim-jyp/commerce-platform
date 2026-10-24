@@ -9,6 +9,13 @@ import {
   type OverseasPriceSummary,
 } from "./overseas-reference";
 import {
+  /** 🔴 CORE-2S §5-②③⑤ — 「🔎 동일상품 확인」·「가격 판단 기준」·「현재 판단」의 문구 owner. */
+  NEXT_STEP_HEADING,
+  PRICE_BASIS_HEADING,
+  SAME_CHECK_HEADING,
+  nextStepLines,
+  priceBasisLines,
+  type MarketReferencePrices,
   MI_SAME_AREA_SCOPE,
   MI_SAME_DOMESTIC_HEADING,
   MI_SAME_EMPTY,
@@ -100,12 +107,20 @@ export interface MarketPriceComparisonProps {
   domesticReference?: OverseasPriceSummary | null;
   /** 🔴 MI 가 이미 낸 해외 참고가격 집계. 여기서 계산하지 않는다. */
   overseasReference?: OverseasPriceSummary | null;
+  /**
+   * 🔴🔴 CORE-2S §5-⑤ — **셀러가 입력한 매입 원가.** 🔴 이 영역은 그 값으로
+   *    **아무것도 계산하지 않는다**(추천가 0 · 마진 0 · 예상수익 0) — 「비어 있다」는
+   *    사실 하나를 말하기 위해서만 읽는다. 🟢 값 자체는 `PriceHistoryResponse.
+   *    currentPrice.costPriceKrw` 로 **이미 응답에 있다**(새 API 0 · 새 계산 0).
+   */
+  costPriceKrw?: number | null;
 }
 
 export function MarketPriceComparison({
   rows,
   domesticReference,
   overseasReference,
+  costPriceKrw,
 }: MarketPriceComparisonProps): JSX.Element | null {
   const domestic = selectMiSameCandidates(rows, "KR");
   const overseas = selectMiSameCandidates(rows, "OVERSEAS");
@@ -119,7 +134,26 @@ export function MarketPriceComparison({
    *    **다른 문장** 이 나온다 — 같은 말을 돌려쓰면 그것은 결론이 아니라 안내문이다.
    * 🟢 집계·판정 **0** — `judgement` 와 `buildPriceGuide` 가 이미 낸 수치를 읽는다.
    */
-  const decision = marketDecisionLines(judgement);
+  /**
+   * 🔴🔴🔴 CORE-2S §5-② — **결론이 참고가격을 «보게» 한다.**
+   *
+   * 🔴 전까지 `marketDecisionLines(judgement)` 는 **SAME 축만** 봤다 ⟹ SAME 0 이면
+   *    🇰🇷 블록에 `KRW 88,000` 이 떠 있는데도 결론이 「없습니다」로 끝났다(CEO 화면의 모순).
+   * 🟢 집계는 **한 글자도 새로 만들지 않는다** — 이 영역이 이미 prop 으로 받고 있는
+   *    두 집계를 그대로 묶어 넘긴다(금액 출력은 그 함수가 하지 않는다 · 계약으로 잠근다).
+   */
+  const references: MarketReferencePrices = { domestic: domesticReference, overseas: overseasReference };
+  const decision = marketDecisionLines(judgement, references);
+  /**
+   * 🔴🔴 CORE-2S §5-③ — **「그 가격이 왜 그 가격인가」.** 🔴 금액 0 · 내부 토큰 0 ·
+   *    전부 **조건부** 다(상태와 무관한 안내문은 WU-146 이 지운 모양이다).
+   */
+  const basis = priceBasisLines(judgement, references);
+  /**
+   * 🔴🔴 CORE-2S §5-⑤ — **「원가가 비었다」와 「데이터가 없다」를 가른다**(UNKNOWN ≠ 실패).
+   * 🔴 가격이 있을 때만 말한다 — 가격도 없는데 원가를 요구하면 순서가 틀린다.
+   */
+  const nextSteps = nextStepLines(basis.length > 0, costPriceKrw);
   /**
    * 🔴 WU-133 — **시장과 무관하게** 센다. 「국내/해외로 갈려서 안 보인다」가 아니라
    *    「판정이 보류돼서 안 보인다」가 사실이고, 그 사실은 시장별로 나누면 흐려진다.
@@ -182,15 +216,27 @@ export function MarketPriceComparison({
             judgement={judgement}
             rows={rows}
             /**
-             * 🔴🔴 CORE-2R-5 — **국내 가격 evidence 의 «소비 위치» 를 1차로 올린다.**
-             *    이 집계(`candidateDomesticPrice`)는 `EXACT | COMPARISON` 를 담는
-             *    **기존 정책 그대로** 이고(`market-intelligence.ts:318`), 지금까지
+             * 🔴🔴 CORE-2R-5 — **가격 evidence 의 «소비 위치» 를 1차로 올린다.**
+             *    이 집계(`candidateDomesticPrice` · `candidateOverseasPrice`)는
+             *    `EXACT | COMPARISON` 를 담는 **기존 정책 그대로** 이고, 지금까지
              *    **`▸ MI 상세 분석` 접힘 안** 에만 그려져 셀러가 볼 수 없었다.
              * 🔴 **승격이 아니다** — `PRESUMED_SAME → SAME` 을 하지 않았고 SAME 게이트도
              *    threshold 도 한 글자 안 바꿨다. 바뀐 것은 **이미 만든 숫자를 어디서 보여
              *    주는가** 뿐이다.
+             *
+             * ── 🔴🔴🔴 CORE-2S §5-④ — **해외도 «같은 정보 구조» 로 올렸다** ────────────
+             * ```
+             * 🔴 CORE-2R-5 는 **국내만** 1차로 올렸다 ⟹ 🇰🇷 는 가격이 첫 화면에 있고
+             *    🌎 는 **접힘을 열어야** 보였다. 그 비대칭이 CPO §5-④ 가 지목한 것이다
+             *    (「🌎 해외 블록을 🇰🇷 와 **같은 정보 구조** 로」).
+             * 🟢 **복제가 아니라 이동** 이다 — 아래 2차의 해외 칸은 `reference={null}` 로
+             *    껐다(국내가 CORE-2R-5 에서 그렇게 됐던 것과 **같은 처리**) ⟹ 같은
+             *    금액이 화면에 두 번 뜨지 않는다(「가격 숫자 중복 금지」 유지).
+             * 🔴 집계·환산·통화 처리는 **한 글자도** 바뀌지 않았다 — 같은
+             *    `OverseasReferencePrice` 에 같은 `OverseasPriceSummary` 를 넘긴다.
+             * ```
              */
-            domesticReference={domesticReference}
+            reference={mk === "KR" ? domesticReference : overseasReference}
           />
         ))}
       </div>
@@ -205,6 +251,33 @@ export function MarketPriceComparison({
         <p data-testid="market-unresolved" className="mt-1 text-[11px] text-text-tertiary">
           {unresolvedNote}
         </p>
+      )}
+
+      {/**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔴🔴🔴 CORE-2S §5-③ — **「💡 가격 판단 기준」이 여기 선다**(CPO 고정 순서 ④)
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * 🔴 CPO 가 고정한 정보 우선순위는
+       *    **① 조사했다 → ② 🇰🇷 → ③ 🌎 → ④ 가격 판단 «기준» → ⑤ 판매 판단 → ⑥ 입력할 것**
+       *    이다 ⟹ 숫자(②③) **뒤**, 결론(⑤) **앞** 이 이 영역의 자리다.
+       * 🟢 wu-140 의 순서 계약은 그대로 지켜진다 — `market-blocks` 는 여전히 맨 앞이고
+       *    `market-judgement` 와 `mi-detail-fold` 는 여전히 그 뒤다.
+       * 🔴 **금액을 적지 않는다** — 금액 owner 는 위 두 블록 하나다(계약이 「KRW 88,000 은
+       *    화면에 1회」를 문다). 🔴 내부 토큰·tier·blocker 어휘 **0**.
+       * 🔴 조건이 없으면 **영역 자체가 서지 않는다**(빈 틀을 만들지 않는다).
+       */}
+      {basis.length > 0 && (
+        <div data-testid="price-basis" className="mt-3">
+          <p className="text-[11px] font-medium text-text-secondary">{PRICE_BASIS_HEADING}</p>
+          <ul className="mt-0.5 space-y-0.5">
+            {basis.map((line) => (
+              <li key={line} data-testid="price-basis-line" className="text-[11px] text-text-tertiary">
+                {line}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {/**
@@ -243,9 +316,26 @@ export function MarketPriceComparison({
             </li>
           ))}
         </ul>
-        <p data-testid="market-verdict" className="text-[11px] text-text-secondary">
-          {MARKET_VERDICT_TEXT[judgement.verdict]}
-        </p>
+        {/**
+         * ══════════════════════════════════════════════════════════════════════
+         * 🔴🔴🔴 CORE-2S §5-⑧ — **`market-verdict` 가 여기서 2차로 내려갔다**(삭제 아님)
+         * ══════════════════════════════════════════════════════════════════════
+         *
+         * 🔴 그 줄은 **바로 위 결론과 같은 말** 이었다. 실측 비교(SAME 0 상태):
+         * ```
+         * seller-decision  「아직 동일상품으로 확정된 판매처가 없습니다.」
+         * market-verdict   「동일상품으로 판정된 판매처가 아직 없습니다.」   ← 같은 사실
+         * market-block ×2  「동일상품 확인 0곳 — …」                        ← 또 같은 사실
+         * ```
+         * ⟹ 🔴 셀러가 첫 화면에서 **「0」을 네 번** 읽는다. 그러면 바로 옆의
+         *    `KRW 88,000` 이 「그래도 없는 것」으로 읽힌다 — 그것이 §2 가 고치라는 모순이다.
+         * 🟢 그래서 **분류 라벨(verdict)을 2차로 내렸다** — WU-145 가 「건수는 1차 ·
+         *    사유 어휘는 2차」로 가른 그 선례와 **같은 모양** 이다.
+         * 🔴 **지우지 않았다** — 같은 `data-testid` 로 `▸ MI 상세 분석` 안에 그대로 선다
+         *    (계약 `wu-132`·`wu-136-render` 가 그 값을 보고 있고, 지우면 네 상태
+         *    (NO_SAME/SAME_BUT_NONE_ON_SALE/ON_SALE_NO_PRICE/ON_SALE)의 구분이 사라진다).
+         * 🔴 **결론 owner 는 하나** 라는 `wu-146` STEP 7-2 계약이 이것으로 더 강해진다.
+         */}
         {judgement.sellers.length > 0 && (
           <>
             {/**
@@ -359,6 +449,31 @@ export function MarketPriceComparison({
       </div>
 
       {/**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔴🔴🔴 CORE-2S §5-⑤ — **「🧾 현재 판단」**(CPO 고정 순서 ⑥ = 셀러가 입력할 것)
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * 🔴 CPO: 「원가 없으면 **『수익성 판단 보류 · 원가 입력 필요』**」 ·
+       *    「🔴 **「데이터 없음」처럼 보이지 않게** 한다(**UNKNOWN ≠ 실패**)」.
+       * 🔴🔴 지금 화면은 시장가격을 **다 찾아 놓고도** 최종 판단이 `UNKNOWN` 으로 끝난다 —
+       *    셀러에게는 「아무것도 못 했다」로 읽히는데 **비어 있는 칸은 원가 하나** 다.
+       * 🔴 **계산 0** — 추천 판매가 · 마진 · 예상 수익을 만들지 않는다(§3 금지축).
+       *    이 영역이 하는 일은 **「무엇이 비어 있는지」** 한 줄로 말하는 것이 전부다.
+       * 🔴 입력칸을 **여기 만들지 않는다** — `wu-154 A-1`(결론 영역에 `<input>` 금지)이
+       *    그것을 문다. 원가 입력의 owner 는 ③ 수익성의 비용 화면이다.
+       */}
+      {nextSteps.length > 0 && (
+        <div data-testid="market-next-step" className="mt-3">
+          <p className="text-[11px] font-medium text-text-secondary">{NEXT_STEP_HEADING}</p>
+          {nextSteps.map((line) => (
+            <p key={line} data-testid="market-next-step-line" className="text-[11px] text-text-tertiary">
+              {line}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {/**
        * 🔴🔴🔴 WU-133 — **「비었다」로 끝내지 않는다.**
        *
        * 전수 추적(human SAME 13건)이 측정한 것: 판정까지 간 7건이 **전부 보류/충돌** 이고
@@ -391,6 +506,15 @@ export function MarketPriceComparison({
         <summary className="cursor-pointer text-[11px] text-text-tertiary">
           ▸ {MI_DETAIL_FOLD_LABEL}
         </summary>
+        {/**
+         * 🔴🔴 CORE-2S §5-⑧ — **1차에서 내려온 분류 라벨.** 「지우지 않는다」의 구현부다.
+         *    🟢 `data-testid` 와 문구 owner(`MARKET_VERDICT_TEXT`)는 **그대로** 이므로
+         *       네 상태의 구분이 보존되고 기존 계약 둘이 계속 그 값을 읽는다.
+         *    🔴 1차에서는 `seller-decision` 이 **결론 owner 하나** 다(`wu-146` STEP 7-2).
+         */}
+        <p data-testid="market-verdict" className="mt-1 text-[11px] text-text-secondary">
+          {MARKET_VERDICT_TEXT[judgement.verdict]}
+        </p>
         {/* 🔴 「유사상품은 비교에 쓰지 않는다」를 영역이 **직접** 말한다(②의 절반). */}
         <p className="mt-1 text-[11px] text-text-tertiary">{MI_SAME_AREA_SCOPE}</p>
         {/**
@@ -433,7 +557,15 @@ export function MarketPriceComparison({
           testId="mi-same-overseas"
           heading={MI_SAME_OVERSEAS_HEADING}
           selection={overseas}
-          reference={overseasReference}
+          /**
+           * 🔴🔴 CORE-2S §5-④ — **해외 집계도 여기서 «꺼진다».** 1차 🌎 블록으로
+           *    **옮겼다**(복제가 아니다 — 국내가 CORE-2R-5 에서 그렇게 됐던 것과 같다).
+           *    두 곳에 두면 같은 `GBP 37 · USD 58` 이 화면에 두 번 뜨고, 그것이
+           *    WU-145/149 가 닫은 「가격 숫자 중복 금지」 계약 위반이다.
+           * 🔴 제목·문구·🧾 아이콘·환산 금지는 **한 글자도 안 바뀌었다** — 1차에서
+           *    같은 컴포넌트에 같은 기본값으로 선다(`wu-056r1` 다섯이 그대로 유효하다).
+           */
+          reference={null}
           /** 🔴 해외 블록의 제목·문구·🧾 아이콘은 **기본값 그대로** 다(`wu-056r1` 계약). */
           referenceProps={{}}
         />
@@ -467,13 +599,17 @@ function MarketBlock({
   market,
   judgement,
   rows,
-  domesticReference,
+  reference,
 }: {
   market: "KR" | "OVERSEAS";
   judgement: MarketJudgement;
   rows?: readonly GeminiTransientRow[] | null;
-  /** 🔴 CORE-2R-5 — 🇰🇷 에서만 쓴다(해외 축은 기존 자리 그대로다). */
-  domesticReference?: OverseasPriceSummary | null;
+  /**
+   * 🔴 CORE-2S §5-④ — **두 시장이 같은 prop 을 쓴다.** 전에는 `domesticReference` 라
+   *    이름이 국내에 묶여 있었고, 그래서 해외는 1차에 가격을 **올릴 자리가 없었다**.
+   * 🟢 호출부가 시장별 집계를 골라 넘기므로 이 컴포넌트는 **시장을 판단하지 않는다**.
+   */
+  reference?: OverseasPriceSummary | null;
 }): JSX.Element {
   const g = buildPriceGuide(judgement, market);
   /**
@@ -498,9 +634,6 @@ function MarketBlock({
          *    부재와 미발견은 다르다(WU-091 어휘 계약).
          */
         <>
-          <p data-testid={`market-empty-${suffix}`} className="text-[11px] text-text-tertiary">
-            {marketEmptyNote(countMarketCandidates(rows, market), countPendingCandidates(rows, market))}
-          </p>
           {/**
            * ══════════════════════════════════════════════════════════════════
            * 🔴🔴🔴 CORE-2R-5 — **「국내 가격을 못 찾는 단계」는 끝났다. 소비 위치를 연다.**
@@ -513,23 +646,41 @@ function MarketBlock({
            * 🟢 그런데 그 금액은 **이미 집계돼 있다** — `candidateDomesticPrice` 는
            *    `EXACT | COMPARISON` 을 담는 **기존 정책** 이다. 지금까지 그 집계가
            *    **`▸ MI 상세 분석` 접힘 안에만** 그려져 셀러 시야 밖이었다.
-           * 🔴 그래서 **승격이 아니라 «이동»** 이다 — 아래 2차의 국내 집계는 **끄고**
+           * 🔴 그래서 **승격이 아니라 «이동»** 이다 — 아래 2차의 집계는 **끄고**
            *    (`reference={null}`) 여기 하나만 그린다 ⟹ **같은 숫자가 두 곳에 뜨지 않는다**.
            * 🔴 SAME 이 **있으면** 이 줄을 그리지 않는다 — 그때는 SAME 축이 더 강한 근거이고
            *    둘을 같이 두면 가격 숫자가 둘이 된다(CPO 「EXACT 우선 · 없을 때 COMPARISON」).
            * 🟢 컴포넌트·문구·testid 는 **WU-056 의 그것 그대로** 다(새 가격 owner 0).
+           *
+           * ── 🔴🔴🔴 CORE-2S §5-② — **가격이 「0곳」보다 «먼저» 온다** ─────────────────
+           * ```
+           * 🔴 CORE-2R-5 는 이 줄을 「동일상품 확인 0곳 — …」 **뒤** 에 뒀다. 그래서
+           *    CEO 화면에서 셀러가 가장 먼저 읽는 글자가 **「0곳」** 이고, 그 아래의
+           *    `KRW 88,000` 은 「그래도 없는 것」으로 읽혔다. **그것이 그 모순이다.**
+           * 🟢 두 줄의 **순서를 뒤집었다** — 위는 돈(🇰🇷/🧾), 아래는 판정(🔎).
+           * 🔴 그리고 아래 줄에 **축의 이름**(`SAME_CHECK_HEADING`)을 붙였다 — 수식어
+           *    없이 나란히 두면 두 축이 **한 축으로** 읽힌다(「1곳 ↔ 0곳」이 모순으로 보인다).
+           * 🔴 숫자·집계·판정은 **한 글자도** 바뀌지 않았다. 바뀐 것은 **순서와 라벨** 뿐이다.
+           * ```
            */}
-          {market === "KR" && (
-            <OverseasReferencePrice
-              summary={domesticReference}
-              title={DOMESTIC_REFERENCE_TITLE}
-              note={DOMESTIC_REFERENCE_NOTE}
-              scope={DOMESTIC_REFERENCE_SCOPE}
-              icon="🇰🇷"
-              testId="domestic-reference"
-              amountTestId="domestic-lowest"
-            />
-          )}
+          <OverseasReferencePrice
+            summary={reference}
+            {...(market === "KR"
+              ? {
+                  title: DOMESTIC_REFERENCE_TITLE,
+                  note: DOMESTIC_REFERENCE_NOTE,
+                  scope: DOMESTIC_REFERENCE_SCOPE,
+                  icon: "🇰🇷",
+                  testId: "domestic-reference",
+                  amountTestId: "domestic-lowest",
+                }
+              : /** 🔴 해외는 **기본값 그대로** — 「🧾 해외 동일상품 참고가격」(`wu-056r1`). */
+                {})}
+          />
+          <p className="mt-2 text-[11px] font-medium text-text-secondary">{SAME_CHECK_HEADING}</p>
+          <p data-testid={`market-empty-${suffix}`} className="text-[11px] text-text-tertiary">
+            {marketEmptyNote(countMarketCandidates(rows, market), countPendingCandidates(rows, market))}
+          </p>
         </>
       ) : (
         <div data-testid={`price-guide-${suffix}`}>

@@ -296,7 +296,19 @@ describe("B. 🔴 영역 (마운트 DOM)", () => {
     expect(
       sec("market-price-comparison")!.querySelectorAll('[data-testid="domestic-reference"]').length,
     ).toBe(1);
-    expect(sec("mi-same-overseas")!.querySelector('[data-testid="overseas-reference"]')).toBeTruthy();
+    /**
+     * 🔴🔴🔴 **CORE-2S §5-④ — 해외 집계도 1차로 올라갔다. 이 단언이 뒤집혔다.**
+     *
+     * 🔴 CORE-2R-5 는 국내만 올려서 🇰🇷 는 첫 화면 · 🌎 는 **접힘을 열어야** 보였다 ⟹
+     *    CPO §5-④ 가 지목한 **비대칭** 이다(「🌎 를 🇰🇷 와 같은 정보 구조로」).
+     * 🟢 계약의 뜻(「두 집계가 **이 영역 안** 에 선다」)은 **그대로** 다 — 둘 다 영역을
+     *    떠나지 않았고, 이제 **둘 다 1차** 다. 🔴 그리고 **각각 한 곳에만** 있어야 한다.
+     */
+    expect(sec("market-block-overseas")!.querySelector('[data-testid="overseas-reference"]')).toBeTruthy();
+    expect(sec("mi-same-overseas")!.querySelector('[data-testid="overseas-reference"]')).toBeNull();
+    expect(
+      sec("market-price-comparison")!.querySelectorAll('[data-testid="overseas-reference"]').length,
+    ).toBe(1);
     /** 🔴 아이콘이 겹치지 않는다(wu-056r1 §5 계약 그대로). */
     expect(sec("overseas-reference")!.textContent).toContain("🧾");
     expect(sec("overseas-reference")!.textContent).not.toContain("🌐");

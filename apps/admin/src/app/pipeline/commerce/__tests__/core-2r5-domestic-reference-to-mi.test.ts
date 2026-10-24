@@ -74,6 +74,15 @@ const DOMESTIC_REFERENCE: OverseasPriceSummary = summarizeCandidateOverseasPrice
   { market: "KR", currency: "KRW", amount: 88000, priceTier: "COMPARISON" },
 ]);
 
+/**
+ * 🟢 CORE-2S §5-④ — **해외 축도 같은 모양이다**(CEO Production 실측: GBP 37 · USD 58).
+ * 🔴 통화가 **둘** 인 fixture 를 일부러 쓴다 — 하나로 합치는 회귀(환산)를 잡기 위해서다.
+ */
+const OVERSEAS_REFERENCE: OverseasPriceSummary = summarizeCandidateOverseasPrices([
+  { market: "OVERSEAS", currency: "GBP", amount: 37, priceTier: "EXACT" },
+  { market: "OVERSEAS", currency: "USD", amount: 58, priceTier: "COMPARISON" },
+]);
+
 function mount(props: Parameters<typeof MarketPriceComparison>[0]): string {
   const host = document.createElement("div");
   document.body.appendChild(host);
@@ -116,11 +125,49 @@ describe("CORE-2R-5 A — 국내 참고가격이 1차 🇰🇷 블록에 선다"
     expect(block, "🔴 2차 국내 칸이 다시 집계를 그린다 — 가격이 두 번 뜬다").toContain("reference={null}");
   });
 
-  /** 🔴 해외 축은 **건드리지 않았다** — 그 집계는 2차 자리에 그대로다. */
-  it("A-4 🟢 해외 2차 칸은 집계를 그대로 그린다", () => {
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 **CORE-2S §5-④ 에서 뒤집혔다 — 이 단언의 «방향» 이 바뀐 이유를 적는다.**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 CORE-2R-5 는 국내만 1차로 올리고 **해외는 2차에 뒀다**. 그래서 🇰🇷 는 가격이
+   *    첫 화면에 있고 🌎 는 **접힘을 열어야** 보였다 ⟹ CPO §5-④ 가 지목한 **비대칭** 이다
+   *    (「🌎 해외 블록을 🇰🇷 와 **같은 정보 구조** 로」).
+   * 🟢 그래서 해외 집계도 **1차로 옮겼다**(복제가 아니라 이동 — 2차는 끈다).
+   * 🔴🔴 **약해지지 않았다** — 지키는 성질은 그대로 「**집계는 화면에 한 번만 그린다**」이고,
+   *    이제 **양방향** 으로 잠근다: ⒜ 2차는 끈 채여야 하고 ⒝ 1차에는 **정확히 하나** 여야 한다.
+   *    ⟹ 되돌려 2차에 다시 그리면 **A-4-b 가 2 를 세어 FAIL** 한다.
+   */
+  it("A-4 🔴 2차 해외 칸도 집계를 그리지 않는다(1차로 옮겼다 · 소스 앵커)", () => {
     const at = MPC_CODE.indexOf('testId="mi-same-overseas"');
     expect(at).toBeGreaterThan(0);
-    expect(MPC_CODE.slice(at, at + 400)).toContain("reference={overseasReference}");
+    const block = MPC_CODE.slice(at, at + 1200);
+    expect(block, "🔴 2차 해외 칸이 다시 집계를 그린다 — 가격이 두 번 뜬다").toContain("reference={null}");
+    expect(block, "🔴 2차가 prop 을 직접 받으면 1차와 둘이 된다").not.toContain(
+      "reference={overseasReference}",
+    );
+  });
+
+  /**
+   * 🔴🔴 **마운트 DOM 축** — 소스 앵커만으로는 「1차에 실제로 섰는가」를 못 본다
+   *    (이 저장소가 반복해 적은 「Render PASS ≠ 소스 PASS」).
+   * 🔴 그리고 **국내와 같은 모양** 인지 같이 본다 — `A-2` 의 해외 버전이다.
+   */
+  it("A-4-b 🟢🟢 해외 참고가격이 **1차 🌎 블록** 에 선다 · 화면에 하나뿐이다", () => {
+    const html = mount({
+      rows: ROWS,
+      domesticReference: DOMESTIC_REFERENCE,
+      overseasReference: OVERSEAS_REFERENCE,
+    });
+    expect((html.match(/data-testid="overseas-reference"/g) ?? []).length).toBe(1);
+    expect((html.match(/GBP 37/g) ?? []).length).toBe(1);
+    const os = html.slice(
+      html.indexOf('data-testid="market-block-overseas"'),
+      html.indexOf('data-testid="mi-detail-fold"'),
+    );
+    expect(os, "🔴 해외 참고가격이 1차 블록 «밖» 에 있다").toContain('data-testid="overseas-reference"');
+    /** 🔴 아이콘·제목은 **기본값 그대로** 여야 한다(`wu-056r1` 다섯이 그것을 본다). */
+    expect(os).toContain("🧾");
   });
 
   /** 🔴 SAME 이 **있으면** 참고가격 줄을 그리지 않는다(EXACT 우선 · 숫자 둘 금지). */

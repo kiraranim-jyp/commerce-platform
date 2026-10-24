@@ -3667,6 +3667,11 @@ export function CommerceWorkspace({
             rows={marketComparison?.rows ?? null}
             domesticReference={marketComparison?.domesticReference ?? null}
             overseasReference={marketComparison?.overseasReference ?? null}
+            /**
+             * 🔴 CORE-2S §5-⑤ — 「🧾 현재 판단」이 **원가가 비었다** 는 사실만 말한다.
+             *    🔴 이 영역에서 계산하지 않는다(추천가·마진·예상수익 **0** · §3 금지축).
+             */
+            costPriceKrw={marketComparison?.costPriceKrw ?? null}
           />
         </div>
       )}
