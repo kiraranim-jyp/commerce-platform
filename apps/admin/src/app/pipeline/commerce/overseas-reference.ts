@@ -22,7 +22,11 @@
 
 export interface OverseasPriceSummary {
   count: number;
-  byCurrency: Record<string, { count: number; lowestAmount: number }>;
+  /**
+   * 🔴 CORE-2R-5 — `highestAmount` 는 **선택** 이다. 서버 집계는 항상 채우지만,
+   *    최저가만 들고 있는 기존 fixture/호출부도 그대로 돈다(하위호환).
+   */
+  byCurrency: Record<string, { count: number; lowestAmount: number; highestAmount?: number }>;
   byMarket: Record<string, number>;
   byPriceTier: Record<string, number>;
 }

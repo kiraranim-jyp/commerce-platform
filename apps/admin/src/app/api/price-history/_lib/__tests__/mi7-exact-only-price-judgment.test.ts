@@ -177,14 +177,45 @@ describe("③ 나머지 네 상황", () => {
 });
 
 describe("④ 🔴 소스 — 판정 입력과 표시 입력이 갈라져 있다", () => {
-  it("sellability 는 «exact» 를 받는다", () => {
+  /**
+   * ════════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 CORE-2R-5(CPO 확정 2026-10-24) — **이 계약이 «뒤집혔다». 지우지 않고 적는다.**
+   * ════════════════════════════════════════════════════════════════════════════
+   *
+   * 원래 이 테스트는 「**sellability 는 `exact` 를 받는다**」였다(P0-D.2 · P0-D.3).
+   * 그 전제는 「`COMPARISON` 가격을 **판정** 에 쓰지 않는다」였고 CPO 가 전제를 바꿨다:
+   * ```
+   * domestic price evidence
+   *   ├─ EXACT      → 우선 사용
+   *   └─ COMPARISON → EXACT 가 없을 때 사용  ⟹ 국내 reference → MI sellability
+   * ```
+   * 🔴 근거(CORE-2R-4 실측) — 국내 후보 **2곳이 둘 다 `KRW 88,000`** 인데 등급이
+   *    `PRESUMED_SAME → COMPARISON` 이라 `exact` 가 **0** 이었다. 그 상태에서는
+   *    「국내 가격을 찾아 놓고 MI 가 쓰지 못한다」가 된다(CPO: 마지막 병목).
+   * 🟢 **계약을 약하게 만들지 않았다** — 방향만 뒤집고 **양방향으로** 잠근다.
+   * 🔴 그리고 **추천가/마진 축은 여전히 `EXACT` 만** 본다(아래 ⑤ 가 그것을 문다).
+   */
+  it("sellability 는 «resolved» 를 받는다 — EXACT 우선 · 없으면 COMPARISON", () => {
     const at = CODE.indexOf("computeSellability({");
     expect(at).toBeGreaterThan(-1);
     const block = CODE.slice(at, CODE.indexOf("});", at));
-    expect(block).toContain("domesticMarketSplit.exact.sellerCount");
-    expect(block).toContain("domesticMarketSplit.exact.averagePriceKrw");
-    /* 🔴 resolved(=domesticSummary)를 판정 입력으로 되살리면 여기서 잡힌다. */
-    expect(block).not.toContain("domesticSummary");
+    expect(block).toContain("domesticMarketSplit.resolved.sellerCount");
+    expect(block).toContain("domesticMarketSplit.resolved.averagePriceKrw");
+    /** 🔴 `exact` 단독으로 되돌리면 COMPARISON 가격이 다시 버려진다 — 여기서 잡는다. */
+    expect(block).not.toContain("domesticMarketSplit.exact");
+  });
+
+  /**
+   * 🔴🔴 **우선순위 규칙을 «새로 만들지 않았다»** 는 것이 이 변경의 안전 근거다 —
+   *    `summarizeDomesticMarketSplit` 의 `resolved` 가 이미 그 규칙이다
+   *    (`exact.sellerCount > 0 ? exact : comparison`).
+   */
+  it("🔴 우선순위를 손으로 적지 않았다 — 기존 `resolved` 규칙 그대로다", () => {
+    expect(CODE).toContain("const domesticSummary = domesticMarketSplit.resolved;");
+    const at = CODE.indexOf("computeSellability({");
+    const block = CODE.slice(at, CODE.indexOf("});", at));
+    expect(block).not.toContain("sellerCount > 0 ?");
+    expect(block).not.toContain("?? domesticMarketSplit");
   });
 
   it("🔴 표시 축은 여전히 resolved 다 — 비교상품 가격을 화면에서 지우지 않았다", () => {

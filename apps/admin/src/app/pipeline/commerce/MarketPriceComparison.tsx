@@ -176,7 +176,22 @@ export function MarketPriceComparison({
        */}
       <div data-testid="market-blocks" className="mt-2 grid gap-2 md:grid-cols-2">
         {(["KR", "OVERSEAS"] as const).map((mk) => (
-          <MarketBlock key={mk} market={mk} judgement={judgement} rows={rows} />
+          <MarketBlock
+            key={mk}
+            market={mk}
+            judgement={judgement}
+            rows={rows}
+            /**
+             * 🔴🔴 CORE-2R-5 — **국내 가격 evidence 의 «소비 위치» 를 1차로 올린다.**
+             *    이 집계(`candidateDomesticPrice`)는 `EXACT | COMPARISON` 를 담는
+             *    **기존 정책 그대로** 이고(`market-intelligence.ts:318`), 지금까지
+             *    **`▸ MI 상세 분석` 접힘 안** 에만 그려져 셀러가 볼 수 없었다.
+             * 🔴 **승격이 아니다** — `PRESUMED_SAME → SAME` 을 하지 않았고 SAME 게이트도
+             *    threshold 도 한 글자 안 바꿨다. 바뀐 것은 **이미 만든 숫자를 어디서 보여
+             *    주는가** 뿐이다.
+             */
+            domesticReference={domesticReference}
+          />
         ))}
       </div>
       {/**
@@ -398,7 +413,13 @@ export function MarketPriceComparison({
           testId="mi-same-domestic"
           heading={MI_SAME_DOMESTIC_HEADING}
           selection={domestic}
-          reference={domesticReference}
+          /**
+           * 🔴🔴 CORE-2R-5 — **국내 집계는 여기서 «꺼진다».** 1차 🇰🇷 블록으로 **옮겼다**
+           *    (복제가 아니다). 두 곳에 두면 같은 `KRW 88,000` 이 화면에 두 번 뜨고
+           *    그것이 WU-145/149 가 닫은 「가격 owner 하나」 계약 위반이다.
+           * 🔴 해외 집계는 **그대로** 다(아래 `MarketColumn`) — 그 축은 이번 범위가 아니다.
+           */
+          reference={null}
           referenceProps={{
             title: DOMESTIC_REFERENCE_TITLE,
             note: DOMESTIC_REFERENCE_NOTE,
@@ -446,10 +467,13 @@ function MarketBlock({
   market,
   judgement,
   rows,
+  domesticReference,
 }: {
   market: "KR" | "OVERSEAS";
   judgement: MarketJudgement;
   rows?: readonly GeminiTransientRow[] | null;
+  /** 🔴 CORE-2R-5 — 🇰🇷 에서만 쓴다(해외 축은 기존 자리 그대로다). */
+  domesticReference?: OverseasPriceSummary | null;
 }): JSX.Element {
   const g = buildPriceGuide(judgement, market);
   /**
@@ -473,9 +497,40 @@ function MarketBlock({
          * 🔴 ⒜ ↔ ⒝ 를 **가른다.** 🔴 「이 시장에 동일상품이 없다」로 적지 않는다 —
          *    부재와 미발견은 다르다(WU-091 어휘 계약).
          */
-        <p data-testid={`market-empty-${suffix}`} className="text-[11px] text-text-tertiary">
-          {marketEmptyNote(countMarketCandidates(rows, market), countPendingCandidates(rows, market))}
-        </p>
+        <>
+          <p data-testid={`market-empty-${suffix}`} className="text-[11px] text-text-tertiary">
+            {marketEmptyNote(countMarketCandidates(rows, market), countPendingCandidates(rows, market))}
+          </p>
+          {/**
+           * ══════════════════════════════════════════════════════════════════
+           * 🔴🔴🔴 CORE-2R-5 — **「국내 가격을 못 찾는 단계」는 끝났다. 소비 위치를 연다.**
+           * ══════════════════════════════════════════════════════════════════
+           *
+           * 실측(B226AC009) — 국내 후보 **2곳이 둘 다 `KRW 88,000`** 이고 `VERIFIED_CURRENT`
+           * 인데, 등급이 `PRESUMED_SAME → COMPARISON` 이라 **SAME 축(`buildPriceGuide`)에
+           * 들어가지 않는다** ⟹ 이 블록이 「찾지 못했습니다」만 말했다.
+           *
+           * 🟢 그런데 그 금액은 **이미 집계돼 있다** — `candidateDomesticPrice` 는
+           *    `EXACT | COMPARISON` 을 담는 **기존 정책** 이다. 지금까지 그 집계가
+           *    **`▸ MI 상세 분석` 접힘 안에만** 그려져 셀러 시야 밖이었다.
+           * 🔴 그래서 **승격이 아니라 «이동»** 이다 — 아래 2차의 국내 집계는 **끄고**
+           *    (`reference={null}`) 여기 하나만 그린다 ⟹ **같은 숫자가 두 곳에 뜨지 않는다**.
+           * 🔴 SAME 이 **있으면** 이 줄을 그리지 않는다 — 그때는 SAME 축이 더 강한 근거이고
+           *    둘을 같이 두면 가격 숫자가 둘이 된다(CPO 「EXACT 우선 · 없을 때 COMPARISON」).
+           * 🟢 컴포넌트·문구·testid 는 **WU-056 의 그것 그대로** 다(새 가격 owner 0).
+           */}
+          {market === "KR" && (
+            <OverseasReferencePrice
+              summary={domesticReference}
+              title={DOMESTIC_REFERENCE_TITLE}
+              note={DOMESTIC_REFERENCE_NOTE}
+              scope={DOMESTIC_REFERENCE_SCOPE}
+              icon="🇰🇷"
+              testId="domestic-reference"
+              amountTestId="domestic-lowest"
+            />
+          )}
+        </>
       ) : (
         <div data-testid={`price-guide-${suffix}`}>
           <p className="text-[11px] font-medium text-text-secondary">{PRICE_GUIDE_TITLE[market]}</p>

@@ -224,7 +224,12 @@ describe("③ 🔴🔴 §8 다섯 케이스 — 실제 집계기 `summarizeDomes
     expect(after.exact.sellerCount).toBe(before.exact.sellerCount);
     expect(after.exact.lowestPriceKrw).toBe(before.exact.lowestPriceKrw);
     /** 🟢 그러나 **버려지지 않는다** — 해외 축에 남는다. */
-    expect(summarizeCandidateOverseasPrices(overseas).byCurrency.EUR).toEqual({ count: 1, lowestAmount: 100 });
+    /** 🔴 CORE-2R-5 — `highestAmount` 가 **추가** 됐다(1건이면 최저=최고). 기존 칸 불변. */
+    expect(summarizeCandidateOverseasPrices(overseas).byCurrency.EUR).toEqual({
+      count: 1,
+      lowestAmount: 100,
+      highestAmount: 100,
+    });
   });
 
   it("🔴🔴 CASE 3 — Bobo Choses(등록부 + EUR)가 국내 최저가가 되지 않는다", () => {
@@ -304,7 +309,11 @@ describe("④ 🔴🔴 해외 축의 격리", () => {
       { market: "OVERSEAS", currency: "USD", amount: 80, priceTier: "EXACT" },
       { market: "OVERSEAS", currency: "EUR", amount: 90, priceTier: "COMPARISON" },
     ]);
-    expect(s.byCurrency).toEqual({ EUR: { count: 2, lowestAmount: 90 }, USD: { count: 1, lowestAmount: 80 } });
+    /** 🔴 CORE-2R-5 — 통화별 **최고가 칸 추가**. 🟢 여전히 **통화를 섞지 않는다**. */
+    expect(s.byCurrency).toEqual({
+      EUR: { count: 2, lowestAmount: 90, highestAmount: 100 },
+      USD: { count: 1, lowestAmount: 80, highestAmount: 80 },
+    });
     /** 🔴 합계 금액 칸이 **없다**(있으면 통화를 섞었다는 뜻이다). */
     expect(Object.keys(s)).toEqual(["count", "byCurrency", "byMarket", "byPriceTier"]);
   });

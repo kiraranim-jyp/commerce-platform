@@ -167,8 +167,15 @@ export interface CandidateOverseasPriceRecord {
 export interface CandidateOverseasPriceSummary {
   /** 가격 증거가 있는 해외/UNKNOWN 후보 수. */
   count: number;
-  /** 🔴 통화를 **섞지 않는다** — 통화별로 갈라 센다. */
-  byCurrency: Record<string, { count: number; lowestAmount: number }>;
+  /**
+   * 🔴 통화를 **섞지 않는다** — 통화별로 갈라 센다.
+   *
+   * 🔴🔴 CORE-2R-5 — `highestAmount` 가 **추가** 됐다(기존 칸은 한 글자도 안 바뀐다).
+   *    왜: 국내 참고 가격을 **「₩83,600 ~ ₩92,000」** 처럼 **구간** 으로 말하려면 최고가가
+   *    필요한데 지금까지 최저가만 냈다. 🟢 같은 루프에서 세므로 **새 집계 경로 0** 이고,
+   *    기존 소비처(해외 최저 확인가)는 이 칸을 **읽지 않으므로 숫자가 안 바뀐다**.
+   */
+  byCurrency: Record<string, { count: number; lowestAmount: number; highestAmount: number }>;
   /** 🔴 시장 판정 분포 — `UNKNOWN` 을 해외로 합치지 않는다. */
   byMarket: Record<string, number>;
   /** 🟢 동일상품 축(EXACT/COMPARISON)과 참고 축을 가른다 — 승격이 아니라 분류다. */
@@ -178,7 +185,7 @@ export interface CandidateOverseasPriceSummary {
 export function summarizeCandidateOverseasPrices(
   records: CandidateOverseasPriceRecord[],
 ): CandidateOverseasPriceSummary {
-  const byCurrency: Record<string, { count: number; lowestAmount: number }> = {};
+  const byCurrency: Record<string, { count: number; lowestAmount: number; highestAmount: number }> = {};
   const byMarket: Record<string, number> = {};
   const byPriceTier: Record<string, number> = {};
   for (const r of records) {
@@ -209,10 +216,12 @@ export function summarizeCandidateOverseasPrices(
     if (r.priceTier === "EXCLUDED") continue;
     if (r.amount == null || !Number.isFinite(r.amount)) continue;
     const bucket = byCurrency[r.currency];
-    if (!bucket) byCurrency[r.currency] = { count: 1, lowestAmount: r.amount };
+    if (!bucket) byCurrency[r.currency] = { count: 1, lowestAmount: r.amount, highestAmount: r.amount };
     else {
       bucket.count += 1;
       if (r.amount < bucket.lowestAmount) bucket.lowestAmount = r.amount;
+      /** 🔴 CORE-2R-5 — 같은 루프에서 센다(새 집계 경로 0 · 환산 0 · 통화 혼합 0). */
+      if (r.amount > bucket.highestAmount) bucket.highestAmount = r.amount;
     }
   }
   return { count: records.length, byCurrency, byMarket, byPriceTier };

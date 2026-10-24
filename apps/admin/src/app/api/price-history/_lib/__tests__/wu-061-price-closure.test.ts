@@ -154,8 +154,13 @@ describe("③ 의미 분리", () => {
     const s = summarizeCandidateOverseasPrices(recs as never);
 
     /** 🟢 금액 집계 — `EXCLUDED` 제외(변경 전 EUR 9 · USD 12 였다). */
-    expect(s.byCurrency.EUR).toEqual({ count: 2, lowestAmount: 40 });
-    expect(s.byCurrency.USD).toEqual({ count: 1, lowestAmount: 98 });
+    /**
+     * 🔴 CORE-2R-5 — `highestAmount` 가 **추가** 됐다. 🟢🟢 그 칸도 `EXCLUDED` 를 **빼고**
+     *    센다 — EUR 최고가가 75 이지 9 가 아니고 USD 는 98 이지 12 가 아니다
+     *    (WU-062 가 막은 오염이 **최고가 칸으로 되돌아오지 않는다**).
+     */
+    expect(s.byCurrency.EUR).toEqual({ count: 2, lowestAmount: 40, highestAmount: 75 });
+    expect(s.byCurrency.USD).toEqual({ count: 1, lowestAmount: 98, highestAmount: 98 });
 
     /** 🔴 **관측/검증 결과는 유지된다**(CPO 조건) — 화면의 「동일상품 아님 2」가 살아 있다. */
     expect(s.byPriceTier).toEqual({ EXACT: 1, COMPARISON: 1, EXCLUDED: 2, REFERENCE: 1 });
@@ -176,7 +181,8 @@ describe("③ 의미 분리", () => {
       { market: "KR", currency: "KRW", amount: 88_000, priceTier: "EXACT" },
     ];
     const s = summarizeCandidateOverseasPrices(domestic as never);
-    expect(s.byCurrency.KRW).toEqual({ count: 2, lowestAmount: 88_000 });
+    /** 🔴 CORE-2R-5 — 최고가 칸 추가. 🟢 국내 숫자(최저 88,000)는 **그대로** 다. */
+    expect(s.byCurrency.KRW).toEqual({ count: 2, lowestAmount: 88_000, highestAmount: 117_000 });
     expect(s.count).toBe(2);
     expect(s.byPriceTier).toEqual({ COMPARISON: 1, EXACT: 1 });
   });
@@ -185,7 +191,7 @@ describe("③ 의미 분리", () => {
   it("🟢 EXACT·COMPARISON·REFERENCE 는 그대로 집계된다", () => {
     for (const tier of ["EXACT", "COMPARISON", "REFERENCE"]) {
       const s = summarizeCandidateOverseasPrices([{ market: "OVERSEAS", currency: "EUR", amount: 10, priceTier: tier }] as never);
-      expect(s.byCurrency.EUR, tier).toEqual({ count: 1, lowestAmount: 10 });
+      expect(s.byCurrency.EUR, tier).toEqual({ count: 1, lowestAmount: 10, highestAmount: 10 });
     }
     /** 🔴 EXCLUDED 만 금액에서 빠진다. */
     const ex = summarizeCandidateOverseasPrices([{ market: "OVERSEAS", currency: "EUR", amount: 10, priceTier: "EXCLUDED" }] as never);

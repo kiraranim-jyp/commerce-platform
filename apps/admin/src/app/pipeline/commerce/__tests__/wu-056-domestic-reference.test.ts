@@ -176,7 +176,17 @@ describe("B. 배선", () => {
     expect(PANEL).toContain("domesticReference,");
     const AREA = strip("apps/admin/src/app/pipeline/commerce/MarketPriceComparison.tsx");
     expect(AREA).toContain('testId: "domestic-reference"');
-    expect(AREA).toContain("reference={domesticReference}");
+    /**
+     * 🔴🔴 CORE-2R-5 — **그 블록이 「2차 접힘」에서 「1차 🇰🇷 블록」으로 올라갔다.**
+     *    전에는 `MarketColumn` 에 `reference={domesticReference}` 로 넘겼고, 그 자리는
+     *    `▸ MI 상세 분석` **안** 이라 셀러가 볼 수 없었다 — 국내 가격을 찾아 놓고도
+     *    화면이 「찾지 못했습니다」만 말했다(CORE-2R-4 실측 · 2곳 × KRW 88,000).
+     * 🟢 지금은 `MarketBlock` 이 그 집계를 받아 **1차** 에서 그린다.
+     * 🔴 **복제가 아니다** — 2차는 `reference={null}` 로 껐고, 「영역에 하나뿐」은
+     *    마운트 DOM 으로 `core-2r5-domestic-reference-to-mi` A-2 가 단언한다.
+     */
+    expect(AREA).toContain("domesticReference={domesticReference}");
+    expect(AREA).toContain('testId="domestic-reference"');
     /** 🔴🔴 **옮긴 것이 맞다** — 패널이 그 블록을 더 이상 그리지 않는다(둘이 되면 FAIL). */
     expect(PANEL).not.toContain('testId="domestic-reference"');
   });

@@ -248,14 +248,31 @@ describe("CORE-2R-4 — 국내 목록 탐색 → MI → 가격 축(실측)", () 
 
     /** ── ⑦ MI 축(`computeSellability` 입력) — 🔴 `exact` 만 받는다. */
     const split = summarizeDomesticMarketSplit(exactRecords, comparisonRecords);
+    /**
+     * 🔴🔴 CORE-2R-5 — **운영과 같은 입력을 쓴다**(`market-intelligence.ts` 의 그 줄).
+     *    전에는 이 하니스가 `split.exact` 를 넣었고 운영도 그랬다. CPO 가 「EXACT 우선 ·
+     *    없으면 COMPARISON」으로 바꿨으므로 **둘 다** `resolved` 다(§5-B 복제 금지).
+     */
     const sellability = computeSellability({
       costPriceKrw: null,
-      domestic: { matched: split.exact.sellerCount > 0, averagePriceKrw: split.exact.averagePriceKrw },
+      domestic: { matched: split.resolved.sellerCount > 0, averagePriceKrw: split.resolved.averagePriceKrw },
     });
     console.log("\n⑦ MI 축(summarizeDomesticMarketSplit → computeSellability)");
     console.log(`   exact ${split.exact.sellerCount}곳 avg=${split.exact.averagePriceKrw} · comparison ${split.comparison.sellerCount}곳 avg=${split.comparison.averagePriceKrw} · basis=${split.basis}`);
     console.log(`   resolved ${split.resolved.sellerCount}곳 avg=${split.resolved.averagePriceKrw} · sellability=${sellability.level}`);
     console.log(`   🔴 costPriceKrw=null 이라 UNKNOWN 이 **정상** 이다(원가/마진 시스템을 만드는 일이 아니다)`);
+    /**
+     * 🟢🟢 **그 국내 가격이 «실제로» 판단을 만드는지** 를 같은 함수로 확인한다.
+     * 🔴 원가는 **지어낸 값이 아니다** — 「원가가 들어오면 이렇게 된다」를 보이는 반사실이고,
+     *    운영 판정에 쓰지 않는다(스냅샷의 원가는 셀러가 입력하는 사업 데이터다).
+     */
+    if (split.resolved.averagePriceKrw != null) {
+      const cf = computeSellability({
+        costPriceKrw: 40_000,
+        domestic: { matched: true, averagePriceKrw: split.resolved.averagePriceKrw },
+      });
+      console.log(`   🔁 반사실(원가 40,000 가정) → sellability=${cf.level} · 기준가=${split.resolved.averagePriceKrw}`);
+    }
 
     /** ── ⑧ 중복 — 같은 상품 URL 이 두 번 들어가지 않았는가. */
     const keys = rows.map((r) => canonicalizeProductUrl(r.discoveredUrl).toLowerCase());

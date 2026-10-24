@@ -717,11 +717,40 @@ export async function computeMarketIntelligence(
    * 쓰이지 않는다 — representative-seller-decision.ts 전수 확인). 즉 표시 축이다.
    * `exact` 로 바꾸면 「비교상품 N곳 시장가격 기준」이라는 사실이 문장에서 사라진다.
    */
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 CORE-2R-5(CPO 확정 2026-10-24) — **판정 입력을 `exact` → `resolved` 로 바꾼다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 **바로 위 주석이 세운 분리(「표시 resolved · 판정 exact」)를 이 소비자에서
+   *    되돌리는 변경이다. 숨기지 않는다.** 그 분리의 전제는 「COMPARISON 가격을 판정에
+   *    쓰지 않는다」였고 CPO 가 그 전제를 바꿨다:
+   * ```
+   * domestic price evidence
+   *   ├─ EXACT      → 우선 사용
+   *   └─ COMPARISON → EXACT 가 없을 때 사용  ⟹ 국내 reference → MI sellability
+   * ```
+   * 🟢 `summarizeDomesticMarketSplit` 의 `resolved` 가 **정확히 그 규칙** 이다
+   *    (`exact.sellerCount > 0 ? exact : comparison` · price-history.ts:644) ⟹
+   *    🔴 **새 우선순위 로직을 만들지 않았다.** 이미 있는 값을 읽는다.
+   *
+   * 🔴 왜 지금인가 — CORE-2R-4 실측에서 국내 후보 **2곳이 둘 다 `KRW 88,000`** 인데
+   *    등급이 `PRESUMED_SAME → COMPARISON` 이라 `exact` 가 **0** 이었다. 그 상태에서는
+   *    「국내 가격을 찾아 놓고 MI 가 쓰지 못한다」가 된다(CPO: 마지막 병목).
+   * 🔴 **SAME 게이트 · threshold · identity 를 열지 않았다**(CPO 금지 1~7 그대로).
+   *    `PRESUMED_SAME → SAME` 승격 **0**. 바뀐 것은 **소비 경로** 하나다.
+   *
+   * 🔴 **나머지 두 소비자는 건드리지 않았다** — `computePriceDecision`(P0-D.2)과
+   *    `computePriceRecommendation`(P-26)은 여전히 `domesticBasis !== "EXACT"` 를 본다.
+   *    그 둘은 **추천가/마진 축** 이고 CPO 가 이번 범위에서 닫아 뒀다.
+   * 🟢 그래서 `domesticBasis` 가 **여전히 응답에 실린다** — 셀러 문장이 「비교상품 N곳
+   *    시장가격 기준」이라고 **출처를 계속 말한다**(그 사실이 사라지면 안 된다).
+   */
   const sellability = computeSellability({
     costPriceKrw,
     domestic: {
-      matched: domesticMarketSplit.exact.sellerCount > 0,
-      averagePriceKrw: domesticMarketSplit.exact.averagePriceKrw,
+      matched: domesticMarketSplit.resolved.sellerCount > 0,
+      averagePriceKrw: domesticMarketSplit.resolved.averagePriceKrw,
     },
   });
 

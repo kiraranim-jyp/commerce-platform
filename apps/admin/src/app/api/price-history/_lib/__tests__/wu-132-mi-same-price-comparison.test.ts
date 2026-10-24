@@ -285,7 +285,17 @@ describe("B. 🔴 영역 (마운트 DOM)", () => {
       domesticReference: { count: 1, byCurrency: { KRW: { count: 1, lowestAmount: 88000 } }, byMarket: { KR: 1 }, byPriceTier: { COMPARISON: 1 } },
       overseasReference: { count: 1, byCurrency: { GBP: { count: 1, lowestAmount: 37 } }, byMarket: { OVERSEAS: 1 }, byPriceTier: { EXACT: 1 } },
     });
-    expect(sec("mi-same-domestic")!.querySelector('[data-testid="domestic-reference"]')).toBeTruthy();
+    /**
+     * 🔴🔴 CORE-2R-5 — **국내 집계만 「1차 🇰🇷 블록」으로 올라갔다**(해외는 그대로 2차).
+     *    전에는 둘 다 `▸ MI 상세 분석` 접힘 안이라 셀러가 국내 가격을 볼 수 없었다.
+     * 🟢 계약의 뜻(「두 집계가 **이 영역 안** 에 선다」)은 그대로다 — 영역을 떠나지 않았다.
+     * 🔴 그리고 국내는 **한 곳에만** 있어야 한다(복제하면 가격 숫자가 둘이 된다).
+     */
+    expect(sec("market-block-domestic")!.querySelector('[data-testid="domestic-reference"]')).toBeTruthy();
+    expect(sec("mi-same-domestic")!.querySelector('[data-testid="domestic-reference"]')).toBeNull();
+    expect(
+      sec("market-price-comparison")!.querySelectorAll('[data-testid="domestic-reference"]').length,
+    ).toBe(1);
     expect(sec("mi-same-overseas")!.querySelector('[data-testid="overseas-reference"]')).toBeTruthy();
     /** 🔴 아이콘이 겹치지 않는다(wu-056r1 §5 계약 그대로). */
     expect(sec("overseas-reference")!.textContent).toContain("🧾");
