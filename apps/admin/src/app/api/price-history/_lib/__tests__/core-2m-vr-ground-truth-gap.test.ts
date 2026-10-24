@@ -53,29 +53,38 @@ import { buildCanonicalProduct } from "../../../pipeline/canonical-product";
 const ORIGIN = "https://bobochoses.com/products/b226ac009-hug-hairy-monster-t-shirt";
 const ORIGIN_CODE = "B226AC009";
 
+/**
+ * 🔴 CORE-2N 에서 fixture 스키마가 바뀌었다(CPO §1·§2) — 라벨을 **두 칸** 으로 갈랐고
+ *    과거 판정은 `historicalConflicts` 로 **분리 보존** 했다. 🟢 이 하니스를 그 스키마로
+ *    갱신했다(기대값을 약하게 만들지 않았다 — 상충 **2건** 단언은 그대로다).
+ */
 interface GtCand {
   domain: string;
   url: string;
-  ceoRaw: string;
-  verdict: "SAME" | "DIFFERENT" | "UNCERTAIN";
+  ceoUiLabel: string;
+  calibrationLabel: "SAME" | "DIFFERENT" | "UNCERTAIN";
   ceoBasis: string;
-  priorVerdict: string | null;
-  conflict: boolean;
+}
+interface HistConflict {
+  domain: string;
+  priorVerdict: string;
+  currentVerdict: string;
+  note: string;
 }
 
 describe("CORE-2M-VR — CEO Visual Truth Calibration (운영 변경 0)", () => {
   it("A — GT 10건이 등록되고 상충 2건이 기록돼 있다", () => {
     const gt = JSON.parse(
       readFileSync(path.join(__dirname, "fixtures", "core-2m-ceo-visual-gt.json"), "utf8"),
-    ) as { candidates: GtCand[]; mapping: Record<string, string> };
+    ) as { candidates: GtCand[]; labelPolicy: { mapping: Record<string, string> }; historicalConflicts: HistConflict[] };
 
     expect(gt.candidates.length, "🔴 CEO 가 판정한 10건 전부 등록돼야 한다").toBe(10);
     /** 🔴 키는 URL 이고 고유해야 한다(WU-095 교훈). */
     expect(new Set(gt.candidates.map((c) => c.url)).size).toBe(10);
     /** 🔴 매핑이 CPO 지시 그대로다 — 「유사」는 SAME 에서 **제외** 된다. */
-    expect(gt.mapping).toEqual({ 동일: "SAME", 유사: "DIFFERENT", 판단불가: "UNCERTAIN" });
+    expect(gt.labelPolicy.mapping).toEqual({ 동일: "SAME", 유사: "DIFFERENT", 판단불가: "UNCERTAIN" });
 
-    const by = (v: string) => gt.candidates.filter((c) => c.verdict === v).length;
+    const by = (v: string) => gt.candidates.filter((c) => c.calibrationLabel === v).length;
     console.log("\n═══ A. CEO Visual Ground Truth ═══");
     console.log(`    SAME **${by("SAME")}** · DIFFERENT **${by("DIFFERENT")}** · UNCERTAIN **${by("UNCERTAIN")}**`);
     expect(by("SAME")).toBe(8);
@@ -83,16 +92,16 @@ describe("CORE-2M-VR — CEO Visual Truth Calibration (운영 변경 0)", () => 
     expect(by("UNCERTAIN")).toBe(1);
 
     /** 🔴🔴 상충을 **기록해 둔 채로** 고정한다 — 숫자로 잠근다. */
-    const conflicts = gt.candidates.filter((c) => c.conflict);
+    const conflicts = gt.historicalConflicts;
     console.log(`\n    🔴🔴 기존 GT 와 **상충 ${conflicts.length}건**`);
     for (const c of conflicts) {
-      console.log(`        ${c.domain.padEnd(24)} WU-112 **${c.priorVerdict}** → CEO **${c.verdict}**`);
+      console.log(`        ${c.domain.padEnd(24)} WU-112 **${c.priorVerdict}** → CEO **${c.currentVerdict}**`);
     }
     expect(conflicts.length, "🔴 상충을 조용히 덮으면 안 된다").toBe(2);
     expect(conflicts.map((c) => c.domain).sort()).toEqual(["bornyesterdaykids.com", "m.luxboy.com"]);
     /** 🔴 상충 건은 **이유를 반드시 적어 둔다**. */
     for (const c of conflicts) {
-      expect((c as GtCand & { conflictNote?: string }).conflictNote, `🔴 ${c.domain} 상충 사유가 비었다`).toBeTruthy();
+      expect(c.note, `🔴 ${c.domain} 상충 사유가 비었다`).toBeTruthy();
     }
     /** 🟢 CEO 근거가 **전건** 적혀 있다(나중에 「왜 SAME 인가」를 되묻지 않게). */
     for (const c of gt.candidates) expect(c.ceoBasis.length, c.domain).toBeGreaterThan(10);
@@ -153,7 +162,7 @@ describe("CORE-2M-VR — CEO Visual Truth Calibration (운영 변경 0)", () => 
       const f = await factsFromProductUrl(g.url);
       if (f.status !== "OK" || !f.candidate?.facts) {
         unreachable += 1;
-        rows.push({ domain: g.domain, ceo: g.verdict, verdict: `🔴 ${f.status}`, truth: "-", l1: "-", l2: "-", gap: "측정불가" });
+        rows.push({ domain: g.domain, ceo: g.calibrationLabel, verdict: `🔴 ${f.status}`, truth: "-", l1: "-", l2: "-", gap: "측정불가" });
         continue;
       }
       const [scored] = withConfidence(query, [f.candidate]);
@@ -182,16 +191,16 @@ describe("CORE-2M-VR — CEO Visual Truth Calibration (운영 변경 0)", () => 
       /** 🔴 GAP 의 «성질» 을 적는다 — 숫자 하나로 뭉개지 않는다. */
       const identGrade = truth === "EXACT_IDENTIFIER" || truth === "STRONG_IDENTIFIER";
       let gap: string;
-      if (g.verdict === "SAME" && cross.verdict === "SAME" && identGrade) gap = "🟢 일치";
-      else if (g.verdict === "SAME" && cross.verdict === "CONFLICT") gap = "🔴🔴 품번 과대평가";
-      else if (g.verdict === "SAME") gap = "🔴 판단등급 부족";
-      else if (g.verdict === "DIFFERENT" && cross.verdict !== "SAME") gap = "🟢 방향 안전";
-      else if (g.verdict === "DIFFERENT") gap = "🔴🔴 오포함";
+      if (g.calibrationLabel === "SAME" && cross.verdict === "SAME" && identGrade) gap = "🟢 일치";
+      else if (g.calibrationLabel === "SAME" && cross.verdict === "CONFLICT") gap = "🔴🔴 품번 과대평가";
+      else if (g.calibrationLabel === "SAME") gap = "🔴 판단등급 부족";
+      else if (g.calibrationLabel === "DIFFERENT" && cross.verdict !== "SAME") gap = "🟢 방향 안전";
+      else if (g.calibrationLabel === "DIFFERENT") gap = "🔴🔴 오포함";
       else gap = "🟡 가격 비교 가능성 별도 필요";
 
       rows.push({
         domain: g.domain,
-        ceo: g.verdict,
+        ceo: g.calibrationLabel,
         verdict: cross.verdict,
         truth,
         l1: `${l1Have.length}/6`,
