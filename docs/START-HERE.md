@@ -124,7 +124,85 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
-## 6. NEXT WORK — 🟢🟢🟢 **CORE-2I 완료 — 국내 SAME 이 «처음으로» 났다(threshold 변경 0)**
+## 6. NEXT WORK — 🔴🔴 **CORE-2J 완료 — CORE-2I 의 「국내 SAME」을 정정한다**
+
+🔴🔴 **진입은 이 절 하나다.** 운영 코드 **0** · 배포 **0** · **push 안 함**(`662df3be` 포함).
+전문 하니스 `apps/admin/src/app/api/price-history/_lib/__tests__/core-2j-identity-field-purity.test.ts`.
+
+🔴🔴🔴 **먼저 — CORE-2I 의 두 숫자를 정정한다. 넘겨 읽지 않는다**:
+```
+⒜ 🔴 CORE-2I 는 `compareCrossSellerProducts` 를 **직접** 불러 `match.ts:627` 의
+   **확인(confirm) 배선이 한 번도 돌지 않았다** ⟹ 그 base 는 **운영 값이 아니다**
+   🟢 운영 순서(`withConfidence`)로 다시 재니 확인 배선이 **실제로 3건을 채운다** —
+      biskuit · **trenbe(→ `EXACT_IDENTIFIER`)** · m.luxboy
+⒝ 🔴🔴 **「donokids SAME」은 정규화 변경과 «같은 효과» 였다** — CORE-2I 가 넣은
+   `226AC009` 는 **선행문자가 없는 꼴** 이고, 그것을 품번으로 인정하는 것이 곧
+   CPO §6 이 금지한 변경이다. 🔴 **원형(`B226AC009`)만** 넣는 규칙으로 다시 재니
+   **SAME 회복 = 0** 이다(donokids 는 전 자리가 「선행문자없음」).
+```
+
+🟢🟢 **그리고 CPO 가 요구한 분리 구조가 «이미 있다»** — `domestic-identifiers.ts:40`:
+> 「품번을 **추출** 하지 않는다. 이미 확정된 품번이 제목에 있는지 **확인** 한다.」
+```
+불변식 셋이 「sellerSku 가 officialProductCode 를 대체하지 않는다」를 **구조로** 보장한다 —
+① 해외에서 **이미 확정된** 문자열만 받는다  ② 산출은 `foreignCode` 아니면 `null` 둘뿐
+③ ⟹ `compareModelCode` 가 **`exact` | `unavailable`** 밖에 못 낸다
+   🔴 `partial`·`conflict` 를 **구조적으로 만들 수 없다**(지어낸 충돌 0 · 실측 확인)
+🟢 판매처 SKU `700005621LBL` 를 넣어도 **채택되지 않는다**(실측 null)
+```
+
+🔴🔴 **오염의 생산자가 특정됐다 — 한 줄이다**
+```
+`seller-facts.ts:208`  extractLabeledProductCode(description) ?? **extractCodeLikeSlugSegment(slug)**
+   🔴 그 slug 승격이 `kids21 700005621lbl` → `700005621LBL` 로 **conflict 를 지어낸다**
+   🟢 공식 품번 slug 는 같은 함수가 **exact** 를 낸다(승격 자체는 유용하다)
+   🟢 숫자만인 세그먼트는 **null**(WU-095 가드 작동)
+🟢 `PLAIN_HTML` 경로는 `brandModelCode: **null**` 하드코딩이고 **그것이 의도** 다
+   (포레포레 자체코드를 넣으면 「모델코드 충돌」을 지어낸다 — 소스 주석)
+```
+
+🟢 **오염 제거 효과 실측 2건** — `kids21` · `junioredition` 이 **CONFLICT → PRESUMED_SAME**
+(= `TEXT_CONFIRMED` · 가격 참고 진입 가능) ⟹ **human SAME 둘이 살아난다**.
+🔴 **그런데 「오염이 확인 경로를 막는다」는 내 가설은 이 분모에서 반증됐다** — 막힌 후보 **0**
+(kids21 은 페이지에 품번이 없어 확인 경로도 `null` 이다).
+
+🔴 **품번을 못 채우는 «정확한 이유» 둘이 확정됐다**
+```
+stockmann.ee  품번이 **본문에만** 있다 — 건초더미는 **title · url · sku** 셋뿐이다
+donokids.com  전 자리(JSON-LD·`<title>`·본문)가 **「선행문자없음」**(`226AC009`)
+              ⟹ `confirmBrandCodeInTitle` 의 **토큰 전체 일치** 를 통과하지 못한다
+```
+
+🔴🔴 **핵심 Negative fixture — `m.luxboy.com`(CPO 승격 지시)**
+```
+**human DIFFERENT** 인데 JSON-LD·meta·`<title>`·본문 **전부에 `B226AC009` 원형** 이 있다
+⟹ 🔴 **확인 경로가 운영에서 그것을 `exact` 로 «이미» 채우고 있다**
+🟢 그래도 `NO_TITLE_OVERLAP`(관측차이) + `crossSellerReserved` **이중 잠금** 이
+   식별자 승격을 막아 `PRESUMED_SAME / TEXT_CONFIRMED` 에 머문다(CORE-2I M3+M4 로 측정)
+🔴 ⟹ 「확인 경로는 판매처 SKU 를 막으므로 안전하다」로 **넘겨 읽지 않는다**.
+🔴 그리고 `TEXT_CONFIRMED` 는 **COMPARISON(가격 참고)** 이라 그 금액이 국내 축에 들 수 있다
+```
+
+🟢 **Negative 전수 PASS** — 깨끗한 공급으로도 human DIFFERENT 의 **SAME 누출 0** ·
+**식별자 등급 누출 0** · 같은 브랜드 다른 품번 **3/3 conflict** · 기존 fixture 유지.
+
+🟢 게이트 — typecheck **0** · 회귀 **640 files / 8,903 passed / 1 failed**(`p54c1` · 무관).
+
+🔵 **CPO 결정 대기(CTO 는 아무것도 고르지 않았다)**
+```
+① 🔴 **오염 제거**(slug 승격이 공식 코드체계와 충돌하는 값을 넣지 않게) — 효과 **2건**
+   🟢 가장 좁고, 「모르면 UNKNOWN」이라는 CPO 원칙과 정확히 같은 방향
+② 🟡 **건초더미 확대**(본문/description) — `stockmann` 1건. 🔴 그런데 `m.luxboy` 도
+   같이 채워지므로 **이중 잠금에 더 의존하게 된다**
+③ 🔴 **표기 정규화**(선행문자 없는 꼴) — `donokids` 가 걸려 있지만 CPO §6 이 **금지** 했다
+④ 🔴 **식별자 단독 경로** — `m.luxboy` 반례 때문에 **위험**(CTO 권하지 않는다)
+```
+
+---
+
+## 6-B. [종료] CORE-2I — Identity / Seller-data 분리
+
+🟢🟢🟢 **CORE-2I — 국내 SAME 이 났다(단 위 ⒝ 정정을 같이 읽는다)**
 
 🔴🔴 **진입은 이 절 하나다.** 운영 코드 **0** · 배포 **0** · **push 안 함**.
 전문 하니스 `apps/admin/src/app/api/price-history/_lib/__tests__/core-2i-identity-vs-seller-data.test.ts`.
