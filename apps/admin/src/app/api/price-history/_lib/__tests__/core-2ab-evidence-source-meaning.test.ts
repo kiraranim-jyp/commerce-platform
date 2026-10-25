@@ -363,6 +363,16 @@ describe.runIf(LIVE)("CORE-2AB 라이브 — Evidence Source × Meaning 전수(R
          * 🔴🔴 **「축 수」가 게이트가 아니다** — `SAME_MIN_AXES=5` 는 **점수 합** 을 보고
          *    식별자 축은 `IDENTIFIER_AXIS_POINTS=3` 을 받는다. 그래서 축 **4개** 로도
          *    SAME 이 된다(donokids). 🔴 「축 4인데 SAME」을 모순으로 읽지 않는다.
+         *
+         * 🔴🔴🔴 **CORE-2AD 정정 — 아래 `after` 열은 «주입된» 값이다. 운영 값이 아니다.**
+         * ```
+         * 내가 CORE-2AB 보고에 「stockmann 축 = TITLE:1 + MODEL_CODE:3 + AUDIENCE:1 = 5p」로
+         * 적었는데 그것은 **이 반사실의 주입 결과** 였다. 운영 실측은(CORE-2AD):
+         *      stockmann  축[TITLE:1]  ·  total **1**  ·  core **0**
+         * ⟹ 🔴 「5p 인데 corePoints 4 라서 떨어진다」는 **틀렸다**. 그 후보는 애초에
+         *    **증거가 거의 없다**(MODEL_CODE 는 facts 에 없고 내가 넣은 것이다).
+         * 🔴 `before` 열(운영 facts)만 운영 값이다 — `after` 를 운영 값으로 인용하지 않는다.
+         * ```
          */
         const pts = (c: typeof after) => (c.axes ?? []).reduce((s, a) => s + (a.points ?? 0), 0);
         console.log(
