@@ -10,17 +10,29 @@
 ## 1. CURRENT STATE
 
 ```
-현재        🟢🟢 **CORE-2S(셀러 UI/UX 재정비) 구현·배포 완료** — 기록은 아래 §6
+현재        🟢🟢 **CORE-2AA(VERIFIED_SAME 가격 자격 배선) 구현·배포 완료** — §6-AA
+            🟢 CORE-2S/2T/2U-A/2V/2W(셀러 화면) CLOSED · 2X(STOP-C) · 2Y(PASS-Y) · 2Z(PASS)
             🟢 CORE-2R(수집→전달) CLOSED · 데이터 엔진 축 동결(CPO 2026-10-22)
-main        clean · origin 0 / 0
+main        clean · origin 0 / 0 · `6bf1f75b`
+deploy      🟢 Ready (`ttaejyo-qs8frqjgm`) · HTTP 200 / 307 / 401
 typecheck   PASS (0)      build PASS (exit 0)
-regression  791 files / **9,006 passed** / 1 failed
-            🔴 그 1 은 `packages/crawler/.../p54c1-grounding-redirect`(라이브 네트워크)로
+regression  apps/admin **661 files / 9,091 passed / 0 failed**
+            🔴 `packages/crawler/.../p54c1-grounding-redirect`(라이브 네트워크) 1건은
                **CPO 가 합산 제외** 한 baseline 이고 이 트랙과 무관하다
-               (`packages/crawler` 변경 **0** — `git status` 로 확인)
 ```
 
-🟡 **지금 막혀 있는 것은 하나 — CEO 화면 확인 1회**(§6 끝의 7항).
+🔴🔴🔴 **이 트랙의 축이 «갈렸다». 다음 세션은 이 문장부터 읽는다**(CPO 2026-10-25):
+```
+가격 축   🟢 **끝났다.** 자격(`VERIFIED_SAME`)만 주면 기존 집계기가 그대로 작동한다
+          (국내 59,000~88,000 · 해외 EUR 35~40/GBP 33/USD 56 · leakage 0)
+          🔴 **더 파지 않는다** — 「가격 쪽은 더 파지 않습니다」(CPO 문장)
+SAME 축   🔴 **여기가 유일하게 남은 문제다** —
+          「왜 자동 MI 가 CEO 가 SAME 으로 확정한 **8개** 를 자동 SAME 으로 회복하지 못하는가」
+          🔴 단 **CORE-2X 가 증거 레버 C0~C6 전수에서 0/8 을 측정** 했다(STOP-C) ⟹
+             다음 범위는 **CPO 가 지정** 한다. CTO 가 threshold/8축/crossSellerReserved 로 되돌아가지 않는다
+```
+
+🟡 **지금 막혀 있는 것은 하나 — CEO 화면 확인 1회**(§6-AA 끝).
 🔵 그 뒤 범위는 **CPO 가 지정한다.** 🔴 CTO 가 할 코드 작업이 없다.
 
 🔴🔴 **WU-150 이 3일짜리 질문에 답했다** — 전문 `docs/HANDOFF-WU-150.md`:
@@ -156,7 +168,57 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
-## 6. 🟢🟢 **CORE-2U-A CLOSED — 가격은 살아 있고 SAME 은 거짓말하지 않는다**(`c6c0891e`)
+## 6-AA. 🟢🟢 **CORE-2AA CLOSED — 사람이 확정한 SAME 이 가격 자격을 «갖는다»**(`6bf1f75b`)
+
+> 🔴🔴 **진입은 이 절 하나다.** 🔴 **CTO 가 할 코드 작업이 없다.** 다음 범위는 CPO 지정.
+> 🟡 남은 것은 **CEO 화면 확인 1회**(아래 CEO Action). 🔴 아래 §6 이하는 **종료된 기록** 이다.
+
+🔴🔴 **CPO 가 범위를 «좁게» 고정했고 그것이 이 WU 의 핵심이다**(2026-10-25):
+```
+특정 스냅샷 + 특정 candidate URL  →  VERIFIED_SAME  →  가격 자격
+🔴 **URL 전역 SAME 으로 만들지 않는다** — 같은 URL 이 다른 원상품에서는 다른 상품일 수 있다
+🟢 자격 매핑  SAME → VERIFIED_SAME  ·  DIFFERENT / UNCERTAIN / UNDECIDED → EXCLUDED
+🔴 `SIMILAR` 도 자격 없음(CORE-2U — 「유사상품을 형성대에 섞지 않는다」)
+```
+
+🔴🔴🔴 **범위가 다른 «두 리더» 를 가른 것이 이 WU 의 설계 결정이다**:
+```
+재투입(발견)    listReviewedSameUrls        snapshot **∪** origin_code  — 넓다
+                ⟹ 위험이 **fetch 비용** 뿐(판정은 페이지를 다시 열어 새로 낸다)
+가격 자격       listSnapshotVerifiedSameKeys  snapshot **만**(`.eq("snapshot_id")`) — 좁다
+                ⟹ 위험이 **오판**(그 금액이 셀러의 가격 판단에 들어간다)
+🔴 재사용하면 좁은 쪽이 **넓은 쪽으로 끌려간다** ⟹ CPO 가 막은 「URL 전역」이 조용히 생긴다
+🔴 그리고 `listCandidateReviews` 는 `snapshotId` 를 **돌려주지 않아** 사후 필터도 불가능하다
+```
+
+🟢 **owner 하나 · 순수 함수** — `priceTierWithVerifiedSame(run-domestic-price-check.ts)`
+```
+🔴 **단조(monotonic)** 다 — 자격이 없다고 자동값을 «내리지» 않는다.
+   내리면 「검토 안 한 상품의 가격이 사라진다」 = CPO 회귀 기준 위반이다
+🔴 `priceTierFromLink` 를 **수정하지 않았다** — 그 산출 «위에» 자격만 덮는다
+   ⟹ CPO 가 거부한 ⒜(「`verified` 가 `matchTruth` 를 이기게 순서 변경」)가 **아니다**
+🔴 자동 MI **불변** — matchTruth 0 · verified 0 · SAME_MIN_AXES 0 · crossSellerReserved 0
+🟢 WU-131 격리 **유지** — `market-intelligence.ts`·`domestic-product-link.ts` 는
+   `humanVerdict` 를 끝까지 **모른다**(계약 삭제 **0**)
+```
+
+🟢 **CPO 가 지정한 순서를 지켰다 — 회귀를 «먼저» 잠갔다**:
+```
+STEP 1  core-2aa AA-1~AA-8  배선 «전» 에 8/8 PASS (네트워크 0 ⟹ CI 에서 매번 돈다)
+STEP 2  core-2aa AA-9~AA-17 배선 계약 9 · 음성대조 M1~M7 전부 FAIL → 바이트 복구
+🔴 CORE-2Z 는 `CORE2Z_LIVE=1` 없이는 SKIP 이라 회귀를 지켜 주지 못한다 — 그 자리를 2AA 가 맡는다
+🟢 CORE-2Z 라이브를 **운영 owner 경유로 교체**(복제 제거) — 숫자 한 자리도 불변
+```
+
+### 🟡 6-AA. CEO Action — **화면 1회**(CPO 가 시점을 정한다)
+
+🔴 **CPO 가 「배선 후 최종 확인 시점에 한 번만」으로 미뤘다** — CTO 가 먼저 요청하지 않는다.
+🔴 그때 보는 것 — 셀러가 후보를 「동일상품」으로 누른 **뒤** 🇰🇷 가격이 **「참고가격」에서
+「동일상품 확인 가격」으로 바뀌는가**. 🔴 경로는 **「새 상품 분석」** 이다(§6-A-0 — transient 수명).
+
+---
+
+## 6. 🟢🟢 [종료] **CORE-2U-A — 가격은 살아 있고 SAME 은 거짓말하지 않는다**(`c6c0891e`)
 
 > 🔴🔴 **진입은 이 절 하나다.** 🔴 **CTO 가 할 코드 작업이 없다.** 다음 범위는 CPO 지정.
 > 🟡 남은 것은 **CEO 화면 확인 1회**(§6-A-0 의 경로 결정이 **선행** — 「새 상품 분석」으로).
