@@ -395,6 +395,20 @@ describe.runIf(LIVE)("CORE-2AK 라이브 — positive 확대 · negative 모양 
       const negOpenC1 = negShape.filter((p) => p.s.c1 === "SAME" && p.s.c0 !== "SAME");
       const negOpenS3 = negShape.filter((p) => p.s.s3 === "SAME" && p.s.c0 !== "SAME");
       console.log(`    C1 이 여는 negative 모양 **${negOpenC1.length}/${negShape.length}** · S3 **${negOpenS3.length}/${negShape.length}**`);
+
+      /**
+       * 🔴🔴 CORE-2AL — **N-SHAPE 전체의 정확한 URL** 을 적는다(열리든 안 열리든).
+       *    CPO §2 가 그 1건을 CEO GT 대상으로 지정했고, **이 하니스가 유일한 출처** 다.
+       *    🔴 URL 을 추정하지 않는다 — 수집된 후보의 값을 그대로 찍는다.
+       */
+      console.log(`\n═══ 🟡 CORE-2AL — **N-SHAPE 정확한 URL**(CEO GT 대상) ═══`);
+      for (const p of negShape) {
+        console.log(`    원상품  ${p.originCode}  "${p.originTitle}"`);
+        console.log(`    후보    ${p.url}`);
+        console.log(
+          `            "${p.candTitle}"  겹침 ${p.overlap} · garment ${p.s.gw}(${p.s.garment}) · line ${p.s.lineX}↔${p.s.lineY} · core ${p.s.core} · C0 ${p.s.c0} → S3 ${p.s.s3}`,
+        );
+      }
       for (const p of negOpenS3.slice(0, 12)) {
         console.log(`\n    🔴 원상품  "${p.originTitle}"  (${p.originCode})`);
         console.log(`       후보    ${p.url}`);
