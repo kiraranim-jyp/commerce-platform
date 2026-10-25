@@ -16,6 +16,9 @@ import { buildCanonicalProduct } from "../../../pipeline/canonical-product";
 import type { DomesticPriceTier } from "../../../domestic-price-sources/_lib/domestic-product-link";
 import { priceTierFromLink } from "../../../domestic-price-sources/_lib/domestic-product-link";
 import { classifyCandidateMarket, summarizeCandidateOverseasPrices } from "../candidate-market";
+/** 🟢 CORE-2AA — 변환을 복제하지 않고 **운영 owner** 를 부른다. */
+import { reviewKey } from "../candidate-review";
+import { priceTierWithVerifiedSame } from "../run-domestic-price-check";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════════
@@ -71,12 +74,25 @@ function verifiedSameFromGroundTruth(label: GtCand["calibrationLabel"]): PriceEl
 /**
  * 🔴 브리지의 **유일한 변환** — `VERIFIED_SAME` 을 기존 가격 축의 tier 로 옮긴다.
  *    🟢 `EXACT` 는 **「동일상품 가격 축」** 이라는 뜻이고, 그것이 CEO 가 확인한 사실이다.
- * 🔴 **`priceTierFromLink` 를 거치지 않는다** — 그 함수는 `matchTruth` owner 이고,
- *    여기에 끌어들이면 「사람 판단이 MI 를 이긴다」가 된다(§10 금지 모양).
+ *
+ * 🟢🟢 **CORE-2AA 에서 운영 owner 로 교체했다** — 전에는 이 파일이 변환을 **복제** 하고
+ *    있었다(`e === "VERIFIED_SAME" ? "EXACT" : "EXCLUDED"`). 그러면 운영 배선이 깨져도
+ *    이 측정은 계속 초록이다. 🔴 그래서 `priceTierWithVerifiedSame` 을 **그대로 부른다**.
+ *
+ * 🔴 자격이 없을 때 `EXCLUDED` 를 쓰는 것은 **이 측정의 분모 설계** 다(브리지만의 효과를
+ *    보려고 자동 tier 를 0 으로 둔다). 🟢 운영은 **단조** 라 자동값을 내리지 않는다 —
+ *    그 성질은 `core-2aa` AA-9/AA-11 이 잠근다.
  */
 function tierForVerified(e: PriceEligibility): DomesticPriceTier {
-  return e === "VERIFIED_SAME" ? "EXACT" : "EXCLUDED";
+  return priceTierWithVerifiedSame({
+    url: PROBE_URL,
+    autoTier: "EXCLUDED",
+    verifiedSameUrlKeys: e === "VERIFIED_SAME" ? [reviewKey(PROBE_URL)] : [],
+  });
 }
+
+/** 🟢 자격 함수는 URL 키만 보므로 어떤 URL 이든 된다 — 분기만 재현한다. */
+const PROBE_URL = "https://example.com/products/core-2z-probe";
 
 const LIB = path.join(__dirname, "..");
 const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/.*$/gm, " ");

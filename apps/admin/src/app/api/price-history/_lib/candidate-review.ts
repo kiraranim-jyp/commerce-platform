@@ -125,6 +125,64 @@ export async function listCandidateReviews(input: {
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴🔴 CORE-2AA — **가격 자격 전용 리더.** 범위가 아래 재투입과 «다르다»
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **CPO 가 범위를 고정했다**(2026-10-25):
+ * ```
+ * 「사람 판정의 효력 범위 → **스냅샷 + 후보 URL** 한정.
+ *   URL 전역 SAME 으로 만들지 않습니다. 같은 URL 이 다른 원상품에서는 다른
+ *   상품일 수 있기 때문입니다.」
+ * ```
+ *
+ * 🔴🔴 **그래서 `listReviewedSameUrls` 를 재사용하지 «않는다».** 두 축의 범위가 다르다:
+ * ```
+ * 재투입(아래)      snapshot_id **OR** origin_code   — 범위가 «넓다»
+ *                   ⟹ 위험이 **fetch 비용** 뿐이다(판정은 페이지를 다시 열어 새로 낸다)
+ * 가격 자격(이 함수) snapshot_id **만**              — 범위가 «좁다»
+ *                   ⟹ 위험이 **오판** 이다(그 금액이 셀러의 가격 판단에 들어간다)
+ * ```
+ * 🔴 두 함수를 합치면 범위가 **넓은 쪽으로** 끌려간다 ⟹ CPO 가 금지한
+ *    「URL 전역 SAME」이 조용히 생긴다. 그래서 **질의를 따로 둔다**
+ *    (`listCandidateReviews` 는 `snapshotId` 를 돌려주지 않아 사후 필터도 불가능하다).
+ *
+ * 🔴 **`SAME` 만** 자격을 얻는다 — CPO 확정:
+ * ```
+ * SAME → VERIFIED_SAME   ·   DIFFERENT → EXCLUDED   ·   UNCERTAIN/UNDECIDED → EXCLUDED
+ * ```
+ * 🔴 `SIMILAR` 도 **자격이 없다**(「유사상품을 형성대에 섞지 않는다」 · CORE-2U).
+ *
+ * 🔴 돌려주는 것은 **정규화된 URL 키 집합** 이다 — verdict 문자열을 밖으로 내보내지
+ *    않는다(그것이 나가면 하류가 사람 판단을 MI 라벨처럼 쓰게 된다).
+ */
+export async function listSnapshotVerifiedSameKeys(input: {
+  snapshotId: string;
+  workspaceId: string;
+}): Promise<string[]> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("candidate_reviews")
+    .select("candidate_url, human_verdict, workspace_id, snapshot_id")
+    /** 🔴 **`origin_code` 축을 쓰지 않는다** — 그것이 CPO 가 막은 「URL 전역」이다. */
+    .eq("snapshot_id", input.snapshotId)
+    .eq("human_verdict", "SAME");
+  if (error) {
+    console.warn("[candidate-review] 가격 자격 조회 실패:", error.message);
+    return [];
+  }
+  const keys = new Set<string>();
+  for (const r of data as any[]) {
+    /** 🔴 다른 workspace 의 판단은 쓰지 않는다 — 단 운영 공용(GT) 행은 통과(위 규약과 동일). */
+    if (r.workspace_id != null && r.workspace_id !== input.workspaceId) continue;
+    if (typeof r.candidate_url !== "string" || !r.candidate_url) continue;
+    keys.add(reviewKey(r.candidate_url));
+  }
+  return [...keys];
+}
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
  * 🔴🔴 WU-132 ⑥ — **셀러가 「동일상품」이라 한 URL 만** 돌려준다 (재투입 입력)
  * ════════════════════════════════════════════════════════════════════════════
  *

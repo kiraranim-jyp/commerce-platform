@@ -74,6 +74,12 @@ import {
   type CandidateMarket,
   type CandidateMarketBasis,
 } from "./candidate-market";
+/**
+ * 🔴 CORE-2AA — **키 규칙을 복제하지 않는다.** WU-131 계약 ⒞ 가 「호출부가 각자
+ *    정규화하지 않는다」고 잠갔다(두 곳이 갈라지면 같은 후보가 다른 키가 된다).
+ * 🔴 `verdict` 를 읽는 함수는 **가져오지 않는다** — URL 키 정규화기 하나뿐이다.
+ */
+import { reviewKey } from "./candidate-review";
 import type { DomesticPriceSource } from "../../domestic-price-sources/_lib/domestic-price-source";
 import { listDomesticPriceSources, recordDomesticSourceCheckAttempt } from "../../domestic-price-sources/_lib/domestic-price-source";
 import {
@@ -180,6 +186,57 @@ export interface DomesticPriceCheckInput {
    *    상품의 「확인/다시 분석」에서만 켠다.
    */
   domesticListingHop?: boolean;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 CORE-2AA — **가격 자격(`VERIFIED_SAME`) 입력.** 위 `reviewedSameUrls` 와 «다르다»
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * ```
+   * reviewedSameUrls      「그 URL 을 **다시 열어 본다**」      ⟹ 발견(discovery) 입력
+   * verifiedSameUrlKeys   「그 URL 의 가격을 **쓸 자격이 있다**」 ⟹ 가격 자격 입력
+   * ```
+   * 🔴 **두 칸을 합치지 않는다.** 범위가 다르다 — 전자는 `snapshot ∪ originCode`,
+   *    후자는 **`snapshot` 한정**(CPO 2026-10-25 · 「URL 전역 SAME 으로 만들지 않는다」).
+   *    합치면 좁은 쪽이 **넓은 쪽으로 끌려간다**.
+   *
+   * 🔴🔴 **이 칸이 바꾸는 것은 `priceTier` 하나다.** `matchTruth` · `verified` ·
+   *    `crossSellerVerdict` · `SAME_MIN_AXES` · `crossSellerReserved` 는 **한 글자도**
+   *    바뀌지 않는다 ⟹ 자동 MI 는 계속 자기 판단(CONFLICT/SIMILAR/PRESUMED_SAME)을 말한다.
+   *    🔴 CPO 가 거부한 ⒜(「`verified` 가 `matchTruth` 를 이기게 순서를 바꾼다」)가 **아니다** —
+   *    `priceTierFromLink` 는 손대지 않고 **그 산출 위에 자격을 덮는** 별도 입력 경로다.
+   *
+   * 🔴 **정규화된 키** 다(`reviewKey`). 호출부가 정규화해서 넘긴다 — 두 곳이 각자
+   *    정규화하면 같은 후보가 갈린다(WU-131 계약 ⒞ 와 같은 이유).
+   * 🔴 안 넘기면 **오늘 동작 그대로** 다(빈 집합 ⟹ 자격 승격 0).
+   */
+  verifiedSameUrlKeys?: readonly string[];
+}
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴 CORE-2AA — 가격 자격 owner **하나**. 순수 함수다(DB 0 · HTTP 0)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🟢 자동 tier 를 **인자로 받는다** — 계산을 복제하지 않는다(owner 는 여전히
+ *    `priceTierFromLink` 다). 이 함수가 하는 일은 「자격이 있으면 `EXACT` 로 올린다」 하나다.
+ *
+ * 🔴 **내리지 않는다.** 자동이 이미 `EXACT` 면 그대로고, 자격이 없으면 **자동값 그대로** 다
+ *    ⟹ 이 함수는 **단조(monotonic)** 다. 「사람이 판단하지 않았다」가 감점이 되면
+ *    **검토를 안 한 상품의 가격이 사라진다**(기존 국내 수집 결과가 깨진다 · CPO 회귀 기준).
+ *
+ * 🔴 `SAME` 이 아닌 판단은 **애초에 이 집합에 들어오지 않는다**(리더가 걸렀다) —
+ *    여기서 `DIFFERENT`/`UNCERTAIN` 을 다시 해석하지 않는다(해석 자리가 둘이 되면 갈린다).
+ */
+export function priceTierWithVerifiedSame(input: {
+  url: string;
+  autoTier: DomesticPriceTier;
+  verifiedSameUrlKeys?: readonly string[];
+}): DomesticPriceTier {
+  if (!input.verifiedSameUrlKeys || input.verifiedSameUrlKeys.length === 0) return input.autoTier;
+  const key = reviewKey(input.url);
+  if (!input.verifiedSameUrlKeys.includes(key)) return input.autoTier;
+  /** 🟢 셀러가 **이 스냅샷에서 이 URL 을** 동일상품으로 확정했다 ⟹ 가격을 쓸 자격이 있다. */
+  return "EXACT";
 }
 
 /**
@@ -1681,8 +1738,16 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
         discoveredUrl: best.url,
         matchTruth: finalMatchTruth,
         verified: finalVerified,
-        /** 🔴 복제 계산하지 않는다 — 운영 owner 를 그대로 부른다. */
-        priceTier: priceTierFromLink({ matchTruth: finalMatchTruth, verified: finalVerified }),
+        /**
+         * 🔴 복제 계산하지 않는다 — 운영 owner 를 그대로 부른다.
+         * 🔴🔴 CORE-2AA — 그 산출 «위에» 가격 자격만 덮는다(`matchTruth`/`verified` 불변).
+         *    자격 집합이 비면 **`priceTierFromLink` 값 그대로** 다 ⟹ 기존 동작 불변.
+         */
+        priceTier: priceTierWithVerifiedSame({
+          url: best.url,
+          autoTier: priceTierFromLink({ matchTruth: finalMatchTruth, verified: finalVerified }),
+          verifiedSameUrlKeys: input.verifiedSameUrlKeys,
+        }),
         matchType,
         crossSellerVerdict: best.crossSellerVerdict ?? null,
         confidence: best.confidence ?? null,

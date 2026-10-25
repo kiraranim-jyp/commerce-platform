@@ -14,7 +14,11 @@ import {
 import { runPriceCheck } from "../_lib/run-price-check";
 /** 🔴 WU-131 — 후보 «이력» 의 생산자. `domestic_product_links` 와 **다른 표** 다. */
 /** 🔴 WU-132 ⑥ — 그 이력을 **다음 조회의 입력으로** 되돌리는 읽기 경로. */
-import { listReviewedSameUrls, recordSeenCandidates } from "../_lib/candidate-review";
+import {
+  listReviewedSameUrls,
+  listSnapshotVerifiedSameKeys,
+  recordSeenCandidates,
+} from "../_lib/candidate-review";
 
 /**
  * 🔴 요청 payload 경계 — 상한(`MAX_SUPPLIED_CANDIDATE_URLS`)보다 넉넉하게 받되
@@ -110,6 +114,27 @@ export async function POST(request: Request) {
     /* 🔴 이력 조회 실패가 가격확인 자체를 깨뜨리지 않는다. */
   }
 
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 CORE-2AA — **가격 자격 입력.** 위 재투입과 «범위가 다른» 별개 질의다
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 **CPO 가 범위를 고정했다**(2026-10-25) — 「스냅샷 + 후보 URL 한정 ·
+   *    URL 전역 SAME 으로 만들지 않습니다」. 그래서 `originCode` 를 **넘기지 않는다**
+   *    (위 재투입은 넘긴다 — 그쪽 위험은 fetch 비용뿐이다).
+   * 🔴 실패해도 가격확인을 멈추지 않는다 — 빈 집합이면 **오늘 동작 그대로** 다.
+   * 🔴 verdict 문자열은 이 라우트로 **올라오지 않는다**(리더가 URL 키만 돌려준다).
+   */
+  let verifiedSameKeys: string[] = [];
+  try {
+    verifiedSameKeys = await listSnapshotVerifiedSameKeys({
+      snapshotId,
+      workspaceId: auth.user.workspaceId,
+    });
+  } catch {
+    /* 🔴 자격 조회 실패는 «감점» 이 아니다 — 자동 tier 그대로 간다. */
+  }
+
   const result = await runPriceCheck({
     snapshotId,
     sourceUrl: product.sourceUrl,
@@ -138,6 +163,11 @@ export async function POST(request: Request) {
       candidateUrls,
       /** 🔴 WU-132 ⑥ — 비어 있으면 그 경로도 **한 줄도 돌지 않는다**(기존 동작 유지). */
       reviewedSameUrls: reviewedSameUrls.length > 0 ? reviewedSameUrls : undefined,
+      /**
+       * 🔴🔴 CORE-2AA — **가격 자격만** 넘긴다(발견 입력과 다른 칸 · 다른 범위).
+       *    비어 있으면 `priceTierFromLink` 산출 그대로다 ⟹ 기존 국내 수집 결과 불변.
+       */
+      verifiedSameUrlKeys: verifiedSameKeys.length > 0 ? verifiedSameKeys : undefined,
       /**
        * 🔴🔴 CORE-2R-4 STEP 2 — **여기서만 켠다.** 셀러가 「지금 확인 / 🔄 다시 분석」을
        *    누른 경로다. 🔴 일괄 cron(`trigger-domestic-price-check`)은 **켜지 않는다** —
