@@ -257,26 +257,73 @@ export interface ListingProductLike {
   /** 판매처 자신의 상품코드/재고번호. 브랜드 품번이 아니다. */
   sellerSku?: string | null;
   imageUrl?: string | null;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 CORE-2AC — **상세 경로가 쓰는 세 칸.** 목록 경로는 넘기지 않는다
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 위 「목록에 없는 것은 지어내지 않는다」는 **그대로 유효** 하다 — 검색 «목록»
+   *    파서는 이 셋을 **안 넘긴다**(undefined ⟹ 기존 null/[] 동작 그대로).
+   * 🟢 넘기는 쪽은 **상세 페이지를 받은 경로 하나** 다 —
+   *    `factsFromProductUrl` 의 `PLAIN_HTML` 분기(product-url-facts.ts).
+   *
+   * 🔴🔴 **왜 필요한가**(CORE-2AB 실측): 같은 MI 가 경로에 따라 **다른 수의 축** 을 봤다.
+   * ```
+   * SHOPIFY_JSON  body_html → description → materialText · type → categoryText/audienceSignals
+   * PLAIN_HTML    HTML 은 받았는데 **이 함수에 들어오지 않아** 일곱 칸이 null/[] 였다
+   * ```
+   * 🟢 그래서 이 WU 는 **새 규칙을 만들지 않고** Shopify 가 쓰는 **같은 의미** 를 쓴다.
+   * 🔴 CPO 가 범위를 **세 칸** 으로 고정했다(2026-10-25) —
+   *    `materialText` · `categoryText` · `audienceSignals`.
+   * 🔴 `brandModelCode` 는 **이번에 채우지 않는다**(seller SKU 오염 이력 · CORE-2K ·
+   *    MODEL_CODE conflict 정책과 직결). `fitText`·`sizeLabels`·`ageRangeText` 도 범위 밖이다.
+   * 🔴 `coreTitleTokens` 의 4번째 인자(material)도 **바꾸지 않는다** — 그것을 바꾸면
+   *    제목 토큰이 움직여 `NO_TITLE_OVERLAP`/TITLE 축이 같이 흔들린다(네 번째 칸이다).
+   */
+  /**
+   * 🟢 Shopify 의 `type`(product_type)과 **같은 자리** — 페이지가 스스로 적은 분류다.
+   *
+   * 🔴🔴🔴 **`materialText` 는 «이 WU 에서 채우지 않는다» — 실측으로 순손실이다**
+   * ```
+   * 원상품     "… Organic Cotton 100% …"  → parseMaterialComposition ⟹ [organic cotton:100]
+   * m.luxboy   "Outer & Lining : 100% Cotton" → ⟹ [cotton:100]
+   * ⟹ 🔴 **MATERIAL blocker 가 생긴다** — 「organic cotton ↔ cotton」을 다른 소재로 읽는다.
+   *    둘 다 면 100% 이고 CEO 는 그 후보를 **SAME** 이라 했다 ⟹ **거짓 충돌** 이다
+   * stockmann  "100% puuvill"(에스토니아어) → ⟹ **[]**(어휘에 없다) ⟹ 축 0
+   * ```
+   * 🟢 측정 결과 — 소재 칸은 **새 축 0 · 거짓 blocker 1** 이었다(CEO SAME 후보에).
+   * 🔴 그래서 넣지 않았다. 고치는 길은 **소재 어휘 정규화**(`organic cotton ≡ cotton`)이고
+   *    그것은 `compareMaterial` 축 변경이라 **CPO 판정 사안** 이다(이 WU 금지 범위).
+   */
+  category?: string | null;
 }
 
 export function productFactsFromListing(input: ListingProductLike): ProductFacts {
   const brand = input.brand?.trim() || null;
   const color = extractColorFromTitle(input.title) ?? null;
+  const category = input.category?.trim() || null;
   return {
     sourceUrl: input.url,
     urlSlug: extractUrlSlug(input.url),
     brand,
+    /** 🔴 CORE-2AC 범위 밖 — 품번은 여전히 **채우지 않는다**(CPO §3). */
     brandModelCode: null,
     sellerSku: input.sellerSku?.trim() || null,
     title: input.title,
+    /** 🔴 4번째 인자를 `material` 로 바꾸지 않는다 — CPO 가 고정한 세 칸 밖이다. */
     coreTitleTokens: coreTokens(input.title, brand, color, null),
-    categoryText: null,
+    categoryText: category,
     colorText: color,
+    /** 🔴 CORE-2AC — 위 주석의 실측(거짓 MATERIAL blocker)으로 **채우지 않는다**. */
     materialText: null,
     fitText: null,
     ageRangeText: null,
     sizeLabels: [],
-    audienceSignals: [],
+    /**
+     * 🟢 Shopify 와 **같은 구성** — 그쪽은 `[...tags, ...(type ? [type] : [])]` 이고
+     *    PLAIN_HTML 에는 tags 가 없으므로 **분류 하나** 다. 🔴 지어내지 않는다.
+     */
+    audienceSignals: category ? [category] : [],
     imageUrls: input.imageUrl ? [input.imageUrl] : [],
   };
 }

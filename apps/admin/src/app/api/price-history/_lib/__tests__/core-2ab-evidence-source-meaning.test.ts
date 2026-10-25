@@ -147,24 +147,34 @@ const SELLER_FACTS_SRC = readFileSync(
 );
 
 describe("CORE-2AB 소스 계약 — PLAIN_HTML 후보의 «빈 칸» 을 고정한다(네트워크 0)", () => {
-  it("AB-S1 🔴🔴 `productFactsFromListing` 이 **일곱 칸을 하드코딩 null/[]** 로 만든다", () => {
+  it("AB-S1 🔴 `productFactsFromListing` 의 빈 칸은 **다섯** 이다(CORE-2AC 가 둘을 닫았다)", () => {
+    /**
+     * 🔴🔴 **이 계약은 CORE-2AC 가 FAIL 로 뒤집었고 그것이 수정의 증거다.**
+     *    원래 「일곱 칸이 하드코딩 null/[]」이었고 그것이 CORE-2AB 조사의 전제였다.
+     * 🟢 CORE-2AC 가 `categoryText` · `audienceSignals` 를 **분류 하나에서** 채웠다
+     *    (Shopify `type`/`tags` 와 같은 자리 · 추가 HTTP 0).
+     * 🔴 그래서 앵커를 **갱신하고 강화** 한다 — 남은 **다섯** 을 그대로 잠그고,
+     *    닫힌 둘은 **「분류에서 온다」는 모양까지** 단언한다(아무 값이나 들어오면 FAIL).
+     */
     const src = SELLER_FACTS_SRC.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/.*$/gm, " ");
     const start = src.indexOf("export function productFactsFromListing");
     expect(start, "🔴 PLAIN_HTML facts owner 가 없다").toBeGreaterThan(-1);
     const seg = src.slice(start, src.indexOf("\n}", start));
+    /** 🔴 남은 다섯 — 열 때마다 이 목록이 줄어야 하고 **조용히** 줄면 안 된다. */
     for (const [field, literal] of [
       ["brandModelCode", "null"],
-      ["categoryText", "null"],
       ["materialText", "null"],
       ["fitText", "null"],
       ["ageRangeText", "null"],
       ["sizeLabels", "[]"],
-      ["audienceSignals", "[]"],
     ] as const) {
-      expect(seg, `🔴 ${field} 가 더는 하드코딩 ${literal} 이 아니다 — 이 조사의 전제가 바뀌었다`).toContain(
+      expect(seg, `🔴 ${field} 가 더는 하드코딩 ${literal} 이 아니다 — 측정을 다시 한다`).toContain(
         `${field}: ${literal}`,
       );
     }
+    /** 🟢 닫힌 둘 — **분류 하나** 에서만 온다(새 출처가 조용히 들어오면 FAIL). */
+    expect(seg).toContain("categoryText: category");
+    expect(seg).toContain("audienceSignals: category ? [category] : []");
   });
 
   it("AB-S2 🔴🔴 그 함수는 **본문(description/body)을 인자로 받지 않는다**", () => {

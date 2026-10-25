@@ -417,7 +417,38 @@ async function htmlPath(
    */
   const micro = extractMicrodataFromHtml(html);
   const brand = brandFromHtml(html) ?? micro?.brand ?? null;
-  const facts = productFactsFromListing({ title, url: crawlerUrl, brand });
+  /**
+   * ══════════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 CORE-2AC — **이미 받은 HTML 의 상세 증거를 facts owner 까지 «전달» 한다**
+   * ══════════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 CORE-2AB 가 측정한 비대칭이 여기서 생겼다 — HTML 을 **받아 놓고** brand/price/
+   *    marketEvidence 만 뽑은 뒤 **버렸다**. 그래서 PLAIN_HTML 후보의 ProductFacts 는
+   *    일곱 칸이 null/[] 이고, 같은 MI 가 Shopify 후보보다 **적은 축** 을 봤다.
+   *
+   * 🟢 **새 추출기를 만들지 않았다.** `extractFromJsonLd` 는 이 파일이 **이미**
+   *    쓰는 함수다(`priceFromJsonLd` 안 · :497). 그 반환값에 `description` ·
+   *    `jsonLdCategory` · `material` 이 **이미 들어 있었고 아무도 읽지 않았다.**
+   * 🟢 **추가 HTTP 0** — 같은 문자열을 한 번 더 파싱할 뿐이다(네트워크 0 · Playwright 0).
+   * 🔴 `priceFromJsonLd` 를 **고치지 않았다**(가격 경로 변경 금지) — 그래서 파싱이
+   *    두 번이다. 가격 규칙의 owner 를 건드리지 않는 쪽을 택했다.
+   *
+   * 🔴 **보강만 한다 — 덮어쓰지 않는다.** 아래 세 칸은 지금 **전건 null/[]** 이므로
+   *    기존 값을 이길 일이 구조적으로 없다(CPO 가 고정한 세 칸 · §1).
+   * 🔴 `sku`/`brand`/`price` 는 **올리지 않는다** — WU-053 이 적은 그 이유 그대로다.
+   */
+  const jsonLd = extractFromJsonLd(html);
+  const facts = productFactsFromListing({
+    title,
+    url: crawlerUrl,
+    brand,
+    /**
+     * 🔴🔴 **분류 하나만 넘긴다.** `description`/`material` 은 **넘기지 않았다** —
+     *    실측에서 `materialText` 가 **새 축 0 · 거짓 MATERIAL blocker 1**(organic cotton ↔
+     *    cotton)을 만들었다. 근거 전문은 `productFactsFromListing` 의 `category` 주석.
+     */
+    category: jsonLd?.jsonLdCategory ?? micro?.jsonLdCategory ?? null,
+  });
   /**
    * 🔴 WU-151 — 고도몰 **판매가** 필드가 **마지막 자리** 다(추가 전용).
    *    구조화 데이터(JSON-LD · microdata)가 값을 주면 그쪽이 언제나 이긴다 ⟹
