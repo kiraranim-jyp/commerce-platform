@@ -16,6 +16,8 @@ import {
   domesticPriceBand,
   marketDecisionLines,
   marketPriceHeadline,
+  /** 🟢 CORE-2AO-R1 — 「그 숫자가 무엇인지」는 **별 줄** 이다(C-1 이 둘을 합쳐 본다). */
+  marketPriceHeadlineLabel,
   overseasLowestText,
 } from "../mi-same-candidates";
 import type { GeminiTransientRow } from "../GeminiTransientCandidates";
@@ -192,19 +194,45 @@ describe("B. 🌎 해외는 «최저 확인가» 다", () => {
 /* ═══════════ C. 💡 결론이 시장별로 다른 말을 한다 ═══════════ */
 
 describe("C. 💡 판매 판단 — 시장별 해석", () => {
-  it("🟢🟢 C-1 국내는 **가격대로**, 해외는 **최저 확인가로** 말한다", () => {
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 CORE-2AO-R1 — **시장별 해석의 자리가 「결론」에서 「헤드라인」으로 옮겨졌다**
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 CEO Production 캡처에서 같은 금액이 **🇰🇷/🌎 블록과 결론 두 군데** 떴다 ⟹
+   *    CPO 2026-10-26: 「`판매 판단` 안의 숫자 제거 — 상단 가격 블록이 이미 보여준다」.
+   * 🟢 **WU-148 이 만든 성질은 하나도 잃지 않았다** — 시장별 해석(🇰🇷 가격대 /
+   *    🌎 최저 확인가)은 `marketPriceHeadline` 이 **그대로** 말하고, 결론은 그 해석의
+   *    **단서**(1건이라 가격대가 아니다 · 통화가 섞여 합치지 않는다)만 말한다.
+   * 🔴 그래서 단언을 **두 자리로 갈라** 둔다 — 금액은 헤드라인, 단서는 결론.
+   */
+  it("🟢🟢 C-1 국내는 **가격대로**, 해외는 **최저 확인가로** 말한다(헤드라인 owner)", () => {
+    /**
+     * 🔴 블록이 **두 줄** 을 그린다 — `marketPriceHeadline`(금액) + `marketPriceHeadlineLabel`
+     *    (그 숫자가 무엇인지). 라벨이 헤드라인 **안** 에 있다고 가정하면 틀린다
+     *    (실측: 🇰🇷 BAND 헤드라인은 `KRW 89000 ─ 95000` 뿐이고 라벨이 따로 선다).
+     *    🟢 셀러가 보는 것은 **두 줄 합쳐서** 이므로 합쳐서 단언한다.
+     */
+    const blockText = (rows: typeof KR_BAND, m: "KR" | "OVERSEAS") =>
+      `${marketPriceHeadline(guide(rows, m)) ?? ""} ${marketPriceHeadlineLabel(guide(rows, m)) ?? ""}`;
+    expect(blockText(KR_BAND, "KR")).toContain(DOMESTIC_BAND_LABEL);
+    expect(blockText(KR_BAND, "KR")).toContain("89000");
+    expect(blockText(OS_SINGLE, "OVERSEAS")).toContain(OVERSEAS_LOWEST_LABEL);
+    expect(blockText(OS_SINGLE, "OVERSEAS")).toContain("USD 58");
+    /** 🔴 그리고 결론은 그 금액을 **다시 적지 않는다**(중복 금지). */
     const lines = marketDecisionLines(buildMarketJudgement([...KR_BAND, ...OS_SINGLE])).lines.join(" ");
-    expect(lines).toContain(DOMESTIC_BAND_LABEL);
-    expect(lines).toContain("89000");
-    expect(lines).toContain(OVERSEAS_LOWEST_LABEL);
-    expect(lines).toContain("USD 58");
+    expect(lines, `🔴 결론이 금액을 또 적었다: ${lines}`).not.toMatch(
+      /(?:KRW|USD|GBP|EUR|CAD|JPY|₩)\s?[\d.,]|\d,\d{3}|\d{5}/,
+    );
   });
 
   it("🔴 C-2 국내 1건이면 결론도 **가격대를 말하지 않는다**", () => {
     const lines = marketDecisionLines(buildMarketJudgement(KR_ONE)).lines.join(" ");
-    expect(lines).toContain("89000");
+    /** 🟢 **1건이라는 사실은 결론이 계속 말한다** — 그것이 WU-148 STEP 4 의 요지다. */
     expect(lines).toContain("1건");
     expect(lines).not.toContain(DOMESTIC_BAND_LABEL);
+    /** 🟢 금액은 **사라지지 않았다** — 헤드라인이 들고 있다. */
+    expect(marketPriceHeadline(guide(KR_ONE, "KR")) ?? "").toContain("89000");
   });
 
   it("🔴🔴 C-3 **추천 판매가를 만들지 않는다**(원가·수수료·마진 0 · §00-B)", () => {

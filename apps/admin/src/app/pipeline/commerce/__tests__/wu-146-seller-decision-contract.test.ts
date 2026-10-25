@@ -10,7 +10,11 @@ import {
   OVERSEAS_LOWEST_LABEL,
   OVERSEAS_LOWEST_PER_CURRENCY_NOTE,
   buildMarketJudgement,
+  /** 🟢 CORE-2AO-R1 — 금액 owner 가 **헤드라인** 으로 옮겨져 그쪽을 단언한다. */
+  buildPriceGuide,
   marketDecisionLines,
+  marketPriceHeadline,
+  marketPriceHeadlineLabel,
 } from "../mi-same-candidates";
 import { KNOWN_BLOCKER_TOKENS, blockerText } from "../blocker-text";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -188,17 +192,23 @@ describe("1·2. seller-facing price owner = 1 · final judgement = 1", () => {
     }
   });
 
-  it("🔴🔴 1-b 가격 **숫자** 의 출처가 하나다 — 결론과 근거 줄이 **같은 값** 을 쓴다", () => {
+  it("🔴🔴 1-b 가격 **숫자** 의 출처가 하나다 — 블록과 근거 줄이 **같은 값** 을 쓴다", () => {
     mount(S1);
-    const decision = q("seller-decision")!.textContent ?? "";
+    const block = q("market-block-overseas")!.textContent ?? "";
     const range = q("market-price-range")!.textContent ?? "";
+    const decision = q("seller-decision")!.textContent ?? "";
     /**
-     * 🔴 `sellerDecision` 이 **자기 집계를 만들지 않는다**(`judgement.byCurrency` 를 읽는다)
-     *    ⟹ 세 통화의 금액이 두 자리에서 **글자 그대로 같다**. 어긋나면 집계가 둘이다.
+     * 🔴 집계를 **자기가 만들지 않는다**(`judgement.byCurrency` 를 읽는다) ⟹ 세 통화의
+     *    금액이 두 자리에서 **글자 그대로 같다**. 어긋나면 집계가 둘이다.
+     * 🔴🔴 **CORE-2AO-R1 — 비교 한쪽이 「결론」에서 「시장 블록」으로 옮겨졌다.**
+     *    CEO Production 캡처에서 같은 금액이 **두 군데** 떠서 CPO 가 결론의 숫자를
+     *    빼라고 판정했다(2026-10-26). 🟢 「출처가 하나다」라는 **성질은 그대로** 다.
      */
     for (const n of ["CAD 64", "GBP 37", "USD 58"]) {
-      expect(decision, `결론에 없다: ${n}`).toContain(n);
+      expect(block, `시장 블록에 없다: ${n}`).toContain(n);
       expect(range, `근거 줄에 없다: ${n}`).toContain(n);
+      /** 🔴 그리고 결론은 그 숫자를 **다시 적지 않는다**(중복 금지). */
+      expect(decision, `🔴 결론이 금액을 또 적었다: ${n}`).not.toContain(n);
     }
     /** 🔴 환산 **0** — 세 통화를 하나로 합치지 않는다(CPO 명시). */
     expect(flat()).not.toContain("₩");
@@ -410,11 +420,20 @@ describe("STEP 4 — CPO Q1~Q7", () => {
       /** Q5 — 영역 하나 · 결론 하나. */
       expect(all("market-price-comparison").length).toBe(1);
       expect(all("seller-decision").length).toBe(1);
-      /** Q6 — 결론의 금액이 근거 줄의 금액과 **같다**(1-b 의 두 상품 버전). */
+      /**
+       * Q6 — 근거 줄의 통화가 **시장 블록에도 그대로** 있다(1-b 의 두 상품 버전).
+       * 🔴🔴 CORE-2AO-R1 — 대조 상대가 「결론」에서 **「시장 블록」** 으로 옮겨졌다
+       *    (결론은 이제 금액을 만들지 않는다 · CPO 2026-10-26).
+       */
+      const blocks = [...all("market-block-overseas"), ...all("market-block-domestic")]
+        .map((b) => b.textContent ?? "")
+        .join(" ");
       const d = q("seller-decision")!.textContent ?? "";
       for (const c of q("market-price-range")!.querySelectorAll("li")) {
         const cur = (c.textContent ?? "").split(" ")[0];
-        if (cur) expect(d, `결론에 ${cur} 가 없다`).toContain(cur);
+        if (!cur) continue;
+        expect(blocks, `시장 블록에 ${cur} 가 없다`).toContain(cur);
+        expect(d, `🔴 결론이 ${cur} 금액을 또 적었다`).not.toContain(`${cur} `);
       }
     }
   });
@@ -432,19 +451,39 @@ describe("순수 함수 — sellerDecision 상태 기계", () => {
   });
 
   it("🔴 단일 통화 1건을 **「가격대」로 적지 않는다** · 여러 통화는 **나란히**", () => {
-    const one = marketDecisionLines(buildMarketJudgement(S2)).lines.join(" ");
-    expect(one).toContain("USD 58");
-    expect(one).not.toContain("58 ~ 58");
-    expect(one).not.toMatch(/평균|적정|권장/);
     /**
-     * 🔴🔴 **WU-148 에서 갱신·강화됨** — 통화가 섞이면 **최저가를 하나로 고르지 않는다.**
-     *    S1 은 CAD 64 · GBP 37 · USD 58 세 통화고, 거기서 「GBP 37 이 최저」라고 적으면
-     *    **거짓** 이다(비교에 환산이 필요하고 환산은 금지다). 🟢 통화별로 나란히 적고
-     *    **그 사실을 문장으로도** 말한다 ⟹ 단언이 하나 늘었다.
+     * 🔴🔴 **CORE-2AO-R1 — 금액 단언이 «헤드라인» 으로 옮겨졌다.**
+     *    결론(`marketDecisionLines`)은 더 이상 금액을 만들지 않는다(CPO 2026-10-26 ·
+     *    CEO 캡처에서 같은 금액이 두 군데 떴다). 🟢 **지키는 성질 둘은 그대로** 다 —
+     *    ⒜ 1건을 「가격대」로 적지 않는다 ⒝ 통화가 섞이면 하나로 합치지 않는다.
+     */
+    const one = marketDecisionLines(buildMarketJudgement(S2)).lines.join(" ");
+    expect(one, `🔴 결론이 금액을 적었다: ${one}`).not.toMatch(
+      /(?:KRW|USD|GBP|EUR|CAD|JPY|₩)\s?[\d.,]|\d,\d{3}/,
+    );
+    expect(one).not.toMatch(/평균|적정|권장/);
+    /** 🟢 금액은 **사라지지 않았다** — 그 owner(헤드라인)가 들고 있고 범위로 적지 않는다. */
+    const osHead = marketPriceHeadline(buildPriceGuide(buildMarketJudgement(S2), "OVERSEAS")) ?? "";
+    expect(osHead).toContain("USD 58");
+    expect(osHead, "🔴 1건을 범위로 적었다").not.toContain("58 ~ 58");
+    /**
+     * 🔴🔴 통화가 섞이면 **최저가를 하나로 고르지 않는다.** S1 은 CAD 64 · GBP 37 ·
+     *    USD 58 세 통화고, 거기서 「GBP 37 이 최저」라고 적으면 **거짓** 이다
+     *    (비교에 환산이 필요하고 환산은 금지다). 🟢 그 사실은 **결론이 문장으로** 말하고
+     *    금액은 헤드라인이 **통화별로 나란히** 적는다.
      */
     const many = marketDecisionLines(buildMarketJudgement(S1)).lines.join(" ");
-    for (const n of ["CAD 64", "GBP 37", "USD 58"]) expect(many).toContain(n);
-    expect(many).toContain(OVERSEAS_LOWEST_PER_CURRENCY_NOTE);
+    const manyHead = marketPriceHeadline(buildPriceGuide(buildMarketJudgement(S1), "OVERSEAS")) ?? "";
+    for (const n of ["CAD 64", "GBP 37", "USD 58"]) expect(manyHead).toContain(n);
+    /**
+     * 🔴🔴 그 말의 owner 도 **블록 하나** 다 — `marketPriceHeadlineLabel` 이 바로 그
+     *    금액 아래에서 말한다. 🔴 결론이 또 적으면 **같은 문장이 화면에 두 번** 뜬다
+     *    (1차 구현에서 실제로 그랬고 `core-2ao-r1-screen-dump` 가 잡았다).
+     */
+    expect(marketPriceHeadlineLabel(buildPriceGuide(buildMarketJudgement(S1), "OVERSEAS")) ?? "").toBe(
+      OVERSEAS_LOWEST_PER_CURRENCY_NOTE,
+    );
+    expect(many, "🔴 결론이 블록의 말을 또 적었다").not.toContain(OVERSEAS_LOWEST_PER_CURRENCY_NOTE);
   });
 
   it("🔴 **금지 표현이 결론 문장에 없다**(순수 축에서도)", () => {

@@ -24,6 +24,8 @@ import {
   buildMarketJudgement,
   buildPriceGuide,
   marketDecisionLines,
+  /** 🟢 CORE-2AO-R1 — 「금액은 결론이 아니라 **헤드라인** 이 말한다」를 단언하기 위해. */
+  marketPriceHeadline,
   nextStepLines,
   priceBasisLines,
 } from "../mi-same-candidates";
@@ -266,29 +268,37 @@ describe("C. 결론이 참고가격을 말한다 — 모순 제거", () => {
   });
 
   /**
-   * 🔴🔴🔴 **CORE-2W §4-C 가 이 단언을 뒤집었다 — 이유를 적는다.**
-   *
-   * 🔴 CORE-2S 는 「결론에 금액 **0**」을 내 판단으로 걸었다(숫자 중복 방지).
-   * 🔴🔴 **CPO 가 그것을 명시적으로 열었다** — 「`국내 참고가격은 KRW 88,000으로
-   *    확인됐습니다 …`」(§4-C) · 「아래 설명에서도 **88,000원이 사라지면 FAIL**」(§7-A).
-   *    근거는 셀러 행동이다 — **금액을 먼저 기억하고 그 자격을 바로 이해** 해야 한다.
-   * 🟢 그래서 **국내 참고가격 금액은 허용** 하고, **그 외 금액은 계속 금지** 한다
-   *    (해외 금액은 `marketPriceHeadline`·`overseasLowestText` 가 이미 owner 다).
-   * 🔴 그리고 **강조 자리(시장 블록)의 1회 규칙은 그대로** 다(`core-2v A-4` 가 문다).
+   * ════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 이 단언은 **세 번 뒤집혔다. 세 번을 다 적는다**(네 번째를 막기 위해)
+   * ════════════════════════════════════════════════════════════════════════
+   * ```
+   * ① CORE-2S      결론에 금액 **0**          ← CTO 판단(숫자 중복 방지)
+   * ② CORE-2W      국내 참고가격 금액 **허용**  ← CPO 가 명시적으로 열었다(§4-C·§7-A)
+   * ③ CORE-2AO-R1  결론에 금액 **0**(전 통화)   ← **CEO Production 캡처가 FAIL 로 지목**
+   * ```
+   * 🔴🔴 ③의 근거는 취향이 아니라 **실측** 이다 — 화면에 `KRW 88,000` 이 🇰🇷 블록과
+   *    「💡 판매 판단」 **두 군데** 떴다. CPO 판정(2026-10-26): 「`판매 판단` 안의
+   *    ₩88,000 숫자 제거 — **상단 가격 블록이 이미 보여주므로 중복하지 않음**」 ·
+   *    「**숫자가 아니라 판단 문장만**」.
+   * 🟢 ②가 지키려던 성질은 **그대로 유지된다** — 「88,000 이 사라지거나 『가격 없음』
+   *    으로 뒤집히면 FAIL」(§7-A). 금액은 🇰🇷 블록에 **있고** 결론은 「확인됐습니다」를
+   *    말한다. 🔴 그래서 아래는 **둘을 같이** 문다 — 금액 0 **그리고** 부정문 금지.
+   * 🔴 ①로 되돌아간 것이 **아니라 더 세다** — ①은 이 fixture 의 해외 금액 두 개만
+   *    봤고, 이것은 **모든 통화 + 천단위 숫자 + ₩** 를 본다.
    */
-  it("C-2 🔴 결론은 **국내 참고가격 금액만** 적는다(그 외 금액 금지)", () => {
+  it("C-2 🔴🔴 결론에 **금액이 0** 이다 — 금액 owner 는 시장 블록 하나다", () => {
     const d = marketDecisionLines(buildMarketJudgement(ROWS), { domestic: KR_REF, overseas: OS_REF });
     const joined = d.lines.join(" ");
-    /** 🟢 CPO 가 요구한 그 금액 — 사라지면 FAIL 이다. */
-    expect(joined, "🔴 결론에서 국내 참고가격 금액이 사라졌다(§7-A FAIL)").toContain("KRW 88,000");
-    /**
-     * 🔴 이 fixture 는 **SAME 이 0**(`NO_SAME_WITH_REFERENCE`)이라 해외 가격 문장이
-     *    애초에 서지 않는다 ⟹ 여기서 해외 금액이 나오면 **분기를 잘못 탄 것** 이다.
-     * 🔴 **PRICED 분기에서는 해외 금액이 «정당하게» 선다**(WU-146/148 이 CPO 지시로
-     *    넣었고 계약이 요구한다) — 그 축은 `core-2w W-10` 이 「한 문장에 섞이지 않는다」로 문다.
-     */
-    for (const n of ["GBP 37", "USD 58"]) {
-      expect(joined, `🔴 SAME 0 분기인데 해외 금액이 나왔다: ${n}`).not.toContain(n);
+    /** 🔴 포맷이 바뀌어도 잡히도록 **통화코드·천단위·₩ 를 전부** 본다. */
+    expect(joined, `🔴 결론에 금액이 들어갔다(중복 금지): ${joined}`).not.toMatch(
+      /(?:KRW|USD|GBP|EUR|CAD|JPY|₩)\s?[\d.,]|\d,\d{3}/,
+    );
+    /** 🔴 금액을 빼면서 **「가격 없음」으로 뒤집지 않았다**(§7-A 가 금지한 그것). */
+    expect(joined, "🔴 금액을 빼면서 「가격 없음」으로 뒤집었다(§7-A FAIL)").toContain(
+      "국내 참고가격이 확인됐습니다",
+    );
+    for (const bad of ["가격이 없습니다", "가격 없음", "확인된 가격은 없습니다"]) {
+      expect(joined, `🔴 부정문으로 뒤집혔다: ${bad}`).not.toContain(bad);
     }
   });
 
@@ -308,11 +318,23 @@ describe("C. 결론이 참고가격을 말한다 — 모순 제거", () => {
     expect(marketDecisionLines(buildMarketJudgement(ROWS), { domestic: empty }).kind).toBe("NO_SAME");
   });
 
-  /** 🟢 SAME 이 **있으면** 기존 `PRICED` 분기가 그대로 산다(반대 분기 보존). */
-  it("C-5 🟢 SAME 가격이 있으면 `PRICED` 다 — 기존 해석이 살아 있다", () => {
-    const d = marketDecisionLines(buildMarketJudgement([SAME_ROW]), { domestic: KR_REF });
+  /**
+   * 🟢 SAME 이 **있으면** 기존 `PRICED` 분기가 그대로 산다(반대 분기 보존).
+   * 🔴🔴 **CORE-2AO-R1 — 그 분기에서도 금액은 결론에 없다.** 단일 통화면 블록
+   *    헤드라인이 「최저 확인가 GBP 37」을 **그대로** 말하므로 결론이 또 적으면
+   *    같은 금액이 두 번 뜬다(CEO FAIL 의 해외판). 🟢 **금액 owner 는 헤드라인** 이고
+   *    그 사실을 아래에서 같이 단언한다 — 「결론에서 뺐다」가 「화면에서 사라졌다」가
+   *    되면 안 되기 때문이다.
+   */
+  it("C-5 🟢 SAME 가격이 있으면 `PRICED` 다 — 🔴 단 금액은 결론이 아니라 **헤드라인** 이 말한다", () => {
+    const j = buildMarketJudgement([SAME_ROW]);
+    const d = marketDecisionLines(j, { domestic: KR_REF });
     expect(d.kind).toBe("PRICED");
-    expect(d.lines.join(" ")).toContain("GBP 37");
+    expect(d.lines.join(" "), "🔴 결론이 금액을 또 적었다").not.toMatch(
+      /(?:KRW|USD|GBP|EUR|CAD|JPY|₩)\s?[\d.,]|\d,\d{3}/,
+    );
+    /** 🟢 금액은 **화면에서 사라지지 않았다** — 그 owner 가 들고 있다. */
+    expect(marketPriceHeadline(buildPriceGuide(j, "OVERSEAS")) ?? "").toContain("GBP 37");
   });
 });
 
@@ -359,11 +381,38 @@ describe("D. 셀러에게 조사/재분석을 요구하지 않는다", () => {
 /* ══════════════ E. 💡 가격 판단 기준 — 복구 ══════════════ */
 
 describe("E. 💡 가격 판단 기준", () => {
-  it("E-1 🟢🟢 **영역이 첫 화면에 선다**(접힘이 아니다)", () => {
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 CORE-2AO-R1 — **이 단언이 뒤집혔다(CEO 피드백 ③). 이유를 적는다.**
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 CORE-2S 는 이 영역을 **첫 화면에** 세웠다(그때는 「기준이 안 보인다」가 문제였다).
+   * 🔴🔴 CEO Production 실측: 「`가격 판단 기준`과 `판매 판단`이 **길게 분리** 되어
+   *    결론이 한 번에 꽂히지 않는다 — **근거 설명은 접거나 짧게**」(2026-10-26).
+   * 🟢 **접는 쪽** 을 골랐다 — 「짧게」는 문장을 지우는 것이고, 그러면 「왜 이 가격을
+   *    기준으로 쓰는가」가 사라진다. 🔴 **한 줄도 지우지 않았다**(아래 E-1b 가 문다).
+   */
+  it("E-1 🔴🔴 **영역이 접혀 있다**(근거 설명이라 결론보다 앞에 펼쳐 두지 않는다)", () => {
     const el = mount({ rows: ROWS, domesticReference: KR_REF, overseasReference: OS_REF });
-    const first = firstScreen(el);
-    expect(first).toContain(PRICE_BASIS_HEADING);
-    expect(first).toContain(PRICE_BASIS_SOURCE_LINE);
+    /** 🔴 첫 화면(= 닫힌 `details` 를 뺀 것)에 **없어야** 한다. */
+    expect(firstScreen(el), "🔴 근거 설명이 다시 펼쳐졌다").not.toContain(PRICE_BASIS_SOURCE_LINE);
+    const fold = q(el, "price-basis") as HTMLElement;
+    expect(fold.tagName.toLowerCase(), "🔴 접힘이 아니다").toBe("details");
+    /** 🔴 `open` 을 붙이면 1차로 되돌아온다(2026-09-19 기전). */
+    expect(fold.hasAttribute("open"), "🔴 `open` 이 붙었다").toBe(false);
+    /**
+     * 🟢 제목은 **접힘 머리에 그대로 보인다** — 접혔다고 이름까지 사라지면 셀러가 못 찾는다.
+     * 🔴 `firstScreen` 으로 보지 않는다 — 그 헬퍼는 닫힌 `details` 를 **통째로 지워서**
+     *    `summary` 까지 날린다(브라우저는 summary 를 **보여준다**). 그 차이를 적어 둔다.
+     */
+    expect(fold.querySelector("summary")?.textContent ?? "").toContain(PRICE_BASIS_HEADING);
+  });
+
+  /** 🟢🟢 **삭제 0** — 접었을 뿐이라 줄은 DOM 에 전부 남아 있다. */
+  it("E-1b 🟢🟢 접었지만 **근거 문장은 한 줄도 사라지지 않았다**", () => {
+    const el = mount({ rows: ROWS, domesticReference: KR_REF, overseasReference: OS_REF });
+    expect((el.textContent ?? "").replace(/\s+/g, " ")).toContain(PRICE_BASIS_SOURCE_LINE);
+    expect(el.querySelectorAll('[data-testid="price-basis-line"]').length).toBeGreaterThan(0);
   });
 
   /**

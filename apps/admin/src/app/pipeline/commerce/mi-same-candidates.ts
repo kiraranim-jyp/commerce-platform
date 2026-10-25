@@ -13,10 +13,23 @@ import type { GeminiTransientRow } from "./GeminiTransientCandidates";
  */
 import type { OverseasPriceSummary } from "./overseas-reference";
 /**
- * 🔴 CORE-2W §4-C — 결론 문장도 **블록과 «같은 금액 문자열»** 을 쓴다.
- *    🟢 포맷 owner 는 하나다(그 함수 머리 주석이 이유를 들고 있다) · 환산 0 · 합산 0.
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴🔴 CORE-2AO-R1 — **CORE-2W §4-C 의 「결론에도 금액」을 «닫는다».**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 CEO Production 실측 — 같은 `KRW 88,000` 이 **두 군데** 떴다:
+ * ```
+ * ① 🇰🇷 블록        「국내 참고가격  KRW 88,000 · 확인 1곳」      ← 금액 owner
+ * ② 💡 판매 판단    「국내 참고가격은 KRW 88,000 으로 확인됐습니다」 ← CORE-2W 가 연 자리
+ * ```
+ * 🔴 CPO 판정(2026-10-26): 「`판매 판단` 안의 ₩88,000 숫자 제거 — **상단 가격 블록이
+ *    이미 보여주므로 중복하지 않음**」 · 「숫자가 아니라 **판단 문장만**」.
+ * 🟢 그래서 `referenceAmountSummary` 를 **이 파일에서 더 쓰지 않는다** — import 를
+ *    지우는 것이 「결론은 금액을 만들지 않는다」의 **구조적 보증** 이다(문구 검사가
+ *    아니라 **쓸 수 있는 함수가 없다**).
+ * 🔴 그 함수 자체는 **지우지 않았다** — 🇰🇷/🌎 블록이 쓰는 **유일한 금액 owner** 다.
  */
-import { referenceAmountSummary } from "./overseas-reference";
+import { OVERSEAS_REFERENCE_TITLE } from "./overseas-reference";
 /** 🔴 WU-133 — 축의 «말» 은 별 모듈이 소유한다(가드를 엄격하게 유지하기 위해 · 그 파일 머리 주석). */
 import { blockerText } from "./blocker-text";
 
@@ -399,9 +412,29 @@ export function priceGuideHeadline(g: PriceGuide): string | null {
  *    한쪽만 고치는 날이 온다(`MARKET_LABEL` 이 생긴 그 이유).
  */
 export const SAME_PRICE_LABEL = "동일상품 확인 가격";
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴🔴 CORE-2AO-R1 — **해외 제목의 owner 는 «이것» 이다**(내가 틀린 자리를 고쳤다)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 CORE-2AO 가 「해외에서 **동일상품** 주장을 뺀다」를 받고 `OVERSEAS_REFERENCE_TITLE`
+ *    을 바꿨다. **그 상수는 화면에 뜨는 자리가 아니었다** — CEO 캡처에 그대로
+ *    「해외 동일상품 확인 가격」이 남았다. 두 상수가 **같은 슬롯의 두 상태** 를 그린다:
+ * ```
+ * 🌎 MarketBlock
+ *   sameCount === 0 → <OverseasReferencePrice>   제목 = OVERSEAS_REFERENCE_TITLE
+ *   sameCount  > 0 → price-guide-overseas        제목 = PRICE_GUIDE_TITLE.OVERSEAS  ← 뜨는 쪽
+ * ```
+ * 🔴 B226AC009 는 해외 SAME **4** 라 **아래쪽만** 뜬다 ⟹ 내 수정이 발화하지 않았다.
+ *    (WU-145 가 「자리가 **둘** 이었다」를 적어 둔 그 함정의 **재발** 이다.)
+ * 🟢 그래서 **두 상태가 한 이름을 공유하도록 owner 를 하나로 묶었다** — 한쪽만 고치는
+ *    길이 **구조적으로 없다**. 🔴 그리고 그것이 의미상으로도 맞다: 두 분모 **모두**
+ *    `COMPARISON` 을 포함할 수 있어 **「동일상품」이라고 단정할 수 없다**.
+ * 🔴 🇰🇷 는 **건드리지 않았다**(CPO: 「`국내 참고가격`이라는 명칭은 유지 → 정상」).
+ */
 export const PRICE_GUIDE_TITLE: Record<"KR" | "OVERSEAS", string> = {
   KR: `💰 국내 ${SAME_PRICE_LABEL}`,
-  OVERSEAS: `💰 해외 ${SAME_PRICE_LABEL}`,
+  OVERSEAS: `💰 ${OVERSEAS_REFERENCE_TITLE}`,
 };
 
 /* ═══════════ 🔴🔴🔴 WU-146 ② — **「💡 판매 판단」은 «상태별» 결론이다** ═══════════
@@ -677,15 +710,15 @@ export function marketDecisionLines(
     }
     const where = markets.join("·");
     /**
-     * 🔴 CORE-2W §4-C — **금액을 같이 말한다.** 🟢 문자열은 블록이 쓰는 **같은 함수** 로
-     *    만든다(글자가 갈리지 않는다). 🔴 금액이 없으면 그 자리를 **비운다**(지어내지 않는다).
+     * 🔴🔴 CORE-2AO-R1 — **금액을 적지 않는다**(CORE-2W §4-C 를 닫았다 · 이 파일 머리).
+     *    🟢 「확인됐다」는 사실은 그대로 말한다 — 사라진 것은 **숫자뿐** 이고
+     *       그 숫자는 바로 위 🇰🇷 블록이 **유일한 owner** 로 들고 있다.
      */
-    const krAmount = referenceAmountSummary(refs?.domestic);
     return {
       kind: "NO_SAME_WITH_REFERENCE",
       lines: [
-        krAmount
-          ? `${MARKET_PLAIN_NAME.KR} 참고가격은 ${krAmount} 으로 확인됐습니다.`
+        hasReferencePrice(refs?.domestic)
+          ? `${MARKET_PLAIN_NAME.KR} 참고가격이 확인됐습니다.`
           : `${where}에서 같은 상품으로 보이는 판매처의 가격은 확인됐습니다.`,
         `다만 현재 동일상품으로 확정된 판매처는 없어, 동일상품 가격으로 확정하지 않습니다.`,
         `지금의 시장가격 판단 근거는 위 ${where} 블록의 참고가격입니다.`,
@@ -724,34 +757,47 @@ export function marketDecisionLines(
    */
   const lines: string[] = [];
 
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 CORE-2AO-R1 — **결론은 «해석» 만 말한다. 금액은 위 블록이 말했다.**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 전까지 이 블록이 `GBP 37 · USD 58` 과 `KRW 88,000` 을 **그대로 다시** 적었다.
+   *    바로 위 🇰🇷/🌎 블록이 같은 숫자를 들고 있으므로 셀러 화면에 **같은 금액이 두 번**
+   *    떴고, 그것이 CEO 가 FAIL 로 지목한 모양이다(CPO: 「상단 가격 블록이 이미
+   *    보여주므로 중복하지 않음」).
+   * 🟢 **지운 것은 숫자뿐이고 «의미» 는 한 줄도 잃지 않았다**:
+   * ```
+   * 🇰🇷 BAND    가격대가 있다        → 🌟 그 사실은 블록 헤드라인 + `headLabel` 이 말한다
+   * 🇰🇷 SINGLE  1건이라 가격대 아님   → **남긴다**(블록만으로는 셀러가 「가격대」로 읽는다)
+   * 🇰🇷 NONE    통화가 섞여 못 합친다 → **남긴다**(환산 금지의 «이유» 다)
+   *            🔴 `pricedCount > 0` 안이라 `NONE` 은 「가격 없음」이 **아니다**
+   *               (`PriceBandKind` 에 `MIXED` 라는 값은 **없다** — typecheck 가 잡았다)
+   * 🌎 단일통화  최저 확인가          → 블록 헤드라인이 **그 문장 그대로** 말한다
+   * 🌎 혼합통화  하나로 안 합친다      → **남긴다**(`OVERSEAS_LOWEST_PER_CURRENCY_NOTE`)
+   * ```
+   * 🔴 집계·판정·통화 분리 규칙은 **한 글자도** 바뀌지 않았다 — `buildPriceGuide` ·
+   *    `domesticPriceBand` · `overseasHasSingleCurrency` 는 그대로 호출된다.
+   */
   if (kr.pricedCount > 0) {
     const band = domesticPriceBand(kr);
-    const text = domesticBandText(band);
-    if (band.kind === "BAND") {
-      lines.push(`${MARKET_PLAIN_NAME.KR} ${DOMESTIC_BAND_LABEL}는 ${text} 로 확인됩니다.`);
-    } else if (band.kind === "SINGLE") {
+    if (band.kind === "SINGLE") {
       /** 🔴 **1개를 가격대라고 부르지 않는다**(CPO STEP 4 명시). */
-      lines.push(`${MARKET_PLAIN_NAME.KR}는 ${text} 입니다 — 확인된 가격이 1건이라 가격대를 말하지 않습니다.`);
-    } else {
+      lines.push(`${MARKET_PLAIN_NAME.KR}는 확인된 가격이 1건이라 가격대를 말하지 않습니다.`);
+    } else if (band.kind === "NONE") {
       /** 🔴 통화가 섞였다 — **환산해서 가격대를 만들지 않는다.** */
       lines.push(`${MARKET_PLAIN_NAME.KR} 확인 가격의 통화가 여러 개라 하나의 가격대로 합치지 않았습니다.`);
     }
   }
 
-  if (os.pricedCount > 0) {
-    const lowest = overseasLowestText(os);
-    if (overseasHasSingleCurrency(os)) {
-      lines.push(`${MARKET_PLAIN_NAME.OVERSEAS} ${OVERSEAS_LOWEST_LABEL}는 ${lowest} 입니다.`);
-    } else {
-      /**
-       * 🔴🔴 **통화가 섞이면 「최저」를 하나로 고를 수 없다.** 실측 S1 은 CAD 64 ·
-       *    GBP 37 · USD 58 세 통화이고, 거기서 「GBP 37 이 최저」라고 적으면 **거짓**
-       *    이다(비교에 환산이 필요하고 환산은 금지다). 🟢 통화별로 적는다.
-       */
-      lines.push(`${MARKET_PLAIN_NAME.OVERSEAS} ${OVERSEAS_LOWEST_LABEL}는 통화별로 ${lowest} 입니다.`);
-      lines.push(OVERSEAS_LOWEST_PER_CURRENCY_NOTE);
-    }
-  }
+  /**
+   * 🔴🔴 **해외 줄은 «아예» 세우지 않는다.** 통화가 섞였을 때의 말
+   *    (`OVERSEAS_LOWEST_PER_CURRENCY_NOTE`)은 🌎 블록의 `marketPriceHeadlineLabel`
+   *    이 **이미 그 자리에서** 말한다 ⟹ 결론이 또 적으면 **같은 문장이 두 번** 뜬다.
+   * 🔴 이것은 추측이 아니라 **배포 전 마운트 DOM 실측으로 잡았다**
+   *    (`core-2ao-r1-screen-dump` · 1차 구현에서 실제로 두 번 떴다).
+   * 🟢 「합치지 않는다」는 성질은 **한 글자도 잃지 않았다** — owner 가 하나가 됐을 뿐이다.
+   */
 
   /** 🔴 **가격을 못 가져온 동일상품을 숨기지 않는다** — 그 사실도 결론의 일부다. */
   const unpriced = kr.unpricedCount + os.unpricedCount;
@@ -779,20 +825,15 @@ export function marketDecisionLines(
      */
     if (hasReferencePrice(refs?.domestic)) {
       /**
-       * 🔴🔴🔴 CORE-2W §4-C — **결론이 «금액까지» 말한다.**
+       * 🔴🔴🔴 CORE-2AO-R1 — **CORE-2W §4-C 가 연 「결론에도 금액」을 여기서 닫는다.**
        *
-       * 🔴 CPO: 「`국내 참고가격은 KRW 88,000으로 확인됐습니다. 다만 현재 동일상품으로
-       *    확정된 국내 판매처는 없어, 동일상품 가격으로 확정하지 않습니다.`」 ·
-       *    「아래 설명에서도 **88,000원이 사라지거나 『가격 없음』으로 뒤집히면 FAIL**」(§7-A).
-       * 🟢 그래서 CORE-2V 의 「금액 0」 방침을 **이 한 자리에서만** 연다 — 금액 «문자열» 은
-       *    블록이 쓰는 **같은 함수**(`referenceAmountSummary`)로 만든다(글자가 갈리지 않는다).
-       * 🔴 「가격이 없습니다」류는 **쓰지 않는다**(§6 금지 목록).
+       * 🔴 CORE-2W 의 요구(「88,000 이 사라지거나 『가격 없음』으로 뒤집히면 FAIL」)는
+       *    **여전히 지켜진다** — 금액은 **바로 위 🇰🇷 블록** 에 그대로 있고, 이 줄은
+       *    「확인됐다」를 말한다. 🔴 **「가격이 없습니다」로 뒤집지 않았다**(§6 금지 그대로).
+       * 🟢 사라진 것은 **중복된 숫자 하나** 다(CPO 2026-10-26 · CEO 캡처 FAIL).
        */
-      const amount = referenceAmountSummary(refs?.domestic);
       lines.push(
-        amount
-          ? `${MARKET_PLAIN_NAME.KR} 참고가격은 ${amount} 으로 확인됐습니다.`
-          : `${MARKET_PLAIN_NAME.KR} 참고가격이 확인됐습니다.`,
+        `${MARKET_PLAIN_NAME.KR} 참고가격이 확인됐습니다.`,
         "다만 현재 동일상품으로 확정된 국내 판매처는 없어, 동일상품 가격으로 확정하지 않습니다.",
       );
     } else {

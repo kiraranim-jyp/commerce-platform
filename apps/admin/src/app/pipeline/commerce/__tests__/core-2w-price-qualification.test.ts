@@ -164,14 +164,22 @@ describe("§8-4 가격 판단 기준이 두 축을 혼동하지 않는다", () =
 });
 
 describe("§8-5 판매 판단이 상단 가격을 부정하지 않는다", () => {
-  /** 🔴🔴 CPO §4-C 의 문장 그대로 — **금액을 말하고, 자격을 말한다.** */
-  it("W-7 🟢🟢 결론이 **금액 + 자격** 을 한 번에 말한다", () => {
+  /**
+   * 🔴🔴 **CORE-2AO-R1 — CPO §4-C 의 「금액까지 말한다」가 뒤집혔다.**
+   *    CEO Production 캡처에서 `KRW 88,000` 이 🇰🇷 블록과 이 결론 **두 군데** 떴다
+   *    ⟹ CPO 2026-10-26: 「`판매 판단` 안의 ₩88,000 숫자 제거 — 상단 가격 블록이
+   *    이미 보여주므로 중복하지 않음」 · 「숫자가 아니라 **판단 문장만**」.
+   * 🟢 §8-5 가 지키려던 성질(「결론이 상단 가격을 **부정하지** 않는다」)은 **그대로** 다.
+   */
+  it("W-7 🟢🟢 결론이 **금액 없이** 자격을 말한다 — 상단 가격을 부정하지 않는다", () => {
     const d = marketDecisionLines(buildMarketJudgement([krRow, osSame]), {
       domestic: KR_REF,
       overseas: OS_REF,
     });
     const joined = d.lines.join(" ");
-    expect(joined, "🔴 결론에서 금액이 사라졌다(§7-A FAIL)").toContain("KRW 88,000");
+    expect(joined, `🔴 결론이 금액을 또 적었다: ${joined}`).not.toMatch(
+      /(?:KRW|USD|GBP|EUR|CAD|JPY|₩)\s?[\d.,]|\d,\d{3}/,
+    );
     expect(joined).toContain("동일상품 가격으로 확정하지 않습니다");
     expect(joined, "🔴 결론이 상단 가격을 부정한다").not.toContain(
       "현재 확인된 국내 동일상품 가격은 없습니다",
@@ -179,11 +187,15 @@ describe("§8-5 판매 판단이 상단 가격을 부정하지 않는다", () =>
   });
 
   /** 🟢 SAME 이 하나도 없을 때도 같은 구조다(두 분기가 같은 말을 쓴다). */
-  it("W-8 🟢 SAME 0 분기도 금액 + 자격을 말한다", () => {
+  it("W-8 🟢 SAME 0 분기도 **금액 없이** 자격을 말한다", () => {
     const d = marketDecisionLines(buildMarketJudgement([krRow]), { domestic: KR_REF });
     expect(d.kind).toBe("NO_SAME_WITH_REFERENCE");
     const joined = d.lines.join(" ");
-    expect(joined).toContain("KRW 88,000");
+    expect(joined, `🔴 결론이 금액을 또 적었다: ${joined}`).not.toMatch(
+      /(?:KRW|USD|GBP|EUR|CAD|JPY|₩)\s?[\d.,]|\d,\d{3}/,
+    );
+    /** 🔴 그렇다고 **「가격 없음」으로 뒤집지 않았다** — §7-A 가 막은 그것. */
+    expect(joined).toContain("국내 참고가격이 확인됐습니다");
     expect(joined).toContain("동일상품 가격으로 확정하지 않습니다");
   });
 
@@ -206,19 +218,36 @@ describe("§8-6·7·8 국내/해외 분리 · 로직 불변", () => {
    * 🟢 그래서 **진짜 지켜야 할 성질** 로 바꾼다 — §8-6 「국내와 해외 가격 의미가 서로
    *    섞이지 않는다」 ⟹ **한 문장에 두 시장의 금액이 같이 들어가지 않는다.**
    */
-  it("W-10 🔴 **한 문장에 두 시장 금액이 섞이지 않는다**(§8-6)", () => {
+  it("W-10 🔴 **두 시장 금액이 섞이지 않는다**(§8-6) — 이제 «블록» 에서 문다", () => {
+    /**
+     * 🔴🔴 **CORE-2AO-R1 — 단언 자리를 결론에서 «화면» 으로 옮겼다.**
+     *    결론은 이제 금액을 **전혀** 만들지 않으므로(W-7·W-8) 거기서 「섞이지 않는다」를
+     *    재면 **동어반복** 이다(금액이 0 이면 항상 통과한다 — 이 트랙이 반복한 함정).
+     * 🟢 §8-6 이 진짜 지키려는 것은 **셀러가 보는 화면에서 두 시장 금액이 섞이지 않는
+     *    것** 이고, 금액 owner 가 블록으로 단일화된 지금은 **거기서** 재는 것이 맞다.
+     */
+    const el = mount({
+      rows: [krRow, osSame],
+      domesticReference: KR_REF,
+      overseasReference: OS_REF,
+    });
+    const kr = (q(el, "market-block-domestic") as HTMLElement).textContent ?? "";
+    const os = (q(el, "market-block-overseas") as HTMLElement).textContent ?? "";
+    expect(kr, "🔴 🇰🇷 블록에 해외 통화가 들어갔다").not.toMatch(/GBP|USD|EUR|CAD/);
+    expect(os, "🔴 🌎 블록에 KRW 가 들어갔다").not.toContain("KRW");
+    /** 🟢 **어느 쪽도 사라지지 않았다** — 금액은 각자의 블록에 그대로 있다. */
+    expect(kr).toContain("KRW 88,000");
+    expect(os).toContain("GBP 37");
+    /** 🔴 그리고 결론은 금액을 **하나도** 만들지 않는다(owner 가 하나라는 뜻). */
     const lines = marketDecisionLines(buildMarketJudgement([krRow, osSame]), {
       domestic: KR_REF,
       overseas: OS_REF,
     }).lines;
     for (const line of lines) {
-      const hasKr = line.includes("KRW");
-      const hasOs = /GBP|USD|EUR|CAD/.test(line);
-      expect(hasKr && hasOs, `🔴 한 문장이 두 시장 금액을 같이 적는다: ${line}`).toBe(false);
+      expect(line, `🔴 결론이 금액을 적었다: ${line}`).not.toMatch(
+        /(?:KRW|USD|GBP|EUR|CAD|JPY|₩)\s?[\d.,]|\d,\d{3}/,
+      );
     }
-    /** 🟢 둘 다 **각자의 줄** 로는 있어야 한다(어느 쪽도 사라지지 않는다). */
-    expect(lines.some((l) => l.includes("KRW 88,000"))).toBe(true);
-    expect(lines.some((l) => l.includes("GBP 37"))).toBe(true);
   });
 
   /** 🟢 Case B — 국내에 **SAME 가격** 이 있으면 기존 정책 그대로(참고 블록이 꺼진다). */

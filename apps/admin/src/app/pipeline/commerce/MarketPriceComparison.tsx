@@ -275,9 +275,25 @@ export function MarketPriceComparison({
        *    화면에 1회」를 문다). 🔴 내부 토큰·tier·blocker 어휘 **0**.
        * 🔴 조건이 없으면 **영역 자체가 서지 않는다**(빈 틀을 만들지 않는다).
        */}
+      {/**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔴🔴 CORE-2AO-R1 — **이 영역이 «접혔다»**(CEO 피드백 ③ · 삭제 0)
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * 🔴 CEO: 「`가격 판단 기준`과 `판매 판단`이 **길게 분리** 되어 결론이 한 번에
+       *    꽂히지 않는다 — **근거 설명은 접거나 짧게** 두는 편이 맞다」.
+       * 🟢 둘 중 **접는 쪽** 을 골랐다 — 이 영역은 **근거 설명** 이고(결론은 아래
+       *    `market-judgement` 다) 문장을 지우면 「왜 이 가격을 기준으로 쓰는가」가
+       *    사라진다. 🔴 **한 줄도 지우지 않았다** — `buildPriceBasis` 는 그대로다.
+       * 🔴 `open` 을 **붙이지 않는다**(붙이면 1차로 되돌아온다 · 2026-09-19 기전).
+       * 🟢 `data-testid` 와 `price-basis-line` 은 **그대로** 다 — React 는 닫힌
+       *    `details` 의 자식도 렌더하므로 마운트 DOM 계약이 전부 유지된다.
+       */}
       {basis.length > 0 && (
-        <div data-testid="price-basis" className="mt-3">
-          <p className="text-[11px] font-medium text-text-secondary">{PRICE_BASIS_HEADING}</p>
+        <details data-testid="price-basis" className="mt-3">
+          <summary className="cursor-pointer text-[11px] font-medium text-text-secondary">
+            ▸ {PRICE_BASIS_HEADING}
+          </summary>
           <ul className="mt-0.5 space-y-0.5">
             {basis.map((line) => (
               <li key={line} data-testid="price-basis-line" className="text-[11px] text-text-tertiary">
@@ -285,7 +301,7 @@ export function MarketPriceComparison({
               </li>
             ))}
           </ul>
-        </div>
+        </details>
       )}
 
       {/**

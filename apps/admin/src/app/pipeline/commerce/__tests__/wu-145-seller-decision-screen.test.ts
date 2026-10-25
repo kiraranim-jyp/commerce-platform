@@ -16,6 +16,8 @@ import {
   pendingReasonNote,
 } from "../mi-same-candidates";
 import { KNOWN_BLOCKER_TOKENS, blockerText } from "../blocker-text";
+/** 🟢 CORE-2AO-R1 — 해외 제목 owner 가 **하나** 임을 단언하기 위해(B-1). */
+import { OVERSEAS_REFERENCE_TITLE } from "../overseas-reference";
 import {
   REVIEW_HISTORY_HEADING,
   ReviewHistorySection,
@@ -222,11 +224,32 @@ describe("B. ① 가격 어휘는 하나다", () => {
      */
     mount(S1);
     expect(SAME_PRICE_LABEL).toBe("동일상품 확인 가격");
-    expect(firstScreenText()).toContain("동일상품 확인 가격");
-    /** 🟢 두 시장 제목이 **같은 상수** 에서 나온다(두 벌로 적지 않는다). */
-    for (const m of ["KR", "OVERSEAS"] as const) {
-      expect(PRICE_GUIDE_TITLE[m]).toContain("동일상품 확인 가격");
-    }
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔴🔴🔴 CORE-2AO-R1 — **해외 제목이 이 어휘에서 «빠졌다». 이유를 적는다.**
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 CPO 2026-10-26: 「`해외 동일상품 확인 가격` → **`해외 최저 소싱가`** —
+     *    이번에 반드시 제거하기로 한 **`동일상품` 주장** 이 화면에 남아 있다」.
+     * 🔴 데이터 근거도 같은 방향이다 — 해외 가격 분모에 `COMPARISON` 이 들어갈 수
+     *    있어 **「동일상품」이라고 단정할 수 없다**(CORE-2AO 가 적은 그 사실).
+     * 🟢 🇰🇷 는 **그대로** 다(CPO: 「`국내 참고가격`이라는 명칭 유지 → 정상」) ⟹
+     *    `SAME_PRICE_LABEL` 은 **국내 SAME 축의 어휘로 계속 산다**(상수 삭제 0).
+     */
+    expect(PRICE_GUIDE_TITLE.KR).toContain("동일상품 확인 가격");
+    expect(PRICE_GUIDE_TITLE.OVERSEAS, "🔴 해외 제목에 「동일상품」 주장이 돌아왔다").not.toContain(
+      "동일상품",
+    );
+    /**
+     * 🔴🔴 **해외 제목 owner 는 «하나» 다.** CORE-2AO 가 `OVERSEAS_REFERENCE_TITLE`
+     *    (해외 SAME 0 일 때 서는 쪽)만 고쳐서 **화면이 한 글자도 안 바뀌었다** —
+     *    같은 슬롯의 두 상태가 **다른 상수** 였기 때문이다(CEO 캡처가 그것을 잡았다).
+     * 🟢 이제 한쪽에서 파생시킨다 ⟹ **한쪽만 고치는 길이 구조적으로 없다.**
+     */
+    expect(OVERSEAS_REFERENCE_TITLE).toBe("해외 최저 소싱가");
+    expect(PRICE_GUIDE_TITLE.OVERSEAS).toContain(OVERSEAS_REFERENCE_TITLE);
+    /** 🟢 화면에도 그 제목이 실제로 선다(상수만 맞고 화면이 다른 일을 막는다). */
+    expect(firstScreenText()).toContain(OVERSEAS_REFERENCE_TITLE);
   });
 
   it("🔴🔴 B-2 **「시장 참고가격」을 쓰지 않는다** — 그 말은 다른 뜻으로 이미 쓰인다", () => {

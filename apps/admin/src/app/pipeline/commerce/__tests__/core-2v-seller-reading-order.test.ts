@@ -98,10 +98,21 @@ describe("A. 국내 가격 표현 단일화", () => {
     );
     /**
      * 🟢 대신 **두 사실을 같이** 말한다 — 참고가격은 있고, 확정은 아직 없다.
-     * 🔴 **CORE-2W §4-C 에서 문장이 CPO 가 준 것으로 바뀌었다** — 금액까지 말한다.
+     * 🔴 CORE-2W §4-C 가 **금액까지** 말하게 했고, 🔴🔴 **CORE-2AO-R1 이 그 금액을
+     *    도로 뺐다** — CEO Production 캡처에서 `KRW 88,000` 이 🇰🇷 블록과 이 결론
+     *    **두 군데** 떴기 때문이다(CPO 2026-10-26: 「상단 가격 블록이 이미 보여주므로
+     *    중복하지 않음」). 🟢 **이 테스트가 지키는 성질은 그대로** 다 — 결론이
+     *    「국내 가격이 없다」로 읽히지 않는 것.
      */
-    expect(first).toContain("국내 참고가격은 KRW 88,000 으로 확인됐습니다");
+    expect(first).toContain("국내 참고가격이 확인됐습니다");
     expect(first).toContain("동일상품 가격으로 확정하지 않습니다");
+    /**
+     * 🔴🔴 그리고 **금액은 첫 화면에 «한 번만»** 있다 — 그것이 CEO 가 FAIL 로 지목한
+     *    바로 그 축이다. 🟢 🇰🇷 블록이 유일한 owner 다.
+     */
+    expect(first.split("KRW 88,000").length - 1, "🔴 같은 금액이 첫 화면에 두 번 이상 떴다").toBe(
+      1,
+    );
   });
 
   /** 🔴 §1 — 국내 가격의 대표 표현은 **하나** 다. */
@@ -188,9 +199,19 @@ describe("B. §8 결론과 근거를 가른다", () => {
     expect(at("market-block-overseas")).toBeLessThan(at("price-basis"));
     expect(at("price-basis")).toBeLessThan(at("market-judgement"));
     expect(at("market-judgement")).toBeLessThan(at("mi-detail-fold"));
-    /** 🟢 네 제목이 전부 첫 화면에 있다(아래로 읽기만 하면 된다). */
+    /**
+     * 🟢 제목이 첫 화면에 있다(아래로 읽기만 하면 된다).
+     * 🔴🔴 **CORE-2AO-R1 — `PRICE_BASIS_HEADING` 이 이 목록에서 빠졌다.** 그 영역은
+     *    CEO 피드백 ③으로 **접혔고**(근거 설명이라 결론보다 앞에 펼쳐 두지 않는다),
+     *    `firstScreen` 은 닫힌 `details` 를 **통째로 지워서** `summary` 까지 날린다.
+     *    🟢 **순서 계약은 그대로** 다(위 `at("price-basis")` 네 줄 — innerHTML 기준이라
+     *    접힘과 무관하다) · 🟢 제목이 접힘 머리에 살아 있다는 것은 아래에서 직접 문다.
+     */
     const first = firstScreen(ceoScreen());
-    for (const t of [DOMESTIC_REFERENCE_TITLE, PRICE_BASIS_HEADING, MARKET_RESULT_HEADING]) {
+    const basisFold = q(ceoScreen(), "price-basis") as HTMLElement;
+    expect(basisFold.tagName.toLowerCase(), "🔴 근거 설명이 다시 펼쳐졌다").toBe("details");
+    expect(basisFold.querySelector("summary")?.textContent ?? "").toContain(PRICE_BASIS_HEADING);
+    for (const t of [DOMESTIC_REFERENCE_TITLE, MARKET_RESULT_HEADING]) {
       expect(first).toContain(t);
     }
   });
