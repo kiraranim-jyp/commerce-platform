@@ -220,7 +220,13 @@ export const MI_SAME_EXCLUSION_TEXT: Record<Exclude<MiSameExclusion, "NOT_SAME">
  * 🔴 내부 토큰(`VERIFIED_CURRENT` · `PRESUMED_SAME` · tier · blocker)은 이 영역에
  *    **한 글자도** 노출되지 않는다. 기술 데이터는 지우지 않고 **접어** 둔다(§E).
  */
-export const MARKET_JUDGEMENT_TITLE = "📊 시장 판매 판단";
+/**
+ * 🔴🔴 **CORE-2AO-R2 — 「시장 판매 판단」 → 「가격 분석」**(CPO 2026-10-26).
+ *    이 영역이 1차에서 하는 일이 **가격 세 덩어리를 보여주는 것** 으로 좁아졌다
+ *    ⟹ 제목이 그 일을 말해야 한다. 「판매 판단」은 **결론 영역의 이름**
+ *    (`MARKET_RESULT_HEADING`)이고 그것은 이제 **상세 안** 에 있다.
+ */
+export const MARKET_JUDGEMENT_TITLE = "📊 가격 분석";
 export const MARKET_JUDGEMENT_NOTE =
   "이 상품이 지금 어디서 얼마에 팔리고 있는지부터 봅니다. 동일상품 판정은 그 판단을 위한 중간 단계입니다.";
 
@@ -432,9 +438,16 @@ export const SAME_PRICE_LABEL = "동일상품 확인 가격";
  *    `COMPARISON` 을 포함할 수 있어 **「동일상품」이라고 단정할 수 없다**.
  * 🔴 🇰🇷 는 **건드리지 않았다**(CPO: 「`국내 참고가격`이라는 명칭은 유지 → 정상」).
  */
+/**
+ * 🔴🔴 **CORE-2AO-R2 — 아이콘이 `💰` 에서 «시장 깃발» 로 바뀌었다.**
+ *    1차에서 `MARKET_LABEL`(「🌎 해외」)을 빼면서 **시장 아이콘이 화면에서 사라졌다**
+ *    (배포 전 계약이 잡았다). 🟢 CPO 목업이 「🇰🇷 국내 참고가격 / 🌎 해외 최저 소싱가」
+ *    이므로 **제목이 그 아이콘을 들고 있는 것** 이 맞다.
+ * 🔴 `OverseasReferencePrice` 의 기본 아이콘 **🧾 는 건드리지 않았다**(`wu-056r1` 계약).
+ */
 export const PRICE_GUIDE_TITLE: Record<"KR" | "OVERSEAS", string> = {
-  KR: `💰 국내 ${SAME_PRICE_LABEL}`,
-  OVERSEAS: `💰 ${OVERSEAS_REFERENCE_TITLE}`,
+  KR: `🇰🇷 국내 ${SAME_PRICE_LABEL}`,
+  OVERSEAS: `🌎 ${OVERSEAS_REFERENCE_TITLE}`,
 };
 
 /* ═══════════ 🔴🔴🔴 WU-146 ② — **「💡 판매 판단」은 «상태별» 결론이다** ═══════════
@@ -1470,7 +1483,29 @@ export function priceBasisLines(
  *    를 말하지 않아 셀러가 그 영역의 목적을 읽을 수 없었다.
  * 🔴 **추천 판매가를 계산하지 않는다**(CPO §5) — 이 영역은 **근거를 모아 두는 자리** 다.
  */
-export const NEXT_STEP_HEADING = "💡 판매가격 판단";
+/**
+ * ══════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴🔴 CORE-2AO-R2 — **첫 화면 = 판단 · 상세 화면 = 근거**(CPO 확정 2026-10-26)
+ * ══════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 CPO: 「셀러가 첫 화면에서 알아야 할 건 **3개뿐** 이다 — ① 국내 얼마에 팔리는가
+ *    ② 해외에서 얼마에 가져올 수 있는가 ③ 그래서 얼마를 기준으로 팔면 되는가.
+ *    나머지는 전부 `＋ 상세정보 보기` 안으로」.
+ * 🔴 그래서 이 영역의 1차 문구는 **한 줄** 이다 — 「판단」이 아니라 **「가이드」** 다
+ *    (우리가 가격을 정해 주지 않는다는 뜻을 이름이 들고 있다).
+ * 🟢 **지운 문장은 하나도 없다** — `PRICE_DECISION_COST_AXIS`(배송비·관부가세·수수료·
+ *    목표마진)와 원가 보류 두 줄은 **상세로 옮겼다**(`costHoldLines`).
+ */
+export const NEXT_STEP_HEADING = "💡 판매가격 가이드";
+/**
+ * 🔴 **한 줄이다.** CPO 가 준 문장 그대로 — 셀러가 보자마자 「그래서 얼마에 팔지」로
+ *    들어가게 하는 것이 이 줄의 유일한 목적이다.
+ * 🔴 추천가·마진·예상수익을 **계산하지 않는다**(§00-B 가격 보류 그대로).
+ */
+export const PRICE_GUIDE_ONE_LINER =
+  "국내 가격과 해외 소싱가를 기준으로 판매가격을 결정해 보세요.";
+/** 🔴 `＋ 상세정보 보기` — 1차에서 내린 모든 근거가 이 뒤에 산다(삭제가 아니라 이동). */
+export const PRICE_DETAIL_FOLD_LABEL = "상세정보 보기";
 /**
  * 🔴🔴 **가격이 있으면 «항상» 서는 줄.** 원가 유무와 무관하다 —
  *    셀러가 지금 무엇을 가지고 무엇을 더해야 하는지를 한 문장으로 말한다.
@@ -1490,15 +1525,24 @@ export const COST_REQUIRED_SCOPE =
 
 /**
  * 🟢 가격이 **있을 때만** 선다. 그 외에는 **빈 배열**(칸을 만들지 않는다).
- * 🔴 순서가 의미다 — ① 무엇으로 판단하는가 ② 무엇을 더해야 하는가
- *    ③ 원가가 없으면 그 사실(기존 두 줄 · 글자 불변).
+ * 🔴🔴 **CORE-2AO-R2 — 1차는 «한 줄» 이다.** 전까지 이 함수가 2~4줄을 냈고 그것이
+ *    CEO 가 「첫 화면에 설명이 너무 많다」로 지목한 덩어리의 일부였다.
+ * 🟢 나머지 세 줄은 **사라지지 않았다** — `costHoldLines` 로 옮겨 상세에서 선다.
  */
-export function nextStepLines(
+export function nextStepLines(hasMarketPrice: boolean): string[] {
+  return hasMarketPrice ? [PRICE_GUIDE_ONE_LINER] : [];
+}
+
+/**
+ * 🔴 상세(`＋ 상세정보 보기`)에서 서는 **비용 축** 줄들 — 글자 불변.
+ *    ① 무엇을 더해야 하는가 ② 원가가 없으면 그 사실(두 줄).
+ * 🔴 **계산 0** — 이 줄들은 「무엇이 비어 있는지」만 말한다.
+ */
+export function costHoldLines(
   hasMarketPrice: boolean,
   costPriceKrw?: number | null,
 ): string[] {
   if (!hasMarketPrice) return [];
-  const basis = [PRICE_DECISION_BASIS, PRICE_DECISION_COST_AXIS];
-  if (costPriceKrw != null) return basis;
-  return [...basis, COST_REQUIRED_NOTE, COST_REQUIRED_SCOPE];
+  if (costPriceKrw != null) return [PRICE_DECISION_COST_AXIS];
+  return [PRICE_DECISION_COST_AXIS, COST_REQUIRED_NOTE, COST_REQUIRED_SCOPE];
 }

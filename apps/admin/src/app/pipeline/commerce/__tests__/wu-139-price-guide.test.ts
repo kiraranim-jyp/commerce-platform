@@ -288,6 +288,7 @@ describe("C. 화면 (마운트 DOM)", () => {
     expect(q("price-guide-empty")?.textContent).toBe(PRICE_GUIDE_EMPTY);
     expect(q("price-guide-headline")).toBeNull();
     /** 🔴 「동일상품이 없다」로 적지 않는다. */
-    expect(q("price-guide-domestic")?.textContent).toContain("동일상품 확인 1곳");
+    /** 🔴 CORE-2AO-R2 — 건수 줄은 상세로 내려갔다(문장 삭제 0). */
+    expect(q("market-detail-domestic")?.textContent).toContain("동일상품 확인 1곳");
   });
 });

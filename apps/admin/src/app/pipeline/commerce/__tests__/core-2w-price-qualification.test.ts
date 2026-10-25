@@ -99,10 +99,13 @@ const caseA = () => mount({ rows: [krRow, osSame], domesticReference: KR_REF, ov
 
 describe("§8-1·2 가격 있음 + SAME 없음을 «동시에» 말한다", () => {
   it("W-1 🟢🟢 Case A — 금액 · 참고가격 성격 · SAME 없음이 **첫 화면에 모두** 있다", () => {
-    const first = firstScreen(caseA());
+    const el = caseA();
+    const first = firstScreen(el);
+    /** 🟢 금액과 그 이름은 **1차** 다(R2 의 1순위). */
     expect(first).toContain(DOMESTIC_REFERENCE_TITLE);
     expect(first).toContain("KRW 88,000");
-    expect(first).toContain(DOMESTIC_SAME_NOT_CONFIRMED);
+    /** 🔴 CORE-2AO-R2 — CPO 가 1차를 «가격 세 덩어리»로 좁혔다 ⟹ 이 축은 ＋ 상세정보 보기 안이다(삭제 0 · 이동). */
+    expect((el.textContent ?? "").replace(/\s+/g, " ")).toContain(DOMESTIC_SAME_NOT_CONFIRMED);
   });
 
   /** 🔴 §6 — 참고가격이 있는데 「가격 없음」류가 **같이 뜨면 안 된다**. */

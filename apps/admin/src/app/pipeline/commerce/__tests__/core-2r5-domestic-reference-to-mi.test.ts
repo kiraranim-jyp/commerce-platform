@@ -123,15 +123,23 @@ describe("CORE-2R-5 A — 국내 참고가격이 1차 🇰🇷 블록에 선다"
   /** 🔴🔴 같은 숫자가 두 곳에 뜨면 WU-145/149 의 「가격 owner 하나」가 깨진다. */
   it("A-2 🔴 `domestic-reference` 구역이 화면에 **하나뿐** 이다", () => {
     const html = mount({ rows: ROWS, domesticReference: DOMESTIC_REFERENCE });
-    expect((html.match(/data-testid="domestic-reference"/g) ?? []).length).toBe(1);
     /**
-     * 🔴🔴 **CORE-2W §4-C 에서 범위가 바뀌었다 — 약해지지 않았다.**
-     *    CPO 가 **결론 문장에도 금액** 을 넣으라고 했다(「국내 참고가격은 KRW 88,000 으로
-     *    확인됐습니다」) ⟹ 화면 **전체** 에서 1회를 요구하면 그 지시와 충돌한다.
-     * 🟢 그래서 **강조 자리(시장 블록)** 에서 1회를 단언한다 — 금액 owner 는 거기 하나다.
+     * 🔴🔴 **CORE-2AO-R2 — 구역이 «두 층» 에 선다**(1차 금액 `compact` · 상세 근거
+     *    `evidenceOnly`) ⟹ 문서 전체로 세면 **2** 다. 🟢 이 계약이 지키는 것은
+     *    **「금액 구역이 1차에 하나」** 이므로 **1차 층으로 범위를 좁혀** 센다.
+     *
+     * 🔴🔴 **CORE-2W §4-C 에서 범위가 바뀌었다 — 약해지지 않았다.**(기록 유지)
+     *    그때는 결론 산문이 금액을 인용했고, 🔴 **CORE-2AO-R1 이 그것을 닫아** 이제
+     *    금액은 **시장 블록 하나** 다 ⟹ 화면 전체 1회가 **다시 참** 이 됐다.
      */
-    const blocks = html.slice(html.indexOf('data-testid="market-blocks"'), html.indexOf('data-testid="price-basis"'));
-    expect((blocks.match(/KRW 88,000/g) ?? []).length).toBe(1);
+    const summary = html.slice(
+      html.indexOf('data-testid="market-blocks"'),
+      html.indexOf('data-testid="market-next-step"'),
+    );
+    expect((summary.match(/data-testid="domestic-reference"/g) ?? []).length).toBe(1);
+    expect((summary.match(/KRW 88,000/g) ?? []).length).toBe(1);
+    /** 🟢 그리고 이제는 **화면 전체** 로도 1회다(결론이 더는 금액을 인용하지 않는다). */
+    expect((html.match(/KRW 88,000/g) ?? []).length).toBe(1);
   });
 
   /** 🔴 2차(`▸ MI 상세 분석`)의 국내 집계는 **꺼져 있다** — 옮긴 것이지 복제가 아니다. */
@@ -176,11 +184,16 @@ describe("CORE-2R-5 A — 국내 참고가격이 1차 🇰🇷 블록에 선다"
       domesticReference: DOMESTIC_REFERENCE,
       overseasReference: OVERSEAS_REFERENCE,
     });
-    expect((html.match(/data-testid="overseas-reference"/g) ?? []).length).toBe(1);
+    /** 🔴 CORE-2AO-R2 — A-2 와 **같은 처리**(구역은 두 층 · 금액은 1차 하나). */
+    const summary = html.slice(
+      html.indexOf('data-testid="market-blocks"'),
+      html.indexOf('data-testid="market-next-step"'),
+    );
+    expect((summary.match(/data-testid="overseas-reference"/g) ?? []).length).toBe(1);
     expect((html.match(/GBP 37/g) ?? []).length).toBe(1);
     const os = html.slice(
       html.indexOf('data-testid="market-block-overseas"'),
-      html.indexOf('data-testid="mi-detail-fold"'),
+      html.indexOf('data-testid="market-next-step"'),
     );
     expect(os, "🔴 해외 참고가격이 1차 블록 «밖» 에 있다").toContain('data-testid="overseas-reference"');
     /** 🔴 아이콘·제목은 **기본값 그대로** 여야 한다(`wu-056r1` 다섯이 그것을 본다). */

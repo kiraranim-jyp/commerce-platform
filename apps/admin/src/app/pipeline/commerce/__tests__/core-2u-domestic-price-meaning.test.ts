@@ -129,8 +129,12 @@ describe("§8 Case A~F — 기존 판정 결과를 하나의 seller-facing 의�
   it("C-SIM-b 🔴🔴 가격 바로 아래에서 **「동일상품 확정 없음」** 을 말한다", () => {
     const el = mount({ rows: SIMILAR_ROWS, domesticReference: ref([{ amount: 88000, seller: "donokids.com" }]) });
     expect(text(el, "reference-status")).toBe(DOMESTIC_SAME_NOT_CONFIRMED);
-    /** 🔴 **금액 뒤가 아니라 금액 «바로» 뒤** 여야 한다 — note/scope 뒤로 밀면 안 읽힌다. */
-    const html = (q(el, "domestic-reference") as HTMLElement).innerHTML;
+    /**
+     * 🔴🔴 **CORE-2AO-R2 — 「확정 여부」가 상세로 내려가 층이 갈렸다**(CPO 2026-10-26).
+     *    🟢 **순서 성질은 그대로** 다 — 금액이 **먼저** 다. 🔴 단 한 구역 안이 아니라
+     *       **문서 전체** 로 잰다(1차 금액 → 상세 확정 여부).
+     */
+    const html = el.innerHTML;
     expect(html.indexOf('data-testid="domestic-lowest"')).toBeLessThan(
       html.indexOf('data-testid="reference-status"'),
     );
@@ -160,9 +164,12 @@ describe("§8 Case A~F — 기존 판정 결과를 하나의 seller-facing 의�
         }),
       ],
     });
-    const kr = text(el, "price-guide-domestic");
-    expect(kr).toContain("KRW 83600 ─ 88000");
-    expect(kr).toContain(DOMESTIC_BAND_LABEL);
+    /**
+     * 🔴 CORE-2AO-R2 — 1차 블록은 **금액** 만, 그 금액이 «무엇인지»(가격대 라벨)는
+     *    **상세** 다. 🟢 둘 다 **사라지지 않았다** — 두 자리에서 각각 문다.
+     */
+    expect(text(el, "price-guide-domestic")).toContain("KRW 83600 ─ 88000");
+    expect(text(el, "market-detail-domestic")).toContain(DOMESTIC_BAND_LABEL);
   });
 
   /** Case DIFFERENT + 가격 → 어느 가격 축에도 들어가지 않는다. */
@@ -245,10 +252,14 @@ describe("§3·§6·§7 — seller-facing 은 하나의 가격 판단", () => {
     for (const bad of ["유사상품 참고가격", "판매처 1곳", "후보 1곳", "보류·충돌"]) {
       expect(kr, `🔴 🇰🇷 블록에 경쟁 숫자/내부 상태가 있다: ${bad}`).not.toContain(bad);
     }
-    /** 🟢 남아야 하는 것 — 가격 하나 · 분모 하나 · 확정 여부 하나. */
+    /**
+     * 🟢 남아야 하는 것 — 가격 하나 · 분모 하나 · 확정 여부 하나.
+     * 🔴 **CORE-2AO-R2 — 확정 여부는 상세(`market-detail-domestic`)로 내려갔다.**
+     *    🟢 성질은 그대로다 — 🇰🇷 축에서 그 문장이 **사라지지 않았다**.
+     */
     expect(kr).toContain("KRW 88,000");
     expect(kr).toContain("확인 1곳");
-    expect(kr).toContain(DOMESTIC_SAME_NOT_CONFIRMED);
+    expect(text(host, "market-detail-domestic")).toContain(DOMESTIC_SAME_NOT_CONFIRMED);
     /** 🔴 1차 전체에서는 **MI 내부 상태** 만 금지한다(§5). */
     expect(firstScreen(host)).not.toContain("보류·충돌");
   });

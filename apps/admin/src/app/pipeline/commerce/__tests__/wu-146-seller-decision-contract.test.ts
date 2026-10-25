@@ -217,12 +217,15 @@ describe("1·2. seller-facing price owner = 1 · final judgement = 1", () => {
 
   it("🔴 1-c 결론이 **1차 화면** 에 있다 — 접힘 뒤로 숨지 않는다", () => {
     mount(S2);
-    expect(firstScreenText()).toContain(MARKET_RESULT_HEADING);
+    /** 🔴 CORE-2AO-R2 — 이 문장은 ＋ 상세정보 보기 안으로 «이동» 했다(삭제 0). */
+    expect(flat()).toContain(MARKET_RESULT_HEADING);
+    expect(firstScreenText(), "🔴 결론이 1차로 되돌아왔다").not.toContain(MARKET_RESULT_HEADING);
     /**
      * 🔴 **WU-148 에서 갱신** — 결론 문구가 **시장별 해석** 으로 갈렸다
      *    (🇰🇷 「시장 가격대」 · 🌎 「최저 확인가」) ⟹ 「확인된 기준가격」이라는
      *    **시장 공통 문구가 사라졌다.** 🟢 S2 는 해외 단일 통화라 그 해석이 나온다.
      */
+    /** 🟢 금액은 **1차에 그대로** 다(그것이 R2 의 1순위다). */
     expect(firstScreenText()).toContain(OVERSEAS_LOWEST_LABEL);
     expect(firstScreenText()).toContain("USD 58");
   });
@@ -306,7 +309,8 @@ describe("5·6. 가격 없는 동일상품을 버리지 않고 링크를 준다"
   it("🔴🔴 5-a 가격 없는 SAME 이 **판매처 수에 들어간다** — 조용히 사라지지 않는다", () => {
     mount(S2);
     /** 🟢 S2 는 SAME 3곳 중 가격 확인 2곳 · 확인 필요 1곳 — **셋 다** 보인다. */
-    const os = q("market-block-overseas")!.textContent ?? "";
+    /** 🔴 CORE-2AO-R2 — 이 문장은 ＋ 상세정보 보기 안으로 «이동» 했다(삭제 0). */
+    const os = q("market-detail-overseas")!.textContent ?? "";
     expect(os).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 3곳`);
     expect(os).toContain("가격 확인 2곳");
     expect(os).toContain("가격 확인 필요 1곳");
@@ -320,8 +324,9 @@ describe("5·6. 가격 없는 동일상품을 버리지 않고 링크를 준다"
     /** 🔴 **그 후보의 URL** 이어야 한다 — 다른 데로 보내면 셀러가 확인할 수 없다. */
     expect(link!.getAttribute("href")).toBe("https://global.trenbe.com/p/3");
     expect(link!.getAttribute("target")).toBe("_blank");
-    /** 🔴 그 링크가 **1차 화면** 에 있다 — 접힘 뒤면 「확인할 수 있다」가 거짓이다. */
-    expect(firstScreenText()).toContain("가격 확인");
+    /** 🔴 CORE-2AO-R2 — CPO 가 1차를 «가격 세 덩어리»로 좁혔다 ⟹ 이 축은 ＋ 상세정보 보기 안이다(삭제 0 · 이동).
+     *    🟢 링크가 **살아 있고 실제 URL** 이라는 성질은 위에서 그대로 문다. */
+    expect(flat()).toContain("가격 확인");
   });
 
   it("🔴 6-b 결론이 그 사실을 **말한다** — 숫자만 보여주지 않는다", () => {
@@ -398,12 +403,11 @@ describe("STEP 4 — CPO Q1~Q7", () => {
     expect(container.querySelector("details[open]")).toBeNull();
     /** Q3 — 가격대가 바로 보인다. */
     expect(first).toContain("USD 58");
-    /** Q4 — 가격 없는 곳은 **어디를 누를지** 보인다. */
-    expect(first).toContain("가격 확인");
-    /** 🟢 그리고 시장·수량이 보인다. */
+    /** 🔴 CORE-2AO-R2 — CPO 가 1차를 «가격 세 덩어리»로 좁혔다 ⟹ 이 축은 ＋ 상세정보 보기 안이다(삭제 0 · 이동). — Q4·수량은 상세에서 읽는다(Q1·Q3 는 1차 그대로). */
+    expect(flat()).toContain("가격 확인");
     expect(first).toContain("🇰🇷");
     expect(first).toContain("🌎");
-    expect(first).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 3곳`);
+    expect(flat()).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 3곳`);
   });
 
   it("🔴 Q2 셀러에게 **동일/유사 판단을 다시 시키지 않는다** — 1차에 판정 요구 문구 0", () => {

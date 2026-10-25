@@ -18,6 +18,9 @@ import {
   PRICE_BASIS_HEADING,
   SAME_CHECK_HEADING,
   nextStepLines,
+  /** 🟢 CORE-2AO-R2 — 1차에서 내려온 비용 축 줄들(상세에서 선다). */
+  costHoldLines,
+  PRICE_DETAIL_FOLD_LABEL,
   priceBasisLines,
   type MarketReferencePrices,
   MI_SAME_AREA_SCOPE,
@@ -161,7 +164,9 @@ export function MarketPriceComparison({
    * 🔴🔴 CORE-2S §5-⑤ — **「원가가 비었다」와 「데이터가 없다」를 가른다**(UNKNOWN ≠ 실패).
    * 🔴 가격이 있을 때만 말한다 — 가격도 없는데 원가를 요구하면 순서가 틀린다.
    */
-  const nextSteps = nextStepLines(basis.length > 0, costPriceKrw);
+  /** 🔴 CORE-2AO-R2 — 1차는 **한 줄**, 비용 축은 **상세** 로 갈렸다(문장 삭제 0). */
+  const nextSteps = nextStepLines(basis.length > 0);
+  const costHolds = costHoldLines(basis.length > 0, costPriceKrw);
   /**
    * 🔴 WU-133 — **시장과 무관하게** 센다. 「국내/해외로 갈려서 안 보인다」가 아니라
    *    「판정이 보류돼서 안 보인다」가 사실이고, 그 사실은 시장별로 나누면 흐려진다.
@@ -197,8 +202,18 @@ export function MarketPriceComparison({
       data-testid="market-price-comparison"
       className="rounded-md border border-border bg-surface/30 p-3"
     >
+      {/**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔴🔴🔴 CORE-2AO-R2 — **첫 화면 = 판단 · 상세 화면 = 근거**(CPO 2026-10-26)
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * 🔴 CPO: 「셀러가 첫 화면에서 알아야 할 건 **3개뿐** — ① 국내 얼마에 팔리는가
+       *    ② 해외에서 얼마에 가져올 수 있는가 ③ 그래서 얼마를 기준으로 팔면 되는가」.
+       * 🟢 그래서 1차는 **세 블록** 이고 나머지는 전부 `＋ 상세정보 보기` 뒤다.
+       * 🔴 **한 문장도 지우지 않았다** — 전부 **이동** 이다(계약이 그 보존을 문다).
+       * 🔴 `MARKET_JUDGEMENT_NOTE`(MI 분석 문장)도 상세로 내려갔다 — CPO 제거 목록.
+       */}
       <p className="text-[11px] font-medium text-text-secondary">{MARKET_JUDGEMENT_TITLE}</p>
-      <p className="mt-0.5 text-[11px] text-text-tertiary">{MARKET_JUDGEMENT_NOTE}</p>
 
       {/**
        * ══════════════════════════════════════════════════════════════════════
@@ -245,9 +260,76 @@ export function MarketPriceComparison({
              * ```
              */
             reference={mk === "KR" ? domesticReference : overseasReference}
+            variant="SUMMARY"
           />
         ))}
       </div>
+
+      {/**
+       * 🔴 CPO 가 고정한 **세 번째 블록** — 「그래서 내가 얼마를 기준으로 팔면 되는가」.
+       *    🔴 설명문은 **최대 한 줄** 이다(`nextStepLines` 가 그것을 보증한다).
+       *    🔴 추천 판매가 **계산 0** — 비용 축 문장들은 상세로 내려갔다(`costHoldLines`).
+       */}
+      {nextSteps.length > 0 && (
+        <div data-testid="market-next-step" className="mt-3">
+          <p className="text-[11px] font-medium text-text-secondary">{NEXT_STEP_HEADING}</p>
+          {nextSteps.map((line) => (
+            <p key={line} data-testid="market-next-step-line" className="text-[11px] text-text-tertiary">
+              {line}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {/**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔴🔴🔴 CORE-2AO-R2 — **＋ 상세정보 보기 — 「근거」가 전부 여기 산다**
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * 🔴 `open` 을 **붙이지 않는다**(붙이면 1차로 되돌아온다 · 2026-09-19 기전).
+       * 🟢 React 는 닫힌 `details` 의 자식도 렌더하므로 **기존 마운트 DOM 계약이
+       *    전부 유지** 된다 — 사라진 것은 **첫 화면 노출** 뿐이고 데이터는 그대로다.
+       */}
+      <details data-testid="price-detail-fold" className="mt-3">
+        <summary className="cursor-pointer text-[11px] font-medium text-text-secondary">
+          ＋ {PRICE_DETAIL_FOLD_LABEL}
+        </summary>
+
+        {/** 🔴 MI 분석 문장 — 1차에서 내려왔다(CPO 제거 목록). 삭제 0. */}
+        <p className="mt-1 text-[11px] text-text-tertiary">{MARKET_JUDGEMENT_NOTE}</p>
+
+        {/**
+         * 🔴 시장별 **근거** 블록 — 금액은 **그리지 않는다**(1차가 유일한 금액 owner).
+         *    판정 상태 · 출처 문구 · 저장 범위 · 「동일상품 확인 N곳」이 여기 산다.
+         */}
+        <div data-testid="market-detail-blocks" className="mt-2 grid gap-2 md:grid-cols-2">
+          {(["KR", "OVERSEAS"] as const).map((mk) => (
+            <MarketBlock
+              key={mk}
+              market={mk}
+              judgement={judgement}
+              rows={rows}
+              reference={mk === "KR" ? domesticReference : overseasReference}
+              variant="DETAIL"
+            />
+          ))}
+        </div>
+
+        {/** 🔴 비용 축 — 1차의 한 줄에서 내려온 나머지(글자 불변 · 계산 0). */}
+        {costHolds.length > 0 && (
+          <div data-testid="market-cost-hold" className="mt-3">
+            {costHolds.map((line) => (
+              <p key={line} data-testid="market-cost-hold-line" className="text-[11px] text-text-tertiary">
+                {line}
+              </p>
+            ))}
+          </div>
+        )}
+      {/**
+       * 🔴 아래는 **원본 JSX 를 그대로 둔 것** 이다 — 조건·순서·`data-testid` 가
+       *    한 글자도 바뀌지 않았다(그래야 기존 마운트 DOM 계약이 그대로 산다).
+       *    바뀐 것은 **이 `<details>` 안에 들어왔다** 는 사실 하나다.
+       */}
       {/**
        * 🔴🔴 **두 블록 어디에도 안 들어간 후보를 조용히 없애지 않는다.**
        *    실측(B226AC010 · `beaumonde.co.kr`): 사람이 SAME 이라 한 `.kr` 후보가
@@ -505,17 +587,12 @@ export function MarketPriceComparison({
        *    이 영역이 하는 일은 **「무엇이 비어 있는지」** 한 줄로 말하는 것이 전부다.
        * 🔴 입력칸을 **여기 만들지 않는다** — `wu-154 A-1`(결론 영역에 `<input>` 금지)이
        *    그것을 문다. 원가 입력의 owner 는 ③ 수익성의 비용 화면이다.
+       *
+       * 🔴🔴🔴 **CORE-2AO-R2 — 이 블록은 «1차» 로 올라갔다**(CPO 의 세 번째 블록).
+       *    여기 두면 `market-next-step` 이 **두 번** 렌더되고 설명문 수 계약이 깨진다
+       *    (실제로 깨졌고 R2-2 가 잡았다). 🟢 비용 축 줄들은 위 `market-cost-hold`
+       *    에서 **상세로** 선다 — 문장 삭제 0.
        */}
-      {nextSteps.length > 0 && (
-        <div data-testid="market-next-step" className="mt-3">
-          <p className="text-[11px] font-medium text-text-secondary">{NEXT_STEP_HEADING}</p>
-          {nextSteps.map((line) => (
-            <p key={line} data-testid="market-next-step-line" className="text-[11px] text-text-tertiary">
-              {line}
-            </p>
-          ))}
-        </div>
-      )}
 
       {/**
        * 🔴🔴🔴 WU-133 — **「비었다」로 끝내지 않는다.**
@@ -632,6 +709,8 @@ export function MarketPriceComparison({
         />
         </div>
       </details>
+      {/** 🔴 CORE-2AO-R2 — 여기까지가 `＋ 상세정보 보기` 안이다. */}
+      </details>
     </section>
   );
 }
@@ -661,10 +740,17 @@ function MarketBlock({
   judgement,
   rows,
   reference,
+  /**
+   * 🔴 CORE-2AO-R2 — `SUMMARY`(첫 화면 · 금액) ↔ `DETAIL`(상세 · 근거).
+   *    🔴 기본값을 `SUMMARY` 로 두지 않는다 — 호출부가 **의식적으로 고르게** 한다
+   *       (기본값이 있으면 새 호출부가 조용히 금액을 두 번 그릴 수 있다).
+   */
+  variant,
 }: {
   market: "KR" | "OVERSEAS";
   judgement: MarketJudgement;
   rows?: readonly GeminiTransientRow[] | null;
+  variant: "SUMMARY" | "DETAIL";
   /**
    * 🔴 CORE-2S §5-④ — **두 시장이 같은 prop 을 쓴다.** 전에는 `domesticReference` 라
    *    이름이 국내에 묶여 있었고, 그래서 해외는 1차에 가격을 **올릴 자리가 없었다**.
@@ -682,13 +768,42 @@ function MarketBlock({
   const head = marketPriceHeadline(g);
   const headLabel = marketPriceHeadlineLabel(g);
   const suffix = market === "KR" ? "domestic" : "overseas";
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 CORE-2AO-R2 — **같은 블록을 «두 번» 그린다. 금액은 한 번만.**
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 CPO: 「첫 화면 = **판단**(국내 가격 · 해외 소싱가 · 가이드 한 줄) ·
+   *    상세 화면 = **근거**」. ⟹ 이 블록의 내용이 **두 층으로 갈린다**.
+   * 🟢 `SUMMARY` 는 **제목 + 금액 + 건수**, `DETAIL` 은 **그 외 전부**(금액 제외).
+   * 🔴 **금액을 두 층에 넣지 않는다** — 그것이 CEO 가 FAIL 로 지목한 모양이다.
+   * 🔴 문장은 **하나도 지우지 않았다** — 전부 `DETAIL` 로 «옮겼다».
+   */
+  const isSummary = variant === "SUMMARY";
+  /**
+   * 🔴 1차에서 **이 시장이 금액 블록을 실제로 그리는가.** 🟢 술어를 지어내지 않고
+   *    두 분기가 쓰는 **그 조건 그대로** 를 읽는다(`buildOverseasReference` 의 조건 ·
+   *    `sameCount`). 어긋나면 라벨이 중복되거나 칸이 빈다.
+   */
+  const hasSummaryAmount = g.sameCount === 0 ? hasReferencePrice(reference) : true;
   return (
     <div
-      data-testid={`market-block-${suffix}`}
+      data-testid={isSummary ? `market-block-${suffix}` : `market-detail-${suffix}`}
       className="rounded border border-border/60 p-2"
     >
-      {/* 🟢 라벨 owner 는 `MARKET_LABEL` 하나다 — 두 벌로 적지 않는다. */}
-      <p className="text-[11px] font-medium text-text-primary">{MARKET_LABEL[market]}</p>
+      {/**
+       * 🟢 라벨 owner 는 `MARKET_LABEL` 하나다 — 두 벌로 적지 않는다.
+       * 🔴🔴 CORE-2AO-R2 — **1차에서는 가격 제목이 있으면 그리지 않는다.** 그 제목이
+       *    **이미 시장을 말한다**(「🇰🇷 국내 참고가격」 · 「💰 해외 최저 소싱가」) ⟹
+       *    둘을 같이 두면 「🇰🇷 국내 / 🇰🇷 국내 참고가격」처럼 **시장 이름이 두 번** 뜬다
+       *    (CPO 목업은 한 번이다).
+       * 🔴🔴 **그러나 가격 블록이 아예 안 서는 시장에서는 «반드시» 그린다** — 안 그러면
+       *    그 시장 칸이 **통째로 비어** 셀러가 「조회조차 안 됐다」로 읽는다. 그것은
+       *    WU-130 ② 가 계약으로 막아 둔 바로 그 거짓말이다(배포 전 계약이 잡았다).
+       */}
+      {(!isSummary || !hasSummaryAmount) && (
+        <p className="text-[11px] font-medium text-text-primary">{MARKET_LABEL[market]}</p>
+      )}
       {g.sameCount === 0 ? (
         /**
          * 🔴 ⒜ ↔ ⒝ 를 **가른다.** 🔴 「이 시장에 동일상품이 없다」로 적지 않는다 —
@@ -726,6 +841,8 @@ function MarketBlock({
            */}
           <OverseasReferencePrice
             summary={reference}
+            compact={isSummary}
+            evidenceOnly={!isSummary}
             {...(market === "KR"
               ? {
                   title: DOMESTIC_REFERENCE_TITLE,
@@ -763,6 +880,13 @@ function MarketBlock({
                   showTierNote: false,
                 })}
           />
+          {/**
+           * 🔴 CORE-2AO-R2 — 「🔎 동일상품 확인 … 0곳 — …」은 **근거 문장** 이다
+           *    (CPO 제거 목록의 「동일상품 여부에 대한 긴 설명」) ⟹ 상세에서만 선다.
+           * 🟢 **지우지 않았다** — `DETAIL` 이 같은 자리에서 같은 글자를 그린다.
+           */}
+          {!isSummary && (
+            <>
           <p className="mt-2 text-[11px] font-medium text-text-secondary">{SAME_CHECK_HEADING}</p>
           <p data-testid={`market-empty-${suffix}`} className="text-[11px] text-text-tertiary">
             {marketEmptyNote(
@@ -776,52 +900,60 @@ function MarketBlock({
               hasReferencePrice(reference),
             )}
           </p>
+            </>
+          )}
         </>
       ) : (
         <div data-testid={`price-guide-${suffix}`}>
           <p className="text-[11px] font-medium text-text-secondary">{PRICE_GUIDE_TITLE[market]}</p>
-          {/* 🟢 ⒞ 와 ⒟ 를 가르는 건수 줄 — 「동일상품 확인」과 「가격 확인」을 따로 적는다. */}
-          <p data-testid="price-guide-counts" className="text-[11px] text-text-secondary">
-            {priceGuideCountNote(g)}
-          </p>
-          {head ? (
-            <>
-              <p data-testid="price-guide-headline" className="text-[12px] font-medium text-text-primary">
+          {/**
+           * 🔴🔴🔴 CORE-2AO-R2 — **1차는 «금액» 하나, 상세는 «그 금액의 근거» 전부.**
+           *
+           * 🔴🔴🔴 CORE-2E §4-4 — **원화 보조 표시를 여기에 «넣었다가 되돌렸다».**
+           *    실측 — `CAD 64` 가 **「약 ₩64」** 로 떴다(`convertToKrw` 는 모르는
+           *    통화를 **그대로 KRW 로 취급** 한다 · `pricing/currency.ts:24`).
+           *    「약」을 붙여도 그것은 **거짓 숫자** 다. 🔴 그리고 기존 계약 **6건** 이
+           *    이 영역 전체에 `₩` 를 금지한다 ⟹ **CPO 예시의 `₩88,000` 을 쓰지 않았다**
+           *    (ISO 코드 `KRW 88,000` 유지 · 판정 사안으로 보고한다).
+           */}
+          {isSummary ? (
+            head ? (
+              /** 🟢 CEO 요구 — **가격 숫자를 가장 크게.** */
+              <p
+                data-testid="price-guide-headline"
+                className="mt-1 text-lg font-semibold tabular-nums text-text-primary"
+              >
                 {head}
               </p>
+            ) : (
+              /** 🔴 「가격을 못 가져왔다」와 「동일상품이 없다」는 다른 문장이다. */
+              <p data-testid="price-guide-empty" className="text-[11px] text-text-tertiary">
+                {PRICE_GUIDE_EMPTY}
+              </p>
+            )
+          ) : (
+            <>
+              {/* 🟢 ⒞ 와 ⒟ 를 가르는 건수 줄 — 「동일상품 확인」과 「가격 확인」을 따로 적는다. */}
+              <p data-testid="price-guide-counts" className="text-[11px] text-text-secondary">
+                {priceGuideCountNote(g)}
+              </p>
               {/**
-               * 🔴🔴 WU-148 — **그 숫자가 «무엇인지» 를 말한다.** 숫자만 두면 셀러가
-               *    「최저가인가 가격대인가」를 모른다. 🟢 🇰🇷 가격대일 때 「국내 시장
-               *    가격대」 · 🌎 통화가 섞였을 때 「하나의 최저가로 합치지 않습니다」.
-               * 🔴 라벨이 없는 상태(1건 국내 · 단일 통화 해외)는 **헤드라인 자체가**
-               *    그 사실을 말하므로 줄을 **만들지 않는다**(없는 말을 적지 않는다).
+               * 🔴🔴 WU-148 — **그 숫자가 «무엇인지» 를 말한다.** 🟢 🇰🇷 가격대일 때
+               *    「국내 시장 가격대」 · 🌎 통화가 섞였을 때 「하나의 최저가로 합치지
+               *    않습니다」. 🔴 라벨이 없는 상태는 줄을 **만들지 않는다**.
                */}
-              {headLabel && (
+              {head && headLabel && (
                 <p data-testid="price-guide-headline-label" className="text-[11px] text-text-tertiary">
                   {headLabel}
                 </p>
               )}
-              {/**
-               * 🔴🔴🔴 CORE-2E §4-4 — **원화 보조 표시를 여기에 «넣었다가 되돌렸다».**
-               *
-               * 🔴 실측 — `CAD 64` 가 **「약 ₩64」** 로 떴다(`convertToKrw` 는 모르는
-               *    통화를 **그대로 KRW 로 취급** 한다 · `pricing/currency.ts:24`).
-               *    「약」을 붙여도 그것은 **거짓 숫자** 다.
-               * 🔴 그리고 기존 계약 **6건** 이 이 영역 전체에 `₩` 를 금지한다
-               *    (`wu-141-r3`·`wu-144`·`wu-145`·`wu-146`·`wu-148`·`wu-139`).
-               * 🔵 넣으려면 `convertToKrwStrict` + 그 여섯 앵커 갱신이 선행이고
-               *    그것은 **가격 표시 정책** 이라 CPO 판정 사안이다. 사유는
-               *    `mi-same-candidates.ts` 의 §4-4 블록에 적어 뒀다.
-               */}
               {/* 🔴 표본이 하나면 그 사실을 **문장으로** 말한다(1건 ≠ 시장 평균). */}
-              <p data-testid="price-guide-note" className="text-[11px] text-text-tertiary">
-                {g.basis === "SINGLE" ? PRICE_GUIDE_SINGLE_NOTE : PRICE_GUIDE_RANGE_NOTE}
-              </p>
+              {head && (
+                <p data-testid="price-guide-note" className="text-[11px] text-text-tertiary">
+                  {g.basis === "SINGLE" ? PRICE_GUIDE_SINGLE_NOTE : PRICE_GUIDE_RANGE_NOTE}
+                </p>
+              )}
             </>
-          ) : (
-            <p data-testid="price-guide-empty" className="text-[11px] text-text-tertiary">
-              {PRICE_GUIDE_EMPTY}
-            </p>
           )}
         </div>
       )}

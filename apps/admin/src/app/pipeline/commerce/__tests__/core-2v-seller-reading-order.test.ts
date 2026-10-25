@@ -104,8 +104,14 @@ describe("A. 국내 가격 표현 단일화", () => {
      *    중복하지 않음」). 🟢 **이 테스트가 지키는 성질은 그대로** 다 — 결론이
      *    「국내 가격이 없다」로 읽히지 않는 것.
      */
-    expect(first).toContain("국내 참고가격이 확인됐습니다");
-    expect(first).toContain("동일상품 가격으로 확정하지 않습니다");
+    /**
+     * 🔴🔴 **CORE-2AO-R2 — 결론이 상세로 내려갔다**(CPO 2026-10-26 · 「첫 화면 = 판단」).
+     *    🟢 **지키는 성질은 그대로** 다 — 결론이 「국내 가격이 없다」로 읽히지 않는 것 ·
+     *    그 문장이 **사라지지 않은 것**. 🔴 그래서 보존은 **전체 DOM** 으로 문다.
+     */
+    const whole = (ceoScreen().textContent ?? "").replace(/\s+/g, " ");
+    expect(whole).toContain("국내 참고가격이 확인됐습니다");
+    expect(whole).toContain("동일상품 가격으로 확정하지 않습니다");
     /**
      * 🔴🔴 그리고 **금액은 첫 화면에 «한 번만»** 있다 — 그것이 CEO 가 FAIL 로 지목한
      *    바로 그 축이다. 🟢 🇰🇷 블록이 유일한 owner 다.
@@ -125,14 +131,19 @@ describe("A. 국내 가격 표현 단일화", () => {
   });
 
   /** 🔴 §4 — **가격 → 동일상품 확정 여부** 순서를 지킨다. */
-  it("A-3 🔴 가격이 「동일상품 확정 여부」보다 **먼저** 온다", () => {
-    const html = (q(ceoScreen(), "market-block-domestic") as HTMLElement).innerHTML;
-    expect(html.indexOf('data-testid="domestic-lowest"')).toBeLessThan(
-      html.indexOf('data-testid="reference-status"'),
-    );
-    expect(html.indexOf('data-testid="reference-status"')).toBeLessThan(
-      html.indexOf('data-testid="market-empty-domestic"'),
-    );
+  it("A-3 🔴 가격이 「동일상품 확정 여부」보다 **먼저** 온다(이제 층이 다르다)", () => {
+    /**
+     * 🔴🔴 CORE-2AO-R2 — 가격은 **1차**, 확정 여부는 **＋ 상세정보 보기** 안이다 ⟹
+     *    한 블록의 innerHTML 로는 못 잰다. 🟢 **문서 전체 순서** 로 잰다(더 세다 —
+     *    셀러는 확정 여부를 보려면 **접힘을 열어야** 한다).
+     */
+    const html = ceoScreen().innerHTML;
+    const at = (id: string) => html.indexOf(`data-testid="${id}"`);
+    for (const id of ["domestic-lowest", "reference-status", "market-empty-domestic"]) {
+      expect(at(id), `🔴 ${id} 가 사라졌다`).toBeGreaterThan(-1);
+    }
+    expect(at("domestic-lowest")).toBeLessThan(at("reference-status"));
+    expect(at("reference-status")).toBeLessThan(at("market-empty-domestic"));
   });
 
   /**
@@ -211,9 +222,14 @@ describe("B. §8 결론과 근거를 가른다", () => {
     const basisFold = q(ceoScreen(), "price-basis") as HTMLElement;
     expect(basisFold.tagName.toLowerCase(), "🔴 근거 설명이 다시 펼쳐졌다").toBe("details");
     expect(basisFold.querySelector("summary")?.textContent ?? "").toContain(PRICE_BASIS_HEADING);
-    for (const t of [DOMESTIC_REFERENCE_TITLE, MARKET_RESULT_HEADING]) {
-      expect(first).toContain(t);
-    }
+    /**
+     * 🔴🔴 **CORE-2AO-R2 — `MARKET_RESULT_HEADING`(💡 판매 판단)도 상세로 내려갔다.**
+     *    1차에 남는 제목은 **국내 가격 · 해외 소싱가 · 판매가격 가이드** 셋이다.
+     *    🟢 결론이 **사라지지 않았다** 는 것은 전체 DOM 으로 문다.
+     */
+    expect(first).toContain(DOMESTIC_REFERENCE_TITLE);
+    expect((ceoScreen().textContent ?? "").replace(/\s+/g, " ")).toContain(MARKET_RESULT_HEADING);
+    expect(first, "🔴 결론 제목이 1차로 되돌아왔다").not.toContain(MARKET_RESULT_HEADING);
   });
 });
 
@@ -262,9 +278,18 @@ describe("D. 🔴 CPO §9 FAIL 조건", () => {
   });
 
   it("D-2 🔴 「동일상품 0곳」이 가격보다 **먼저 보이지 않는다**", () => {
+    /**
+     * 🔴🔴 CORE-2AO-R2 — 이제 **1차에 아예 없다**(상세로 내려갔다) ⟹ 「먼저 보일」
+     *    길이 구조적으로 없다. 🟢 그 사실을 **그대로** 단언한다(순서보다 강한 조건).
+     */
     const first = firstScreen(ceoScreen());
-    expect(first.indexOf("KRW 88,000")).toBeLessThan(first.indexOf(DOMESTIC_SAME_NOT_CONFIRMED));
-    expect(first.indexOf("KRW 88,000")).toBeLessThan(first.indexOf("동일상품 확인 0곳"));
+    expect(first).toContain("KRW 88,000");
+    expect(first, "🔴 「확정 없음」이 1차로 되돌아왔다").not.toContain(DOMESTIC_SAME_NOT_CONFIRMED);
+    expect(first, "🔴 「동일상품 확인 0곳」이 1차로 되돌아왔다").not.toContain("동일상품 확인 0곳");
+    /** 🟢 단 **사라지지는 않았다** — 상세에 그대로 있다. */
+    const whole = (ceoScreen().textContent ?? "").replace(/\s+/g, " ");
+    expect(whole).toContain(DOMESTIC_SAME_NOT_CONFIRMED);
+    expect(whole).toContain("동일상품 확인 0곳");
   });
 
   it("D-3 🔴 환산 흔적 0 · 통화 합산 0", () => {
@@ -282,9 +307,10 @@ describe("D. 🔴 CPO §9 FAIL 조건", () => {
 describe("E. 🟢 참고가격이 없을 때의 기존 문장은 그대로", () => {
   /** 🔴 **조건부** 다 — 국내 참고가격이 없으면 기존 결론이 그대로 나와야 한다. */
   it("E-1 🟢 국내 참고가격이 없으면 기존 문장 유지(회귀 방지)", () => {
-    const first = firstScreen(mount({ rows: [osSame] }));
-    expect(first).toContain("현재 확인된 국내 동일상품 가격은 없습니다");
-    expect(first).not.toContain("국내는 참고가격으로 확인됐고");
+    /** 🔴 CORE-2AO-R2 — 결론은 **상세** 에 산다. 회귀 방지 축(문장 보존)은 그대로다. */
+    const whole = (mount({ rows: [osSame] }).textContent ?? "").replace(/\s+/g, " ");
+    expect(whole).toContain("현재 확인된 국내 동일상품 가격은 없습니다");
+    expect(whole).not.toContain("국내는 참고가격으로 확인됐고");
   });
 
   /** 🟢 SAME 이 하나도 없으면 근거 접힘 자체가 서지 않는다(빈 틀 금지). */

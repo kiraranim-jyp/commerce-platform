@@ -182,8 +182,9 @@ describe("A. ① MI blocker 는 1차에 노출되지 않는다 (삭제가 아니
     const el = q("mi-same-pending");
     expect(el).not.toBeNull();
     expect(el!.textContent).toContain("1건");
-    /** 🔴 그 줄이 **접힘 밖** 에 있어야 「1차에 남았다」가 참이다. */
-    expect(firstScreenText()).toContain("1건");
+    /** 🔴 CORE-2AO-R2 — 이 문장은 ＋ 상세정보 보기 안으로 «이동» 했다(삭제 0). */
+    expect(flat(), "🔴 건수 줄이 아예 사라졌다").toContain("1건");
+    expect(firstScreenText(), "🔴 건수 줄이 1차로 되돌아왔다").not.toContain("보류·충돌");
   });
 
   it("🔴🔴 A-3 사유는 **2차에 그대로** 있다 — 「지우지 않는다」(CPO 명시)", () => {
@@ -294,7 +295,8 @@ describe("C. ② 셀러가 읽는 결론", () => {
     expect(container.querySelectorAll('[data-testid="seller-decision"]').length).toBe(1);
     /** 🔴 WU-145 의 옛 owner 는 **사라졌다** — 두면 결론이 둘이 된다(STEP 7-2). */
     expect(q("market-price-judgement")).toBeNull();
-    expect(firstScreenText()).toContain("동일상품");
+    /** 🔴 CORE-2AO-R2 — 이 문장은 ＋ 상세정보 보기 안으로 «이동» 했다(삭제 0). */
+    expect(flat()).toContain("동일상품");
     /**
      * 🔴 S1 은 **세 통화** 라 결론이 「확인된 **가격은** …」이다(「확인된 기준가격은」은
      *    단일 통화 분기다). 🟢 1차에 쓴 단언이 그 분기를 혼동했고 FAIL 로 드러났다 —
@@ -370,7 +372,8 @@ describe("D. ② 국내 동일상품 0 일 때", () => {
     expect(kr).not.toContain("USD");
     expect(kr).not.toContain("58");
     /** 🟢 그리고 「없다」로 단정하지 않는다 — 부재와 미발견은 다르다(WU-091 어휘 계약). */
-    expect(kr).toMatch(/찾지 못했습니다|판정된 곳이 없습니다/);
+    /** 🔴 CORE-2AO-R2 — CPO 가 1차를 «가격 세 덩어리»로 좁혔다 ⟹ 이 축은 ＋ 상세정보 보기 안이다(삭제 0 · 이동). */
+    expect(q("market-detail-domestic")!.textContent ?? "").toMatch(/찾지 못했습니다|판정된 곳이 없습니다/);
   });
 
   it("🟢 D-4 순수 함수 축에서도 같다 — owner 가 그 말을 들고 있다", () => {
@@ -439,9 +442,21 @@ describe("F. 1차 화면은 «결론» 이다", () => {
 
   it("🟢🟢 F-2 셀러가 1차에서 **동일상품 → 판매중 → 가격 → 판단** 을 순서대로 읽는다", () => {
     mount(S2);
-    const first = firstScreenText();
-    /** 🔴 WU-146 — 마지막 칸이 **「💡 판매 판단」** 으로 바뀌었다(결론 owner 교체). */
-    const order = [`${SAME_CONFIRMED_COUNT_LABEL} 3곳`, "판매중 확인 1곳", "USD 58", MARKET_RESULT_HEADING];
+    /**
+     * 🔴 WU-146 — 마지막 칸이 **「💡 판매 판단」** 으로 바뀌었다(결론 owner 교체).
+     * 🔴🔴 🔴 CORE-2AO-R2 — CPO 가 1차를 «가격 세 덩어리»로 좁혔다 ⟹ 이 축은 ＋ 상세정보 보기 안이다(삭제 0 · 이동).
+     *    🟢 **읽는 순서 자체는 그대로** 다 — 1차의 금액을 보고 접으면 같은 순서로
+     *       건수·판매중·결론이 이어진다. ⟹ **문서 순서** 로 잰다(접힘 포함).
+     */
+    const first = flat();
+    /**
+     * 🔴🔴 **CORE-2AO-R2 에서 «읽는 순서» 자체가 바뀌었다**(CPO 2026-10-26).
+     *    전: 동일상품 → 판매중 → 가격 → 판단   (조사 → 결론)
+     *    후: **가격** → 동일상품 → 판매중 → 판단 (판단 → 근거)
+     *    🟢 셀러가 **먼저 보는 것이 가격** 이고 나머지는 접힘 안이다 — 그것이
+     *       「첫 화면 = 판단 / 상세 화면 = 근거」의 정의다.
+     */
+    const order = ["USD 58", `${SAME_CONFIRMED_COUNT_LABEL} 3곳`, "판매중 확인 1곳", MARKET_RESULT_HEADING];
     let at = -1;
     for (const part of order) {
       const i = first.indexOf(part);

@@ -293,8 +293,18 @@ describe("B. 🔴 영역 (마운트 DOM)", () => {
      */
     expect(sec("market-block-domestic")!.querySelector('[data-testid="domestic-reference"]')).toBeTruthy();
     expect(sec("mi-same-domestic")!.querySelector('[data-testid="domestic-reference"]')).toBeNull();
+    /**
+     * 🔴🔴 **CORE-2AO-R2 — 구역이 «두 층» 에 선다**(1차 금액 `compact` · 상세 근거
+     *    `evidenceOnly`) ⟹ 영역 전체로 세면 **2** 다. 🟢 이 계약이 지키는 것은
+     *    **「국내 금액이 한 곳에만 있다」** 이므로 **1차 층으로 좁혀** 센다.
+     * 🟢 그리고 **금액 칸은 영역 전체에서도 하나** 다(상세는 금액을 그리지 않는다) —
+     *    같이 단언해 「복제하면 숫자가 둘」 축을 그대로 잠근다.
+     */
     expect(
-      sec("market-price-comparison")!.querySelectorAll('[data-testid="domestic-reference"]').length,
+      sec("market-blocks")!.querySelectorAll('[data-testid="domestic-reference"]').length,
+    ).toBe(1);
+    expect(
+      sec("market-price-comparison")!.querySelectorAll('[data-testid="domestic-lowest"]').length,
     ).toBe(1);
     /**
      * 🔴🔴🔴 **CORE-2S §5-④ — 해외 집계도 1차로 올라갔다. 이 단언이 뒤집혔다.**
@@ -306,8 +316,12 @@ describe("B. 🔴 영역 (마운트 DOM)", () => {
      */
     expect(sec("market-block-overseas")!.querySelector('[data-testid="overseas-reference"]')).toBeTruthy();
     expect(sec("mi-same-overseas")!.querySelector('[data-testid="overseas-reference"]')).toBeNull();
+    /** 🔴 CORE-2AO-R2 — 국내와 **같은 처리**(구역은 두 층 · 금액은 1차 하나). */
     expect(
-      sec("market-price-comparison")!.querySelectorAll('[data-testid="overseas-reference"]').length,
+      sec("market-blocks")!.querySelectorAll('[data-testid="overseas-reference"]').length,
+    ).toBe(1);
+    expect(
+      sec("market-price-comparison")!.querySelectorAll('[data-testid="overseas-lowest"]').length,
     ).toBe(1);
     /** 🔴 아이콘이 겹치지 않는다(wu-056r1 §5 계약 그대로). */
     expect(sec("overseas-reference")!.textContent).toContain("🧾");

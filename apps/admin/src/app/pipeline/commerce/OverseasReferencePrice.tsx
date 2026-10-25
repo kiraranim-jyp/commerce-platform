@@ -52,6 +52,21 @@ export function OverseasReferencePrice({
    *    🔴 이 컴포넌트는 그 **상태를 판단하지 않는다** — 호출부가 넘긴 문장을 그릴 뿐이다.
    */
   statusLine,
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 CORE-2AO-R2 — **첫 화면에서는 «제목 + 금액 + 건수» 셋만 그린다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 CPO(2026-10-26): 「첫 화면 = **판단** · 상세 화면 = **근거**」.
+   *    `note`·`scope`·`statusLine`·`unknownMarketNote` 는 전부 **근거 문장** 이라
+   *    상세로 간다. 🔴 **지우지 않는다** — 호출부가 `variant="DETAIL"` 로 같은
+   *    문장들을 그대로 그린다(그래서 이 컴포넌트에서 삭제 0).
+   * 🟢 `compact` 일 때 금액을 **크게** 키운다 — CEO 가 요구한 「가격 숫자를 가장 크게」.
+   * 🔴 통화를 **기호로 바꾸지 않는다**(ISO 그대로) — `₩` 금지 계약 6건이 유효하다.
+   */
+  compact = false,
+  /** 🔴 `compact` 의 반대편 — 금액을 **빼고** 근거 문장만 그린다(중복 금지). */
+  evidenceOnly = false,
 }: {
   summary?: OverseasPriceSummary | null;
   title?: string;
@@ -63,6 +78,8 @@ export function OverseasReferencePrice({
   sellerCountLabel?: string;
   showTierNote?: boolean;
   statusLine?: string | null;
+  compact?: boolean;
+  evidenceOnly?: boolean;
 }) {
   const view = buildOverseasReference(summary, { sellerCountLabel, showTierNote });
   if (!view) return null;
@@ -77,35 +94,52 @@ export function OverseasReferencePrice({
         {view.tierNote && <span className="text-xs text-muted-foreground">{view.tierNote}</span>}
       </div>
 
-      <ul className="mt-2 space-y-1">
-        {view.lines.map((l) => (
-          <li key={l.currency} className="flex flex-wrap items-baseline gap-x-2">
-            {/* 🔴 통화를 기호로 바꾸지 않는다 — ISO 코드 그대로 적어야 통화를 잃지 않는다. */}
-            <span data-testid={amountTestId} className="font-medium tabular-nums">
-              {l.lowest}
-            </span>
-            <span className="text-xs text-muted-foreground">{l.scope}</span>
-          </li>
-        ))}
-      </ul>
-
-      {/**
-       * 🔴🔴🔴 CORE-2U-A §1·§4 — **가격과 「확정 여부」를 나란히 둔다.**
-       *    🔴 금액 **바로 아래** 가 그 자리다 — note/scope 뒤로 밀면 셀러가 금액만 읽고
-       *       「동일상품 가격」으로 단정한다(2026-09-19 사고의 기전).
-       *    🔴 상태를 **판단하지 않는다** — 호출부가 SAME 유무를 보고 넘긴다.
-       */}
-      {statusLine && (
-        <p data-testid="reference-status" className="mt-2 text-xs font-medium text-text-secondary">
-          {statusLine}
-        </p>
+      {!evidenceOnly && (
+        <ul className="mt-2 space-y-1">
+          {view.lines.map((l) => (
+            <li key={l.currency} className="flex flex-wrap items-baseline gap-x-2">
+              {/* 🔴 통화를 기호로 바꾸지 않는다 — ISO 코드 그대로 적어야 통화를 잃지 않는다. */}
+              <span
+                data-testid={amountTestId}
+                className={
+                  compact
+                    ? "text-lg font-semibold tabular-nums text-text-primary"
+                    : "font-medium tabular-nums"
+                }
+              >
+                {l.lowest}
+              </span>
+              <span className="text-xs text-muted-foreground">{l.scope}</span>
+            </li>
+          ))}
+        </ul>
       )}
+      {/**
+       * 🔴 1차(`compact`)는 **금액까지** 다 — 아래 근거 문장들은 `＋ 상세정보 보기`
+       *    안에서 **같은 컴포넌트가 `evidenceOnly` 로** 그린다(삭제 0 · 중복 0).
+       */}
+      {!compact && (
+        <>
+          {/**
+           * 🔴🔴🔴 CORE-2U-A §1·§4 — **가격과 「확정 여부」를 나란히 둔다.**
+           *    🔴 상태를 **판단하지 않는다** — 호출부가 SAME 유무를 보고 넘긴다.
+           *    🔴🔴 **CORE-2AO-R2 에서 이 줄이 상세로 내려갔다** — 1차에서 금액 바로
+           *       아래에 두던 배치였는데, 1차가 「금액 셋」으로 좁아지면서 근거 축 전체가
+           *       같이 내려갔다. 🟢 금액과 **같은 접힘 안** 에 있어 순서 의미는 유지된다.
+           */}
+          {statusLine && (
+            <p data-testid="reference-status" className="mt-2 text-xs font-medium text-text-secondary">
+              {statusLine}
+            </p>
+          )}
 
-      <p className="mt-2 text-xs text-muted-foreground">{note}</p>
-      {/* 🔴🔴 이 두 문장은 지우지 않는다(테스트가 잠근다). */}
-      <p className="text-xs text-muted-foreground">{scope}</p>
-      {view.unknownMarketNote && (
-        <p className="text-xs text-muted-foreground">{view.unknownMarketNote}</p>
+          <p className="mt-2 text-xs text-muted-foreground">{note}</p>
+          {/* 🔴🔴 이 두 문장은 지우지 않는다(테스트가 잠근다). */}
+          <p className="text-xs text-muted-foreground">{scope}</p>
+          {view.unknownMarketNote && (
+            <p className="text-xs text-muted-foreground">{view.unknownMarketNote}</p>
+          )}
+        </>
       )}
     </section>
   );

@@ -23,6 +23,8 @@ import {
   SAME_CONFIRMED_COUNT_LABEL,
   buildMarketJudgement,
   buildPriceGuide,
+  /** 🟢 CORE-2AO-R2 — 비용 축 owner(상세). */
+  costHoldLines,
   marketDecisionLines,
   /** 🟢 CORE-2AO-R1 — 「금액은 결론이 아니라 **헤드라인** 이 말한다」를 단언하기 위해. */
   marketPriceHeadline,
@@ -154,29 +156,38 @@ describe("A. 🇰🇷 국내 — 가격이 먼저, 판정이 뒤", () => {
    *    가격이 「동일상품 확인 0곳」 **뒤** 에 오면 셀러는 「0 이니까 가격도 없다」로 읽는다.
    *    ⟹ 순서를 되돌리면 이 단언이 FAIL 한다.
    */
-  it("A-2 🔴🔴 🇰🇷 블록 안에서 **가격이 「동일상품 확인」보다 먼저** 온다", () => {
+  /**
+   * 🔴🔴 **CORE-2AO-R2 — 두 줄이 «다른 층» 으로 갈렸다**(CPO 2026-10-26).
+   *    가격은 **1차**, 「동일상품 확인 0곳」은 **＋ 상세정보 보기** 안이다 ⟹ 한 블록
+   *    안의 순서로는 더 못 잰다. 🟢 **지키는 성질은 더 세졌다** — 셀러가 「0곳」을
+   *    보려면 **접힘을 열어야** 하므로 「없다」로 먼저 읽을 길이 구조적으로 없다.
+   */
+  it("A-2 🔴🔴 가격이 「동일상품 확인」보다 **먼저** 온다(이제 층이 다르다)", () => {
     const el = mount({ rows: ROWS, domesticReference: KR_REF });
-    const block = q(el, "market-block-domestic") as HTMLElement;
-    const html = block.innerHTML;
-    const price = html.indexOf('data-testid="domestic-reference"');
+    const html = el.innerHTML;
+    const price = html.indexOf('data-testid="domestic-lowest"');
     const same = html.indexOf('data-testid="market-empty-domestic"');
-    expect(price, "🔴 1차 🇰🇷 블록에 가격이 없다").toBeGreaterThan(-1);
-    expect(same).toBeGreaterThan(-1);
+    expect(price, "🔴 1차에 국내 가격이 없다").toBeGreaterThan(-1);
+    expect(same, "🔴 「동일상품 확인 0곳」이 사라졌다(상세에도 없다)").toBeGreaterThan(-1);
     expect(price, "🔴 「동일상품 확인 0곳」이 가격보다 먼저 온다 — 셀러가 「없다」로 읽는다").toBeLessThan(same);
+    /** 🔴 그리고 그 줄은 **1차에 없어야** 한다(R2 의 핵심). */
+    expect(firstScreen(el)).not.toContain("동일상품 확인 0곳");
   });
 
   /**
    * 🔴 **축의 이름이 붙어 있어야** 두 숫자가 다른 축으로 읽힌다.
    *    수식어 없이 「1곳」과 「0곳」을 나란히 두면 **모순으로 보인다**(§2 의 그 모양).
    */
-  it("A-3 🔴 「🔎 동일상품 확인」 라벨이 가격 줄과 판정 줄을 가른다", () => {
+  it("A-3 🔴 「🔎 동일상품 확인」 라벨이 가격 줄과 판정 줄을 가른다(상세 안)", () => {
     const el = mount({ rows: ROWS, domesticReference: KR_REF });
-    const block = q(el, "market-block-domestic") as HTMLElement;
+    /** 🔴 CORE-2AO-R2 — 이 라벨은 **상세** 로 내려갔다(삭제 0 · 자리만 바뀌었다). */
+    const block = q(el, "market-detail-domestic") as HTMLElement;
     expect(block.textContent).toContain(SAME_CHECK_HEADING);
-    /** 🔴 라벨은 가격 **뒤** · 판정 **앞** 이다(그 사이가 그 라벨의 자리다). */
+    /** 🔴 라벨은 판정 줄 **앞** 이다(그 사이가 그 라벨의 자리다). */
     const html = block.innerHTML;
-    expect(html.indexOf(SAME_CHECK_HEADING)).toBeGreaterThan(html.indexOf('data-testid="domestic-reference"'));
     expect(html.indexOf(SAME_CHECK_HEADING)).toBeLessThan(html.indexOf('data-testid="market-empty-domestic"'));
+    /** 🔴 1차에는 없다 — CPO 제거 목록의 「동일상품 여부에 대한 긴 설명」이다. */
+    expect(firstScreen(el)).not.toContain(SAME_CHECK_HEADING);
   });
 
   /** 🟢 「0곳」이라는 **숫자 자체는 남긴다** — 사실이고, 지우면 WU-145 가 되돌아간다. */
@@ -214,12 +225,14 @@ describe("B. 🌎 해외 — 1차 · 통화 분리", () => {
   });
 
   /** 🔴 **같은 구조** 인지 본다 — 🌎 도 가격이 「동일상품 확인」보다 먼저여야 한다. */
-  it("B-4 🔴 🌎 블록도 **가격 → 판정** 순서다(🇰🇷 와 같은 구조)", () => {
+  it("B-4 🔴 🌎 도 **가격 → 판정** 순서다(🇰🇷 와 같은 구조 · 이제 층이 다르다)", () => {
     const el = mount({ rows: ROWS, overseasReference: OS_REF });
-    const html = (q(el, "market-block-overseas") as HTMLElement).innerHTML;
-    const price = html.indexOf('data-testid="overseas-reference"');
+    /** 🔴 CORE-2AO-R2 — 🇰🇷 와 **같은 처리** 다(A-2 참조). 두 시장이 대칭을 유지한다. */
+    const html = el.innerHTML;
+    const price = html.indexOf('data-testid="overseas-lowest"');
     const same = html.indexOf('data-testid="market-empty-overseas"');
     expect(price).toBeGreaterThan(-1);
+    expect(same).toBeGreaterThan(-1);
     expect(price).toBeLessThan(same);
   });
 });
@@ -498,11 +511,20 @@ describe("F. 🧾 원가 보류 — 「데이터 없음」이 아니다", () => 
       overseasReference: OS_REF,
       costPriceKrw: null,
     });
-    const first = firstScreen(el);
-    expect(first).toContain(NEXT_STEP_HEADING);
-    expect(first).toContain(COST_REQUIRED_NOTE);
-    /** 🔴🔴 **이 줄이 「실패로 보이는 것」을 막는다.** 지우면 UNKNOWN 이 다시 실패로 읽힌다. */
-    expect(first).toContain(COST_REQUIRED_SCOPE);
+    /** 🟢 1차에는 **영역 제목과 한 줄** 만 선다(CORE-2AO-R2). */
+    expect(firstScreen(el)).toContain(NEXT_STEP_HEADING);
+    /**
+     * 🔴🔴 **CORE-2AO-R2 — 원가 보류 두 줄이 상세로 내려갔다**(CPO 제거 목록).
+     *    🟢 **지키는 성질은 그대로** 다 — 두 줄이 **사라지지 않았다**(「실패로 보이는 것」
+     *    을 막는 그 줄이다). 🔴 그래서 **전체 DOM** 으로 보존을 단언한다.
+     */
+    const whole = (el.textContent ?? "").replace(/\s+/g, " ");
+    expect(whole, "🔴 원가 보류 줄이 아예 사라졌다").toContain(COST_REQUIRED_NOTE);
+    expect(whole, "🔴 「실패가 아니다」 줄이 사라졌다 — UNKNOWN 이 실패로 읽힌다").toContain(
+      COST_REQUIRED_SCOPE,
+    );
+    /** 🔴 그리고 1차에는 **없다** — 그것이 R2 가 요구한 것이다. */
+    expect(firstScreen(el)).not.toContain(COST_REQUIRED_NOTE);
   });
 
   /**
@@ -516,19 +538,27 @@ describe("F. 🧾 원가 보류 — 「데이터 없음」이 아니다", () => 
     const el = mount({ rows: ROWS, domesticReference: KR_REF, costPriceKrw: 40000 });
     const area = q(el, "market-next-step");
     expect(area, "🔴 판매가격 판단 영역이 사라졌다").not.toBeNull();
-    const t = area!.textContent ?? "";
-    expect(t, "🔴 원가가 있는데 원가를 또 요구한다").not.toContain("수익성 판단 보류");
-    expect(t).not.toContain("원가가 아직 없어서");
-    /** 🟢 판단 근거 두 줄은 **남아 있어야** 한다. */
-    expect(t).toContain("판매가격을 판단할 수 있습니다");
-    expect(t).toContain("별도로 반영해야");
+    const whole = (el.textContent ?? "").replace(/\s+/g, " ");
+    expect(whole, "🔴 원가가 있는데 원가를 또 요구한다").not.toContain("수익성 판단 보류");
+    expect(whole).not.toContain("원가가 아직 없어서");
+    /**
+     * 🟢 **CORE-2AO-R2 — 판단 근거가 두 층으로 갈렸다**(둘 다 살아 있다):
+     *    1차 = 가이드 한 줄 · 상세 = 비용 축 한 줄.
+     */
+    expect((area!.textContent ?? "").replace(/\s+/g, " ")).toContain(
+      "국내 가격과 해외 소싱가를 기준으로",
+    );
+    expect(whole, "🔴 비용 축 줄이 사라졌다").toContain("별도로 반영해야");
   });
 
   /** 🔴 가격도 없는데 원가를 요구하지 않는다 — 순서가 틀린 요구다. */
   it("F-3 🔴 가격이 없으면 원가를 요구하지 않는다", () => {
-    expect(nextStepLines(false, null)).toEqual([]);
+    /** 🔴 CORE-2AO-R2 — 비용 축이 `costHoldLines` 로 갈렸다(두 owner 를 같이 본다). */
+    expect(nextStepLines(false)).toEqual([]);
+    expect(costHoldLines(false, null)).toEqual([]);
     const el = mount({ rows: [], costPriceKrw: null });
     expect(q(el, "market-next-step")).toBeNull();
+    expect(q(el, "market-cost-hold")).toBeNull();
   });
 
   /** 🔴 **계산하지 않는다** — 추천가·마진·예상수익 어휘가 이 영역에 0 이다(§3 금지축). */
@@ -591,8 +621,16 @@ describe("G. 중복 제거", () => {
     expect((blocks.match(/KRW 88,000/g) ?? []).length).toBe(1);
     expect((blocks.match(/GBP 37/g) ?? []).length).toBe(1);
     expect((blocks.match(/USD 58/g) ?? []).length).toBe(1);
-    expect(el.querySelectorAll('[data-testid="domestic-reference"]').length).toBe(1);
-    expect(el.querySelectorAll('[data-testid="overseas-reference"]').length).toBe(1);
+    /**
+     * 🔴🔴 **CORE-2AO-R2 — 구역이 «두 층» 에 선다**(1차 `compact` · 상세 `evidenceOnly`)
+     *    ⟹ 문서 전체로 세면 **2** 다. 🟢 이 계약이 지키려는 것은 **「1차에서 한 번」**
+     *    이므로 **1차 층으로 범위를 좁혀** 센다.
+     * 🔴 금액 칸(`*-lowest`)으로는 세지 않는다 — **통화마다 하나** 라 해외는 2가 정상이다
+     *    (그렇게 세다가 이 단언이 틀렸고, 그 사실을 여기 적는다).
+     */
+    const summary = q(el, "market-blocks") as HTMLElement;
+    expect(summary.querySelectorAll('[data-testid="domestic-reference"]').length).toBe(1);
+    expect(summary.querySelectorAll('[data-testid="overseas-reference"]').length).toBe(1);
   });
 });
 

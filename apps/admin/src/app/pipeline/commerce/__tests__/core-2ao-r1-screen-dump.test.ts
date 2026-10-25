@@ -142,14 +142,111 @@ describe("CORE-2AO-R1 — 배포 전 화면 실측(마운트 DOM)", () => {
     expect(first).toContain("KRW 88,000");
     expect(first).toContain("GBP 37");
     expect(first).toContain("USD 58");
-    /** 🟢 결론은 「국내 가격 없음」으로 뒤집히지 않았다. */
-    expect(first).toContain("국내 참고가격이 확인됐습니다");
-    /** 🟢 근거 설명은 **접혔을 뿐** 이고 DOM 에 전부 남아 있다. */
+    /** 🟢 근거 문장들은 **접혔을 뿐** 이고 DOM 에 전부 남아 있다(삭제 0). */
     const all = (container.textContent ?? "").replace(/\s+/g, " ");
-    expect(all).toContain("판매처 상세 페이지에서 확인한");
+    for (const kept of [
+      "국내 참고가격이 확인됐습니다",
+      "판매처 상세 페이지에서 확인한",
+      "동일상품으로 확정된 국내 판매처는 없습니다",
+      "배송비·관부가세·수수료·목표마진은 별도로 반영해야",
+      "수익성 판단 보류",
+      "동일상품 판정은 그 판단을 위한 중간 단계입니다",
+    ]) {
+      expect(all, `🔴 상세로 «옮긴» 문장이 아예 사라졌다: ${kept}`).toContain(kept);
+    }
     /** 🔴 추천 판매가·환산은 **여전히 0** 이다(이 WU 가 연 축이 아니다). */
     for (const bad of ["추천 판매가", "권장 판매가", "적정 판매가", "약 ₩"]) {
       expect(all, `🔴 금지 축이 열렸다: ${bad}`).not.toContain(bad);
     }
+  });
+});
+
+/* ══════════ 🔴🔴🔴 CORE-2AO-R2 — **첫 화면 = 판단 / 상세 = 근거** ══════════ */
+
+describe("CORE-2AO-R2 — 첫 화면에 «긴 설명» 이 남아 있지 않다", () => {
+  /**
+   * 🔴 CPO(2026-10-26): 「셀러가 첫 화면에서 알아야 할 건 **3개뿐** 이다.
+   *    나머지는 전부 `＋ 상세정보 보기` 안으로」. 🔴 그 목록을 **글자로** 문다 —
+   *    「짧아졌다」 같은 주관적 기준을 쓰면 다음 사람이 다시 늘린다.
+   */
+  const MUST_NOT_BE_ON_FIRST_SCREEN = [
+    /** ① 동일상품 여부에 대한 긴 설명 */
+    "동일상품 확인 0곳",
+    "동일상품으로 확정된 국내 판매처는 없습니다",
+    /** ② 가격 판단 기준 설명 */
+    "판매처 상세 페이지에서 확인한",
+    /** ③ 통화가 여러 개라는 설명 */
+    "통화가 여러 개라",
+    /** ④ 배송비/관부가세/수수료/마진 */
+    "배송비·관부가세·수수료·목표마진",
+    "수익성 판단 보류",
+    /** ⑤ MI 분석 문장 */
+    "동일상품 판정은 그 판단을 위한 중간 단계입니다",
+    "이 목록은 동일상품으로",
+    /** ⑥ 저장 범위·출처 설명 */
+    "이번 확인에만 쓰이고 저장되지 않습니다",
+    /** ⑦ 표본 설명 */
+    "시장 평균가가 아닙니다",
+  ];
+
+  it("🔴🔴 R2-1 CPO 가 지목한 긴 설명이 **1차에 하나도 없다**", () => {
+    mount();
+    const first = firstScreen();
+    for (const bad of MUST_NOT_BE_ON_FIRST_SCREEN) {
+      expect(first, `🔴 첫 화면에 긴 설명이 남았다: ${bad}`).not.toContain(bad);
+    }
+  });
+
+  it("🟢🟢 R2-2 1차는 **세 블록** 이다 — 국내 · 해외 · 판매가격 가이드", () => {
+    mount();
+    for (const id of ["market-block-domestic", "market-block-overseas", "market-next-step"]) {
+      expect(container.querySelector(`[data-testid="${id}"]`), `🔴 1차 블록이 없다: ${id}`).not.toBeNull();
+    }
+    /** 🔴 **설명문은 최대 1줄** 이다(CPO 명시). */
+    expect(container.querySelectorAll('[data-testid="market-next-step-line"]').length).toBe(1);
+  });
+
+  it("🔴🔴 R2-3 **첫 화면 글자 수가 상세보다 훨씬 적다** — 「판단 화면」의 정의다", () => {
+    mount();
+    const first = firstScreen().length;
+    const whole = (container.textContent ?? "").replace(/\s+/g, " ").trim().length;
+    /**
+     * 🔴 절대값으로 재지 않는다(상품마다 다르다) — **비율** 로 잠근다.
+     *    🟢 실측 기준 1차는 전체의 **10% 대** 다. 25% 를 넘으면 1차가 다시 설명을
+     *       끌어안기 시작한 것이고, 그것이 이 WU 가 되돌리려는 상태다.
+     */
+    expect(first / whole, `🔴 첫 화면이 다시 길어졌다(${first}/${whole})`).toBeLessThan(0.25);
+  });
+
+  it("🟢 R2-4 상세는 **접혀 있다**(`open` 금지) 그리고 근거를 전부 들고 있다", () => {
+    mount();
+    const fold = container.querySelector('[data-testid="price-detail-fold"]') as HTMLElement;
+    expect(fold, "🔴 `＋ 상세정보 보기` 가 없다").not.toBeNull();
+    expect(fold.tagName.toLowerCase()).toBe("details");
+    expect(fold.hasAttribute("open"), "🔴 상세가 펼쳐져 있다").toBe(false);
+    const inside = (fold.textContent ?? "").replace(/\s+/g, " ");
+    for (const kept of MUST_NOT_BE_ON_FIRST_SCREEN) {
+      expect(inside, `🔴 1차에서 뺐는데 상세에도 없다(= 삭제됐다): ${kept}`).toContain(kept);
+    }
+  });
+
+  /**
+   * 🔴🔴 **1차 단언이 틀렸고 CPO 스펙이 맞았다. 적는다.**
+   *    처음엔 「상세에 금액이 **하나도** 없어야 한다」로 썼는데, CPO 가 상세에
+   *    요구한 목록이 **「판매처 · 원통화 가격 · 통화별 최저가」** 다 ⟹ 상세는
+   *    금액을 **가져야** 한다(그것이 「근거」다).
+   * 🟢 그래서 진짜 지켜야 할 성질로 바꾼다 — **집계 금액을 두 층에서 그리지 않는다**
+   *    (1차 요약 블록 ↔ 상세 «근거 블록»). 판매처별 가격 표는 그 축이 아니다.
+   */
+  it("🔴 R2-5 **집계 금액** 은 1차에만 있다 — 상세 근거 블록이 또 그리지 않는다", () => {
+    mount();
+    const detail = container.querySelector('[data-testid="market-detail-blocks"]') as HTMLElement;
+    const inside = (detail.textContent ?? "").replace(/\s+/g, " ");
+    for (const amount of ["KRW 88,000", "GBP 37 · USD 58"]) {
+      expect(inside, `🔴 상세 근거 블록이 집계 금액을 또 그린다: ${amount}`).not.toContain(amount);
+    }
+    /** 🟢 반대로 **판매처별 근거** 는 상세에 있어야 한다(CPO 가 요구한 목록). */
+    const fold = container.querySelector('[data-testid="price-detail-fold"]') as HTMLElement;
+    expect((fold.textContent ?? "").replace(/\s+/g, " ")).toContain("GBP 37");
   });
 });

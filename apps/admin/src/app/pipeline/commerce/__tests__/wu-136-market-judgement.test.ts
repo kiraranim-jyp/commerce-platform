@@ -263,7 +263,11 @@ describe("E. 영역 경계", () => {
   );
 
   it("🔴 E-1 제목이 판매 판단이고 셀러의 말이다", () => {
-    expect(MARKET_JUDGEMENT_TITLE).toContain("시장 판매 판단");
+    /** 🔴 CORE-2AO-R2 — 「시장 판매 판단」 → **「가격 분석」**(CPO 2026-10-26).
+     *    1차가 «가격 세 덩어리»로 좁아져 제목이 그 일을 말한다. 🟢 「판매 판단」은
+     *    결론 영역 이름(`MARKET_RESULT_HEADING`)으로 **살아 있다**(상세 안). */
+    expect(MARKET_JUDGEMENT_TITLE).toContain("가격 분석");
+    expect(MARKET_JUDGEMENT_TITLE, "🔴 셀러의 말이 아니다").not.toMatch(/MI|tier|verdict/);
     expect(src).toContain("MARKET_JUDGEMENT_TITLE");
   });
 

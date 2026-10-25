@@ -250,11 +250,12 @@ describe("C. 🔴🔴🔴 CPO 확정 순서 — 🇰🇷 → 🌎 → 판단 결
 
   it("🔴🔴 C-4 셀러가 **후보 목록을 읽지 않고도** 네 수치를 읽는다(CPO 성공 기준)", async () => {
     await mount({ rows: twoMarkets });
+    /** 🔴 CORE-2AO-R2 — 금액은 **1차**, 건수는 **＋ 상세정보 보기** 안이다(두 자리로 문다). */
     const kr = q("market-block-domestic")!.textContent ?? "";
-    /** 동일상품 수 · 판매중 수 · 확인 가격 · (필요하면) 가격 확인 필요 수. */
-    expect(kr).toContain("동일상품 확인 1곳");
-    expect(kr).toContain("판매중 확인 1곳");
-    expect(kr).toContain("가격 확인 1곳");
+    const krDetail = q("market-detail-domestic")!.textContent ?? "";
+    expect(krDetail).toContain("동일상품 확인 1곳");
+    expect(krDetail).toContain("판매중 확인 1곳");
+    expect(krDetail).toContain("가격 확인 1곳");
     expect(kr).toContain("KRW 88000");
     /** 🔴 환산 0 — 한쪽 통화가 다른 블록에 나타나지 않는다. */
     expect(kr).not.toContain("USD");
@@ -296,7 +297,8 @@ describe("D. 🔴🔴 시장이 비었을 때 — 네 상태가 화면에서 갈
     await mount({
       rows: [sameRow({ market: "KR", priceAmount: null, priceCurrency: null, priceStatus: null })],
     });
-    const kr = q("market-block-domestic")!.textContent ?? "";
+    /** 🔴 CORE-2AO-R2 — 건수는 상세에 있다(삭제 0). */
+    const kr = q("market-detail-domestic")!.textContent ?? "";
     expect(kr).toContain("동일상품 확인 1곳");
     expect(kr).toContain("가격 확인 필요 1곳");
     expect(q("price-guide-headline")).toBeNull();
