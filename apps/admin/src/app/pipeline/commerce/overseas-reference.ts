@@ -118,6 +118,42 @@ export const OVERSEAS_SELLER_COUNT_LABEL = "판매처";
 export const DOMESTIC_REFERENCE_SCOPE =
   "이번 확인에만 쓰이고 저장되지 않습니다 — 새로고침하면 사라집니다.";
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴🔴 CORE-2W — **금액 문자열의 owner 는 «하나» 다.**
+ * ════════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 CPO §4-C 가 **결론 문장에도 금액** 을 넣으라고 했다(「국내 참고가격은 KRW 88,000 으로
+ *    확인됐습니다 …」). 🔴 그런데 포맷을 그 자리에서 다시 쓰면 **블록과 결론이 다른
+ *    글자** 를 낼 수 있다(한쪽만 범위를 적거나 천단위 구분이 갈린다).
+ * 🟢 그래서 **블록이 쓰던 그 식을 함수로 뽑아** 결론도 같은 것을 부른다 — 새 규칙 0.
+ *
+ * 🔴 **1건(또는 같은 금액)을 억지 범위로 만들지 않는다** — `88,000 ~ 88,000` 은 거짓 폭이다.
+ *    🟢 판별은 **금액 비교** 로 한다(건수로 하면 「판매처 2곳인데 같은 가격」이 범위가 된다).
+ * 🔴 환산 **0** · 통화 **혼합 0** · 기호 변환 **0**(ISO 코드 그대로 — `wu-056r1`).
+ */
+export function formatReferenceAmount(
+  currency: string,
+  v: { lowestAmount: number; highestAmount?: number },
+): string {
+  const lo = (v.lowestAmount ?? 0).toLocaleString("ko-KR");
+  const hi = v.highestAmount;
+  const isBand = hi != null && Number.isFinite(hi) && hi > v.lowestAmount;
+  return isBand ? `${currency} ${lo} ~ ${hi.toLocaleString("ko-KR")}` : `${currency} ${lo}`;
+}
+
+/**
+ * 🟢 CORE-2W — 집계 전체를 **한 줄** 로(통화가 여럿이면 `·` 로 나란히). 🔴 **합치지 않는다.**
+ *    🔴 가격이 없으면 `null` — 호출부가 「없는 금액」을 문장에 넣지 못하게 한다.
+ */
+export function referenceAmountSummary(s?: OverseasPriceSummary | null): string | null {
+  if (!s || s.count <= 0) return null;
+  const parts = Object.entries(s.byCurrency)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([currency, v]) => formatReferenceAmount(currency, v));
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
 export interface OverseasReferenceLine {
   /** `EUR` 같은 ISO 코드. 🔴 기호로 바꾸지 않는다(기호는 통화를 잃는다). */
   currency: string;
@@ -193,7 +229,6 @@ export function buildOverseasReference(
     /** 🔴 통화 간 «순서» 를 금액으로 매기지 않는다 — 환산 없이 비교할 수 없다. */
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([currency, v]) => {
-      const n = (v.lowestAmount ?? 0).toLocaleString("ko-KR");
       /**
        * ══════════════════════════════════════════════════════════════════════
        * 🔴🔴🔴 CORE-2T §16 — **「마지막 1미터」가 바로 이 줄이었다.**
@@ -210,13 +245,9 @@ export function buildOverseasReference(
        *    (건수로 하면 「판매처 2곳인데 같은 가격」이 범위가 돼 버린다 · 실측 D4).
        * 🔴 환산 **0** · 통화 **혼합 0** — 범위는 **한 통화 «안»** 에서만 만든다.
        */
-      const hi = v.highestAmount;
-      const isBand = hi != null && Number.isFinite(hi) && hi > v.lowestAmount;
       return {
         currency,
-        lowest: isBand
-          ? `${currency} ${n} ~ ${(hi as number).toLocaleString("ko-KR")}`
-          : `${currency} ${n}`,
+        lowest: formatReferenceAmount(currency, v),
         /**
          * 🔴 `count` 는 **집계에 들어간 수** 다 — 국내는 집계기가 **판매처 단위로 접은
          *    뒤** 세므로 그 값이 「확인 N곳」의 분모로 정확하다(중복이 새어 나오지 않는다).

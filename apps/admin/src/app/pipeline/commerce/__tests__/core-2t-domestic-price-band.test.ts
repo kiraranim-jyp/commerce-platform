@@ -118,11 +118,16 @@ describe("A. 국내 가격 형성대 — 화면", () => {
   });
 
   /** 🔴 §11 — 금액은 **한 번만** 대표로 표시한다. */
-  it("A-3 🔴 같은 금액이 화면에 **반복되지 않는다**", () => {
-    const html = mount({ rows: ROWS, domesticReference: KR_BAND, overseasReference: OS_REF }).innerHTML;
-    expect((html.match(/83,600/g) ?? []).length).toBe(1);
-    expect((html.match(/KRW 83,600 ~ 88,000/g) ?? []).length).toBe(1);
-    expect((html.match(/GBP 37/g) ?? []).length).toBe(1);
+  it("A-3 🔴 **강조된 금액** 이 시장 블록에서 반복되지 않는다", () => {
+    /**
+     * 🔴 **CORE-2W §4-C 에서 범위가 바뀌었다** — 결론 산문이 국내 금액을 **인용** 한다
+     *    (CPO: 「아래 설명에서도 88,000원이 사라지면 FAIL」). 🟢 그래서 **강조 자리** 에서 센다.
+     */
+    const el = mount({ rows: ROWS, domesticReference: KR_BAND, overseasReference: OS_REF });
+    const blocks = text(el, "market-blocks");
+    expect((blocks.match(/83,600/g) ?? []).length).toBe(1);
+    expect((blocks.match(/KRW 83,600 ~ 88,000/g) ?? []).length).toBe(1);
+    expect((blocks.match(/GBP 37/g) ?? []).length).toBe(1);
   });
 
   /** 🔴 §9 — 국내와 해외를 **하나의 가격대로 합치지 않는다**. */

@@ -124,7 +124,14 @@ describe("CORE-2R-5 A — 국내 참고가격이 1차 🇰🇷 블록에 선다"
   it("A-2 🔴 `domestic-reference` 구역이 화면에 **하나뿐** 이다", () => {
     const html = mount({ rows: ROWS, domesticReference: DOMESTIC_REFERENCE });
     expect((html.match(/data-testid="domestic-reference"/g) ?? []).length).toBe(1);
-    expect((html.match(/KRW 88,000/g) ?? []).length).toBe(1);
+    /**
+     * 🔴🔴 **CORE-2W §4-C 에서 범위가 바뀌었다 — 약해지지 않았다.**
+     *    CPO 가 **결론 문장에도 금액** 을 넣으라고 했다(「국내 참고가격은 KRW 88,000 으로
+     *    확인됐습니다」) ⟹ 화면 **전체** 에서 1회를 요구하면 그 지시와 충돌한다.
+     * 🟢 그래서 **강조 자리(시장 블록)** 에서 1회를 단언한다 — 금액 owner 는 거기 하나다.
+     */
+    const blocks = html.slice(html.indexOf('data-testid="market-blocks"'), html.indexOf('data-testid="price-basis"'));
+    expect((blocks.match(/KRW 88,000/g) ?? []).length).toBe(1);
   });
 
   /** 🔴 2차(`▸ MI 상세 분석`)의 국내 집계는 **꺼져 있다** — 옮긴 것이지 복제가 아니다. */

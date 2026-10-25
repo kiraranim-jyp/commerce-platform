@@ -236,8 +236,12 @@ describe("C. 결론이 참고가격을 말한다 — 모순 제거", () => {
     expect(joined).toContain("국내");
     expect(joined).toContain("해외");
     expect(joined).toContain("참고가격");
-    /** 🔴 **확정 가격으로 적지 않는다** — 그것이 참고 축과 SAME 축의 차이다. */
-    expect(joined).toContain("확정된 동일상품 가격은 아닙니다");
+    /**
+     * 🔴 **확정 가격으로 적지 않는다** — 그것이 참고 축과 SAME 축의 차이다.
+     * 🔴 **CORE-2W §4-C 에서 문장이 바뀌었다**(「… 동일상품 가격으로 **확정하지 않습니다**」) —
+     *    뜻은 같고 **CPO 가 준 문장** 이다. 🟢 지키는 성질(「확정이 아니라고 말한다」)은 그대로다.
+     */
+    expect(joined).toContain("동일상품 가격으로 확정하지 않습니다");
   });
 
   /**
@@ -255,18 +259,36 @@ describe("C. 결론이 참고가격을 말한다 — 모순 제거", () => {
     const el = mount({ rows: ROWS, domesticReference: KR_REF, overseasReference: OS_REF });
     const d = text(el, "seller-decision");
     expect(d, "🔴 결론이 참고가격을 말하지 않는다 — 배선이 끊겼다").toContain("참고가격");
-    expect(d).toContain("확정된 동일상품 가격은 아닙니다");
+    expect(d).toContain("동일상품 가격으로 확정하지 않습니다");
     /** 🔴 소스 앵커 — 두 번째 인자를 떼면 FAIL 한다. */
     expect(AREA).toContain("marketDecisionLines(judgement, references)");
     expect(AREA).toContain("priceBasisLines(judgement, references)");
   });
 
-  /** 🔴 **금액을 결론에서 또 적지 않는다** — 금액 owner 는 두 블록 하나다. */
-  it("C-2 🔴 결론 문장에 금액이 **없다**(숫자 중복 금지)", () => {
+  /**
+   * 🔴🔴🔴 **CORE-2W §4-C 가 이 단언을 뒤집었다 — 이유를 적는다.**
+   *
+   * 🔴 CORE-2S 는 「결론에 금액 **0**」을 내 판단으로 걸었다(숫자 중복 방지).
+   * 🔴🔴 **CPO 가 그것을 명시적으로 열었다** — 「`국내 참고가격은 KRW 88,000으로
+   *    확인됐습니다 …`」(§4-C) · 「아래 설명에서도 **88,000원이 사라지면 FAIL**」(§7-A).
+   *    근거는 셀러 행동이다 — **금액을 먼저 기억하고 그 자격을 바로 이해** 해야 한다.
+   * 🟢 그래서 **국내 참고가격 금액은 허용** 하고, **그 외 금액은 계속 금지** 한다
+   *    (해외 금액은 `marketPriceHeadline`·`overseasLowestText` 가 이미 owner 다).
+   * 🔴 그리고 **강조 자리(시장 블록)의 1회 규칙은 그대로** 다(`core-2v A-4` 가 문다).
+   */
+  it("C-2 🔴 결론은 **국내 참고가격 금액만** 적는다(그 외 금액 금지)", () => {
     const d = marketDecisionLines(buildMarketJudgement(ROWS), { domestic: KR_REF, overseas: OS_REF });
     const joined = d.lines.join(" ");
-    for (const n of ["88,000", "88000", "37", "58"]) {
-      expect(joined, `🔴 결론이 금액을 적는다: ${n}`).not.toContain(n);
+    /** 🟢 CPO 가 요구한 그 금액 — 사라지면 FAIL 이다. */
+    expect(joined, "🔴 결론에서 국내 참고가격 금액이 사라졌다(§7-A FAIL)").toContain("KRW 88,000");
+    /**
+     * 🔴 이 fixture 는 **SAME 이 0**(`NO_SAME_WITH_REFERENCE`)이라 해외 가격 문장이
+     *    애초에 서지 않는다 ⟹ 여기서 해외 금액이 나오면 **분기를 잘못 탄 것** 이다.
+     * 🔴 **PRICED 분기에서는 해외 금액이 «정당하게» 선다**(WU-146/148 이 CPO 지시로
+     *    넣었고 계약이 요구한다) — 그 축은 `core-2w W-10` 이 「한 문장에 섞이지 않는다」로 문다.
+     */
+    for (const n of ["GBP 37", "USD 58"]) {
+      expect(joined, `🔴 SAME 0 분기인데 해외 금액이 나왔다: ${n}`).not.toContain(n);
     }
   });
 
@@ -495,12 +517,17 @@ describe("G. 중복 제거", () => {
   });
 
   /** 🔴 **같은 금액이 화면에 한 번만** 뜬다(두 시장 각각). */
-  it("G-3 🔴 금액이 화면에 **한 번만** 뜬다", () => {
+  it("G-3 🔴 **강조된 금액** 이 시장 블록에서 한 번만 뜬다", () => {
     const el = mount({ rows: ROWS, domesticReference: KR_REF, overseasReference: OS_REF });
     const html = el.innerHTML;
-    expect((html.match(/KRW 88,000/g) ?? []).length).toBe(1);
-    expect((html.match(/GBP 37/g) ?? []).length).toBe(1);
-    expect((html.match(/USD 58/g) ?? []).length).toBe(1);
+    /**
+     * 🔴 **CORE-2W §4-C 에서 범위가 바뀌었다** — 결론 산문이 국내 금액을 **인용** 한다.
+     *    🟢 그래서 **강조 자리(시장 블록)** 에서 1회를 단언한다(금액 owner 의 자리).
+     */
+    const blocks = text(el, "market-blocks");
+    expect((blocks.match(/KRW 88,000/g) ?? []).length).toBe(1);
+    expect((blocks.match(/GBP 37/g) ?? []).length).toBe(1);
+    expect((blocks.match(/USD 58/g) ?? []).length).toBe(1);
     expect(el.querySelectorAll('[data-testid="domestic-reference"]').length).toBe(1);
     expect(el.querySelectorAll('[data-testid="overseas-reference"]').length).toBe(1);
   });

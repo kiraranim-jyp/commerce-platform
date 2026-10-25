@@ -220,9 +220,12 @@ describe("§3·§6·§7 — seller-facing 은 하나의 가격 판단", () => {
       ]),
     });
 
-  it("U-1 🔴 국내 금액이 첫 화면에 **한 번만** 뜬다", () => {
-    const html = el().innerHTML;
-    expect((html.match(/KRW 88,000/g) ?? []).length).toBe(1);
+  it("U-1 🔴 **강조된** 국내 금액이 시장 블록에서 한 번만 뜬다", () => {
+    /**
+     * 🔴 **CORE-2W §4-C 에서 범위가 바뀌었다** — 결론 산문이 국내 금액을 **인용** 한다
+     *    (CPO 가 그 문장을 직접 줬다). 🟢 강조 자리(시장 블록)에서 1회를 단언한다.
+     */
+    expect((text(el(), "market-blocks").match(/KRW 88,000/g) ?? []).length).toBe(1);
   });
 
   /**

@@ -12,6 +12,11 @@ import type { GeminiTransientRow } from "./GeminiTransientCandidates";
  *    「있는가 / 몇 곳인가 / 통화가 몇 개인가」로 **읽기만** 한다(환산 0 · 합산 0).
  */
 import type { OverseasPriceSummary } from "./overseas-reference";
+/**
+ * 🔴 CORE-2W §4-C — 결론 문장도 **블록과 «같은 금액 문자열»** 을 쓴다.
+ *    🟢 포맷 owner 는 하나다(그 함수 머리 주석이 이유를 들고 있다) · 환산 0 · 합산 0.
+ */
+import { referenceAmountSummary } from "./overseas-reference";
 /** 🔴 WU-133 — 축의 «말» 은 별 모듈이 소유한다(가드를 엄격하게 유지하기 위해 · 그 파일 머리 주석). */
 import { blockerText } from "./blocker-text";
 
@@ -671,11 +676,19 @@ export function marketDecisionLines(
       };
     }
     const where = markets.join("·");
+    /**
+     * 🔴 CORE-2W §4-C — **금액을 같이 말한다.** 🟢 문자열은 블록이 쓰는 **같은 함수** 로
+     *    만든다(글자가 갈리지 않는다). 🔴 금액이 없으면 그 자리를 **비운다**(지어내지 않는다).
+     */
+    const krAmount = referenceAmountSummary(refs?.domestic);
     return {
       kind: "NO_SAME_WITH_REFERENCE",
       lines: [
-        `동일상품으로 확정된 판매처는 아직 없지만, ${where}에서 같은 상품으로 보이는 판매처의 가격은 확인됐습니다.`,
-        `지금의 시장가격 판단 근거는 위 ${where} 블록의 참고가격입니다 — 확정된 동일상품 가격은 아닙니다.`,
+        krAmount
+          ? `${MARKET_PLAIN_NAME.KR} 참고가격은 ${krAmount} 으로 확인됐습니다.`
+          : `${where}에서 같은 상품으로 보이는 판매처의 가격은 확인됐습니다.`,
+        `다만 현재 동일상품으로 확정된 판매처는 없어, 동일상품 가격으로 확정하지 않습니다.`,
+        `지금의 시장가격 판단 근거는 위 ${where} 블록의 참고가격입니다.`,
       ],
     };
   }
@@ -765,9 +778,22 @@ export function marketDecisionLines(
      * 🔴 금액을 **적지 않는다** — 금액 owner 는 🇰🇷/🌎 블록 하나다(숫자 중복 금지).
      */
     if (hasReferencePrice(refs?.domestic)) {
+      /**
+       * 🔴🔴🔴 CORE-2W §4-C — **결론이 «금액까지» 말한다.**
+       *
+       * 🔴 CPO: 「`국내 참고가격은 KRW 88,000으로 확인됐습니다. 다만 현재 동일상품으로
+       *    확정된 국내 판매처는 없어, 동일상품 가격으로 확정하지 않습니다.`」 ·
+       *    「아래 설명에서도 **88,000원이 사라지거나 『가격 없음』으로 뒤집히면 FAIL**」(§7-A).
+       * 🟢 그래서 CORE-2V 의 「금액 0」 방침을 **이 한 자리에서만** 연다 — 금액 «문자열» 은
+       *    블록이 쓰는 **같은 함수**(`referenceAmountSummary`)로 만든다(글자가 갈리지 않는다).
+       * 🔴 「가격이 없습니다」류는 **쓰지 않는다**(§6 금지 목록).
+       */
+      const amount = referenceAmountSummary(refs?.domestic);
       lines.push(
-        "국내는 참고가격으로 확인됐고, 동일상품으로 확정된 판매처는 아직 없습니다.",
-        "해외에서 확인된 동일상품 가격과 함께 참고할 수 있습니다.",
+        amount
+          ? `${MARKET_PLAIN_NAME.KR} 참고가격은 ${amount} 으로 확인됐습니다.`
+          : `${MARKET_PLAIN_NAME.KR} 참고가격이 확인됐습니다.`,
+        "다만 현재 동일상품으로 확정된 국내 판매처는 없어, 동일상품 가격으로 확정하지 않습니다.",
       );
     } else {
       lines.push(
@@ -1314,8 +1340,18 @@ export const PRICE_BASIS_SAME_LINE = "동일상품으로 판정된 판매처의 
  *    🔴 「유사상품」이라는 등급 어휘를 쓰지 않는다(`TIER_LABEL` 의 말이고 내부 축이다) —
  *       셀러의 말로 **「같은 상품으로 보이는」** 이라고 적는다.
  */
+/**
+ * 🔴🔴🔴 CORE-2W §4-B — **이 문장이 「동일상품 가격을 기준으로 쓴다」와 충돌했다.**
+ *
+ * 🔴 CEO 캡처 실측 — 🇰🇷 에 「국내 참고가격 KRW 88,000」이 떠 있는데 바로 아래
+ *    「💡 가격 판단 기준」이 **「동일상품으로 판정된 판매처의 가격을 기준으로 씁니다」**
+ *    만 말했다. 원인은 그 둘이 **배타적 분기** 였던 것이다(`sameHasPrice ? A : B`) —
+ *    해외에 SAME 가격이 있으면 `A` 가 이기고 **국내 참고가격의 «성질» 이 사라졌다**.
+ * 🟢 이제 **둘 다 말한다**(아래 함수) — 축이 둘이면 설명도 둘이다.
+ * 🔴 핵심은 하나다: **참고가격 ≠ SAME 가격.**
+ */
 export const PRICE_BASIS_REFERENCE_LINE =
-  "국내 참고가격은 현재 확보된 국내 판매처의 가격을 참고한 값이며, 동일상품으로 확정된 가격만을 의미하지 않습니다.";
+  "국내 참고가격은 판매처 상세 페이지에서 확인한 실제 표시 가격입니다 — 동일상품 확정 가격과는 별도로 참고합니다.";
 /** 🔴 환산 금지를 **셀러에게도** 말한다 — 안 적으면 두 통화를 비교해도 되는 줄 안다. */
 export const PRICE_BASIS_CURRENCY_LINE =
   "통화가 다른 가격은 환산하지 않고 통화별로 따로 적습니다.";
@@ -1340,7 +1376,17 @@ export function priceBasisLines(
   if (!sameHasPrice && refMarkets.length === 0) return [];
 
   const lines = [PRICE_BASIS_SOURCE_LINE];
-  lines.push(sameHasPrice ? PRICE_BASIS_SAME_LINE : PRICE_BASIS_REFERENCE_LINE);
+  /**
+   * 🔴🔴🔴 CORE-2W §4-B — **배타적 분기(`? :`)를 «둘 다» 로 바꿨다.**
+   *
+   * 🔴 전까지 `sameHasPrice ? SAME_LINE : REFERENCE_LINE` 이었다 ⟹ 해외에 SAME 가격이
+   *    있으면 SAME_LINE 이 이기고 **국내 참고가격의 성질 설명이 사라졌다**. 그래서 셀러가
+   *    「88,000 은 동일상품 가격인가?」를 **화면만 보고 알 수 없었다**(CPO 지적 그대로).
+   * 🟢 축이 **둘이면 설명도 둘** 이다 — 어느 쪽도 다른 쪽을 지우지 않는다.
+   * 🔴 순서는 **SAME 먼저 · 참고 나중** 이다(확정된 것이 더 강한 근거다).
+   */
+  if (sameHasPrice) lines.push(PRICE_BASIS_SAME_LINE);
+  if (refMarkets.length > 0) lines.push(PRICE_BASIS_REFERENCE_LINE);
 
   /** 🔴 통화 개수는 **두 축을 합쳐** 센다 — SAME 축과 참고 축이 다른 통화일 수 있다. */
   const currencies = new Set<string>(j.byCurrency.map((c) => c.currency));
