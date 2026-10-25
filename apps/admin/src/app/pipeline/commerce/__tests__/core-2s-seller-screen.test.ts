@@ -456,9 +456,23 @@ describe("F. 🧾 원가 보류 — 「데이터 없음」이 아니다", () => 
     expect(first).toContain(COST_REQUIRED_SCOPE);
   });
 
-  it("F-2 🟢 원가가 있으면 그 줄이 **사라진다**(상태 기반)", () => {
+  /**
+   * 🔴🔴 CORE-2AO ⒝ — **영역은 남고 「원가 보류」 두 줄만 사라진다.**
+   *    전에는 영역 자체가 사라졌다. 그런데 그 영역이 이제 **「💡 판매가격 판단」** 이고
+   *    CPO 가 요구한 **판단 근거 두 줄**(무엇으로 판단하는가 · 무엇을 더해야 하는가)을
+   *    **원가 유무와 무관하게** 말한다 ⟹ 🟢 앵커를 **더 좁게** 갱신한다
+   *    (영역 존재가 아니라 **그 두 줄의 부재** 를 단언한다).
+   */
+  it("F-2 🟢 원가가 있으면 **「원가 보류」 줄만** 사라진다(영역은 남는다)", () => {
     const el = mount({ rows: ROWS, domesticReference: KR_REF, costPriceKrw: 40000 });
-    expect(q(el, "market-next-step")).toBeNull();
+    const area = q(el, "market-next-step");
+    expect(area, "🔴 판매가격 판단 영역이 사라졌다").not.toBeNull();
+    const t = area!.textContent ?? "";
+    expect(t, "🔴 원가가 있는데 원가를 또 요구한다").not.toContain("수익성 판단 보류");
+    expect(t).not.toContain("원가가 아직 없어서");
+    /** 🟢 판단 근거 두 줄은 **남아 있어야** 한다. */
+    expect(t).toContain("판매가격을 판단할 수 있습니다");
+    expect(t).toContain("별도로 반영해야");
   });
 
   /** 🔴 가격도 없는데 원가를 요구하지 않는다 — 순서가 틀린 요구다. */

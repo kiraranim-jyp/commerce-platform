@@ -1419,19 +1419,45 @@ export function priceBasisLines(
  * 🔴 그리고 **가격이 있을 때만** 말한다 — 가격도 없는 상태에서 「원가를 입력하세요」는
  *    순서가 틀린 요구다(그때의 결론은 `marketDecisionLines` 가 이미 말한다).
  */
-export const NEXT_STEP_HEADING = "🧾 현재 판단";
+/**
+ * ══════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴 CORE-2AO ⒝ — **이 영역이 「판매가격 판단」 이라고 말한다**(CPO 확정 2026-10-25)
+ * ══════════════════════════════════════════════════════════════════════════════
+ *
+ * 🟢 CPO 가 요구한 최종 화면은 「🇰🇷 국내 참고가격 → 🌎 해외 최저 소싱가 →
+ *    💡 **판매가격 판단**」이다. 🔴 전 제목(「🧾 현재 판단」)은 **무엇을 판단하는지**
+ *    를 말하지 않아 셀러가 그 영역의 목적을 읽을 수 없었다.
+ * 🔴 **추천 판매가를 계산하지 않는다**(CPO §5) — 이 영역은 **근거를 모아 두는 자리** 다.
+ */
+export const NEXT_STEP_HEADING = "💡 판매가격 판단";
+/**
+ * 🔴🔴 **가격이 있으면 «항상» 서는 줄.** 원가 유무와 무관하다 —
+ *    셀러가 지금 무엇을 가지고 무엇을 더해야 하는지를 한 문장으로 말한다.
+ * 🔴 「동일상품 가격」이라고 적지 않는다 — 국내 분모에 `COMPARISON` 이 들어 있다
+ *    (CPO: 「국내 참고가격과 동일상품 가격 근거를 같은 의미로 쓰지 않는다」).
+ */
+export const PRICE_DECISION_BASIS =
+  "국내 참고가격과 해외 최저 소싱가를 함께 확인해 판매가격을 판단할 수 있습니다.";
+/** 🔴 계산하지 않는 것을 **먼저** 말한다 — 이 줄이 없으면 위 숫자가 「판매가」로 읽힌다. */
+export const PRICE_DECISION_COST_AXIS =
+  "배송비·관부가세·수수료·목표마진은 별도로 반영해야 최종 판매가격이 됩니다.";
 export const COST_REQUIRED_NOTE =
   "수익성 판단 보류 — 매입 원가를 입력하면 위 시장가격을 기준으로 예상 수익을 계산합니다.";
 /** 🔴🔴 **이 줄이 「실패로 보이는 것」을 막는다.** 지우면 UNKNOWN 이 다시 실패로 읽힌다. */
 export const COST_REQUIRED_SCOPE =
   "시장가격을 찾지 못한 것이 아닙니다 — 원가가 아직 없어서 수익 계산만 남은 상태입니다.";
 
-/** 🟢 가격이 있고 원가가 없을 때만 두 줄. 그 외에는 **빈 배열**(칸을 만들지 않는다). */
+/**
+ * 🟢 가격이 **있을 때만** 선다. 그 외에는 **빈 배열**(칸을 만들지 않는다).
+ * 🔴 순서가 의미다 — ① 무엇으로 판단하는가 ② 무엇을 더해야 하는가
+ *    ③ 원가가 없으면 그 사실(기존 두 줄 · 글자 불변).
+ */
 export function nextStepLines(
   hasMarketPrice: boolean,
   costPriceKrw?: number | null,
 ): string[] {
   if (!hasMarketPrice) return [];
-  if (costPriceKrw != null) return [];
-  return [COST_REQUIRED_NOTE, COST_REQUIRED_SCOPE];
+  const basis = [PRICE_DECISION_BASIS, PRICE_DECISION_COST_AXIS];
+  if (costPriceKrw != null) return basis;
+  return [...basis, COST_REQUIRED_NOTE, COST_REQUIRED_SCOPE];
 }
