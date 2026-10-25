@@ -1,0 +1,42 @@
+{
+  "_note": "CORE-2AJ — CEO 육안 GT 4/4. 🔴 **URL 키** 로 고정한다(WU-095 교훈: 인덱스 금지).",
+  "_source": "CEO 판정 2026-10-25 · artifact 779dfa76-5cc0-4bfc-ba19-91e66c6ce3a5",
+  "_scope": "🔴 원상품은 B226AC009 / B226AC010 둘뿐이다. 다른 원상품 측정에 끌어오지 않는다.",
+  "_shape": "🔴 넷 다 동일 조건이다 — 품번 없음 · TITLE_STRONG · CHILD↔BABY · GARMENT t-shirt↔t-shirt",
+  "_why_it_matters": "🔴 이 넷이 CORE-2AI 가 못 찾은 「직접 반례의 자리」였고, CEO 는 **4/4 SAME** 이라 했다 ⟹ 반례가 아니라 **positive** 다.",
+  "counts": { "SAME": 4, "DIFFERENT": 0, "UNCERTAIN": 0, "total": 4 },
+  "candidates": [
+    {
+      "n": 1,
+      "originCode": "B226AC009",
+      "domain": "cissywears.com",
+      "url": "https://cissywears.com/products/bobo-choses-babyhug-hairy-monster-t-shirt",
+      "verdict": "SAME",
+      "reason": "원상품 Kids ↔ 후보 Baby 여기만 다르다, 나머지 다 똑같음 단, baby"
+    },
+    {
+      "n": 2,
+      "originCode": "B226AC010",
+      "domain": "cissywears.com",
+      "url": "https://cissywears.com/products/bobo-choses-baby-booty-ghosts-t-shirt",
+      "verdict": "SAME",
+      "reason": "원상품 Kids ↔ 후보 Baby 여기만 다르다, 나머지 다 똑같음 단, baby"
+    },
+    {
+      "n": 3,
+      "originCode": "B226AC009",
+      "domain": "kolkid.ca",
+      "url": "https://kolkid.ca/products/bobo-choses-baby-hug-hairy-monster-t-shirt",
+      "verdict": "SAME",
+      "reason": "원상품 Kids ↔ 후보 Baby 여기만 다르다, 나머지 다 똑같음 단, baby"
+    },
+    {
+      "n": 4,
+      "originCode": "B226AC009",
+      "domain": "cemarose.ca",
+      "url": "https://cemarose.ca/products/bobo-choses-baby-hug-hairy-monster-t-shirt-light-blue-c7883",
+      "verdict": "SAME",
+      "reason": "원상품 Kids ↔ 후보 Baby 여기만 다르다, 나머지 다 똑같음 단, baby"
+    }
+  ]
+}
