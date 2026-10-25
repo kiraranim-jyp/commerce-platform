@@ -26,6 +26,8 @@ import {
   MI_SAME_EXCLUSION_TEXT,
   MI_SAME_OVERSEAS_HEADING,
   MI_DETAIL_FOLD_LABEL,
+  /** 🔴 CORE-2V §8 — 결론과 근거 수치를 가르는 접힘의 이름. */
+  MARKET_EVIDENCE_FOLD_LABEL,
   MARKET_JUDGEMENT_NOTE,
   MARKET_JUDGEMENT_TITLE,
   MARKET_LABEL,
@@ -343,7 +345,27 @@ export function MarketPriceComparison({
          * 🔴 **결론 owner 는 하나** 라는 `wu-146` STEP 7-2 계약이 이것으로 더 강해진다.
          */}
         {judgement.sellers.length > 0 && (
-          <>
+          /**
+           * ══════════════════════════════════════════════════════════════════
+           * 🔴🔴🔴 CORE-2V §2·§3·§8 — **근거 수치가 «접힘» 으로 내려갔다**(삭제 0)
+           * ══════════════════════════════════════════════════════════════════
+           *
+           * 🔴 CEO 캡처 실측 — 이 네 줄(`market-sale-counts` · `market-split` ·
+           *    `market-price-range` · `market-seller-table`)이 **1차에 펼쳐져 있었다**.
+           *    그래서 ⒜ 🌎 블록의 「최저 확인가 GBP 37 · USD 58」이 **아래에서 또**
+           *    「GBP 37 (3곳 …)」로 반복됐고(§2 가격 숫자 중복) ⒝ 결론이 **근거 표에
+           *    묻혔다**(§3·§8 — 셀러가 아래까지 내려가야 핵심을 본다).
+           * 🟢 **한 글자도 지우지 않았다** — `data-testid` 넷이 그대로 있고 계약
+           *    (`wu-140`·`wu-136-render`·`wu-146` Q6)이 계속 그 값을 읽는다
+           *    (React 는 닫힌 `details` 의 자식도 렌더한다).
+           * 🔴 **`open` 을 붙이지 않는다** — 붙이면 1차로 되돌아온다(2026-09-19 사고의 기전).
+           * 🔴 JSX 를 **옮기지 않았다** — 옮기면 이 블록의 조건·순서 계약이 흔들린다.
+           *    바꾼 것은 **감싼 것 하나** 다.
+           */
+          <details data-testid="market-evidence-fold" className="mt-1">
+            <summary className="cursor-pointer text-[11px] text-text-tertiary">
+              ▸ {MARKET_EVIDENCE_FOLD_LABEL}
+            </summary>
             {/**
              * 🔴🔴 「판매중 N곳」은 **ON_SALE 만** 센 숫자다. 미확인·품절을 **같은 줄에**
              *    적어 그 분모를 숨기지 않는다 — 실측(호스트 9)에서 **7곳이 재고 칸을
@@ -450,7 +472,7 @@ export function MarketPriceComparison({
                 ))}
               </tbody>
             </table>
-          </>
+          </details>
         )}
       </div>
 
@@ -709,8 +731,21 @@ function MarketBlock({
                    */
                   statusLine: DOMESTIC_SAME_NOT_CONFIRMED,
                 }
-              : /** 🔴 해외는 **기본값 그대로** — 「🧾 해외 동일상품 참고가격」·「판매처 N곳」(§9). */
-                {})}
+              : {
+                  /**
+                   * 🔴🔴🔴 CORE-2V §5 — **해외의 「유사상품 1」도 끈다**(CPO 가 이번에 명시).
+                   *
+                   * 🔴 CORE-2U 에서 이것을 **CPO 판정으로 올려 두었다** — 제목이
+                   *    「해외 **동일상품** 참고가격」인데 `tierNote` 가 「동일상품 1 ·
+                   *    **유사상품 1**」이라 **국내와 같은 성질의 모순** 이었다.
+                   * 🟢 CORE-2V §5 가 `유사상품 1` 을 **핵심 가격 영역에서 제거** 하라고
+                   *    명시했고 **시장을 가르지 않았다** ⟹ 해외에도 적용한다.
+                   * 🔴 **가격 숫자·통화·집계는 한 글자도 안 바뀐다** — 등급 «분포 라벨» 만
+                   *    꺼진다(§9 가 금지한 「해외 가격」은 로직/숫자다).
+                   * 🟢 등급 분포는 `▸ MI 상세 분석` 이 계속 들고 있다(삭제 0).
+                   */
+                  showTierNote: false,
+                })}
           />
           <p className="mt-2 text-[11px] font-medium text-text-secondary">{SAME_CHECK_HEADING}</p>
           <p data-testid={`market-empty-${suffix}`} className="text-[11px] text-text-tertiary">
