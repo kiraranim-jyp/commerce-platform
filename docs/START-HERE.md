@@ -10,15 +10,57 @@
 ## 1. CURRENT STATE
 
 ```
-현재        🟢🟢 **CORE-2AA(VERIFIED_SAME 가격 자격 배선) 구현·배포 완료** — §6-AA
+현재        🟡 **CORE-2AI CLOSED — 다음 WU 는 «CPO 발행 대기» 다**(2026-10-25)
+            🔴 CTO 가 할 코드 작업이 **없다.** 선제적으로 WU 를 만들지 않는다
+            🟢 CORE-2AA(VERIFIED_SAME 가격 자격 배선) 배포 완료 — §6-AA
+            🟢 CORE-2AC(PLAIN_HTML parity) 배포 · 🔵 2AB·2AD·2AE·2AF·2AG·2AH·2AI 조사(운영 0)
             🟢 CORE-2S/2T/2U-A/2V/2W(셀러 화면) CLOSED · 2X(STOP-C) · 2Y(PASS-Y) · 2Z(PASS)
-            🟢 CORE-2R(수집→전달) CLOSED · 데이터 엔진 축 동결(CPO 2026-10-22)
-main        clean · origin 0 / 0 · `6bf1f75b`
-deploy      🟢 Ready (`ttaejyo-qs8frqjgm`) · HTTP 200 / 307 / 401
+main        clean · origin 0 / 0 · `61b2740a`
+deploy      🟢 Ready (`ttaejyo-bvqoqqjqt` · CORE-2AC) · HTTP 200 / 307 / 401
 typecheck   PASS (0)      build PASS (exit 0)
-regression  apps/admin **661 files / 9,091 passed / 0 failed**
+regression  apps/admin **669 files / 9,127 passed / 0 failed**
             🔴 `packages/crawler/.../p54c1-grounding-redirect`(라이브 네트워크) 1건은
                **CPO 가 합산 제외** 한 baseline 이고 이 트랙과 무관하다
+```
+
+### 🔵 1-SI3. **다음 WU 가 들어오기 전에 알아야 하는 것 — SI-3 트랙 요약**
+
+🔴🔴 **재조사 금지.** 2AB~2AI 가 닫은 것을 다시 열지 않는다. 전문은 각 커밋 메시지.
+
+```
+SI-3 정의   「TITLE 축 2점(STRONG_TITLE_OVERLAP) 이면 AUDIENCE_LINE 을 비차단으로」
+            🔴 **운영에 넣지 않았다**(CPO 2026-10-25 · 「⒜ 품번 없을 때만」도 보류)
+측정 결과   WU-143 false SAME 재발 **0/5** · SI-3 가 만든 누출 **0** · 회수 **1**(kids21)
+            누적 CEO GT **36건** · fixture 순서쌍 **930** · 공식몰 같은그래픽 **108쌍**
+            ⟹ 🔴 직접 반례(CEO DIFFERENT + GARMENT 같음) **0건**
+
+🔴🔴 **그리고 그 0 의 «이유» 가 구조적이다** — 이것이 2AI 의 핵심이다:
+  공식몰 AB/AC 108쌍 = **108/108 MODEL_CODE conflict** ⟹ **조기 반환**(axes: []) ⟹
+  TITLE 축이 **계산조차 되지 않는다** ⟹ SI-3 이 **발화할 수 없다**
+  ⟹ SI-3 의 사정거리는 **「후보에 브랜드 품번이 없을 때」** 뿐이다(kids21 · cissywears)
+  🔴 CPO: 「108/108 이 막힌다고 남은 영역의 false SAME 이 없다는 뜻은 아니다」
+
+차단 구조   CEO SAME 8건을 막는 것은 **전부 blocker/conflict** 다(점수 부족은 1건뿐) —
+            AUDIENCE_LINE 2 · MODEL_CODE conflict 2 · NO_TITLE_OVERLAP 2 ·
+            BRAND_MISMATCH 1 · BRAND_UNCONFIRMED 1 · 증거부재 1(stockmann)
+            🟢 `kids21` 은 corePoints **5** 로 문턱을 **이미 충족** 했고 blocker 하나만 걸린다
+
+🔴 다시 열지 않는 것 — AUDIENCE_LINE 제거/완화 · GARMENT_FORM 조건 추가 ·
+   SAME_MIN_AXES · corePoints 산식 · TITLE partial 점수 · crossSellerReserved ·
+   MODEL_CODE conflict · compareMaterial(소재 어휘 정규화는 **CPO 판정 대기**)
+🟡 CPO 가 승인한 다음 방향 = ⒝ **품번 없는 리테일러 축에서 신규 표본 수집**
+   🔴 그 WU 는 **CPO 가 발행한다.** CTO 가 먼저 착수하지 않는다
+```
+
+🟢 **CI 에 상주하는 회귀(네트워크 0 · 다음 세션이 믿고 쓸 것)**
+```
+core-2aa  17  국내 가격 회귀 — KRW 59,000~88,000 · 3곳 · sellerKey dedupe
+core-2af   4  WU-143 false SAME 5쌍 — SI-1/2/3 재발 0/5
+core-2ab   3  PLAIN_HTML 빈 칸 **다섯** + Shopify 비대칭
+core-2ac   8  parity 세 칸 범위(🔴 소재는 «채우지 않는다» 가 계약이다)
+core-2ad   5  corePoints 산식 바이트 고정   core-2ae 5  AUDIENCE_LINE 발화 경로
+core-2ag   4  표본 출처/SI-3 정의          core-2ah 3  GT 합집합  core-2ai 4  반례 모양
+🔴 라이브 축은 환경변수로만 돈다 — CORE2Z/2AB/2AC/2AD/2AE/2AF/2AG/2AH/2AI_LIVE=1
 ```
 
 🔴🔴🔴 **이 트랙의 축이 «갈렸다». 다음 세션은 이 문장부터 읽는다**(CPO 2026-10-25):
