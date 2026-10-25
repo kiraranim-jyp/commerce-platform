@@ -16,12 +16,15 @@
             🟢 CORE-2AA(VERIFIED_SAME 가격 자격 배선) 배포 완료 — §6-AA
             🟢 CORE-2AC(PLAIN_HTML parity) 배포 · 🔵 2AB·2AD·2AE·2AF·2AG·2AH·2AI 조사(운영 0)
             🟢 CORE-2S/2T/2U-A/2V/2W(셀러 화면) CLOSED · 2X(STOP-C) · 2Y(PASS-Y) · 2Z(PASS)
-main        clean · origin 0 / 0 · `ea4391ba`
-deploy      🟢 Ready (CORE-2AO-R1) · HTTP 200 / 307 / 401
+main        clean · origin 0 / 0 · `6734dc77`
+deploy      🟢 Ready · 배포 커밋 **`95d012b`**(CORE-2AO-R2) · HTTP 200 / 307 / 401
+            🔴 그 뒤 커밋 둘은 **docs 전용** 이라 화면은 그대로다
 typecheck   PASS (0)      build PASS (exit 0)
-regression  apps/admin **674 files / 9,150 passed / 0 failed**
-            🔴 `packages/crawler/.../p54c1-grounding-redirect`(라이브 네트워크) 1건은
-               **CPO 가 합산 제외** 한 baseline 이고 이 트랙과 무관하다
+regression  apps/admin **673 files / 9,154 passed**
+            🔴 라이브 네트워크 하니스 **2건이 병렬에서 간헐 FAIL · 단독 PASS** 다 —
+               `p54c1-grounding-redirect`(CPO 가 합산 제외한 baseline) ·
+               `core-2m-visual-review-build`(외부 사이트 의존 · `packages/` 변경 0)
+            🔴 숨기지 않는다 — 전체 실행 한 번이 그 1건을 포함한 채 끝났다
 ```
 
 ### 🔴🔴🔴 1-AO. **CORE-2AO-R1 이 남긴 교훈 — 이것부터 읽는다**
@@ -95,8 +98,10 @@ SAME 축   🔴 **여기가 유일하게 남은 문제다** —
              다음 범위는 **CPO 가 지정** 한다. CTO 가 threshold/8축/crossSellerReserved 로 되돌아가지 않는다
 ```
 
-🟡 **지금 막혀 있는 것은 하나 — CEO 화면 확인 1회**(§6-AA 끝).
-🔵 그 뒤 범위는 **CPO 가 지정한다.** 🔴 CTO 가 할 코드 작업이 없다.
+🔵 **[갱신 2026-10-26] 지금 할 일은 «CEO 확인» 이 아니라 «구현» 이다 — §6-NEXT.**
+🔴 위 「CEO 화면 확인 1회」는 **CORE-2AA 시점의 상태** 였다. CPO 가 그 뒤
+   CORE-2AO ⒝ · R1 · R2 를 지시했고 지금은 **CORE-NEXT STEP 4 착수 대기** 다.
+🔴 **CEO Action 은 현재 없다** — STEP 4 배포 뒤 5문 확인 1회로 한 번에 닫는다.
 
 🔴🔴 **WU-150 이 3일짜리 질문에 답했다** — 전문 `docs/HANDOFF-WU-150.md`:
 ```
@@ -300,7 +305,13 @@ B      패널 응답 `data?.recommendation` = {recommendedPrice, estimatedMargin
 
 ---
 
-## 6-AO. 🟡 **CORE-2AO + R1 — 표시만 조립했다 · CEO 확인 1회 대기**(`ea4391ba`)
+## 6-AO. 🟢 [종료] **CORE-2AO ⒝ + R1 + R2 — 셀러 화면 조립 완료**(배포 `95d012b`)
+
+> 🔵 **현재 좌표는 §6-NEXT 다.** 이 절은 **종료된 기록** 이다(CEO 확인은 STEP 4 뒤로 합친다).
+> 🟢 R2 1차 화면 실측 — `📊 가격 분석 / 🇰🇷 국내 참고가격 KRW 88,000 확인 1곳 /
+> 🌎 해외 최저 소싱가 최저 확인가 GBP 37 · USD 58 / 💡 판매가격 가이드 1줄 / ＋ 상세정보 보기`
+> (첫 화면 글자 비중 **전체의 약 13%** · 계약이 25% 상한으로 잠근다)
+
 
 > 🔴🔴 **진입은 이 절 하나다.** 🔴 **CTO 가 할 코드 작업이 없다.** 다음 범위는 CPO 지정.
 > 🔴 아래 §6-AA 이하는 **종료된 기록** 이다.
@@ -2020,7 +2031,9 @@ Adapter/Registry/MI/SAME/MODEL_CODE/synonym/seed **전부 0**.
 
 ---
 
-## 6-S. [종료] CORE-1 전반부 — Query Planner PASS
+## 6-S2. [종료] CORE-1 전반부 — Query Planner PASS
+<!-- 🔴 재번호 — 위 §6-S(CORE-2S)와 **다른 WU** 다. -->
+
 
 ### 🔴🔴🔴 Q1 — **Production runtime 의 AI Search capability = 0**(전수 확인)
 
@@ -2089,7 +2102,9 @@ Adapter/Registry/MI/SAME/MODEL_CODE/synonym/seed **전부 0**.
 
 ---
 
-## 6-T. [종료] WU-FINAL 1·2·3
+## 6-T2. [종료] WU-FINAL 1·2·3
+<!-- 🔴 재번호 — 위 §6-T(CORE-2T)와 **다른 WU** 다. -->
+
 
 ### 🟢🟢 FINAL-1 — **배포 완료**(`ce3a42ca`) · brand 복구 **20% → 93%**
 
@@ -2588,7 +2603,9 @@ luxboy — URL 에 품번 **없음**     · 제목에만 품번 있음 · human 
 
 ---
 
-## 6-AA. [종료] WU-167 — 한글 토큰화 자산 검토
+## 6-AA2. [종료] WU-167 — 한글 토큰화 자산 검토
+<!-- 🔴 번호 중복이라 재번호했다 — 위 §6-AA(CORE-2AA)와 **다른 WU** 다. -->
+
 
 > 🟢🟢 **그리고 「띄어쓰기로 축이 죽는다」의 «정확한 기전» 이 밝혀졌다** — 이것이
 > 이 WU 의 핵심이다. 🔴 원인은 음역이 아니라 **토큰화 + `includes` 조합** 이다.
