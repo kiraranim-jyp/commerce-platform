@@ -1,0 +1,70 @@
+{
+  "_note": "CORE-2AL — CEO 육안 GT 6/6 **DIFFERENT**. 🔴 **URL 키** 로 고정한다(WU-095 교훈).",
+  "_source": "CEO 판정 2026-10-25 · artifact 59be8919-ed55-46e2-bfe4-8a8f46675b8f",
+  "_why_it_matters": "🟢🟢 이 6건이 **CEO negative 분모** 다 — CORE-2AI/2AJ/2AK 가 「분모 0」으로 닫혔던 그 자리를 채운다. 🔴 그리고 그중 5건은 WU-143 `BABY_FALSE_SAME` 과 **같은 쌍** 이므로, 그 계약 negative 가 처음으로 **CEO 라벨** 을 얻었다.",
+  "_ceo_reason": "「프린트를 보면 전혀 다름」 — 🔴 CEO 는 **브랜드·연령라인·옷종류** 가 같아도 **프린트(디자인)** 가 다르면 DIFFERENT 라고 했다.",
+  "_ceo_feedback": "🔴 CEO 가 화면에 대해 지적했다 — 「브랜드, 연령 라인, 프린트그림, 옷종류 이걸로만 판단한다고?」. 즉 **비교표가 얇았다**. 다음 판정 화면은 상세정보(소재·구성·설명)를 같이 보여야 한다.",
+  "counts": { "SAME": 0, "DIFFERENT": 6, "UNCERTAIN": 0, "total": 6 },
+  "origins": {
+    "SM430632": {
+      "url": "https://www.smallable.com/en/product/all-about-monsters-washed-t-shirt-organic-cotton-blue-bobo-choses-430632",
+      "title": "All About Monsters Washed T-shirt Organic cotton | Blue",
+      "equivalentOfficial": "https://bobochoses.com/products/b226ac018-all-about-monsters-t-shirt",
+      "note": "🔴 Smallable 은 품번을 싣지 않는다(brandModelCode null) · WU-143 의 그 원상품이다"
+    },
+    "AC157": {
+      "url": "https://bobochoses.com/products/b226ac157-mystery-bc-striped-t-shirt",
+      "title": "Mystery BC striped T-shirt"
+    }
+  },
+  "candidates": [
+    {
+      "n": 1,
+      "group": "N-CONTRACT",
+      "origin": "SM430632",
+      "url": "https://bobochoses.com/products/b226ab043-mush-monster-duo-all-over-t-shirt",
+      "verdict": "DIFFERENT",
+      "reason": "프린트를 보면 전혀다름"
+    },
+    {
+      "n": 2,
+      "group": "N-CONTRACT",
+      "origin": "SM430632",
+      "url": "https://bobochoses.com/products/b226ab048-softpaw-monster-all-over-t-shirt",
+      "verdict": "DIFFERENT",
+      "reason": "프린트를 보면 전혀다름"
+    },
+    {
+      "n": 3,
+      "group": "N-CONTRACT",
+      "origin": "SM430632",
+      "url": "https://junioredition.com/products/mush-monster-duo-all-over-baby-t-shirt-by-bobo-choses",
+      "verdict": "DIFFERENT",
+      "reason": "프린트를 보면 전혀다름"
+    },
+    {
+      "n": 4,
+      "group": "N-CONTRACT",
+      "origin": "SM430632",
+      "url": "https://junioredition.com/products/juicy-tomatoes-all-over-baby-t-shirt-by-bobo-choses",
+      "verdict": "DIFFERENT",
+      "reason": "프린트를 보면 전혀다름"
+    },
+    {
+      "n": 5,
+      "group": "N-CONTRACT",
+      "origin": "SM430632",
+      "url": "https://junioredition.com/products/bobo-choses-color-all-over-baby-t-shirt-by-bobo-choses",
+      "verdict": "DIFFERENT",
+      "reason": "프린트를 보면 전혀다름"
+    },
+    {
+      "n": 6,
+      "group": "N-SHAPE",
+      "origin": "AC157",
+      "url": "https://www.billsstore.com.au/products/bc-striped-cardigan-yellow",
+      "verdict": "DIFFERENT",
+      "reason": "프린트를 보면 전혀다름 · 옷 종류도 가디건이다"
+    }
+  ]
+}
