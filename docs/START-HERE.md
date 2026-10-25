@@ -10,8 +10,8 @@
 ## 1. CURRENT STATE
 
 ```
-현재        🟡 **CORE-2AO-R1 배포 완료 — 남은 것은 «CEO 화면 확인 1회» 다**(2026-10-26)
-            🔴 CTO 가 할 코드 작업이 **없다.** 선제적으로 WU 를 만들지 않는다
+현재        🔵 **CORE-NEXT STEP 4 착수 대기 — 조사 끝났다(§6-NEXT). 재조사 금지**
+            🔵 STEP 4 구현 좌표가 §6-NEXT 에 **전부** 있다(A/B 정책 확정 · 실측 표본 포함)
             🟢 CORE-2AO ⒝(표시 조립) + R1(CEO FAIL 3건 수정) — §6-AO
             🟢 CORE-2AA(VERIFIED_SAME 가격 자격 배선) 배포 완료 — §6-AA
             🟢 CORE-2AC(PLAIN_HTML parity) 배포 · 🔵 2AB·2AD·2AE·2AF·2AG·2AH·2AI 조사(운영 0)
@@ -228,6 +228,75 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 ```
 
 🟢 관련 계약·변이는 **이미 추가·검증** 됐고 전체 회귀 PASS 다(`wu-148-market-price-signal` D).
+
+---
+
+## 6-NEXT. 🔵 **CORE-NEXT STEP 4 — 착수점. 조사는 끝났다. 재조사 금지**
+
+> 🔴🔴 **STEP 1·2·3 조사 완료(운영 변경 0).** 아래 좌표만 보고 **바로 구현** 한다.
+> 🔴 CPO 가 가격 정책을 **확정** 했다(2026-10-26). A/B 를 다시 비교하지 않는다.
+
+### 🔴 확정된 가격 정책 — 다시 묻지 않는다
+
+```
+권장 판매가격 = **A** `breakdown.suggestedPriceKrw`   (착지원가 + 수수료 + 목표마진)
+시장가격     = **B** `computePriceRecommendation().recommendedPrice`
+🔴 A 와 B 를 **하나로 합치지 않는다** · B 를 「권장 판매가격」으로 **승격하지 않는다**
+🔴 「ⓘ 가격 계산 기준」은 **A 전용** 으로 유지한다(B 설명으로 바꾸지 않는다)
+```
+
+### 🟢 운영 DB 실측 표본 — **이 숫자를 다시 재지 않는다**
+
+```
+snapshot  32f7b651-29b9-4217-b8ce-46596f538306  Lulu T Bar Shoes in Vernice Nero by PèPè
+원본가 GBP 119 · 환율 1,837.99 · priceBreakdown {fee 10 · ship 12,000 · margin 12}
+착지원가 ₩230,721
+A suggestedPriceKrw   **₩295,796**     ← 화면 「권장 판매가」가 쓰는 값
+국내 EXACT 최저가      ₩258,000(포레포레 · STRONG_IDENTIFIER · verified)
+B recommendedPrice    **₩258,000** · competitiveBasis DOMESTIC_LOWEST · marketCase **B**
+                      Gross 10.6% · **Net 0.6%** · 순이익 **₩1,479**
+셀러 확정가 priceOverrideKrw **₩295,800** ⟹ 🟢 셀러가 **A 를 그대로 적용** 했다
+대조군   국내 EXACT 없음 → marketCase **D** → recommendedPrice **null**
+분모     스냅샷 574 · 원가 있음 467 · 국내 EXACT 링크까지 있음 **56**
+```
+
+### 🔴🔴 「ⓘ 가격 계산 기준」이 안 보이는 원인 — **확정**
+
+```
+CommerceWorkspace.tsx:3769        presentation="HIDDEN"      ← WU-152 `7c445165`
+DomesticPriceIntelligencePanel:2366  if (presentation === "HIDDEN") return null;
+⟹ ③ 수익성 · 권장 판매가 · ⓘ · 판매판단 카드 · 후보 · 📚 이력이 **한꺼번에** 사라졌다
+🔴 그리고 `PRICE_CALCULATION_ANCHOR_ID` 가 **그 패널 안**(Panel:3724)이라
+   `PriceEditor` 의 「가격 계산 기준 보기 →」가 **스크롤할 대상을 잃었다**(버튼이 죽어 있다)
+🟢 CORE-2AO-R1/R2 는 그 파일을 **0회** 건드렸다 — 내 개편이 지운 것이 아니다
+```
+
+### 🟢 배선 좌표 — **전부 확인됐다. 새 계산 0**
+
+```
+A      CommerceWorkspace.tsx:2047  profitability.recommendedPriceKrw   ← 이미 있다
+B      패널 응답 `data?.recommendation` = {recommendedPrice, estimatedMarginPercent}
+       (Panel:2207 이 이미 읽는다 · 🔴 netProfit 은 응답에 **없다**)
+노드   CommerceWorkspace.tsx:2025  priceCalculationDetail(= <PriceCalculationDetail>)
+진입   PriceEditor.tsx:178 「가격 계산 기준 보기 →」 → handleOpenPriceCalculation(:862)
+       setTab("source") · setMarketDetailOpen(true) · setPriceDetailRequest(n+1) · scroll
+운반   MarketComparisonInput(Panel:1737) — 여기에 B 를 실어 올린다(기존 통로)
+```
+
+### 🔵 구현 순서(§4-C — 한 세션에 끝까지)
+
+```
+① MarketComparisonInput 에 B 두 칸 추가(marketPriceKrw · marketPriceMarginPercent)
+   🔴 생산자를 늘릴 때 **읽는 쪽 다섯 자리** 를 같이 고친다(Panel:1954 가 적어 둔 그 함정)
+② MarketPriceComparison SUMMARY 에 「💡 권장 판매가격 ₩A」 + 「ⓘ 가격 계산 기준 보기」
+③ 그 버튼 → `handleOpenPriceCalculation` 재사용 · 🔴 **anchor + priceCalculationDetail 을
+   PriceEditor 자리에 조건부로 렌더** 한다(전체 패널을 되살리지 않는다 · CPO 금지)
+④ DETAIL 에 B 근거 한 줄(「시장가격에 맞추면 목표마진 미달」) · 🔴 새 계산 0
+⑤ 15 케이스 + 마운트 DOM + PèPè 회귀(A ₩295,796 ↔ B ₩258,000 **안 바뀜**) + 전체 회귀 + 배포
+```
+
+🔴 **FAIL 조건** — B 가 SUMMARY 권장가가 됨 · A/B 가 한 owner 로 합쳐짐 · ⓘ 가 B 를 설명함 ·
+전체 MI 패널이 다시 노출됨 · 기존 가격/MI/등록 로직 변경.
 
 ---
 
