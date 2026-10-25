@@ -8,6 +8,8 @@ import {
   DOMESTIC_REFERENCE_TITLE,
   /** 🔴 CORE-2T §4 — 국내 「확인 N곳」 라벨 owner(해외는 기본값을 쓴다). */
   DOMESTIC_SELLER_COUNT_LABEL,
+  /** 🔴 CORE-2U-A §1·§4 — 가격 바로 아래의 「동일상품 확정 없음」 한 줄. */
+  DOMESTIC_SAME_NOT_CONFIRMED,
   type OverseasPriceSummary,
 } from "./overseas-reference";
 import {
@@ -31,6 +33,8 @@ import {
   MARKET_RESULT_HEADING,
   countMarketCandidates,
   countUnresolvedMarketCandidates,
+  /** 🔴 CORE-2U-A §3 — 「가격이 실제로 섰는가」의 술어. 뷰와 **같은 조건** 을 쓴다. */
+  hasReferencePrice,
   marketEmptyNote,
   marketUnresolvedNote,
   MARKET_TABLE_HEADERS,
@@ -487,11 +491,22 @@ export function MarketPriceComparison({
        * 🔴 「동일상품이다」라고 **단정하지 않는다** — 「판정이 보류됐다」가 정확한 말이고
        *    판단은 셀러가 아래 검토 구역에서 사진으로 한다.
        */}
-      {pending && (
-        <p data-testid="mi-same-pending" className="mt-1 text-[11px] text-warning">
-          {pending}
-        </p>
-      )}
+      {/**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔴🔴🔴 CORE-2U-A §5 — **이 줄이 2차로 내려갔다**(삭제 아님)
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * 🔴 CPO §5: 「**브랜드 미확인 · TEXT_CONFIRMED · PRESUMED_SAME · 후보별 내부
+       *    verdict · 내부 blocker** 는 기본 화면에서 **셀러의 결론처럼 보이지 않게** 한다」.
+       * 🔴 그런데 이 줄은 「가격까지 확인됐지만 **동일상품 판정이 보류·충돌된** 후보가
+       *    N건 있습니다」로 **MI 내부 상태를 1차에서 말하고 있었다** — 그리고 바로 위
+       *    🇰🇷 블록이 이미 「동일상품으로 확정된 국내 판매처는 없습니다」를 말하므로
+       *    **같은 사실을 두 번** 적는 중복이기도 했다(§6).
+       * 🟢 그래서 **`▸ MI 상세 분석` 안으로 옮겼다** — `data-testid` 와 문구 owner
+       *    (`pendingNote`)는 **그대로** 이고 사유 분포(`pendingReasonNote`)가 이미 그 안에 있다.
+       * 🔴 **WU-133 이 고친 거짓말은 되돌아오지 않는다** — 그때의 위험(「아무것도 못
+       *    찾았다」로 읽힘)은 **가격이 1차에 없을 때** 의 것이고, 이제 금액이 1차에 선다.
+       */}
 
       {/**
        * 🔴🔴🔴 WU-136 §E — **기술/참고 정보는 «지우지 않고» 접는다.**
@@ -528,6 +543,12 @@ export function MarketPriceComparison({
          *    (브랜드 미확인 · 품번 충돌 …)은 **이 접힘 안에서만** 보인다.
          * 🔴 사유가 없으면 **줄을 만들지 않는다** — 그 함수가 `null` 을 낸다(없는 말 금지).
          */}
+        {/** 🔴 CORE-2U-A §5 — 1차에서 내려온 **보류 건수** 줄(위 주석이 이유를 들고 있다). */}
+        {pending && (
+          <p data-testid="mi-same-pending" className="mt-1 text-[11px] text-warning">
+            {pending}
+          </p>
+        )}
         {pendingReasons && (
           <p data-testid="mi-same-pending-reasons" className="mt-1 text-[11px] text-text-tertiary">
             {pendingReasons}
@@ -677,13 +698,32 @@ function MarketBlock({
                   amountTestId: "domestic-lowest",
                   /** 🔴 CORE-2T §4 — 국내는 「확인 N곳」이다(해외는 기본값 「판매처」 그대로). */
                   sellerCountLabel: DOMESTIC_SELLER_COUNT_LABEL,
+                  /**
+                   * 🔴🔴 CORE-2U-A §5 — 「유사상품 1」(내부 등급 분포)을 **끈다.**
+                   *    🟢 같은 사실을 아래 `statusLine` 이 **셀러의 말** 로 적는다.
+                   */
+                  showTierNote: false,
+                  /**
+                   * 🔴🔴🔴 CORE-2U-A §1·§4 — **이 블록은 `sameCount === 0` 분기 안에만 있다**
+                   *    ⟹ 「동일상품 확정 없음」이 **구조적으로 항상 참** 이다(상태를 지어내지 않는다).
+                   */
+                  statusLine: DOMESTIC_SAME_NOT_CONFIRMED,
                 }
               : /** 🔴 해외는 **기본값 그대로** — 「🧾 해외 동일상품 참고가격」·「판매처 N곳」(§9). */
                 {})}
           />
           <p className="mt-2 text-[11px] font-medium text-text-secondary">{SAME_CHECK_HEADING}</p>
           <p data-testid={`market-empty-${suffix}`} className="text-[11px] text-text-tertiary">
-            {marketEmptyNote(countMarketCandidates(rows, market), countPendingCandidates(rows, market))}
+            {marketEmptyNote(
+              countMarketCandidates(rows, market),
+              countPendingCandidates(rows, market),
+              /**
+               * 🔴🔴 CORE-2U-A §3·§7 — **가격이 이미 1차에 섰으면 후보 수를 또 말하지 않는다.**
+               *    🟢 조건은 **그 블록이 실제로 금액을 그렸는가** 다 — 같은 술어를 쓰는
+               *       `buildOverseasReference` 와 어긋나지 않게 그 함수의 조건을 읽는다.
+               */
+              hasReferencePrice(reference),
+            )}
           </p>
         </>
       ) : (

@@ -185,7 +185,7 @@ export const MI_SAME_AREA_NOTE =
  *       건수가 다를 수 있다」를 말하고, 그것이 2026-09-19 사고를 막는 핵심이다.
  */
 export const MI_SAME_AREA_SCOPE =
-  "유사상품·판단보류 후보는 이 비교에 쓰지 않습니다 — 아래 검토 구역에 그대로 남아 있습니다. 각 시장의 「참고가격」은 유사상품까지 포함한 참고 축이라 이 목록과 건수가 다를 수 있습니다.";
+  "이 목록은 동일상품으로 «확정» 된 후보만 담습니다 — 그래서 위의 「참고가격」과 건수가 다를 수 있습니다. 확정되지 않은 후보는 아래 검토 구역에 그대로 남아 있습니다.";
 export const MI_SAME_DOMESTIC_HEADING = "🇰🇷 국내";
 export const MI_SAME_OVERSEAS_HEADING = "🌎 해외";
 /** 🔴 「국내에 동일상품이 없다」로 적지 않는다 — 부재와 미발견은 다르다(WU-091 어휘 계약). */
@@ -965,10 +965,30 @@ export const SAME_CHECK_HEADING = "🔎 동일상품 확인";
  * 🔴 **금지 문구 셋은 여기서도 쓰지 않는다** — 「국내에서는 판매되지 않습니다」·
  *    「국내 시장 가격이 없습니다」·「국내는 USD 58 정도입니다」(CPO ② · 계약이 잠근다).
  */
-export function marketEmptyNote(candidateCount: number, pending: PendingSummary): string {
+export function marketEmptyNote(
+  candidateCount: number,
+  pending: PendingSummary,
+  /**
+   * 🔴🔴🔴 CORE-2U-A §3·§6·§7 — **참고가격이 «이미 섰으면» 후보 수를 또 말하지 않는다.**
+   *
+   * 🔴 CPO: 「셀러에게는 숫자가 여러 개 나오면 안 된다 … `국내 가격 1곳` · `동일상품
+   *    가격 0곳` · `유사상품 참고가격 1곳` 이렇게 나오면 **실패** 다」(§7) ·
+   *    「**후보 개수와 가격 evidence 개수를 동일한 의미처럼 표시**」 금지(§6).
+   * 🔴🔴 그런데 **후보 수를 늘 지우면 WU-133 이 고친 거짓말이 되돌아온다** —
+   *    「아무것도 못 찾았다」로 읽히는 그 화면이다. 🟢 그 거짓말은 **참고가격이 없을 때만**
+   *    위험하다(가격이 서 있으면 화면이 이미 「KRW 88,000 · 확인 N곳」을 말한다).
+   * ⟹ 🟢 그래서 **조건부** 로 가른다 — 넘기지 않으면 **동작이 전과 똑같다**(기존 호출부 불변).
+   */
+  hasReferencePriceShown?: boolean,
+): string {
   /** 🔴 **0 을 숫자로 말한다** — 「동일상품 확인 N곳」 축을 두 블록이 **같은 말** 로 쓴다. */
   const head = `${SAME_CONFIRMED_COUNT_LABEL} 0곳`;
   if (candidateCount === 0) return `${head} — ${MARKET_EMPTY_NO_CANDIDATE}`;
+  /**
+   * 🟢 CORE-2U-A — 가격이 **이미** 1차에 섰으면 **상태 한 줄로 끝낸다**(숫자 하나 원칙).
+   *    🔴 사유·후보 수·보류 수는 **지우지 않는다** — `▸ MI 상세 분석` 이 그대로 들고 있다.
+   */
+  if (hasReferencePriceShown) return `${head} — ${SAME_NOT_CONFIRMED_SHORT}`;
   /**
    * 🔴 **건수는 1차에 남긴다**(그것이 ⒜ 와 ⒝ 를 가르는 사실이다) · **사유 어휘는 2차로**.
    * 🔴 사유를 지어내지 않듯 **보류 0 이면 그 절도 쓰지 않는다**.
@@ -979,6 +999,9 @@ export function marketEmptyNote(candidateCount: number, pending: PendingSummary)
     MARKET_EMPTY_REVIEW_HINT
   );
 }
+
+/** 🟢 CORE-2U-A — 참고가격이 이미 선 블록에서 쓰는 **짧은 상태 문장**(후보 수 노출 0). */
+export const SAME_NOT_CONFIRMED_SHORT = "아직 동일상품으로 확정된 판매처가 없습니다.";
 
 /**
  * 🔴🔴🔴 WU-140 — **시장이 «확정되지 않은» 후보를 조용히 없애지 않는다.**
@@ -1265,7 +1288,7 @@ export const PRICE_BASIS_SAME_LINE = "동일상품으로 판정된 판매처의 
  *       셀러의 말로 **「같은 상품으로 보이는」** 이라고 적는다.
  */
 export const PRICE_BASIS_REFERENCE_LINE =
-  "동일상품으로 확정된 판매처가 없을 때는, 같은 상품으로 보이는 판매처에서 확인한 가격을 참고가격으로 씁니다.";
+  "국내 참고가격은 현재 확보된 국내 판매처의 가격을 참고한 값이며, 동일상품으로 확정된 가격만을 의미하지 않습니다.";
 /** 🔴 환산 금지를 **셀러에게도** 말한다 — 안 적으면 두 통화를 비교해도 되는 줄 안다. */
 export const PRICE_BASIS_CURRENCY_LINE =
   "통화가 다른 가격은 환산하지 않고 통화별로 따로 적습니다.";

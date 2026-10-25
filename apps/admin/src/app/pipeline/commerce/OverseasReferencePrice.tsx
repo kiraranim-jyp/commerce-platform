@@ -42,6 +42,16 @@ export function OverseasReferencePrice({
    *       기본값으로 들고 있어서, 안 넘기면 **해외 동작이 그대로** 다(§9).
    */
   sellerCountLabel,
+  /**
+   * 🔴 CORE-2U-A §5 — 국내는 등급 분포(「유사상품 1」)를 **끈다**. 🟢 기본값을 주지
+   *    않는다 — owner 가 `true` 를 기본으로 들고 있어서 **해외는 그대로** 다(§9).
+   */
+  showTierNote,
+  /**
+   * 🔴🔴 CORE-2U-A §1·§4 — 금액 **바로 아래** 에 서는 「확정이 아니다」 한 줄.
+   *    🔴 이 컴포넌트는 그 **상태를 판단하지 않는다** — 호출부가 넘긴 문장을 그릴 뿐이다.
+   */
+  statusLine,
 }: {
   summary?: OverseasPriceSummary | null;
   title?: string;
@@ -51,8 +61,10 @@ export function OverseasReferencePrice({
   testId?: string;
   amountTestId?: string;
   sellerCountLabel?: string;
+  showTierNote?: boolean;
+  statusLine?: string | null;
 }) {
-  const view = buildOverseasReference(summary, { sellerCountLabel });
+  const view = buildOverseasReference(summary, { sellerCountLabel, showTierNote });
   if (!view) return null;
 
   return (
@@ -76,6 +88,18 @@ export function OverseasReferencePrice({
           </li>
         ))}
       </ul>
+
+      {/**
+       * 🔴🔴🔴 CORE-2U-A §1·§4 — **가격과 「확정 여부」를 나란히 둔다.**
+       *    🔴 금액 **바로 아래** 가 그 자리다 — note/scope 뒤로 밀면 셀러가 금액만 읽고
+       *       「동일상품 가격」으로 단정한다(2026-09-19 사고의 기전).
+       *    🔴 상태를 **판단하지 않는다** — 호출부가 SAME 유무를 보고 넘긴다.
+       */}
+      {statusLine && (
+        <p data-testid="reference-status" className="mt-2 text-xs font-medium text-text-secondary">
+          {statusLine}
+        </p>
+      )}
 
       <p className="mt-2 text-xs text-muted-foreground">{note}</p>
       {/* 🔴🔴 이 두 문장은 지우지 않는다(테스트가 잠근다). */}

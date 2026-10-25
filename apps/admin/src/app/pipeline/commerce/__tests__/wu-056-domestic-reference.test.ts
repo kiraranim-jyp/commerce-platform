@@ -65,8 +65,8 @@ const renderDomestic = (summary: OverseasPriceSummary | null) =>
 describe("A. 국내 참고가격 블록", () => {
   it("🟢 KRW 금액과 확인 판매처 수를 적는다", () => {
     const html = renderDomestic(SUMMARY);
-    /** 🔴 CORE-2T §4·§8 — 제목이 「국내 참고가격」 → **「국내 가격 형성대」** 로 바뀌었다. */
-    expect(html).toContain("국내 가격 형성대");
+    /** 🔴 CORE-2U-A — 제목이 **「국내 참고가격」** 으로 되돌아왔다(CPO 가 「형성대」를 반려). */
+    expect(html).toContain("국내 참고가격");
     expect(html).toContain("KRW 88,000");
     /** 🔴 국내는 **「확인 N곳」** 이다(「판매처」는 해외 축의 말이다 · §9). */
     expect(html).toContain("확인 3곳");

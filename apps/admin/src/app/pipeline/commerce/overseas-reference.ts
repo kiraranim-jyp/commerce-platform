@@ -69,24 +69,48 @@ export const OVERSEAS_REFERENCE_SCOPE = "참고용입니다 — 판매판정과 
  * 🟢 그래서 **확실한 사실만** 적는다 — 저장되지 않고, 새로고침하면 사라진다.
  */
 /**
- * 🔴🔴🔴 CORE-2T §4·§8 — **「국내 참고가격」 → 「국내 가격 형성대」.**
+ * ════════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴🔴 CORE-2U-A — **이름이 「형성대」에서 「참고가격」으로 «되돌아왔다». 이유를 적는다.**
+ * ════════════════════════════════════════════════════════════════════════════════
  *
- * 🔴 CPO: 「우리가 원하는 최종 결과는 **국내 가격 형성대** 다 … 현재 화면은
- *    `판매처 1곳 / 88,000원` 처럼 **단일 참고가격으로 보이는 상태** 다」.
- * 🟢 제목이 그 축의 이름을 말해야 셀러가 **「이 상품이 국내에서 어느 가격대인가」**
- *    로 읽는다 — 「참고가격」은 **무엇의 참고인지** 를 말하지 않는다.
- * 🔴 **1건이면 범위를 만들지 않는다**(§4) — 그때도 제목은 이 축의 이름 그대로 두고
- *    **금액 한 줄 + 「확인 1곳」** 으로 적는다(억지 `88,000 ~ 88,000` 금지).
- * 🔴 **`₩` 로 바꾸지 않았다.** CPO 예시는 `₩83,600 ~ ₩88,000` 이지만 이 영역의 `₩` 는
- *    **계약 6건이 금지** 한다(`wu-141-r3`·`wu-144`·`wu-145`·`wu-146`·`wu-148`·`wu-139`) —
- *    근거는 실측이다: `convertToKrw` 가 모르는 통화를 그대로 KRW 로 취급해 `CAD 64` 가
- *    **「약 ₩64」** 로 떴다(CORE-2E §4-4). 🟢 그래서 **ISO 코드** 를 유지한다
- *    (`KRW 83,600 ~ 88,000`) — 통화를 잃지 않는 쪽이고 §4 의 «뜻» 은 그대로 지킨다.
- *    🔵 기호 표기를 쓰려면 그 여섯 앵커 갱신이 선행이고 **가격 표시 정책** 이다(CPO 판정).
+ * 🔴 CORE-2T 가 이 제목을 **「국내 가격 형성대」** 로 바꿨고 **CPO 가 그것을 반려했다.**
+ *    CEO Production 화면이 「국내 가격 형성대  **유사상품 1**」로 떴기 때문이다 —
+ *    그 숫자의 근거는 `TEXT_CONFIRMED → COMPARISON`(= 유사상품)이고,
+ *    **유사상품 가격을 「형성대」라고 부르면 셀러 의사결정 기준이 틀린다**(CPO 문장).
+ *
+ * ── 🔴 왜 「형성대」를 쓸 수 없는가 (코드로 확정된 사실) ───────────────────────────
+ * ```
+ * 국내 후보 → crossSellerVerdict PRESUMED_SAME → match-truth.ts:233 crossSellerReserved
+ *          → :237 식별자 경로 **차단** → matchTruth **TEXT_CONFIRMED**
+ *          ├ domestic-product-link.ts:88  → **COMPARISON** (= 이 참고 축에 들어온다)
+ *          └ match-display.ts:268         → **PRESUMED_SAME** (= SAME 축에서 탈락)
+ * ⟹ 🔴 국내에서 SAME/EXACT 는 **구조적으로 도달 불가** 다(그 완화는 WU-066 실측
+ *    precision **91.7% → 55.6%** 로 **영구 폐기** · 8축/threshold FREEZE).
+ * ```
+ * 🟢 그래서 **가격을 지우지 않고 이름을 정직하게 가른다**(CPO 결정 A):
+ * ```
+ * SAME 가격 있음  → 「💰 … 동일상품 확인 가격」 + 금액이 다르면 **가격대**(`DOMESTIC_BAND_LABEL`)
+ * SAME 가격 없음  → **「국내 참고가격」** + 「동일상품으로 확정된 국내 판매처는 없습니다」
+ * ```
+ * 🔴 **「가격 형성대」는 SAME 가격이 없는 상태에서 쓰지 않는다**(CPO §1 명시).
+ * 🟢 금액 표현(최저 ~ 최고 · 1건은 범위 금지)은 CORE-2T 그대로 **유지** 한다 —
+ *    유사상품 기준에서도 **여러 판매처의 폭** 은 사실이고, 이름이 그 성질을 말한다.
+ * 🔴 **`₩` 로 바꾸지 않았다** — 이 영역의 `₩` 는 계약 6건이 금지한다(실측: `convertToKrw` 가
+ *    모르는 통화를 그대로 KRW 로 취급해 `CAD 64` → **「약 ₩64」** · CORE-2E §4-4).
  */
-export const DOMESTIC_REFERENCE_TITLE = "국내 가격 형성대";
+export const DOMESTIC_REFERENCE_TITLE = "국내 참고가격";
 export const DOMESTIC_REFERENCE_NOTE =
   "국내 판매처의 상세 페이지에서 확인한 가격입니다 — 원래 통화 그대로입니다.";
+/**
+ * 🔴🔴🔴 CORE-2U-A §1·§4 — **가격 바로 아래에서 「확정이 아니다」를 말한다.**
+ *
+ * 🔴 이 한 줄이 없으면 셀러는 「국내 참고가격 KRW 88,000」을 **동일상품 가격으로 읽는다** —
+ *    그것이 2026-09-19 사고의 기전이고, CEO 화면에서 실제로 모순으로 보인 것이다.
+ * 🟢 그래서 **두 사실을 나란히** 둔다(CPO §4): 가격은 **있고**, 동일상품 확정은 **없다**.
+ * 🔴 「없다」로 끝내지 않되 **셀러에게 판단을 떠넘기지도 않는다**(§7) — 「사진으로
+ *    확인해 주세요」류를 쓰지 않는다.
+ */
+export const DOMESTIC_SAME_NOT_CONFIRMED = "동일상품으로 확정된 국내 판매처는 없습니다.";
 /** 🔴 CORE-2T §4 — 국내는 **「확인 N곳」** 이다(「판매처 N곳」은 해외 축의 기존 말). */
 export const DOMESTIC_SELLER_COUNT_LABEL = "확인";
 /** 🟢 해외 축의 기존 말 — **한 글자도 바꾸지 않는다**(§9). */
@@ -146,10 +170,24 @@ export function buildOverseasReference(
    * 🔴 CORE-2T — 국내는 「**확인** N곳」 · 해외는 「**판매처** N곳」이다. 🟢 기본값이
    *    해외의 기존 말이라 **해외 호출부는 한 글자도 바뀌지 않는다**(§9).
    */
-  opts?: { sellerCountLabel?: string },
+  opts?: {
+    sellerCountLabel?: string;
+    /**
+     * 🔴🔴🔴 CORE-2U-A §1·§5 — **등급 분포(`tierNote`)를 국내에서 끈다.**
+     *
+     * 🔴 CEO 화면의 「국내 가격 형성대 **유사상품 1**」이 바로 이 줄이었다. 그 어휘는
+     *    `TIER_LABEL`(= 내부 tier 의 말)이고, **셀러의 결론 옆에 설 정보가 아니다**
+     *    (§5 「후보별 내부 verdict 는 MI 상세로 격리」).
+     * 🟢 **지우지 않았다** — 같은 사실을 1차에서 **셀러의 말**(`DOMESTIC_SAME_NOT_CONFIRMED`)
+     *    로 적고, 등급 분포는 `▸ MI 상세 분석` 이 계속 들고 있다.
+     * 🔴 **기본값은 `true`** 다 ⟹ 해외 축은 **한 글자도 바뀌지 않는다**(§9).
+     */
+    showTierNote?: boolean;
+  },
 ): OverseasReferenceView | null {
   if (!summary || summary.count <= 0) return null;
   const countLabel = opts?.sellerCountLabel ?? OVERSEAS_SELLER_COUNT_LABEL;
+  const showTierNote = opts?.showTierNote ?? true;
 
   const lines: OverseasReferenceLine[] = Object.entries(summary.byCurrency)
     /** 🔴 통화 간 «순서» 를 금액으로 매기지 않는다 — 환산 없이 비교할 수 없다. */
@@ -196,7 +234,8 @@ export function buildOverseasReference(
 
   return {
     lines,
-    tierNote: tierParts.length > 0 ? tierParts.join(" · ") : null,
+    /** 🔴 CORE-2U-A — 국내는 **끈다**(내부 등급 어휘를 셀러 결론 옆에 두지 않는다 · §5). */
+    tierNote: showTierNote && tierParts.length > 0 ? tierParts.join(" · ") : null,
     /** 🔴 `UNKNOWN` 을 「해외」로 적지 않는다 — 시장을 확인하지 못한 것이다. */
     unknownMarketNote: unknown > 0 ? `${unknown}곳은 판매 시장을 확인하지 못했습니다.` : null,
   };

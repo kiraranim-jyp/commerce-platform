@@ -143,7 +143,8 @@ describe("A. 🇰🇷 국내 — 가격이 먼저, 판정이 뒤", () => {
      *    🟢 지키는 성질(「1차에 국내 금액과 그 분모가 같이 선다」)은 **그대로** 다.
      */
     expect(first).toContain("확인 1곳");
-    expect(first).toContain("국내 가격 형성대");
+    /** 🔴 CORE-2U-A — 제목이 **「국내 참고가격」** 으로 되돌아왔다(CPO 결정 A). */
+    expect(first).toContain("국내 참고가격");
   });
 
   /**
