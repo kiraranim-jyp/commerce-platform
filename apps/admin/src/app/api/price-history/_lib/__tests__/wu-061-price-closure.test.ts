@@ -159,6 +159,7 @@ describe("③ 의미 분리", () => {
      *    센다 — EUR 최고가가 75 이지 9 가 아니고 USD 는 98 이지 12 가 아니다
      *    (WU-062 가 막은 오염이 **최고가 칸으로 되돌아오지 않는다**).
      */
+    /** 🟢 CORE-2T — 해외 축은 `sellerKey` 를 **넘기지 않으므로** 숫자가 **전부 그대로** 다(§9). */
     expect(s.byCurrency.EUR).toEqual({ count: 2, lowestAmount: 40, highestAmount: 75 });
     expect(s.byCurrency.USD).toEqual({ count: 1, lowestAmount: 98, highestAmount: 98 });
 
@@ -182,6 +183,7 @@ describe("③ 의미 분리", () => {
     ];
     const s = summarizeCandidateOverseasPrices(domestic as never);
     /** 🔴 CORE-2R-5 — 최고가 칸 추가. 🟢 국내 숫자(최저 88,000)는 **그대로** 다. */
+    /** 🟢 CORE-2T — 이 fixture 는 `sellerKey` 가 **없다**(옛 호출부 모양) ⟹ 숫자 불변. */
     expect(s.byCurrency.KRW).toEqual({ count: 2, lowestAmount: 88_000, highestAmount: 117_000 });
     expect(s.count).toBe(2);
     expect(s.byPriceTier).toEqual({ COMPARISON: 1, EXACT: 1 });

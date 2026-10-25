@@ -205,6 +205,19 @@ describe("D. 배선이 유지된다", () => {
   /** 🔴 이 파일은 환산기를 **import 조차 하지 않는다**. */
   it("🔴 참고가격 모듈이 환율을 모른다", () => {
     const src = readFileSync(path.join(repoRoot, "apps/admin/src/app/pipeline/commerce/overseas-reference.ts"), "utf8");
-    expect(src).not.toMatch(/convertToKrw|exchangeRate|fetchLiveExchangeRates/);
+    /**
+     * 🔴🔴🔴 CORE-2T — **주석을 벗긴다. 이 저장소에서 아홉 번째로 걸린 함정이다.**
+     *
+     * 🔴 이 줄은 **날것 소스** 를 봤다. 그래서 CORE-2T 가 「`₩` 를 쓰지 않은 이유」를
+     *    주석에 적으면서 **실측 근거로 `convertToKrw` 를 인용** 하자 FAIL 했다 —
+     *    모듈은 그 함수를 **쓰지 않는데** 말이다.
+     * 🟢 **가드가 약해지지 않는다** — 지키는 성질은 「이 모듈이 환율을 **쓰지 않는다**」
+     *    이고 **주석은 사용이 아니다**. 🔴 실제 코드가 쓰면 **여전히 FAIL** 한다.
+     * 🟢 같은 파일이 이미 `strip` 을 들고 있다(이 줄만 쓰지 않고 있었다).
+     */
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/.*$/gm, " ");
+    expect(code).not.toMatch(/convertToKrw|exchangeRate|fetchLiveExchangeRates/);
+    /** 🔴 **import 자체가 없다** — 위 검사가 주석을 벗긴 만큼 이 단언을 같이 둔다(강화). */
+    expect(code).not.toMatch(/from\s+"@commerce\/pricing"/);
   });
 });

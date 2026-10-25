@@ -162,6 +162,24 @@ export interface CandidateOverseasPriceRecord {
   currency: string;
   amount: number | null;
   priceTier: string;
+  /**
+   * 🔴🔴🔴 CORE-2T §5·§13 — **「판매처 N곳」을 «레코드 수» 로 세지 않기 위한 키.**
+   *
+   * 🔴 이 칸이 없던 동안 이 집계는 **중복을 구조적으로 막을 수 없었다** — 레코드에
+   *    URL 도 도메인도 없어서 「같은 판매처가 두 번 들어왔는가」를 **알 방법이 없었다**.
+   *    ⟹ `count` 는 **수집 레코드 수** 였고 「실제 판매처 수」가 아니었다(§5 의 그 혼동).
+   * 🟢 **옵셔널이다** — 넘기지 않으면 **동작이 한 글자도 바뀌지 않는다**(해외 축 불변 ·
+   *    §9). `highestAmount` 를 CORE-2R-5 가 더한 것과 **같은 모양** 이다.
+   * 🔴 국내는 **도메인** 을 넘긴다 — 「판매처」의 단위가 도메인이기 때문이다(§15-3
+   *    「실제 unique seller 수」). 같은 판매처가 여러 레코드로 들어오면 **그 판매처의
+   *    최저 확인가 하나** 로 접는다(아래 루프).
+   * 🔴 **실측 주의** — 현재 transient 경로는 `judgeDomesticCandidate` 가 **샵당 best
+   *    1건** 만 sink 에 싣고(WU-109), 러너가 canonical URL 로 생산자 간 중복을 이미
+   *    막는다(`ALREADY_CANDIDATE`). ⟹ 🟢 **B226AC009 실측에서 이 가드의 효과는 0**
+   *    이다(후보 2건 · 고유 URL 2건). 그래도 두는 이유는 **그 둘 중 하나라도 바뀌면
+   *    「판매처 수」가 조용히 틀려지기** 때문이다(계약이 D1·D3 로 잠근다).
+   */
+  sellerKey?: string | null;
 }
 
 export interface CandidateOverseasPriceSummary {
@@ -175,6 +193,19 @@ export interface CandidateOverseasPriceSummary {
    *    필요한데 지금까지 최저가만 냈다. 🟢 같은 루프에서 세므로 **새 집계 경로 0** 이고,
    *    기존 소비처(해외 최저 확인가)는 이 칸을 **읽지 않으므로 숫자가 안 바뀐다**.
    */
+  /**
+   * 🔴🔴🔴 CORE-2T — **`count` 의 의미가 «정확해졌다». 칸을 더하지 않았다.**
+   *
+   * 🔴 1차 구현에서 `sellerCount` 를 **따로 뒀다가 지웠다.** 이 집계는 `sellerKey` 가
+   *    오면 **판매처 단위로 먼저 접은 뒤** 세므로 그 둘이 **항상 같았다** ⟹ 같은 것을
+   *    가리키는 칸 둘은 언젠가 갈라지고, 그때 화면이 어느 쪽을 믿는지 알 수 없다
+   *    (이 저장소가 반복해 막아 온 「owner 둘」 그 모양이다).
+   * 🟢 그래서 **칸은 그대로 셋** 이고 `count` 가 이렇게 읽힌다:
+   * ```
+   * sellerKey 있음(국내)  → **판매처 수**(같은 판매처는 최저 확인가 하나로 접힌 뒤)
+   * sellerKey 없음(해외)  → **레코드 수**(접을 근거가 없다 · 기존 동작 그대로 · §9)
+   * ```
+   */
   byCurrency: Record<string, { count: number; lowestAmount: number; highestAmount: number }>;
   /** 🔴 시장 판정 분포 — `UNKNOWN` 을 해외로 합치지 않는다. */
   byMarket: Record<string, number>;
@@ -185,9 +216,21 @@ export interface CandidateOverseasPriceSummary {
 export function summarizeCandidateOverseasPrices(
   records: CandidateOverseasPriceRecord[],
 ): CandidateOverseasPriceSummary {
-  const byCurrency: Record<string, { count: number; lowestAmount: number; highestAmount: number }> = {};
+  const byCurrency: CandidateOverseasPriceSummary["byCurrency"] = {};
   const byMarket: Record<string, number> = {};
   const byPriceTier: Record<string, number> = {};
+  /**
+   * 🔴🔴🔴 CORE-2T §5·§13 — **판매처별 「확인가 하나」.**
+   *
+   * 🔴 같은 판매처가 여러 레코드로 들어오면 **그 판매처의 최저 확인가 하나** 로 접는다.
+   *    접지 않으면 ⒜ 「판매처 N곳」이 부풀고 ⒝ **중복 레코드가 형성대를 넓힌다**
+   *    (D1 — 같은 URL 2회면 `최저 ~ 최고` 가 **거짓** 이 된다).
+   * 🔴 「첫 레코드가 이긴다」로 하지 않는다 — 임의 선택이다. **최저** 가 그 판매처에서
+   *    셀러가 실제로 살 수 있는 확인가다(기존 「최저 확인가」 어휘와 같은 방향).
+   * 🟢 `sellerKey` 가 **없는** 레코드는 접지 않는다 — 접을 근거가 없고, 그것이
+   *    해외 축의 동작을 **한 글자도 바꾸지 않는** 이유다.
+   */
+  const lowestBySeller = new Map<string, Map<string, number>>();
   for (const r of records) {
     byMarket[r.market] = (byMarket[r.market] ?? 0) + 1;
     byPriceTier[r.priceTier] = (byPriceTier[r.priceTier] ?? 0) + 1;
@@ -215,14 +258,40 @@ export function summarizeCandidateOverseasPrices(
      */
     if (r.priceTier === "EXCLUDED") continue;
     if (r.amount == null || !Number.isFinite(r.amount)) continue;
+    /**
+     * 🔴🔴 CORE-2T — **키가 있으면 판매처 단위로 모은다.** 집계는 루프 뒤에서 한 번에
+     *    한다(그래야 「같은 판매처의 두 번째 레코드」가 형성대를 넓히지 못한다).
+     */
+    const key = r.sellerKey?.trim().toLowerCase();
+    if (key) {
+      const perSeller = lowestBySeller.get(r.currency) ?? new Map<string, number>();
+      const prev = perSeller.get(key);
+      if (prev == null || r.amount < prev) perSeller.set(key, r.amount);
+      lowestBySeller.set(r.currency, perSeller);
+      continue;
+    }
     const bucket = byCurrency[r.currency];
-    if (!bucket) byCurrency[r.currency] = { count: 1, lowestAmount: r.amount, highestAmount: r.amount };
-    else {
+    if (!bucket) {
+      byCurrency[r.currency] = { count: 1, lowestAmount: r.amount, highestAmount: r.amount };
+    } else {
       bucket.count += 1;
       if (r.amount < bucket.lowestAmount) bucket.lowestAmount = r.amount;
       /** 🔴 CORE-2R-5 — 같은 루프에서 센다(새 집계 경로 0 · 환산 0 · 통화 혼합 0). */
       if (r.amount > bucket.highestAmount) bucket.highestAmount = r.amount;
     }
+  }
+  /**
+   * 🔴 **판매처 단위로 접힌 레코드를 통화별로 합친다.** 🔴 통화를 **섞지 않는다**(환산 0).
+   * 🟢 그래서 여기서의 `count` 는 **판매처 수** 다 — 「확인 N곳」이 그 값을 읽는다.
+   */
+  for (const [currency, perSeller] of lowestBySeller) {
+    const amounts = [...perSeller.values()];
+    if (amounts.length === 0) continue;
+    byCurrency[currency] = {
+      count: perSeller.size,
+      lowestAmount: Math.min(...amounts),
+      highestAmount: Math.max(...amounts),
+    };
   }
   return { count: records.length, byCurrency, byMarket, byPriceTier };
 }

@@ -26,6 +26,11 @@ export interface OverseasPriceSummary {
    * 🔴 CORE-2R-5 — `highestAmount` 는 **선택** 이다. 서버 집계는 항상 채우지만,
    *    최저가만 들고 있는 기존 fixture/호출부도 그대로 돈다(하위호환).
    */
+  /**
+   * 🔴 CORE-2T — `count` 는 **집계에 들어간 수** 다. 국내 축은 집계기가 **판매처 단위로
+   *    접은 뒤** 세므로 그 값이 **판매처 수** 이고, 해외 축은 레코드 수다(§9 불변).
+   *    🟢 그래서 칸을 더하지 않았다 — 같은 것을 가리키는 칸 둘을 만들지 않는다.
+   */
   byCurrency: Record<string, { count: number; lowestAmount: number; highestAmount?: number }>;
   byMarket: Record<string, number>;
   byPriceTier: Record<string, number>;
@@ -63,9 +68,29 @@ export const OVERSEAS_REFERENCE_SCOPE = "참고용입니다 — 판매판정과 
  *    거짓이 된다. 🔴 문구를 **제품 정책 판단 없이** 넓히지 않는다.
  * 🟢 그래서 **확실한 사실만** 적는다 — 저장되지 않고, 새로고침하면 사라진다.
  */
-export const DOMESTIC_REFERENCE_TITLE = "국내 참고가격";
+/**
+ * 🔴🔴🔴 CORE-2T §4·§8 — **「국내 참고가격」 → 「국내 가격 형성대」.**
+ *
+ * 🔴 CPO: 「우리가 원하는 최종 결과는 **국내 가격 형성대** 다 … 현재 화면은
+ *    `판매처 1곳 / 88,000원` 처럼 **단일 참고가격으로 보이는 상태** 다」.
+ * 🟢 제목이 그 축의 이름을 말해야 셀러가 **「이 상품이 국내에서 어느 가격대인가」**
+ *    로 읽는다 — 「참고가격」은 **무엇의 참고인지** 를 말하지 않는다.
+ * 🔴 **1건이면 범위를 만들지 않는다**(§4) — 그때도 제목은 이 축의 이름 그대로 두고
+ *    **금액 한 줄 + 「확인 1곳」** 으로 적는다(억지 `88,000 ~ 88,000` 금지).
+ * 🔴 **`₩` 로 바꾸지 않았다.** CPO 예시는 `₩83,600 ~ ₩88,000` 이지만 이 영역의 `₩` 는
+ *    **계약 6건이 금지** 한다(`wu-141-r3`·`wu-144`·`wu-145`·`wu-146`·`wu-148`·`wu-139`) —
+ *    근거는 실측이다: `convertToKrw` 가 모르는 통화를 그대로 KRW 로 취급해 `CAD 64` 가
+ *    **「약 ₩64」** 로 떴다(CORE-2E §4-4). 🟢 그래서 **ISO 코드** 를 유지한다
+ *    (`KRW 83,600 ~ 88,000`) — 통화를 잃지 않는 쪽이고 §4 의 «뜻» 은 그대로 지킨다.
+ *    🔵 기호 표기를 쓰려면 그 여섯 앵커 갱신이 선행이고 **가격 표시 정책** 이다(CPO 판정).
+ */
+export const DOMESTIC_REFERENCE_TITLE = "국내 가격 형성대";
 export const DOMESTIC_REFERENCE_NOTE =
   "국내 판매처의 상세 페이지에서 확인한 가격입니다 — 원래 통화 그대로입니다.";
+/** 🔴 CORE-2T §4 — 국내는 **「확인 N곳」** 이다(「판매처 N곳」은 해외 축의 기존 말). */
+export const DOMESTIC_SELLER_COUNT_LABEL = "확인";
+/** 🟢 해외 축의 기존 말 — **한 글자도 바꾸지 않는다**(§9). */
+export const OVERSEAS_SELLER_COUNT_LABEL = "판매처";
 export const DOMESTIC_REFERENCE_SCOPE =
   "이번 확인에만 쓰이고 저장되지 않습니다 — 새로고침하면 사라집니다.";
 
@@ -115,17 +140,52 @@ const TIER_LABEL: Record<string, string> = {
  * 🔴 값이 없으면 **null** 을 돌려준다 — 「0건」이나 「-」로 칸을 만들지 않는다.
  *    (이 저장소가 반복해서 막아 온 「화면이 아는 척하는」 사고)
  */
-export function buildOverseasReference(summary: OverseasPriceSummary | null | undefined): OverseasReferenceView | null {
+export function buildOverseasReference(
+  summary: OverseasPriceSummary | null | undefined,
+  /**
+   * 🔴 CORE-2T — 국내는 「**확인** N곳」 · 해외는 「**판매처** N곳」이다. 🟢 기본값이
+   *    해외의 기존 말이라 **해외 호출부는 한 글자도 바뀌지 않는다**(§9).
+   */
+  opts?: { sellerCountLabel?: string },
+): OverseasReferenceView | null {
   if (!summary || summary.count <= 0) return null;
+  const countLabel = opts?.sellerCountLabel ?? OVERSEAS_SELLER_COUNT_LABEL;
 
   const lines: OverseasReferenceLine[] = Object.entries(summary.byCurrency)
     /** 🔴 통화 간 «순서» 를 금액으로 매기지 않는다 — 환산 없이 비교할 수 없다. */
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([currency, v]) => ({
-      currency,
-      lowest: `${currency} ${v.lowestAmount.toLocaleString("ko-KR")}`,
-      scope: `판매처 ${v.count}곳`,
-    }));
+    .map(([currency, v]) => {
+      const n = (v.lowestAmount ?? 0).toLocaleString("ko-KR");
+      /**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔴🔴🔴 CORE-2T §16 — **「마지막 1미터」가 바로 이 줄이었다.**
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * 🔴 `highestAmount` 는 **CORE-2R-5 가 이미 집계** 하고 있었는데 이 함수가 그 칸을
+       *    **한 번도 읽지 않았다** ⟹ 금액이 **서로 달라도** 화면은 **최저가 한 줄** 만
+       *    보여줬다. 그래서 「국내 가격 형성대」가 **구조적으로 표시될 수 없었다** —
+       *    CPO 가 「단일 참고가격으로 보이는 상태」라고 지적한 그 모양이다.
+       * 🟢 고친 것은 **읽는 쪽 하나** 다 — 집계·수집·판정·중복제거는 건드리지 않았다.
+       *
+       * 🔴 **1건(또는 같은 금액)을 억지 범위로 만들지 않는다**(§4 명시) —
+       *    `88,000 ~ 88,000` 은 거짓 폭이다. 🟢 그 판별은 **금액 비교** 로 한다
+       *    (건수로 하면 「판매처 2곳인데 같은 가격」이 범위가 돼 버린다 · 실측 D4).
+       * 🔴 환산 **0** · 통화 **혼합 0** — 범위는 **한 통화 «안»** 에서만 만든다.
+       */
+      const hi = v.highestAmount;
+      const isBand = hi != null && Number.isFinite(hi) && hi > v.lowestAmount;
+      return {
+        currency,
+        lowest: isBand
+          ? `${currency} ${n} ~ ${(hi as number).toLocaleString("ko-KR")}`
+          : `${currency} ${n}`,
+        /**
+         * 🔴 `count` 는 **집계에 들어간 수** 다 — 국내는 집계기가 **판매처 단위로 접은
+         *    뒤** 세므로 그 값이 「확인 N곳」의 분모로 정확하다(중복이 새어 나오지 않는다).
+         */
+        scope: `${countLabel} ${v.count}곳`,
+      };
+    });
   if (lines.length === 0) return null;
 
   const tierParts = Object.entries(summary.byPriceTier)

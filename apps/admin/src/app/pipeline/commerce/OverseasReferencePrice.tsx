@@ -36,6 +36,12 @@ export function OverseasReferencePrice({
   icon = "🧾",
   testId = "overseas-reference",
   amountTestId = "overseas-lowest",
+  /**
+   * 🔴 CORE-2T §4 — 국내는 「**확인** N곳」 · 해외는 「**판매처** N곳」이다.
+   *    🟢 기본값을 주지 않는다 — owner(`buildOverseasReference`)가 해외의 기존 말을
+   *       기본값으로 들고 있어서, 안 넘기면 **해외 동작이 그대로** 다(§9).
+   */
+  sellerCountLabel,
 }: {
   summary?: OverseasPriceSummary | null;
   title?: string;
@@ -44,8 +50,9 @@ export function OverseasReferencePrice({
   icon?: string;
   testId?: string;
   amountTestId?: string;
+  sellerCountLabel?: string;
 }) {
-  const view = buildOverseasReference(summary);
+  const view = buildOverseasReference(summary, { sellerCountLabel });
   if (!view) return null;
 
   return (

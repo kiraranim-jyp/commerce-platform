@@ -7,6 +7,8 @@ import {
   DOMESTIC_REFERENCE_NOTE,
   DOMESTIC_REFERENCE_SCOPE,
   DOMESTIC_REFERENCE_TITLE,
+  /** 🔴 CORE-2T §4 — 국내 「확인 N곳」 라벨. 운영 호출부와 같은 props 로 그린다. */
+  DOMESTIC_SELLER_COUNT_LABEL,
   OVERSEAS_REFERENCE_SCOPE,
   OVERSEAS_REFERENCE_TITLE,
   type OverseasPriceSummary,
@@ -33,6 +35,7 @@ import {
 
 const SUMMARY: OverseasPriceSummary = {
   count: 3,
+  /** 🟢 `highestAmount`·`sellerCount` 는 **옵셔널** 이다 — 옛 fixture 가 그대로 돈다(하위호환). */
   byCurrency: { KRW: { count: 3, lowestAmount: 88_000 } },
   byMarket: { KR: 3 },
   byPriceTier: { COMPARISON: 3 },
@@ -48,17 +51,57 @@ const renderDomestic = (summary: OverseasPriceSummary | null) =>
       icon: "🇰🇷",
       testId: "domestic-reference",
       amountTestId: "domestic-lowest",
+      /**
+       * 🔴 CORE-2T §4 — **운영 호출부와 같은 props 로 그린다.** 이 줄이 없으면 테스트가
+       *    「판매처 N곳」(해외 기본값)을 보는데 운영은 「확인 N곳」을 그려서, 계약이
+       *    **운영과 다른 화면** 을 잠근다.
+       */
+      sellerCountLabel: DOMESTIC_SELLER_COUNT_LABEL,
     }) as never,
   );
 
 /* ══════════════ A. 🟢 국내 블록이 실제로 그려진다 ══════════════ */
 
 describe("A. 국내 참고가격 블록", () => {
-  it("🟢 KRW 최저가와 판매처 수를 적는다", () => {
+  it("🟢 KRW 금액과 확인 판매처 수를 적는다", () => {
     const html = renderDomestic(SUMMARY);
-    expect(html).toContain("국내 참고가격");
+    /** 🔴 CORE-2T §4·§8 — 제목이 「국내 참고가격」 → **「국내 가격 형성대」** 로 바뀌었다. */
+    expect(html).toContain("국내 가격 형성대");
     expect(html).toContain("KRW 88,000");
-    expect(html).toContain("판매처 3곳");
+    /** 🔴 국내는 **「확인 N곳」** 이다(「판매처」는 해외 축의 말이다 · §9). */
+    expect(html).toContain("확인 3곳");
+    expect(html, "🔴 국내 블록에 해외 축의 말이 들어왔다").not.toContain("판매처 3곳");
+  });
+
+  /**
+   * 🔴🔴🔴 CORE-2T §16 — **「마지막 1미터」가 이 단언이다.**
+   *    `highestAmount` 는 CORE-2R-5 가 **이미 집계** 하고 있었는데 화면이 그 칸을
+   *    **한 번도 읽지 않아** 형성대가 구조적으로 표시될 수 없었다.
+   */
+  it("🟢🟢 금액이 서로 다르면 **최저 ~ 최고** 로 적는다(형성대)", () => {
+    const html = renderDomestic({
+      count: 3,
+      byCurrency: { KRW: { count: 3, lowestAmount: 83_600, highestAmount: 88_000 } },
+      byMarket: { KR: 3 },
+      byPriceTier: { COMPARISON: 3 },
+    });
+    expect(html, "🔴 최고가를 읽지 않는다 — 형성대가 단일 가격으로 보인다").toContain(
+      "KRW 83,600 ~ 88,000",
+    );
+    expect(html).toContain("확인 3곳");
+  });
+
+  /** 🔴 **1건·같은 금액을 억지 범위로 만들지 않는다**(§4 명시 · `88,000 ~ 88,000` 금지). */
+  it("🔴 금액이 같으면 **범위를 만들지 않는다**", () => {
+    const html = renderDomestic({
+      count: 2,
+      byCurrency: { KRW: { count: 2, lowestAmount: 88_000, highestAmount: 88_000 } },
+      byMarket: { KR: 2 },
+      byPriceTier: { COMPARISON: 2 },
+    });
+    expect(html).toContain("KRW 88,000");
+    expect(html, "🔴 같은 금액을 범위로 적었다").not.toContain("~");
+    expect(html).toContain("확인 2곳");
   });
 
   /** 🔴 환산하지 않는다 — 금액 줄에 다른 통화/환산 흔적이 없다. */

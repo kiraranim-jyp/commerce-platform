@@ -107,7 +107,12 @@ describe("CORE-2R-5 A — 국내 참고가격이 1차 🇰🇷 블록에 선다"
     const kr = end > 0 ? block.slice(0, end) : block;
     expect(kr, "🔴 1차 🇰🇷 블록에 국내 참고가격이 없다").toContain('data-testid="domestic-reference"');
     expect(kr).toContain("KRW 88,000");
-    expect(kr).toContain("국내 참고가격");
+    /**
+     * 🔴 **CORE-2T §4·§8 에서 제목이 바뀌었다** — 「국내 참고가격」 → **「국내 가격 형성대」**.
+     *    CPO: 「현재 화면은 `판매처 1곳 / 88,000원` 처럼 **단일 참고가격으로 보이는 상태**」.
+     * 🟢 이 단언이 지키는 성질(「1차 🇰🇷 블록에 국내 금액 블록이 선다」)은 **그대로** 다.
+     */
+    expect(kr).toContain("국내 가격 형성대");
   });
 
   /** 🔴🔴 같은 숫자가 두 곳에 뜨면 WU-145/149 의 「가격 owner 하나」가 깨진다. */
@@ -290,7 +295,58 @@ describe("CORE-2R-5 C — byCurrency 최고가(추가 칸)", () => {
       { market: "KR", currency: "KRW", amount: 92000, priceTier: "COMPARISON" },
       { market: "KR", currency: "KRW", amount: 88000, priceTier: "COMPARISON" },
     ]);
+    /**
+     * 🟢 **CORE-2T 는 칸을 더하지 않았다** — `sellerKey` 를 안 넘긴 입력이라 이 축의
+     *    동작이 **한 글자도 바뀌지 않는다**(§9). 🔴 1차 구현에서 `sellerCount` 를
+     *    따로 뒀다가 **지웠다**(집계기가 판매처 단위로 먼저 접어서 `count` 와 항상 같았다 —
+     *    같은 것을 가리키는 칸 둘은 언젠가 갈라진다).
+     */
     expect(s.byCurrency.KRW).toEqual({ count: 3, lowestAmount: 83600, highestAmount: 92000 });
+  });
+
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 CORE-2T §5·§13 — **같은 판매처 중복이 「판매처 수」와 「형성대」를 둘 다 틀린다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 `sellerKey` 가 없던 동안 이 집계는 중복을 **구조적으로 막을 수 없었다** —
+   *    레코드에 URL 도 도메인도 없었다. ⟹ `판매처 N곳` 이 **레코드 수** 였고,
+   *    같은 URL 이 두 번 들어오면 **형성대가 거짓으로 넓어졌다**(D1).
+   */
+  it("C-3 🔴 D1 — 같은 판매처 2회면 **판매처 1곳** 이고 형성대가 넓어지지 않는다", () => {
+    const s = summarizeCandidateOverseasPrices([
+      { market: "KR", currency: "KRW", amount: 88000, priceTier: "COMPARISON", sellerKey: "donokids.com" },
+      { market: "KR", currency: "KRW", amount: 92000, priceTier: "COMPARISON", sellerKey: "DONOKIDS.COM" },
+    ]);
+    /** 🔴 그 판매처의 **최저 확인가 하나** 로 접는다 ⟹ 범위가 생기지 않고 **1곳** 이다. */
+    expect(s.byCurrency.KRW).toEqual({ count: 1, lowestAmount: 88000, highestAmount: 88000 });
+  });
+
+  it("C-4 🟢 D4 — 다른 판매처 **같은 가격** 은 「확인 2곳 · 범위 없음」 이다", () => {
+    const s = summarizeCandidateOverseasPrices([
+      { market: "KR", currency: "KRW", amount: 88000, priceTier: "COMPARISON", sellerKey: "donokids.com" },
+      { market: "KR", currency: "KRW", amount: 88000, priceTier: "COMPARISON", sellerKey: "miniboutique.co.kr" },
+    ]);
+    expect(s.byCurrency.KRW).toEqual({ count: 2, lowestAmount: 88000, highestAmount: 88000 });
+  });
+
+  it("C-5 🟢 D5 — 다른 판매처 **다른 가격** 이면 최저~최고가 생긴다", () => {
+    const s = summarizeCandidateOverseasPrices([
+      { market: "KR", currency: "KRW", amount: 86000, priceTier: "COMPARISON", sellerKey: "biskuit.kr" },
+      { market: "KR", currency: "KRW", amount: 83600, priceTier: "COMPARISON", sellerKey: "donokids.com" },
+      { market: "KR", currency: "KRW", amount: 88000, priceTier: "COMPARISON", sellerKey: "miniboutique.co.kr" },
+    ]);
+    expect(s.byCurrency.KRW).toEqual({ count: 3, lowestAmount: 83600, highestAmount: 88000 });
+  });
+
+  /** 🔴 §9 — **해외 축은 키를 넘기지 않으므로 동작이 한 글자도 바뀌지 않는다.** */
+  it("C-6 🔴 `sellerKey` 가 없으면 **기존 동작 그대로** 다(해외 축 불변)", () => {
+    const s = summarizeCandidateOverseasPrices([
+      { market: "OVERSEAS", currency: "GBP", amount: 37, priceTier: "EXACT" },
+      { market: "OVERSEAS", currency: "GBP", amount: 37, priceTier: "EXACT" },
+    ]);
+    /** 🔴 접지 않는다 — 접을 근거(키)가 없다 ⟹ **레코드 수 2** 가 그대로 남는다. */
+    expect(s.byCurrency.GBP).toEqual({ count: 2, lowestAmount: 37, highestAmount: 37 });
   });
 
   /** 🔴 `EXCLUDED` 는 금액 집계에서 **여전히 빠진다**(WU-062 계약 유지). */

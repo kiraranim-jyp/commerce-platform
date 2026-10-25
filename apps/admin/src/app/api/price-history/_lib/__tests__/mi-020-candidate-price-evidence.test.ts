@@ -310,6 +310,7 @@ describe("④ 🔴🔴 해외 축의 격리", () => {
       { market: "OVERSEAS", currency: "EUR", amount: 90, priceTier: "COMPARISON" },
     ]);
     /** 🔴 CORE-2R-5 — 통화별 **최고가 칸 추가**. 🟢 여전히 **통화를 섞지 않는다**. */
+    /** 🟢 CORE-2T — 해외 축은 `sellerKey` 를 안 넘기므로 **숫자가 전부 그대로** 다(§9). */
     expect(s.byCurrency).toEqual({
       EUR: { count: 2, lowestAmount: 90, highestAmount: 100 },
       USD: { count: 1, lowestAmount: 80, highestAmount: 80 },

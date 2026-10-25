@@ -6,6 +6,8 @@ import {
   DOMESTIC_REFERENCE_NOTE,
   DOMESTIC_REFERENCE_SCOPE,
   DOMESTIC_REFERENCE_TITLE,
+  /** 🔴 CORE-2T §4 — 국내 「확인 N곳」 라벨 owner(해외는 기본값을 쓴다). */
+  DOMESTIC_SELLER_COUNT_LABEL,
   type OverseasPriceSummary,
 } from "./overseas-reference";
 import {
@@ -673,8 +675,10 @@ function MarketBlock({
                   icon: "🇰🇷",
                   testId: "domestic-reference",
                   amountTestId: "domestic-lowest",
+                  /** 🔴 CORE-2T §4 — 국내는 「확인 N곳」이다(해외는 기본값 「판매처」 그대로). */
+                  sellerCountLabel: DOMESTIC_SELLER_COUNT_LABEL,
                 }
-              : /** 🔴 해외는 **기본값 그대로** — 「🧾 해외 동일상품 참고가격」(`wu-056r1`). */
+              : /** 🔴 해외는 **기본값 그대로** — 「🧾 해외 동일상품 참고가격」·「판매처 N곳」(§9). */
                 {})}
           />
           <p className="mt-2 text-[11px] font-medium text-text-secondary">{SAME_CHECK_HEADING}</p>

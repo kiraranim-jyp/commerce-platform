@@ -134,12 +134,16 @@ function firstScreen(el: HTMLElement): string {
 /* ══════════════════ A. 🇰🇷 — 가격이 「0곳」보다 «먼저» 온다 ══════════════════ */
 
 describe("A. 🇰🇷 국내 — 가격이 먼저, 판정이 뒤", () => {
-  it("A-1 🟢🟢 SAME 0 인데 **KRW 88,000 · 판매처 1곳** 이 첫 화면에 있다", () => {
+  it("A-1 🟢🟢 SAME 0 인데 **KRW 88,000 · 확인 1곳** 이 첫 화면에 있다", () => {
     const el = mount({ rows: ROWS, domesticReference: KR_REF, overseasReference: OS_REF });
     const first = firstScreen(el);
     expect(first).toContain("KRW 88,000");
-    expect(first).toContain("판매처 1곳");
-    expect(first).toContain("국내 참고가격");
+    /**
+     * 🔴 **CORE-2T §4 에서 어휘가 바뀌었다** — 국내는 「확인 N곳」 · 해외는 「판매처 N곳」.
+     *    🟢 지키는 성질(「1차에 국내 금액과 그 분모가 같이 선다」)은 **그대로** 다.
+     */
+    expect(first).toContain("확인 1곳");
+    expect(first).toContain("국내 가격 형성대");
   });
 
   /**

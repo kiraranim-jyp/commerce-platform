@@ -321,6 +321,21 @@ export async function computeMarketIntelligence(
         currency: "KRW",
         amount: e.priceKrw,
         priceTier: e.priceTier,
+        /**
+         * 🔴🔴🔴 CORE-2T §5·§13 — **「판매처 N곳」의 단위를 레코드에 실어 보낸다.**
+         *
+         * 🔴 이 칸이 없던 동안 집계기는 **중복을 막을 방법이 없었다**(레코드에 URL 도
+         *    도메인도 없었다) ⟹ 「판매처 N곳」이 **수집 레코드 수** 였다.
+         * 🟢 **도메인** 을 쓴다 — 「판매처」의 단위가 그것이고 §15-3 이 「실제 unique
+         *    seller 수」를 요구한다. 같은 도메인이 여러 레코드로 오면 집계기가 **그
+         *    판매처의 최저 확인가 하나** 로 접는다(D1·D3).
+         * 🔴 실측(B226AC009)에서는 **효과가 0** 이다 — 후보 2건 · 고유 URL 2건 ·
+         *    도메인 2개(donokids · miniboutique). 🟢 그래도 두는 이유는 그 전제
+         *    (sink 가 샵당 1건 · 러너가 canonical URL 중복 제거)가 **바뀌면 숫자가
+         *    조용히 틀려지기** 때문이다.
+         * 🔴 **해외 축(`overseasEvidence`)에는 넘기지 않는다** — 그 축의 숫자가 바뀌면 §9 위반이다.
+         */
+        sellerKey: e.domain,
       });
     }
     /** 🔴 REFERENCE/EXCLUDED 는 기존 국내 후보와 **같은 이유로** 가격 버킷에
