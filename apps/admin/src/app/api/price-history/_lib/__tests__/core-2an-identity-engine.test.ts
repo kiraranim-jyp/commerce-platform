@@ -271,6 +271,67 @@ describe("CORE-2AN 계약 — 네 단계의 경계를 고정한다(네트워크 
     expect(src).toContain("total >= 1");
   });
 
+  /**
+   * ══════════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 **CORE-2AO 반려 기록 — 이 반사실을 운영에 넣었다가 되돌렸다**
+   * ══════════════════════════════════════════════════════════════════════════════
+   *
+   * 2026-10-25, CPO 지시로 C1+C2+C3 를 운영(`cross-seller.ts` · `match-truth.ts`)에
+   * **실제로 넣었다.** 🔴 **전체 회귀가 막았다** — 두 단계로 드러났다:
+   * ```
+   * 1차  **39건 실패** — 원인은 **C2**(SAME 에 Identity evidence 요구).
+   *      `Smallable 430701 ↔ Bobo B226AC114` 같은 **골든 SAME** 은 Smallable 이 Bobo 품번을
+   *      싣지 않아 MODEL_CODE 축이 없고 제목이 일반어라 TITLE 2점도 아니다 —
+   *      **보조 축 합**(CATEGORY·COLOR·MATERIAL·FIT·AUDIENCE·SIZE)으로 SAME 에 닿는다.
+   *      ⟹ 🔴 CORE-2AN 의 「C2 손실 0」은 **GT 34 안에서만** 참이었다.
+   * 2차  C2 를 되돌린 뒤에도 **15건 실패** — 결정적인 것은 이것이다:
+   *      🔴🔴 `쌍 C: B226AC114 ↔ B226AC049 는 서로 다른 상품이다`(cross-seller-matching)
+   *      ⟹ **품번 충돌 조기 반환을 열자 「진짜 다른 상품」이 가격 축으로 들어오는 경로가 생겼다.**
+   *      그 밖에 `CONFLICT 는 어느 축에서 와도 항상 EXCLUDED`(P0-A ③ 96칸) ·
+   *      `AUDIENCE_LINE 보류는 유지된다`(WU-143 A-1) · `CONFLICT 는 맨 먼저 이긴다` 가 깨졌다.
+   * ```
+   * 🟢 **그래서 전부 되돌렸다**(운영 2파일 `git checkout` · 회귀 **9,146 passed / 0 failed** 복구).
+   * 🔴 **실패한 테스트를 고치지 않았다** — 그것들이 1년치 precision 결정을 담고 있다.
+   *
+   * ⟹ 🔴🔴 **교훈: GT 34 는 운영 안전성의 분모가 아니다.** 아래 숫자는 그 34건에서만 유효하고,
+   *    「IDENTITY STRUCTURE VALID」는 **전체 계약 분모에서 반증됐다**.
+   *    다음에 이 구조를 다시 열려면 **깨진 계약 넷을 먼저 설명** 해야 한다(CPO 판정 사안).
+   */
+  it("AN-0 🔴🔴 **운영 반영은 반려됐다** — 품번 조기 반환은 그대로다(복구 증거)", () => {
+    /**
+     * 🔴 **주석을 먼저 벗긴다**(메모 `source-scan-must-strip-comments` · 열 번째).
+     * 🔴🔴 그리고 **줄 단위 `.replace(/\/\/.*$/)` 는 이 저장소에서 «동작하지 않는다»** —
+     *    파일이 **CRLF** 라서 `.` 가 `\r` 를 넘지 못하고 `$`(non-multiline)가 그 앞에서
+     *    맞지 않는다. 1차에 그렇게 써서 `//` 가 남아 FAIL 했다.
+     * 🟢 CORE-2AM AM-1 이 쓰는 **`/^\s*\/\/.*$/gm`** 형태를 쓴다(그 `$` 는 `\r` 앞에서 맞는다).
+     */
+    const strip = (s: string) =>
+      s
+        .replace(/\/\*[\s\S]*?\*\//g, " ")
+        .replace(/^\s*\/\/.*$/gm, " ")
+        .replace(/\s+/g, " ");
+    const CROSS = strip(
+      readFileSync(
+        path.join(__dirname, "../../../../../../../../packages/crawler/src/comparison-search/cross-seller.ts"),
+        "utf8",
+      ),
+    );
+    /** 🔴 조기 반환이 **조건 없이** 그대로 있어야 한다(CORE-2AO 반려 상태). */
+    expect(CROSS, "🔴 품번 단독 충돌 예외가 되살아났다 — 깨진 계약 넷을 먼저 설명해야 한다").toContain(
+      "if (conflicts.length > 0) { return { verdict: \"CONFLICT\", axes: [],",
+    );
+    expect(CROSS, "🔴 SAME 게이트에 조건이 더해졌다").toContain(
+      "if (!blocked && brandOk && corePoints >= SAME_MIN_AXES) return \"SAME\";",
+    );
+    const TRUTH = strip(
+      readFileSync(
+        path.join(__dirname, "../../../../../../../../packages/crawler/src/comparison-search/match-truth.ts"),
+        "utf8",
+      ),
+    );
+    expect(TRUTH, "🔴 품번 충돌이 다시 조건부가 됐다").toContain('if (modelCode === "conflict") return "CONFLICT";');
+  });
+
   it("AN-5 🟢 §9 GT 34건 baseline 이 유지된다", () => {
     const { rows, conflicted } = loadGt();
     const byCeo = rows.reduce<Record<string, number>>((a, r) => ((a[r.ceo] = (a[r.ceo] ?? 0) + 1), a), {});
