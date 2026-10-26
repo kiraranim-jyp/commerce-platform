@@ -250,6 +250,32 @@ MarketPriceComparison 에 **prop 둘** 을 더한다(값은 전부 이미 있다
    ⟹ PriceEditor 의 「최종 판매가격에 적용」(:158)과 **동일 동작**(사본 0 · 새 handler 0)
 ```
 
+### 🔵🔵 실행 표 — **단계 × 완료 조건이 한 줄에 있다**(CEO 확정 양식 2026-10-26)
+
+> 🔴 이 표 하나로 실행한다. 행을 건너뛰지 않고, 완료 조건의 **증거** 를 보고서에 그대로 적는다.
+> 🔴 **STOP 열에 걸리면 범위를 넓히지 않고 그 자리에서 STOP 보고** 한다.
+
+| # | 단계 · 무엇을 바꾸는가 (좌표) | 완료 조건 (증거) | 🔴 FAIL / STOP |
+|---|---|---|---|
+| 0 | **착수** — owner 6건·A/B 정책·STEP 5 **재조사 0** | 조사 도구 호출 0 · 바로 코드 | 탐색성 조사를 시작하면 STOP |
+| 1 | `MarketPriceComparison` 에 **prop 둘** — `sellVerdictCopy` · `onApplyRecommendedPrice` | 새 prop **정확히 2** · 새 state **0** · 새 API **0** | 3번째 prop·새 state 가 필요해지면 STOP |
+| 2 | **① 판매판단** 을 왼쪽 📊 1차에 삽입 (`FINAL_VERDICT_COPY[sellVerdict]` 소비) | 왼쪽·오른쪽 **문자열 동일** · 오른쪽 Action Center **존재** | verdict 를 **계산** 하거나 새 copy 를 만들면 STOP |
+| 3 | **② 권장 판매가격 ₩A** (`recommendedPriceKrw` 그대로) | 화면 ₩ 금액 == A · 계산 코드 변경 0 | A 계산을 건드리면 STOP |
+| 4 | **② CTA [이 가격으로 설정]** → `updateSalePriceKrw(recommendedPriceKrw)` | 클릭 시 그 함수 1회 호출(스파이) · 새 handler 0 | 별도 적용 handler/재계산이면 STOP |
+| 5 | **③ 근거** 🇰🇷 국내 참고가격 · 🌎 해외 최저 소싱가 — **순서만** 이동 | 두 블록 **그대로** · 환산 0 · 통화 합산 0 | B 가 A 위치로 오면 STOP |
+| 6 | **④ ⓘ 가격 계산 기준** — 기존 `handleOpenPriceCalculation` + 앵커(CW:3727) 유지 | 클릭 → `priceDetailRequest` 증가 → 상세 노출 | ⓘ 가 **B** 를 설명하면 STOP |
+| 7 | **계약 UX-01~06** — 순서 · owner 동일 · CTA · A/B · ⓘ · 1차 비중 | 신규 계약 PASS (분모 명시) | 기존 계약을 **약화** 해야 PASS 면 STOP |
+| 8 | **변이 M1~M6** — 판매판단/A/CTA 제거 · B 를 A 자리 · ⓘ→B · 오른쪽 삭제 | **6/6 전부 FAIL** → 바이트 복구 | 하나라도 통과하면 계약이 약하다(단언 강화) |
+| 9 | **전체 회귀** `apps/admin` | **676 files / 9,181 passed / 0 failed / 140 skipped** 이상 | 「UI 변경이라 생략」 금지 · 낮아지면 원인 규명 |
+| 10 | **typecheck** `tsc --noEmit` | `error TS` **0** | — |
+| 11 | **build** `npm run build` | exit **0** | — |
+| 12 | **산출물 점검 + Git** — 🔴 `docs/core-2m-visual-review.html` 등 라이브 재생성물 확인 | `git status` 로 **파일 전수 확인 후** 커밋 · 무관 파일 **0** | 생성물을 자동 커밋하면 FAIL(이번 세션에 실제로 났다) |
+| 13 | **deploy → Production** | `/` · `/pipeline` HTTP · UX01 화면 mount 확인 | 「Deployment successful」만 적으면 FAIL |
+| 14 | **CEO 확인 9항** (판매판단 위치 · 양쪽 불일치 0 · A 가시성 · CTA 직관 · B 는 근거 · ⓘ 는 A) | CEO PASS 1회로만 **Production UI PASS** | 세 질문(팔아도 돼/얼마에/왜)에 못 답하면 **UX01 FAIL** |
+| 15 | **보고 17절 + 좌표 갱신** | 분모 포함 보고 1회 · **START-HERE §0·§9 갱신** | 갱신 없으면 다음 페이지가 과거로 되돌아간다 |
+
+🔴 **완료 기준은 「구현했다」가 아니다** — 표 **0~15 전 행** 이 채워져야 CORE-UX-SELLER-01 이 닫힌다.
+
 ### 🔴 이 WU 에서 변경 금지
 
 ```
