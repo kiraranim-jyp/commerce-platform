@@ -11,7 +11,7 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-SAME-SPRINT-06** — 🟢🟢 **PLAIN_HTML Evidence 공급 구현·배포**(§9-P)
+CURRENT WU   **CORE-SAME-SPRINT-07** — 🟢🟢 **Evidence Utility 측정 · 추천 1개**(§9-Q · 운영 변경 0)
 NEXT         🔵 **CPO 가 다음 Evidence Layer 범위 지정** — 🔴 CTO 선제 작업 0
 CEO ACTION   🟡 **없다**
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-SAME-SPRINT-06 — HTML 공급 **배포**(§9-P · DIFFERENT→SAME 0 · 효과 0) · CPO 판정 대기
+CURRENT    CORE-SAME-SPRINT-07 — Evidence Utility **측정 완료**(§9-Q) · 추천 = BRAND quality · CPO 판정 대기
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -1954,3 +1954,100 @@ core-sprint02   「공급 지점 하나」 → **「경로마다 하나」**(둘
 ```
 
 **STOP — CORE-SAME-SPRINT-06 PLAIN_HTML Evidence Supply Integration 완료 / Identity 영향 검증 후 CPO 판정 대기**
+
+---
+
+## 9-Q. 🟢🟢 **CORE-SAME-SPRINT-07 — Evidence Utility Prioritization**(측정 only · 운영 **0**)
+
+🔴 **production code change 0 · 네트워크 0.** matcher 정책 · threshold · `NO_TITLE_OVERLAP` ·
+MODEL_CODE conflict · 새 axis · category matcher · description similarity · meta 공급 ·
+`priceTier` · `domesticReference` · A/B 가격 — **전부 변경 0**.
+
+### 🟢🟢 설계 — **ablation**(이 Sprint 의 핵심)
+
+```
+각 Evidence 칸을 **양쪽(원상품·후보) 다** 비워 판정 변화를 본다
+⟹ 「matcher 가 실제로 읽는가(B)」와 「판정 효과(C)」가 **한 번에** 나온다
+🔴 한쪽만 비우면 「한쪽 없음」 분기를 타서 **둘을 구별할 수 없다**
+   (`brandKnown = Boolean(x.brand && y.brand)` 가 그 모양이다)
+🔴 **역방향을 추정하지 않는다** — 「공급을 늘리면 SAME +N」은 이 측정으로 **나오지 않는다**
+   (없는 값을 지어내야 한다)
+```
+
+### 표 (GT 33 · human SAME 17 · DIFFERENT 10 · UNCERTAIN 6 · baseline SAME **5** · FP **2**)
+
+| Evidence | 공급(후보) | 발화 | matcher | 비웠을때 SAME | 비웠을때 FP |
+|---|---:|---:|---|---:|---:|
+| TITLE | 33/33 | 33 | 🟢 쓴다 | **0 (-5)** | 0 (-2) |
+| BRAND | 24/33 | 30 | 🟢 쓴다 | **0 (-5)** | 0 (-2) |
+| MODEL_CODE | 9/33 | 33 | 🟢 쓴다 | **6 (+1)** | 1 (-1) |
+| COLOR | 15/33 | 32 | 🟢 쓴다 | 3 (-2) | 2 (+0) |
+| MATERIAL | 16/33 | 33 | 🟢 쓴다 | 4 (-1) | 2 (+0) |
+| FIT | 7/33 | 28 | 🟢 쓴다 | **6 (+1)** | 2 (+0) |
+| CATEGORY/FORM | 19/33 | 33 | 🔴 변화0 | 5 (+0) | 2 (+0) |
+| IMAGE(URL) | 21/33 | 33 | 🔴 변화0 | 5 (+0) | 2 (+0) |
+| DESCRIPTION | **0/33** | 33 | 🔴 변화0 | 5 (+0) | 2 (+0) |
+| OPTION/SKU | 0/33 | 25 | 🔴 변화0 | 5 (+0) | 2 (+0) |
+| COMPOSITION | 측정불가 | — | 측정불가 | 측정불가 | 측정불가 |
+
+🔴 **읽는 법** — 이 표는 **「비웠을 때」** 다. SAME 이 **줄면** 그 Evidence 가 SAME 을 **지탱** 한다.
+
+🔴🔴 **TITLE · BRAND 를 비우면 SAME 이 «전멸»(5→0)** ⟹ 둘은 **SAME 의 필수 관문** 이다.
+🔴🔴 **MODEL_CODE · FIT 는 비울 때 SAME 이 «늘어난다»(+1)** ⟹ 현재 분모에서 그 축들은
+**SAME 을 막는 쪽** 으로 작동한다(품번 conflict 3 · FIT blocker 1).
+
+### ① FN blocker 분포 재집계 (FN = 12 · 중복 집계 · 🔴 과거 분류를 복사하지 않았다)
+
+```
+**BRAND_UNCONFIRMED 5** · (blocker 0) **3** · conflict:MODEL_CODE **3** · FIT 1
+MODEL_CODE 비교 — unavailable **6** · exact **3** · conflict **3**
+🔴 「(blocker 0) 3」은 blocker 없이 SAME 이 안 된 것 ⟹ **축 수 부족**(SAME_MIN_AXES)
+🔴 「exact 3」은 **품번이 정확히 일치하는데도** SAME 이 아니다 ⟹ 다른 관문이 막는다
+```
+
+### ② safety
+
+```
+🔴 이 Sprint 에서 「DIFFERENT → SAME = 0」은 **합격선이 아니다** — ablation 은
+   **일부러 약화** 하는 측정이라 누출이 나오는 것이 **정상이고 정보** 다.
+🟢 실측 — 최대 누출 증가 **+0**(약화해도 FP 가 늘지 않았다) · 구현이 없으므로 운영 누출 **0**
+```
+
+### 🔴🔴 하니스 결함 — 그대로 보고했으면 무의미한 분포였다
+
+```
+`blockers`/`conflicts` 를 **문자열 배열로 추측** 해 `.map(String)`·`Object.keys` 를 썼고
+**`[object Object]` 6 · `conflict:0` 3** 이 나왔다.
+🟢 타입에서 읽어 고쳤다 — 실제는 `{blocker, detail}[]` · `{conflict, detail}[]`
+   (`cross-seller.ts:194-195`). 🔴 이 트랙의 「칸 모양 추측」 반복 실수다.
+```
+
+### 🟡 추천 — 정확히 **1개**: `C. BRAND evidence quality`
+
+```
+① FN 최대 단일 blocker = **BRAND_UNCONFIRMED 5/12 (41.7%)**
+② ablation — BRAND 를 비우면 SAME **5 → 0** ⟹ **모든 SAME 이 그 관문을 지난다**
+③ 공급률 **24/33** ⟹ 9건 공백이 곧 UNCONFIRMED 분모다
+🔴 **MODEL_CODE 를 1순위로 고르지 않은 이유** — 그 축은 비울 때 SAME 이 **늘어난다**(+1)
+   ⟹ 공급을 늘리면 conflict 가 늘 위험이 **측정됐다**(SPRINT-06 도 같은 방향 · 회복 0)
+🔴 **TITLE 은 공급 33/33 로 포화** ⟹ 「공급」 개선 대상이 아니다(normalization 은 **정책**)
+🔴 이 추천은 **BRAND 완화가 아니다**(WU-080 CPO REJECT 유지) — **공급/품질** 축이다
+```
+
+### 🔴 측정불가 (0% 로 적지 않는다)
+
+```
+COMPOSITION — `ProductFacts` 에 칸이 **없다**(compareMaterial 이 그 자리에서 파싱)
+IMAGE scoring — 이 경로에 **없다**(URL 공급만 쟀다 · 별도 트랙)
+DESCRIPTION 효과 — 저장 facts 공급 **0/33** ⟹ 이 분모에서 **발화 불가**
+「공급 증가 → SAME 증가」 — **역방향 전부 측정불가**
+```
+
+### 증거
+
+```
+회귀 695 files / **9,323 passed · 0 failed · 142 skipped** · typecheck **0** · build exit **0**
+운영 변경 **0** · 네트워크 **0** · 작업트리 clean · origin/main **0 / 0** · 🔴 Deploy 없음
+```
+
+**STOP — CORE-SAME-SPRINT-07 Evidence Utility 측정 완료 / 다음 Evidence Layer 1개 우선순위 CPO 판정 대기**
