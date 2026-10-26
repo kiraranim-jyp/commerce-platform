@@ -13,12 +13,13 @@
 ```
 트랙 A (증거)  CORE-PRICE-SAME-01  STEP 1 · 2 · 2-R 🟢 **MEASURED / CLOSED**(§9-EV)
                CORE-PRICE-SAME-02  🟢 **CEO 판정 화면 준비 완료**(§9-EV2 · 11건)
-               CORE-PRICE-SAME-03  🔵 **예약**(§9-EV3) — 🔴 CEO JSON 전까지 **착수 금지**
+               CORE-PRICE-SAME-03  🔵 **착수점**(§9-EV3B · 국내 SAME 검토 화면 · 조사 끝)
 트랙 B (화면)  CORE-UX-SELLER-01 🟢 CLOSED · CORE-UX-SELLER-02 🟢 **구현·배포 완료**(§9-UX02)
-BLOCKING       🟡🟡 **CEO 육안 판정 11건** ← 지금 이것 하나다
-               docs/core-2m-visual-review.html (브라우저로 열고 [복사] 버튼)
-CEO ACTION     ① **판정 11건**(동일/다른제품/판단불가 + 사유)  ← 이것이 트랙 A 를 연다
-               ② 화면 확인 1회 — UX01 9항 + UX02 국내가격 4항 + STEP 4(§18)
+NEXT           🔵 **CTO 구현 — §9-EV3B**(국내 SAME 검토 화면 · 조사 끝 · 바로 코드)
+               🔴 그 화면이 나온 뒤에 CEO 가 **국내 후보** 를 판정한다
+CEO ACTION     🟡 지금 당장은 **없다**(§9-EV3B 구현 대기)
+               🔵 이미 준비된 것 — docs/core-2m-visual-review.html 11건(§9-EV2 · 해외 중심)
+                  🔴 CPO 가 요구한 **국내 5건 이상** 은 §9-EV3B 화면이 담는다
 STEP 5         CLOSED (CPO 2026-10-26 · 재개 조건 1건 · §10)
 🔴 「A/B/C/D 한 글자」 질문은 **철회됐다** — 위 ① 의 **사유** 가 그 답을 직접 담는다
 ```
@@ -329,7 +330,77 @@ M5 MI_SAME_AREA_SCOPE 연결 제거 · M6 CTA wiring 제거 · M7 금지 리터�
 
 ---
 
-## 9-EV3. 🔵 **`CORE-PRICE-SAME-03` 예약 — CEO 판정 fixture 고정 + 시스템 대조**
+## 9-EV3B. 🔵🔵🔵 **`CORE-PRICE-SAME-03` 착수점 — 국내 SAME 검토 화면**(조사 끝 · 구현부터)
+
+> 🔴 **100% 조사/판정 화면이다.** matcher · threshold · priceTier · domesticReference ·
+> 가격 pipeline · **셀러 UI** 변경 **전부 0**. 🔴 UI 개선은 SAME 원인 확정 **뒤** 다.
+> 🔴 이번 세션은 **후보 인벤토리 + 계약 충돌 확인까지** 했다(코드 0 · clean).
+
+### 🔴🔴 착수 전에 알아야 할 **계약 충돌 하나** — 이것부터 읽는다
+
+```
+🔴 기존 `core-2m-visual-review-build` 는 **내부 토큰 노출을 «전수 단언» 으로 금지** 한다
+   (NO_TITLE_OVERLAP · BRAND_UNCONFIRMED · PRESUMED_SAME · TEXT_CONFIRMED ·
+    EXACT_IDENTIFIER · SAME_MIN_AXES · matchLevel · confidence)
+   🔴 실제로 내가 `verdict` 를 날것으로 적었다가 **그 계약이 FAIL 시켰다**(CORE-PRICE-SAME-02)
+🔴 그런데 CPO §5·§6 은 이 화면에 **시스템 판정·8축·blocker 를 그대로 보여 달라** 고 한다
+⟹ 🟢 **해법 — 출력 파일을 «둘» 로 가른다**(계약을 풀지 않는다):
+   docs/core-2m-visual-review.html        기존 · **내부 토큰 0** · 그 계약 그대로 유지
+   docs/core-same03-domestic-review.html  **신규** · 내부 결과 노출 O · 🔴 셀러 UI 에 **연결 0**
+🔴 기존 빌더를 «수정» 하지 말고 **새 빌더 파일**을 만든다 — 한 파일이 두 정책을 갖게 하지 않는다
+```
+
+### 🟢 후보 인벤토리 — **기존 fixture 전수 실측**(새 웹 검색 0)
+
+```
+global.trenbe.com   9     m.luxboy.com        5 ← 🔴 라벨 충돌    beaumonde.co.kr   5 (AC010)
+luksusbaby.kr       4     donokids.com        4                   biskuit.kr        4
+wconcept.co.kr      4     miniboutique.co.kr  2 ← 🔴 **현재 국내 참고가격 KRW 88,000 의 출처**
+m.web.mustit.co.kr  2     littleluna.co.kr    2                   kream.co.kr       1
+⟹ 🟢 **국내/한국계 도메인 11개** — CPO 요구(≥5) 충족 · 🔴 **임의로 5건만 자르지 않는다**
+출처 fixture — core-2m(4) · wu-059(3) · wu-067(3) · wu-068(3) · wu-074(3) · wu-111(1) ·
+              wu-112(7) · wu-116(1)   🔴 그 밖에서 후보를 **만들지 않는다**
+```
+
+### 🔵 화면 요구(CPO §4~§9 · 기존 패턴 재사용)
+
+```
+원상품 ↔ 비교상품  이미지 · URL · 브랜드 · 상품명 · 품번 · 상세 · 색상 · 소재 · 핏 ·
+                   옵션/SKU · 카테고리 · 기타   🔴 **좌우 같은 항목**
+시스템 결과        verdict · matchTruth · priceTier · **국내 참고가격 포함 여부**
+8축               BRAND · TITLE · MODEL_CODE · COLOR · MATERIAL · FIT · GARMENT_FORM ·
+                  AUDIENCE_LINE  (+ IMAGE 는 **실제 계산될 때만**)
+                  각 축 PASS/FAIL/UNKNOWN/NOT_AVAILABLE · 🔴 **blocker 는 눈에 띄게**
+raw evidence      축 결과만 보여주지 않는다 — **원상품 값 ↔ 후보 값**을 나란히
+판정              [동일] [다른제품] [판단불가] + **사유**(가능한 한 요구)
+이전 기록         「이전 CEO 판정 / 이전 사유」를 **별도로** 표시(이번 판정과 섞지 않는다)
+JSON export       { domain, url, ceo, why, system, priceTier, blockers }
+🔴 이미지 없으면 **「이미지 없음」** — 다른 상품 이미지로 대체 금지
+```
+
+### 🔴 화면에 **드러내야** 할 공급 문제(이미 측정됨 · 고치지 않는다)
+
+```
+description  ProductFacts 에 **전달 안 됨**(product-url-facts.ts:441 이 category 하나만)
+image        후보 imageUrl **하드코딩 null**(:472) · compare 3번째 인자 미전달(match.ts:661)
+model code   분기 시 conflict → **EXCLUDED**(domestic-product-link.ts:86)
+title        한국어 제목 ↔ 영문 원상품 ⟹ **NO_TITLE_OVERLAP**
+⟹ 🔴 「CEO 가 SAME 이라 봤는데 시스템은 왜 막혔는가」를 **화면에서 보이게** 한다
+```
+
+### 🔴 보고 형식·STOP
+
+```
+후보 N · 국내 후보 N · CEO 기존 SAME N · System non-SAME N · 국내 참고가격 후보 N
+변경 — matcher 0 · threshold 0 · priceTier 0 · domesticReference 0 · 가격 0 · **셀러 UI 0**
+마지막 줄 고정 — `STOP — CEO SAME 육안 판정 대기`
+```
+
+---
+
+## 9-EV3. 🔵 **[참고] `CORE-PRICE-SAME-03` 2단계 — CEO 판정 fixture 고정 + 시스템 대조**
+
+> 🔵 **위 §9-EV3B 화면으로 CEO 판정이 들어온 «뒤»** 의 단계다. 그 전에는 착수하지 않는다.
 
 > 🔴🔴 **입력은 CEO 판정 JSON 이다.** 그것이 오기 전에는 **착수하지 않는다**(CPO 명시).
 > 🔴 **측정 전용** — matcher · threshold · 8축 · priceTier · domesticReference ·
