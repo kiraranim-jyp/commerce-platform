@@ -318,6 +318,78 @@ AC010  현행 {count 1 · KRW 83,600 · EXACT}       →  SAME-only {count 1}   
 
 ---
 
+### 🔴🔴🔴 STEP 2 측정 완료 — **안전한 증거 조합이 «없다»**(운영 코드 0 · CPO 판정 대기)
+
+🔴 **분모를 섞지 않는다 — 둘이다**:
+```
+⒜ C3 GT(순수 · `core-step5-evidence-c3-gt`)  저장 33 · facts+원상품 33 · 라벨 **27**(SAME 17 · DIFF 10)
+   🔴🔴 **그 27쌍에 biskuit 도 luxboy 도 «없다»**(실측 0건) ⟹ 성공기준 ③(전체 GT precision)은
+      이 분모에서 재고, **대상 쌍의 분리력은 ⒝ 에서만** 잴 수 있다
+⒝ AC009 라이브(`core-step5-domestic-lineage`)  biskuit · luxboy · donokids (라벨 존재)
+```
+
+🟢 **⒜ 분모의 현재 숫자**(기준선 · 재측정 금지):
+```
+baseline  SAME 판정 7 = 정답 5 · **false SAME 2** · precision 71.4% · recall 29.4%
+C3        SAME 판정 9 = 정답 7 · **false SAME 2** · precision 77.8% · recall 41.2%
+          🟢 뒤집힌 2건은 **둘 다 `bobochoses.co.jp`**(C11·C37 · human SAME) · 누출 0
+```
+
+### 🔴 증거 분리력 표 — **모든 축이 0 이거나 «역방향» 이다**
+
+```
+증거            biskuit(human SAME)          luxboy(human DIFFERENT)      분리력
+model code      exact                        **exact**                    ❌ 0 (동일)
+brand           "비스킷" → **BRAND_MISMATCH** "BOBO CHOSES" → 통과         🔴 **역방향**
+title overlap   NO_TITLE_OVERLAP             NO_TITLE_OVERLAP             ❌ 0 (동일)
+color / fit / material / category   null / null                           ⚪ 측정불가(양쪽 없음)
+description*    258자 → **COLOR_VARIANT 추가** 52자 → 변화 0               🔴 **역방향**
+image*          null(공급 owner 없음)         null                         ⚪ 측정불가
+confidence      **0.02**                     0.37                         🔴 **역방향**
+blocker 수      **2**                        1                            🔴 **역방향**
+```
+
+🔴🔴 **즉 정답(biskuit)이 오답(luxboy)보다 «모든 축에서 더 나쁜 신호» 를 들고 있다.**
+샵이 `brand` 칸에 자기 이름(「비스킷」)을 적어 BRAND_MISMATCH 를 얻었고(WU-080 그 모양),
+luxboy 는 brand 를 정확히 적어 그 축을 통과한다 ⟹ **브랜드 축 완화는 오답을 더 많이 연다.**
+
+### 🔴 반사실 — 둘 다 **이미 측정돼 있다**(재측정 안 했다)
+
+```
+C3(품번 exact → 브랜드 확인)   biskuit blockers 2 → 1 · 🔴 **verdict 불변**(NO_TITLE_OVERLAP 남음)
+                               ⟹ SAME gain **0** · leakage **0**  (STEP 1 실측)
+NO_TITLE_OVERLAP 비차단        🔴 **m.luxboy.com 이 누출된다** — DIFFERENT 방어 4/4 → **3/4** ·
+                               KRW 59,000 유입 · 국내 최종 0 → 0 ⟹ **순손실**(WU-138 실측)
+```
+
+### 🔴 유일하게 남은 신호 — 그리고 그것은 **닫힌 축** 이다
+
+```
+origin  titleTokens [hug, hairy, monster, shirt]
+biskuit [보보쇼즈, **허그, 헤어리, 몬스터**, 티셔츠, b226ac009]   ← 디자인명 음역 **3개**
+luxboy  [보보쇼즈, 키즈, 긴팔티셔츠, b226ac009, since, 2002, …]   ← 음역 **0개**(일반명사뿐)
+⟹ 🟡 분리력이 «있어 보이는» 유일한 축 = **음역(transliteration)**
+🔴🔴 그러나 CPO 가 **WU-078 에서 종료** 했다 — 「음역/언어 축을 생산 로직에 넣지 않는다 ·
+   회수 효과 **0** · 분모 4 · 문턱 근거 부족 · **DIFFERENT 를 열 수 있는 위험 축**」
+🔴 그리고 **현재 production 이 공급하는 evidence 가 아니다**(새 매칭 축이 필요하다) ⟹ Q7 **불충족**
+```
+
+### 🔴 CPO 질문 답
+
+```
+Q1 biskuit SAME 최소 증거 조합   🔴 **없다**(현재 공급 evidence 안에서)
+Q2 luxboy DIFFERENT 유지         ⚪ Q1 불성립이라 측정 대상이 없다
+Q3/Q4 전체 GT precision/recall   🟢 baseline 71.4%/29.4% · C3 77.8%/41.2% (분모 27 · 🔴 대상 쌍 밖)
+Q5 false SAME                    🟢 baseline **2** · C3 **2**(증가 0)
+Q6 C3 보다 개선                  🔴 **아니다** — AC009 에서 C3 의 이득이 **0** 이다
+Q7 production 공급 가능           🔴 **아니다**(음역 축은 신규 규칙 · 그리고 닫힌 축)
+```
+
+🔴 **성공 기준 ①②③ 중 ① 이 불성립** ⟹ **구현 후보 없음.** STOP 하고 CPO 판단을 기다린다.
+🔴 **처방을 적지 않았다** — SAME/8축/threshold/COLOR/FIT/description/image/가격 게이트 **전부 변경 0**.
+
+---
+
 ### 🔵 [원래 범위] STEP 1 지시 — 재조사 금지
 
 > 🔴 **STEP 1 은 측정 전용** 이다 — 구현이 아니다.
