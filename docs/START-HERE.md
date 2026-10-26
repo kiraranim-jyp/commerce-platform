@@ -11,8 +11,8 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-MI-PRICE-01** — 🔴 **STOP: Level 2(가격 형성대) 0/3**(§9-E)
-NEXT         🔴 **CPO 판정 2건** — ⒜ 밴드 집계기 ①↔② 선택 ⒝ 등록부 접근(측정불가 해소)
+CURRENT WU   **CORE-MI-PRICE-02** — 🟢 **STEP 1~4 PASS**(Level 0/1/2 전부) · 🟡 **STEP 5·6 미완결**
+NEXT         🔵 **해외 최저 소싱가 → 판매판단 → 권장가 E2E 하나**(§9-F 의 시나리오 D)
 CEO ACTION   🟡 **없다**
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SAME-03**(화면 + CEO GT 10/10) · **SAME-04**(FN 3건 원인 확정)
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-MI-PRICE-01 — 가격 형성대 Level 2 **0/3** STOP(§9-E) · **CPO 판정 대기**
+CURRENT    CORE-MI-PRICE-02 — Level 2 **달성** · 시나리오 D(판매판단 E2E)만 남음(§9-F)
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -634,6 +634,72 @@ B226AC009 의 human SAME 국내 후보 4건 중 ②에 들어간 것은 **1** �
 core-mi-price-01-band  2   ①↔② 집계기 나란히 · CPO Level 매핑 · **DIFFERENT 오염 단언**
                            🔴 `CORE_MI_PRICE_01_LIVE=1`
 기존(재사용) WU_172_PROBE=1 (상품 3종 퍼널) · WU_F3_PROBE=1 (자동 공급 0 확인)
+```
+
+---
+
+## 9-F. 🟢🟢 **CORE-MI-PRICE-02 — Level 2 달성(실데이터) · STEP 5·6 미완결**(운영 변경 0)
+
+> 🔴 matcher 0 · threshold 0 · P1/P2 적용 0 · description axis 0 · 새 가격 산식 0 · UI 0.
+> 🟢 **CPO 정책 확정 반영** — 가격 형성대의 기준은 **`domesticReference`**(`EXACT|COMPARISON`)다.
+
+### 🟢🟢🟢 STEP 1 — **CASE B 확정** · 등록부 접근이 «필요하지 않았다»
+
+```
+🔴🔴 1차 측정(MI-PRICE-01)이 운영 입력을 빠뜨렸다 — `classifyCandidateMarket` 의
+   CORE-2R-4 분기는 `marketEvidence` 를 보는데(`candidate-market.ts:104`),
+   그 값은 **`factsFromProductUrl` 가 이미 돌려준다**(`product-url-facts.ts:510`) ·
+   운영도 그대로 넘긴다(`run-domestic-price-check.ts:1795`).
+   ⟹ 그 칸을 안 넘겨서 「UNKNOWN」이 나왔다. 🟢 넘기자 결과가 바뀌었다.
+
+m.luxboy.com   KRW 59,000  🟢 **KR** — basis **KR_SELLER_EVIDENCE_AND_KRW**
+                           ⟹ 🔴 **등록부가 아니라 «그 페이지가 스스로 적은 증거» 다**
+donokids.com   KRW 88,000  🔴 **UNKNOWN** — basis `KRW_WITHOUT_DOMAIN_EVIDENCE`
+                           ⟹ 그 페이지의 강한 KR 신호가 2개 미만 · 🔴 등록부 분기는 **측정불가**
+🔴 mock 으로 KR 을 만들지 않았다 · 코드 변경 0 · service-role 0.
+```
+
+### 🟢🟢 STEP 2·3·4 — **Level 0/1/2 가 실데이터에서 전부 성립한다**
+
+| 상품 | ② domesticReference | Level | 가격 형성대 | 🔴 오염 |
+|---|---:|---|---|---:|
+| **B226AC009** | **2** | 🟢🟢 **Level 2** | **KRW 59,000 ~ 88,000** | 0 |
+| B226AC010 | 1 | Level 1 — 제한된 근거 | 83,600 (가격대 확정 불가) | 0 |
+| B226AC117 | 0 | Level 0 — 국내 참고가격 없음(정상) | 없음 | 0 |
+
+```
+AC009 의 2건 = `biskuit.kr` 88,000(KR_TLD_AND_KRW) + `m.luxboy.com` 59,000(KR_SELLER_EVIDENCE)
+🟢 둘 다 tier **COMPARISON**(PRESUMED_SAME) ⟹ CPO 가 확정한 기준에서 **정당한 입력** 이다
+🟢🟢 **DIFFERENT 오염 = 0** — `kream`(human DIFFERENT · 65,000)이 CONFLICT 로 정확히 빠졌다
+🟢 `SIMILAR`·`CONFLICT`·`EXCLUDED`·`UNREACHABLE` 이 가격 축에 **하나도** 들어가지 않았다
+🔴 ① SAME-only 집계기로는 Level 2 가 **0/3** 이다 ⟹ CPO 의 ② 선택이 **측정으로 뒷받침된다**
+```
+
+### 🟡 STEP 5·6 — **해외 최저 소싱가 → 판매판단 → 권장가 E2E 는 미완결**
+
+```
+🔴 이번 세션에서 **돌리지 못했다.** 사유를 그대로 적는다 —
+   `computeMarketIntelligence` 가 `fetchLiveExchangeRates()` + 스냅샷 + 셀러 설정을
+   요구한다(WU-021 이 같은 자리를 기록했다) ⟹ 하니스에서 전 구간이 서지 않는다.
+🟢 재사용 가능한 기준선은 있다 — §6(착지원가 ₩230,721 · A ₩295,796 · B ₩258,000) ·
+   AC009 해외가 실측(WU-136: GBP 37 · USD 58 · 판매중 3곳).
+⟹ 🔴 §9 시나리오 **D 만 남았다**(A·B·C 는 위에서 PASS).
+```
+
+### 🔴 상세설명 — **CPO 전략대로 축을 추가하지 않았다**
+
+```
+🟢 description → 새 SAME axis **0** · threshold **0** · 금지축 재개방 **0**.
+🟢 이미 추출되는 brand/model code/product name/color/material/category 는
+   **기존 계약 안에서 그대로** 쓰인다(새 전달 경로 0).
+```
+
+### 🟢 재사용 하니스
+
+```
+core-mi-price-01-band  2   ①↔② 집계기 · CPO Level · market basis · **DIFFERENT 오염 단언**
+                           🔴 `CORE_MI_PRICE_01_LIVE=1`
+🟢 `marketEvidence` 를 운영과 같이 넘긴다 — 다음 세션이 이 입력을 **다시 빠뜨리지 않게** 주석에 박았다
 ```
 
 ---

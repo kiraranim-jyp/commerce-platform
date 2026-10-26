@@ -155,10 +155,25 @@ describe("CORE-MI-PRICE-01 — 국내 가격 형성대: 두 집계기를 나란�
           );
           const tier = priceTierFromLink({ matchTruth: truth, verified: false });
           const price = scored?.price ?? f.candidate.price ?? null;
+          /**
+           * 🔴🔴🔴 **CORE-MI-PRICE-02 STEP 1 — 1차 측정이 운영 입력을 빠뜨렸다.**
+           *
+           * `classifyCandidateMarket` 의 CORE-2R-4 분기는 `marketEvidence` 를 본다
+           * (`candidate-market.ts:104` → `hasCompositeKrSellerEvidence`). 그리고 그 값은
+           * **`factsFromProductUrl` 가 이미 돌려준다**(`product-url-facts.ts:510`) —
+           * 운영도 그것을 그대로 넘긴다(`run-domestic-price-check.ts:1795`).
+           * 🔴 1차 하니스는 그 칸을 **넘기지 않아** `KRW_WITHOUT_DOMAIN_EVIDENCE` 를 만들었다
+           *    ⟹ 「운영에서도 UNKNOWN」이라는 **거짓 결론**이 될 자리였다.
+           * 🟢 이제 **운영과 같은 입력** 으로 부른다. 🔴 mock 으로 KR 을 만들지 않았다 —
+           *    그 페이지가 스스로 적은 증거만 쓴다(§2 금지 준수).
+           * 🔴 `isRegisteredDomesticShop` 은 **여전히 false** 다(service-role 없음) ⟹
+           *    등록부 분기는 **측정불가로 남는다**. 둘을 섞어 적지 않는다.
+           */
           const market = classifyCandidateMarket({
             domain: host,
             currency: price?.currency ?? null,
             isRegisteredDomesticShop: false,
+            marketEvidence: f.candidate.marketEvidence ?? null,
           });
           const krw = price && price.currency.toUpperCase() === "KRW" ? price.amount : null;
 
@@ -175,7 +190,7 @@ describe("CORE-MI-PRICE-01 — 국내 가격 형성대: 두 집계기를 나란�
 
           console.log(
             `    ${host.padEnd(24)} human=${c.human.padEnd(13)} verdict=${String(cross.verdict).padEnd(14)} ` +
-              `tier=${tier.padEnd(11)} market=${market.market.padEnd(8)} ` +
+              `tier=${tier.padEnd(11)} market=${market.market.padEnd(8)}(${market.basis}) ` +
               `${krw != null ? `KRW ${krw.toLocaleString()}` : `가격 ${price ? price.currency : "없음"}`} ` +
               `① ${inSameOnly ? "포함" : "—   "} ② ${inDomRef ? "포함" : "—"}`,
           );
