@@ -10,9 +10,10 @@
 ## 1. CURRENT STATE
 
 ```
-현재        🟢🟢 **CORE-NEXT STEP 4 구현·배포 완료 — 남은 것은 «CEO 화면 확인 1회» 다**
-            🔵 권장 판매가격(A)이 1차에 서고 **죽어 있던 ⓘ 가 되살아났다**(§6-NEXT 실행 기록)
-            🔴 **CTO 가 할 코드 작업이 없다.** 다음 범위는 **CPO 가 지정** 한다
+현재        🔴🔴 **STEP 5-1·5-2 완료 — 「SAME 아닌 후보의 가격이 국내 참고가격에 있다」가
+               실측됐다**(§6-STEP5) ⟹ 🟡 **CPO 판정 2건 대기 · STEP 5-3 착수 금지**
+            🔴 반사실 — 「SAME 만 허용」하면 **AC009 국내 가격이 사라진다**(1 → 0 · 실측)
+            🟢 STEP 4 구현·배포 완료(`6fe1b0bf`) — 남은 것은 **CEO 화면 확인 1회**(§6-NEXT ⑦)
             🟢 CORE-2AO ⒝(표시 조립) + R1(CEO FAIL 3건 수정) — §6-AO
             🟢 CORE-2AA(VERIFIED_SAME 가격 자격 배선) 배포 완료 — §6-AA
             🟢 CORE-2AC(PLAIN_HTML parity) 배포 · 🔵 2AB·2AD·2AE·2AF·2AG·2AH·2AI 조사(운영 0)
@@ -233,6 +234,111 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 ```
 
 🟢 관련 계약·변이는 **이미 추가·검증** 됐고 전체 회귀 PASS 다(`wu-148-market-price-signal` D).
+
+---
+
+## 6-STEP5. 🔴🔴🔴 **CORE-NEXT STEP 5-1·5-2 완료 — 「SAME 아닌 가격」이 실측됐다**
+
+> 🔴 **운영 코드 변경 0 · DB 0 · 배포 0.** 하니스 1개(`core-step5-domestic-lineage` ·
+> `CORE_STEP5_PROBE=1` 없으면 SKIP)만 추가했다. 🔴 **STEP 5-3 은 착수하지 않았다**(사유 아래).
+> 🟢 재현성 — **같은 숫자로 3회** 실행(운영 함수 · 실제 HTTP).
+
+### 🔴 결론 한 줄
+
+```
+🇰🇷 국내 참고가격 `KRW 88,000` 의 출처는 **biskuit.kr 단 1곳** 이고, 그 후보의 MI 판정은
+   **TEXT_CONFIRMED → PRESUMED_SAME(보류)** 다 ⟹ 🔴 **「동일상품으로 인정하지 않은
+   후보의 가격」이 국내 참고가격에 실제로 들어가 있다.** CPO 의심 ①이 **사실로 확인됐다.**
+```
+
+### 🟢 Q1~Q7 답 (코드 + 실측)
+
+```
+Q1 같은 candidate set 인가        🟢 **같다.** transient 경로 하나이고 후보 배열도 하나다
+                                 (`geminiEvidence` — 다섯 출처를 패널이 합쳐 올린다)
+Q2 어디서 갈리는가                🔴 **후보군이 아니라 «자격 술어» 가 둘이다**:
+     UI SAME 축   `transientDisplayTier(row) === "SAME"` + 판매중 + 가격확인
+                  (mi-same-candidates.ts:165)
+     참고가격 축   `market === "KR" && priceKrw != null
+                   && priceTier ∈ {EXACT, COMPARISON}`  (market-intelligence.ts:318)
+Q3 KRW 88,000 의 후보            🔴 **biskuit.kr 하나**(레코드 1건 · 「확인 1곳」과 일치)
+Q4 그 후보의 MI 결과              🔴 `TEXT_CONFIRMED` / display **PRESUMED_SAME**(보류)
+                                 (🟡 human 라벨은 SAME — wu-112 GT)
+Q5 SAME 아닌 후보가 들어가나      🔴🔴 **들어간다.** 실측 **1건 / 참고가격 레코드 2건**
+Q6 EXACT ↔ COMPARISON ↔ SAME     `priceTierFromLink:86` ⟹
+     EXACT_IDENTIFIER·STRONG_IDENTIFIER → **EXACT**      (= display **SAME**)
+     TEXT_CONFIRMED                      → **COMPARISON** (= display **PRESUMED_SAME**)
+     SIMILAR → REFERENCE · CONFLICT/INSUFFICIENT → EXCLUDED(둘 다 가격 제외)
+     🔴 `matchTruth === null` → `verified ? EXACT : COMPARISON` ⟹ **판정이 없어도 COMPARISON**
+     ⟹ 🔴 **COMPARISON 은 SAME 과 무관한 등급이다**
+Q7 최종 owner                    `summarizeCandidateOverseasPrices(domesticTransientRecords)`
+     입력 조건 `market-intelligence.ts:318` → 산출 `:1041 candidateDomesticPrice`
+     → 응답 `domesticReference` → `setDomesticReference`(Panel)
+     → `MarketComparisonInput.domesticReference` → `MarketPriceComparison` 🇰🇷 블록
+```
+
+### 🟢 STEP 5-2 lineage (실측 · 분모 포함 · 원상품 2 · 국내 GT URL 6)
+
+| code | host | human | 후보 | 판정 | matchTruth | display | tier | market | 가격 | SAME축 | 참고가격 |
+|---|---|---|---|---|---|---|---|---|---:|---|---|
+| AC009 | biskuit.kr | SAME | O | O | TEXT_CONFIRMED | PRESUMED_SAME | COMPARISON | KR | KRW 88,000 | **X** | **O** |
+| AC009 | m.luxboy.com | DIFFERENT | O | O | TEXT_CONFIRMED | PRESUMED_SAME | COMPARISON | UNKNOWN | KRW 59,000 | X | X |
+| AC009 | donokids.com | (라벨없음) | O | O | TEXT_CONFIRMED | PRESUMED_SAME | COMPARISON | UNKNOWN | KRW 88,000 | X | X |
+| AC010 | beaumonde.co.kr | SAME | O | O | STRONG_IDENTIFIER | **SAME** | EXACT | KR | KRW 83,600 | **O** | **O** |
+| AC010 | luksusbaby.kr | DIFFERENT | **X** | X | — | — | — | — | — | X | X |
+| AC010 | kream.co.kr | DIFFERENT | O | **EVIDENCE_NOT_WORTHWHILE** | — | — | — | — | — | X | X |
+
+🟢 **Negative 는 작동한다** — human DIFFERENT 3건이 **전부 참고가격에서 빠졌다**
+(⒜ luxboy 는 `.com`+KRW → market **UNKNOWN** ⒝ kream 은 ⑧ 게이트 ⒞ luksusbaby 는 후보 미생성).
+🔴 그런데 **같은 이유로 donokids(KRW 88,000)도 빠졌다** — 라벨이 없는 한국 쇼핑몰이고
+`.com` 이라 `KRW_WITHOUT_DOMAIN_EVIDENCE` 다 ⟹ 「확인 1곳」의 구조적 이유가 이것이다.
+
+### 🔴🔴 반사실 — **「SAME 만 허용」하면 국내 가격이 사라진다**(같은 실행에서 측정)
+
+```
+B226AC009  현행 KRW 88,000(COMPARISON 1)  →  SAME 만 허용 **레코드 1 → 0 · 참고가격 없음**
+B226AC010  현행 KRW 83,600(EXACT 1)       →  SAME 만 허용 **1 → 1 · 불변**
+```
+
+🔴 그래서 STEP 5-3(「SAME-qualified 만 연결」)을 **그대로 구현하지 않았다** — 그 변경은
+**셀러 화면의 국내 가격을 지우는** 변경이고, CPO 가 §3 에서 「`COMPARISON` 을 함부로
+뒤집지 말라 · 국내 가격 = EXACT 만 으로 단순 변경하지 않는다」고 **직접 금지** 했다.
+
+### 🟡 CPO 판정 2건 (CTO 가 고르지 않았다)
+
+```
+⒜ **참고가격 자격 범위** — §2 가 「EXACT + 기존 정책상 허용된 COMPARISON」이라 적었는데
+   실측하면 **그 「허용된 COMPARISON」이 곧 PRESUMED_SAME(보류)** 다 ⟹ 셋 중 하나다:
+   ① 현행 유지(= 코드 변경 0 · 보류 후보 가격이 계속 들어온다)
+   ② EXACT 만(= AC009 국내 가격 **사라진다** · 실측)
+   ③ **표시로 가른다** — 자격은 유지하고 그 숫자가 「보류 후보 기준」임을 화면이 말한다
+      🟢 ③은 §2 의 「가격 후보의 **자격** 과 가격의 **표시 의미** 를 분리한다」와 같은 말이고,
+         🟢 그 한 줄은 **이미 화면에 있다**(`DOMESTIC_SAME_NOT_CONFIRMED` · CORE-2U-A)
+⒝ 🔴🔴 **§5 의 제목 예시를 그대로 쓰면 화면이 거짓말한다** — CPO 목업은
+   「🇰🇷 **국내 동일상품** 참고가격 / SAME 상품 1곳」이지만 그 숫자의 출처는 **보류 후보** 다.
+   🟢 현재 제목은 「🇰🇷 국내 참고가격」(동일상품 주장 **없음**)이고 **그것이 정확하다** —
+      CORE-2AO 가 해외 제목에서 「동일상품」을 뺀 것과 **같은 축** 이다.
+   🔴 ⒜에서 ①/③ 을 고르면 **그 제목을 바꾸지 않는 것** 이 맞다
+```
+
+### 🔵 STEP 5-3 이후를 열 때의 좌표 (조사 끝 · 재조사 금지)
+
+```
+고칠 자리는 **한 곳** 이다 — `market-intelligence.ts:318` 의 tier 조건.
+🟢 그 앞의 `priceTierWithVerifiedSame`(CORE-2AA)이 **이미 자격 승격 입구** 이므로
+   「SAME eligibility 를 가격 pipeline 입력으로 연결」은 **새 파이프라인이 아니라 그 한 줄** 이다.
+🔴 건드리지 않는다 — `priceTierFromLink` · SAME threshold · 8축 · `crossSellerReserved` ·
+   model-code · sellerKey dedupe · 집계기(`summarizeCandidateOverseasPrices`) · 해외 축.
+🔴 그리고 그 줄을 바꾸면 **`domesticCompetition`(권위 집계)과 달라진다** — 그 버킷
+   (`exactShopRecords`/`comparisonShopRecords` · :296~302)은 **같은 tier 를 다른 용도로** 쓴다.
+   ⟹ 자격을 좁힐 때 **둘 중 어디를 좁히는지** 를 CPO 가 명시해야 한다(판정·알림 경로).
+```
+
+🔴 **측정 한계** — ⒜ 원상품 **2개**(CPO 가 요구한 3개 이상 중 2개) · 국내 GT URL 이 실재하는
+원상품이 **그 둘뿐** 이고 **URL 을 지어내지 않았다** ⒝ `beaumonde` 가 이번에 **SAME · 가격
+83,600** 으로 나왔다 — WU-138/150 의 「가격 없음 · 보류」와 **다르다**(그 사이 WU-15x 가
+brand/parity 를 고쳤다). 🔴 「개선됐다」로 단정하지 않는다 — **이번 실행에서 그렇다** ⒞ 해외
+축은 이 하니스 범위 밖이다(국내 GT URL 만 넣었다).
 
 ---
 
