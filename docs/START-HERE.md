@@ -11,15 +11,16 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-DESC-EVIDENCE-01** — 🟢🟢 **구현·배포 완료**(§9-Z) · matcher 변화 **0**
-NEXT         🔵 **CPO 판정** — ⒜ Evidence 를 Comparability 로 넘길지 ⒝ **IMAGE**(C19·C20·C22)
-             ⒞ BRAND alias 확대(🔴 SPRINT-08 HOLD 해제 사안) — 🔴 **CTO 선제 작업 0**
-CEO ACTION   🟡 **없다** — 이 WU 는 화면을 바꾸지 않는다(셀러 UI 변경 0)
+CURRENT WU   **CORE-IMAGE-EVIDENCE-01** — 🟢🟢 **조사 완료 · `IMAGE EVIDENCE = GO`**(§9-AA)
+NEXT         🔵 **CPO 지정** — §16 규칙상 GO ⟹ 다음은 **IMAGE Evidence production 설계**
+             🔴 **CTO 가 다음 WU 를 고르지 않는다** · BRAND alias 확대는 **HOLD 유지**
+CEO ACTION   🟡 **없다** — 화면 변경 0
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SAME-03**(화면 + CEO GT 10/10) · **SAME-04**(FN 3건 원인 확정) ·
-             **DESC-EVIDENCE-01**(provenance + 6축 + probe 4축 · 운영 2경로 배선)
+             **DESC-EVIDENCE-01**(provenance + 6축 + probe 4축 · 운영 2경로 배선) ·
+             **IMAGE-EVIDENCE-01**(공급 32/32 · 판별 실증 · GO)
 Git          clean · origin/main 0/0 · Production / 200
-회귀         **699 files / 9,360 passed / 0 failed / 146 skipped** · typecheck 0 · build 0
+회귀         **700 files / 9,379 passed / 0 failed / 147 skipped** · typecheck 0 · build 0
 ```
 
 🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **CPO 판정** 이다 — matcher 를 CTO 가 열지 않는다.
@@ -2852,3 +2853,123 @@ typecheck **0** · build exit **0** · 운영 파일 **3**(shared 1 · crawler 2
 ```
 
 **STOP — `CORE-DESC-EVIDENCE-01` 구현·검증·배포 완료 / 다음 범위 CPO 지정**
+
+---
+
+## 9-AA. 🟢🟢 **`CORE-IMAGE-EVIDENCE-01` — 이미지 Evidence 실현 가능성 = GO**(2026-10-27)
+
+🔴🔴 **image matcher 를 만들지 않았다.** threshold · score · `IMAGE → SAME/DIFFERENT` ·
+Comparability · price · priceTier · seller UI · 등록 payload — **전부 변경 0**.
+보존한 것은 **대표 이미지 URL 1개** 이고 그 값은 **어떤 판정에도 들어가지 않는다**.
+
+### 🟢 STEP 1 — 공급(운영 `factsFromProductUrl` · 실측)
+
+| 건 | 경로 | imageUrls | 접근 |
+|---|---|---:|---|
+| 원상품 S4 (Grey Melange) | fixture | 7 | 200 |
+| C42 human **SAME** | SHOPIFY_JSON | 6 | 200 |
+| C19 DIFFERENT | SHOPIFY_JSON | 6 | 200 |
+| C20 DIFFERENT | SHOPIFY_JSON | 8 | 200 |
+| C25 DIFFERENT | SHOPIFY_JSON | 5 | 200 |
+| **C22** DIFFERENT | **PLAIN_HTML** | 🔴 **0** | — |
+
+🟢 **접근 32/32 (100%)** · 전부 `image/jpeg` · 실패율 **0** · 대표(0번)가 **전건 상품 정면컷**.
+🔴 **C22 의 0 은 「페이지에 이미지가 없다」가 아니다** — 페이지에 상품 이미지가 **있고**
+(`/shopimages/DONOKIDS/026002000008.jpg` · HTTP 200 · 310KB) **PLAIN_HTML 경로가 수집하지
+않는다**(`og:image` 도 0건). 🔴 **고치지 않았다** — 추출기 변경은 이 WU 범위 밖이다.
+
+### 🟢🟢 STEP 2 — 이미지가 **실제로** 차이를 설명한다(CTO 육안 · 🔴 GT 가 아니다)
+
+```
+원상품 Grey Melange  회색 + **파란** MAIN STORY MMXVII 프린트
+C42  human SAME       **같은 상품**(회색 + 파란 프린트) · 🟢 이미지가 SAME 을 지지한다
+C19  DIFFERENT        **보라/크림 가로 줄무늬** · 프린트 없음 ⟹ 한눈에 다른 상품
+C20  DIFFERENT        🔴🔴 **네이비 + 노란 프린트**
+C25  DIFFERENT        🔴🔴 **네이비 + 노란 프린트**(C20 과 같은 상품)
+C22  DIFFERENT        페이지 이미지 = **C19 와 같은 Conker Stripe 줄무늬**
+```
+
+🔴🔴🔴 **이 WU 의 가장 중요한 발견 — 텍스트가 «적극적으로» 오해를 유발한다**:
+```
+「Graystone」은 **회색이 아니라 네이비** 다(C20 · C25 실물 확인).
+⟹ COLOR 축이 「Grey Melange」 ↔ 「Graystone」을 글자로 비교하면 **겹쳐 보인다**.
+⟹ 🟢 이미지는 그 둘을 **즉시** 가른다(색거리 **156~157**).
+🔴 즉 C19/C20/C22 는 「텍스트가 부족한」 사례가 아니라 **「텍스트가 틀리게 비슷한」** 사례다.
+```
+
+### 🟢 STEP 3 — 자동화 «가능성» 측정(🔴 도입 결정 아님 · 새 의존성 **0**)
+
+🟢 `sharp@0.34.5` 가 **이미 설치돼 있다**(`packages/image` 의존성) ⟹ 추가 설치 0 으로 실측했다.
+
+| 원상품 대비 | dHash | **dHash(trim)** | aHash(trim) | 색거리 |
+|---|---:|---:|---:|---:|
+| **C42 (human SAME)** | 26 | 🟢 **3** | 1 | 🟢 **0** |
+| C19 DIFFERENT | 14 | **16** | 5 | 33 |
+| C20 DIFFERENT | 11 | **17** | 5 | **157** |
+| C25 DIFFERENT | 27 | **17** | 5 | **156** |
+| C22(페이지) DIFFERENT | 24 | **20** | 5 | 24 |
+
+```
+🟢 **trim-dHash 가 깨끗하게 갈린다** — SAME **3** ↔ DIFFERENT **16~20**
+🟢 같은 상품 · 다른 판매처 사진  C19 ↔ C22페이지 = trim-dHash **4** · aHash **0**
+🟢 같은 색 variant · 다른 판매처 C20 ↔ C25     = trim-dHash **2** · 색거리 **2**
+🟢 안정성 0 · 비용 **80ms/장** · 평균 **350KB**
+```
+
+🔴🔴 **그런데 전처리가 답을 뒤집는다 — 이것을 먼저 적는다**:
+```
+**trim 없이** 재면 C42(human SAME)가 **26** 이고 C20(DIFFERENT)이 **11** 이다 ⟹ **역전**.
+원인은 판매처마다 **크롭·여백·종횡비** 가 다르기 때문이다
+(원상품 1200x1200 ↔ main-story 3333x5000).
+⟹ 🔴 「pHash 를 쓰면 된다」가 아니라 **「trim 같은 정규화가 «필수» 다」** 가 측정 결과다.
+```
+
+🔴 **dHash 는 회색조** 라 **밝기가 같은 두 색** 은 못 가른다 ⟹ 색거리와 **같이** 써야 한다.
+🔴 그리고 이 표본은 **한 상품군(Main Story Bubble Sweatshirt) · SAME쌍 3 · DIFFERENT쌍 4** 다
+⟹ 🔴 **임계값을 정하지 않았다**(정할 분모가 아니다).
+
+### 🔴 계약 I1~I6 + 변이
+
+```
+I1 IMAGE evidence 가 source 를 잃지 않는다(axis IMAGE · source IMAGE · **대표 1장**)
+I2 이미지가 없어도 TITLE/DESCRIPTION 증거 **불변** · 없으면 축 자체가 **없다**(C22 상태)
+I3 🟢 추출기에 `fetch`/`http`/`sharp` **0** ⟹ 이미지 접근 실패가 판정에 **닿을 수 없다**
+I4 🔴 **이미지 URL 이 완전히 같아도 SAME 이 아니다** · GT 33 전수 verdict/tier **변화 0**
+I5 C19 **PRESUMED_SAME** · C20 **PRESUMED_SAME** · C22 **SIMILAR** — 셋 다 **불변**
+I6 배선 제거 변이 **5 FAIL** · `IMAGE → SAME` 변이 **1 FAIL** → 바이트 복구
+```
+
+🔴 **기존 계약 하나가 FAIL 했고 «의도된 변경» 이라 갱신·강화했다** — `계약 8-c` 가 관측 전용
+축을 **개수(4)** 로 세고 있었다(이제 5). 🟢 느슨하게 하지 않고 **구성원 전체를 단언** 하도록
+바꿨다 ⟹ 이제 아무 축이나 끼워 넣으면 거기서 잡힌다.
+
+### 증거
+
+```
+계약 신규 **19**(I1~I6) · 회귀 **700 files / 9,379 passed / 0 failed / 147 skipped**
+(직전 기준선 699/9,360/146 대비 **+1 file · +19 tests · +1 skip** — 전부 이 WU 산출물)
+typecheck **0** · build exit **0** · HTTP 33회(read-only) · 운영 파일 **2**
+🔴 matcher · threshold · MATCHING-3.1 · priceTier · Comparability · price · UI — **변경 0**
+```
+
+### 🔴 STOP 조건 9개 — **하나도 발생하지 않았다**
+
+```
+①verdict 변경 0  ②score/threshold 불요  ③shortcut 불요  ④consumer 안 깨짐(optional)
+⑤crawler 대규모 변경 불요(단 🟡 C22 는 PLAIN_HTML 수집 보강이 **필요** · 별도 사안)
+⑥비용 80ms/350KB — 허용 범위  ⑦판별 **가능** 했다  ⑧false positive 위험은 **전처리**
+   에 달려 있다(측정됨 · 임계값 미정)  ⑨price/comparability 변경 0
+```
+
+### 🔵 다음(🔴 CTO 가 고르지 않았다 · CPO §16 규칙)
+
+```
+GO ⟹ **IMAGE Evidence production integration 설계**
+🔴 그 WU 가 반드시 안고 가야 할 측정 결과 셋 —
+   ⒜ **정규화(trim)가 없으면 답이 뒤집힌다**
+   ⒝ **dHash 단독 금지** — 색거리와 같이 본다
+   ⒞ **C22 류(PLAIN_HTML) 공급 보강** 이 없으면 그 경로는 영원히 이미지가 0 이다
+🔴 임계값은 **더 큰 분모에서** 정한다 — 이 표본(한 상품군)으로 고정하지 않는다
+```
+
+**STOP — `CORE-IMAGE-EVIDENCE-01` 조사 완료 / `IMAGE EVIDENCE = GO` / 다음 범위 CPO 지정**

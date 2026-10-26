@@ -380,11 +380,24 @@ describe("CORE-DESC-EVIDENCE-01 §8 — 🔴 Evidence 는 비교 입력이 아�
     for (const f of COMPARATORS) expect(evidenceCode).not.toContain(f.replace(/\.ts$/, '"'));
   });
 
+  /**
+   * 🔴 **CORE-IMAGE-EVIDENCE-01 에서 이 계약이 FAIL 했고 «의도된 변경» 이라 갱신했다** —
+   *    관측 전용 축이 4 → **5**(`IMAGE` 추가). 🟢 느슨하게 하지 않고 **개수 대신 구성원을
+   *    단언** 하도록 강화했다 — 이제 아무 축이나 슬쩍 끼워 넣으면 **여기서 잡힌다**.
+   * 🔴 Identity 축 **6 은 그대로다** — IMAGE 는 판정 축이 **아니다**.
+   */
   it("계약 8-c — 축 목록이 둘로 갈려 있고 겹치지 않는다", () => {
     const ident = new Set<string>(IDENTITY_EVIDENCE_AXES);
     for (const axis of PROBE_EVIDENCE_AXES) expect(ident.has(axis)).toBe(false);
-    expect(IDENTITY_EVIDENCE_AXES).toHaveLength(6);
-    expect(PROBE_EVIDENCE_AXES).toHaveLength(4);
+    expect([...IDENTITY_EVIDENCE_AXES]).toEqual([
+      "BRAND",
+      "MODEL_CODE",
+      "PRODUCT_NAME",
+      "FORM",
+      "COLOR",
+      "MATERIAL",
+    ]);
+    expect([...PROBE_EVIDENCE_AXES]).toEqual(["FIT", "COMPOSITION", "SET", "OPTION_SKU", "IMAGE"]);
   });
 
   it("계약 8-d — 추출기가 «판정 어휘» 를 만들지 않는다", () => {

@@ -665,7 +665,15 @@ export function resolveAdultGender(signals: string[]): GenderGroup | null {
  *    「설명에 아무것도 없다」와 「상품명에 다 있다」가 **같은 모양** 이 된다.
  * ```
  */
-export type EvidenceSource = "TITLE" | "DESCRIPTION";
+/**
+ * 🔵 **`IMAGE` 는 CORE-IMAGE-EVIDENCE-01 에서 «출처로만» 추가됐다**(2026-10-27).
+ * ```
+ * 🔴 「이미지가 있다」는 사실을 **출처를 달아 보존** 하는 것이 전부다.
+ * ❌ 이미지 점수 · 유사도 · threshold · `IMAGE → SAME` · `IMAGE → DIFFERENT`
+ * 🟢 그래서 이 타입이 늘어나도 **비교 함수는 여전히 이 칸을 읽지 않는다**(계약 P2).
+ * ```
+ */
+export type EvidenceSource = "TITLE" | "DESCRIPTION" | "IMAGE";
 
 /**
  * 🔴 Identity 축 — 기존 비교 축과 **이름이 대응** 한다(새 축을 만들지 않는다).
@@ -686,7 +694,7 @@ export const IDENTITY_EVIDENCE_AXES = [
  *    🔴 이 배열이 그 경계를 기계로 읽을 수 있게 해 준다 — 계약이 이 목록을 돌려
  *       「이 축들이 비교 입력에 등장하지 않는다」를 단언한다.
  */
-export const PROBE_EVIDENCE_AXES = ["FIT", "COMPOSITION", "SET", "OPTION_SKU"] as const;
+export const PROBE_EVIDENCE_AXES = ["FIT", "COMPOSITION", "SET", "OPTION_SKU", "IMAGE"] as const;
 
 export type IdentityEvidenceAxis = (typeof IDENTITY_EVIDENCE_AXES)[number];
 export type ProbeEvidenceAxis = (typeof PROBE_EVIDENCE_AXES)[number];
