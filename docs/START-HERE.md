@@ -11,13 +11,15 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   CORE-UX-SELLER-01  🟢 **구현·검증·배포 완료** — 남은 것은 CEO 확인 1회
-NEXT WU      **CORE-PRICE-SAME-01**  (CPO 예약 · §9-NEXT) — 🔴 CTO 가 먼저 착수하지 않는다
+CURRENT WU   CORE-UX-SELLER-01  🟢 **CPO 승인 · CLOSED**(구현·계약·변이·회귀·배포 완료)
+NEXT WU      **CORE-PRICE-SAME-01 STEP 1**(측정 전용 · §9-NEXT)
+             🔴🔴 **CPO 지시서 발행 전까지 CTO 는 착수하지 않는다**
 STEP 5       CLOSED             (CPO 2026-10-26 · 재개 조건 1건 · §10)
 CEO ACTION   **화면 확인 1회** — UX01 9항 + STEP 4 를 **한 번에**(§18)
 ```
 
-🔴 **CTO 가 할 코드 작업이 없다.** 다음 범위(`CORE-PRICE-SAME-01`)는 **CPO 가 발행** 한다.
+🔴 **CTO 가 할 코드 작업이 없다.** 다음 범위는 **CPO 가 발행** 하고, 그 보고는
+**UX 결과와 섞지 않고 따로** 올린다(CPO 명시).
 
 ---
 
@@ -245,23 +247,64 @@ SELL_VERDICT_HEADING   「판매 판단」   = 한 줄 verdict 의 머리말 · 
 
 ---
 
-## 9-NEXT. 🔵 **다음 WU 예약 — `CORE-PRICE-SAME-01`**(CPO 발행 대기)
+## 9-NEXT. 🔵 **다음 WU — `CORE-PRICE-SAME-01` STEP 1**(🔴 CPO 지시서 발행 대기)
 
-> 🔴 **CTO 가 먼저 착수하지 않는다.** 아래는 CPO 가 예약한 **범위와 금지** 다.
+> 🔴🔴 **CTO 가 임의 착수하지 않는다**(CPO 명시 2026-10-26). 아래는 **발행될 범위** 다.
+> 🔴 **STEP 1 은 측정 전용** 이다 — 구현이 아니다.
 
 ```
-목적   「SAME 상품의 국내가격만 국내 참고가격에 반영되는지」를 **증거로 확인** 하고,
-       연결이 끊어진 부분을 **최소 수정** 한다.
-목표   원상품 → SAME 판별 → SAME 신뢰 후보 → 국내 가격 → 국내 참고가격
-       → 판매판단 → 권장 판매가격
-🔴 **먼저 측정** 한다 — 지금 국내가격 aggregation 에 **실제로 어떤 후보가 들어가는지**,
-   SAME 판정과 **어디서 갈라지는지** 만 증거로 확인한다(SAME 알고리즘을 뜯지 않는다).
-🔴 그대로 유지 — STEP 5 CLOSED · MI 8축 · threshold · COLOR/FIT · description 금지 ·
-   이미지 축 금지 · `priceTierFromLink` · 국내가격 수집 로직
+목적   「국내 참고가격이 **실제 SAME 상품의 가격** 으로 구성되는지」를 증거로 확인한다
+우리가 원하는 흐름   원상품 → SAME 판정 → SAME 신뢰 후보 → 국내 가격
+                   → 국내 참고가격 → 판매판단 → 권장 판매가격
+의심되는 흐름       국내 후보 → EXACT / COMPARISON → 국내 참고가격
 ```
 
-🟡 **이 트랙의 전략 문장(§10 과 같다)** — 「국내가격을 **많이** 가져오는 시스템」이 아니라
+### 🔴🔴 **그 「의심」은 이미 코드로 확인됐다 — 다시 조사하지 않는다**
+
+```
+market-intelligence.ts:**318**  if (e.priceTier === "EXACT" || e.priceTier === "COMPARISON")
+market-intelligence.ts:**192**  국내 축 = market === "KR" && priceKrw != null && tier EXACT|COMPARISON
+⟹ 🔴 **적재 자격의 술어는 `priceTier` 이고 SAME verdict 가 아니다.**
+   즉 CPO 가 적은 「의심되는 흐름」이 **현재 운영 코드의 모양** 이다(추측이 아니다).
+🔴 그리고 이것은 **기록된 사실** 이다 — 「국내 참고가격은 `PRESUMED_SAME` 을 받아들인다 ·
+   자격은 tier 이고 SAME 축과 **다른 술어** 다」. 🔴 **SAME 만 허용하면 AC009 국내 가격이
+   사라진다**(1 → 0 · 실측 · §10 반사실).
+🟢 **그래서 STEP 1 의 질문은 「갈라지는가」가 아니라 «각 후보가 왜 그 tier 를 받았는가» 다.**
+```
+
+### 🔵 STEP 1 이 표로 답해야 하는 것 (CPO 질문 그대로)
+
+```
+국내가격 aggregation 의 실제 입력 후보는 무엇인가 · 각 후보의 MI verdict · truth · tier ·
+SAME 판정은 어디서 만들어지는가 · 국내가격 eligibility 는 어디서 만들어지는가 ·
+두 경로가 **정확히 어느 좌표에서** 분리되는가 ·
+현재 국내 참고가격에 들어온 **각 후보가 SAME 인지 아닌지** 를 하나의 표로 재현할 수 있는가
+```
+
+🔵 **AC009 실제 케이스 — 네 판매처를 «한 줄 lineage» 로**:
+
+```
+biskuit · luxboy · donokids · beaumonde
+  candidate → MI verdict → truth → transientDisplayTier → priceTier
+            → domestic eligibility → domesticReference
+```
+
+### 🔴 STEP 1 에서 **절대 수정하지 않는다**
+
+```
+❌ SAME 알고리즘  ❌ 8축  ❌ threshold  ❌ COLOR/FIT  ❌ description  ❌ image  ❌ C3
+❌ priceTierFromLink  ❌ 국내가격 검색/수집  ❌ aggregation 로직
+```
+
+🔴 **측정 결과가 나온 뒤에만 CPO 가 최소 수정 여부를 결정** 한다.
+
+### 🔴🔴 성공 기준 — **「몇 개 잡혔느냐」가 아니다**
+
+> **「잡힌 국내가격 각각이 «왜 SAME 가격이라고 판단됐는지» 설명할 수 있느냐」**(CPO 문장)
+
+🟡 **전략 문장(§10 과 같다)** — 「국내가격을 **많이** 가져오는 시스템」이 아니라
 「**같은 상품** 의 국내가격을 근거로 판매결정을 내리는 시스템」이다. 순서를 뒤집지 않는다.
+🔴 **그리고 CPO 는 이 결과를 UX 결과와 섞어 판단하지 않는다** — 보고를 따로 올린다.
 
 ---
 
