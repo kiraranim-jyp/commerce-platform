@@ -390,6 +390,81 @@ Q7 production 공급 가능           🔴 **아니다**(음역 축은 신규 �
 
 ---
 
+### 🔴🔴🔴 STEP 2-R. **기존 CEO evidence 재검토 — CASE B 는 «실재» 하고, 축마다 다르다**
+
+> 🔴 **새 측정 0 · 운영 코드 0.** 기존 기록(CORE-2AB/2AC · STEP 5-E2/E2R/E2R-LIVE)만 정리했다.
+> 🔴🔴 **STEP 2 의 「현재 공급 증거로 분리 불가」를 축별로 쪼개야 한다**(아래 ⓕ).
+
+🟢 **CASE B 는 «코드 사실» 이다 — 추측이 아니다**:
+```
+PLAIN_HTML 후보 facts owner = productFactsFromListing({title, url, brand})
+   product-url-facts.ts:**420** · seller-facts.ts:**262**
+🔴 **일곱 칸을 하드코딩 null/[]** — brandModelCode · categoryText · materialText ·
+   fitText · ageRangeText · sizeLabels · audienceSignals
+🔴 그리고 **본문(description)을 인자로 받지 않는다** — HTML 은 fetch 됐는데 버려진다
+🟢 SHOPIFY_JSON 경로는 productFactsFromShopifyProduct(body) 가 color/material 을 **채운다**
+⟹ 🔴 같은 MI 가 **경로마다 다른 수의 축** 을 본다 · 🔴 **국내 후보는 전부 PLAIN_HTML**
+```
+
+🟢🟢 **공급선은 «이미 있고 의도적으로 꺼져 있다»**:
+```
+🟢 수집   product-url-facts.ts:**440** extractFromJsonLd(html).description (추가 HTTP 0)
+🟢 소비자 seller-facts.ts 가 description 을 받으면 **다섯 칸** 을 채운다 —
+          :199 colorText · :200 materialText · :215 fitText · category/audienceSignals ·
+          :208 **brandModelCode ← extractLabeledProductCode(description)** 🔴 품번도 상세에서 나온다
+🔴 끊은 자리 product-url-facts.ts:**441** 이 **category 하나만** 넘긴다
+🔴 끊은 이유 :**446** 에 측정으로 적혀 있다 — materialText 가 **새 축 0 · 거짓 MATERIAL
+          blocker 1**(organic cotton ↔ cotton) ⟹ CORE-2AC 가 **의도적으로** 끊었다
+```
+
+### 🔴 축별 CASE 판정 (CPO §5 표 · 추정으로 채우지 않았다)
+
+```
+증거        CEO확인 상세정보 extraction matcher소비  판정
+상품코드     ✓     🟢있다   🟡title경유 🟢exact      공급됨(biskuit·luxboy 둘 다 exact)
+브랜드       ✓     🟢있다   🟢        🟢           공급됨(🔴 biskuit="비스킷"=샵이름)
+상품명       ✓     🟢있다   🟢        🟢           공급됨
+상세설명     ✓     🟢**있다**(biskuit 258자·luxboy 52·donokids 44) 🟢수집됨 🔴**미공급**  **CASE B**
+색상/소재/핏  ?     🟡상세 안 🟢수집됨  🔴미공급      **CASE B**
+이미지       ?     🟢페이지에 🔴**하드코딩 null** 🔴미공급  **CASE B** 🔴🔴 **효과 미측정**
+기타 식별    ?     ?        ?         ?            미측정
+```
+
+### 🔴🔴 ⓕ **그래서 STEP 2 결론을 축별로 정정한다**
+
+```
+description 축  🔴 **CASE B 확정 · 그러나 연결 효과가 «두 번» 측정됐다**
+  1차(STEP 5-E2)   🔴 **무효** — `ListingProductLike` 에 `description` 칸이 **없다**
+                   (소비자는 `productFactsFromShopifyProduct` 하나) ⟹ 인자가 조용히 무시됐다
+  2차(E2R/E2R-LIVE) 🔴 **발화했고 정답을 악화** — biskuit(human SAME)에 **+COLOR_VARIANT** ·
+                   luxboy(human DIFFERENT) 변화 **0** ⟹ CASE C · CPO **연결 금지**
+  🔴 그리고 분모 — GT 27쌍 중 의미 있는 쌍 **8**(나머지 19 는 Shopify 라 이미 소비) ·
+     그 8쌍 baseline SAME 판정 **0** · 🔴 상세설명 **원문이 없는 쌍 4/8**
+     ⟹ 「상세설명을 연결하면 국내가 살아난다」는 **절반에서 입력 자체가 없다**
+  ⟹ 🟢 이 축에서는 STEP 2 결론이 **유지** 된다(분리 불가 · 측정 근거 있음)
+
+image 축        🔴🔴 **CASE B 이고 «한 번도 측정되지 않았다»** ← 여기가 열려 있다
+  🔴 후보 imageUrl = **하드코딩 null**(product-url-facts.ts:**472**) — 공급 owner **없다**
+     (비용 문제가 아니라 **배선 부재** 다)
+  🟢 비교 함수는 **이미 준비돼 있다** — compareCrossSellerProducts(a, b, **image?**) ·
+     🔴 운영 호출부가 **3번째 인자를 넘기지 않는다**(match.ts:**661**)
+  🔴 IMAGE 축은 `corePoints` 에서도 **제외** 돼 있다(:**1149**) ⟹ 공급만으로 점수가 되지 않는다
+  🔴🔴 **원상품 이미지 공급 여부는 «측정불가» 다** — 내 하니스가 `items` 를 빈 배열로 넘겼다
+     (운영은 `items` + `sourceRepresentativeId` 를 넘긴다 · api/pipeline/route.ts:**284**)
+     ⟹ 🔴 「원상품 이미지 0」으로 **적지 않는다**
+  ⟹ 🟡 **CEO 가 육안으로 쓴 가장 강한 증거가 이 축일 가능성이 있고, 그것이 matcher 에
+        한 번도 전달된 적이 없다.** 🔴 단 효과는 **미측정** 이다 — 단정하지 않는다
+```
+
+🔴 **brand 축 주의(Track C)** — `siteBrandName`(og:site_name·Organization) **≠ 상품 브랜드**
+(biskuit = 「비스킷」 = **샵 이름**). 🟢 상세설명 brand 는 **세 번째 축으로 별도** 여야 한다 —
+`siteBrandName === productBrand` 가정은 코드에 없고 넣어서도 안 된다.
+
+🔴 **그대로 유지되는 금지**(이미 측정됨) — 브랜드 완화 · `NO_TITLE_OVERLAP` 완화 ·
+description 무조건 연결 · 음역축 재개방 · SAME-only / EXACT-only 국내가격.
+
+---
+
 ### 🔵 [원래 범위] STEP 1 지시 — 재조사 금지
 
 > 🔴 **STEP 1 은 측정 전용** 이다 — 구현이 아니다.
