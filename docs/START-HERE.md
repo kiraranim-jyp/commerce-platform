@@ -10,7 +10,7 @@
 ## 1. CURRENT STATE
 
 ```
-현재        🔴🔴 **STEP 5-1·5-2 완료 — 「SAME 아닌 후보의 가격이 국내 참고가격에 있다」가
+현재        🔴🔴 **STEP 5-E2 측정불가(자기정정 1건) · STEP 5-1·5-2 완료 — 「SAME 아닌 후보의 가격이 국내 참고가격에 있다」가
                실측됐다**(§6-STEP5) ⟹ 🟡 **CPO 판정 2건 대기 · STEP 5-3 착수 금지**
             🔴 반사실 — 「SAME 만 허용」하면 **AC009 국내 가격이 사라진다**(1 → 0 · 실측)
             🟢 STEP 4 구현·배포 완료(`6fe1b0bf`) — 남은 것은 **CEO 화면 확인 1회**(§6-NEXT ⑦)
@@ -237,9 +237,60 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
+## 6-STEP5-E2. 🔴🔴🔴 **STEP 5-E2 — 측정불가 · 그리고 내 직전 보고를 «정정» 한다**
+
+> 🔴 **운영 0 · DB 0 · 배포 0.** 하니스 1개 추가(`CORE_STEP5E2_PROBE=1` 없으면 SKIP).
+> 🔴🔴 **CASE A/B/C 중 아무것도 아니다 — 반사실이 «발화하지 않았다».**
+
+### 🔴🔴 자기정정 — 「연결은 인자 한 개」가 **틀렸다**
+
+```
+🔴 아래 §6-STEP5-E 에서 「`productFactsFromListing({description})` 인자 한 개」라고 적었다.
+   **그 함수에는 `description` 칸이 없다**(`ListingProductLike` · seller-facts.ts:252 전수).
+🟢 description/body 를 받는 생산자는 **`productFactsFromShopifyProduct`(:169)** 하나다
+   (`ShopifyProductLike.description`/`body` · :66-67) ⟹ 상세설명 소비는 **Shopify 입력 전용** 이다.
+🔴 그래서 내가 넘긴 인자는 **조용히 무시** 됐고(`as never` 로 타입도 가렸다) 1차 실행이
+   **전건 변화 0**(material null→null)을 냈다. 🔴 「안전하다」로 보고했으면 **거짓** 이었다.
+🟢 하니스에 **발화 단언** 을 박았다 — 새 materialText 0 ∧ 새 품번 0 이면 **FAIL** 한다.
+   🔴 지금 **의도적으로 FAIL 상태** 이고, 그 FAIL 이 「측정불가」의 증거다(LIVE 게이트라 CI 영향 0).
+```
+
+### 🟢 그래도 확정된 것 — **분모와 영향권**
+
+```
+저장 GT 라벨쌍 **27** 중 상세설명 반사실이 «의미 있는» 쌍 = **8**(SAME 5 · DIFF 3)
+   🔴 나머지 19 는 Shopify 경로라 description 이 **이미 소비** 된다 ⟹ 반사실 불성립
+   ⟹ 🔴 CORE-2AC 의 절단은 **PLAIN_HTML 경로에만** 영향한다(국내 후보가 그 경로다)
+🔴 그 8쌍의 baseline 은 **SAME 판정 0건**(precision 측정불가 · recall 0%) —
+   전부 품번 `unavailable` + `BRAND_UNCONFIRMED`/`UNKNOWN` 이다
+🟡 상세설명 **원문 유무** 실측 — 있음 **4/8**(cissywears 808자 · stockmann 398 ·
+   rboutique 136 · donokids 55) · 🔴 **없음 4/8**(beaumonde · ladida · kihanan · wconcept)
+   ⟹ 🔴 「상세설명을 연결하면 국내가 살아난다」는 **그 절반에서 애초에 입력이 없다**
+```
+
+### 🔵 다음 세션 좌표 (재조사 금지 · 바로 실행)
+
+```
+① 반사실을 **발화시키려면 세 곳** 이다(「인자 한 개」가 아니다):
+   ⒜ `ListingProductLike` 에 `description` 칸 신설
+   ⒝ `productFactsFromListing` 이 그것을 소비(color/material/fit/code 파생)
+   ⒞ `product-url-facts.ts:441` 이 전달
+   🟢 **새 추출기 0** — `extractColor`·`parseMaterialComposition`·
+      `extractLabeledProductCode`·`extractFitPhrase` 가 **이미 있다**(:199~215 가 쓴다)
+   🟢 **ProductFacts schema 변경 0**(담을 칸이 이미 있다)
+② 🔴 운영에 넣기 «전» 에 **하니스 안에서 그 파생 로직을 로컬 복제** 해 먼저 잰다 —
+   그 함수를 직접 고치면 **Shopify 경로까지 같이 흔들린다**(계약 다수)
+③ 측정 순서는 CPO §2~§6 그대로(E2-A/B/C/D/E) · 분모 **8쌍 + AC009 3건**
+🔴 desc 가 **없는 4/8** 은 그 측정에서도 **측정불가** 로 남는다
+```
+
+---
+
 ## 6-STEP5-E. 🔴🔴🔴 **STEP 5-EVIDENCE 완료 — C3 는 AC009 를 «못 살린다» · 출구는 ②다**
 
 > 🔴 **운영 0 · 테스트(운영) 0 · 배포 0 · DB 0.** 조사 하니스 2개(둘 다 게이트/순수).
+> 🔴🔴 **[정정됨 · §6-STEP5-E2]** 아래 Track B 의 「연결은 **인자 한 개**」는 **틀렸다** —
+> `productFactsFromListing` 에는 `description` 칸이 **없다**(세 곳을 고쳐야 한다).
 > 🔴 **C3 를 적용하지 않았다** · `NO_TITLE_OVERLAP` 완화 **0** · 가격 pipeline **0**.
 
 ### 🔴🔴 Track A — C3 GT precision (분모 **27쌍** · 🔴 63 이 아니다)
