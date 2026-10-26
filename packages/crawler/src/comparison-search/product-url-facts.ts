@@ -7,6 +7,7 @@ import { extractMarketEvidence } from "./market-evidence";
 /** 🔵 CORE-SAME-SPRINT-02 — 후보 상세설명의 품번을 기존 MODEL_CODE 증거로 «보강» 한다(새 축 0). */
 import { recoverModelCodeFromDetail } from "./model-code-from-detail";
 import { productFactsFromListing, productFactsFromShopifyProduct } from "./seller-facts";
+import { jsonLdProductDescription } from "./jsonld-product-description";
 import { classifyUrlShape, toCrawlerUrl } from "./url-shape";
 import { extractShopifyHandle, fetchPlainHtmlWithFinalUrl } from "../shopify-product-json";
 import { fetchWithDomainRateLimit } from "../rate-limit/domain-rate-limiter";
@@ -472,12 +473,35 @@ async function htmlPath(
     url: crawlerUrl,
     brand,
     /**
-     * 🔴🔴 **분류 하나만 넘긴다.** `description`/`material` 은 **넘기지 않았다** —
-     *    실측에서 `materialText` 가 **새 축 0 · 거짓 MATERIAL blocker 1**(organic cotton ↔
-     *    cotton)을 만들었다. 근거 전문은 `productFactsFromListing` 의 `category` 주석.
+     * 🔴🔴 **`material` 은 여전히 넘기지 않는다.** 실측에서 `materialText` 가
+     *    **새 축 0 · 거짓 MATERIAL blocker 1**(organic cotton ↔ cotton)을 만들었다.
+     *    근거 전문은 `productFactsFromListing` 의 `category` 주석.
      */
     category: jsonLd?.jsonLdCategory ?? micro?.jsonLdCategory ?? null,
+    /**
+     * 🔵🔵 **CORE-SAME-SPRINT-06 — Evidence Layer 공급**(CPO GO 2026-10-26).
+     *
+     * 🔴 **JSON-LD `@type=Product` 의 `description` 만** 쓴다. `meta`/`og`/body 는 **0** —
+     *    SPRINT-05 실측에서 meta 가 **2/5 UNSAFE** 였다(「너무 짧다 9자」·「제목과 사실상 같다」).
+     * 🟢 **추가 HTTP 0** — 위 `fetchPlainHtmlWithFinalUrl` 이 받아 둔 `html` 을 그대로 읽는다
+     *    (가격·분류가 이미 그렇게 한다).
+     * 🔴 이 칸은 `materialText` 와 **다르다** — 소재 축 입력은 **계속 `null`** 이다(계약 B).
+     * 🔴 그리고 이것은 **새 SAME 축이 아니다** — 아래 `recoverModelCodeFromDetail` 이
+     *    **기존 MODEL_CODE 축** 에 증거를 넣는 것까지가 전부다.
+     */
+    description: jsonLdProductDescription(html),
   });
+  /**
+   * 🔵🔵 **SPRINT-06 — 기존 recovery 경로를 «그대로» 쓴다**(새 정책 0).
+   *
+   * 🔴 호출 지점이 **둘** 이 됐다 — Shopify 경로(:335)와 **이 HTML 경로** 다.
+   *    🟢 그것이 CPO ⒝ 의 요구다(「HTML 에서도 동일하게 공급」) ⟹ 「공급 지점은 하나」라는
+   *       기존 계약을 **경로별 하나** 로 갱신했다(`core-sprint02-detail-model-code`).
+   * 🔴 Contract A~G 는 **한 글자도 바뀌지 않았다** — 기존 값을 덮지 않고 · 단일 품번만 ·
+   *    후보측만 보고 · 충돌을 **완화하지 않는다**(원상품과 다르면 기존 `compareModelCode`
+   *    가 conflict 를 내고 그 보호가 그대로 작동한다 ⟹ **차단이 강해지는 방향**).
+   */
+  const suppliedFacts = recoverModelCodeFromDetail(facts);
   /**
    * 🔴 WU-151 — 고도몰 **판매가** 필드가 **마지막 자리** 다(추가 전용).
    *    구조화 데이터(JSON-LD · microdata)가 값을 주면 그쪽이 언제나 이긴다 ⟹
@@ -526,7 +550,8 @@ async function htmlPath(
       priceSource: priced ? "detail" : null,
       /** 🟢 성공 규약을 `enrichCandidatePrices`(price-source-adapter.ts:275)와 맞춘다. */
       priceStatus: priced ? "VERIFIED_CURRENT" : "PRICE_UNAVAILABLE",
-      facts,
+      /** 🔵 SPRINT-06 — **품번이 보강된** facts 를 싣는다(배선이 끊기면 공급이 무의미하다). */
+      facts: suppliedFacts,
       /**
        * 🔴🔴 CORE-2R-4 STEP 3 — **시장 증거를 같은 HTML 에서 읽는다**(추가 HTTP **0**).
        *

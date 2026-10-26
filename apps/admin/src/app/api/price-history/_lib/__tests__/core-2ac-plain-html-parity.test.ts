@@ -109,13 +109,34 @@ describe("CORE-2AC 계약 — 세 칸만 · 배선은 하나 · 범위 밖은 �
     expect(seg).not.toContain("parseMaterialComposition");
   });
 
-  it("AC-4 🔴 PLAIN_HTML 경로가 `description`/`material` 을 **넘기지 않는다**", () => {
+  /**
+   * 🔵🔵 **CORE-SAME-SPRINT-06 에서 «의도적으로» 갱신됐다**(CPO ⒜ GO 2026-10-26).
+   *
+   * ```
+   * BEFORE  description «그리고» material 을 **둘 다** 넘기지 않는다고 단언했다
+   *         🟢 그 계약이 이번 변경을 **FAIL 로 잡았다**(가드가 살아 있다는 증거다)
+   * AFTER   🟢 `description` 은 넘긴다 — 단 **JSON-LD `Product.description` 만**
+   *         🔴 `material` 은 **여전히 넘기지 않는다** ⟹ **거짓 MATERIAL blocker 는
+   *            돌아오지 않는다**(이 계약의 «실제 보호 대상» 이 그것이었다)
+   * ```
+   * 🔴 그래서 단언을 **지우지 않고 갈라 강화** 했다 — material 금지는 **그대로** 이고
+   *    description 은 **source 를 못 박는다**(meta/og 는 CPO **HOLD**).
+   */
+  it("AC-4 🔴 PLAIN_HTML 은 `material` 을 **여전히** 넘기지 않는다 · `description` 은 JSON-LD 만", () => {
     const start = URL_FACTS_SRC.indexOf("const facts = productFactsFromListing({");
     expect(start).toBeGreaterThan(-1);
     const seg = URL_FACTS_SRC.slice(start, URL_FACTS_SRC.indexOf("});", start));
     expect(seg).toContain("category:");
-    expect(seg, "🔴 설명문을 넘기기 시작했다 — 소재 거짓 blocker 가 돌아온다").not.toContain("description:");
-    expect(seg).not.toContain("material:");
+    /** 🔴🔴 **이것이 그 계약의 보호 대상이다** — 소재 축 입력은 계속 비어 있다. */
+    expect(seg, "🔴 material 을 넘기면 거짓 MATERIAL blocker 가 돌아온다").not.toContain("material:");
+    /** 🟢 SPRINT-06 — description 공급은 **있다**(끊기면 FAIL 한다). */
+    expect(seg, "🔴 공급 배선이 없으면 SPRINT-06 이 무의미하다").toContain(
+      "description: jsonLdProductDescription(html)",
+    );
+    /** 🔴 source 를 못 박는다 — SPRINT-05 실측에서 meta 는 **2/5 가 UNSAFE** 였다. */
+    for (const bad of ["metaDescription", "og:description", 'name="description"']) {
+      expect(seg, `🔴 「${bad}」를 쓰면 CPO HOLD 를 깬다`).not.toContain(bad);
+    }
   });
 
   it("AC-5 🔴 `coreTitleTokens` 의 4번째 인자를 **material 로 바꾸지 않았다**", () => {

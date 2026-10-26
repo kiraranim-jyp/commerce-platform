@@ -269,6 +269,17 @@ export interface ListingProductLike {
   sellerSku?: string | null;
   imageUrl?: string | null;
   /**
+   * 🔵🔵 **CORE-SAME-SPRINT-06 — Evidence Layer 공급**(CPO GO 2026-10-26).
+   *
+   * 🔴 **JSON-LD `@type=Product` 의 `description` 만** 들어온다
+   *    (`jsonLdProductDescription` · `product-url-facts.ts` htmlPath 가 채운다).
+   * 🔴 **meta description 은 넣지 않는다** — SPRINT-05 실측에서 **2/5 가 UNSAFE** 였다
+   *    (「너무 짧다」·「제목과 사실상 같다」) ⟹ CPO **HOLD**.
+   * 🔴 그리고 이 칸은 **`materialText` 와 다르다** — 소재 축의 입력이 아니다
+   *    (`ProductFacts.description` 계약 B). 🔴 `materialText` 는 **계속 `null`** 이다.
+   */
+  description?: string | null;
+  /**
    * ══════════════════════════════════════════════════════════════════════════
    * 🔴🔴🔴 CORE-2AC — **상세 경로가 쓰는 세 칸.** 목록 경로는 넘기지 않는다
    * ══════════════════════════════════════════════════════════════════════════
@@ -336,6 +347,14 @@ export function productFactsFromListing(input: ListingProductLike): ProductFacts
      */
     audienceSignals: category ? [category] : [],
     imageUrls: input.imageUrl ? [input.imageUrl] : [],
+    /**
+     * 🔵 **SPRINT-06 — Evidence Layer 공급**(JSON-LD `Product.description` 만).
+     *
+     * 🔴 `materialText` 는 **위에서 `null` 그대로** 다 — 두 칸은 서로의 alias 가 아니다
+     *    (계약 B). 🔴 그래서 **소재 축(`compareMaterial`)의 입력이 변하지 않는다**.
+     * 🔴 빈 문자열은 `null` 로 둔다 — 「없다」와 「비었다」를 한 모양으로(계약 C).
+     */
+    description: input.description?.trim() || null,
   };
 }
 

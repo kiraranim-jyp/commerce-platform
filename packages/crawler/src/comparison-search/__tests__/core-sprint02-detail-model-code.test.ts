@@ -157,12 +157,38 @@ describe("SPRINT-02 — 배선과 금지 범위를 소스에서 잠근다", () =
   const WIRE = readFileSync(join(__dirname, "../product-url-facts.ts"), "utf8");
   const SRC = WIRE.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/.*$/gm, " ");
 
-  it("공급 지점이 «하나» 다 — Shopify 경로에서만 부른다", () => {
+  /**
+   * 🔵🔵 **SPRINT-06 에서 이 계약이 «의도적으로» 갱신됐다**(CPO ⒝ GO 2026-10-26).
+   *
+   * ```
+   * BEFORE  「공급 지점은 **하나** 다」 — Shopify 경로에만 있었다
+   * AFTER   「공급 지점은 **경로마다 하나** 다」 — Shopify «그리고» PLAIN_HTML
+   *         🟢 CPO 요구가 「HTML 에서도 **동일하게** 공급」이다 ⟹ 둘이 맞다
+   * 🔴 그래도 **경로당 하나** 는 지킨다 — 같은 경로에서 두 번 부르면 공급원이 갈린다
+   * ```
+   */
+  it("공급 지점이 «경로마다 하나» 다 — Shopify + PLAIN_HTML", () => {
     expect(SRC).toContain("recoverModelCodeFromDetail");
-    /** 🔴 호출이 둘 이상이면 공급 지점이 갈린다(CPO §7 「한 곳으로 제한」). */
-    expect(SRC.match(/recoverModelCodeFromDetail\(/g)?.length, "🔴 공급 지점은 하나여야 한다").toBe(1);
+    /** 🔴 **정확히 둘** 이다. 늘면 공급원이 갈리고, 줄면 한 경로가 공급을 잃는다. */
+    expect(SRC.match(/recoverModelCodeFromDetail\(/g)?.length, "🔴 경로 둘 · 각 하나여야 한다").toBe(2);
     /** 🟢 보강된 facts 가 **실제로 후보에 실린다** — 배선이 끊기면 FAIL 한다. */
-    expect(SRC).toContain("facts: suppliedFacts");
+    expect(SRC.match(/facts: suppliedFacts/g)?.length, "🔴 두 경로 모두 실어야 한다").toBe(2);
+  });
+
+  it("PLAIN_HTML 공급은 **JSON-LD Product.description 만** 쓴다(meta 0)", () => {
+    /** 🟢 공급원이 그 함수 하나다 — 배선이 끊기면 FAIL 한다. */
+    expect(SRC, "🔴 JSON-LD 공급 배선이 없다").toContain("description: jsonLdProductDescription(html)");
+    /**
+     * 🔴🔴 **meta/og 를 쓰지 않는다**(CPO ⒜ HOLD · SPRINT-05 실측 2/5 UNSAFE).
+     *    🔴 주석을 벗기고 본다 — 이 파일 주석에는 「meta」가 설명으로 등장한다.
+     */
+    for (const bad of ['name="description"', "name='description'", "og:description"]) {
+      expect(SRC, `🔴 「${bad}」를 description 으로 쓰면 CPO HOLD 를 깬다`).not.toContain(bad);
+    }
+    /** 🔴 소재 축 입력은 **계속 넘기지 않는다**(거짓 MATERIAL blocker 실측). */
+    const call = SRC.slice(SRC.indexOf("productFactsFromListing({"));
+    const args = call.slice(0, call.indexOf("});"));
+    expect(args, "🔴 material 을 넘기면 소재 축의 의미가 바뀐다").not.toContain("material");
   });
 
   it("이 Sprint 가 금지한 것이 소스에 없다", () => {
@@ -244,15 +270,32 @@ describe("SPRINT-03 — Shopify 공급을 소스에서 잠근다", () => {
     expect(SRC).toMatch(/const material =\s*parseMaterialComposition\(description\)\.length > 0 \? description : null/);
   });
 
-  it("HTML 일반 경로를 description 으로 «억지로 채우지» 않았다", () => {
-    /**
-     * 🔴 CPO §4 — 「입력이 없는 것을 추정해서 채우지 않는다」.
-     * `productFactsFromListing` 산출에 description 공급이 **없어야** 한다.
-     */
+  /**
+   * 🔵🔵 **SPRINT-06 에서 «의도적으로» 뒤집힌 계약이다**(CPO ⒜ GO 2026-10-26).
+   *
+   * ```
+   * BEFORE  「HTML 경로를 description 으로 **억지로 채우지 않았다**」 — 공급 0 을 단언했다
+   *         🟢 그 계약이 이번 변경을 **FAIL 로 잡았다**(가드가 살아 있다는 증거다)
+   * AFTER   공급은 **하되 입력을 좁힌다** — `input.description` 을 **그대로** 받고
+   *         **지어내지 않는다**(`trim() || null`). 🔴 어디서 오는지는 **호출부가** 정한다
+   *         (`product-url-facts.ts` = JSON-LD Product 만 · meta/og **0**).
+   * ```
+   * 🔴 그래서 단언을 **지우지 않고 방향을 바꿔 강화** 했다 — 「채운다」 + 「**추정하지
+   *    않는다**」 + 「**소재 칸은 여전히 null**」 셋을 같이 본다.
+   */
+  it("HTML 경로는 description 을 «받아서만» 채운다 — 추정 0 · 소재 칸 불변", () => {
     const listing = SRC.slice(SRC.indexOf("export function productFactsFromListing"));
     const body = listing.slice(0, listing.indexOf("\n}"));
-    expect(body, "🔴 목록/HTML 경로에 description 을 채우면 거짓 증거가 된다").not.toContain(
-      "description:",
+    /** 🟢 공급이 **있다** — 끊기면 FAIL 한다. */
+    expect(body, "🔴 공급 배선이 없으면 SPRINT-06 이 무의미하다").toContain("description:");
+    /** 🔴 **입력을 그대로** 쓴다 — HTML/본문에서 스스로 만들지 않는다. */
+    expect(body, "🔴 입력이 없는 것을 추정해 채우면 거짓 증거다").toContain("input.description");
+    for (const token of ["html", "body", "innerText", "textContent"]) {
+      expect(body, `🔴 「${token}」에서 description 을 만들면 추정이다`).not.toContain(token);
+    }
+    /** 🔴🔴 **소재 축 입력은 계속 `null`** 이다 — 계약 B(두 칸은 alias 가 아니다). */
+    expect(body, "🔴 materialText 가 채워지면 compareMaterial 의 분모가 바뀐다").toContain(
+      "materialText: null",
     );
   });
 });

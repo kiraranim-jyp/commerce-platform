@@ -177,13 +177,32 @@ describe("CORE-2AB 소스 계약 — PLAIN_HTML 후보의 «빈 칸» 을 고정
     expect(seg).toContain("audienceSignals: category ? [category] : []");
   });
 
-  it("AB-S2 🔴🔴 그 함수는 **본문(description/body)을 인자로 받지 않는다**", () => {
+  /**
+   * 🔵🔵 **CORE-SAME-SPRINT-06 — 이 계약이 예고한 그 순간이 왔다**(CPO ⒜ GO 2026-10-26).
+   *
+   * 🟢 원래 실패 메시지가 「**비대칭이 해소됐는지 다시 측정한다**」였고, SPRINT-04/05 가
+   *    실제로 그것을 측정했다(PLAIN_HTML description **0/6** → 공급 가능 **3/6** 확인).
+   * ```
+   * BEFORE  「description · body · bodyHtml · html 을 **하나도** 받지 않는다」
+   * AFTER   🟢 `input.description` **은 받는다**(정식 Evidence Layer 칸 · 호출부가 JSON-LD
+   *            `Product.description` 만 넣는다)
+   *         🔴 `body` / `bodyHtml` / `html` 은 **계속 받지 않는다** ⟹ 이 함수는
+   *            **원문을 스스로 파싱하지 않는다**(추정 금지 · 그것이 비대칭의 «위험» 부분이었다)
+   * ```
+   * 🔴 그래서 금지 목록에서 `description` **하나만** 빼고 나머지는 **그대로 유지** 했다.
+   */
+  it("AB-S2 🔴 그 함수는 **원문(body/html)을 파싱하지 않는다** · `description` 은 «받아서만» 쓴다", () => {
     const src = SELLER_FACTS_SRC.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/.*$/gm, " ");
     const start = src.indexOf("export function productFactsFromListing");
     const seg = src.slice(start, src.indexOf("\n}", start));
-    for (const no of ["description", "body", "bodyHtml", "html"]) {
+    /** 🔴 **원문을 받지 않는다** — 받으면 이 함수가 추출기가 되고 추정이 들어온다. */
+    for (const no of ["body", "bodyHtml", "html", "plainText"]) {
       expect(seg, `🔴 ${no} 를 읽기 시작했다 — 비대칭이 해소됐는지 다시 측정한다`).not.toContain(no);
     }
+    /** 🟢 SPRINT-06 — 넘어온 값을 **그대로** 쓴다(지어내지 않는다). */
+    expect(seg, "🔴 공급 배선이 없으면 PLAIN_HTML Evidence 공백이 그대로다").toContain("input.description");
+    /** 🔴🔴 그리고 **소재 축 입력은 계속 `null`** 이다(두 칸은 alias 가 아니다). */
+    expect(seg, "🔴 materialText 가 채워지면 compareMaterial 의 분모가 바뀐다").toContain("materialText: null");
   });
 
   it("AB-S3 🟢 반면 Shopify 경로는 **본문을 읽는다**(비대칭의 반대쪽)", () => {
