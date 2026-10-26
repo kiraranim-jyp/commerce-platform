@@ -326,6 +326,95 @@ M5 MI_SAME_AREA_SCOPE 연결 제거 · M6 CTA wiring 제거 · M7 금지 리터�
 
 ---
 
+## 9-EV. 🔴🔴🔴 **`CORE-PRICE-SAME-01` 재개 — CEO Evidence Lineage**(운영 0 · CPO 판정 대기)
+
+> 🔴🔴 **STEP 2 의 전제가 뒤집혔다. 이것부터 읽는다.**
+
+### 🔴🔴🔴 ① `m.luxboy.com` 의 CEO 라벨이 **둘** 이고, 최신은 **SAME** 이다
+
+```
+wu-112(이전)    DIFFERENT · 사유 「컬러 다름」
+core-2m(최신)   **SAME**  · 사유 「**브랜드 + 품번 동일로 판단 가능.** 추가로 상품명·상세설명으로도」
+fixture 주석    「🔴 이 한 건이 CORE-2I/2J/2K/2L 의 **핵심 반례** 였다」
+                「CPO 확정: CEO 육안 판정이 truth ⟹ **최신 판정을 truth 로** 쓰고 상충을 기록한다」
+🔴 GT 합집합(`core-2ah`)은 그 충돌 때문에 **이 건을 제외** 한다(36건에 없다)
+```
+
+⟹ 🔴🔴 **STEP 2 의 질문(「biskuit SAME 과 luxboy DIFFERENT 를 가르는 증거」)이 성립하지 않는다.**
+최신 GT 로는 **둘 다 SAME** 이다 ⟹ 가를 필요가 없고, 둘을 **같이 여는 것이 recall 회복** 이다.
+🔴 그리고 CPO 전제(「DIFFERENT 가격이 국내 참고가격에 들어온다」)는 **이 표본에서 성립하지 않는다**.
+
+### 🟢🟢 ② CEO 가 쓴 근거가 **후보별로 적혀 있다**(`core-2m-ceo-visual-gt.json` · SAME 8 · DIFF 1 · UNC 1)
+
+```
+SAME  biskuit.kr        상품명에 「보보쇼즈 + B226AC009」 — 🔴 brand 칸은 **판매처 이름(비스킷)**
+SAME  m.luxboy.com      **브랜드 + 품번** 동일 · 상품명·상세설명으로도
+SAME  donokids.com      **브랜드 + 상품명** · 상품명에 브랜드와 품번(#226AC009) · 상세설명으로도
+SAME  junioredition.com **브랜드 + 상품명** · 🔴 품번은 **040**(원상품 009)인데 동일상품이 맞다
+SAME  bobochoses.com    브랜드 같음 · 🔴 **품번 다름(B226AB040)** · 상품명 동일
+                        → 「품번은 같은 상품을 여러 개 등록한 **실수** 로 보인다」
+SAME  cissywears.com    **브랜드 + 상품명** · 품번 없음 · 상세에서 파악
+SAME  kids21.com        **브랜드 + 상품명** · 품번 없음 · **상세 없음**
+SAME  stockmann.ee      브랜드 같음 · 품번 없음 · 상품명 다름(에스토니아어)
+                        → 🔴 **상세설명까지 내려가야** 판단된다
+DIFF  parkette.ca       **상품 유형** 이 다르다 — T-shirt ↔ Sweatshirt
+UNC   bornyesterdaykids 상/하의 **세트** — 상의는 동일인데 **가격 비교에 부적합**
+```
+
+🔴🔴 **CEO 의 규칙을 그 말대로 정리하면 다섯이다**:
+```
+① 「브랜드 + 상품명」 일치 → SAME            **4/10**(품번 없어도)
+② 「브랜드 + 품번」 일치   → SAME            **2/10**
+③ 🔴🔴 **품번이 «달라도»** 브랜드+상품명 같으면 SAME  **2/10**(「등록 실수」)
+④ **상품 유형**(T-shirt ↔ Sweatshirt)이 다르면 DIFFERENT  1/10
+⑤ **세트 구성**이면 UNCERTAIN(동일성과 «가격 비교 가능성» 을 **분리**)  1/10
+```
+🔴🔴 **③ 이 현재 운영과 정면으로 충돌한다** — `compareModelCode` 는 품번 분기를 **conflict**
+로 보고 `priceTierFromLink` 가 그것을 **EXCLUDED** 로 만든다(공식몰 AB/AC **108/108** 선차단).
+🟢 ④ 는 시스템에 **이미 있다**(`GARMENT_FORM`) · 🟡 ⑤ 는 축이 **없다**(세트 판별).
+
+### 🔴 ③ Evidence Supply Lineage (EXISTS / EXTRACTED / PASSED / USED)
+
+```
+evidence      EXISTS EXTRACTED PASSED USED   근거(좌표)
+브랜드          O      O        O     O     공급됨 · 🔴 샵이 자기 이름을 적으면 거짓 신호(biskuit)
+상품명          O      O        O     O     공급됨 · 🔴 한국어면 NO_TITLE_OVERLAP 이 **막는다**
+품번            O      O        O     O     공급됨(title/url 경유) · 🔴 분기하면 conflict → EXCLUDED
+상세설명        O      O        **X**  X     product-url-facts.ts:**441** 이 `category` 하나만 넘긴다
+색상/소재/핏    O      O        **X**  X     같은 줄에서 끊긴다(7칸 하드코딩 null · :420)
+이미지          O      **X**    X     X     imageUrl **하드코딩 null**(:472) · 3번째 인자 미전달(match.ts:661)
+옵션/SKU        ?      ?        ?     ?     🔴 **미조사**(CORE-2AB 의 S7/S8 자리 · 기록 0)
+```
+
+### 🔴🔴 ④ False Negative **3** · False Positive **0**(최신 GT 기준)
+
+```
+biskuit.kr   CEO SAME → sys PRESUMED_SAME / TEXT_CONFIRMED / COMPARISON   blockers BRAND_MISMATCH·NO_TITLE_OVERLAP
+m.luxboy.com CEO SAME → sys PRESUMED_SAME / TEXT_CONFIRMED / COMPARISON   blockers NO_TITLE_OVERLAP
+donokids.com CEO SAME → sys PRESUMED_SAME / TEXT_CONFIRMED / COMPARISON   blockers BRAND_UNCONFIRMED
+⟹ 🔴 **국내 후보 3곳이 전부 false negative** 다 · 🟢 false positive **0**
+🟢 beaumonde(AC010) CEO SAME → sys SAME / STRONG_IDENTIFIER / EXACT  ← 유일하게 재현된다
+```
+
+### 🔴🔴🔴 ⑤ **CASE 1 이 아니라 CASE 2 다**(이것이 이번 조사의 답)
+
+```
+🔴 「evidence 전달만 복구하면 되는가」 → **아니다.**
+   biskuit·luxboy·donokids 가 막히는 지점은 **공급이 아니다** — 브랜드·상품명·품번이
+   **이미 matcher 에 들어와 있고**, 막는 것은 `NO_TITLE_OVERLAP` + `crossSellerReserved` 다.
+🟢 즉 **CEO 의 주 근거(「브랜드 + 상품명」 4/10)가 입력에는 있는데 비교 규칙이 쓰지 못한다**
+   — 한국어 상품명 ↔ 영문 원상품에서 토큰 겹침이 0 이 되기 때문이다.
+⟹ 🔴 **CASE 2**(evidence 는 들어오는데 기존 로직이 사용하지 않는다). 🔴 CTO 는 그 로직을
+   건드리지 않았다 — 완화는 WU-063~080 에서 **여덟 축 전수 측정으로 닫힌 축** 이다.
+```
+
+🔴 **측정불가로 남긴 것** — ⒜ `stockmann.ee` · `bobochoses.com` · `cissywears.com` · `kids21.com` ·
+`parkette.ca` · `bornyesterdaykids.com` 은 DB 에 **system 값이 없다**(라이브 재측정 필요 · 이번에 안 했다)
+⒝ 옵션/SKU 축은 **기록 자체가 0** ⒞ GT 충돌이 **둘 더** 있다(`villagekids.co.uk` · `tinyapple.net`
+각각 SAME/DIFFERENT 양쪽 라벨이 DB 에 있다) ⒟ 합집합 36 의 SAME/DIFF 분포는 이번에 세지 않았다.
+
+---
+
 ## 9-NEXT. 🟢🟢 **`CORE-PRICE-SAME-01` STEP 1 — 측정 완료**(🔴 CPO 판정 대기 · 운영 코드 0)
 
 > 🔴 **CTO 가 할 코드 작업이 없다.** 처방은 **CPO 가 A/B/C/D 중 하나를 고른다.**
