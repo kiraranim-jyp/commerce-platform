@@ -10,7 +10,8 @@
 ## 1. CURRENT STATE
 
 ```
-현재        🟢🔴 **STEP 5 = CLOSED**(CPO 2026-10-26) — 🔴 **CTO 가 할 코드 작업이 없다**
+현재        🔵🔵 **CORE-UX-SELLER-01 착수 대기 — owner 6건 확정됨(§6-UX01 · 재조사 금지)**
+            🟢 STEP 5 = CLOSED(CPO 2026-10-26) · 국내가격 자격 HOLD · description 금지
             🔴 국내가격 자격 **HOLD** · description 연결 **금지** · 운영 변경 **0**
             🔵 재개 조건은 **하나** 다 — §6-STEP5-CLOSED 의 「GT 기반 정밀도 재측정 WU」
             🔴🔴 **순서를 뒤집지 않는다** — 「국내가격을 더 가져오는 것」이 아니라
@@ -240,6 +241,55 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 ```
 
 🟢 관련 계약·변이는 **이미 추가·검증** 됐고 전체 회귀 PASS 다(`wu-148-market-price-signal` D).
+
+---
+
+## 6-UX01. 🔵🔵🔵 **CORE-UX-SELLER-01 — 착수점. owner 6건 확정됨 · 재조사 금지**
+
+> 🔴 **이번 세션은 §13 owner 확인까지만 했다**(코드 0). 용량상 UI 재배치+계약+변이+회귀+
+> 배포를 끝까지 갈 수 없어 **clean 으로 넘긴다**(§4-C ③). 🟢 다음 세션은 **조사 없이** 구현부터.
+> 🔴 **presentation layer 전용** — 계산·MI·API·DB **전부 금지**(CPO §12 목록 그대로).
+
+### 🟢 §13 owner 6건 (코드 좌표 · 전부 확인됨)
+
+```
+① 판매판단        `sellVerdict` = resolveSellVerdict(reportedSellVerdict, snapshotId)
+                  CommerceWorkspace.tsx:**727** · 공급 onSellerVerdictChange(:3792)
+                  🔴 현재 렌더 자리는 **오른쪽 Action Center**(:4418 `FINAL_VERDICT_COPY[sellVerdict]`)
+                  ⟹ 그래서 셀러가 결론(왼쪽 📊)과 판단(오른쪽)을 **두 기둥에서** 읽는다
+② A 권장 판매가격  `recommendedPriceKrw`(CW:**1996** · resolveListingPrice · override null)
+                  소비 **둘** — PriceEditor(:3990) · MarketPriceComparison(STEP 4 · :3680)
+③ B 국내 참고가격  `marketComparison.domesticReference` → 🇰🇷 블록(`domestic-reference`)
+④ ⓘ 가격 계산 기준 `PRICE_CALCULATION_LINK_TEXT` + `handleOpenPriceCalculation`(CW:**862**)
+                  도착지 = 앵커 블록(CW:**3727** · `priceDetailRequest > 0`)
+⑤ 가격 적용        `updateSalePriceKrw`(CW:**1452**) · 기존 CTA 는 PriceEditor 의
+                  「최종 판매가격에 적용」(PriceEditor.tsx:**158**)
+⑥ 상세 영역        `price-detail-fold`(MarketPriceComparison) + `priceCalculationDetail`(CW:2025)
+```
+
+### 🔵 최소 변경 설계 (새 계산 0 · 새 state 0 · 새 API 0)
+
+```
+MarketPriceComparison 에 **prop 둘** 을 더한다(값은 전부 이미 있다):
+  sellVerdictCopy?: {icon,title,note} | null   ← CW 의 `sellVerdict` + FINAL_VERDICT_COPY
+  onApplyRecommendedPrice?: () => void         ← () => updateSalePriceKrw(recommendedPriceKrw)
+그리고 1차 블록 **순서만** 바꾼다(문장 삭제 0):
+  ① 판매판단(조건부 판매 + 한 줄)   ← 🔴 **새 문구를 만들지 않는다**(기존 copy owner 재사용)
+  ② 권장 판매가격 ₩A + [이 가격으로 설정]
+  ③ 가격 판단 근거 — 🇰🇷 국내 참고가격 · 🌎 해외 최저 소싱가(**기존 두 블록 그대로**)
+  ④ ⓘ 가격 계산 기준 보기 → 기존 앵커(STEP 4 에서 되살려 뒀다)
+🔴 오른쪽 Action Center 의 판매판단은 **지우지 않는다**(지우면 커머스 탭에서 판단이 사라진다)
+   ⟹ 같은 값이 두 곳에 뜬다 ⟹ 🔴 **CPO 판정 1건**: 왼쪽으로 «이동» 인가 «양쪽 유지» 인가
+```
+
+### 🔴 다음 세션이 반드시 지킬 것
+
+```
+🔴 A/B 통합 금지 · B 를 권장가로 승격 금지 · ⓘ 가 B 를 설명 금지(STEP 4 계약 25건이 문다)
+🔴 `market-next-step-line`(설명문 ≤1) · ₩ 개수 1 · 1차 비중 <25% — 기존 계약 유지
+🟢 회귀는 `core-next-step4-recommended-price` + `core-2ao-r1-screen-dump` 가 1차 방어선
+🔴 FAIL 조건·CEO 확인 7항은 **CPO 지시문 §15·§17 그대로** 쓴다
+```
 
 ---
 
