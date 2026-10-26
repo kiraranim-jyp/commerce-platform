@@ -11,7 +11,7 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-DESC-REVIEW** — 🟢 **CEO 조서 11/11 수신 · GT 고정**(§9-V · 🔴 C06 정정)
+CURRENT WU   **CORE-DESC-EVIDENCE-01** — 🟡 **기준선 정정 완료 · 구현 대기**(§9-X)
 NEXT         🔵 **CPO 가 다음 Evidence Layer 범위 지정** — 🔴 CTO 선제 작업 0
 CEO ACTION   🟡 **없다** — 조서 11/11 수신 완료
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-DESC-REVIEW — 조서 **11/11 수신·고정**(§9-V) · 🔴 FP 2→1 정정 · CPO Sprint 작성 대기
+CURRENT    CORE-DESC-EVIDENCE-01 — 기준선 **코드 반영 완료**(§9-X) · 🔴 CPO 숫자 2건 정정 · 구현 대기
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -2565,3 +2565,77 @@ C06(global.trenbe.com)  기존 GT **DIFFERENT** → 이번 조서 **SAME**
 ```
 
 **STOP — CEO 조서 11/11 고정 완료 / `DESCRIPTION → Structured Evidence` 구현 Sprint CPO 작성 대기**
+
+---
+
+## 9-X. 🔴🔴 **기준선 정정을 «코드에» 반영**(2026-10-27 · 운영 변경 **0**)
+
+🔴 `CORE-DESC-EVIDENCE-01` 의 **구현 전 선행 작업** 이다. 🔴 운영 변경 **0** · matcher **0** ·
+threshold **0**. 바뀐 것은 **GT 라벨 한 건과 그 기준선** 이다.
+
+### 🟢 C06 재라벨을 코드에 반영 — `core-same05-gt.ts` 의 `CEO_RELABEL`
+
+```
+🔴 **원본 fixture 를 고치지 않았다**(`wu-059-gt-facts.json` 은 역사 기록 · CPO: 「이전
+   Sprint 의 FP 2 는 **역사적 측정값으로만** 취급」)
+🟢 나중 라벨을 **위에 얹고** 출처를 `src` 에 잇는다(`wu-059+desc-review`) —
+   어느 조서가 덮었는지 **추적 가능** 하다
+```
+
+### 🔴🔴🔴 **CPO 기준선 숫자 둘이 틀렸고 실측으로 정정했다**
+
+| | CPO 가 적은 값 | 🟢 실측 |
+|---|---:|---:|
+| GT 총 | 33 | 33 ✅ |
+| Human SAME | 18 | 18 ✅ |
+| **Human DIFFERENT** | 10 | **9** 🔴 정정 |
+| **Human UNCERTAIN** | 5 | **6** 🔴 정정 |
+| FP | 1 | 1 ✅ |
+| SAME 회복 | — | **6/18** |
+
+🔴 산술이 그렇다 — C06 이 DIFFERENT → SAME 이므로 **DIFFERENT 가 1 줄고 UNCERTAIN 은
+변하지 않는다**. **18 + 9 + 6 = 33**.
+🟢 `SAME05_BASELINE` 상수를 신설했다 — 하니스가 각자 리터럴로 적으면 기준선이 바뀔 때
+**조용히 낡는다**(이번에 실제로 8개 파일이 그랬다).
+
+### 🟢🟢 낡은 기준선을 쓰던 곳 **전수** 가 FAIL 로 드러났다 — 8 파일 / 12 단언
+
+```
+core-same05-gt-baseline · core-same05-counterfactual · core-same07-criteria-survey ·
+core-sprint02-step456-matrix · core-sprint07-evidence-utility · core-sprint08-brand-evidence ·
+core-sprint02-brandname-separability · core-desc-review-gt
+🟢 **의도된 발화** 이고 숨기지 않고 전부 갱신했다
+```
+
+### 🔴🔴 CPO 의 SPRINT-02 전제도 바뀌었다
+
+```
+「Brand + 제품명 12건 = SAME **9** / DIFFERENT **3**」  →  **SAME 10 / DIFFERENT 2**
+   (C06 이 그 집합에 있었다)
+그 집합의 누출도 **C06+S1-6 둘 → S1-6 하나** 다(baseline FP 1 과 일치)
+⟹ 🔴 **「C06 이 FP 다」를 쓰는 서술은 전부 낡았다**
+```
+
+🟢 `core-desc-review-gt` 의 두 단언은 **방향을 뒤집어** 갱신했다 — 「뒤집힘이 있다」에서
+**「이제 뒤집힘이 0 이다(= 정정이 반영됐다)」** 로. 🔴 그 단언이 깨지면 **GT 소스와 조서가
+어긋난 것** 이다(둘 중 하나가 낡았다).
+
+### 증거
+
+```
+🟢 회귀 698 files / **9,333 passed · 0 failed · 145 skipped** · typecheck **0** · build exit **0**
+운영 변경 **0** · 작업트리 clean · origin/main **0 / 0** · 🔴 Deploy 없음
+```
+
+### 🔵 다음 — `CORE-DESC-EVIDENCE-01` **구현**(기준선이 이제 코드에 있다)
+
+```
+🟡 CPO 가 §6 에 범위를, §7 에 성공기준 10개를 이미 고정했다 ⟹ **조사 없이 구현부터** 간다
+🔴 기준선은 **GT 33 / SAME 18 / DIFFERENT 9 / UNCERTAIN 6 / FP 1 / SAME 회복 6/18**
+🔴 이미지 검증 분모는 **C22 · C19 · C20 = 3건**(CEO 가 직접 「이미지 확인 필요」라 적었다)
+🔴 guardrail — **Evidence 가 늘었다는 이유만으로 SAME 이 늘어나는 것을 성공으로 보지 않는다**
+🔴 §4-C 용량 판단 — 이 Sprint 는 `ProductFacts` provenance 계약 + 추출기 6 + matcher 연결 +
+   계약/음성대조/회귀 다. **한 세션에 끝까지 가지 못하면** 안전 종료 지점까지 가고 clean handoff
+```
+
+**STOP — 기준선 정정 완료 / `CORE-DESC-EVIDENCE-01` 구현 착수 가능**
