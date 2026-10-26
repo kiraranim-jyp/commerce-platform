@@ -11,15 +11,16 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   CORE-UX-SELLER-01  🟢 **CPO 승인 · CLOSED**(구현·계약·변이·회귀·배포 완료)
-NEXT WU      **CORE-PRICE-SAME-01 STEP 1**(측정 전용 · §9-NEXT)
-             🔴🔴 **CPO 지시서 발행 전까지 CTO 는 착수하지 않는다**
-STEP 5       CLOSED             (CPO 2026-10-26 · 재개 조건 1건 · §10)
-CEO ACTION   **화면 확인 1회** — UX01 9항 + STEP 4 를 **한 번에**(§18)
+트랙 A (증거)  CORE-PRICE-SAME-01   STEP 1 · 2 · 2-R 🟢 **MEASURED / CLOSED**
+                                    STEP 3(IMAGE) 🟡 **NOT MEASURED** — ⏸ 착수 대기
+트랙 B (화면)  CORE-UX-SELLER-01 🟢 **CLOSED** → 다음은 **CORE-UX-SELLER-02**(CPO 발행 대기)
+BLOCKING       🟡🟡 **CEO 답변 «한 글자»**(A/B/C/D · §18) — STEP 3 착수 여부가 여기서 갈린다
+CEO ACTION     ① **A/B/C/D 한 글자**   ② 화면 확인 1회(UX01 9항 + STEP 4)
+STEP 5         CLOSED (CPO 2026-10-26 · 재개 조건 1건 · §10)
 ```
 
-🔴 **CTO 가 할 코드 작업이 없다.** 다음 범위는 **CPO 가 발행** 하고, 그 보고는
-**UX 결과와 섞지 않고 따로** 올린다(CPO 명시).
+🔴 **CTO 는 ⏸ 대기다.** 두 트랙 **모두** CPO 발행/CEO 답변을 기다린다.
+🔴 **용어·단계 판정은 §9-NEXT 「정합표」로 고정** 했다 — 「완료/확정/보류」를 섞어 적지 않는다.
 
 ---
 
@@ -29,12 +30,14 @@ CEO ACTION   **화면 확인 1회** — UX01 9항 + STEP 4 를 **한 번에**(§
 [PROJECT RESUME]
 프로젝트     스마트스토어 상품자동등록
 진입점       docs/START-HERE.md (MASTER HANDOFF) — 이것만 읽는다
-CURRENT WU   CORE-UX-SELLER-01
-NEXT         조사 없이 구현
-STEP 5       CLOSED
+트랙 A       CORE-PRICE-SAME-01 — STEP 1·2·2-R CLOSED · STEP 3(IMAGE) 착수 대기
+트랙 B       CORE-UX-SELLER-01 CLOSED → CORE-UX-SELLER-02 발행 대기
+BLOCKING     CEO 답변 한 글자(A/B/C/D)
 이 페이지 역할  CPO / CTO / CEO 검증  (하나를 고른다)
-재조사 금지   owner 6건 · A/B 가격 정책 · STEP 5 결론 · MI 아키텍처 · 8축 · threshold
-금지         SAME-only · EXACT-only · description 연결 · COLOR/FIT 완화 · 국내가격 pipeline
+재조사 금지   STEP 1·2·2-R 결론 · owner 6건 · A/B 가격 정책 · STEP 5 · MI 8축 · threshold
+금지         SAME-only · EXACT-only · description 무조건 연결 · COLOR/FIT 완화 ·
+             음역축 · 국내가격 pipeline · 「시장 참고가격」 리터럴(wu-145 금지 목록)
+용어         판정은 MEASURED/CLOSED/HOLD/REJECT/측정불가/STOP 여섯 중 하나로만 적는다(§9-NEXT 정합표)
 Master Handoff 를 기준으로 이어서 진행한다.
 ```
 
@@ -465,6 +468,90 @@ description 무조건 연결 · 음역축 재개방 · SAME-only / EXACT-only �
 
 ---
 
+### 🔵🔵🔵 **용어·단계 판정 정합표**(CTO 정리 2026-10-26 · 🔴 충돌 4건을 가렸다)
+
+> 🔴 지시서와 기록 사이에 **같은 글자가 다른 뜻** 으로 쓰인 자리가 넷이다. 아래로 고정한다.
+
+#### ① 단계 사다리 — **WU 는 `-01` 하나다**(`-03` 을 만들지 않는다)
+
+```
+CORE-PRICE-SAME-01
+  STEP 1    국내가격 lineage                 🟢 **MEASURED / CLOSED**
+  STEP 2    SAME 분리력(biskuit ↔ luxboy)    🟢 **MEASURED / CLOSED**
+  STEP 2-R  기존 CEO evidence 공급 재검토      🟢 **MEASURED / CLOSED**
+  STEP 3    IMAGE evidence 공급 효과          🟡 **NOT MEASURED**(CEO 답 A/C 일 때만 착수)
+    3-1 하니스 공급 수리(items + sourceRepresentativeId) · 3-2 공급 lineage · 3-3 공급≠채점 분리
+🔴 CPO 문서의 `CORE-PRICE-SAME-03` 은 **이 STEP 3 과 같은 것** 이다 — `-02` 가 없으므로
+   번호를 새로 만들지 않고 **`-01 STEP 3`** 으로 쓴다(한 WU 안의 다음 단계다).
+```
+
+#### ② 판정 어휘 — **헌장 §6 어휘로만 적는다**
+
+```
+MEASURED   측정이 끝났다(숫자·좌표 있음)        CLOSED   재조사하지 않는다
+HOLD       **측정은 했고** 판단을 미뤘다        REJECT   측정 결과로 **채택하지 않는다**
+측정불가    **분모가 없어 숫자를 못 만들었다**   STOP     그 자리에서 멈추고 보고
+🔴 「완료」·「확정」·「보류」를 섞어 쓰지 않는다 — 위 여섯 중 하나로 적는다
+```
+
+#### ③ 🔴🔴 **`CASE` 알파벳이 두 축에서 충돌한다 — 이름을 가른다**
+
+```
+기존(먼저 쓰였다 · 커밋 다수)  CASE A/B/C = **description 연결 «효과» 축**
+                              (STEP 5-E2R · WU-156 「Case C / NO-GO」)
+🔴 STEP 2-R 이 같은 글자를 **evidence 공급 축** 에 썼다 ⟹ 충돌
+🟢 그래서 공급 축을 **`SUPPLY-A` / `SUPPLY-B`** 로 바꾼다:
+   SUPPLY-A  상세정보에도 없다            = 진짜 evidence 부재
+   SUPPLY-B  상세정보엔 있는데 미공급      = 배선 문제
+🔴 앞으로 「CASE B」는 **description 효과 축만** 가리킨다
+```
+
+#### ④ 🔴 `description` — **「보류」가 아니다. 둘로 갈린다**
+
+```
+무조건 연결        🔴 **REJECT** — 효과 측정 2회(1차 무효 · 2차 **정답 악화** CASE C)
+조건부 재검토      🟡 **HOLD** — 새 증거(GT 기반 정밀도 재측정)가 생길 때만
+🔴 CPO 표의 「description → 보류」는 위 둘을 합친 말이다 ⟹ 분리해서 적는다
+```
+
+#### ⑤ 🔴 `image` — **「보류」가 아니라 «측정불가» 다**
+
+```
+공급 단절      🟢 **코드 사실**(SUPPLY-B) — imageUrl 하드코딩 null(:472) · 3번째 인자 미전달(match.ts:661)
+효과           🔴 **측정불가** — 분모를 만든 적이 없다(HOLD 로 적으면 「재 봤다」로 읽힌다)
+🔴 그리고 `corePoints` 에서 IMAGE 가 **제외**(:1149) ⟹ **공급 ≠ 채점**(CPO §3-3 과 같다)
+```
+
+#### ⑥ 🔴🔴 **UX 어휘 충돌 — CPO §7 의 「시장 참고가격」은 금지 리터럴이다**
+
+```
+🔴 `wu-145-seller-decision-screen.test.ts:60` 의 **금지 목록에 「시장 참고가격」이 있다**
+🔴 이유가 코드에 적혀 있다(mi-same-candidates.ts:407-412) — 「참고가격」을
+   `MI_SAME_AREA_SCOPE`/`wu-056r1` 이 **유사상품 포함 참고 축** 의 뜻으로 **이미 쓴다**
+   ⟹ 1차 결론에 쓰면 **같은 말이 두 뜻** 이 된다
+🟢 **새 어휘를 만들지 않는다 — owner 가 이미 셋 있다**:
+   DOMESTIC_REFERENCE_TITLE   「국내 참고가격」        overseas-reference.ts:114 (wu-056r1 잠금)
+   SAME_CONFIRMED_COUNT_LABEL 「동일상품 확인」        mi-same-candidates.ts:372
+   SAME_PRICE_LABEL           「동일상품 확인 가격」    mi-same-candidates.ts:420
+🟢🟢 그리고 CPO 가 §7 에서 **말하려던 문장이 이미 상수다** — `MI_SAME_AREA_SCOPE`(:205):
+   「이 목록은 동일상품으로 «확정» 된 후보만 담습니다 — 그래서 위의 「참고가격」과 건수가
+     다를 수 있습니다. 확정되지 않은 후보는 아래 검토 구역에 그대로 남아 있습니다.」
+⟹ 🟢 CPO 가 지목한 모순(₩88,000 ↔ 동일상품 없음)은 **어휘 신설 0** 으로 해소된다 —
+   기존 상수 **병치 + 그 문장의 위치** 문제다(새 말을 만드는 문제가 아니다)
+```
+
+#### ⑦ UX 트랙 이름 — **`CORE-UX-SELLER-02`**
+
+```
+🟢 UX01 은 CLOSED 다 ⟹ 다음 UX 는 **-02** 다(이름 없는 「UX 수정 WU」로 두지 않는다)
+🔴 그 WU 는 SAME 알고리즘과 **분리** 된다(CPO §7 명시) · 🔴 금지 리터럴 ⑥ 을 먼저 읽는다
+```
+
+🔴 **CTO 는 ⏸ 대기** — CEO 의 **A/B/C/D 한 글자**가 STEP 3 착수 여부를 결정한다.
+🔴 image 구현 · image scoring · corePoints 에 IMAGE 추가 · description 재연결 · threshold 변경 **전부 0**.
+
+---
+
 ### 🔵 [원래 범위] STEP 1 지시 — 재조사 금지
 
 > 🔴 **STEP 1 은 측정 전용** 이다 — 구현이 아니다.
@@ -803,7 +890,26 @@ CEO 는 코드·계약·commit 을 검토하지 않는다. **배포 전에는 �
 테스트 URL:      테스트 상품:      테스트 순서:      예상 결과:
 ```
 
-### 🟡 지금 열려 있는 CEO Action — **화면 1회**(UX01 + STEP 4 를 한 번에)
+### 🟡🟡 **CEO Action ① — 한 글자 답변**(이것이 STEP 3 착수 여부를 가른다)
+
+> 🔴 **새 상품을 다시 테스트하지 않는다.** 과거 실제 상품 검증 때 biskuit / luxboy 같은
+> 후보를 SAME / DIFFERENT 로 판단하면서 **실제로 무엇을 눈으로 보고 판단했는지** 만 묻는다.
+
+```
+A. 상품 사진/이미지
+B. 상세페이지의 색상·소재·핏 등의 정보
+C. 둘 다
+D. 둘 다 아니고 상품명/품번/브랜드만
+```
+
+🔵 **답에 따라 CTO 가 할 일이 정해진다**(CPO 확정):
+```
+A 또는 C  →  **STEP 3 IMAGE evidence 측정** 착수(측정 전용 · 구현 0)
+B         →  image STEP 3 **보류** · description 은 **REJECT 유지** · 다른 공급선 검토
+D         →  image·description 둘 다 보류 · **새 evidence 공급 조사**를 별도 WU 로
+```
+
+### 🟡 CEO Action ② — **화면 1회**(UX01 + STEP 4 를 한 번에)
 
 🔵 **UX01 확인 9항** — `/pipeline` 에서 아무 상품 1개(「새 상품 분석」 또는 「🔄 다시 분석」):
 
