@@ -11,13 +11,13 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-MI-PRICE-02** — 🟢 **STEP 1~4 PASS**(Level 0/1/2 전부) · 🟡 **STEP 5·6 미완결**
-NEXT         🔵 **해외 최저 소싱가 → 판매판단 → 권장가 E2E 하나**(§9-F 의 시나리오 D)
-CEO ACTION   🟡 **없다**
+CURRENT WU   **CORE-MI-PRICE-03** — 🔴 **STOP: 기존 snapshot 입력 경로 실행 불가**(§9-G)
+NEXT         🔵 **차단 해제 조건 «하나»** — `SUPABASE_SERVICE_ROLE_KEY`(읽기면 충분)
+CEO ACTION   🟡 **키 제공 1회**(또는 CPO 가 대안 경로 지정)
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SAME-03**(화면 + CEO GT 10/10) · **SAME-04**(FN 3건 원인 확정)
 Git          clean · origin/main 0/0 · Production / 200
-회귀         **686 files / 9,262 passed / 0 failed** · typecheck 0 · build 0
+회귀         **687 files / 9,265 passed / 0 failed** · typecheck 0 · build 0
 ```
 
 🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **CPO 판정** 이다 — matcher 를 CTO 가 열지 않는다.
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-MI-PRICE-02 — Level 2 **달성** · 시나리오 D(판매판단 E2E)만 남음(§9-F)
+CURRENT    CORE-MI-PRICE-03 — 국내 축 CLOSED · 판매판단 E2E 는 **키 부재로 차단**(§9-G)
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -700,6 +700,62 @@ AC009 의 2건 = `biskuit.kr` 88,000(KR_TLD_AND_KRW) + `m.luxboy.com` 59,000(KR_
 core-mi-price-01-band  2   ①↔② 집계기 · CPO Level · market basis · **DIFFERENT 오염 단언**
                            🔴 `CORE_MI_PRICE_01_LIVE=1`
 🟢 `marketEvidence` 를 운영과 같이 넘긴다 — 다음 세션이 이 입력을 **다시 빠뜨리지 않게** 주석에 박았다
+```
+
+---
+
+## 9-G. 🔴🔴 **CORE-MI-PRICE-03 — STOP: 기존 snapshot 입력 경로 실행 불가**(운영 변경 0)
+
+> 🟢 CPO 가 ⒝(CTO 단독 E2E)를 승인했다. 🔴 **실행할 수 없다** — 추론이 아니라 **실행해서**
+> 확인했고, 그 사실을 계약으로 고정했다(`core-mi-price-03-e2e-blocker` 3건 · 네트워크 0).
+
+### 🔴🔴🔴 차단 지점은 «하나» 이고 좌표가 확정됐다
+
+```
+computeMarketIntelligence(snapshotId, workspaceId)     market-intelligence.ts:105
+  :110  const snapshot = await getSnapshot(snapshotId, workspaceId)
+  :111  if (!snapshot) return null                     ← 🔴 **여기서 끝난다**
+getSnapshot → snapshots/_lib/snapshot.ts → getSupabaseAdmin()
+getSupabaseAdmin  lib/supabase-admin.ts:12  `if (!url || !serviceRoleKey) return null`
+⟹ 🔴 `SUPABASE_SERVICE_ROLE_KEY` 가 **로컬 어디에도 없다**(.env 전수:
+   `.env.local` · `apps/admin/.env.local` · `packages/database/.env` · `scripts/.env`)
+🟢 실측 — `computeMarketIntelligence(dummy, dummy)` → **null**(DB 에 닿지도 않는다)
+```
+
+### 🔴 그래서 «하지 않은» 것 셋 — 전부 CPO 금지에 걸린다
+
+```
+❌ snapshot / seller 설정을 **mock** 으로 만든다            §2 「임의 값 생성 금지」
+❌ `computeMarketIntelligence` 를 **주입받게** 고친다        §1 「운영 코드 변경 금지」
+❌ DB 를 직접 읽어 downstream 을 **복제 실행** 한다
+   🔴 그 함수는 DB 를 **자기가** 읽는다 ⟹ 주입 지점이 없고, 복제식은 대조할
+      **운영 산출값(CONTROL)이 없다**(§5-B) ⟹ 「운영 결과 흉내」가 된다
+🔴 그리고 `pg` 모듈이 설치돼 있지도 않다(실측 MODULE_NOT_FOUND).
+```
+
+### 🟢🟢 이미 닫힌 것 — **국내 축은 CLOSED 다**(다시 재지 않는다)
+
+```
+B226AC009  domesticReference **2** · 🟢 **Level 2** · **KRW 59,000 ~ 88,000** · 오염 0
+B226AC010  1 · Level 1(가격대 확정 불가)      B226AC117  0 · Level 0(정상)
+🟢 §13 시나리오 **A·B·C PASS** · DIFFERENT 오염 **0** · SIMILAR/CONFLICT/EXCLUDED 유입 **0**
+```
+
+### 🔴 미완결 — **셋 다 DB 경로 «뒤» 에 있다**
+
+```
+해외 최저 소싱가 · sellability · A 권장 판매가격
+⟹ 🔴 전부 `getSnapshot` 뒤이고 service-role 없이는 **도달 자체가 불가** 다.
+🔴 「해외 가격을 못 읽는다」가 아니다 — **그 앞 문이 안 열린다.** 두 문장을 섞지 않는다.
+```
+
+### 🔵 해제 조건 — **하나**
+
+```
+`SUPABASE_SERVICE_ROLE_KEY`(🟢 **읽기 권한이면 충분** 하다 — 이 E2E 는 쓰기 0)
+🟢 키가 생기면 `core-mi-price-03-e2e-blocker` 의 첫 단언이 **FAIL 로 뒤집힌다** —
+   그것이 「지금 착수 가능」이라는 신호다(쿠팡 고시 선례와 같은 모양).
+🟡 대안(CPO 결정) — 운영 `/check` 응답 1건을 받는다(CEO 화면 1회 · §12 의 ⒜ 경로)
 ```
 
 ---
