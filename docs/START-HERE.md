@@ -11,13 +11,16 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-트랙 A (증거)  CORE-PRICE-SAME-01   STEP 1 · 2 · 2-R 🟢 **MEASURED / CLOSED**
-                                    STEP 3(IMAGE) 🟡 **NOT MEASURED** — ⏸ 착수 대기
-트랙 B (화면)  CORE-UX-SELLER-01 🟢 CLOSED → **CORE-UX-SELLER-02 착수점**(§9-UX02)
-               🟢 조사 끝 · 설계 확정 · **다음 세션은 조사 없이 구현**(1차에 한 줄 추가)
-BLOCKING       🟡🟡 **CEO 육안 판정 11건**(§9-EV2 · docs/core-2m-visual-review.html) ← 지금 이것이다
-CEO ACTION     ① **A/B/C/D 한 글자**   ② 화면 확인 1회(UX01 9항 + STEP 4)
+트랙 A (증거)  CORE-PRICE-SAME-01  STEP 1 · 2 · 2-R 🟢 **MEASURED / CLOSED**(§9-EV)
+               CORE-PRICE-SAME-02  🟢 **CEO 판정 화면 준비 완료**(§9-EV2 · 11건)
+               CORE-PRICE-SAME-03  🔵 **예약**(§9-EV3) — 🔴 CEO JSON 전까지 **착수 금지**
+트랙 B (화면)  CORE-UX-SELLER-01 🟢 CLOSED · CORE-UX-SELLER-02 🟢 **구현·배포 완료**(§9-UX02)
+BLOCKING       🟡🟡 **CEO 육안 판정 11건** ← 지금 이것 하나다
+               docs/core-2m-visual-review.html (브라우저로 열고 [복사] 버튼)
+CEO ACTION     ① **판정 11건**(동일/다른제품/판단불가 + 사유)  ← 이것이 트랙 A 를 연다
+               ② 화면 확인 1회 — UX01 9항 + UX02 국내가격 4항 + STEP 4(§18)
 STEP 5         CLOSED (CPO 2026-10-26 · 재개 조건 1건 · §10)
+🔴 「A/B/C/D 한 글자」 질문은 **철회됐다** — 위 ① 의 **사유** 가 그 답을 직접 담는다
 ```
 
 🔴 **CTO 는 ⏸ 대기다.** 두 트랙 **모두** CPO 발행/CEO 답변을 기다린다.
@@ -323,6 +326,60 @@ M5 MI_SAME_AREA_SCOPE 연결 제거 · M6 CTA wiring 제거 · M7 금지 리터�
 
 🔴 **보고는 「CEO Production UX 확인 대기」로 끝낸다**(CPO §12) ·
 🔴 `Production HTTP PASS ≠ Production UI PASS`(로그인 뒤 화면은 CTO 가 못 본다).
+
+---
+
+## 9-EV3. 🔵 **`CORE-PRICE-SAME-03` 예약 — CEO 판정 fixture 고정 + 시스템 대조**
+
+> 🔴🔴 **입력은 CEO 판정 JSON 이다.** 그것이 오기 전에는 **착수하지 않는다**(CPO 명시).
+> 🔴 **측정 전용** — matcher · threshold · 8축 · priceTier · domesticReference ·
+> 국내가격 aggregation · A/B 가격 **전부 변경 0**. 🔴 **CEO 판정에 맞춰 코드를 고치지 않는다.**
+
+### 🟢 입력 형식은 이미 정해져 있다(§9-EV2 화면의 복사 버튼)
+
+```
+[{ domain, url, ceo: "동일"|"다른제품"|"판단불가"|"미선택", why: "<사유>" }, …]
+🔵 fixture 매핑   동일 → SAME · 다른제품 → DIFFERENT · 판단불가 → **UNDETERMINED**
+🔴 「판단불가」를 SAME/DIFFERENT 로 **변환하지 않는다** · 성능 분모에서 **별도 처리**
+🔴 「미선택」이 있으면 **보정하지 않고** 분모와 함께 보고한다
+🔴 후보 수가 11 과 다르면 ⒜ 실제 분모 ⒝ 누락 ⒞ 추가 를 **먼저** 보고한다
+```
+
+### 🔵 실행 순서
+
+```
+① CEO JSON → **immutable fixture**(candidate · verdict · reason **원문 그대로**)
+   🔴 과거 판정을 지우지 않는다 — `previousVerdict`/`ceoBasis` 를 같이 보존
+② 1:1 대조표 — 후보 | CEO | 시스템 | 일치 | matchTruth | priceTier | 국내참고가격 포함 | 주요 blocker
+③ 분모 전부 명시 — CEO 분포 · 시스템 분포 · 교차 · 🔴 **모든 수치에 분모**
+④ 후보 FN/FP — 🔴 「**후보**」로 적는다(즉시 production bug 로 단정하지 않는다)
+⑤ Evidence 대조 — 11축 × (수집/추출/전달/사용/판정영향)
+⑥ CEO reason → axis 연결 · 🔴 억지로 끼워 맞추지 않는다 ⟹ `UNREPRESENTED_EVIDENCE`
+⑦ 가격 lineage — CEO → verdict → truth → priceTier → domesticReference → 집계 포함 여부
+⑧ 계약 — 판정값·사유·후보 수·충돌 후보 **보존** 단언
+   🔴🔴 **fixture 를 통과시키려고 matcher 결과를 바꾸지 않는다** — 차이를 **기록하는** 방향으로
+⑨ targeted → full regression → typecheck → build · 🔴 기존 계약이 깨지면 고치지 말고 **원인 분류**
+```
+
+### 🔴 이미 측정된 것 — **다시 조사하지 않는다**(STEP 1·2·2-R · §9-EV)
+
+```
+priceTier = f(matchTruth, verified)  ← verdict 를 안 본다(domestic-product-link.ts:86)
+domestic 자격 = market==="KR" && priceKrw && tier∈{EXACT,COMPARISON}(market-intelligence:232·318)
+PLAIN_HTML 7칸 하드코딩 null(:420) · description 미전달(:441) · image 하드코딩 null(:472)
+compareCrossSellerProducts(a,b,**image?**) 3번째 인자 미전달(match.ts:661) · IMAGE corePoints 제외(:1149)
+```
+
+### 🔴 STOP 조건 — 하나라도 반복되면 **구현하지 말고 STOP**
+
+```
+CEO SAME ↔ 현재 정책 반복 충돌 · 품번 conflict 반복 충돌 · NO_TITLE_OVERLAP 반복 차단 ·
+brand 가 seller name 인지 불명확 · description/image 가 CEO 판단에 중요한데 미전달 ·
+identity ↔ price comparability 분리 반복 · 기존 axis 로 설명 불가한 기준 반복
+⟹ 다음 WU 는 「어떤 matcher 를 고칠까」가 아니라 **「어떤 evidence 정책을 채택할까」**(CPO 결정)
+```
+
+🔴 **보고 마지막 줄 고정** — `STOP — matcher 정책 변경 여부는 CPO 판단 대기`
 
 ---
 
