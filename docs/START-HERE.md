@@ -11,16 +11,16 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-PRICE-SAME-03** — 🟢 **화면 구현 완료**(§9) · 🟡 **CEO 판정 대기**
-NEXT         🟡 **CEO 가 국내 후보 10건을 판정** → 그 라벨로 CPO 가 다음 범위를 지정
-CEO ACTION   🟡 **있다** — `docs/core-same03-domestic-review.html` 열고 10건 판정(§18-③)
-CLOSED       UX-01 · UX-02(배포됨) · SAME-01 STEP 1·2·2-R · SAME-02 · STEP 5 ·
-             **SAME-03 화면 생성**(운영 코드 0)
+CURRENT WU   **CORE-PRICE-SAME-04** — 🟢 **FN 3건 Evidence Trace 완료**(§9-B · 운영 코드 0)
+NEXT         🔴 **CPO matcher 정책 판단 1건** — `NO_TITLE_OVERLAP`(§9-B 의 단일 차단)
+CEO ACTION   🟡 **없다** — SAME-03 판정 10/10 수신 완료
+CLOSED       UX-01 · UX-02 · SAME-01 STEP 1·2·2-R · SAME-02 · STEP 5 ·
+             **SAME-03**(화면 + CEO GT 10/10) · **SAME-04**(FN 3건 원인 확정)
 Git          clean · origin/main 0/0 · Production / 200
-회귀         **680 files / 9,231 passed / 0 failed** · typecheck 0 · build 0
+회귀         **682 files / 9,245 passed / 0 failed** · typecheck 0 · build 0
 ```
 
-🔴 **CTO 가 할 코드 작업이 없다.** 선제적으로 다른 WU 를 만들지 않는다 — 다음 입력은 **CEO 라벨** 이다.
+🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **CPO 판정** 이다 — matcher 를 CTO 가 열지 않는다.
 🔴 **용어는 여섯뿐** — MEASURED / CLOSED / HOLD / REJECT / 측정불가 / STOP.
 🟢 종료된 WU 상세·정합표·과거 측정은 전부 `docs/ARCHIVE-CLOSED-WU.md` 에 있다(막혔을 때만 연다).
 
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-PRICE-SAME-03 — 국내 SAME 검토 화면 **생성 완료** · **CEO 판정 대기**(§9)
+CURRENT    CORE-PRICE-SAME-04 — FN 3건 원인 확정 **완료**(§9-B) · **CPO matcher 판정 대기**
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -293,6 +293,85 @@ STEP 4               권장 판매가격 A 1차 노출 + **ⓘ 가격 계산 기
 
 ---
 
+## 9-B. 🟢🟢 **CORE-PRICE-SAME-04 — CEO GT 10/10 + FN 3건 원인 확정**(운영 변경 0)
+
+### 🔴🔴🔴 분모를 먼저 적는다 — **precision 은 측정불가** 다
+
+```
+CEO 라벨   동일 **5** · 판단불가 **5** · **다른제품 0**
+⟹ 🔴 「시스템 SAME 인데 사람은 다르다」 분모가 **0** 이므로 **precision 을 측정할 수 없다**.
+   🔴 「오포함 0」을 정밀도 근거로 쓰지 않는다 — 분모가 없는 0 이다.
+🟢 재현율 — CEO 동일 5 중 system SAME 확정 **2** · 보류(PRESUMED_SAME) **3**
+🟢 국내 참고가격 진입 — CEO 동일 5 중 **2**(biskuit · beaumonde)
+🔴 판단불가 5 의 성질 — **읽기 실패 3** + 목록 URL 1 + 이미지 부족 1 ⟹ **판정 실패가 아니다**
+🔴 사유 **3/10 은 근거 측정불가** — 입력 사유 네 건이 글자 그대로 같았다(붙여넣기) ⟹
+   donokids · m.luxboy · beaumonde 의 「무엇을 보고 판단했는가」를 그 후보 서술로 쓰지 않는다
+라벨 고정 `fixtures/core-same03-human-gt.json`(**URL 키** · WU-095 교훈)
+```
+
+### 🟢 FN 3건 — **실측 trace**(운영 함수 그대로 · 복제 계산은 교차검증했다)
+
+`cross-seller.ts:1202` → `if (!blocked && brandOk && corePoints >= SAME_MIN_AXES) return "SAME"`
+
+| 후보 | brand | 품번 | TITLE | corePoints | 보류 | **실패 조건 수** |
+|---|---|---|---|---:|---|---:|
+| biskuit.kr | 🔴 **「비스킷」**(판매처명) | exact | 🔴 겹침 0 | **4** | BRAND_MISMATCH · NO_TITLE_OVERLAP | **3** |
+| m.luxboy.com | 🟢 BOBO CHOSES | exact | 🔴 겹침 0 | **5** ✓ | NO_TITLE_OVERLAP | 🔴🔴 **1** |
+| donokids.com | 🔴 **null** | 🔴 **null** | 🟢 +2 | **3** | BRAND_UNCONFIRMED | **3** |
+| 🟢 trenbe(baseline) | BOBO CHOSES | exact | +1 | 6 | 없음 | 0 |
+| 🟢 beaumonde(baseline) | Bobo Choses | exact | +1 | 5 | 없음 | 0 |
+
+🔴🔴 **「축 하나를 열면 3건이 산다」는 거짓이다** — `m.luxboy.com` 만 **단일 차단** 이고
+나머지 둘은 **세 조건이 동시에** 실패한다. 🟢 복제식(`corePoints`·`brandOk`)은 운영
+verdict 와 **5/5 대조 통과** 했다(틀린 복제로 원인을 적지 않았다).
+
+### 🔴🔴 원인 분류 — **CEO 근거는 페이지에 «있다». 칸까지 오지 않는다**
+
+```
+① biskuit    EXTRACTION + NORMALIZATION + AXIS
+   raw HTML 에 보보쇼즈 **26** · B226AC009 **21** · BOBO CHOSES **3** ⟹ 공급은 있다
+   🔴 그런데 brand 칸 = **「비스킷」**(판매처가 그 자리에 자기 이름을 적었다)
+      ⟹ `:807 brandKnown` 참 · `:808 brandOk` **거짓** → `:835 BRAND_MISMATCH`
+      🟢 WU-080 이 「extractor 가 명시된 자리를 정직하게 읽었다(결함 아님)」로 닫은 그 모양
+   🔴 제목이 **한글 음역만** 이다 — [보보쇼즈·허그·헤어리·몬스터·티셔츠] ↔ [hug·hairy·monster·shirt]
+      ⟹ jaccard **0** → `:929 NO_TITLE_OVERLAP` (WU-078 이 음역 축을 REJECT 로 닫았다)
+② m.luxboy   🔴🔴 **AXIS 단일** (근본은 SUPPLY)
+   brand ✓ · 품번 exact ✓ · brandOk ✓ · corePoints **5** ✓ ⟹ **NO_TITLE_OVERLAP 하나** 가 막는다
+   🔴 원인은 그 페이지 제목에 **상품명이 없다** — 「보보쇼즈(BOBO CHOSES) 키즈 긴팔티셔츠
+      B226AC009 | SINCE 2002 … 럭스보이」 = 브랜드 + 카테고리 + 품번 + 판매처 홍보문뿐
+③ donokids   EXTRACTION + SUPPLY + AXIS
+   🔴 brand **null** — 페이지엔 보보쇼즈 10 · BOBO CHOSES 3 이 있고 **breadcrumb 에도** 있다
+      (`categoryText = "BOBO CHOSES (대) > F/W 2026 (중)"`) ⟹ brand extractor 가 **제목·breadcrumb 를
+      읽지 않는다** → `:1122 BRAND_UNCONFIRMED`
+   🔴 품번 **null** — 그 페이지는 **`#226AC009`** 로 적는다(「B」가 없다 · raw 에 `B226AC009` **0회**)
+      ⟹ `modelCode = unavailable` → MODEL_CODE 축 **0점**(baseline 둘은 +3)
+   🟢 제목 축은 **정상 작동** 했다(+2 hug/hairy/monster) — 영문 상품명을 같이 적기 때문이다
+🔴 MATCH_TRUTH **0건** · PRICE_TIER **0건** — `TEXT_CONFIRMED`(`match-truth.ts:233`
+   `crossSellerReserved`)와 `COMPARISON`(`domestic-product-link.ts:88`)은 **PRESUMED_SAME 의
+   정상 귀결** 이다. 🟢 가격 축은 이미 통과한다(biskuit 이 국내 참고가격에 들어간다)
+🔴 luxboy·donokids 의 국내 미포함은 priceTier 가 아니라 **market UNKNOWN** 이고,
+   그 판정은 **등록부 미조회 때문에 측정불가** 다(운영에서는 KR 일 수 있다)
+```
+
+### 🔴🔴🔴 **CPO 판정 1건 — 코드 주석의 전제가 CEO 라벨로 반증됐다**
+
+```
+`cross-seller.ts:802-804` 가 적어 둔 경고:
+  「🔴 알려진 의존 — `m.luxboy.com` 은 품번 exact 인데 human **DIFFERENT** 다.
+    C3 를 켜면 그 쌍을 막는 것이 **NO_TITLE_OVERLAP 하나** 가 되므로
+    그 축을 완화하는 변경과 **절대 같이** 가면 안 된다」
+🔴🔴 그 전제의 「human DIFFERENT」가 **이번 CEO 라벨에서 「동일」로 뒤집혔다.**
+   그리고 그 주석이 예고한 상태가 **실측으로 그대로 재현** 됐다 — 막는 것이 그 축 하나다.
+🔴 **CTO 는 열지 않았다.** 완화의 안전성을 **이 표본으로 증명할 수 없다** —
+   「다른제품 0」이라 WU-063~080 이 측정한 「완화 = Human DIFFERENT 동반 개방」의
+   위험을 **잴 분모가 없다**. ⟹ 재개 조건은 §10 의 **「GT 기반 정밀도 재측정 WU」** 와 같다.
+```
+
+🟢 **COLOR 반증은 이 표본에서 오차단하지 않았다** — 유일한 COLOR 반증(`luksusbaby` t-shirt)의
+CEO 라벨이 **판단불가** 다(동일이 아니다) ⟹ 🔴 COLOR 완화 근거로 쓰지 않는다.
+
+---
+
 ## 10. 🟢🔴 STEP 5 = CLOSED (CPO 2026-10-26) — 재개 조건 **하나**
 
 | 트랙 | 판정 |
@@ -484,7 +563,9 @@ CEO 는 코드·계약·commit 을 검토하지 않는다. **배포 전에는 �
 테스트 URL:      테스트 상품:      테스트 순서:      예상 결과:
 ```
 
-### 🟡🟡🟡 **CEO Action ③ — 국내 후보 10건 판정**(지금 할 일 · 15~25분)
+### 🟢 **[완료] CEO Action ③ — 국내 후보 10건 판정**(2026-10-26 수신 10/10 · §9-B)
+
+🔴 **다시 하지 않는다.** 라벨은 `fixtures/core-same03-human-gt.json` 에 고정됐다.
 
 ```
 파일        docs/core-same03-domestic-review.html   ← 브라우저로 **그냥 열면 된다**
