@@ -3709,3 +3709,757 @@ Seller Decision
 
 ---
 
+
+
+---
+
+## 9. 🟢🟢 **CORE-UX-SELLER-01 — 구현·배포 완료**(CEO 확인 1회만 남았다)
+
+> 🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **§9-NEXT** 이고 **CPO 가 발행** 한다.
+
+### 🟢 실행 완료 기록 (2026-10-26)
+
+```
+① 판매판단   왼쪽 📊 1차에 `market-sell-verdict` — 🔴 오른쪽 Action Center **유지**
+             owner 하나: resolveSellVerdict(CW:727) → FINAL_VERDICT_COPY(Panel:873)
+             🟢 좌우가 **글자 그대로 같은 식** 이다(계약 UX-02-b 가 둘 다 문다)
+② 권장가 ₩A  `market-recommended-price` + **CTA `market-apply-recommended-price`**
+             🔴 CTA = `() => updateSalePriceKrw(recommendedPriceKrw)` — PriceEditor:158 과
+                **같은 함수**(새 handler 0 · 새 state 0 · 재계산 0)
+③ 근거       🇰🇷/🌎 `market-blocks` — **순서만** 이동(블록 안쪽 불변)
+④ ⓘ          `market-price-calculation-link` 를 ③ **뒤** 로 이동(기존 핸들러·앵커 그대로)
+🟢 새 prop **정확히 둘** — `sellVerdictCopy` · `onApplyRecommendedPrice`
+🟢 새 어휘 둘은 기존 copy owner 에 — `APPLY_RECOMMENDED_PRICE_LABEL` · `SELL_VERDICT_HEADING`
+🔴 MI · SAME · 국내가격 수집/자격 · priceTierFromLink · aggregation · 환율 ·
+   profitability · A/B 계산 · API · DB · schema **전부 변경 0**
+```
+
+🔴🔴 **그 과정에서 알게 된 것 — 「💡 판매 판단」과 「판매 판단」은 다른 것이다**:
+```
+MARKET_RESULT_HEADING  「💡 판매 판단」 = 결론 «문장» 블록(seller-decision) 제목 · **상세에 있다**
+                        🔴 계약 둘이 「1차로 되돌아오면 FAIL」을 문다(core-2v:232 · wu-146:222)
+SELL_VERDICT_HEADING   「판매 판단」   = 한 줄 verdict 의 머리말 · **1차에 있다**(이번 WU)
+⟹ 🔴 둘을 합치면 그 계약 둘이 FAIL 한다. **그것이 가드가 맞는 것이다.**
+```
+
+### 🔴 검증 결과
+
+```
+계약 신규 **24**(`core-ux-seller-01-decision-order` · UX-01~06) — 마운트 DOM + 소스 배선
+변이 **M1~M6 전부 FAIL → 바이트 복구**(md5 일치 · 흔적 0)
+  M1 판매판단 제거 **4F** · M2 A 제거 **8F** · M3 CTA 배선 제거 **1F** ·
+  M4 B→A 자리 **1F**(기존 D-6 이 잡았다) · M5 ⓘ→B **2F** · M6 오른쪽 제거 **1F**
+회귀 **677 files / 9,205 passed / 0 failed / 140 skipped** · typecheck 0 · build 0
+🔴 기존 계약 1건(`core-2r5` A-2·A-4-b)이 FAIL 했고 **의도된 순서 변경** 이라 앵커를
+   갱신·**강화** 했다 — 슬라이스 기준을 «순서» 에서 «층»(상세 접힘 앞)으로 바꾸고
+   **새 순서를 직접 단언** 하도록 더했다(약화 0)
+```
+
+---
+
+## 9-UX02. 🔵🔵🔵 **`CORE-UX-SELLER-02` — 착수점. 조사 끝 · 구현부터**
+
+> 🔴 **presentation layer 전용** — SAME · priceTier · domesticReference · matchTruth ·
+> A/B 가격 · MI threshold **전부 0**. 🟢 **새 어휘 0**(기존 owner 재사용).
+> 🔴 이번 세션은 **조사만** 했다(코드 0 · 작업트리 clean) — 다음 세션은 **조사 없이** 구현한다.
+
+### 🟢🟢 조사 결론 — **모순의 실체는 「한쪽만 보인다」 다**(마운트 DOM 실측)
+
+```
+현재 1차(실측 덤프)   「🇰🇷 국내 참고가격 KRW 88,000 · **확인 1곳**」
+                     「🌎 해외 최저 소싱가 최저 확인가 GBP 37 · USD 58」
+🟢 CPO 가 원한 「₩88,000 · 확인 1곳」 형식은 **이미 있다**
+🟢 CPO §6 의 제거 요구도 **이미 충족** — 1차에 PRESUMED_SAME · TEXT_CONFIRMED ·
+   COMPARISON · blocker · confidence · 긴 MI 설명이 **0** 이다(`core-2ao-r2` 가 잠근다)
+🔴 **없는 것은 「동일상품 확인 0곳」 하나** — 셀러는 그 0 을 **볼 수 없다**
+⟹ 🔴 모순은 「말이 틀려서」가 아니라 **두 축 중 하나만 1차에 서서** 생긴다
+```
+
+### 🔴🔴 그것을 1차에서 빼는 게이트가 **둘** 이고, **CPO 의 이전 결정** 이다
+
+```
+MarketPriceComparison.tsx:**1086**  {!isSummary && (   ← 「🔎 동일상품 확인 0곳 — …」
+OverseasReferencePrice.tsx:**121**  {!compact && (     ← statusLine
+                                    (DOMESTIC_SAME_NOT_CONFIRMED · overseas-reference.ts:126)
+이유(:1081-84 · :61 · :118-119)   **CORE-2AO-R2** — 「note·scope·statusLine 은 전부
+                                  **근거 문장** 이다(CPO 제거 목록)」 ⟹ 1차에서 뺐다
+```
+
+### 🟢🟢 **충돌이 아니다 — 둘을 다 지키는 축이 있다**(이것이 설계다)
+
+```
+🔴 CORE-2AO-R2 가 뺀 것은 **문장** 이다:
+   「동일상품으로 확정된 국내 판매처는 없습니다.」(19자) · marketEmptyNote 의 **사유** 문장
+🟢 CPO UX-02 가 원하는 것은 **숫자 한 줄** 이다: 「동일상품 확인 **0곳**」
+⟹ 🟢 **숫자는 1차 · 문장은 상세** 로 가르면 **두 결정이 동시에 성립** 한다
+🔴 그러므로 `{!isSummary}` · `{!compact}` 게이트를 **풀지 않는다**(문장은 상세에 그대로 둔다)
+```
+
+### 🔵 최소 변경 설계 (새 어휘 0 · 새 계산 0 · 새 state 0)
+
+```
+위치   MarketBlock 의 `g.sameCount === 0` 분기 **안**(SUMMARY) — 금액 줄 **바로 아래**
+       🔴 그 분기 안이라 「동일상품 확정 없음」이 **구조적으로 항상 참** 이다(:1060-62 가 적어 둔 성질)
+어휘   `SAME_CONFIRMED_COUNT_LABEL`(mi-same-candidates.ts:**372** = 「동일상품 확인」) + `g.sameCount`곳
+       🔴 `SAME_CHECK_HEADING`(「🔎 동일상품 확인」)을 쓰지 않는다 — 그쪽은 **상세 머리말** 이고
+          1차에 올리면 2AO-R2 가 뺀 그 블록이 되돌아온다
+       🔴 🔴 **「시장 참고가격」 금지 리터럴을 쓰지 않는다**(wu-145 목록 · §9-NEXT 정합표 ⑥)
+결과   🇰🇷 국내 참고가격 KRW 88,000 · 확인 1곳
+       동일상품 확인 0곳                      ← **이 한 줄이 이번 WU 의 전부다**
+```
+
+### 🔴 착수 전 반드시 확인할 위험 둘
+
+```
+⒜ 1차 글자 비중 계약 — `core-next-step4` B-8(<25%) · `core-2ao-r2` R2-3(상세보다 훨씬 적다)
+   🔴 1차에 글자를 **더하는** 변경이다 ⟹ 두 계약을 **먼저** 돌려 여유를 확인한다
+⒝ `core-2ao-r2` R2-2(「1차는 **세 블록** 이다」) — 🟢 블록을 늘리지 않는다(기존 블록 **안** 에 한 줄)
+```
+
+### 🔵 계약 UX-01~07 · 변이 M1~M7 (CPO 지시 그대로)
+
+```
+UX-01 1차에 판매판단      UX-02 권장가가 그 바로 다음   UX-03 국내 참고가격 ↔ 동일상품 확인 수 **같은 1차**
+UX-04 「시장 참고가격」 금지 리터럴 0                   UX-05 `MI_SAME_AREA_SCOPE` 의미 유지(상세)
+UX-06 CTA 동작 동일       UX-07 오른쪽 Action Center 존재
+M1 판매판단 제거 · M2 권장가 제거 · M3 국내 참고가격 제거 · M4 동일상품 확인 수 제거 ·
+M5 MI_SAME_AREA_SCOPE 연결 제거 · M6 CTA wiring 제거 · M7 금지 리터럴 삽입  → **전부 FAIL**
+🔴 변이 뒤 **바이트 복구**(md5) 확인 · 🔴 python3 없음 ⟹ `Edit` 로만
+```
+
+🔴 **보고는 「CEO Production UX 확인 대기」로 끝낸다**(CPO §12) ·
+🔴 `Production HTTP PASS ≠ Production UI PASS`(로그인 뒤 화면은 CTO 가 못 본다).
+
+---
+
+## 9-EV3. 🔵 **[참고] `CORE-PRICE-SAME-03` 2단계 — CEO 판정 fixture 고정 + 시스템 대조**
+
+> 🔵 **위 §9-EV3B 화면으로 CEO 판정이 들어온 «뒤»** 의 단계다. 그 전에는 착수하지 않는다.
+
+> 🔴🔴 **입력은 CEO 판정 JSON 이다.** 그것이 오기 전에는 **착수하지 않는다**(CPO 명시).
+> 🔴 **측정 전용** — matcher · threshold · 8축 · priceTier · domesticReference ·
+> 국내가격 aggregation · A/B 가격 **전부 변경 0**. 🔴 **CEO 판정에 맞춰 코드를 고치지 않는다.**
+
+### 🟢 입력 형식은 이미 정해져 있다(§9-EV2 화면의 복사 버튼)
+
+```
+[{ domain, url, ceo: "동일"|"다른제품"|"판단불가"|"미선택", why: "<사유>" }, …]
+🔵 fixture 매핑   동일 → SAME · 다른제품 → DIFFERENT · 판단불가 → **UNDETERMINED**
+🔴 「판단불가」를 SAME/DIFFERENT 로 **변환하지 않는다** · 성능 분모에서 **별도 처리**
+🔴 「미선택」이 있으면 **보정하지 않고** 분모와 함께 보고한다
+🔴 후보 수가 11 과 다르면 ⒜ 실제 분모 ⒝ 누락 ⒞ 추가 를 **먼저** 보고한다
+```
+
+### 🔵 실행 순서
+
+```
+① CEO JSON → **immutable fixture**(candidate · verdict · reason **원문 그대로**)
+   🔴 과거 판정을 지우지 않는다 — `previousVerdict`/`ceoBasis` 를 같이 보존
+② 1:1 대조표 — 후보 | CEO | 시스템 | 일치 | matchTruth | priceTier | 국내참고가격 포함 | 주요 blocker
+③ 분모 전부 명시 — CEO 분포 · 시스템 분포 · 교차 · 🔴 **모든 수치에 분모**
+④ 후보 FN/FP — 🔴 「**후보**」로 적는다(즉시 production bug 로 단정하지 않는다)
+⑤ Evidence 대조 — 11축 × (수집/추출/전달/사용/판정영향)
+⑥ CEO reason → axis 연결 · 🔴 억지로 끼워 맞추지 않는다 ⟹ `UNREPRESENTED_EVIDENCE`
+⑦ 가격 lineage — CEO → verdict → truth → priceTier → domesticReference → 집계 포함 여부
+⑧ 계약 — 판정값·사유·후보 수·충돌 후보 **보존** 단언
+   🔴🔴 **fixture 를 통과시키려고 matcher 결과를 바꾸지 않는다** — 차이를 **기록하는** 방향으로
+⑨ targeted → full regression → typecheck → build · 🔴 기존 계약이 깨지면 고치지 말고 **원인 분류**
+```
+
+### 🔴 이미 측정된 것 — **다시 조사하지 않는다**(STEP 1·2·2-R · §9-EV)
+
+```
+priceTier = f(matchTruth, verified)  ← verdict 를 안 본다(domestic-product-link.ts:86)
+domestic 자격 = market==="KR" && priceKrw && tier∈{EXACT,COMPARISON}(market-intelligence:232·318)
+PLAIN_HTML 7칸 하드코딩 null(:420) · description 미전달(:441) · image 하드코딩 null(:472)
+compareCrossSellerProducts(a,b,**image?**) 3번째 인자 미전달(match.ts:661) · IMAGE corePoints 제외(:1149)
+```
+
+### 🔴 STOP 조건 — 하나라도 반복되면 **구현하지 말고 STOP**
+
+```
+CEO SAME ↔ 현재 정책 반복 충돌 · 품번 conflict 반복 충돌 · NO_TITLE_OVERLAP 반복 차단 ·
+brand 가 seller name 인지 불명확 · description/image 가 CEO 판단에 중요한데 미전달 ·
+identity ↔ price comparability 분리 반복 · 기존 axis 로 설명 불가한 기준 반복
+⟹ 다음 WU 는 「어떤 matcher 를 고칠까」가 아니라 **「어떤 evidence 정책을 채택할까」**(CPO 결정)
+```
+
+🔴 **보고 마지막 줄 고정** — `STOP — matcher 정책 변경 여부는 CPO 판단 대기`
+
+---
+
+## 9-EV2. 🟡🟡 **`CORE-PRICE-SAME-02` — CEO 판정 화면 «준비 완료»**(운영 0 · CEO 육안 대기)
+
+```
+산출물   docs/core-2m-visual-review.html   **7.91MB · 자립형**(원격 이미지 0 · data: URI)
+검토 대상 **11건** · 🟢 CPO 가 지목한 10곳 **전부 포함** + 충돌 후보 tinyapple
+이미지   biskuit 1/1 · tinyapple 2/2 · stockmann 1/1 · bobochoses 3/3 · junioredition 3/3 ·
+         cissywears 3/3 · kids21 3/3 · parkette 2/2 · luxboy 1/1 · bornyesterdaykids 3/3 · donokids 1/1
+제외     global.trenbe · thefrontshop(시스템 확정 SAME · 충돌 아님) ·
+         🔴 miniboutique.co.kr **UNREACHABLE**(측정불가 — 화면에 넣지 않았다)
+```
+
+🟢 **기존 빌더를 재사용했다**(새 화면 0) — `core-2m-visual-review-build`. 바꾼 것 넷:
+```
+① 「유사」 → **「다른제품」**   CPO 확정. 🔴 전 라운드의 「유사」는 CPO 가 내부 calibration 에서
+                              DIFFERENT 로 **변환** 했고 그 변환이 CEO 뜻과 같은지 확인된 적이 없다
+② **사유 입력**(textarea) 신설 · 복사 버튼 산출에 `why` 포함
+③ 시스템 판정을 **실제 값으로** 분기해 적는다 — 🔴 전까지 모든 카드가 「확정하지 못했습니다」
+   한 문장이었고, 시스템이 SAME 이라 한 후보에서는 그것이 **거짓** 이었다
+④ **충돌 배지** — 과거 판정이 갈린 후보에 「꼭 다시 봐 주십시오」 표시
+   🔴 그리고 **충돌 후보는 «확정 SAME 이어도» 화면에 넣는다**(안 그러면 tinyapple 이 사라진다 · 실측)
+```
+
+🔴 **내가 두 번 틀렸고 둘 다 가드가 잡았다** — ⒜ 템플릿 리터럴 안에 **JSX 주석 `{/* */}`** 을 써서
+화면에 글자로 찍힐 상태였다(제거) ⒝ `verdict` 를 **날것으로** 적어 **내부 토큰 노출 금지 계약이
+FAIL** 했다(`PRESUMED_SAME`) ⟹ 🟢 `humanWord()` 로 **셀러의 말** 로 바꿨다.
+
+🔴 **CTO 는 판정하지 않았다** — 미리 선택된 칸 **0**(계약이 단언) · 사유 칸 비어 있음.
+🟡 **CEO 는 11건에 「동일 / 다른제품 / 판단불가 + 사유」를 주시면 된다.** 🔴 판단불가는 실패가
+아니다 — 증거가 부족하면 그대로 남기는 것이 **정답** 이다(CTO 가 변환하지 않는다).
+
+---
+
+## 9-EV. 🔴🔴🔴 **`CORE-PRICE-SAME-01` 재개 — CEO Evidence Lineage**(운영 0 · CPO 판정 대기)
+
+> 🔴🔴 **STEP 2 의 전제가 뒤집혔다. 이것부터 읽는다.**
+
+### 🔴🔴🔴 ① `m.luxboy.com` 의 CEO 라벨이 **둘** 이고, 최신은 **SAME** 이다
+
+```
+wu-112(이전)    DIFFERENT · 사유 「컬러 다름」
+core-2m(최신)   **SAME**  · 사유 「**브랜드 + 품번 동일로 판단 가능.** 추가로 상품명·상세설명으로도」
+fixture 주석    「🔴 이 한 건이 CORE-2I/2J/2K/2L 의 **핵심 반례** 였다」
+                「CPO 확정: CEO 육안 판정이 truth ⟹ **최신 판정을 truth 로** 쓰고 상충을 기록한다」
+🔴 GT 합집합(`core-2ah`)은 그 충돌 때문에 **이 건을 제외** 한다(36건에 없다)
+```
+
+⟹ 🔴🔴 **STEP 2 의 질문(「biskuit SAME 과 luxboy DIFFERENT 를 가르는 증거」)이 성립하지 않는다.**
+최신 GT 로는 **둘 다 SAME** 이다 ⟹ 가를 필요가 없고, 둘을 **같이 여는 것이 recall 회복** 이다.
+🔴 그리고 CPO 전제(「DIFFERENT 가격이 국내 참고가격에 들어온다」)는 **이 표본에서 성립하지 않는다**.
+
+### 🟢🟢 ② CEO 가 쓴 근거가 **후보별로 적혀 있다**(`core-2m-ceo-visual-gt.json` · SAME 8 · DIFF 1 · UNC 1)
+
+```
+SAME  biskuit.kr        상품명에 「보보쇼즈 + B226AC009」 — 🔴 brand 칸은 **판매처 이름(비스킷)**
+SAME  m.luxboy.com      **브랜드 + 품번** 동일 · 상품명·상세설명으로도
+SAME  donokids.com      **브랜드 + 상품명** · 상품명에 브랜드와 품번(#226AC009) · 상세설명으로도
+SAME  junioredition.com **브랜드 + 상품명** · 🔴 품번은 **040**(원상품 009)인데 동일상품이 맞다
+SAME  bobochoses.com    브랜드 같음 · 🔴 **품번 다름(B226AB040)** · 상품명 동일
+                        → 「품번은 같은 상품을 여러 개 등록한 **실수** 로 보인다」
+SAME  cissywears.com    **브랜드 + 상품명** · 품번 없음 · 상세에서 파악
+SAME  kids21.com        **브랜드 + 상품명** · 품번 없음 · **상세 없음**
+SAME  stockmann.ee      브랜드 같음 · 품번 없음 · 상품명 다름(에스토니아어)
+                        → 🔴 **상세설명까지 내려가야** 판단된다
+DIFF  parkette.ca       **상품 유형** 이 다르다 — T-shirt ↔ Sweatshirt
+UNC   bornyesterdaykids 상/하의 **세트** — 상의는 동일인데 **가격 비교에 부적합**
+```
+
+🔴🔴 **CEO 의 규칙을 그 말대로 정리하면 다섯이다**:
+```
+① 「브랜드 + 상품명」 일치 → SAME            **4/10**(품번 없어도)
+② 「브랜드 + 품번」 일치   → SAME            **2/10**
+③ 🔴🔴 **품번이 «달라도»** 브랜드+상품명 같으면 SAME  **2/10**(「등록 실수」)
+④ **상품 유형**(T-shirt ↔ Sweatshirt)이 다르면 DIFFERENT  1/10
+⑤ **세트 구성**이면 UNCERTAIN(동일성과 «가격 비교 가능성» 을 **분리**)  1/10
+```
+🔴🔴 **③ 이 현재 운영과 정면으로 충돌한다** — `compareModelCode` 는 품번 분기를 **conflict**
+로 보고 `priceTierFromLink` 가 그것을 **EXCLUDED** 로 만든다(공식몰 AB/AC **108/108** 선차단).
+🟢 ④ 는 시스템에 **이미 있다**(`GARMENT_FORM`) · 🟡 ⑤ 는 축이 **없다**(세트 판별).
+
+### 🔴 ③ Evidence Supply Lineage (EXISTS / EXTRACTED / PASSED / USED)
+
+```
+evidence      EXISTS EXTRACTED PASSED USED   근거(좌표)
+브랜드          O      O        O     O     공급됨 · 🔴 샵이 자기 이름을 적으면 거짓 신호(biskuit)
+상품명          O      O        O     O     공급됨 · 🔴 한국어면 NO_TITLE_OVERLAP 이 **막는다**
+품번            O      O        O     O     공급됨(title/url 경유) · 🔴 분기하면 conflict → EXCLUDED
+상세설명        O      O        **X**  X     product-url-facts.ts:**441** 이 `category` 하나만 넘긴다
+색상/소재/핏    O      O        **X**  X     같은 줄에서 끊긴다(7칸 하드코딩 null · :420)
+이미지          O      **X**    X     X     imageUrl **하드코딩 null**(:472) · 3번째 인자 미전달(match.ts:661)
+옵션/SKU        ?      ?        ?     ?     🔴 **미조사**(CORE-2AB 의 S7/S8 자리 · 기록 0)
+```
+
+### 🔴🔴 ④ False Negative **3** · False Positive **0**(최신 GT 기준)
+
+```
+biskuit.kr   CEO SAME → sys PRESUMED_SAME / TEXT_CONFIRMED / COMPARISON   blockers BRAND_MISMATCH·NO_TITLE_OVERLAP
+m.luxboy.com CEO SAME → sys PRESUMED_SAME / TEXT_CONFIRMED / COMPARISON   blockers NO_TITLE_OVERLAP
+donokids.com CEO SAME → sys PRESUMED_SAME / TEXT_CONFIRMED / COMPARISON   blockers BRAND_UNCONFIRMED
+⟹ 🔴 **국내 후보 3곳이 전부 false negative** 다 · 🟢 false positive **0**
+🟢 beaumonde(AC010) CEO SAME → sys SAME / STRONG_IDENTIFIER / EXACT  ← 유일하게 재현된다
+```
+
+### 🔴🔴🔴 ⑤ **CASE 1 이 아니라 CASE 2 다**(이것이 이번 조사의 답)
+
+```
+🔴 「evidence 전달만 복구하면 되는가」 → **아니다.**
+   biskuit·luxboy·donokids 가 막히는 지점은 **공급이 아니다** — 브랜드·상품명·품번이
+   **이미 matcher 에 들어와 있고**, 막는 것은 `NO_TITLE_OVERLAP` + `crossSellerReserved` 다.
+🟢 즉 **CEO 의 주 근거(「브랜드 + 상품명」 4/10)가 입력에는 있는데 비교 규칙이 쓰지 못한다**
+   — 한국어 상품명 ↔ 영문 원상품에서 토큰 겹침이 0 이 되기 때문이다.
+⟹ 🔴 **CASE 2**(evidence 는 들어오는데 기존 로직이 사용하지 않는다). 🔴 CTO 는 그 로직을
+   건드리지 않았다 — 완화는 WU-063~080 에서 **여덟 축 전수 측정으로 닫힌 축** 이다.
+```
+
+🔴 **측정불가로 남긴 것** — ⒜ `stockmann.ee` · `bobochoses.com` · `cissywears.com` · `kids21.com` ·
+`parkette.ca` · `bornyesterdaykids.com` 은 DB 에 **system 값이 없다**(라이브 재측정 필요 · 이번에 안 했다)
+⒝ 옵션/SKU 축은 **기록 자체가 0** ⒞ GT 충돌이 **둘 더** 있다(`villagekids.co.uk` · `tinyapple.net`
+각각 SAME/DIFFERENT 양쪽 라벨이 DB 에 있다) ⒟ 합집합 36 의 SAME/DIFF 분포는 이번에 세지 않았다.
+
+---
+
+## 9-NEXT. 🟢🟢 **`CORE-PRICE-SAME-01` STEP 1 — 측정 완료**(🔴 CPO 판정 대기 · 운영 코드 0)
+
+> 🔴 **CTO 가 할 코드 작업이 없다.** 처방은 **CPO 가 A/B/C/D 중 하나를 고른다.**
+
+### 🟢 lineage 7칸 (라이브 실측 · `CORE_STEP5_PROBE=1 core-step5-domestic-lineage`)
+
+```
+host              human  verdict        truth              display        tier        market   가격        SAME축 참고가격
+biskuit.kr        SAME   PRESUMED_SAME  TEXT_CONFIRMED     PRESUMED_SAME  COMPARISON  KR       KRW 88,000  ✗     **O**
+m.luxboy.com      DIFF   PRESUMED_SAME  TEXT_CONFIRMED     PRESUMED_SAME  COMPARISON  UNKNOWN  KRW 59,000  ✗     ✗
+www.donokids.com  없음   PRESUMED_SAME  TEXT_CONFIRMED     PRESUMED_SAME  COMPARISON  UNKNOWN  KRW 88,000  ✗     ✗
+www.beaumonde.co.kr SAME SAME           STRONG_IDENTIFIER  SAME           EXACT       KR       KRW 83,600  **O** **O**
+🔴 **beaumonde 는 B226AC010 이다**(AC009 가 아니다 · 지시서 전제 정정) · AC009 는 3곳이다
+```
+
+### 🔴🔴 사슬 좌표 — **`priceTier` 는 SAME verdict 를 «읽지 않는다»**
+
+```
+verdict ──→ truth ──────────────────→ priceTier ──→ eligibility ──→ domesticReference
+(cross-seller) (deriveMatchTruth)     (priceTierFromLink)  (market-intelligence)
+
+match-truth.ts:**233**  crossSellerReserved = (verdict === "PRESUMED_SAME")
+match-truth.ts:**237**  !observedDifference && !crossSellerReserved && !colorUnverified 일 때만
+                        품번 경로(exact → EXACT_IDENTIFIER/STRONG_IDENTIFIER)
+match-truth.ts:**283**  SAME → STRONG_IDENTIFIER · **PRESUMED_SAME → TEXT_CONFIRMED** · UNKNOWN → INSUFFICIENT
+domestic-product-link.ts:**86**  priceTier = f(matchTruth, verified) — 🔴 verdict 를 **안 본다**
+                        EXACT_IDENTIFIER|STRONG → EXACT · **TEXT_CONFIRMED → COMPARISON** ·
+                        SIMILAR → REFERENCE · CONFLICT|INSUFFICIENT → EXCLUDED ·
+                        matchTruth 없음 → `verified ? EXACT : COMPARISON`
+market-intelligence.ts:**232·318**  market==="KR" && priceKrw != null && tier ∈ {EXACT, COMPARISON}
+                        🔴 **SAME 을 직접 검사하지 않는다**
+run-domestic-price-check.ts:**230**  priceTierWithVerifiedSame — 사람 확정 SAME 이면 **EXACT 로 덮는다**(2번째 경로)
+```
+
+🟢 **그래서 biskuit 의 COMPARISON 이 증명된다** — 품번이 **exact 인데도** `PRESUMED_SAME` 이
+`crossSellerReserved` 로 품번 경로를 막아 `TEXT_CONFIRMED` 로 내려가고, 그것이 `COMPARISON` 이 된다.
+(blockers `BRAND_MISMATCH`·`NO_TITLE_OVERLAP` 이 verdict 를 SAME 으로 못 가게 한 것이 머리다.)
+
+### 🔴🔴🔴 CPO Q8 의 답 — **아니오**
+
+```
+biskuit.kr  →  🇰🇷 국내 참고가격 **O**  ·  SAME 축 **✗**
+⟹ 셀러가 보는 AC009 의 KRW 88,000 은 **SAME 으로 확정된 상품의 가격이 아니다**(PRESUMED_SAME).
+   🟡 사람(GT)은 SAME 이라 했지만 **시스템은 그렇게 말하지 않았다** — 설명 근거가 lineage 에 없다.
+🟢 AC010 beaumonde 는 반대다 — verdict SAME · truth STRONG_IDENTIFIER · tier EXACT ⟹ **설명 가능**.
+```
+
+### 🔴🔴 그리고 더 중요한 것 — **DIFFERENT 를 막은 것은 SAME 축이 아니다**
+
+```
+m.luxboy.com  human **DIFFERENT** · tier **COMPARISON**(자격 있음) · KRW 59,000
+  🔴 제외된 이유는 **market = UNKNOWN**(`.com` + KRW → KR 증거 없음 · classifyCandidateMarket)
+  ⟹ 🔴🔴 **그 후보가 `.kr` 도메인이었다면 human DIFFERENT 상품의 가격이 국내 참고가격에
+     들어간다.** 지금 그것을 막고 있는 것은 **동일성 축이 아니라 TLD** 다.
+donokids 도 같다(market UNKNOWN · 그래서 빠졌다 · tier 는 COMPARISON 이었다)
+```
+
+### 🔴 반사실 — **SAME-only 는 AC009 에서 순손실**(재확인)
+
+```
+AC009  현행 {count 1 · KRW 88,000 · COMPARISON}  →  SAME-only **{count 0}**   (1 → 0)
+AC010  현행 {count 1 · KRW 83,600 · EXACT}       →  SAME-only {count 1}       (1 → 1 · 불변)
+```
+
+🔴 **측정불가로 남긴 것** — `luksusbaby.kr`(facts 없음) · `kream.co.kr`(⑧ `EVIDENCE_NOT_WORTHWHILE`) ·
+`candidate_reviews` 의 AC009 75행 중 `market=KR` 기록은 **miniboutique.co.kr 1행**(KRW 88,000)이고
+지목 4곳의 system 값은 그 테이블에 **없다**(biskuit·luxboy 는 `GT_IMPORT` 행 · donokids·beaumonde 는 0행)
+⟹ 🔴 그 테이블은 **사람 검토 저장소** 이고 집계 입력이 아니다. 위 표는 **라이브 운영 경로** 산출이다.
+
+---
+
+### 🔴🔴🔴 STEP 2 측정 완료 — **안전한 증거 조합이 «없다»**(운영 코드 0 · CPO 판정 대기)
+
+🔴 **분모를 섞지 않는다 — 둘이다**:
+```
+⒜ C3 GT(순수 · `core-step5-evidence-c3-gt`)  저장 33 · facts+원상품 33 · 라벨 **27**(SAME 17 · DIFF 10)
+   🔴🔴 **그 27쌍에 biskuit 도 luxboy 도 «없다»**(실측 0건) ⟹ 성공기준 ③(전체 GT precision)은
+      이 분모에서 재고, **대상 쌍의 분리력은 ⒝ 에서만** 잴 수 있다
+⒝ AC009 라이브(`core-step5-domestic-lineage`)  biskuit · luxboy · donokids (라벨 존재)
+```
+
+🟢 **⒜ 분모의 현재 숫자**(기준선 · 재측정 금지):
+```
+baseline  SAME 판정 7 = 정답 5 · **false SAME 2** · precision 71.4% · recall 29.4%
+C3        SAME 판정 9 = 정답 7 · **false SAME 2** · precision 77.8% · recall 41.2%
+          🟢 뒤집힌 2건은 **둘 다 `bobochoses.co.jp`**(C11·C37 · human SAME) · 누출 0
+```
+
+### 🔴 증거 분리력 표 — **모든 축이 0 이거나 «역방향» 이다**
+
+```
+증거            biskuit(human SAME)          luxboy(human DIFFERENT)      분리력
+model code      exact                        **exact**                    ❌ 0 (동일)
+brand           "비스킷" → **BRAND_MISMATCH** "BOBO CHOSES" → 통과         🔴 **역방향**
+title overlap   NO_TITLE_OVERLAP             NO_TITLE_OVERLAP             ❌ 0 (동일)
+color / fit / material / category   null / null                           ⚪ 측정불가(양쪽 없음)
+description*    258자 → **COLOR_VARIANT 추가** 52자 → 변화 0               🔴 **역방향**
+image*          null(공급 owner 없음)         null                         ⚪ 측정불가
+confidence      **0.02**                     0.37                         🔴 **역방향**
+blocker 수      **2**                        1                            🔴 **역방향**
+```
+
+🔴🔴 **즉 정답(biskuit)이 오답(luxboy)보다 «모든 축에서 더 나쁜 신호» 를 들고 있다.**
+샵이 `brand` 칸에 자기 이름(「비스킷」)을 적어 BRAND_MISMATCH 를 얻었고(WU-080 그 모양),
+luxboy 는 brand 를 정확히 적어 그 축을 통과한다 ⟹ **브랜드 축 완화는 오답을 더 많이 연다.**
+
+### 🔴 반사실 — 둘 다 **이미 측정돼 있다**(재측정 안 했다)
+
+```
+C3(품번 exact → 브랜드 확인)   biskuit blockers 2 → 1 · 🔴 **verdict 불변**(NO_TITLE_OVERLAP 남음)
+                               ⟹ SAME gain **0** · leakage **0**  (STEP 1 실측)
+NO_TITLE_OVERLAP 비차단        🔴 **m.luxboy.com 이 누출된다** — DIFFERENT 방어 4/4 → **3/4** ·
+                               KRW 59,000 유입 · 국내 최종 0 → 0 ⟹ **순손실**(WU-138 실측)
+```
+
+### 🔴 유일하게 남은 신호 — 그리고 그것은 **닫힌 축** 이다
+
+```
+origin  titleTokens [hug, hairy, monster, shirt]
+biskuit [보보쇼즈, **허그, 헤어리, 몬스터**, 티셔츠, b226ac009]   ← 디자인명 음역 **3개**
+luxboy  [보보쇼즈, 키즈, 긴팔티셔츠, b226ac009, since, 2002, …]   ← 음역 **0개**(일반명사뿐)
+⟹ 🟡 분리력이 «있어 보이는» 유일한 축 = **음역(transliteration)**
+🔴🔴 그러나 CPO 가 **WU-078 에서 종료** 했다 — 「음역/언어 축을 생산 로직에 넣지 않는다 ·
+   회수 효과 **0** · 분모 4 · 문턱 근거 부족 · **DIFFERENT 를 열 수 있는 위험 축**」
+🔴 그리고 **현재 production 이 공급하는 evidence 가 아니다**(새 매칭 축이 필요하다) ⟹ Q7 **불충족**
+```
+
+### 🔴 CPO 질문 답
+
+```
+Q1 biskuit SAME 최소 증거 조합   🔴 **없다**(현재 공급 evidence 안에서)
+Q2 luxboy DIFFERENT 유지         ⚪ Q1 불성립이라 측정 대상이 없다
+Q3/Q4 전체 GT precision/recall   🟢 baseline 71.4%/29.4% · C3 77.8%/41.2% (분모 27 · 🔴 대상 쌍 밖)
+Q5 false SAME                    🟢 baseline **2** · C3 **2**(증가 0)
+Q6 C3 보다 개선                  🔴 **아니다** — AC009 에서 C3 의 이득이 **0** 이다
+Q7 production 공급 가능           🔴 **아니다**(음역 축은 신규 규칙 · 그리고 닫힌 축)
+```
+
+🔴 **성공 기준 ①②③ 중 ① 이 불성립** ⟹ **구현 후보 없음.** STOP 하고 CPO 판단을 기다린다.
+🔴 **처방을 적지 않았다** — SAME/8축/threshold/COLOR/FIT/description/image/가격 게이트 **전부 변경 0**.
+
+---
+
+### 🔴🔴🔴 STEP 2-R. **기존 CEO evidence 재검토 — CASE B 는 «실재» 하고, 축마다 다르다**
+
+> 🔴 **새 측정 0 · 운영 코드 0.** 기존 기록(CORE-2AB/2AC · STEP 5-E2/E2R/E2R-LIVE)만 정리했다.
+> 🔴🔴 **STEP 2 의 「현재 공급 증거로 분리 불가」를 축별로 쪼개야 한다**(아래 ⓕ).
+
+🟢 **CASE B 는 «코드 사실» 이다 — 추측이 아니다**:
+```
+PLAIN_HTML 후보 facts owner = productFactsFromListing({title, url, brand})
+   product-url-facts.ts:**420** · seller-facts.ts:**262**
+🔴 **일곱 칸을 하드코딩 null/[]** — brandModelCode · categoryText · materialText ·
+   fitText · ageRangeText · sizeLabels · audienceSignals
+🔴 그리고 **본문(description)을 인자로 받지 않는다** — HTML 은 fetch 됐는데 버려진다
+🟢 SHOPIFY_JSON 경로는 productFactsFromShopifyProduct(body) 가 color/material 을 **채운다**
+⟹ 🔴 같은 MI 가 **경로마다 다른 수의 축** 을 본다 · 🔴 **국내 후보는 전부 PLAIN_HTML**
+```
+
+🟢🟢 **공급선은 «이미 있고 의도적으로 꺼져 있다»**:
+```
+🟢 수집   product-url-facts.ts:**440** extractFromJsonLd(html).description (추가 HTTP 0)
+🟢 소비자 seller-facts.ts 가 description 을 받으면 **다섯 칸** 을 채운다 —
+          :199 colorText · :200 materialText · :215 fitText · category/audienceSignals ·
+          :208 **brandModelCode ← extractLabeledProductCode(description)** 🔴 품번도 상세에서 나온다
+🔴 끊은 자리 product-url-facts.ts:**441** 이 **category 하나만** 넘긴다
+🔴 끊은 이유 :**446** 에 측정으로 적혀 있다 — materialText 가 **새 축 0 · 거짓 MATERIAL
+          blocker 1**(organic cotton ↔ cotton) ⟹ CORE-2AC 가 **의도적으로** 끊었다
+```
+
+### 🔴 축별 CASE 판정 (CPO §5 표 · 추정으로 채우지 않았다)
+
+```
+증거        CEO확인 상세정보 extraction matcher소비  판정
+상품코드     ✓     🟢있다   🟡title경유 🟢exact      공급됨(biskuit·luxboy 둘 다 exact)
+브랜드       ✓     🟢있다   🟢        🟢           공급됨(🔴 biskuit="비스킷"=샵이름)
+상품명       ✓     🟢있다   🟢        🟢           공급됨
+상세설명     ✓     🟢**있다**(biskuit 258자·luxboy 52·donokids 44) 🟢수집됨 🔴**미공급**  **CASE B**
+색상/소재/핏  ?     🟡상세 안 🟢수집됨  🔴미공급      **CASE B**
+이미지       ?     🟢페이지에 🔴**하드코딩 null** 🔴미공급  **CASE B** 🔴🔴 **효과 미측정**
+기타 식별    ?     ?        ?         ?            미측정
+```
+
+### 🔴🔴 ⓕ **그래서 STEP 2 결론을 축별로 정정한다**
+
+```
+description 축  🔴 **CASE B 확정 · 그러나 연결 효과가 «두 번» 측정됐다**
+  1차(STEP 5-E2)   🔴 **무효** — `ListingProductLike` 에 `description` 칸이 **없다**
+                   (소비자는 `productFactsFromShopifyProduct` 하나) ⟹ 인자가 조용히 무시됐다
+  2차(E2R/E2R-LIVE) 🔴 **발화했고 정답을 악화** — biskuit(human SAME)에 **+COLOR_VARIANT** ·
+                   luxboy(human DIFFERENT) 변화 **0** ⟹ CASE C · CPO **연결 금지**
+  🔴 그리고 분모 — GT 27쌍 중 의미 있는 쌍 **8**(나머지 19 는 Shopify 라 이미 소비) ·
+     그 8쌍 baseline SAME 판정 **0** · 🔴 상세설명 **원문이 없는 쌍 4/8**
+     ⟹ 「상세설명을 연결하면 국내가 살아난다」는 **절반에서 입력 자체가 없다**
+  ⟹ 🟢 이 축에서는 STEP 2 결론이 **유지** 된다(분리 불가 · 측정 근거 있음)
+
+image 축        🔴🔴 **CASE B 이고 «한 번도 측정되지 않았다»** ← 여기가 열려 있다
+  🔴 후보 imageUrl = **하드코딩 null**(product-url-facts.ts:**472**) — 공급 owner **없다**
+     (비용 문제가 아니라 **배선 부재** 다)
+  🟢 비교 함수는 **이미 준비돼 있다** — compareCrossSellerProducts(a, b, **image?**) ·
+     🔴 운영 호출부가 **3번째 인자를 넘기지 않는다**(match.ts:**661**)
+  🔴 IMAGE 축은 `corePoints` 에서도 **제외** 돼 있다(:**1149**) ⟹ 공급만으로 점수가 되지 않는다
+  🔴🔴 **원상품 이미지 공급 여부는 «측정불가» 다** — 내 하니스가 `items` 를 빈 배열로 넘겼다
+     (운영은 `items` + `sourceRepresentativeId` 를 넘긴다 · api/pipeline/route.ts:**284**)
+     ⟹ 🔴 「원상품 이미지 0」으로 **적지 않는다**
+  ⟹ 🟡 **CEO 가 육안으로 쓴 가장 강한 증거가 이 축일 가능성이 있고, 그것이 matcher 에
+        한 번도 전달된 적이 없다.** 🔴 단 효과는 **미측정** 이다 — 단정하지 않는다
+```
+
+🔴 **brand 축 주의(Track C)** — `siteBrandName`(og:site_name·Organization) **≠ 상품 브랜드**
+(biskuit = 「비스킷」 = **샵 이름**). 🟢 상세설명 brand 는 **세 번째 축으로 별도** 여야 한다 —
+`siteBrandName === productBrand` 가정은 코드에 없고 넣어서도 안 된다.
+
+🔴 **그대로 유지되는 금지**(이미 측정됨) — 브랜드 완화 · `NO_TITLE_OVERLAP` 완화 ·
+description 무조건 연결 · 음역축 재개방 · SAME-only / EXACT-only 국내가격.
+
+---
+
+### 🔵🔵🔵 **용어·단계 판정 정합표**(CTO 정리 2026-10-26 · 🔴 충돌 4건을 가렸다)
+
+> 🔴 지시서와 기록 사이에 **같은 글자가 다른 뜻** 으로 쓰인 자리가 넷이다. 아래로 고정한다.
+
+#### ① 단계 사다리 — **WU 는 `-01` 하나다**(`-03` 을 만들지 않는다)
+
+```
+CORE-PRICE-SAME-01
+  STEP 1    국내가격 lineage                 🟢 **MEASURED / CLOSED**
+  STEP 2    SAME 분리력(biskuit ↔ luxboy)    🟢 **MEASURED / CLOSED**
+  STEP 2-R  기존 CEO evidence 공급 재검토      🟢 **MEASURED / CLOSED**
+  STEP 3    IMAGE evidence 공급 효과          🟡 **NOT MEASURED**(CEO 답 A/C 일 때만 착수)
+    3-1 하니스 공급 수리(items + sourceRepresentativeId) · 3-2 공급 lineage · 3-3 공급≠채점 분리
+🔴 CPO 문서의 `CORE-PRICE-SAME-03` 은 **이 STEP 3 과 같은 것** 이다 — `-02` 가 없으므로
+   번호를 새로 만들지 않고 **`-01 STEP 3`** 으로 쓴다(한 WU 안의 다음 단계다).
+```
+
+#### ② 판정 어휘 — **헌장 §6 어휘로만 적는다**
+
+```
+MEASURED   측정이 끝났다(숫자·좌표 있음)        CLOSED   재조사하지 않는다
+HOLD       **측정은 했고** 판단을 미뤘다        REJECT   측정 결과로 **채택하지 않는다**
+측정불가    **분모가 없어 숫자를 못 만들었다**   STOP     그 자리에서 멈추고 보고
+🔴 「완료」·「확정」·「보류」를 섞어 쓰지 않는다 — 위 여섯 중 하나로 적는다
+```
+
+#### ③ 🔴🔴 **`CASE` 알파벳이 두 축에서 충돌한다 — 이름을 가른다**
+
+```
+기존(먼저 쓰였다 · 커밋 다수)  CASE A/B/C = **description 연결 «효과» 축**
+                              (STEP 5-E2R · WU-156 「Case C / NO-GO」)
+🔴 STEP 2-R 이 같은 글자를 **evidence 공급 축** 에 썼다 ⟹ 충돌
+🟢 그래서 공급 축을 **`SUPPLY-A` / `SUPPLY-B`** 로 바꾼다:
+   SUPPLY-A  상세정보에도 없다            = 진짜 evidence 부재
+   SUPPLY-B  상세정보엔 있는데 미공급      = 배선 문제
+🔴 앞으로 「CASE B」는 **description 효과 축만** 가리킨다
+```
+
+#### ④ 🔴 `description` — **「보류」가 아니다. 둘로 갈린다**
+
+```
+무조건 연결        🔴 **REJECT** — 효과 측정 2회(1차 무효 · 2차 **정답 악화** CASE C)
+조건부 재검토      🟡 **HOLD** — 새 증거(GT 기반 정밀도 재측정)가 생길 때만
+🔴 CPO 표의 「description → 보류」는 위 둘을 합친 말이다 ⟹ 분리해서 적는다
+```
+
+#### ⑤ 🔴 `image` — **「보류」가 아니라 «측정불가» 다**
+
+```
+공급 단절      🟢 **코드 사실**(SUPPLY-B) — imageUrl 하드코딩 null(:472) · 3번째 인자 미전달(match.ts:661)
+효과           🔴 **측정불가** — 분모를 만든 적이 없다(HOLD 로 적으면 「재 봤다」로 읽힌다)
+🔴 그리고 `corePoints` 에서 IMAGE 가 **제외**(:1149) ⟹ **공급 ≠ 채점**(CPO §3-3 과 같다)
+```
+
+#### ⑥ 🔴🔴 **UX 어휘 충돌 — CPO §7 의 「시장 참고가격」은 금지 리터럴이다**
+
+```
+🔴 `wu-145-seller-decision-screen.test.ts:60` 의 **금지 목록에 「시장 참고가격」이 있다**
+🔴 이유가 코드에 적혀 있다(mi-same-candidates.ts:407-412) — 「참고가격」을
+   `MI_SAME_AREA_SCOPE`/`wu-056r1` 이 **유사상품 포함 참고 축** 의 뜻으로 **이미 쓴다**
+   ⟹ 1차 결론에 쓰면 **같은 말이 두 뜻** 이 된다
+🟢 **새 어휘를 만들지 않는다 — owner 가 이미 셋 있다**:
+   DOMESTIC_REFERENCE_TITLE   「국내 참고가격」        overseas-reference.ts:114 (wu-056r1 잠금)
+   SAME_CONFIRMED_COUNT_LABEL 「동일상품 확인」        mi-same-candidates.ts:372
+   SAME_PRICE_LABEL           「동일상품 확인 가격」    mi-same-candidates.ts:420
+🟢🟢 그리고 CPO 가 §7 에서 **말하려던 문장이 이미 상수다** — `MI_SAME_AREA_SCOPE`(:205):
+   「이 목록은 동일상품으로 «확정» 된 후보만 담습니다 — 그래서 위의 「참고가격」과 건수가
+     다를 수 있습니다. 확정되지 않은 후보는 아래 검토 구역에 그대로 남아 있습니다.」
+⟹ 🟢 CPO 가 지목한 모순(₩88,000 ↔ 동일상품 없음)은 **어휘 신설 0** 으로 해소된다 —
+   기존 상수 **병치 + 그 문장의 위치** 문제다(새 말을 만드는 문제가 아니다)
+```
+
+#### ⑦ UX 트랙 이름 — **`CORE-UX-SELLER-02`**
+
+```
+🟢 UX01 은 CLOSED 다 ⟹ 다음 UX 는 **-02** 다(이름 없는 「UX 수정 WU」로 두지 않는다)
+🔴 그 WU 는 SAME 알고리즘과 **분리** 된다(CPO §7 명시) · 🔴 금지 리터럴 ⑥ 을 먼저 읽는다
+```
+
+🔴 **CTO 는 ⏸ 대기** — CEO 의 **A/B/C/D 한 글자**가 STEP 3 착수 여부를 결정한다.
+🔴 image 구현 · image scoring · corePoints 에 IMAGE 추가 · description 재연결 · threshold 변경 **전부 0**.
+
+---
+
+### 🔵 [원래 범위] STEP 1 지시 — 재조사 금지
+
+> 🔴 **STEP 1 은 측정 전용** 이다 — 구현이 아니다.
+
+```
+목적   「국내 참고가격이 **실제 SAME 상품의 가격** 으로 구성되는지」를 증거로 확인한다
+우리가 원하는 흐름   원상품 → SAME 판정 → SAME 신뢰 후보 → 국내 가격
+                   → 국내 참고가격 → 판매판단 → 권장 판매가격
+의심되는 흐름       국내 후보 → EXACT / COMPARISON → 국내 참고가격
+```
+
+### 🔴🔴 **그 「의심」은 이미 코드로 확인됐다 — 다시 조사하지 않는다**
+
+```
+market-intelligence.ts:**318**  if (e.priceTier === "EXACT" || e.priceTier === "COMPARISON")
+market-intelligence.ts:**192**  국내 축 = market === "KR" && priceKrw != null && tier EXACT|COMPARISON
+⟹ 🔴 **적재 자격의 술어는 `priceTier` 이고 SAME verdict 가 아니다.**
+   즉 CPO 가 적은 「의심되는 흐름」이 **현재 운영 코드의 모양** 이다(추측이 아니다).
+🔴 그리고 이것은 **기록된 사실** 이다 — 「국내 참고가격은 `PRESUMED_SAME` 을 받아들인다 ·
+   자격은 tier 이고 SAME 축과 **다른 술어** 다」. 🔴 **SAME 만 허용하면 AC009 국내 가격이
+   사라진다**(1 → 0 · 실측 · §10 반사실).
+🟢 **그래서 STEP 1 의 질문은 「갈라지는가」가 아니라 «각 후보가 왜 그 tier 를 받았는가» 다.**
+```
+
+### 🔵 STEP 1 이 표로 답해야 하는 것 (CPO 질문 그대로)
+
+```
+국내가격 aggregation 의 실제 입력 후보는 무엇인가 · 각 후보의 MI verdict · truth · tier ·
+SAME 판정은 어디서 만들어지는가 · 국내가격 eligibility 는 어디서 만들어지는가 ·
+두 경로가 **정확히 어느 좌표에서** 분리되는가 ·
+현재 국내 참고가격에 들어온 **각 후보가 SAME 인지 아닌지** 를 하나의 표로 재현할 수 있는가
+```
+
+🔵 **AC009 실제 케이스 — 네 판매처를 «한 줄 lineage» 로**:
+
+```
+biskuit · luxboy · donokids · beaumonde
+  candidate → MI verdict → truth → transientDisplayTier → priceTier
+            → domestic eligibility → domesticReference
+```
+
+### 🔴 STEP 1 에서 **절대 수정하지 않는다**
+
+```
+❌ SAME 알고리즘  ❌ 8축  ❌ threshold  ❌ COLOR/FIT  ❌ description  ❌ image  ❌ C3
+❌ priceTierFromLink  ❌ 국내가격 검색/수집  ❌ aggregation 로직
+```
+
+🔴 **측정 결과가 나온 뒤에만 CPO 가 최소 수정 여부를 결정** 한다.
+
+### 🔴🔴 성공 기준 — **「몇 개 잡혔느냐」가 아니다**
+
+> **「잡힌 국내가격 각각이 «왜 SAME 가격이라고 판단됐는지» 설명할 수 있느냐」**(CPO 문장)
+
+🟡 **전략 문장(§10 과 같다)** — 「국내가격을 **많이** 가져오는 시스템」이 아니라
+「**같은 상품** 의 국내가격을 근거로 판매결정을 내리는 시스템」이다. 순서를 뒤집지 않는다.
+🔴 **그리고 CPO 는 이 결과를 UX 결과와 섞어 판단하지 않는다** — 보고를 따로 올린다.
+
+---
+
+## 9-ARCHIVE. 🔵 [기준선] CORE-UX-SELLER-01 좌표 — 재조사 금지
+
+> 🔴 **presentation layer 전용** — 계산 · MI · API · DB **전부 금지**.
+> 🟢 owner 6건과 CPO 판정이 **확정**됐다. **재조사하지 않는다.**
+
+### 🟢 owner 6건 (코드 좌표 · 전부 확인됨)
+
+```
+① 판매판단        `sellVerdict` = resolveSellVerdict(reportedSellVerdict, snapshotId)
+                  CommerceWorkspace.tsx:**727** · 공급 onSellerVerdictChange(:3792)
+                  현재 렌더 자리 = **오른쪽 Action Center**(:4418 `FINAL_VERDICT_COPY[sellVerdict]`)
+② A 권장 판매가격  `recommendedPriceKrw`(CW:**1996**) · 소비 둘 — PriceEditor(:3990) ·
+                  MarketPriceComparison(:3680)
+③ B 국내 참고가격  `marketComparison.domesticReference` → 🇰🇷 블록(`domestic-reference`)
+④ ⓘ 가격 계산 기준 `PRICE_CALCULATION_LINK_TEXT` + `handleOpenPriceCalculation`(CW:**862**)
+                  도착지 = 앵커 블록(CW:**3727** · `priceDetailRequest > 0`)
+⑤ 가격 적용        `updateSalePriceKrw`(CW:**1452**) · 기존 CTA = PriceEditor.tsx:**158**
+⑥ 상세 영역        `price-detail-fold`(MarketPriceComparison) + `priceCalculationDetail`(CW:2025)
+```
+
+### 🟢🟢 CPO 판정 (2026-10-26) — **「결론은 하나, 표현 위치는 둘」**
+
+```
+✅ ① 왼쪽(📊 가격 분석)에 **추가** + ② 오른쪽 Action Center **유지**
+   왼쪽 = 셀러의 **1차 판단** 화면   ·   오른쪽 = 현재 커머스 작업의 **실행** 영역
+   🔴 오른쪽을 지우면 다른 탭/작업 흐름에서 판매판단이 사라진다
+🔴🔴 **「결론 owner 둘」이 아니다** — owner 는 resolveSellVerdict() → sellVerdict(CW:727)
+   → 기존 **`FINAL_VERDICT_COPY`** 하나이고 **두 UI 가 그것을 «소비»** 한다.
+   🔴 두 곳에서 결론을 **각각 만드는 것은 금지** 다.
+   ⟹ 계약으로 잠근다: 새 verdict 계산 0 · 새 copy owner 0 · 양쪽이 **같은 상수** 를 읽는다
+```
+
+### 🔵 최소 변경 설계 (새 계산 0 · 새 state 0 · 새 API 0)
+
+```
+MarketPriceComparison 에 **prop 둘** 을 더한다(값은 전부 이미 있다):
+  sellVerdictCopy?: {icon,title,note} | null   ← CW 의 sellVerdict + FINAL_VERDICT_COPY
+  onApplyRecommendedPrice?: () => void         ← () => updateSalePriceKrw(recommendedPriceKrw)
+
+그리고 1차 블록 **순서만** 바꾼다(문장 삭제 0):
+  ① 판매판단(조건부 판매 + 한 줄)  ← 🔴 새 문구를 만들지 않는다(기존 copy owner 재사용)
+  ② 권장 판매가격 ₩A + **[이 가격으로 설정]**
+  ③ 가격 판단 근거 — 🇰🇷 국내 참고가격 · 🌎 해외 최저 소싱가(**기존 두 블록 그대로**)
+  ④ ⓘ 가격 계산 기준 보기 → 기존 앵커(STEP 4 에서 되살려 뒀다)
+
+🔴 `[이 가격으로 설정]` 은 **반드시** `updateSalePriceKrw(recommendedPriceKrw)` 를 부른다
+   ⟹ PriceEditor 의 「최종 판매가격에 적용」(:158)과 **동일 동작**(사본 0 · 새 handler 0)
+```
+
+### 🔵🔵 실행 표 — **단계 × 완료 조건이 한 줄에 있다**(CEO 확정 양식 2026-10-26)
+
+> 🔴 이 표 하나로 실행한다. 행을 건너뛰지 않고, 완료 조건의 **증거** 를 보고서에 그대로 적는다.
+> 🔴 **STOP 열에 걸리면 범위를 넓히지 않고 그 자리에서 STOP 보고** 한다.
+
+| # | 단계 · 무엇을 바꾸는가 (좌표) | 완료 조건 (증거) | 🔴 FAIL / STOP |
+|---|---|---|---|
+| 0 | **착수** — owner 6건·A/B 정책·STEP 5 **재조사 0** | 조사 도구 호출 0 · 바로 코드 | 탐색성 조사를 시작하면 STOP |
+| 1 | `MarketPriceComparison` 에 **prop 둘** — `sellVerdictCopy` · `onApplyRecommendedPrice` | 새 prop **정확히 2** · 새 state **0** · 새 API **0** | 3번째 prop·새 state 가 필요해지면 STOP |
+| 2 | **① 판매판단** 을 왼쪽 📊 1차에 삽입 (`FINAL_VERDICT_COPY[sellVerdict]` 소비) | 왼쪽·오른쪽 **문자열 동일** · 오른쪽 Action Center **존재** | verdict 를 **계산** 하거나 새 copy 를 만들면 STOP |
+| 3 | **② 권장 판매가격 ₩A** (`recommendedPriceKrw` 그대로) | 화면 ₩ 금액 == A · 계산 코드 변경 0 | A 계산을 건드리면 STOP |
+| 4 | **② CTA [이 가격으로 설정]** → `updateSalePriceKrw(recommendedPriceKrw)` | 클릭 시 그 함수 1회 호출(스파이) · 새 handler 0 | 별도 적용 handler/재계산이면 STOP |
+| 5 | **③ 근거** 🇰🇷 국내 참고가격 · 🌎 해외 최저 소싱가 — **순서만** 이동 | 두 블록 **그대로** · 환산 0 · 통화 합산 0 | B 가 A 위치로 오면 STOP |
+| 6 | **④ ⓘ 가격 계산 기준** — 기존 `handleOpenPriceCalculation` + 앵커(CW:3727) 유지 | 클릭 → `priceDetailRequest` 증가 → 상세 노출 | ⓘ 가 **B** 를 설명하면 STOP |
+| 7 | **계약 UX-01~06** — 순서 · owner 동일 · CTA · A/B · ⓘ · 1차 비중 | 신규 계약 PASS (분모 명시) | 기존 계약을 **약화** 해야 PASS 면 STOP |
+| 8 | **변이 M1~M6** — 판매판단/A/CTA 제거 · B 를 A 자리 · ⓘ→B · 오른쪽 삭제 | **6/6 전부 FAIL** → 바이트 복구 | 하나라도 통과하면 계약이 약하다(단언 강화) |
+| 9 | **전체 회귀** `apps/admin` | **676 files / 9,181 passed / 0 failed / 140 skipped** 이상 | 「UI 변경이라 생략」 금지 · 낮아지면 원인 규명 |
+| 10 | **typecheck** `tsc --noEmit` | `error TS` **0** | — |
+| 11 | **build** `npm run build` | exit **0** | — |
+| 12 | **산출물 점검 + Git** — 🔴 `docs/core-2m-visual-review.html` 등 라이브 재생성물 확인 | `git status` 로 **파일 전수 확인 후** 커밋 · 무관 파일 **0** | 생성물을 자동 커밋하면 FAIL(이번 세션에 실제로 났다) |
+| 13 | **deploy → Production** | `/` · `/pipeline` HTTP · UX01 화면 mount 확인 | 「Deployment successful」만 적으면 FAIL |
+| 14 | **CEO 확인 9항** (판매판단 위치 · 양쪽 불일치 0 · A 가시성 · CTA 직관 · B 는 근거 · ⓘ 는 A) | CEO PASS 1회로만 **Production UI PASS** | 세 질문(팔아도 돼/얼마에/왜)에 못 답하면 **UX01 FAIL** |
+| 15 | **보고 17절 + 좌표 갱신** | 분모 포함 보고 1회 · **START-HERE §0·§9 갱신** | 갱신 없으면 다음 페이지가 과거로 되돌아간다 |
+
+🔴 **완료 기준은 「구현했다」가 아니다** — 표 **0~15 전 행** 이 채워져야 CORE-UX-SELLER-01 이 닫힌다.
+
+### 🔴 이 WU 에서 변경 금지
+
+```
+❌ sellVerdict 새 계산   ❌ 새 verdict copy    ❌ 오른쪽 Action Center 삭제
+❌ A/B 통합             ❌ B 를 권장가로 승격  ❌ ⓘ 가 B 를 설명
+❌ 가격 계산 변경        ❌ 국내가격/SAME pipeline 변경
+❌ 새 state             ❌ 새 판단 로직
+❌ SAME 판정 · MI 계산 · priceTierFromLink · aggregation · 환율 · profitability
+❌ API · DB · snapshot · SAME-only · EXACT-only · description 연결
+❌ COLOR/FIT blocker 완화 · C3 재개 · 이미지 MI 축 개방
+```
+
+🟢 **1차 방어선** — `core-next-step4-recommended-price`(25) + `core-2ao-r1-screen-dump`
+(기존 계약: A/B 분리 · B 승격 금지 · ⓘ 는 A 설명 · `market-next-step-line` ≤1 · ₩ 1개 ·
+1차 정보 비중 <25%). 🔴 FAIL 조건·CEO 확인 7항은 **CPO 지시문 §15·§17 그대로** 쓴다.
+
+---
