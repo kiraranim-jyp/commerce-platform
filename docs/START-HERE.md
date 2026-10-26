@@ -11,15 +11,16 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-PRICE-SAME-03** — 국내 SAME 검토 화면 (§9)
-NEXT         🔵 **바로 구현**(조사 끝 · 제약 3건 확정) · 🔴 운영 코드 0 · 셀러 UI 0
-CEO ACTION   🟡 **지금은 없다** — §9 화면이 나온 뒤 국내 후보를 판정한다
-CLOSED       UX-01 · UX-02(배포됨) · SAME-01 STEP 1·2·2-R · SAME-02(화면 준비) · STEP 5
+CURRENT WU   **CORE-PRICE-SAME-03** — 🟢 **화면 구현 완료**(§9) · 🟡 **CEO 판정 대기**
+NEXT         🟡 **CEO 가 국내 후보 10건을 판정** → 그 라벨로 CPO 가 다음 범위를 지정
+CEO ACTION   🟡 **있다** — `docs/core-same03-domestic-review.html` 열고 10건 판정(§18-③)
+CLOSED       UX-01 · UX-02(배포됨) · SAME-01 STEP 1·2·2-R · SAME-02 · STEP 5 ·
+             **SAME-03 화면 생성**(운영 코드 0)
 Git          clean · origin/main 0/0 · Production / 200
-회귀         677 files / 9,208 passed / 0 failed · typecheck 0 · build 0
+회귀         **680 files / 9,231 passed / 0 failed** · typecheck 0 · build 0
 ```
 
-🔴 **CTO 가 할 일은 §9 하나다.** 선제적으로 다른 WU 를 만들지 않는다.
+🔴 **CTO 가 할 코드 작업이 없다.** 선제적으로 다른 WU 를 만들지 않는다 — 다음 입력은 **CEO 라벨** 이다.
 🔴 **용어는 여섯뿐** — MEASURED / CLOSED / HOLD / REJECT / 측정불가 / STOP.
 🟢 종료된 WU 상세·정합표·과거 측정은 전부 `docs/ARCHIVE-CLOSED-WU.md` 에 있다(막혔을 때만 연다).
 
@@ -31,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-PRICE-SAME-03 — 국내 SAME 검토 화면(§9 · 조사 끝 · 바로 구현)
+CURRENT    CORE-PRICE-SAME-03 — 국내 SAME 검토 화면 **생성 완료** · **CEO 판정 대기**(§9)
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -205,113 +206,90 @@ STEP 4               권장 판매가격 A 1차 노출 + **ⓘ 가격 계산 기
 
 ---
 
-## 9. 🔵🔵🔵 **CURRENT WU — `CORE-PRICE-SAME-03` 국내 SAME 검토 화면**(조사 끝 · 구현부터)
+## 9. 🟢🟢 **CORE-PRICE-SAME-03 — 화면 구현 «완료» · CEO 판정 대기**
 
-> 🔴 **100% 조사/판정 화면이다.** matcher · threshold · priceTier · domesticReference ·
-> 가격 pipeline · **셀러 UI** 변경 **전부 0**. 🔴 UI 개선은 SAME 원인 확정 **뒤** 다.
-> 🔴 이번 세션은 **후보 인벤토리 + 계약 충돌 확인까지** 했다(코드 0 · clean).
+> 🟢 산출물 **`docs/core-same03-domestic-review.html`**(4.35MB · 자립형 · 원격 이미지 0).
+> 🔴 변경 — matcher **0** · threshold **0** · priceTier **0** · domesticReference **0** ·
+> 가격 pipeline **0** · **셀러 UI 0** · 운영 파일 **0**(전부 `__tests__` + `docs/`).
+> 🔴 **CTO 가 판정하지 않았다** — 라디오 10 × 3 전부 미선택(`checked` 속성 0).
 
-### 🔴🔴 착수 전에 알아야 할 **계약 충돌 하나** — 이것부터 읽는다
-
-```
-🔴 기존 `core-2m-visual-review-build` 는 **내부 토큰 노출을 «전수 단언» 으로 금지** 한다
-   (NO_TITLE_OVERLAP · BRAND_UNCONFIRMED · PRESUMED_SAME · TEXT_CONFIRMED ·
-    EXACT_IDENTIFIER · SAME_MIN_AXES · matchLevel · confidence)
-   🔴 실제로 내가 `verdict` 를 날것으로 적었다가 **그 계약이 FAIL 시켰다**(CORE-PRICE-SAME-02)
-🔴 그런데 CPO §5·§6 은 이 화면에 **시스템 판정·8축·blocker 를 그대로 보여 달라** 고 한다
-⟹ 🟢 **해법 — 출력 파일을 «둘» 로 가른다**(계약을 풀지 않는다):
-   docs/core-2m-visual-review.html        기존 · **내부 토큰 0** · 그 계약 그대로 유지
-   docs/core-same03-domestic-review.html  **신규** · 내부 결과 노출 O · 🔴 셀러 UI 에 **연결 0**
-🔴 기존 빌더를 «수정» 하지 말고 **새 빌더 파일**을 만든다 — 한 파일이 두 정책을 갖게 하지 않는다
-```
-
-### 🟢 후보 인벤토리 — **기존 fixture 전수 실측**(새 웹 검색 0)
+### 🟢 실측 결과 — **국내 후보 10 / 원상품 2**
 
 ```
-global.trenbe.com   9     m.luxboy.com        5 ← 🔴 라벨 충돌    beaumonde.co.kr   5 (AC010)
-luksusbaby.kr       4     donokids.com        4                   biskuit.kr        4
-wconcept.co.kr      4     miniboutique.co.kr  2 ← 🔴 **현재 국내 참고가격 KRW 88,000 의 출처**
-m.web.mustit.co.kr  2     littleluna.co.kr    2                   kream.co.kr       1
-⟹ 🟢 **국내/한국계 도메인 11개** — CPO 요구(≥5) 충족 · 🔴 **임의로 5건만 자르지 않는다**
-출처 fixture — core-2m(4) · wu-059(3) · wu-067(3) · wu-068(3) · wu-074(3) · wu-111(1) ·
-              wu-112(7) · wu-116(1)   🔴 그 밖에서 후보를 **만들지 않는다**
+🇰🇷 B226AC009  biskuit.kr          PRESUMED_SAME  COMPARISON  **국내가격 포함** · BRAND_MISMATCH+NO_TITLE_OVERLAP
+              donokids.com        PRESUMED_SAME  COMPARISON  미포함(KRW 88,000 · 🔴 등록부 미조회) · BRAND_UNCONFIRMED
+              global.trenbe.com   **SAME**       **EXACT**   미포함(USD 80 · 해외 통화) · 보류 0 · 🔴 CEO 라벨 **충돌**
+              m.luxboy.com        PRESUMED_SAME  COMPARISON  미포함(KRW 59,000 · 🔴 등록부 미조회) · 🔴 CEO 라벨 **충돌**
+              miniboutique.co.kr  **UNREACHABLE** — 측정불가(🔴 빼지 않고 표시했다)
+🇰🇷 B226AC010  beaumonde.co.kr(목록) SIMILAR      EXCLUDED    미포함 · NO_TITLE_OVERLAP+BRAND_UNCONFIRMED
+              beaumonde.co.kr(상세) **SAME**     **EXACT**   **국내가격 포함** · 보류 0
+              kream.co.kr         **UNREACHABLE** — 측정불가(🔴 실행 간 OK ↔ UNREACHABLE 로 갈린다)
+              luksusbaby.kr(1)    **REDIRECTED_AWAY** — 측정불가
+              luksusbaby.kr(2)    CONFLICT       EXCLUDED    미포함 · 반증 COLOR
+⟹ 페이지 읽기 **7/10** · 이미지 **7/10** · 국내 참고가격 포함 **2** · 과거 판정 충돌 **2**
 ```
 
-### 🔴🔴 구현 직전 제약 — **후보 11개가 «원상품 둘» 에 걸쳐 있다**
+### 🔴🔴🔴 지시서를 **실측으로 정정한 것 셋** — 다시 조사하지 않는다
 
 ```
-B226AC009  biskuit · luxboy · donokids · miniboutique · trenbe · wconcept · mustit ·
-           littleluna · kream · luksusbaby
-B226AC010  **beaumonde.co.kr**   ← 🔴 STEP 1 에서 정정한 그 사실이다(AC009 아님)
-🔴 기존 빌더는 **원상품 하나**(상수 `ORIGIN`)를 전제로 쓰여 있다 — sticky 원상품 패널도 하나다
-⟹ 🟢 새 빌더는 **원상품별 섹션** 으로 가른다(한 화면 · 두 블록) ·
-   🔴 두 원상품의 후보를 **한 목록에 섞지 않는다**(섞으면 비교 대상이 거짓이 된다)
-🔴 그리고 **분모를 원상품별로** 적는다 — 「국내 후보 N」을 합쳐서만 쓰지 않는다
+① 「wu-059/067/074 는 originCode 가 없다」  → 🟢 **틀렸다. 전부 증명 가능하게 매핑된다**
+   `wu-059.origins[searchId].canonicalProduct.sku.value` 가 그 맵이고,
+   🟢 **증명 두 축** 으로 잠갔다 — 원상품 제목 **6/6 일치**(59↔67) ·
+   같은 후보 id 가 세 파일에서 **같은 URL 19/19**. 🔴 증명이 깨지면 조인을 **쓰지 않는다**
+② 「wu-116 kream.co.kr = AC009」          → 🔴 **AC010 이다**(fixture 가 그렇게 적어 뒀다)
+③ 「국내 도메인 11개」                     → 🔴 **분모가 섞여 있었다.** 그 11 에는
+   ⒜ 다른 원상품(wconcept → S6 트랙수트)과 ⒝ **가치 라벨**(`wu-099/100` ·
+   USEFUL/NOISE · 원상품 **B226AC112**)의 도메인이 들어 있다 —
+   `miniboutique` · `mustit` · `littleluna` 가 **거기서만** 나온다
+   ⟹ 🟢 동일상품 GT + 원상품 확정 + 국내 = **후보 10 · 도메인 8**
+🔴 그리고 「miniboutique 가 KRW 88,000 의 출처」도 **정정한다** — 실측 88,000 은
+   **biskuit.kr**(국내 참고가격에 실제로 들어간다)과 **donokids.com** 이고,
+   miniboutique 는 **읽히지 않아 가격이 없다**
 ```
 
-🔴 **miniboutique 는 직전 빌드에서 `UNREACHABLE` 이었다** — 🟢 이번엔 **빼지 말고**
-「페이지를 읽지 못했습니다(측정불가)」로 **표시** 한다. 그 후보가 지금 화면의 `KRW 88,000`
-출처이고, **「가격은 있는데 동일상품 0곳」의 실체** 라서 CEO 가 꼭 봐야 한다.
-
-### 🔴🔴🔴 구현 제약 ② — **fixture 가 `originCode` 를 «일관되게» 달고 있지 않다**
+### 🔴🔴 측정불가 / 한계 — **넘겨 읽지 않는다**
 
 ```
-🔴 그래서 「후보 → 원상품」 매핑을 **파일 단위 규칙** 으로 해야 한다. 전수 실측:
-  core-2m-ceo-visual-gt.json   **파일 상단** 에 `originCode` + `originUrl` (= B226AC009)
-                               🟢 후보 10건에 `ceoBasis` 까지 있다 — **이 파일이 1순위 소스** 다
-  wu-112-human-gt.json         **행마다** `originCode`(AC009 / AC010) 🟢 사용 가능
-  wu-116-human-gt.json         행 단위 · kream.co.kr(AC009)
-  wu-059 / wu-067 / wu-074     🔴 **originCode 가 없다** ⟹ 그 행의 원상품을 **알 수 없다**
-⟹ 🔴🔴 **wu-059/067/074 의 한국 후보를 임의로 AC009 에 붙이지 않는다**(원상품 미상으로 적는다)
-   그렇게 붙이면 **원상품이 다른 후보를 같은 비교표에 넣는 것** 이고, 그 비교는 거짓이다
-🟢 안전한 1차 집합 = **core-2m 10건**(AC009 · 그중 한국 4) **+ wu-112 의 originCode 보유 행**
-   + wu-116 kream(AC009)  ⟹ 🔴 「국내 11개 도메인」은 **도메인 수** 이지 **안전 매핑 수가 아니다**
+⒜ 🔴🔴 **이 화면은 국내 판매처 등록부를 조회할 수 없다**(service-role 키 없음) ⟹
+   `classifyCandidateMarket` 의 「등록부 + KRW」·「판매자 증거 + KRW」 분기가 **발화하지 않는다**.
+   그래서 **KRW 후보 둘**(donokids 88,000 · luxboy 59,000)의 「KR 아님」은 **측정불가** 다 —
+   🟢 화면이 그 문장을 **직접** 말한다(「운영에서는 KR 로 확정될 수 있습니다(측정불가)」)
+⒝ 🔴 페이지 읽기가 **실행 간 갈린다** — `kream.co.kr` 이 한 실행에서 OK(CONFLICT/COLOR),
+   다음 실행에서 UNREACHABLE 이었다. 🔴 「그 사이트를 읽을 수 없다」로 적지 않는다
+⒞ 🔴 후보 `imageUrl` 은 추출 경로에서 **하드코딩 null** 이라 **IMAGE 축이 계산되지 않는다** ⟹
+   화면의 사진은 `og:image`/JSON-LD 보충이고 **판정에 쓰이지 않았다**(화면에 적었다)
+⒟ 🔴 **실제 따져 화면이 아니다** — 이 산출물은 `docs/` 자립형 HTML 이고 셀러 UI 연결 **0**
 ```
 
-🔴 **그러므로 보고에 분모를 둘로 적는다** — ⒜ 도메인 수 11 ⒝ **원상품 매핑이 확정된 후보 수**.
-🔴 그 둘을 같은 숫자로 쓰면 CPO 가 「국내 11건을 다 봤다」로 읽는다.
-
-### 🟢 AC010 원상품 URL 은 `wu-112` 행에서 얻는다(core-2m 은 AC009 전용)
+### 🔴🔴 화면이 **드러낸** 것 — 「CEO 가 SAME 이라 봤는데 왜 막혔는가」
 
 ```
-🔴 `core-2m` 의 `originUrl` 은 **AC009 하나** 다 — AC010 섹션의 원상품은 그 파일에 없다
-🟢 AC010 후보(beaumonde · luksusbaby)는 wu-112 에 `originCode: "B226AC010"` 로 있다 ·
-   원상품 URL 은 **그 묶음의 원상품 정의** 를 따른다(STEP 1 라이브 하니스가 쓰던 그 URL)
+🟢 `global.trenbe.com` 은 **SAME/EXACT** 이고 보류가 **0** 이다 — 그런데 **CEO 라벨이
+   충돌** 한다(wu-112/111 SAME ↔ wu-059 DIFFERENT) ⟹ 🔴 **이 한 건이 이번 판정의 핵심** 이다
+🟢 `beaumonde.co.kr` 상세는 **SAME/EXACT + 국내가격 포함** 이다 ⟹ 🔴 「국내 SAME 0」은
+   **AC009 에 대한 문장** 이고 AC010 에서는 성립하지 않는다(섹션을 섞어 읽지 않는다)
+🔴 반증(`CONFLICT`)을 만난 후보는 `axes: []` 로 **조기 종료** 되어 나머지 축이
+   **계산조차 되지 않는다** ⟹ 화면이 `NOT_AVAILABLE` + 「조기 종료」로 **UNKNOWN 과 가른다**
 ```
 
-### 🔵 화면 요구(CPO §4~§9 · 기존 패턴 재사용)
+### 🟢 변경 파일 — 운영 **0**
 
 ```
-원상품 ↔ 비교상품  이미지 · URL · 브랜드 · 상품명 · 품번 · 상세 · 색상 · 소재 · 핏 ·
-                   옵션/SKU · 카테고리 · 기타   🔴 **좌우 같은 항목**
-시스템 결과        verdict · matchTruth · priceTier · **국내 참고가격 포함 여부**
-8축               BRAND · TITLE · MODEL_CODE · COLOR · MATERIAL · FIT · GARMENT_FORM ·
-                  AUDIENCE_LINE  (+ IMAGE 는 **실제 계산될 때만**)
-                  각 축 PASS/FAIL/UNKNOWN/NOT_AVAILABLE · 🔴 **blocker 는 눈에 띄게**
-raw evidence      축 결과만 보여주지 않는다 — **원상품 값 ↔ 후보 값**을 나란히
-판정              [동일] [다른제품] [판단불가] + **사유**(가능한 한 요구)
-이전 기록         「이전 CEO 판정 / 이전 사유」를 **별도로** 표시(이번 판정과 섞지 않는다)
-JSON export       { domain, url, ceo, why, system, priceTier, blockers }
-🔴 이미지 없으면 **「이미지 없음」** — 다른 상품 이미지로 대체 금지
+신규  __tests__/core-same03-inventory.ts        인벤토리·원상품 조인 증명(순수 · 네트워크 0)
+신규  __tests__/core-same03-evidence.ts         8축 읽기(순수 · MI 변경 0)
+신규  __tests__/core-same03-inventory.test.ts   계약 **20**(CI 상주 · 네트워크 0)
+신규  __tests__/core-same03-review-dom.test.ts  **마운트 DOM** 계약(jsdom · 네트워크 0)
+신규  __tests__/core-same03-domestic-review-build.test.ts  화면 생성(🔴 `CORE_SAME03_LIVE=1` 로만)
+신규  docs/core-same03-domestic-review.html     **CEO 판정 화면**
+🔴 `core-2m` 빌더와 그 산출물은 **한 글자도 건드리지 않았다** — 그 파일의 「내부 토큰 0」
+   계약과 이 WU 의 「내부 결과 노출」 요구가 **충돌** 하므로 **파일을 둘로 갈랐다**
+🟢 변이 **M1~M11 전부 FAIL → 복구**(두 모듈 **바이트 동일** 확인 · 잔여 `MUTATION` 0)
+🔴🔴 **변이가 내 계약 셋을 뚫었고 셋 다 메웠다** — ⒜ 원상품 미상 가드가 **발화한 적이 없었다**
+   (합성 행으로 직접 찔러 잠갔다) ⒝ 「측정불가를 빼지 않았다」가 **이미 빠진 것을 못 본다**
+   (인벤토리 수 ↔ 화면 수 대조로 바꿨다) ⒞ 등록부 경고 대조가 **`0 === 0` 으로 통과**
+   (발화 단언 `> 0` 을 앞에 세웠다)
 ```
 
-### 🔴 화면에 **드러내야** 할 공급 문제(이미 측정됨 · 고치지 않는다)
-
-```
-description  ProductFacts 에 **전달 안 됨**(product-url-facts.ts:441 이 category 하나만)
-image        후보 imageUrl **하드코딩 null**(:472) · compare 3번째 인자 미전달(match.ts:661)
-model code   분기 시 conflict → **EXCLUDED**(domestic-product-link.ts:86)
-title        한국어 제목 ↔ 영문 원상품 ⟹ **NO_TITLE_OVERLAP**
-⟹ 🔴 「CEO 가 SAME 이라 봤는데 시스템은 왜 막혔는가」를 **화면에서 보이게** 한다
-```
-
-### 🔴 보고 형식·STOP
-
-```
-후보 N · 국내 후보 N · CEO 기존 SAME N · System non-SAME N · 국내 참고가격 후보 N
-변경 — matcher 0 · threshold 0 · priceTier 0 · domesticReference 0 · 가격 0 · **셀러 UI 0**
-마지막 줄 고정 — `STOP — CEO SAME 육안 판정 대기`
-```
 
 ---
 
@@ -386,7 +364,11 @@ core-2ab  3  PLAIN_HTML 빈 칸 다섯 + Shopify 비대칭
 core-2ac  8  parity 세 칸 범위(🔴 소재는 «채우지 않는다» 가 계약이다)
 core-2ad  5  corePoints 산식 바이트 고정     core-2ae 5  AUDIENCE_LINE 발화 경로
 core-2ag  4  표본 출처 / SI-3 정의          core-2ah 3  GT 합집합   core-2ai 4  반례 모양
-🔴 라이브 축은 환경변수로만 — CORE2Z/2AB/2AC/2AD/2AE/2AF/2AG/2AH/2AI_LIVE=1
+core-same03-inventory  20  원상품 조인 **증명**(제목 6/6 · id→URL 19/19) · 분모 둘 ·
+                           충돌 2건 · 가치라벨 fixture 격리 · 8축 읽기
+core-same03-review-dom  2  생성된 검토 화면 **마운트 DOM**(jsdom · 섹션 2 · 라디오 미선택)
+🔴 라이브 축은 환경변수로만 — CORE2Z/2AB/2AC/2AD/2AE/2AF/2AG/2AH/2AI_LIVE=1 ·
+   **CORE_SAME03_LIVE=1**(검토 화면 재생성)
 ```
 
 ---
@@ -429,7 +411,9 @@ PRICE_CALCULATION_ANCHOR_ID          🔴 STEP 4 가 되살린 앵커 — 지우
 ## 14. TEST RULE — 분모를 반드시 적는다
 
 ```
-677 files / **9,205 passed** / 0 failed / 140 skipped   ← 기준선(apps/admin · CORE-UX-SELLER-01 후)
+**680 files / 9,231 passed / 0 failed / 140 skipped**   ← 기준선(apps/admin · CORE-PRICE-SAME-03 후)
+   🟢 직전 677/9,208 에서 **+3 files / +23 tests** = 이번 WU 가 더한 계약 전부
+      (inventory 20 · DOM 2 · 라이브 게이트 1 · 🔴 라이브 생성 본편은 **skip** 된다)
 typecheck PASS (0)      build PASS (exit 0)
 🔴 라이브 네트워크 하니스 **2건이 병렬에서 간헐 FAIL · 단독 PASS** —
    `p54c1-grounding-redirect`(CPO 가 합산 제외한 baseline) ·
@@ -499,6 +483,28 @@ CEO 는 코드·계약·commit 을 검토하지 않는다. **배포 전에는 �
 ```
 테스트 URL:      테스트 상품:      테스트 순서:      예상 결과:
 ```
+
+### 🟡🟡🟡 **CEO Action ③ — 국내 후보 10건 판정**(지금 할 일 · 15~25분)
+
+```
+파일        docs/core-same03-domestic-review.html   ← 브라우저로 **그냥 열면 된다**
+            (자립형 · 로그인 0 · 네트워크 0 · 사진이 **파일 안에** 들어 있다)
+무엇을      원상품 **둘**(B226AC009 · B226AC010) 각각의 국내 후보를
+            [동일] / [다른제품] / [판단불가] 로 고르고 **사유 한 줄**
+끝나면      맨 아래 **[판정 결과 복사하기]** → 그 JSON 을 붙여 주십시오
+```
+
+🔴🔴 **섹션을 넘어 비교하지 마십시오** — 원상품이 둘이고, 섞으면 비교가 거짓이 됩니다.
+🔴 **가장 중요한 두 건**(과거 판정이 서로 달랐습니다 · 화면에 🔴 로 표시돼 있습니다):
+`global.trenbe.com` · `m.luxboy.com`. 이 둘은 **반드시** 봐 주십시오.
+
+🔴 **정상인데 FAIL 로 보이기 쉬운 것 넷**:
+⒜ **측정불가 3건**(miniboutique · kream · luksusbaby) — 저희가 그 **페이지를 읽지 못한** 것이고
+  「상품이 없다」가 아닙니다. 사진이 없으면 **판단불가** 가 정답입니다
+⒝ `PASS` / `FAIL` 배지는 **시스템의 상태** 일 뿐이고 **정답이 아닙니다** — 대표님 판정이 기준입니다
+⒞ `beaumonde.co.kr` 이 **두 줄** 인 것 — 하나는 **목록 페이지** 이고 하나는 상품 상세입니다(다른 URL)
+⒟ 「조기 종료」라고 적힌 후보 — 반증을 먼저 만나서 **나머지 축을 계산하지 않은** 것이고,
+  점수가 낮아서가 아닙니다
 
 ### 🟡🟡 **CEO Action ① — 한 글자 답변**(이것이 STEP 3 착수 여부를 가른다)
 
