@@ -1023,7 +1023,7 @@ export const MARKET_EMPTY_NO_CANDIDATE = "아직 이 시장에서 비교할 후�
  *
  * 🔴 전 문구는 「**아래 후보 검토 구역에서 사진으로 확인해 주세요**」였다 — 그것은
  *    셀러에게 **동일상품 판정을 시키는 말** 이고, 이 제품의 North Star 와 정면으로
- *    충돌한다(START-HERE §2: 「셀러가 직접 SAME/SIMILAR 를 판단하지 않는다 — MI 가 한다」).
+ *    충돌한다(START-HERE §4 NORTH STAR: 「셀러가 직접 SAME/SIMILAR 를 판단하지 않는다 — MI 가 한다」).
  *    🔴 WU-154 가 같은 이유로 「URL 을 찾아 넣는」 입력칸을 폐기했는데, **같은 요구가
  *    문장으로 남아 있었다**(그 계약은 `MarketPriceComparison.tsx` 소스만 보므로
  *    이 상수 파일의 문장을 잡지 못했다).
@@ -1412,7 +1412,7 @@ export const PRICE_BASIS_CURRENCY_LINE =
 /**
  * 🔴 **한 곳을 가격대로 읽히게 두지 않는다**(`PRICE_BAND_UNDETERMINED` 와 같은 축).
  * 🔴 **국내 전용** 이다 — 「가격대」는 🇰🇷 의 해석이고 🌎 는 「최저 확인가」다
- *    (START-HERE §3 MARKET RULE). 두 시장 판매처를 합쳐 세면 그 규칙이 섞인다.
+ *    (START-HERE §5 MARKET RULE). 두 시장 판매처를 합쳐 세면 그 규칙이 섞인다.
  */
 export const PRICE_BASIS_SINGLE_SELLER_LINE =
   "국내는 확인된 판매처가 한 곳이라 가격대가 아니라 참고가격 한 건입니다.";

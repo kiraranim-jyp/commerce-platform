@@ -40,7 +40,7 @@ const WORKSPACE = strip(readFileSync(join(COMMERCE, "..", "CommerceWorkspace.tsx
 const COPY = strip(readFileSync(join(COMMERCE, "recommended-price-copy.ts"), "utf8"));
 
 /**
- * 🔴 운영 DB 실측 표본(START-HERE §6-NEXT) — snapshot `32f7b651`
+ * 🔴 운영 DB 실측 표본(ARCHIVE-CLOSED-WU §6-NEXT · 현재 좌표는 START-HERE §0) — snapshot `32f7b651`
  *    `Lulu T Bar Shoes in Vernice Nero by PèPè`.
  * ```
  * A suggestedPriceKrw ₩295,796   B recommendedPrice ₩258,000 · Net 0.6%

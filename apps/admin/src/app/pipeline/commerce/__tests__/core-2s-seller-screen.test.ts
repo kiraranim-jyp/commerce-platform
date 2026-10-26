@@ -482,7 +482,7 @@ describe("E. 💡 가격 판단 기준", () => {
     ).toContain(PRICE_BASIS_CURRENCY_LINE);
   });
 
-  /** 🔴 국내 1곳이면 「가격대가 아니다」를 말한다(START-HERE §3 MARKET RULE). */
+  /** 🔴 국내 1곳이면 「가격대가 아니다」를 말한다(START-HERE §5 MARKET RULE). */
   it("E-6 🔴 국내 판매처 **1곳** 이면 「가격대가 아니다」를 말한다", () => {
     expect(priceBasisLines(buildMarketJudgement(ROWS), { domestic: KR_REF })).toContain(
       PRICE_BASIS_SINGLE_SELLER_LINE,
