@@ -11,7 +11,7 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-SAME-SPRINT-03** — 🟢🟢 **Evidence Layer 정식화 완료 · 배포 `793bd099`**(§9-M)
+CURRENT WU   **CORE-SAME-SPRINT-04** — 🟢🟢 **Evidence Coverage 측정 완료**(§9-N · 운영 변경 0)
 NEXT         🔵 **CPO 가 다음 Evidence Layer 범위 지정** — 🔴 CTO 선제 작업 0
 CEO ACTION   🟡 **없다**
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-SAME-SPRINT-03 — `ProductFacts.description` **정식화·배포**(§9-M) · CPO 판단 대기
+CURRENT    CORE-SAME-SPRINT-04 — coverage **측정 완료**(§9-N) · 다음 Evidence 우선순위 CPO 판단 대기
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -1659,3 +1659,105 @@ BEFORE 는 그 경우 `materialText === null` 이라 **구조적으로 못 읽�
 🔵 **다음 좌표** — CPO 가 지정한 순서는 ① description 정식화(**완료**) → ② evidence coverage
 측정 → ③ 필요한 evidence 만 Identity 에 연결 → ④ Comparability(A/B) → ⑤ 가격 형성대 →
 ⑥ 판매판단. 🔴 **CTO 가 ②를 임의로 시작하지 않는다.**
+
+---
+
+## 9-N. 🟢🟢 **CORE-SAME-SPRINT-04 — Evidence Coverage 측정**(측정 only · 운영 변경 **0**)
+
+🔴 **production code change 0.** test-only 하니스 1파일
+(`core-sprint04-evidence-coverage.test.ts`). matcher · threshold · `NO_TITLE_OVERLAP` ·
+MODEL_CODE conflict · material parser · `priceTier` · `domesticReference` ·
+HTML 경로 description 공급 — **전부 변경 0**(CPO §11 금지 1~8 전수 준수).
+
+### 🔴🔴 분모를 «둘» 로 갈랐다 — 섞으면 측정이 틀린다
+
+```
+분모 A  저장 facts **33** — 🔴 `description` 이 생기기 «전» 스냅샷이다
+        ⟹ 그 칸의 0 은 **계약 버전** 문제이고 「coverage 0%」가 **아니다**
+분모 B  라이브 재수집(운영 `factsFromProductUrl`) — 🟢 **이것이 coverage 다**
+🔴 candidate rows **33** ↔ unique URL **33** ↔ facts 확보 **26** 을 같은 줄에 적지 않는다
+```
+
+### 공급 경로별 description coverage (URL 단위 · facts 확보분)
+
+| 공급 경로 | URL | facts O | desc 있음 | desc 없음 | coverage |
+|---|---:|---:|---:|---:|---:|
+| SHOPIFY_JSON | 20 | 20 | 19 | 1 | **95.0%** |
+| PLAIN_HTML | 13 | 6 | 0 | 6 | **0.0%** 🟢 설계대로 |
+| 전체 | 33 | 26 | 19 | 7 | **73.1%** |
+
+🔴 facts 미확보 **7**(`REDIRECTED_AWAY` 5 · `UNREACHABLE` 2)은 **coverage 분모에서 뺐다** —
+「description 없음」으로 세지 않는다(측정불가).
+
+### Evidence coverage matrix (분모 B = 26)
+
+```
+TITLE 100.0 · BRAND 84.6 · CATEGORY/FORM 76.9 · IMAGE(URL만) 76.9 ·
+DESCRIPTION 73.1 · MATERIAL 61.5 · COLOR 53.8 · MODEL_CODE 46.2 · FIT 26.9 ·
+OPTION/SKU **0.0** · COMPOSITION **측정불가**(`ProductFacts` 에 칸이 없다)
+```
+
+🔴 `COMPOSITION` 은 `compareMaterial` 이 **그 자리에서 파싱** 해 쓰고 facts 에 보존되지
+않는다 ⟹ 공급 여부를 읽을 수 없다. 🔴 `OPTION/SKU`(`sellerSku`)는 0% 지만 **matcher 가
+읽지 않으므로 병목이 아니다**(SPRINT-01 실측 — 그 어휘가 `cross-seller.ts` 에 **없다**).
+
+### description → MODEL_CODE 추출 3층
+
+```
+① description 있음        19/26 (73.1%)
+② 그중 품번 «포함»          5/19 (**26.3%**)
+③ 그중 «단일» 품번          5/5  (복수 0 ⟹ Contract C 포기 **0건**)
+```
+
+### 🔴🔴 하니스 결함 둘 — 둘 다 거짓 결론 직전이었다
+
+```
+⒜ `facts` 를 **최상위** 에서 읽어 **전건 null** ⟹ 「coverage 측정불가」가 될 뻔했다.
+   실제 자리는 **`candidate.facts`** 다(칸 이름 추측 — 이 트랙의 반복 실수).
+   🟢 발화 단언(`readable.length > 0`)이 잡았다
+⒝ 라이브 산출에서 「보강 «전» 비어 있음」을 세어 **0/19** 이 나왔다 ⟹ 「발화 0」으로
+   적었으면 **거짓** 이다. 그 산출은 **이미 `recoverModelCodeFromDetail` 이 적용된 뒤** 라
+   **역산이 불가능** 하다. 🟢 그래서 Q4 는 **분모 A(보강 전)** 에서만 답했다
+```
+
+### Q1~Q7 — 실측값
+
+```
+Q1 전체 description coverage      **73.1%**(19/26 · facts 확보분) · 🔴 전수 아님(GT 33 URL)
+Q2 어느 경로에 집중되는가          **SHOPIFY_JSON 95.0%** · PLAIN_HTML **0.0%**
+Q3 description 중 품번 포함         **26.3%**(5/19)
+Q4 품번 있는데 기존 코드 비어 있음   **3/4**(분모 A · SPRINT-02 발화 3건과 **일치**)
+Q5 extraction 실패 패턴            🔴 품번이 **애초에 없다**(14/19 = 73.7%) ·
+                                  보조 관측 — 「매우 짧음(<120)」 6건 · markup 잔존 **0**
+Q6 가장 큰 공급 공백               🔴 **PLAIN_HTML 의 description 0%**(구조적) ·
+                                  matcher 가 «쓰는» 축 중에서는 **FIT 26.9% · MODEL_CODE 46.2%**
+Q7 다음 대상을 객관적으로 하나?     🟡 **예 — 단 CPO 선택이다**(아래)
+```
+
+### 🔴🔴 대표성 — 「tinyapple 3건」을 일반화하지 않는다
+
+발화 호스트 분포가 **`tinyapple.net` 3 (100%)** 다. **한 호스트에 몰려 있다** ⟹
+「Shopify 전체에서 이 비율로 발화한다」로 **적지 않는다**.
+
+### 증거
+
+```
+회귀 693 files / **9,304 passed · 0 failed · 140 skipped** · typecheck **0** · build exit **0**
+🔴 직전 실행에서 **1 failed 가 한 번** 났고 재실행에서 **재현되지 않았다**. 🔴 이름을
+   특정하지 못했다 — 「일시 실패」로 단정하지 않고 **미규명** 으로 적는다
+   (이번 변경은 test-only 이고 운영 영향 0 이다)
+HTTP 33 회(read-only) · 운영 변경 **0** · 작업트리 clean · origin/main **0 / 0**
+```
+
+### 🟡 CPO 판단 대기 — §13 네 선택지 중
+
+```
+🔵 데이터가 가리키는 것 — **B(공급 경로 확장 검토)** 와 **C(핵심 정보 부족)** 가 동시에 성립한다
+   B 근거  PLAIN_HTML **0%**(13 URL 중 6 읽힘 · 전건 0) ⟹ 국내 Cafe24 계열이 그 경로다
+   C 근거  description 이 있어도 품번 포함은 **26.3%** 뿐이다
+🔴 D(Image/Option)는 **아니다** — IMAGE 는 URL 76.9% 이고 OPTION 은 matcher 가 안 읽는다
+🔴 **CTO 가 고르지 않았다.** 그리고 금지 7(HTML 경로 임의 공급)이 B 를 막고 있어
+   **CPO 가 그 금지를 열어야** 진행된다
+```
+
+**STOP — CORE-SAME-SPRINT-04 Evidence Coverage 측정 완료 / 다음 Evidence Layer 우선순위 CPO 판단 대기**
