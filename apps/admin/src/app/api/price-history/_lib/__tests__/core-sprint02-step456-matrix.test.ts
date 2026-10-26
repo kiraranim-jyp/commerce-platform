@@ -4,7 +4,7 @@ import { compareCrossSellerProducts } from "@commerce/crawler/src/comparison-sea
 import { deriveMatchTruth } from "@commerce/crawler/src/comparison-search/match-truth";
 import { recoverModelCodeFromDetail } from "@commerce/crawler/src/comparison-search/model-code-from-detail";
 import type { ProductFacts } from "@commerce/shared";
-import { SAME05_PAIRS, type Same05Pair } from "./core-same05-gt";
+import { SAME05_BASELINE, SAME05_PAIRS, type Same05Pair } from "./core-same05-gt";
 import { priceTierFromLink } from "../../../domestic-price-sources/_lib/domestic-product-link";
 
 /**
@@ -169,8 +169,8 @@ describe("CORE-SAME-SPRINT-02 STEP 4~6 — 5행 표 + 안전조건 6(운영 반�
           `${pad(`${t.und}(${t.undSysSame})`, 14)}${pad(`${base.fp}→${t.fp}`, 12)}${apply}`,
       );
     }
-    expect(base.tp).toBe(5);
-    expect(base.fp).toBe(2);
+    expect(base.tp).toBe(6);
+    expect(base.fp).toBe(SAME05_BASELINE.fp);
   });
 
   /**

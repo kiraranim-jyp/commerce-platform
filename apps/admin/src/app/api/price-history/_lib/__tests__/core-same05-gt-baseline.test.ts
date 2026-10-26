@@ -5,6 +5,7 @@ import {
   isSystemSame,
   same05Judge,
   same05Tally,
+  SAME05_BASELINE,
 } from "./core-same05-gt";
 
 /**
@@ -32,8 +33,8 @@ describe("CORE-PRICE-SAME-05 STEP 1 — GT baseline (네트워크 0 · 운영 �
   it("[기준선 고정] baseline 숫자를 계약으로 박는다 — 이후 STEP 이 이 분모를 쓴다", () => {
     const t = same05Tally((p) => same05Judge(p.origin, p.facts).cross.verdict);
     /** 🔴 이 숫자가 바뀌면 **운영 matcher 가 바뀐 것** 이다 — 그때 STEP 비교가 무효가 된다. */
-    expect(t.gtSame).toBe(17);
-    expect(t.gtDifferent).toBe(10);
+    expect(t.gtSame).toBe(SAME05_BASELINE.same);
+    expect(t.gtDifferent).toBe(SAME05_BASELINE.different);
     expect(t.gtUncertain).toBe(6);
     expect(SAME05_PAIRS).toHaveLength(33);
     /**
@@ -47,8 +48,8 @@ describe("CORE-PRICE-SAME-05 STEP 1 — GT baseline (네트워크 0 · 운영 �
      * 🔴 그래서 §12 의 PASS 기준은 「FP 0」이 아니라 **「FP 가 2 에서 늘지 않는다」** 다.
      *    🔴 **그 차이를 흐리면 완화가 통과해 버린다** — 기준선을 숫자로 박는다.
      */
-    expect(t.falsePositive, "🔴 baseline FP 가 2 에서 변했다 — 운영 matcher 가 바뀐 것이다").toBe(2);
-    expect(t.truePositive).toBe(5);
+    expect(t.falsePositive, "🔴 baseline FP 가 기준선에서 변했다 — 운영 matcher 가 바뀐 것이다").toBe(SAME05_BASELINE.fp);
+    expect(t.truePositive).toBe(6);
     expect(t.falseNegative).toBe(12);
     expect(t.trueNegative).toBe(8);
   });

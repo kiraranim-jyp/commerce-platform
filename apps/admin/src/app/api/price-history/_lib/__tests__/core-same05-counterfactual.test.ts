@@ -9,6 +9,7 @@ import {
   fmtTally,
   isSystemSame,
   same05Tally,
+  SAME05_BASELINE,
 } from "./core-same05-gt";
 
 /**
@@ -195,7 +196,7 @@ describe("CORE-PRICE-SAME-05 STEP 2·3·4 — 반사실(안전성 분모 · 네�
     console.log(`\n═══ 음역 축 위험 분모 ═══`);
     console.log(`    DIFFERENT ${diff.length} 중 **한글 토큰 보유 ${withHangul.length}**` + ` → ${withHangul.map((p) => `${p.id}(${p.domain})`).join(" · ") || "없음"}`);
     console.log(`    🔴 나머지 ${diff.length - withHangul.length} 쌍은 한글 토큰이 **0** 이라 음역이 구조적으로 영향을 줄 수 없다`);
-    expect(diff.length).toBe(10);
+    expect(diff.length).toBe(SAME05_BASELINE.different);
     /** 🔴 1 이면 「안전하다」가 아니라 **그 축의 안전성을 이 GT 로 못 증명한다** 는 뜻이다. */
     expect(withHangul.length).toBeLessThanOrEqual(2);
   });
@@ -261,7 +262,7 @@ describe("CORE-PRICE-SAME-05 STEP 2·3·4 — 반사실(안전성 분모 · 네�
       console.log(`    ${fmtTally(mode, t)}`);
     }
     const base = tallies.get("baseline")!;
-    expect(base.falsePositive).toBe(2);
+    expect(base.falsePositive).toBe(SAME05_BASELINE.fp);
 
     console.log(`\n═══ baseline 대비 변화 ═══`);
     for (const mode of MODES.filter((m) => m !== "baseline")) {

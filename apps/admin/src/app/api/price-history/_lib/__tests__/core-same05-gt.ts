@@ -88,6 +88,47 @@ for (const r of Object.values(B)) {
 }
 
 /**
+ * ════════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 **CEO 최신 라벨이 이긴다** — CORE-DESC-REVIEW 조서(2026-10-27 · CPO 확정)
+ * ════════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **원본 fixture 를 «고치지 않는다».** `wu-059-gt-facts.json` 의 `humanGt` 는 그때의
+ *    판정이고 **역사 기록** 이다(CPO: 「이전 Sprint 의 FP 2 는 **역사적 측정값으로만** 취급」).
+ *    🟢 그래서 덮어쓰지 않고 **나중 라벨을 위에 얹고 출처를 남긴다**.
+ *
+ * 🔴 **실제로 뒤집힌 것은 C06 하나** 다(조서 11건 전수 대조 · `core-desc-review-gt` 실측):
+ * ```
+ * C06  global.trenbe.com   DIFFERENT → **SAME**
+ * 🔴 §12 는 그 건을 「현행 **False EXACT** 1건 · precision 11/12」로 적었다 ⟹
+ *    그 서술은 **사실이 아니다**. 운영 판정이 SAME 이고 CEO 도 SAME 이므로 **옳았다**.
+ * 🟢 그 건의 품번은 **unavailable** 이다 ⟹ **품번 없이 올바른 SAME** 의 실증이다.
+ * ⟹ 🔴🔴 기준선이 **FP 2 → 1 · SAME 6/18** 로 바뀐다(CPO 확정 2026-10-27)
+ * ```
+ * 🔴 나머지 10건은 기존 라벨과 **일치** 하므로 **건드리지 않는다**.
+ * 🔴 미응답(`S1-5.set`)은 **임의 보정하지 않는다** — 그 칸은 판정 라벨이 아니다.
+ */
+const CEO_RELABEL: Record<string, { human: string; why: string }> = {
+  C06: { human: "SAME", why: "CORE-DESC-REVIEW 조서(2026-10-27) — 상세설명에 브랜드·품번·색상이 전부 있다" },
+};
+for (const p of SAME05_PAIRS) {
+  const r = CEO_RELABEL[p.id];
+  if (r && p.human !== r.human) {
+    p.human = r.human;
+    /** 🟢 출처를 **지우지 않고 잇는다** — 어느 조서가 덮었는지 추적 가능해야 한다. */
+    p.src = `${p.src}+desc-review`;
+  }
+}
+
+/**
+ * 🔴🔴 **CPO 가 적은 숫자 둘을 정정했다**(실측 · 2026-10-27):
+ *    SAME **18** 🟢 · FP **1** 🟢 — 맞다.
+ *    🔴 DIFFERENT 는 **9** 다(CPO 10) · 🔴 UNCERTAIN 은 **6** 다(CPO 5).
+ *    산술이 그렇다 — C06 이 DIFFERENT → SAME 이므로 **DIFFERENT 가 1 줄고**
+ *    UNCERTAIN 은 **변하지 않는다**. 18 + 9 + 6 = 33.
+ */
+export const SAME05_BASELINE = { total: 33, same: 18, different: 9, uncertain: 6, fp: 1, samePrecision: "6/18" } as const;
+
+/**
  * 🔴 **운영 판정 순서 그대로** — cross-seller → compareModelCode → deriveMatchTruth
  *    → priceTierFromLink. 🔴 순서를 바꾸거나 인자를 지어내지 않는다.
  * 🟢 `core-step5-evidence-c3-gt.test.ts:71` 의 `judge()` 와 **같은 모양** 이다.

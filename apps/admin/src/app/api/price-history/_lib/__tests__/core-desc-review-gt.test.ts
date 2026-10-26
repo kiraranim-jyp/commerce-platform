@@ -72,12 +72,11 @@ describe("CORE-DESC-REVIEW GT — CEO 조서 고정(네트워크 0)", () => {
     const flips = rows.filter((r) => r.flip);
     console.log(`\n  🔴 뒤집힌 라벨 **${flips.length}건**`);
     /**
-     * 🔴🔴🔴 **C06 이 뒤집혔다 — 이 트랙에서 가장 많이 인용된 그 건이다.**
-     *    §12 는 C06(`global.trenbe.com`)을 「현행 **False EXACT** 1건 · precision 11/12」로
-     *    적고 WU-060 이 그 원인을 확정했다. 🔴 그런데 CEO 가 이번에 **SAME** 이라 했다.
-     *    ⟹ 그 「False EXACT」는 **사실이 아니게 된다** ⟹ 기존 FP 분모가 **바뀐다**.
+     * 🟢🟢 **정정이 «이미 반영됐다»** — `core-same05-gt` 의 CEO_RELABEL 이 C06 을 SAME 으로
+     *    올렸다(2026-10-27 · CPO 확정). 🔴 그래서 여기서 뒤집힘은 **0 이어야 한다**.
+     * 🔴 이 단언이 깨지면 **GT 소스와 조서가 어긋난 것** 이다(둘 중 하나가 낡았다).
      */
-    expect(flips.map((f) => f.id), "🔴 뒤집힌 라벨이 바뀌면 아래 재계산이 전부 틀린다").toEqual(["C06"]);
+    expect(flips, "🔴 GT 소스가 조서와 어긋났다 — 둘 중 하나가 낡았다").toEqual([]);
   });
 
   it("[🔴🔴 재계산] C06 뒤집힘이 기존 FP 숫자를 «바꾼다»", () => {
@@ -125,8 +124,12 @@ describe("CORE-DESC-REVIEW GT — CEO 조서 고정(네트워크 0)", () => {
       `  🔴 C06 운영 판정 = ${c06.verdict} · 품번 ${c06.code} ⟹ ` +
         `CEO 가 SAME 이라 했으므로 그 판정은 **옳다** ⟹ §12 의 「False EXACT 1건」이 **정정된다**`,
     );
-    /** 🔴 발화 단언 — FP 가 안 움직이면 뒤집힘이 숫자에 닿지 않은 것이다. */
-    expect(after.fp, "🔴 C06 이 SAME 이 되면 FP 가 줄어야 한다").toBeLessThan(before.fp);
+    /**
+     * 🔴🔴 정정이 반영된 뒤이므로 **before == after** 다. 그러면 「FP 가 줄었다」를 쓸 수 없다 ⟹
+     *    대신 **기준선과 같은지** 를 단언한다(그것이 지금 지켜야 하는 사실이다).
+     */
+    expect(after.fp, "🔴 FP 가 기준선(1)에서 벗어났다 — 운영 matcher 가 바뀐 것이다").toBe(1);
+    expect(after.tp, "🔴 SAME 회복이 기준선(6)에서 벗어났다").toBe(6);
   });
 
   it("[🔴🔴 핵심] 상세설명 Evidence 가 «충분해도» DIFFERENT 가 나온다", () => {

@@ -4,7 +4,7 @@ import { compareCrossSellerProducts } from "@commerce/crawler/src/comparison-sea
 import { deriveMatchTruth } from "@commerce/crawler/src/comparison-search/match-truth";
 import { lookupBrandByAliasInTitle } from "@commerce/crawler/src/comparison-search/brand-alias";
 import type { ProductFacts } from "@commerce/shared";
-import { SAME05_PAIRS, type Same05Pair } from "./core-same05-gt";
+import { SAME05_BASELINE, SAME05_PAIRS, type Same05Pair } from "./core-same05-gt";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════════
@@ -256,7 +256,7 @@ describe("CORE-SAME-SPRINT-08 — BRAND Evidence Quality(측정 · 네트워크 
       );
     }
 
-    expect(base.tp).toBe(5);
-    expect(base.fp).toBe(2);
+    expect(base.tp).toBe(6);
+    expect(base.fp).toBe(SAME05_BASELINE.fp);
   });
 });

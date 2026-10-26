@@ -4,7 +4,7 @@ import { compareCrossSellerProducts } from "@commerce/crawler/src/comparison-sea
 import { deriveMatchTruth } from "@commerce/crawler/src/comparison-search/match-truth";
 import { priceTierFromLink } from "../../../domestic-price-sources/_lib/domestic-product-link";
 import type { ProductFacts } from "@commerce/shared";
-import { SAME05_PAIRS, type Same05Pair } from "./core-same05-gt";
+import { SAME05_BASELINE, SAME05_PAIRS, type Same05Pair } from "./core-same05-gt";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════════
@@ -231,8 +231,8 @@ describe("CORE-SAME-SPRINT-07 — Evidence Utility(측정 only · 네트워크 0
     const anyFired = rows.some((r) => r.fired > 0);
     expect(anyFired, "🔴 ablation 이 하나도 발화하지 않았다 — 하니스 결함이다").toBe(true);
     /** 🔴 baseline 을 고정한다(분모가 바뀌면 이 표 전체가 무효다). */
-    expect(base.tp).toBe(5);
-    expect(base.fp).toBe(2);
+    expect(base.tp).toBe(6);
+    expect(base.fp).toBe(SAME05_BASELINE.fp);
   });
 
   it("[① FN blocker 분포] human SAME 인데 system 이 SAME 이 아닌 쌍을 «현재 데이터로» 재집계한다", () => {
@@ -286,6 +286,6 @@ describe("CORE-SAME-SPRINT-07 — Evidence Utility(측정 only · 네트워크 0
      *    🟢 합격선은 구현 Sprint(SPRINT-06)의 것이고, 여기서는 **보호의 크기** 를 읽는다.
      */
     console.log(`\n  🔴 최대 누출 증가 = +${maxLeak} — 이 Sprint 는 **구현이 없으므로** 운영 누출은 **0** 이다`);
-    expect(base.fp, "🔴 baseline FP 가 바뀌면 이 표의 기준선이 무효다").toBe(2);
+    expect(base.fp, "🔴 baseline FP 가 바뀌면 이 표의 기준선이 무효다").toBe(SAME05_BASELINE.fp);
   });
 });

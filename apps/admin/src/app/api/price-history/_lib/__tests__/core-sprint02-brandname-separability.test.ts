@@ -7,7 +7,8 @@ import { SAME05_PAIRS, type Same05Pair, same05Judge } from "./core-same05-gt";
  * ════════════════════════════════════════════════════════════════════════════════
  *
  * 🔴🔴 **이 측정이 스프린트의 성립 여부를 결정한다.** CPO 목표는
- *    「**SAME 9 를 유지하면서 DIFFERENT 3 을 차단할 공통 증거 조합**」이다.
+ *    「**SAME 을 유지하면서 DIFFERENT 를 차단할 공통 증거 조합**」이다.
+ *    🔴 분모는 **SAME 10 · DIFFERENT 2**(CORE-DESC-REVIEW 재라벨 뒤 · 원래 9/3 이었다).
  *    ⟹ 🔴 그런 조합이 **존재하는지** 가 먼저다. 없으면 개선안은 성립하지 않는다.
  * 🟢 선례 — WU-093 이 「축 문자열이 글자 그대로 같아 **구별 불가**」를 측정하고
  *    「완화 = False SAME +1」로 닫았다. 그 모양인지 **먼저** 확인한다.
@@ -38,8 +39,13 @@ describe("CORE-SAME-SPRINT-02 — 「Brand + 제품명」 집합의 분리가능
     const D = COHORT.filter((r) => r.p.human === "DIFFERENT").length;
     console.log(`\n═══ 집합 재현 — ${COHORT.length}건 (human SAME ${S} · DIFFERENT ${D}) ═══`);
     expect(COHORT).toHaveLength(12);
-    expect(S).toBe(9);
-    expect(D).toBe(3);
+    /**
+     * 🔴🔴 **CPO 가 적은 전제가 바뀌었다**(CORE-DESC-REVIEW · 2026-10-27) —
+     *    이 집합은 「SAME **9** · DIFFERENT **3**」이었으나 C06 이 DIFFERENT → SAME 으로
+     *    재라벨되어 **SAME 10 · DIFFERENT 2** 다. 🔴 그 전제를 쓰는 설계는 갱신해야 한다.
+     */
+    expect(S, "🔴 집합이 바뀌면 아래 분리가능성 결론의 분모가 바뀐다").toBe(10);
+    expect(D).toBe(2);
   });
 
   it("[전수 증거] 12건의 모든 축 값을 펼친다", () => {
@@ -67,12 +73,12 @@ describe("CORE-SAME-SPRINT-02 — 「Brand + 제품명」 집합의 분리가능
   });
 
   /**
-   * 🔴🔴🔴 **핵심 질문** — SAME 9 과 DIFFERENT 3 을 가르는 축이 있는가.
+   * 🔴🔴🔴 **핵심 질문** — SAME 10 과 DIFFERENT 2 를 가르는 축이 있는가.
    *
    * 🟢 방법 — 축마다 「SAME 쪽 값 집합」과 「DIFFERENT 쪽 값 집합」을 만들어
    *    **DIFFERENT 에만 나타나는 신호** 가 있는지 센다. 🔴 추측이 아니라 집합 연산이다.
    */
-  it("[분리가능성] DIFFERENT 3 에만 있는 신호가 존재하는가", () => {
+  it("[분리가능성] DIFFERENT 에만 있는 신호가 존재하는가", () => {
     const same = COHORT.filter((r) => r.p.human === "SAME");
     const diff = COHORT.filter((r) => r.p.human === "DIFFERENT");
 
@@ -103,7 +109,7 @@ describe("CORE-SAME-SPRINT-02 — 「Brand + 제품명」 집합의 분리가능
     if (perfect.length === 0) {
       console.log(
         `\n  🔴🔴 **현재 증거 어휘로는 이 12건을 가를 축이 없다.**\n` +
-          `     ⟹ 「SAME 9 유지 + DIFFERENT 3 차단」은 **지금 있는 신호의 조합으로는 불가능** 하다.\n` +
+          `     ⟹ 「SAME 유지 + DIFFERENT 차단」은 **지금 있는 신호의 조합으로는 불가능** 하다.\n` +
           `     🟢 그래서 CPO 가 ④(description Evidence Layer)를 연 것이 **정확한 방향** 이다 —\n` +
           `        **새 증거가 들어오지 않으면** 이 집합은 분리되지 않는다.\n` +
           `     🔴 threshold/NO_TITLE_OVERLAP 완화로는 **DIFFERENT 쪽이 같이 열린다**(WU-093 선례).`,
@@ -200,8 +206,13 @@ describe("CORE-SAME-SPRINT-02 — 「Brand + 제품명」 집합의 분리가능
       );
     }
     console.log(`  ⟹ 이 집합의 누출 **${leaked.length}** / DIFFERENT ${COHORT.filter((r) => r.p.human === "DIFFERENT").length}`);
-    /** 🟢 baseline 전체 FP 2 가 **이 집합 안에** 있다는 것이 CPO 판단의 근거였다. */
-    expect(leaked.length).toBe(2);
-    expect(leaked.map((r) => r.p.id).sort()).toEqual(["C06", "S1-6"]);
+    /**
+     * 🔴🔴 **근거가 바뀌었다.** 「baseline 전체 FP **2** 가 이 집합 안에 있다」가 CPO 판단의
+     *    근거였는데, C06 이 **human SAME 으로 재라벨**(CORE-DESC-REVIEW · 2026-10-27)되어
+     *    더는 누출이 아니다 ⟹ 🟢 남은 누출은 **S1-6 하나** 다(baseline FP **1** 과 일치).
+     * 🔴 「C06 이 FP 다」를 쓰는 서술은 **전부 낡았다**.
+     */
+    expect(leaked.length, "🔴 이 집합의 누출이 baseline FP(1)와 어긋났다").toBe(1);
+    expect(leaked.map((r) => r.p.id).sort()).toEqual(["S1-6"]);
   });
 });

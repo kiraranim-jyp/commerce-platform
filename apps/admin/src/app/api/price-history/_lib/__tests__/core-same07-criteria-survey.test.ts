@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { SAME05_PAIRS, isSystemSame, same05Judge } from "./core-same05-gt";
+import { SAME05_BASELINE, SAME05_PAIRS, isSystemSame, same05Judge } from "./core-same05-gt";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════════
@@ -157,8 +157,8 @@ describe("CORE-SAME-07 ② CPO 요구의 «분모» 를 GT 에서 센다", () =>
         `  🔴 CPO 성공 기준은 「SAME 몇 건」이 아니라 **누출 0 + 과잉 폐기 최소** 다 —\n` +
         `     지금은 **회수가 낮고 누출이 2** 다(그 2 는 알려진 False EXACT: C06 · S1-6)`,
     );
-    expect(tp).toBe(5);
-    expect(fp).toBe(2);
+    expect(tp).toBe(6);
+    expect(fp).toBe(SAME05_BASELINE.fp);
   });
 });
 
