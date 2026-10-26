@@ -11,13 +11,13 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-PRICE-SAME-05** — 🟡 **STEP 1~4 반사실 측정 완료 · 구현 «전» 에 STOP**
-NEXT         🔴 **CPO 판정** — P0 전제가 반증됐다(§9-C) · leakage **측정불가** ⟹ 통합 미승인
-CEO ACTION   🟡 **없다**
+CURRENT WU   **CORE-PRICE-SAME-06** — 🔴 **STOP: P1/P2 안전성 분모 확보 불가**(§9-D)
+NEXT         🟡 **CEO 가 「다른제품」을 라벨해야 열린다** — 기존 데이터로는 구조적으로 불가
+CEO ACTION   🟡 **조건부 1회** — 국내 후보(brand 공백·절단 품번)에서 DIFFERENT 라벨 확보(§9-D)
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SAME-03**(화면 + CEO GT 10/10) · **SAME-04**(FN 3건 원인 확정)
 Git          clean · origin/main 0/0 · Production / 200
-회귀         **684 files / 9,256 passed / 0 failed** · typecheck 0 · build 0
+회귀         **685 files / 9,261 passed / 0 failed** · typecheck 0 · build 0
 ```
 
 🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **CPO 판정** 이다 — matcher 를 CTO 가 열지 않는다.
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-PRICE-SAME-05 — 반사실 측정 **완료** · 구현 전 STOP(§9-C) · **CPO 판정 대기**
+CURRENT    CORE-PRICE-SAME-06 — P1/P2 안전성 분모 **확보 불가** STOP(§9-D) · **CPO 판정 대기**
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -478,6 +478,85 @@ core-same05-counterfactual 7   축별 반사실 · **발화 확인 단언** · �
 ⒞ 발화 쌍을 DIFFERENT 로 단언(실제 **SAME** ⟹ leakage 측정불가가 드러났다)
 ⒟ `all` 모드에서 **음역이 brand 추론보다 먼저** 돌아 브랜드 토큰을 없앴다
    ⟹ 「셋을 합쳐도 SAME 0」이라는 거짓이 될 자리였다(**brand → code → title** 로 고정).
+
+---
+
+## 9-D. 🔴🔴 **CORE-PRICE-SAME-06 — STOP: P1/P2 안전성 분모 확보 불가**(운영 변경 0)
+
+> 🔴 §7 의 STOP 조건이 **전수 검색으로 확정** 됐다. 새 DIFFERENT GT 를 **만들지 않았다**(§2).
+> 🔴 운영 코드 **0** · 새 fixture **0** · matcher **0**.
+
+### 🟢 검색 범위 — **fixture 15개 전수 · 미분류 0**
+
+```
+수집 10 · 제외 6(이유를 각각 적었다) · 🔴 미분류 **0**(계약으로 단언)
+제외 사유 — wu-093 **URL 없음**(SKU 키) · wu-099/100 **가치 라벨**(원상품 B226AC112) ·
+            wu-067 라벨 없음 · wu-074 probe 전용
+수집 결과 — 행 **102** · 고유 URL **70**
+기존 라벨 — SAME **60** · DIFFERENT **28** · UNDETERMINED **14** · 해석 실패 **0**
+DIFFERENT 출처 — wu-059:7 · wu-112:6 · core-2al:6 · wu-125:4 · wu-068:3 · core-2m:1 · wu-116:1
+```
+
+### 🔴🔴🔴 전수 교차표 — **발화 × 사람 라벨**(고유 URL 70 · 읽기 실패 3)
+
+| 발화 | SAME | **DIFFERENT** | UNDETERMINED | 충돌 | 합 |
+|---|---:|---:|---:|---:|---:|
+| P1 BRAND | 1 | **0** | 0 | 0 | 1 |
+| P2 MODEL_CODE | 0 | **0** | 0 | 0 | 0 |
+| P1+P2 | 1 | **0** | 0 | 0 | 1 |
+| 발화 없음 | 31 | 22 | 8 | 4 | 65 |
+| 측정불가 | 1 | 0 | 1 | 1 | 3 |
+
+```
+발화한 후보는 **둘뿐이고 둘 다 SAME** 이다 — `beaumonde.co.kr`(P1) · `donokids.com`(P1+P2)
+🔴 Case A(P1×DIFFERENT) **0** · Case B(P2×DIFFERENT) **0** · Case C **0**
+⟹ 🔴🔴 **leakage 를 측정할 분모가 코퍼스 전체에 존재하지 않는다.**
+```
+
+### 🔴🔴 왜 구조적으로 0 인가 — **추측이 아니라 실측**
+
+```
+① P1 은 **후보 brand 가 null 일 때만** 발화한다(선언된 값을 덮지 않는 §6 계약).
+   🔴 그런데 기존 DIFFERENT 16/16 이 **brand 를 이미 들고 있다**(전부 "Bobo Choses"/"BOBO CHOSES")
+   🟢 이유도 확인됐다 — `lookupBrandByAliasInTitle` 가 **이미 운영에 배선** 돼 있다
+      (`product-url-facts.ts:250`) ⟹ 그 사이트들은 og:title 에서 브랜드가 채워진다
+   ⟹ 🔴 **P1 은 기존 DIFFERENT 에서 발화할 수 없다**(가드가 아니라 데이터 성질이다)
+② P2 는 **절단형 품번**(`#226AC009` — 「B」 없음)이 제목에 있을 때만 발화한다.
+   🔴 그 표기는 **국내 고도몰 계열(donokids)에서만** 관측됐고, 그런 후보에
+      **DIFFERENT 라벨이 하나도 없다**(국내 후보의 CEO 라벨은 SAME 5 · 판단불가 5)
+```
+
+### 🔴 §13 GO 조건 대조
+
+| 축 | 발화 분모 | DIFFERENT | leakage | 판정 |
+|---|---:|---:|---:|---|
+| P1 BRAND | 1 (SAME) | **0** | — | 🔴 **측정불가** |
+| P2 MODEL_CODE | 1 (SAME) | **0** | — | 🔴 **측정불가** |
+| 통합 | 1 (SAME) | **0** | — | 🔴 **측정불가** |
+
+🔴 **GO 도 NO-GO 도 아니다 — 측정불가** 다. §9 규칙대로 **0 으로 처리하지 않는다.**
+
+### 🔵 이것을 여는 길 — **CEO 라벨 하나뿐**(CTO 가 만들 수 없다)
+
+```
+🔴 CTO 가 새 DIFFERENT 를 만들면 그것은 §2 위반이고, CPO 가 원한 「사람이 실제 상품을
+   보고 내린 GT」가 아니다.
+🟡 필요한 것은 **「brand 가 공백이거나 품번이 절단형인 국내 후보」 중 CEO 가 «다른제품»
+   이라 판정하는 것** 이다. 🟢 화면과 하니스는 이미 있다:
+     docs/core-same03-domestic-review.html  (`CORE_SAME03_LIVE=1` 로 재생성)
+     core-same06-safety-gt-search           (발화 검색 · 전수 교차표)
+🔴 단 현재 국내 후보 10건의 CEO 라벨은 **SAME 5 · 판단불가 5 · DIFFERENT 0** 이다 ⟹
+   **후보를 더 넣어야** 하고, 그 공급은 §7 ABSOLUTE FREEZE(discovery) 밖의 일이다
+   ⟹ 🔴 **CPO 범위 결정 사안.**
+```
+
+### 🟢 재사용 하니스 (네트워크 0 · CI 상주)
+
+```
+core-same06-safety-gt-search  4   검색 범위 전수(미분류 0 단언) · 라벨 분포 · offline 발화 · 라이브 대상
+🔴 라이브 — `CORE_SAME06_LIVE=1`(기존 DIFFERENT 17건 발화) ·
+            `CORE_SAME06_FULL=1`(고유 URL 70 전수 교차표)
+```
 
 ---
 
