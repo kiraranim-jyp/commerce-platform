@@ -6,11 +6,20 @@ import {
   confirmBrandCodeInTitle,
   deriveMatchTruth,
   enrichCandidatePrices,
+  extractFromJsonLd,
   fetchDomesticModelCode,
   isSelfReferenceCandidate,
   withConfidence,
 } from "@commerce/crawler";
 import type { ProductFacts } from "@commerce/shared";
+/** 🔵 STEP 5-E2R-LIVE — 운영이 쓰는 그 추출기들(규칙 신설 0 · §STEP 5-E2R 와 동일). */
+import {
+  extractFitPhrase,
+  extractLabeledProductCode,
+  extractLeadingColorPhrase,
+  parseMaterialComposition,
+} from "@commerce/shared";
+import { extractColor } from "@commerce/crawler/src/description-facts";
 import { domesticMatchDisplay } from "../../../../pipeline/commerce/match-display";
 import type { ExtractedProductData, ProductDataSource } from "@commerce/crawler";
 import { buildCrossSellerSearchQueries, buildProductIdentityDna, productFactsFromIdentityDna } from "@commerce/shared";
@@ -160,6 +169,8 @@ describe("CORE-NEXT STEP 5-1/5-2 — 국내 참고가격 lineage", () => {
         string,
         { modelCodeEvidence?: string | null; matchedModelName?: string | null; colorText?: string | null }
       >();
+      /** 🔵 STEP 5-E2R-LIVE — 상세설명 반사실에 쓸 **운영 산출 facts**(사본 0). */
+      const factsByUrl = new Map<string, ProductFacts>();
       const byUrl = new Map<string, Row>();
       for (const g of c.gt) {
         byUrl.set(loose(g.url), {
@@ -236,6 +247,7 @@ describe("CORE-NEXT STEP 5-1/5-2 — 국내 참고가격 lineage", () => {
          */
         for (const cand of priced) {
           const cf = cand as unknown as { facts?: ProductFacts; title?: string; url?: string };
+          if (cf.facts && cf.url) factsByUrl.set(loose(cf.url), cf.facts);
           if (!cf.facts || !query.facts) continue;
           const codeNow = compareModelCode(
             (query.facts as ProductFacts).brandModelCode,
@@ -308,6 +320,76 @@ describe("CORE-NEXT STEP 5-1/5-2 — 국내 참고가격 lineage", () => {
           r.price = row.priceAmount != null ? `${row.priceCurrency} ${row.priceAmount}` : null;
           r.priceConfirmed = isPriceConfirmed(row);
         }
+      }
+
+      /**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔵🔵🔵 STEP 5-E2R-LIVE — **상세설명이 biskuit ↔ luxboy 를 가르는가**
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * 🔴 CPO 지시(2026-10-26) — 「대상은 정확히 3건(biskuit · luxboy · donokids) ·
+       *    목적은 하나 — **상세설명 증거가 두 후보를 실제로 분리하는가**」.
+       * 🔴 **운영 코드 0** — 반사실은 §STEP 5-E2R 에서 발화를 확인한 **그 로컬 복제** 다
+       *    (운영 추출기를 그대로 부른다 · 규칙 신설 0 · `coreTitleTokens` 재파생 0).
+       * 🔴 기존 분모·경로를 **그대로** 둔다 — 이 블록은 위 판정에 **아무 영향이 없다**
+       *    (읽기만 한다 · `rows`/집계/참고가격에 들어가지 않는다).
+       */
+      for (const g of c.gt) {
+        const candFacts = factsByUrl.get(loose(g.url));
+        if (!candFacts || !query.facts) {
+          console.log(`   🔵 E2R-LIVE ${g.url.slice(0, 48)} — 🔴 facts 없음(측정불가)`);
+          continue;
+        }
+        let html = "";
+        try {
+          const r2 = await fetch(g.url, {
+            headers: { "user-agent": "Mozilla/5.0 (compatible; ttaejyo-measure)" },
+          });
+          html = r2.ok ? await r2.text() : "";
+        } catch {
+          html = "";
+        }
+        const desc = (extractFromJsonLd(html)?.description ?? "")
+          .replace(/<[^>]*>/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+        const withDesc: ProductFacts = {
+          ...candFacts,
+          colorText:
+            candFacts.colorText ?? extractLeadingColorPhrase(desc) ?? extractColor(desc) ?? null,
+          materialText:
+            candFacts.materialText ?? (parseMaterialComposition(desc).length > 0 ? desc : null),
+          fitText: candFacts.fitText ?? extractFitPhrase(desc) ?? null,
+          brandModelCode: candFacts.brandModelCode ?? extractLabeledProductCode(desc) ?? null,
+        };
+        const judgeWith = (f: ProductFacts) => {
+          const cross = compareCrossSellerProducts(query.facts as ProductFacts, f);
+          /** 🔴 품번 축은 **제목 건초더미** 도 본다(운영 :687) — 그 값을 같이 쓴다. */
+          const t = confirmBrandCodeInTitle(dna.brandModelCode, candFacts.title ?? "");
+          const code = t
+            ? compareModelCode(dna.brandModelCode, t)
+            : compareModelCode((query.facts as ProductFacts).brandModelCode, f.brandModelCode);
+          const truth = deriveMatchTruth("low", code, cross.verdict, cross.blockers, cross.conflicts, !f.colorText);
+          return { code, truth, display: domesticMatchDisplay(truth).tier, blk: cross.blockers.map((b) => b.blocker) };
+        };
+        const b4 = judgeWith(candFacts);
+        const af = judgeWith(withDesc);
+        const host = (() => {
+          try {
+            return new URL(g.url).hostname;
+          } catch {
+            return "?";
+          }
+        })();
+        console.log(
+          `   🔵 E2R-LIVE ${host} human=${g.human} desc=${desc ? desc.length + "자" : "**없음**"}` +
+            ` | base ${b4.code}/${b4.display} [${b4.blk.join(",")}]` +
+            ` → +desc ${af.code}/${af.display} [${af.blk.join(",")}]` +
+            ` | 새 칸 color=${!candFacts.colorText && !!withDesc.colorText}` +
+            ` material=${!candFacts.materialText && !!withDesc.materialText}` +
+            ` fit=${!candFacts.fitText && !!withDesc.fitText}` +
+            ` code=${!candFacts.brandModelCode && !!withDesc.brandModelCode}`,
+        );
       }
 
       /* ── ④ 두 축을 «운영이 쓰는 그 함수» 로 각각 계산한다 ── */

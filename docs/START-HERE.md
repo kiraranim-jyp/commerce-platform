@@ -10,7 +10,7 @@
 ## 1. CURRENT STATE
 
 ```
-현재        🔴🔴 **STEP 5-E2 재측정 완료 — CASE B(축별로 갈린다) · AC009 분기는 미측정 · STEP 5-1·5-2 완료 — 「SAME 아닌 후보의 가격이 국내 참고가격에 있다」가
+현재        🔴🔴 **STEP 5-E2 종료 — CASE C(위험) · description 연결 금지(AC009 실측) · STEP 5-1·5-2 완료 — 「SAME 아닌 후보의 가격이 국내 참고가격에 있다」가
                실측됐다**(§6-STEP5) ⟹ 🟡 **CPO 판정 2건 대기 · STEP 5-3 착수 금지**
             🔴 반사실 — 「SAME 만 허용」하면 **AC009 국내 가격이 사라진다**(1 → 0 · 실측)
             🟢 STEP 4 구현·배포 완료(`6fe1b0bf`) — 남은 것은 **CEO 화면 확인 1회**(§6-NEXT ⑦)
@@ -237,7 +237,44 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
-## 6-STEP5-E2R. 🟢🔴 **STEP 5-E2 재측정 — 반사실 «발화함» · CASE B(축별로 갈린다)**
+## 6-STEP5-E2R-LIVE. 🔴🔴🔴 **AC009 실측 — description 이 정답을 «악화» 시킨다 ⟹ 연결 금지**
+
+> 🔴 **운영 코드 0 · DB 0 · 배포 0.** 기존 live 하니스의 분모·경로 그대로 + §E2R 의 **같은
+> 로컬 복제**(운영 추출기 호출 · 규칙 신설 0 · `coreTitleTokens` 재파생 0).
+> 🔴 이 블록은 **읽기만** 한다 — `rows`·집계·참고가격·판정에 **들어가지 않는다**.
+
+```
+biskuit.kr   human **SAME**      desc 258자
+   base  exact/PRESUMED_SAME [BRAND_MISMATCH, NO_TITLE_OVERLAP]
+   +desc exact/PRESUMED_SAME [BRAND_MISMATCH, **COLOR_VARIANT**, NO_TITLE_OVERLAP]
+   🔴 **blocker 가 하나 늘었다**(상세에서 색상이 새로 생겨 COLOR_VARIANT 발화) · 등급 불변
+m.luxboy.com human **DIFFERENT** desc 52자 — 변화 **0**(새 칸 0)
+donokids.com 라벨없음            desc 44자 — 변화 **0**(새 칸 0)
+beaumonde    human SAME          desc **없음** — 변화 0(이미 SAME · EXACT)
+```
+
+### 🔴 CPO 판정 기준 대조 — **「biskuit 도 개선되지 않음」에 해당**
+
+```
+❌ biskuit 개선 + luxboy 악화 없음  → biskuit 이 **악화** 됐다(blocker +1)
+❌ biskuit 와 luxboy 가 같이 열림    → 둘 다 **안 열렸다**
+✅ **biskuit 도 개선되지 않음 ⟹ description 연결 금지**
+—  donokids 오판 확대 **없음**(변화 0)
+⟹ 🔴🔴 **CASE C(위험)로 닫는다** — §E2R 의 S1-1 과 **같은 기전**(상세에서 색상이 생겨
+   COLOR_VARIANT)이 **AC009 의 정답 후보에서 재현** 됐다(2건 연속 · 우연이 아니다).
+```
+
+🟢 **이 트랙이 증명한 것** — 「상품명 + 상세설명」은 **전략으로는 맞지만 현재 구조에서는
+SAME 판별력을 높이지 않는다.** 상세에서 뽑은 색상/핏은 원상품과 어긋나면 **곧 blocker** 이고
+그 어긋남이 **정답에서도 난다**(biskuit — 원상품 `Light blue` ↔ 상세 색상).
+🔴 즉 병목은 「description 을 넣는가」가 아니라 **색상/핏 축이 「다른 상품」과 「다른 표기」를
+가르지 못하는 것** 이다 — 그것은 **8축 정책** 이고 CPO 판정 사안이다.
+
+🔴 **STEP 5-3 · C3 · SAME-only 국내가격 · IMAGE — 전부 HOLD 유지.**
+
+---
+
+## 6-STEP5-E2R. 🟢🔴 **[저장 GT] STEP 5-E2 재측정 — 반사실 «발화함» · CASE B**
 
 > 🔴 **운영 코드 0 · DB 0 · 배포 0.** 반사실을 **하니스 안에서 로컬 복제**(CPO 승인 조건) —
 > 운영이 쓰는 추출기(`extractLeadingColorPhrase`·`extractColor`·`parseMaterialComposition`·
