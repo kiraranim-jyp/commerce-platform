@@ -281,11 +281,26 @@ describe("D. 🔴 CPO §9 FAIL 조건", () => {
     /**
      * 🔴🔴 CORE-2AO-R2 — 이제 **1차에 아예 없다**(상세로 내려갔다) ⟹ 「먼저 보일」
      *    길이 구조적으로 없다. 🟢 그 사실을 **그대로** 단언한다(순서보다 강한 조건).
+     *
+     * ── 🔵🔵🔵 CORE-UX-SELLER-02 — **숫자는 1차로 돌아왔고, 문장은 상세에 남았다**
+     * ```
+     * 🔴 CPO 확정(2026-10-26) — 셀러가 1차에서 「KRW 88,000」만 보고 **그 가격을 동일상품으로
+     *    확인한 곳이 0** 임을 못 보는 것이 CEO 가 지목한 모순이었다 ⟹ **숫자 한 줄** 을 올린다.
+     * 🟢 이 단언의 **원래 목적(「0곳」이 가격보다 먼저 보이지 않는다)은 그대로** 다 —
+     *    「없다」로 먼저 읽히는 것을 막는 것이고, 그래서 **순서로** 다시 문다(아래 index 비교).
+     * 🔴 그리고 **문장은 여전히 1차 금지** 다(`DOMESTIC_SAME_NOT_CONFIRMED`) — 게이트를
+     *    풀었는지 그 줄이 잡는다. ⟹ 약화가 아니라 **층 분리** 다.
+     * ```
      */
     const first = firstScreen(ceoScreen());
     expect(first).toContain("KRW 88,000");
     expect(first, "🔴 「확정 없음」이 1차로 되돌아왔다").not.toContain(DOMESTIC_SAME_NOT_CONFIRMED);
-    expect(first, "🔴 「동일상품 확인 0곳」이 1차로 되돌아왔다").not.toContain("동일상품 확인 0곳");
+    /** 🟢 숫자는 **1차에 있다** · 🔴 단 **가격보다 뒤** 여야 한다(원래 목적 그대로). */
+    expect(first, "🔴 동일상품 확인 수가 1차에서 사라졌다").toContain("동일상품 확인 0곳");
+    expect(
+      first.indexOf("KRW 88,000"),
+      "🔴 「동일상품 확인 0곳」이 가격보다 먼저 온다 — 셀러가 「없다」로 읽는다",
+    ).toBeLessThan(first.indexOf("동일상품 확인 0곳"));
     /** 🟢 단 **사라지지는 않았다** — 상세에 그대로 있다. */
     const whole = (ceoScreen().textContent ?? "").replace(/\s+/g, " ");
     expect(whole).toContain(DOMESTIC_SAME_NOT_CONFIRMED);

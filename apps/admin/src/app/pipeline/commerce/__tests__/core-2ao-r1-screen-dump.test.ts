@@ -18,6 +18,8 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { MarketPriceComparison } from "../MarketPriceComparison";
+/** 🔵 CORE-UX-SELLER-02 UX-05 — 「그 상수가 **그려지는가**」를 보려면 상수 자체가 필요하다. */
+import { MI_SAME_AREA_SCOPE } from "../mi-same-candidates";
 import type { GeminiTransientRow } from "../GeminiTransientCandidates";
 import type { OverseasPriceSummary } from "../overseas-reference";
 
@@ -94,6 +96,14 @@ function firstScreen(): string {
   const clone = container.cloneNode(true) as HTMLElement;
   for (const d of [...clone.querySelectorAll("details")]) if (!d.hasAttribute("open")) d.remove();
   return (clone.textContent ?? "").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * 🟢 **접힘까지 포함한 전체 글자.** 🔴 `firstScreen()` 과 **짝** 으로 쓴다 — 「1차에 없다」만
+ *    단언하면 **삭제** 와 **상세로 이동** 을 가를 수 없다(이동이 정책이고 삭제는 아니다).
+ */
+function allText(): string {
+  return (container.textContent ?? "").replace(/\s+/g, " ").trim();
 }
 
 describe("CORE-2AO-R1 — 배포 전 화면 실측(마운트 DOM)", () => {
@@ -180,9 +190,24 @@ describe("CORE-2AO-R2 — 첫 화면에 «긴 설명» 이 남아 있지 않다"
    *    「짧아졌다」 같은 주관적 기준을 쓰면 다음 사람이 다시 늘린다.
    */
   const MUST_NOT_BE_ON_FIRST_SCREEN = [
-    /** ① 동일상품 여부에 대한 긴 설명 */
-    "동일상품 확인 0곳",
+    /**
+     * ① 동일상품 여부에 대한 긴 **설명**
+     *
+     * 🔵🔵 **CORE-UX-SELLER-02 에서 방향이 갈렸다 — 약해진 것이 아니다**(CPO 확정 2026-10-26):
+     * ```
+     * 🔴 전까지 이 목록에 「동일상품 확인 0곳」(**숫자 한 줄**)이 들어 있었다. 그래서
+     *    셀러는 1차에서 「KRW 88,000 · 확인 1곳」만 읽고 **그 가격을 동일상품으로 확인한
+     *    곳이 0** 이라는 사실을 **볼 수 없었다** — 그것이 CEO 가 지목한 모순이다.
+     * 🟢 CPO 가 가른 축 = **「숫자는 1차 · 문장은 상세」** ⟹ **숫자 한 줄만** 1차로 올린다.
+     * 🔴 **문장은 그대로 금지** 다(바로 아래 statusLine · 🔎 머리말) · `{!isSummary}` ·
+     *    `{!compact}` 게이트도 **풀지 않았다**.
+     * 🟢 그리고 **양방향으로 잠근다** — R2-1b 가 「그 숫자가 1차에 **있다**」를 단언한다
+     *    ⟹ 숫자를 상세로 되돌리면 **R2-1b 가 FAIL** 한다.
+     * ```
+     */
     "동일상품으로 확정된 국내 판매처는 없습니다",
+    /** 🔴 축 머리말(🔎)은 **상세 전용** 이다 — 1차에 오면 2AO-R2 가 뺀 블록이 되돌아온다. */
+    "🔎 동일상품 확인",
     /** ② 가격 판단 기준 설명 */
     "판매처 상세 페이지에서 확인한",
     /** ③ 통화가 여러 개라는 설명 */
@@ -205,6 +230,67 @@ describe("CORE-2AO-R2 — 첫 화면에 «긴 설명» 이 남아 있지 않다"
     for (const bad of MUST_NOT_BE_ON_FIRST_SCREEN) {
       expect(first, `🔴 첫 화면에 긴 설명이 남았다: ${bad}`).not.toContain(bad);
     }
+  });
+
+  /**
+   * 🔵🔵🔵 CORE-UX-SELLER-02 — **그 «숫자» 는 1차에 «있어야» 한다**(R2-1 의 반대쪽 잠금)
+   *
+   * 🔴 이것이 없으면 R2-1 의 완화가 **그냥 완화** 가 된다 — 숫자를 상세로 되돌려도
+   *    아무 계약이 울지 않는다. 🟢 그래서 **양방향** 으로 문다.
+   * 🔴 그리고 **문장이 같이 올라오지 않았는지** 를 같은 자리에서 확인한다 —
+   *    「숫자는 1차 · 문장은 상세」가 이 WU 의 정책 전부다.
+   */
+  it("🟢🟢 R2-1b 「동일상품 확인 N곳」이 **1차에 있고** 문장은 **상세에만** 있다", () => {
+    mount();
+    const first = firstScreen();
+    /** 🔴 글자를 직접 단언한다 — 상수를 import 해서 비교하면 **동어반복** 이다(메모 그 함정). */
+    expect(first, "🔴 동일상품 확인 수가 1차에서 사라졌다 — CEO 가 본 그 모순으로 되돌아간다").toContain(
+      "동일상품 확인 0곳",
+    );
+    /** 🟢 가격과 **같은 화면** 에 있어야 한다(그 둘이 같이 읽혀야 모순이 풀린다). */
+    expect(first, "🔴 국내 참고가격이 1차에서 사라졌다").toContain("국내 참고가격");
+    expect(first, "🔴 확인 건수가 1차에서 사라졌다").toContain("확인 1곳");
+    /** 🔴 문장은 **여전히 상세에만** — 게이트를 풀었는지 여기서 잡는다. */
+    expect(first, "🔴 근거 «문장» 이 1차로 올라왔다(게이트가 풀렸다)").not.toContain(
+      "동일상품으로 확정된 국내 판매처는 없습니다",
+    );
+    expect(allText(),"🔴 근거 문장이 상세에서도 사라졌다 — 이동이 아니라 삭제가 됐다").toContain(
+      "동일상품으로 확정된 국내 판매처는 없습니다",
+    );
+  });
+
+  /**
+   * 🔴🔴 CORE-UX-SELLER-02 UX-04 — **「시장 참고가격」은 금지 리터럴이다**(wu-145 목록).
+   *    이유는 취향이 아니라 **충돌** 이다 — 「참고가격」을 `MI_SAME_AREA_SCOPE`/`wu-056r1` 이
+   *    **유사상품 포함 참고 축** 의 뜻으로 이미 쓴다 ⟹ 같은 말이 두 뜻이 된다.
+   */
+  it("🔴 R2-1c 금지 리터럴 「시장 참고가격」이 **화면 어디에도 없다**", () => {
+    mount();
+    expect(allText(),"🔴 wu-145 금지 리터럴이 들어왔다").not.toContain("시장 참고가격");
+  });
+
+  /**
+   * 🔴🔴🔴 CORE-UX-SELLER-02 UX-05 — **`MI_SAME_AREA_SCOPE` 가 실제로 «렌더» 된다**
+   *
+   * 🔴🔴 **이 단언은 변이가 찾아낸 구멍을 메운다.** M5(그 `<p>` 를 `{false && …}` 로 죽임)가
+   *    **통과했다** — 기존 계약 둘이 그것을 못 봤기 때문이다:
+   * ```
+   * core-2ao-r1 금지목록  「이 목록은 동일상품으로」가 **1차에 없다**  ← 부정만 본다
+   * wu-145:264           `MI_SAME_AREA_SCOPE.length > 0`           ← 🔴 **상수만** 본다(동어반복)
+   * ⟹ 둘 다 「그 문장이 화면에 실제로 선다」를 보지 않았다
+   * ```
+   * 🟢 그래서 **마운트 DOM 으로** 단언한다 — 그 문장이 **상세에 있고 1차에는 없다**.
+   *    🔴 여기서는 상수를 쓰는 것이 맞다 — 지키는 성질이 「**그 상수가 그려진다**」이기
+   *       때문이다(문구 «확정» 이 아니라 **배선** 을 문다).
+   */
+  it("🟢🟢 R2-1d `MI_SAME_AREA_SCOPE` 가 **상세에 렌더되고 1차에는 없다**", () => {
+    mount();
+    expect(allText(), "🔴 동일상품 영역 범위 설명이 화면에서 사라졌다(M5 가 뚫은 그 구멍)").toContain(
+      MI_SAME_AREA_SCOPE,
+    );
+    expect(firstScreen(), "🔴 그 설명이 1차로 올라왔다(긴 설명 금지)").not.toContain(
+      MI_SAME_AREA_SCOPE,
+    );
   });
 
   it("🟢🟢 R2-2 1차는 **세 블록** 이다 — 국내 · 해외 · 판매가격 가이드", () => {

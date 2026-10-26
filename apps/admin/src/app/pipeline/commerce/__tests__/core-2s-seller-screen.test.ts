@@ -159,19 +159,35 @@ describe("A. 🇰🇷 국내 — 가격이 먼저, 판정이 뒤", () => {
   /**
    * 🔴🔴 **CORE-2AO-R2 — 두 줄이 «다른 층» 으로 갈렸다**(CPO 2026-10-26).
    *    가격은 **1차**, 「동일상품 확인 0곳」은 **＋ 상세정보 보기** 안이다 ⟹ 한 블록
-   *    안의 순서로는 더 못 잰다. 🟢 **지키는 성질은 더 세졌다** — 셀러가 「0곳」을
-   *    보려면 **접힘을 열어야** 하므로 「없다」로 먼저 읽을 길이 구조적으로 없다.
+   *    안의 순서로는 더 못 잰다.
+   *
+   * ── 🔵🔵🔵 CORE-UX-SELLER-02 — **다시 «같은 층» 이 됐고, 그래서 순서가 핵심으로 돌아왔다**
+   * ```
+   * 🔴 CPO 확정(2026-10-26) — 「숫자는 1차 · 문장은 상세」. 「동일상품 확인 N곳」(**숫자**)이
+   *    가격 바로 아래 **1차** 에 선다 ⟹ 두 줄이 **나란히** 있으므로 2AO-R2 때 느슨해졌던
+   *    **순서 단언이 다시 실제 방어선** 이다(가격이 먼저여야 「없다」로 안 읽힌다).
+   * 🟢 그래서 아래 단언을 **셋으로** 늘렸다 — ⒜ 순서(가격 먼저) ⒝ **숫자는 1차에 있다**
+   *    ⒞ **문장은 1차에 없다**. 🔴 ⒝⒞ 를 같이 둬야 「완화」가 아니라 «층 분리» 가 된다.
+   * ```
    */
-  it("A-2 🔴🔴 가격이 「동일상품 확인」보다 **먼저** 온다(이제 층이 다르다)", () => {
+  it("A-2 🔴🔴 가격이 「동일상품 확인」보다 **먼저** 온다 · 숫자는 1차 · 문장은 상세", () => {
     const el = mount({ rows: ROWS, domesticReference: KR_REF });
     const html = el.innerHTML;
     const price = html.indexOf('data-testid="domestic-lowest"');
+    const count = html.indexOf('data-testid="market-same-count-domestic"');
     const same = html.indexOf('data-testid="market-empty-domestic"');
     expect(price, "🔴 1차에 국내 가격이 없다").toBeGreaterThan(-1);
-    expect(same, "🔴 「동일상품 확인 0곳」이 사라졌다(상세에도 없다)").toBeGreaterThan(-1);
-    expect(price, "🔴 「동일상품 확인 0곳」이 가격보다 먼저 온다 — 셀러가 「없다」로 읽는다").toBeLessThan(same);
-    /** 🔴 그리고 그 줄은 **1차에 없어야** 한다(R2 의 핵심). */
-    expect(firstScreen(el)).not.toContain("동일상품 확인 0곳");
+    expect(count, "🔴 1차의 「동일상품 확인 N곳」 숫자 줄이 사라졌다").toBeGreaterThan(-1);
+    expect(same, "🔴 「동일상품 확인 0곳」 근거 문장이 사라졌다(상세에도 없다)").toBeGreaterThan(-1);
+    /** ⒜ 🔴 가격이 **먼저** 다 — 되돌리면 셀러가 「0 이니까 가격도 없다」로 읽는다. */
+    expect(price, "🔴 동일상품 확인 수가 가격보다 먼저 온다 — 셀러가 「없다」로 읽는다").toBeLessThan(count);
+    /** ⒝ 🟢 **숫자는 1차에 있다**(CORE-UX-SELLER-02 의 목적). */
+    expect(firstScreen(el), "🔴 동일상품 확인 수가 1차에서 사라졌다").toContain("동일상품 확인 0곳");
+    /** ⒞ 🔴 **문장은 1차에 없다** — 게이트를 풀었는지 여기서 잡는다. */
+    expect(
+      firstScreen(el),
+      "🔴 근거 «문장» 이 1차로 올라왔다(CORE-2AO-R2 게이트가 풀렸다)",
+    ).not.toContain("동일상품으로 확정된 국내 판매처는 없습니다");
   });
 
   /**

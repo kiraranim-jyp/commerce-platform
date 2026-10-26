@@ -53,6 +53,11 @@ import {
   PRICE_LINK_TEXT,
   buildPriceGuide,
   priceGuideCountNote,
+  /**
+   * 🔵 CORE-UX-SELLER-02 — **1차의 「동일상품 확인 N곳」 어휘 owner.** 🔴 새로 만들지
+   *    않는다(이 상수가 이미 `priceGuideCountNote` · `marketEmptyNote` 와 **같은 말** 을 쓴다).
+   */
+  SAME_CONFIRMED_COUNT_LABEL,
   marketPriceHeadline,
   marketPriceHeadlineLabel,
   SALE_STATE_TEXT,
@@ -1078,6 +1083,42 @@ function MarketBlock({
                   showTierNote: false,
                 })}
           />
+          {/**
+           * ══════════════════════════════════════════════════════════════════
+           * 🔵🔵🔵 CORE-UX-SELLER-02 — **숫자는 1차 · 문장은 상세**(CPO 확정 2026-10-26)
+           * ══════════════════════════════════════════════════════════════════
+           *
+           * 🔴🔴 **고치는 모순이 무엇인지 먼저 적는다**(마운트 DOM 실측):
+           * ```
+           * 1차   「🇰🇷 국내 참고가격 KRW 88,000 · 확인 1곳」        ← 셀러가 본다
+           * 상세  「🔎 동일상품 확인 0곳 — …」                        ← 🔴 펼치지 않으면 못 본다
+           * ⟹ 셀러는 「가격이 있다」만 읽고 **그 가격을 동일상품으로 확인한 곳이 0** 이라는
+           *    사실을 **볼 수 없었다**. 그것이 CEO 가 지목한 모순이다.
+           * ```
+           *
+           * 🟢🟢 **그런데 CORE-2AO-R2 와 충돌하지 않는다 — 축이 다르다**:
+           * ```
+           * 2AO-R2 가 1차에서 뺀 것 = **문장**(statusLine · marketEmptyNote 의 사유)
+           * 이 WU 가 1차에 세우는 것 = **숫자 한 줄**(「동일상품 확인 0곳」)
+           * ⟹ 아래 `{!isSummary}` 게이트를 **풀지 않는다** — 문장은 상세에 그대로 있다
+           * ```
+           *
+           * 🔴 **새 어휘 0** — `SAME_CONFIRMED_COUNT_LABEL`(mi-same-candidates.ts:372)을
+           *    그대로 쓴다. 🔴 `SAME_CHECK_HEADING`(「🔎 …」)을 쓰지 않는다 — 그쪽은
+           *    **상세 머리말** 이고 1차로 올리면 2AO-R2 가 뺀 그 블록이 되돌아온다.
+           * 🔴 **새 계산 0** — 이 분기가 이미 들고 있는 `g.sameCount` 를 그대로 읽는다.
+           * 🔴 **새 블록 0** — 기존 🇰🇷/🌎 블록 **안** 의 한 줄이다(`R2-2` 「1차는 세 블록」 유지).
+           * 🟢 이 분기는 `g.sameCount === 0` 안이라 그 숫자가 **항상 0** 이다 — 그래도
+           *    상수를 거쳐 **값으로** 적는다(「0곳」을 손으로 박으면 분기가 바뀔 때 거짓이 된다).
+           */}
+          {isSummary && (
+            <p
+              data-testid={`market-same-count-${suffix}`}
+              className="mt-0.5 text-[11px] text-text-tertiary"
+            >
+              {`${SAME_CONFIRMED_COUNT_LABEL} ${g.sameCount}곳`}
+            </p>
+          )}
           {/**
            * 🔴 CORE-2AO-R2 — 「🔎 동일상품 확인 … 0곳 — …」은 **근거 문장** 이다
            *    (CPO 제거 목록의 「동일상품 여부에 대한 긴 설명」) ⟹ 상세에서만 선다.
