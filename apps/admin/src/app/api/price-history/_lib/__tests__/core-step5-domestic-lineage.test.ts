@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { shopifySiteStrategy } from "@commerce/crawler/src/site-strategies/shopify.site-strategy";
 import {
+  compareCrossSellerProducts,
+  compareModelCode,
+  confirmBrandCodeInTitle,
+  deriveMatchTruth,
   enrichCandidatePrices,
   fetchDomesticModelCode,
   isSelfReferenceCandidate,
   withConfidence,
 } from "@commerce/crawler";
+import type { ProductFacts } from "@commerce/shared";
+import { domesticMatchDisplay } from "../../../../pipeline/commerce/match-display";
 import type { ExtractedProductData, ProductDataSource } from "@commerce/crawler";
 import { buildCrossSellerSearchQueries, buildProductIdentityDna, productFactsFromIdentityDna } from "@commerce/shared";
 import { buildCanonicalProduct } from "../../../pipeline/canonical-product";
@@ -216,6 +222,44 @@ describe("CORE-NEXT STEP 5-1/5-2 — 국내 참고가격 lineage", () => {
          *    🔴 1차에 `j.best` 를 읽어 `undefined` 가 나왔다 — 「품번 축 미발화」로
          *       적었으면 거짓 결론이었다(칸 이름 추측 함정 · 사전에 잡았다).
          */
+        /**
+         * ════════════════════════════════════════════════════════════════════
+         * 🔵🔵🔵 STEP 5-EVIDENCE Track A 보강 — **C3 반사실을 AC009 에서 직접 잰다**
+         * ════════════════════════════════════════════════════════════════════
+         *
+         * 🔴 Track A 의 저장 GT 분모(27쌍)에는 **`NO_TITLE_OVERLAP` ∧ 품번 exact 가
+         *    0건** 이다 ⟹ 그 분모의 「false SAME +0」을 **C3 의 안전 근거로 쓸 수 없다**.
+         * 🟢 그런데 **AC009 가 정확히 그 모양** 이다(biskuit human SAME · luxboy human
+         *    DIFFERENT · 둘 다 품번 exact · 둘 다 NO_TITLE_OVERLAP) ⟹ 여기서 재야 한다.
+         * 🔴 C3 를 **적용하지 않는다** — 후보 brand 를 원상품 brand 로 바꿔 **같은
+         *    판정기를 한 번 더** 부를 뿐이다(운영 산출은 위 `j` 가 이미 냈다).
+         */
+        for (const cand of priced) {
+          const cf = cand as unknown as { facts?: ProductFacts; title?: string; url?: string };
+          if (!cf.facts || !query.facts) continue;
+          const codeNow = compareModelCode(
+            (query.facts as ProductFacts).brandModelCode,
+            cf.facts.brandModelCode,
+          );
+          /** 🔴 품번은 **제목 건초더미** 에서도 온다(운영 :687) — 그 값을 같이 본다. */
+          const titleCode = confirmBrandCodeInTitle(dna.brandModelCode, cf.title ?? "");
+          const codeEff = titleCode ? compareModelCode(dna.brandModelCode, titleCode) : codeNow;
+          if (codeEff !== "exact") continue;
+          const baseCross = compareCrossSellerProducts(query.facts as ProductFacts, cf.facts);
+          const injected: ProductFacts = { ...cf.facts, brand: (query.facts as ProductFacts).brand };
+          const cfCross = compareCrossSellerProducts(query.facts as ProductFacts, injected);
+          const mk = (cross: typeof baseCross) =>
+            deriveMatchTruth("low", codeEff, cross.verdict, cross.blockers, cross.conflicts, !cf.facts!.colorText);
+          const bt = mk(baseCross);
+          const ct = mk(cfCross);
+          console.log(
+            `   🔵 C3-CF ${res.domain} — code=${codeEff}` +
+              ` base ${bt}/${domesticMatchDisplay(bt).tier}` +
+              ` → C3 ${ct}/${domesticMatchDisplay(ct).tier}` +
+              ` · base blockers=[${baseCross.blockers.map((b) => b.blocker).join(",")}]` +
+              ` · C3 blockers=[${cfCross.blockers.map((b) => b.blocker).join(",")}]`,
+          );
+        }
         bestByUrl.set(loose(j.best.url), {
           modelCodeEvidence: j.modelCodeEvidence ?? null,
           matchedModelName: j.domesticModelCode ?? null,

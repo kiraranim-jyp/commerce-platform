@@ -237,6 +237,96 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
+## 6-STEP5-E. 🔴🔴🔴 **STEP 5-EVIDENCE 완료 — C3 는 AC009 를 «못 살린다» · 출구는 ②다**
+
+> 🔴 **운영 0 · 테스트(운영) 0 · 배포 0 · DB 0.** 조사 하니스 2개(둘 다 게이트/순수).
+> 🔴 **C3 를 적용하지 않았다** · `NO_TITLE_OVERLAP` 완화 **0** · 가격 pipeline **0**.
+
+### 🔴🔴 Track A — C3 GT precision (분모 **27쌍** · 🔴 63 이 아니다)
+
+```
+저장 GT 쌍 33 → facts+원상품 보유 33 → 라벨 있음(UNCERTAIN 제외) **27**(SAME 17 · DIFF 10)
+🔴 CPO 의 「63쌍」 중 **facts 가 저장된 쌍만** offline 측정 가능하다(나머지는 live 재추출).
+
+baseline  SAME 7 = 정답 5 · **false SAME 2** · precision **71.4%** · recall 29.4%
+C3        SAME 9 = 정답 7 · **false SAME 2** · precision **77.8%** · recall **41.2%**
+뒤집힌 쌍 **2** — C11 · C37(둘 다 `bobochoses.co.jp`) · **둘 다 human SAME** ⟹ 🟢 정답만 열렸다
+품번 exact 5쌍 중 human DIFFERENT 2(junioredition C19·C20)는 **C3 에서도 열리지 않았다**
+```
+
+🔴🔴 **그런데 이 숫자를 C3 의 안전 근거로 쓸 수 없다** — CPO 가 우려한 조합
+**`NO_TITLE_OVERLAP` ∧ 품번 exact 가 이 분모에 «0건»** 이다(= luxboy 같은 쌍이 없다).
+
+### 🔴🔴🔴 Track A 보강 — **AC009 에서 직접 쟀다. C3 는 아무것도 바꾸지 않는다**
+
+```
+biskuit.kr   human SAME      base blockers [BRAND_MISMATCH, NO_TITLE_OVERLAP]
+                             → C3 blockers [**NO_TITLE_OVERLAP**]
+                             base PRESUMED_SAME → C3 **PRESUMED_SAME**  ← 🔴 안 열린다
+m.luxboy.com human DIFFERENT base [NO_TITLE_OVERLAP] → C3 [NO_TITLE_OVERLAP] · 불변 🟢
+beaumonde    human SAME      base [] → **SAME** (이미 SAME · 불변)
+```
+
+🔴 **C3 는 AC009 에서 이득 0 · 위험 0** 이다 — `BRAND_MISMATCH` 를 지워도
+**`NO_TITLE_OVERLAP` 이 남아** `observedDifference`(match-truth.ts:237)가 계속 참이다.
+🔴🔴 **그리고 C3 를 적용한 뒤 biskuit 과 luxboy 의 blocker 집합이 «글자 그대로 같다»**
+(`[NO_TITLE_OVERLAP]`) ⟹ **그 축을 풀면 정답과 오답이 «같은 순간에» 열린다.**
+⟹ 🔴 **CPO §11 의 질문에 대한 답: 현재 증거 축으로 그 둘은 «구분 불가» 다.**
+
+### 🟢🟢 Track B/C — **상세설명 소비자가 «이미 구현돼 있고 꺼져 있다»**
+
+```
+🟢 후보 상세설명은 **이미 수집된다** — `product-url-facts.ts:440 extractFromJsonLd(html)`
+   의 반환값에 `description` 이 들어 있다(CORE-2AC 주석이 직접 그렇게 적었다 · 추가 HTTP 0)
+🟢🟢 그리고 소비자도 있다 — `seller-facts.ts` 가 `description` 을 받으면 **다섯 칸** 을 채운다:
+     :199 colorText   :200 materialText   :215 fitText   category/audienceSignals
+     :208 **brandModelCode ← extractLabeledProductCode(description)** 🔴 품번도 상세에서 나온다
+🔴 그런데 `product-url-facts.ts:441` 이 **`category` 하나만 넘긴다** ⟹ PLAIN_HTML 후보
+   (국내 대부분)의 그 다섯 칸이 **전건 비어 있다**(AC009 실측 — biskuit/luxboy/donokids 전부 null)
+🔴 **이유가 측정으로 적혀 있다**(:446) — 「`materialText` 가 **새 축 0 · 거짓 MATERIAL
+   blocker 1**(organic cotton ↔ cotton)을 만들었다」 ⟹ CORE-2AC 가 **의도적으로** 끊었다
+```
+
+🟢 **Q1~Q7(Track B)** — ① 수집한다 ② owner = `extractFromJsonLd` ③ 끊긴 이유 = CORE-2AC 의
+의도적 결정 ④ 연결 지점 = **인자 한 개**(`productFactsFromListing({description})`) ⑤ 🔴 CORE-2AC
+계약과 **정면 충돌**(「소재는 채우지 않는다」) ⑥ 🟢 **새 schema 불필요**(담을 칸이 이미 있다)
+⑦ 🟢 기존 raw evidence **그대로 소비 가능 · 추가 HTTP 0**.
+
+🔴 **Track C** — `siteBrandName`(og:site_name·Organization)과 **상품 브랜드는 다르다**
+(biskuit = 「비스킷」 = 샵 이름). 🟢 그래서 **상세설명 brand evidence 는 세 번째 축으로
+«별도» 여야 한다** — `siteBrandName === productBrand` 가정은 코드에도 없고 넣어서도 안 된다.
+
+### 🔴 Track D — 이미지 공급
+
+```
+🔴 후보 이미지 = **하드코딩 `imageUrl: null`**(product-url-facts.ts:472) ⟹ PLAIN_HTML 후보는
+   이미지를 **아예 세우지 않는다**. 공급 owner 가 **없다**(비용이 아니라 배선 부재다)
+🔴🔴 **원상품 이미지 0 은 측정불가다** — 내 하니스가 `buildCanonicalProduct(…, [])` 로
+   **items 를 빈 배열** 로 넘겼다. 운영은 `items` + `sourceRepresentativeId` 를 넘긴다
+   (`api/pipeline/route.ts:284`) ⟹ 🔴 「원상품 이미지 공급 0」으로 **적지 않는다**
+🟢 비교 함수는 준비돼 있다 — `compareCrossSellerProducts(a,b,**image?**)` · 운영 호출부가
+   3번째 인자를 안 넘긴다(match.ts:661) · IMAGE 축은 `corePoints` 에서도 제외(:1149)
+```
+
+### 🟡 CPO 결정 — **측정이 순서를 바꿨다**
+
+```
+🔴 ④ C3 를 먼저 열 이유가 **사라졌다** — AC009 에서 **이득 0** 이고, 27쌍에서 얻은
+   recall +2 는 **전부 `bobochoses.co.jp`(브랜드 공식몰 다른 로케일)** 다
+🟢 ② **상세설명 연결이 유일한 출구** 다 — biskuit/luxboy 를 가를 수 있는 것은 blocker 가
+   아니라 **상세 내용** 이고, 그 배선은 **인자 한 개** 이며 **새 schema 가 필요 없다**
+🔴 단 그 한 개가 CORE-2AC 계약과 충돌하므로 **선행 측정** 이 필요하다 —
+   「`description` 을 넘기면 ⒜ 거짓 MATERIAL blocker 가 몇 건 생기는가 ⒝ `brandModelCode`
+   가 몇 건 새로 채워지는가 ⒞ GT 27쌍 precision 이 어떻게 변하는가」 ⟹ **STEP 5-E2**
+🔴 ③ 은 ② 의 부분집합이다(같은 `description` 입력) · ④ 는 **공급 배선부터** 다
+```
+
+🔴 **하니스 자기정정 3건**(전부 사전 포착) — ⒜ `facts.brandModelCode` 를 품번 축 입력으로 읽음
+(실제는 **제목 건초더미**) ⒝ `j.best.modelCodeEvidence`(실제는 `j`) ⒞ 원상품 이미지 0 을
+제품 사실로 읽을 뻔함(**내 하니스가 items 를 비웠다**).
+
+---
+
 ## 6-STEP5-0. 🔴🔴🔴 **STEP 5-0 완료 — SAME 전략 4단계 중 «①만» 실행된다**
 
 > 🔴 **운영 0 · 테스트 0 · 배포 0.** 하니스 1개(`core-step5-domestic-lineage` · LIVE 게이트).
