@@ -11,7 +11,7 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-SAME-SPRINT-08** — 🔴 **STOP: BRAND 를 고쳐도 SAME 이 늘지 않는다**(§9-R · 운영 0)
+CURRENT WU   **CORE-SAME-SPRINT-09** — 🔴🔴 **「BRAND+CODE⟹SAME」은 CEO 가 폐기한 규칙**(§9-S · 운영 0)
 NEXT         🔵 **CPO 가 다음 Evidence Layer 범위 지정** — 🔴 CTO 선제 작업 0
 CEO ACTION   🟡 **없다**
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-SAME-SPRINT-08 — BRAND 측정 완료 · **production 후보 없음**(§9-R) · CPO 판정 대기
+CURRENT    CORE-SAME-SPRINT-09 — Evidence Chain 측정 · **반례가 GT 안에 있다**(§9-S) · CPO 판정 대기
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -2148,3 +2148,99 @@ CPO GO 기준 10 — ①~⑨ 전부 측정됨 · ⑩ **추천할 source 가 없�
 ```
 
 **STOP — CORE-SAME-SPRINT-08 BRAND Evidence Quality 측정 완료 / Production 적용 여부 CPO 판정 대기**
+
+---
+
+## 9-S. 🔴🔴 **CORE-SAME-SPRINT-09 — Universal Identity Evidence Chain**(측정 · 운영 **0**)
+
+🔴 **운영 변경 0 · 네트워크 0.** threshold · `SAME_MIN_AXES` · `NO_TITLE_OVERLAP` ·
+MODEL_CODE conflict · BRAND policy · 새 axis — **전부 변경 0**.
+
+### 🔴🔴 STEP 1 — 현재 구조는 **「계층」이 아니라 「점수 누적」** 이다
+
+```
+① conflicts > 0 → **CONFLICT**(점수를 보기 «전» early return · axes 계산 0)
+② blockers 0 ∧ brandOk ∧ **corePoints ≥ SAME_MIN_AXES** → SAME
+③ totalPoints ≥ PRESUMED_SAME_MIN_AXES → PRESUMED_SAME  ④ ≥1 SIMILAR  ⑤ UNKNOWN
+🔴 `cross-seller.ts:1197` 주석 — 「품번이 일치해도 여기를 지나간다. **예외가 없다**」
+```
+🟢 **CPO 가 지적한 긴장이 코드로 확인됐다.**
+
+### 🔴🔴🔴 그 예외는 **과거에 있었고 CEO 가 폐기했다** — MATCHING-3.1(CEO 지시 2026-09-14)
+
+`cross-seller.ts:36` 원문:
+> 「여기에는 원래 `if (identifierConfirmed) return "SAME"` 한 줄이 있었다 … 그 전제가
+> 실측 데이터에서 깨진다. junioredition.com 은 서로 다른 두 상품에 **글자 하나까지 같은
+> Product Code** 를 적는다」
+
+```
+Minnie Newborn Body / Onesie             둘 다 KS106168-P05261
+Bubble Sweatshirt Grey/Graystone/Conker  둘 다 **AW26MS185**
+Giulia Flower Sandals 3색                전부 01325
+🔴 세 세트 모두 **같은 브랜드 안** 이다 ⟹ **BRAND 를 더해도 그 반례는 막히지 않는다**
+```
+
+### 🔴🔴🔴 STEP 2 — 그 반례가 **현재 GT 안에 그대로** 있다
+
+| 건 | brand | code | human | 현재 verdict | 막는 것 |
+|---|---|---|---|---|---|
+| C19 | Main Story ↔ Main Story | AW26MS185 ↔ 동일 | **DIFFERENT** | PRESUMED_SAME | `SAME_SELLER_DISTINCT_LISTING` |
+| C20 | 동일 | 동일 | **DIFFERENT** | PRESUMED_SAME | `COLOR_VARIANT` + 위 |
+
+```
+BRAND 호환 ∧ MODEL_CODE exact 인 쌍 = **2/33** 이고 **둘 다 human DIFFERENT** 다
+⟹ 🔴🔴 CPO 규칙을 적용하면 **False SAME +2** · 회복되는 human SAME **0**
+🟢 현재 그 둘을 막는 것은 **SAME_SELLER_DISTINCT_LISTING**(MATCHING-3.1 이 같이 만든 보호)
+```
+
+### 🟢 STEP 3 — Evidence Chain 단계별 (human SAME 17 의 **실제 분포**)
+
+| 단계 | 쌍 | 현재 SAME | human 분포 |
+|---|---:|---:|---|
+| ③ BRAND만(code 없음) | 13 | 7 | SAME **9** · DIFF 3 · UNC 1 |
+| ⑤ 둘 다 없음 | 11 | 0 | SAME 2 · DIFF 4 · UNC 5 |
+| ⑥ CODE conflict | 4 | 0 | SAME **3** · DIFF 1 |
+| ④ CODE만(brand 없음) | 3 | 0 | SAME **3** |
+| ①② BRAND+CODE exact | 2 | 0 | **DIFF 2** |
+
+🔴🔴 **CPO 가 「100% SAME」이라 한 칸에 human SAME 이 «0건» 이다.**
+human SAME 17 은 ③(9) · ⑥(3) · ④(3) · ⑤(2) 에 흩어져 있다.
+
+🟡 그래서 체인에서 **실제로 가치가 있는 지점은 ①② 가 아니다** — **④(brand 공백 3건 전부
+human SAME)** 와 **⑥(품번 충돌이 human SAME 3건을 막는다)** 다.
+🔴 단 ④는 SPRINT-08 이 측정한 자리(원상품 brand 공백 = **WU-080 REJECT**) · ⑥은 **CPO 금지**
+(conflict 완화) ⟹ **CTO 가 열지 않았다**.
+
+### 알려진 사례 추적
+
+```
+biskuit · luxboy   🔴 **이 GT 에 없다**(측정불가)
+donokids   C22  DIFF · SIMILAR        · BRAND_UNCONFIRMED
+beaumonde  C27  SAME · PRESUMED_SAME  · BRAND_UNCONFIRMED  ← SPRINT-08 의 그 건
+main-story C42  SAME · **SAME** 🟢    / C25 DIFF · PRESUMED_SAME · COLOR_VARIANT
+junioredition S1-5  DIFF · **CONFLICT** 🟢(품번 충돌이 올바르게 막았다)
+```
+
+### 🔴 분모 주의 · 하니스 결함
+
+```
+🔴 이 GT 는 품번이 **9/33** 뿐이라 「강한 증거」 쌍이 **2건** 밖에 없다 ⟹
+   그 2건으로 **전수 위험도를 일반화하지 않는다**
+🔴 하니스 — 템플릿 리터럴에 **백틱을 중첩** 해 transform 실패(이 트랙의 그 함정) · 🟢 고쳤다
+🟢 회귀 697 files / **9,329 passed · 0 failed · 142 skipped** · typecheck 0 · build exit 0
+작업트리 clean · origin/main **0 / 0** · 🔴 Deploy 없음
+```
+
+### 🟡 CPO 판정 대기 — 이번에 올리는 것은 **정책 충돌** 하나다
+
+```
+🔴 「BRAND + MODEL_CODE exact ⟹ SAME」은 **신규 정책이 아니라 CEO 가 폐기한 규칙의 복구** 다.
+   그 복구는 이 GT 에서 **False SAME +2**(C19 · C20)를 만들고 **SAME 회복은 0** 이다.
+🟡 그러므로 CPO 가 고를 것은 둘 중 하나다 —
+   ⒜ 그 규칙을 **「같은 판매처가 아닐 때만」** 으로 좁힌다(C19/C20 은 **같은 판매처** 다)
+      🔴 그러면 이 GT 에서 발화 분모가 **0** 이 되어 **효과도 위험도 측정불가** 가 된다
+   ⒝ 규칙을 **복구하지 않고** 현재 점수 누적 구조를 유지한다(= MATCHING-3.1 유지)
+🔴 **CTO 가 고르지 않았다.** 그리고 어느 쪽도 **CEO 지시를 되돌리는 판단** 이라 CPO→CEO 사안이다
+```
+
+**STOP — CORE-SAME-SPRINT-09 Identity Evidence Chain 측정 완료 / Evidence hierarchy ↔ MATCHING-3.1 충돌 CPO 판정 대기**
