@@ -146,17 +146,63 @@ describe.skipIf(!LIVE)("CORE-DESC-REVIEW — CEO 육안 검증 화면(운영 변
       <li>형태 · 색상 · 소재 · 세트/구성: 🔴 <b>상세설명에서 추출하는 경로가 없습니다</b>.</li>
     </ul>
   </div>
-  <div class="ask">
-    <b>🟡 대표님께 묻는 것</b>
-    <ol>
-      <li>상세설명만으로 <b>브랜드</b>를 알 수 있습니까?</li>
-      <li>상세설명만으로 <b>품번</b>을 알 수 있습니까?</li>
-      <li>상세설명만으로 <b>상품 형태</b>(티셔츠/가디건/세트 등)를 알 수 있습니까?</li>
-      <li>상세설명만으로 <b>색상·소재</b>를 알 수 있습니까?</li>
-      <li>상세설명만으로 <b>세트/구성</b>(단품인가 세트인가)을 알 수 있습니까?</li>
-      <li>🔴 <b>동일상품이라고 판단되는 «결정적 문구»가 어디에 있습니까?</b> (그 문장을 알려 주십시오)</li>
-    </ol>
-  </div>
+  <form class="ask" data-case="${esc(p.id)}">
+    <b>🟡 대표님이 답하실 자리</b>
+    <p class="hint">상세설명을 읽고 아래를 눌러 주십시오. <b>적는 즉시 저장</b>되고,
+       맨 아래 「답변 복사」로 한 번에 전달하실 수 있습니다.</p>
+    ${[
+      ["brand", "브랜드"],
+      ["code", "품번"],
+      ["form", "상품 형태 (티셔츠·가디건·세트 등)"],
+      ["colmat", "색상 · 소재"],
+      ["set", "세트/구성 (단품인가 세트인가)"],
+    ]
+      .map(
+        ([key, label], i) => `
+    <fieldset class="q">
+      <legend><span class="qn">${i + 1}</span>상세설명만으로 <b>${esc(label)}</b>을 알 수 있습니까?</legend>
+      <div class="opts">
+        ${[
+          ["yes", "예 — 설명에 있다"],
+          ["no", "아니오 — 설명에 없다"],
+          ["unsure", "모르겠다"],
+        ]
+          .map(
+            ([v, t]) =>
+              `<label><input type="radio" name="${esc(p.id)}__${esc(key)}" value="${esc(v)}"><span>${esc(t)}</span></label>`,
+          )
+          .join("")}
+      </div>
+    </fieldset>`,
+      )
+      .join("")}
+    <fieldset class="q decisive">
+      <legend><span class="qn">6</span>🔴 <b>동일상품이라고 판단되는 «결정적 문구»</b>는 어디에 있습니까?</legend>
+      <p class="hint">위 상세설명에서 <b>그 문장을 드래그</b>한 뒤 아래 버튼을 누르시면 그대로 담깁니다.
+         직접 적으셔도 됩니다. 결정적 문구가 <b>없으면 비워 두십시오</b> — 그것도 답입니다.</p>
+      <div class="grab">
+        <button type="button" class="btn" data-grab="${esc(p.id)}">선택한 문장 담기</button>
+        <button type="button" class="btn ghost" data-clear="${esc(p.id)}">지우기</button>
+      </div>
+      <textarea name="${esc(p.id)}__phrase" rows="3"
+        placeholder="예) 상세설명 안의 「보보쇼즈 B226AC009」 — 품번이 그대로 적혀 있다"></textarea>
+    </fieldset>
+    <fieldset class="q">
+      <legend><span class="qn">+</span>이 후보는 원상품과 <b>같은 상품</b>입니까?</legend>
+      <div class="opts">
+        ${[
+          ["SAME", "같은 상품"],
+          ["DIFFERENT", "다른 상품"],
+          ["UNCERTAIN", "판단 보류"],
+        ]
+          .map(
+            ([v, t]) =>
+              `<label><input type="radio" name="${esc(p.id)}__verdict" value="${esc(v)}"><span>${esc(t)}</span></label>`,
+          )
+          .join("")}
+      </div>
+    </fieldset>
+  </form>
   <div class="links">
     <a href="${esc(p.origin.sourceUrl)}" target="_blank" rel="noreferrer">원상품 페이지 열기</a>
     <a href="${esc(p.url)}" target="_blank" rel="noreferrer">후보 페이지 열기</a>
@@ -263,11 +309,49 @@ describe.skipIf(!LIVE)("CORE-DESC-REVIEW — CEO 육안 검증 화면(운영 변
 
  /* 대표님이 답하는 자리 — 유일하게 색을 쓰는 블록 */
  .ask{border:1px solid var(--seal);border-left-width:3px;background:#fdfaf4;
-      padding:16px 18px;display:flex;flex-direction:column;gap:10px}
- .ask b{font:600 11px/1 var(--kr-sans);letter-spacing:.1em;text-transform:uppercase;color:var(--seal)}
- .ask ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px;max-width:58rem}
- .ask ol li::marker{font-family:var(--mono);color:var(--seal)}
- .ask ol li:last-child{border-top:1px solid var(--rule);padding-top:10px;margin-top:2px}
+      padding:18px 20px;display:flex;flex-direction:column;gap:14px}
+ .ask>b{font:600 11px/1 var(--kr-sans);letter-spacing:.1em;text-transform:uppercase;color:var(--seal)}
+ .hint{margin:0;font-size:12.5px;line-height:1.65;color:var(--ink-soft)}
+ .hint b{color:var(--ink);font-weight:600}
+ fieldset.q{border:0;border-top:1px solid var(--rule);margin:0;padding:12px 0 0;
+            display:flex;flex-direction:column;gap:9px}
+ fieldset.q legend{padding:0;font-size:14px;font-weight:500;display:flex;align-items:baseline;gap:9px}
+ .qn{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+     width:21px;height:21px;border:1px solid var(--seal);color:var(--seal);
+     font:600 11px/1 var(--mono);font-variant-numeric:tabular-nums;border-radius:50%}
+ .opts{display:flex;flex-wrap:wrap;gap:8px}
+ .opts label{display:inline-flex;align-items:center;gap:7px;cursor:pointer;
+             border:1px solid var(--rule);background:var(--sheet);padding:7px 13px;font-size:13.5px}
+ .opts label:hover{border-color:var(--seal)}
+ .opts input{margin:0;accent-color:var(--seal)}
+ .opts input:checked+span{font-weight:600;color:var(--seal)}
+ .opts label:has(input:checked){border-color:var(--seal);background:#fbf4e8}
+ fieldset.decisive{border-top-color:var(--seal)}
+ .grab{display:flex;gap:8px;flex-wrap:wrap}
+ .btn{font:500 13px var(--kr-sans);cursor:pointer;padding:7px 14px;
+      border:1px solid var(--seal);background:var(--seal);color:#fffdf9}
+ .btn:hover{background:#865923}
+ .btn.ghost{background:transparent;color:var(--seal)}
+ .btn.ghost:hover{background:#f6ecdb}
+ .ask textarea{font:14px/1.7 var(--kr-sans);width:100%;padding:11px 12px;resize:vertical;
+               border:1px solid var(--rule);background:var(--sheet);color:var(--ink)}
+ .ask textarea:focus{border-color:var(--seal);outline:none;box-shadow:0 0 0 2px #f0e2cb}
+
+ /* 진행 · 내보내기 — 조서 맨 아래 고정 */
+ .bar{position:sticky;bottom:0;z-index:5;background:var(--ink);color:#f3efe7;
+      display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:13px 20px;
+      margin:0 -24px -80px;border-top:2px solid var(--seal)}
+ .bar .prog{font:600 13px var(--mono);font-variant-numeric:tabular-nums;letter-spacing:.03em}
+ .bar .prog b{color:#e8c98e}
+ .bar .spacer{flex:1}
+ .bar .btn{border-color:#e8c98e;background:#e8c98e;color:var(--ink);font-weight:600}
+ .bar .btn:hover{background:#f2daa9}
+ .bar .btn.ghost{background:transparent;color:#e8c98e}
+ .bar .btn.ghost:hover{background:#2b3346}
+ .bar .said{font-size:12px;color:#b9b2a4}
+ .out{border:1px solid var(--rule);background:var(--ink);color:#e9e4d9;padding:14px 16px;
+      font:12.5px/1.65 var(--mono);white-space:pre-wrap;word-break:break-all;display:none}
+ .out.on{display:block}
 
  .links{display:flex;gap:18px;flex-wrap:wrap}
  .links a{color:var(--seal);text-decoration:none;border-bottom:1px solid var(--seal);
@@ -308,7 +392,126 @@ describe.skipIf(!LIVE)("CORE-DESC-REVIEW — CEO 육안 검증 화면(운영 변
  </ul>
 </div>
 ${cards}
+
+<pre class="out" id="out"></pre>
+<div class="bar">
+  <span class="prog">답변 <b id="done">0</b> / ${picked.length}</span>
+  <span class="said" id="said">적는 즉시 저장됩니다 — 창을 닫아도 남습니다</span>
+  <span class="spacer"></span>
+  <button type="button" class="btn" id="copy">답변 복사</button>
+  <button type="button" class="btn ghost" id="show">답변 보기</button>
 </div>
+</div>
+<script>
+(function () {
+  "use strict";
+  /* 🔴 CEO 입력을 잃지 않는 것이 이 화면의 전부다 — 적는 즉시 보관하고 다시 열면 복원한다.
+     🔴 이것은 **검증용 artifact** 다. §12 의 localStorage 금지 계약은 운영 패널
+        (DomesticPriceIntelligencePanel 의 transient 참고가격)에 대한 것이고 이 화면이
+        아니다 — 그 칸은 **여기서 한 글자도 읽지 않는다**.
+     🔴 이 블록 안에서는 backtick 을 쓰지 않는다 — 바깥이 템플릿 리터럴이라 끊긴다
+        (이 트랙에서 **세 번째** 같은 실수였다). */
+  var KEY = "ttaejyo.desc.review.v1";
+  var CASES = ${JSON.stringify(picked.map((p) => p.id))};
+  var store = {};
+  try { store = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { store = {}; }
+
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(store)); }
+    catch (e) { document.getElementById("said").textContent = "🔴 저장할 수 없습니다 — 복사해서 보관해 주십시오"; }
+  }
+  function put(id, field, value) {
+    store[id] = store[id] || {};
+    store[id][field] = value;
+    save();
+    progress();
+  }
+  /* 🔴 「답변 완료」의 기준은 **마지막 판정** 하나다 — 다섯 문항을 다 눌러야
+     완료로 세면 대표님이 보류하고 싶은 사건을 셀 수 없다. */
+  function progress() {
+    var n = 0;
+    CASES.forEach(function (id) { if (store[id] && store[id].verdict) n += 1; });
+    document.getElementById("done").textContent = String(n);
+  }
+
+  /* 저장된 답 복원 */
+  Array.prototype.forEach.call(document.querySelectorAll("form.ask"), function (form) {
+    var id = form.getAttribute("data-case");
+    var saved = store[id] || {};
+    Array.prototype.forEach.call(form.querySelectorAll("input[type=radio]"), function (input) {
+      var field = input.name.split("__")[1];
+      if (saved[field] === input.value) input.checked = true;
+      input.addEventListener("change", function () { put(id, field, input.value); });
+    });
+    var ta = form.querySelector("textarea");
+    if (ta) {
+      var f = ta.name.split("__")[1];
+      if (saved[f]) ta.value = saved[f];
+      ta.addEventListener("input", function () { put(id, f, ta.value); });
+    }
+  });
+
+  /* 🟢 상세설명에서 «드래그한 문장» 을 그대로 담는다 — ⑥ 이 이 화면의 핵심 질문이다.
+     🔴 그 카드 «안» 에서 고른 것만 받는다(다른 사건의 문장이 섞이면 증거가 오염된다). */
+  Array.prototype.forEach.call(document.querySelectorAll("[data-grab]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var id = btn.getAttribute("data-grab");
+      var card = btn.closest("section.card");
+      var form = card.querySelector("form.ask");
+      var ta = form.querySelector("textarea");
+      var sel = window.getSelection();
+      var text = sel ? String(sel).replace(/\\s+/g, " ").trim() : "";
+      var inside = sel && sel.rangeCount > 0 && card.contains(sel.getRangeAt(0).commonAncestorContainer);
+      var said = document.getElementById("said");
+      if (!text) { said.textContent = "🔴 먼저 상세설명에서 문장을 드래그해 주십시오"; return; }
+      if (!inside) { said.textContent = "🔴 이 사건의 상세설명 안에서 골라 주십시오"; return; }
+      ta.value = ta.value ? ta.value + "\\n" + text : text;
+      put(id, "phrase", ta.value);
+      said.textContent = "🟢 담았습니다 — " + text.slice(0, 40) + (text.length > 40 ? "…" : "");
+      ta.focus();
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-clear]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var id = btn.getAttribute("data-clear");
+      var ta = btn.closest("form.ask").querySelector("textarea");
+      ta.value = "";
+      put(id, "phrase", "");
+    });
+  });
+
+  function payload() {
+    return JSON.stringify({ review: "CORE-DESC-REVIEW", cases: CASES.length, answers: store }, null, 2);
+  }
+  document.getElementById("copy").addEventListener("click", function () {
+    var text = payload();
+    var said = document.getElementById("said");
+    function fallback() {
+      var pre = document.getElementById("out");
+      pre.textContent = text;
+      pre.classList.add("on");
+      var r = document.createRange();
+      r.selectNodeContents(pre);
+      var s = window.getSelection();
+      s.removeAllRanges();
+      s.addRange(r);
+      said.textContent = "🟡 자동 복사가 막혔습니다 — 아래 블록이 선택돼 있으니 그대로 복사해 주십시오";
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        said.textContent = "🟢 복사했습니다 — 대화에 붙여넣어 주십시오";
+      }, fallback);
+    } else { fallback(); }
+  });
+  document.getElementById("show").addEventListener("click", function () {
+    var pre = document.getElementById("out");
+    pre.textContent = payload();
+    pre.classList.toggle("on");
+  });
+
+  progress();
+})();
+</script>
 `;
       const out = join(__dirname, "../../../../../../../../docs/core-desc-evidence-review.html");
       writeFileSync(out, html, "utf8");
@@ -319,6 +522,26 @@ ${cards}
       expect(html).toContain("동일상품이라고 판단되는");
       /** 🔴 CTO 가 판정을 채우지 않았다는 것을 **기계로** 단언한다. */
       expect(html).not.toMatch(/judgedByCto|"ceo"\s*:/);
+
+      /**
+       * 🔴🔴 **입력 계약** — CEO 가 답을 «적을 수 있어야» 이 화면이 성립한다.
+       *    1차 조서는 질문만 있고 **적을 자리가 없었다**(CEO 지적) ⟹ 그 재발을 막는다.
+       */
+      const N = picked.length;
+      /** 사건마다 6문항(5 + 최종판정) · 선택지 3 ⟹ 라디오 18개. */
+      expect(html.match(/type="radio"/g)?.length, "🔴 선택 입력이 사건당 18개여야 한다").toBe(N * 18);
+      /** 🔴 ⑥ 결정적 문구는 **자유 입력** 이다 — 선택지로 대신할 수 없다. */
+      expect(html.match(/<textarea/g)?.length, "🔴 사건마다 문구 입력칸이 하나여야 한다").toBe(N);
+      /** 🟢 상세설명에서 **드래그한 문장을 담는** 버튼 — ⑥ 의 실제 수단이다. */
+      expect(html.match(/data-grab="/g)?.length, "🔴 사건마다 「선택한 문장 담기」가 있어야 한다").toBe(N);
+      /** 🟢 적은 것이 **보존되고 전달될 수 있어야** 한다. */
+      for (const must of ["localStorage.setItem", "navigator.clipboard", 'id="copy"', 'id="done"']) {
+        expect(html, `🔴 ${must} 가 없으면 답이 보존·전달되지 않는다`).toContain(must);
+      }
+      /** 🔴 자동 복사가 막힐 때의 **대체 경로** 가 있어야 한다(CSP/권한). */
+      expect(html, "🔴 복사 실패 시 대체 경로가 없으면 답이 갇힌다").toContain('id="out"');
+      /** 🔴 사건 식별자가 입력 이름에 **그대로** 들어가야 답이 섞이지 않는다. */
+      for (const p of picked) expect(html).toContain(`name="${p.id}__verdict"`);
     },
     15 * 60 * 1000,
   );
