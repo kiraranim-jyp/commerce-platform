@@ -13,7 +13,8 @@
 ```
 트랙 A (증거)  CORE-PRICE-SAME-01   STEP 1 · 2 · 2-R 🟢 **MEASURED / CLOSED**
                                     STEP 3(IMAGE) 🟡 **NOT MEASURED** — ⏸ 착수 대기
-트랙 B (화면)  CORE-UX-SELLER-01 🟢 **CLOSED** → 다음은 **CORE-UX-SELLER-02**(CPO 발행 대기)
+트랙 B (화면)  CORE-UX-SELLER-01 🟢 CLOSED → **CORE-UX-SELLER-02 착수점**(§9-UX02)
+               🟢 조사 끝 · 설계 확정 · **다음 세션은 조사 없이 구현**(1차에 한 줄 추가)
 BLOCKING       🟡🟡 **CEO 답변 «한 글자»**(A/B/C/D · §18) — STEP 3 착수 여부가 여기서 갈린다
 CEO ACTION     ① **A/B/C/D 한 글자**   ② 화면 확인 1회(UX01 9항 + STEP 4)
 STEP 5         CLOSED (CPO 2026-10-26 · 재개 조건 1건 · §10)
@@ -247,6 +248,81 @@ SELL_VERDICT_HEADING   「판매 판단」   = 한 줄 verdict 의 머리말 · 
    갱신·**강화** 했다 — 슬라이스 기준을 «순서» 에서 «층»(상세 접힘 앞)으로 바꾸고
    **새 순서를 직접 단언** 하도록 더했다(약화 0)
 ```
+
+---
+
+## 9-UX02. 🔵🔵🔵 **`CORE-UX-SELLER-02` — 착수점. 조사 끝 · 구현부터**
+
+> 🔴 **presentation layer 전용** — SAME · priceTier · domesticReference · matchTruth ·
+> A/B 가격 · MI threshold **전부 0**. 🟢 **새 어휘 0**(기존 owner 재사용).
+> 🔴 이번 세션은 **조사만** 했다(코드 0 · 작업트리 clean) — 다음 세션은 **조사 없이** 구현한다.
+
+### 🟢🟢 조사 결론 — **모순의 실체는 「한쪽만 보인다」 다**(마운트 DOM 실측)
+
+```
+현재 1차(실측 덤프)   「🇰🇷 국내 참고가격 KRW 88,000 · **확인 1곳**」
+                     「🌎 해외 최저 소싱가 최저 확인가 GBP 37 · USD 58」
+🟢 CPO 가 원한 「₩88,000 · 확인 1곳」 형식은 **이미 있다**
+🟢 CPO §6 의 제거 요구도 **이미 충족** — 1차에 PRESUMED_SAME · TEXT_CONFIRMED ·
+   COMPARISON · blocker · confidence · 긴 MI 설명이 **0** 이다(`core-2ao-r2` 가 잠근다)
+🔴 **없는 것은 「동일상품 확인 0곳」 하나** — 셀러는 그 0 을 **볼 수 없다**
+⟹ 🔴 모순은 「말이 틀려서」가 아니라 **두 축 중 하나만 1차에 서서** 생긴다
+```
+
+### 🔴🔴 그것을 1차에서 빼는 게이트가 **둘** 이고, **CPO 의 이전 결정** 이다
+
+```
+MarketPriceComparison.tsx:**1086**  {!isSummary && (   ← 「🔎 동일상품 확인 0곳 — …」
+OverseasReferencePrice.tsx:**121**  {!compact && (     ← statusLine
+                                    (DOMESTIC_SAME_NOT_CONFIRMED · overseas-reference.ts:126)
+이유(:1081-84 · :61 · :118-119)   **CORE-2AO-R2** — 「note·scope·statusLine 은 전부
+                                  **근거 문장** 이다(CPO 제거 목록)」 ⟹ 1차에서 뺐다
+```
+
+### 🟢🟢 **충돌이 아니다 — 둘을 다 지키는 축이 있다**(이것이 설계다)
+
+```
+🔴 CORE-2AO-R2 가 뺀 것은 **문장** 이다:
+   「동일상품으로 확정된 국내 판매처는 없습니다.」(19자) · marketEmptyNote 의 **사유** 문장
+🟢 CPO UX-02 가 원하는 것은 **숫자 한 줄** 이다: 「동일상품 확인 **0곳**」
+⟹ 🟢 **숫자는 1차 · 문장은 상세** 로 가르면 **두 결정이 동시에 성립** 한다
+🔴 그러므로 `{!isSummary}` · `{!compact}` 게이트를 **풀지 않는다**(문장은 상세에 그대로 둔다)
+```
+
+### 🔵 최소 변경 설계 (새 어휘 0 · 새 계산 0 · 새 state 0)
+
+```
+위치   MarketBlock 의 `g.sameCount === 0` 분기 **안**(SUMMARY) — 금액 줄 **바로 아래**
+       🔴 그 분기 안이라 「동일상품 확정 없음」이 **구조적으로 항상 참** 이다(:1060-62 가 적어 둔 성질)
+어휘   `SAME_CONFIRMED_COUNT_LABEL`(mi-same-candidates.ts:**372** = 「동일상품 확인」) + `g.sameCount`곳
+       🔴 `SAME_CHECK_HEADING`(「🔎 동일상품 확인」)을 쓰지 않는다 — 그쪽은 **상세 머리말** 이고
+          1차에 올리면 2AO-R2 가 뺀 그 블록이 되돌아온다
+       🔴 🔴 **「시장 참고가격」 금지 리터럴을 쓰지 않는다**(wu-145 목록 · §9-NEXT 정합표 ⑥)
+결과   🇰🇷 국내 참고가격 KRW 88,000 · 확인 1곳
+       동일상품 확인 0곳                      ← **이 한 줄이 이번 WU 의 전부다**
+```
+
+### 🔴 착수 전 반드시 확인할 위험 둘
+
+```
+⒜ 1차 글자 비중 계약 — `core-next-step4` B-8(<25%) · `core-2ao-r2` R2-3(상세보다 훨씬 적다)
+   🔴 1차에 글자를 **더하는** 변경이다 ⟹ 두 계약을 **먼저** 돌려 여유를 확인한다
+⒝ `core-2ao-r2` R2-2(「1차는 **세 블록** 이다」) — 🟢 블록을 늘리지 않는다(기존 블록 **안** 에 한 줄)
+```
+
+### 🔵 계약 UX-01~07 · 변이 M1~M7 (CPO 지시 그대로)
+
+```
+UX-01 1차에 판매판단      UX-02 권장가가 그 바로 다음   UX-03 국내 참고가격 ↔ 동일상품 확인 수 **같은 1차**
+UX-04 「시장 참고가격」 금지 리터럴 0                   UX-05 `MI_SAME_AREA_SCOPE` 의미 유지(상세)
+UX-06 CTA 동작 동일       UX-07 오른쪽 Action Center 존재
+M1 판매판단 제거 · M2 권장가 제거 · M3 국내 참고가격 제거 · M4 동일상품 확인 수 제거 ·
+M5 MI_SAME_AREA_SCOPE 연결 제거 · M6 CTA wiring 제거 · M7 금지 리터럴 삽입  → **전부 FAIL**
+🔴 변이 뒤 **바이트 복구**(md5) 확인 · 🔴 python3 없음 ⟹ `Edit` 로만
+```
+
+🔴 **보고는 「CEO Production UX 확인 대기」로 끝낸다**(CPO §12) ·
+🔴 `Production HTTP PASS ≠ Production UI PASS`(로그인 뒤 화면은 CTO 가 못 본다).
 
 ---
 
