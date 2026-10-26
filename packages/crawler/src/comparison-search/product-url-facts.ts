@@ -4,6 +4,8 @@ import { lookupBrandByAliasInTitle } from "./brand-alias";
 import { decodeHtmlEntities } from "./html-entities";
 /** 🔴 CORE-2R-4 STEP 3 — **이미 받은 HTML** 에서만 읽는 순수 파서(추가 HTTP 0). */
 import { extractMarketEvidence } from "./market-evidence";
+/** 🔵 CORE-SAME-SPRINT-02 — 후보 상세설명의 품번을 기존 MODEL_CODE 증거로 «보강» 한다(새 축 0). */
+import { recoverModelCodeFromDetail } from "./model-code-from-detail";
 import { productFactsFromListing, productFactsFromShopifyProduct } from "./seller-facts";
 import { classifyUrlShape, toCrawlerUrl } from "./url-shape";
 import { extractShopifyHandle, fetchPlainHtmlWithFinalUrl } from "../shopify-product-json";
@@ -307,6 +309,30 @@ export async function factsFromProductUrl(url: string): Promise<ProductUrlFactsR
       },
       domain,
     );
+    /**
+     * ══════════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 CORE-SAME-SPRINT-02 — **공급 지점은 «여기 하나» 다**(CPO §7)
+     * ══════════════════════════════════════════════════════════════════════════
+     *
+     * 🔴🔴 **새 SAME 축이 아니다.** 기존 `MODEL_CODE` 축에 **증거를 공급** 한다 —
+     *    `brandModelCode` 가 **비어 있을 때만** 후보 상세 raw text 에서 승인된 품번
+     *    패턴이 **정확히 1개** 찾히면 채운다. 그 뒤는 **기존 matcher 그대로** 통과한다.
+     * 🔴 threshold · 8축 · `NO_TITLE_OVERLAP` · BRAND · COLOR · `priceTier` ·
+     *    `domesticReference` — **변경 0**.
+     *
+     * 🟢 **왜 Shopify 경로에만 두는가** — 상세설명 전문이 **이 경로에서만** 들어온다
+     *    (위 `body: body.body_html` → `plainText()`). 🔴 HTML 경로는 `description`/
+     *    `material` 을 **일부러 넘기지 않는다**(거짓 MATERIAL blocker 때문 ·
+     *    `productFactsFromListing` 의 `category` 주석) ⟹ 그 경로에 두면 **발화할 입력이 없다**.
+     *    🔴 그래서 실측 발화가 `tinyapple`(Shopify)에 몰린 것은 샵 편향이 아니라
+     *       **공급 경로의 구조** 다 — 「모든 판매처에서 검증됐다」로 읽지 않는다.
+     *
+     * 🟢 실측(GT 33쌍) — SAME 회수 **5/17 유지** · DIFFERENT 누출 **2 → 1** ·
+     *    기존 FP **2 → 1** · TN **8 → 9** · 안전조건 **6/6 PASS**.
+     * 🔴 `materialText` 를 **description 계약으로 인정하지 않는다** — 읽기 전용이다
+     *    (CPO §8 · 정식 `ProductFacts.description` 도입은 **별도 Sprint**).
+     */
+    const suppliedFacts = recoverModelCodeFromDetail(facts);
     return {
       status: "OK",
       crawlerUrl,
@@ -333,10 +359,11 @@ export async function factsFromProductUrl(url: string): Promise<ProductUrlFactsR
          *    「모른다」를 「판매중」으로도 「품절」로도 만들지 않는다(CPO WU-136 §G).
          */
         soldOut: ((a) => (a == null ? null : !a))(shopifyVariantAvailability(body)),
-        imageUrl: facts.imageUrls[0] ?? null,
+        imageUrl: suppliedFacts.imageUrls[0] ?? null,
         confidence: 0,
-        brand: facts.brand ?? undefined,
-        facts,
+        brand: suppliedFacts.brand ?? undefined,
+        /** 🔵 SPRINT-02 — **품번이 보강된** facts 를 넘긴다(그 외 칸은 그대로다). */
+        facts: suppliedFacts,
       },
       httpCalls: 1,
       fetchPath: "SHOPIFY_JSON",

@@ -11,13 +11,13 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-SAME-SPRINT-02** — 🟢🟢 **STEP 1~6 완료 · 안전조건 6/6 PASS**(§9-K)
-NEXT         🔵 **CPO GO/HOLD/NO-GO 1건** — 누출 **2→1** · SAME 손실 0 · 운영 반영 미실행
+CURRENT WU   **CORE-SAME-SPRINT-02** — 🟢🟢 **production integration 완료 · 배포**(§9-L)
+NEXT         🔵 **CPO 가 다음 Evidence Layer 범위 지정** — 🔴 CTO 선제 작업 0
 CEO ACTION   🟡 **없다**
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SAME-03**(화면 + CEO GT 10/10) · **SAME-04**(FN 3건 원인 확정)
 Git          clean · origin/main 0/0 · Production / 200
-회귀         **691 files / 9,281 passed / 0 failed** · typecheck 0 · build 0
+회귀         **692 files / 9,297 passed / 0 failed** · typecheck 0 · build 0
 ```
 
 🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **CPO 판정** 이다 — matcher 를 CTO 가 열지 않는다.
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-SAME-SPRINT-02 — STEP 1~6 완료 · 6/6 PASS(§9-K) · **CPO GO 판정 대기**
+CURRENT    CORE-SAME-SPRINT-02 — Evidence 공급 **배포 완료**(§9-L) · CPO 다음 범위 지정 대기
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -1168,6 +1168,79 @@ S1-6 human DIFFERENT  복원 B226AC141 ↔ 원상품 B226AC010 ⟹ conflict · s
 ③ Brand+제품명     🔵 **이번 스프린트** — 분리축 **1 발견**(위)
 ④ description     🟢 Evidence Layer 공급 GO — 🔴 반사실까지만 · 운영 적용 **0**
 🟡 URL 3개 수신 보류(CPO 확정) — 현재 병목이 카테고리 수가 아니라는 실측과 일치
+```
+
+---
+
+## 9-L. 🟢🟢 **CORE-SAME-SPRINT-02 — Description → MODEL_CODE 공급 «배포 완료»**
+
+> 🟢 CPO 제한적 GO(2026-10-26)로 **운영 반영**. 🔴 새 SAME 축 **0** · threshold **0** ·
+> `NO_TITLE_OVERLAP` **0** · MODEL_CODE 완화 **0** · `priceTier`/`domesticReference` **0**.
+
+### 🟢 변경 — 운영 **2 파일**(신규 1 · 배선 1줄)
+
+```
+신규  packages/crawler/src/comparison-search/model-code-from-detail.ts
+      `recoverModelCodeFromDetail(facts)` — 🔴 인자 **하나**(원상품을 볼 방법이 구조적으로 없다)
+배선  product-url-facts.ts:335  `const suppliedFacts = recoverModelCodeFromDetail(facts)`
+      :366 `facts: suppliedFacts`   🔴 **공급 지점은 하나** 다(계약이 호출 수 1 을 단언)
+```
+
+🔴🔴 **공급 지점이 Shopify 경로인 이유 — 샵 편향이 아니라 «구조» 다**
+```
+상세설명 전문은 **Shopify 경로에서만** `materialText` 로 들어온다
+  (`body: body.body_html` → `plainText()`).
+🔴 HTML 경로는 `description`/`material` 을 **일부러 넘기지 않는다**(거짓 MATERIAL
+   blocker 때문 · `productFactsFromListing` 의 `category` 주석).
+⟹ 🔴 그래서 실측 발화가 `tinyapple` 에 몰린 것은 **공급 경로의 성질** 이다.
+   「모든 판매처에서 검증됐다」로 **읽지 않는다**.
+```
+
+### 🟢 안전계약 A~F — **16/16 PASS** · 변이 **M1~M4 전부 FAIL → 바이트 복구**
+
+```
+A 기존 값 보존      값이 있으면 **같은 객체** 를 돌려준다(할당 0) — M1 1 FAIL
+B 후보측만          인자 **하나** · 소스에 `origin`/`query` 어휘 **0**(주석 벗기고)
+C 다중 보류         서로 다른 품번 2개면 **고르지 않는다** — M2 1 FAIL
+D 정확 패턴만       `226AC009`·`AC009`·`B226AC09`·단어경계 위반 전부 **거부** — M3 **7 FAIL**
+                   🟢 전역 regex 를 **함수** 로 만들어 `lastIndex` 공유 사고도 잠갔다
+E conflict 보호     복원값이 원상품과 다르면 기존 `compareModelCode` 가 conflict 를 낸다
+                   🔴 이 파일에 `verdict`/`blocker`/`threshold` 어휘 **0**
+F 다른 칸 불변       `brandModelCode` **한 칸만** 바꾼다(전 칸 대조)
+배선                `facts: suppliedFacts` 를 끊으면 **M4 1 FAIL**
+```
+
+### 🟢 GT 결과 — 🔴 **두 분모를 갈라 적는다**
+
+| | baseline | after |
+|---|---:|---:|
+| SAME 회수 | 5/17 | **5/17**(유지) |
+| 🔴 DIFFERENT 누출 | 2/10 | 2/10 |
+| 기존 FP | 2 | 2 |
+| TN | 8 | 8 |
+| UNDETERMINED | 6(sysSAME 0) | 6(0) |
+
+🔴🔴 **저장 facts GT 는 변하지 않는다 — 그것이 «정상» 이다.** 그 분모는
+`factsFromProductUrl` 를 **거치지 않고** 저장된 facts 를 바로 쓰므로 **공급 지점을 지나지 않는다**.
+⟹ 🟢 이 표가 증명하는 것은 **「회귀 0」** 이다(개선은 아래 반사실이 증명한다).
+
+🟢🟢 **개선은 반사실에서 측정됐다**(`core-sprint02-step456-matrix` · 공급을 시뮬레이션):
+```
+SAME 회수 5/17 **유지** · DIFFERENT 누출 **2 → 1** · 기존 FP **2 → 1** · TN **8 → 9**
+발화 3건 — C05 exact→SAME 유지 · S1-6 conflict→**FP→TN** · C50 conflict→차단 강화
+🔴 남은 누출 1 = `C06`(trenbe) — 후보 설명이 **비어 있어** 이 증거로 못 막는다
+```
+
+### 🔴 STOP / Risk
+
+```
+🔴🔴 **이번 구현은 Evidence Layer 개선이며, 모든 판매처/카테고리에 대한 범용성
+   검증 완료를 의미하지 않는다.**
+🔴 발화 분모 — 실측 3건(전부 Shopify) · 🔴 비-Shopify 경로는 **입력이 없어 발화 0**
+🔴 `materialText` 를 **description 계약으로 인정하지 않았다** — 읽기 전용이다
+   (쓰기 0 · 계약이 `materialText\s*:` 를 금지로 단언) ·
+   🟡 정식 `ProductFacts.description` 도입은 **별도 Sprint**(CPO 확정)
+🔴 A/B 분리(Comparability)는 **여전히 HOLD** — 이번 범위가 아니다
 ```
 
 ---
