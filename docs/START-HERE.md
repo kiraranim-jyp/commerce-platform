@@ -11,7 +11,7 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-DESC-EVIDENCE-01** — 🟡 **기준선 정정 완료 · 구현 대기**(§9-X)
+CURRENT WU   **CORE-DESC-EVIDENCE-01** — 🟡 **지시서 고정 · 구현 착수점**(§9-Y · 조사 0)
 NEXT         🔵 **CPO 가 다음 Evidence Layer 범위 지정** — 🔴 CTO 선제 작업 0
 CEO ACTION   🟡 **없다** — 조서 11/11 수신 완료
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-DESC-EVIDENCE-01 — 기준선 **코드 반영 완료**(§9-X) · 🔴 CPO 숫자 2건 정정 · 구현 대기
+CURRENT    CORE-DESC-EVIDENCE-01 — 지시서 **§9-Y 에 고정** · 🔴 **조사 없이 구현부터** 간다
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -2639,3 +2639,124 @@ core-sprint02-brandname-separability · core-desc-review-gt
 ```
 
 **STOP — 기준선 정정 완료 / `CORE-DESC-EVIDENCE-01` 구현 착수 가능**
+
+---
+
+## 9-Y. 🔵🔵🔵 **`CORE-DESC-EVIDENCE-01` 착수점 — 조사하지 말고 «구현부터» 간다**
+
+🔴🔴 **다음 세션은 이 절만 읽고 바로 코드를 쓴다.** 조사·설계는 **끝났다**(§9-S ~ §9-X).
+🔴 §4-C — 이 Sprint 는 **한 덩어리** 다: 계약 → 추출기 → provenance → matcher 연결 →
+변이 → 회귀 → 보고 **1회**. **중간 보고 금지.**
+
+### 전략 좌표 — 이 Sprint 가 **어디** 인가
+
+```
+SOURCE → **[ Evidence Layer ]** → Identity → Comparability → Domestic Price
+       → Sellability → Price A/B → Registration
+🔴 이번은 **Evidence Layer «만»** 이다. matcher 를 똑똑하게 만드는 Sprint 가 **아니다**.
+```
+
+### 🔴 절대 변경 금지 (CPO §2 전수)
+
+```
+Identity      SAME/DIFFERENT/UNDETERMINED 정책 · **MATCHING-3.1** · SAME threshold ·
+              PRESUMED_SAME · MODEL_CODE conflict 보호 · `brand+modelCode → SAME` ·
+              same-seller conditional shortcut · 기존 blocker 정책
+Comparability `DomesticPriceTier` · EXACT/COMPARISON/REFERENCE/EXCLUDED ·
+              `priceTierFromLink` · `matchTruth` · 국내 가격 집계 · `buildPriceGuide`
+Price         Price A · Price B · 권장 판매가격 식 · 국내 참고가격 표시 정책
+UI            seller UI · 가격 입력 · 등록 · 기존 운영 패널
+Image         scoring · matcher · threshold · 자동판정 — **이번 Sprint 에 0**
+```
+
+### 🔴 기준선 — **코드에 있다**(`SAME05_BASELINE` · `core-same05-gt.ts`)
+
+```
+GT 33 · Human SAME **18** · DIFFERENT **9** · UNCERTAIN **6** · FP **1** · SAME 회복 **6/18**
+🔴 과거의 `FP 2 / DIFFERENT 10 / UNCERTAIN 5` 는 **역사적 측정값** 이다 — 기준선이 아니다
+🔴 하니스는 **그 상수를 import** 한다(리터럴로 적으면 조용히 낡는다 · 8파일 선례)
+```
+
+### 구현 순서 (그대로 따른다)
+
+```
+① `ProductFacts` 에 **provenance 를 담을 자리** — 🔴 optional 로(breaking change 0)
+   목표 모양 — `{ value, source }` · source ∈ { TITLE, DESCRIPTION } · 확장 가능하게
+   🔴 **기존 칸(brand/brandModelCode/…)의 타입을 바꾸지 않는다** — 옆에 둔다
+② DESCRIPTION 추출기 — BRAND · MODEL_CODE · PRODUCT_NAME · FORM/CATEGORY · COLOR · MATERIAL
+   🟢 **MODEL_CODE 는 `recoverModelCodeFromDetail` 을 그대로 재사용**(Contract A~G 유지)
+   🟡 FIT · COMPOSITION · SET · OPTION/SKU 는 **추출 가능성만 측정** — matcher 축 승격 **0**
+③ TITLE 추출기를 **별도 source 로** — 🔴 C27 이 그 이유다(설명엔 없고 **상품명에** 있었다)
+④ matcher 연결은 **마지막에만** — 그리고 「Evidence 증가 ≠ SAME 증가」를 보고에 적는다
+```
+
+### 🔴 parser 가 읽어야 하는 실제 표현 (CEO 조서 원문에서 왔다)
+
+```
+BRAND        「Brand : BOBO CHOSES」 · 「Bobo Choses」 · 「브랜드 : 보보쇼즈」
+MODEL_CODE   「B226AC009」 · 「26FW B226AC009」 · 「SKU : 26FW B226AC009」
+PRODUCT_NAME 「Product Name : Bobo Choses Kids Hug Hairy Monster Long Sleeve T-Shirt」
+FORM         「T-shirt」 · 「Long Sleeve T-Shirt」 · 「Sweatshirt」
+COLOR        「Light Blue」 · 「Conker Stripe」
+MATERIAL     「100% Organic Cotton」 · 「Cotton」
+```
+
+### 🔴🔴 반드시 보호할 CEO GT 반례 (fixture `core-desc-review-ceo-gt.json` 11건)
+
+| 건 | 지켜야 하는 것 |
+|---|---|
+| **C06** | 품번 `unavailable` 인데 **SAME** — 품번 없이 올바른 SAME 이 가능하다 |
+| **C27** | **TITLE** 에 브랜드·품번(설명엔 없다) → SAME — **source 분리의 이유** |
+| **C42** | 품번 **없음** → SAME — 품번 필수화 **금지** |
+| **C19 · C20 · C22** | 강한 text evidence 인데 **DIFFERENT** → **IMAGE 필요**(다음 Sprint 분모) |
+| **C50** | BRAND+CODE+FORM+COLOR/MAT 전부 있는데 **DIFFERENT** — **score 기반 SAME 금지** |
+| **C25** | 동일 디자인 · 컬러 차이 → DIFFERENT — Identity ↔ Comparability 혼합 금지 |
+| **S1-5 · S1-6** | 동일 디자인 · **긴팔↔반팔** → DIFFERENT — 형태/구성 Evidence 의 근거 |
+
+🔴 `S1-5.set` 은 **CEO 미응답** 이다 — `yes`/`no` 로 **채우지 않는다**(계약이 그것을 잠근다).
+
+### 🔴 변이 M1~M6 (CPO §12 — 「잘못된 shortcut 을 넣으면 반드시 잡힌다」)
+
+```
+M1 DESCRIPTION 추출 배선 제거      → 관련 계약 FAIL
+M2 TITLE source 제거               → **C27** 계약 FAIL
+M3 설명문 MODEL_CODE recovery 제거 → description-code 계약 FAIL
+M4 provenance 제거                 → source 계약 FAIL
+M5 description score → SAME 삽입   → **금지 계약** FAIL
+M6 brand+modelCode → SAME 삽입     → **C19/C20/C22/C50** 반례 계약 FAIL
+🔴 변이는 **Edit 로** 적용하고 **`grep -c` 로 적용을 확인** 한다(이 트랙에서 네 번 틀렸다)
+🔴 템플릿 리터럴 안에 **backtick 을 쓰지 않는다**(세 번 transform 이 깨졌다)
+```
+
+### 회귀 기준선
+
+```
+698 files / **9,333 passed** / 0 failed / 145 skipped · typecheck **0** · build **0**
+🔴 파일 수·skip 수가 달라지면 **이유를 보고** 한다
+```
+
+### 🔴 STOP 조건 (하나라도 나오면 확장하지 말고 보고)
+
+```
+기존 field 의미 변경 필요 · MODEL_CODE shortcut 요구 · threshold 변경 필요 ·
+MATCHING-3.1 수정 필요 · **C06 이 다시 DIFFERENT** · C19/C20/C22/C50 이 text 만으로 SAME ·
+TITLE provenance 소실 · DESCRIPTION provenance 소실 · price/comparability 변경 필요 ·
+IMAGE 구현 필요 · **테스트를 약화해야 통과**
+```
+
+### 🔴🔴 성공 정의 — **SAME 을 늘리는 것이 아니다**
+
+> 상품 원문의 정보를 **TITLE 과 DESCRIPTION 에서 구조화 Evidence 로 보존** 하고,
+> 그 **출처를 추적 가능** 하게 만들면서, 기존 Identity/Comparability/Price 전략을
+> **한 글자도 훼손하지 않는 것**.
+
+🔴 **Evidence 가 늘었다는 이유만으로 SAME 이 늘어나면 그것은 실패다.**
+
+### 🔵 이 Sprint 뒤 — **IMAGE**(C22 · C19 · C20 3건으로만)
+
+```
+Text Evidence 충분 → Identity        Text Evidence 충돌/애매 → **IMAGE 검증**
+🔴 이번 Sprint 에서 IMAGE 는 **구현하지 않는다**
+```
+
+**STOP — `CORE-DESC-EVIDENCE-01` 착수점 고정 완료 / 다음 세션이 조사 없이 구현 시작**
