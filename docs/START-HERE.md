@@ -11,13 +11,13 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-PRICE-SAME-04** — 🟢 **FN 3건 Evidence Trace 완료**(§9-B · 운영 코드 0)
-NEXT         🔴 **CPO matcher 정책 판단 1건** — `NO_TITLE_OVERLAP`(§9-B 의 단일 차단)
-CEO ACTION   🟡 **없다** — SAME-03 판정 10/10 수신 완료
-CLOSED       UX-01 · UX-02 · SAME-01 STEP 1·2·2-R · SAME-02 · STEP 5 ·
+CURRENT WU   **CORE-PRICE-SAME-05** — 🟡 **STEP 1~4 반사실 측정 완료 · 구현 «전» 에 STOP**
+NEXT         🔴 **CPO 판정** — P0 전제가 반증됐다(§9-C) · leakage **측정불가** ⟹ 통합 미승인
+CEO ACTION   🟡 **없다**
+CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SAME-03**(화면 + CEO GT 10/10) · **SAME-04**(FN 3건 원인 확정)
 Git          clean · origin/main 0/0 · Production / 200
-회귀         **682 files / 9,245 passed / 0 failed** · typecheck 0 · build 0
+회귀         **684 files / 9,256 passed / 0 failed** · typecheck 0 · build 0
 ```
 
 🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **CPO 판정** 이다 — matcher 를 CTO 가 열지 않는다.
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-PRICE-SAME-04 — FN 3건 원인 확정 **완료**(§9-B) · **CPO matcher 판정 대기**
+CURRENT    CORE-PRICE-SAME-05 — 반사실 측정 **완료** · 구현 전 STOP(§9-C) · **CPO 판정 대기**
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -369,6 +369,115 @@ verdict 와 **5/5 대조 통과** 했다(틀린 복제로 원인을 적지 않�
 
 🟢 **COLOR 반증은 이 표본에서 오차단하지 않았다** — 유일한 COLOR 반증(`luksusbaby` t-shirt)의
 CEO 라벨이 **판단불가** 다(동일이 아니다) ⟹ 🔴 COLOR 완화 근거로 쓰지 않는다.
+
+---
+
+## 9-C. 🟡🟡 **CORE-PRICE-SAME-05 — STEP 1~4 반사실 측정 완료 · 구현 «전» STOP**
+
+> 🔴 운영 코드 **0**(matcher · threshold · 8축 · priceTier · 가격 pipeline · 셀러 UI 전부 0).
+> 🔴 §11 STEP 5(통합)의 전제 — 「P0/P1/P2 가 **각각 안전성을 통과** 했을 때만」 — 가
+> **충족되지 않았다.** 그래서 통합하지 않고 STOP 한다.
+
+### 🔴🔴🔴 핵심 — **분모가 둘로 갈려 있고, 그래서 §12 를 충족할 수 없다**
+
+```
+안전성(DIFFERENT) 분모   GT 33쌍  SAME 17 · DIFFERENT 10 · UNCERTAIN 6  (wu-059 + wu-068 저장 facts · 네트워크 0)
+효과(제목 문제) 분모      SAME-03 FN 3건                                 🔴 **DIFFERENT 0**
+🔴 두 분모를 합치면 「recall 올랐고 leakage 없다」가 **서로 다른 표본의 말** 이 된다.
+```
+
+### 🟢 baseline (STEP 1 · 계약으로 고정)
+
+```
+TP 5/17 · FN **12** · DIFFERENT 방어 8/10 · 🔴 **FP 2** · UNCERTAIN 6(시스템 SAME 0)
+🔴🔴 **baseline FP 는 0 이 아니라 2 다** — 이미 알려진 False EXACT 둘이다:
+   C06 `global.trenbe.com`(WU-060) · S1-6 `www.tinyapple.net`(WU-068)
+   ⟹ §12 기준은 「FP 0」이 아니라 **「2 에서 늘지 않는다」** 다
+🔴 FN 12 의 원인 — BRAND_UNCONFIRMED **5** · MODEL_CODE 반증 **3** · FIT 1 · 기타 3
+🔴🔴 **P0 축(`NO_TITLE_OVERLAP`)이 막는 FN = 0 / 12** ⟹ 이 GT 로 P0 효과를 못 잰다
+```
+
+### 🔴🔴 STEP 2·3·4 반사실 — **안전성 분모에서 「발화 자체가 0」이다**
+
+| 축 | 발화한 쌍 | SAME Δ | FP Δ | 판정 |
+|---|---|---:|---:|---|
+| P0 TITLE 음역 | **1** (`C27` beaumonde · human **SAME**) | +0 | +0 | 🔴 **leakage 측정불가** |
+| P2 MODEL_CODE 복원 | **0** | +0 | +0 | 🔴 **측정불가**(발화 0) |
+| P1 BRAND 보강 | **1** (`C27` · human **SAME**) | +0 | +0 | 🔴 **leakage 측정불가** |
+
+🔴🔴 **DIFFERENT 쌍에서 발화한 반사실이 «하나도 없다»** ⟹ `FP +0` 은 **「leakage 가
+없다」가 아니라 「측정할 기회가 0 이었다」** 다(§9 측정불가 규칙).
+🟢 원인은 데이터다 — DIFFERENT 10 중 **한글 토큰 보유가 1**(C22)이고, 품번 절단형은 **0** 이다.
+
+### 🟡 효과 분모 — FN 3건(라이브 · 운영 순서)
+
+| 후보 | baseline | P0 단독 | P2 단독 | P1 단독 | **셋 통합** |
+|---|---|---|---|---|---|
+| biskuit.kr | PRESUMED_SAME | PRESUMED_SAME | PRESUMED_SAME | PRESUMED_SAME | 🔴 PRESUMED_SAME |
+| m.luxboy.com | PRESUMED_SAME | PRESUMED_SAME | PRESUMED_SAME | PRESUMED_SAME | 🔴 PRESUMED_SAME |
+| donokids.com | PRESUMED_SAME | PRESUMED_SAME | PRESUMED_SAME | PRESUMED_SAME | 🟢🟢 **SAME** |
+| | | **0/3** | **0/3** | **0/3** | **1/3** |
+
+🔴🔴🔴 **CPO 전제가 반증됐다** — 「가장 효과가 큰 `NO_TITLE_OVERLAP` 부터」였는데
+**P0 단독 효과가 0/3** 이다. 🟢 유일한 회복(`donokids`)은 **P1+P2**(brand+code)에서 나온다.
+
+```
+🔴 biskuit 가 안 되는 이유 — brand 가 **「비스킷」(판매처명)으로 «선언»** 돼 있고,
+   §6 이 「inferred 가 declared 를 이기게 하지 말라」고 했으므로 **덮지 않았다**
+   ⟹ BRAND_MISMATCH 가 남아 `blocked` 가 유지된다
+🔴 luxboy 가 안 되는 이유 — 그 페이지 제목에 **상품명이 아예 없다**(브랜드+카테고리+
+   품번+홍보문) ⟹ **음역할 대상이 없다.** 🔴 **이것은 SUPPLY 문제이고 matcher 로 못 푼다**
+🟢 donokids 가 되는 이유 — brand 보강(보보쇼즈→Bobo Choses)이 `brandOk` 를 열고,
+   품번 복원(`#226AC009`→`B226AC009`)이 MODEL_CODE +3 을 줘 corePoints **6 ≥ 5**
+```
+
+### 🟢 통과한 안전 게이트(§10·§12 필수)
+
+```
+🟢 필수 안전 케이스 — **품번 exact + human DIFFERENT 2건**(`C19`·`C20` junioredition ·
+   품번 재사용 실례)이 **모든 축·모든 모드에서 non-SAME 유지**
+🟢 새 FP **0**(FP 2 → 2) · 기존 TP 유지(5 → 5)
+🟢 P2 는 **후보 코드가 null 일 때만** 발화한다 ⟹ 값이 있는 후보를 덮지 않아
+   `AC042↔AC043` 충돌 보호가 **한 글자도 안 바뀐다**(전수 단언)
+🟢 음역 표는 **관측된 3토큰**(허그·헤어리·몬스터) + **기존 `lookupBrandAlias` 역방향** 뿐 —
+   새 번역 사전 **0**(§4 금지 준수 · 계약으로 잠금)
+```
+
+### 🔴🔴 그래서 **구현하지 않았다** — 통합을 막는 것은 둘
+
+```
+① §11 STEP 5 가 「각 축이 **안전성을 통과** 했을 때만 통합」이라 했고,
+   P1/P2 의 안전성은 **통과가 아니라 측정불가** 다(DIFFERENT 발화 0)
+② §12 중요 — 「SAME recall 개선 **과** DIFFERENT leakage 없음」이 **동시** 여야 하는데
+   그 둘이 **서로 다른 분모** 에서만 나온다
+🔴 그리고 WU-164(CPO 2026-10-22)가 같은 축을 「leakage 1건이라도 생기면 NO-GO」로
+   닫았고, WU-078 은 음역 축을 **종료** 했다 — 그 REJECT 사유를 **반증할 분모가 없다**
+```
+
+### 🔵 이것을 열려면 필요한 것 **하나**
+
+```
+🔴 **한글 제목 후보가 포함된 DIFFERENT GT** — 지금 GT 의 DIFFERENT 10 은 9 가 영문-영문이다.
+🟢 그 GT 가 있으면 P0/P1/P2 의 leakage 를 **같은 분모** 에서 재서 §12 를 충족할 수 있다.
+🔴 **CTO 가 새 DIFFERENT fixture 를 만들지 않았다**(§8 금지) — CEO 육안 라벨이 필요하다.
+🟡 가장 값싼 경로 — SAME-03 화면에 **국내 후보를 더 넣어 CEO 가 「다른제품」을 라벨** 한다
+   (그 화면과 하니스는 이미 있다 · `CORE_SAME03_LIVE=1`).
+```
+
+### 🟢 재사용 하니스(네트워크 0 · CI 상주)
+
+```
+core-same05-gt.ts              GT 적재 · 운영 판정 호출 · 집계(모듈)
+core-same05-gt-baseline  5     baseline 고정 · FN 원인 분포 · 필수 안전 케이스
+core-same05-counterfactual 7   축별 반사실 · **발화 확인 단언** · 필수 안전 케이스 전 모드
+🔴 라이브 효과 축은 `CORE_SAME05_LIVE=1` 로만 (FN 3건)
+```
+
+🔴 **내 하니스 결함 넷을 측정이 잡았다**(그대로 보고했으면 전부 거짓 결론이었다) —
+⒜ baseline FP 를 0 으로 단언(실제 **2**) ⒝ 반사실 발화를 0 으로 단언(실제 title 1 · brand 1)
+⒞ 발화 쌍을 DIFFERENT 로 단언(실제 **SAME** ⟹ leakage 측정불가가 드러났다)
+⒟ `all` 모드에서 **음역이 brand 추론보다 먼저** 돌아 브랜드 토큰을 없앴다
+   ⟹ 「셋을 합쳐도 SAME 0」이라는 거짓이 될 자리였다(**brand → code → title** 로 고정).
 
 ---
 
