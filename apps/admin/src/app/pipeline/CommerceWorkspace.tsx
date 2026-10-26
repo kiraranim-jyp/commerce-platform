@@ -3694,6 +3694,31 @@ export function CommerceWorkspace({
              *    상세 계산 노드 하나로 모인다.
              */
             onOpenPriceCalculation={handleOpenPriceCalculation}
+            /**
+             * ══════════════════════════════════════════════════════════════
+             * 🔵🔵🔵 CORE-UX-SELLER-01 ① — **오른쪽과 «글자 그대로 같은 식» 이다**
+             * ══════════════════════════════════════════════════════════════
+             *
+             * 🔴🔴 아래 Action Center(:4418)가 받는 식과 **동일** 하다:
+             *    `verdict={sellVerdict ? FINAL_VERDICT_COPY[sellVerdict] : null}`
+             * 🟢 그래서 **왼쪽/오른쪽이 다른 판정을 말할 경로가 구조적으로 없다** —
+             *    owner 는 `resolveSellVerdict`(:727) 하나이고 문구 맵도 한 벌이다
+             *    (「결론은 하나, 표현 위치는 둘」 · CPO 확정 2026-10-26).
+             * 🔴 **왼쪽을 추가했다고 오른쪽을 지우지 않았다** — 오른쪽은 다른 탭/작업
+             *    흐름에서도 판매판단을 들고 있어야 한다(변이 M6 가 그것을 문다).
+             */
+            sellVerdictCopy={sellVerdict ? FINAL_VERDICT_COPY[sellVerdict] : null}
+            /**
+             * 🔵🔵 CORE-UX-SELLER-01 ② — **A 를 실제 판매가격으로 확정하는 CTA.**
+             *
+             * 🔴 **새 handler 를 만들지 않았다** — `PriceEditor` 의 「최종 판매가격에
+             *    적용」(:158)이 쓰는 `updateSalePriceKrw`(:1452) **그 함수** 다.
+             * 🔴 A 가 없으면 **넘기지 않는다**(`undefined`) ⟹ 버튼이 렌더되지 않는다.
+             *    그래야 「₩0 을 판매가로 설정」 같은 거짓 동작이 구조적으로 불가능하다.
+             */
+            onApplyRecommendedPrice={
+              recommendedPriceKrw != null ? () => updateSalePriceKrw(recommendedPriceKrw) : undefined
+            }
           />
           {/**
            * ══════════════════════════════════════════════════════════════════

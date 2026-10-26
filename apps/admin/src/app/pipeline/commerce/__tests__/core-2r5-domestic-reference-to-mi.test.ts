@@ -132,12 +132,32 @@ describe("CORE-2R-5 A — 국내 참고가격이 1차 🇰🇷 블록에 선다"
      *    그때는 결론 산문이 금액을 인용했고, 🔴 **CORE-2AO-R1 이 그것을 닫아** 이제
      *    금액은 **시장 블록 하나** 다 ⟹ 화면 전체 1회가 **다시 참** 이 됐다.
      */
-    const summary = html.slice(
-      html.indexOf('data-testid="market-blocks"'),
-      html.indexOf('data-testid="market-next-step"'),
-    );
+    /**
+     * ════════════════════════════════════════════════════════════════════════
+     * 🔴🔴 **CORE-UX-SELLER-01 — 슬라이스 기준이 «순서» 에서 «층» 으로 바뀌었다.**
+     * ════════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 전까지 1차를 `market-blocks` ~ `market-next-step` **사이** 로 잡았다. 그런데
+     *    CPO 가 1차 순서를 **① 판매판단 → ② 권장가 → ③ 근거 → ④ ⓘ** 로 확정해
+     *    `market-next-step` 이 `market-blocks` **앞** 으로 왔다 ⟹ 그 구간이 **빈다**
+     *    (실제로 이 단언이 `0` 을 세며 FAIL 했고 **그것이 가드가 맞은 것** 이다).
+     * 🟢🟢 **약해지지 않았다 — 더 강해졌다**: 1차를 「**상세 접힘 «앞» 전부**」로 정의하면
+     *    순서가 또 바뀌어도 지키는 성질(「금액 구역이 1차에 하나」)이 그대로 유지된다.
+     */
+    const firstLayer = (h: string): string => h.slice(0, h.indexOf('data-testid="price-detail-fold"'));
+    const summary = firstLayer(html);
+    expect(summary, "🔴 1차 층을 잘라내지 못했다(상세 접힘이 사라졌다)").not.toBe("");
     expect((summary.match(/data-testid="domestic-reference"/g) ?? []).length).toBe(1);
     expect((summary.match(/KRW 88,000/g) ?? []).length).toBe(1);
+    /**
+     * 🔵 **그리고 새 순서를 «직접» 단언한다** — 되돌리면 여기서 잡힌다.
+     *    (전에는 슬라이스가 순서를 암묵적으로 들고 있었고, 그래서 순서가 바뀔 때
+     *     「0 을 세는」 모호한 FAIL 이 났다. 이제 순서는 순서로 문다.)
+     */
+    expect(
+      summary.indexOf('data-testid="market-next-step"'),
+      "🔴 권장 판매가격이 근거보다 뒤로 갔다",
+    ).toBeLessThan(summary.indexOf('data-testid="market-blocks"'));
     /** 🟢 그리고 이제는 **화면 전체** 로도 1회다(결론이 더는 금액을 인용하지 않는다). */
     expect((html.match(/KRW 88,000/g) ?? []).length).toBe(1);
   });
@@ -184,17 +204,16 @@ describe("CORE-2R-5 A — 국내 참고가격이 1차 🇰🇷 블록에 선다"
       domesticReference: DOMESTIC_REFERENCE,
       overseasReference: OVERSEAS_REFERENCE,
     });
-    /** 🔴 CORE-2AO-R2 — A-2 와 **같은 처리**(구역은 두 층 · 금액은 1차 하나). */
-    const summary = html.slice(
-      html.indexOf('data-testid="market-blocks"'),
-      html.indexOf('data-testid="market-next-step"'),
-    );
+    /**
+     * 🔴 CORE-2AO-R2 — A-2 와 **같은 처리**(구역은 두 층 · 금액은 1차 하나).
+     * 🔴 CORE-UX-SELLER-01 — A-2 와 **같은 이유로** 기준을 「층」으로 바꿨다
+     *    (`market-next-step` 이 1차 순서 변경으로 `market-blocks` **앞** 에 온다).
+     */
+    const upToDetail = html.slice(0, html.indexOf('data-testid="price-detail-fold"'));
+    const summary = upToDetail;
     expect((summary.match(/data-testid="overseas-reference"/g) ?? []).length).toBe(1);
     expect((html.match(/GBP 37/g) ?? []).length).toBe(1);
-    const os = html.slice(
-      html.indexOf('data-testid="market-block-overseas"'),
-      html.indexOf('data-testid="market-next-step"'),
-    );
+    const os = upToDetail.slice(upToDetail.indexOf('data-testid="market-block-overseas"'));
     expect(os, "🔴 해외 참고가격이 1차 블록 «밖» 에 있다").toContain('data-testid="overseas-reference"');
     /** 🔴 아이콘·제목은 **기본값 그대로** 여야 한다(`wu-056r1` 다섯이 그것을 본다). */
     expect(os).toContain("🧾");

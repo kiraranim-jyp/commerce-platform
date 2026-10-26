@@ -37,6 +37,37 @@ export const RECOMMENDED_PRICE_LABEL = "권장 판매가격";
 export const PRICE_CALCULATION_LINK_TEXT = "ⓘ 가격 계산 기준 보기";
 
 /**
+ * 🔵🔵🔵 CORE-UX-SELLER-01 — **A 를 실제 판매가격으로 확정하는 CTA 의 «말».**
+ *
+ * 🔴 **새 가격을 만들지 않는다** — 누르면 `updateSalePriceKrw(recommendedPriceKrw)`
+ *    하나를 부른다. 즉 `PriceEditor` 의 「최종 판매가격에 적용」(:158)과 **같은 동작** 이고
+ *    **같은 handler** 다(사본 0 · 새 state 0 · 재계산 0).
+ * 🔴 **금액을 품지 않는다** — 「₩」가 이 문구에 들어오면 1차의 `₩ count = 1` 계약이
+ *    깨진다(금액 owner 는 바로 위 A 줄 하나다).
+ * 🔴 「추천/적정/시장가로 설정」이 아니다 — **셀러가 보고 있는 그 가격(A)** 을 가리킨다.
+ */
+export const APPLY_RECOMMENDED_PRICE_LABEL = "이 가격으로 설정";
+
+/**
+ * 🔵🔵🔵 CORE-UX-SELLER-01 ① — **1차 판매판단 줄의 머리말.**
+ *
+ * 🔴🔴 **`MARKET_RESULT_HEADING`(「💡 판매 판단」)과 «다른 것» 이다 — 합치지 않는다:**
+ * ```
+ * MARKET_RESULT_HEADING   결론 «문장» 블록(`seller-decision` 여러 줄)의 제목
+ *                         🔴 CORE-2AO-R2 가 그것을 **상세로 내렸고** 계약 둘이
+ *                            「1차로 되돌아오면 FAIL」을 문다
+ *                            (core-2v:232 · wu-146:222)
+ * SELL_VERDICT_HEADING    **한 줄 verdict**(🟡 조건부 판매)의 머리말
+ *                         🟢 CPO 가 1차에 세우라고 확정한 것이 **이것** 이다(2026-10-26)
+ * ```
+ * 🔴 그러므로 이 상수를 「💡 판매 판단」으로 바꾸면 그 계약 둘이 FAIL 한다 —
+ *    **그것은 가드가 맞는 것이다**(둘은 다른 요소다).
+ * 🟢 글자는 오른쪽 Action Center 의 머리말(`ActionCenter.tsx:128`)과 **같다** —
+ *    같은 것을 좌우에서 다른 말로 부르지 않는다.
+ */
+export const SELL_VERDICT_HEADING = "판매 판단";
+
+/**
  * 🔴 **B 근거 한 줄.**
  *
  * 🔴 **금액을 적지 않는다** — 금액 owner 는 시장 블록 하나다(CORE-2AO-R1 §금액 owner).

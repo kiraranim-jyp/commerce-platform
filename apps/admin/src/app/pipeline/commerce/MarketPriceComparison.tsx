@@ -77,8 +77,10 @@ import {
    *    **계산하지 않는다** — 문구조차 자기가 들지 않는다(그 파일 머리가 이유를 든다).
    */
   marketPriceBasisLine,
+  APPLY_RECOMMENDED_PRICE_LABEL,
   PRICE_CALCULATION_LINK_TEXT,
   RECOMMENDED_PRICE_LABEL,
+  SELL_VERDICT_HEADING,
 } from "./recommended-price-copy";
 /** 🟢 `PriceEditor` 가 쓰는 **그 포맷터** 다 — 두 화면이 같은 숫자를 다르게 적지 않는다. */
 import { formatKrw } from "@commerce/pricing";
@@ -162,6 +164,30 @@ export interface MarketPriceComparisonProps {
    *    (도착지가 둘이 되면 셀러가 두 설명을 비교한다).
    */
   onOpenPriceCalculation?: () => void;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 CORE-UX-SELLER-01 ① — **판매판단. 🔴 이 영역이 «판정하지 않는다».**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 **owner 는 하나다** — `resolveSellVerdict()`(CommerceWorkspace:727) → `sellVerdict`
+   *    → **`FINAL_VERDICT_COPY`**(DomesticPriceIntelligencePanel:873). 이 prop 은 그 맵에서
+   *    이미 고른 **문구 객체를 그대로** 받는다. ⟹ 오른쪽 Action Center(CW:4418)가 받는 것과
+   *    **글자 그대로 같은 식** 이다(`sellVerdict ? FINAL_VERDICT_COPY[sellVerdict] : null`).
+   * 🔴 그래서 **왼쪽/오른쪽이 갈릴 경로가 구조적으로 없다** — 「결론은 하나, 표현 위치는 둘」
+   *    (CPO 확정 2026-10-26). 🔴 여기서 verdict 를 **계산하거나 문구를 새로 만들면** 그
+   *    불변식이 깨진다(계약 UX-02 와 변이 M1 이 그것을 문다).
+   * 🔴 `null` = 아직 판정이 없다 ⟹ **줄을 만들지 않는다**(「판단 보류」를 지어내지 않는다).
+   */
+  sellVerdictCopy?: { icon: string; title: string; tone: "GOOD" | "CAUTION" | "STOP" } | null;
+  /**
+   * 🔵🔵🔵 CORE-UX-SELLER-01 ② — **A 를 실제 판매가격으로 확정하는 CTA.**
+   *
+   * 🔴 **이 영역은 가격을 만들지 않는다** — `CommerceWorkspace` 가
+   *    `() => updateSalePriceKrw(recommendedPriceKrw)` 로 **이미 묶어서** 넘긴다.
+   *    즉 `PriceEditor` 의 「최종 판매가격에 적용」(:158)과 **같은 handler** 다.
+   * 🔴 없으면 **버튼을 그리지 않는다**(갈 곳 없는 버튼 금지 · ⓘ 와 같은 규약).
+   */
+  onApplyRecommendedPrice?: () => void;
 }
 
 export function MarketPriceComparison({
@@ -173,6 +199,8 @@ export function MarketPriceComparison({
   marketPriceKrw,
   marketPriceMarginPercent,
   onOpenPriceCalculation,
+  sellVerdictCopy,
+  onApplyRecommendedPrice,
 }: MarketPriceComparisonProps): JSX.Element | null {
   const domestic = selectMiSameCandidates(rows, "KR");
   const overseas = selectMiSameCandidates(rows, "OVERSEAS");
@@ -267,13 +295,110 @@ export function MarketPriceComparison({
 
       {/**
        * ══════════════════════════════════════════════════════════════════════
-       * 🔴🔴🔴 WU-140 ② — **시장 블록이 «먼저» 다** (CPO 확정 순서)
+       * 🔵🔵🔵 CORE-UX-SELLER-01 ① — **「팔아도 되는가」가 첫 줄이다**(CPO 2026-10-26)
        * ══════════════════════════════════════════════════════════════════════
        *
-       * 🔴 CPO 가 고정한 순서는 **🇰🇷 국내 → 🌎 해외 → 판매·가격 판단 결과 → 상세 근거**
-       *    다. 내 초안은 `verdict → 시장 블록` 이었고 **CPO 가 그것을 뒤집었다** —
-       *    셀러의 첫 질문은 「국내에 있나 / 해외에 있나」이고 `verdict` 는 그 **요약**
-       *    이기 때문이다. 요약을 먼저 읽히게 두면 셀러는 그 한 줄만 보고 판단한다.
+       * 🔴🔴 **이 영역은 판정하지 않는다.** `FINAL_VERDICT_COPY` 에서 이미 고른 문구
+       *    객체를 prop 으로 받아 **그리기만** 한다 ⟹ 오른쪽 Action Center(CW:4418)와
+       *    **같은 식·같은 owner** 다(「결론은 하나, 표현 위치는 둘」).
+       * 🔴 머리말은 `SELL_VERDICT_HEADING`(「판매 판단」)이고 **`MARKET_RESULT_HEADING`
+       *    (「💡 판매 판단」)이 아니다** — 후자는 결론 «문장» 블록의 제목이고 상세에
+       *    남아 있어야 한다(계약 core-2v:232 · wu-146:222 가 그것을 문다).
+       * 🔴 verdict 가 없으면 **줄을 만들지 않는다**(「판단 보류」를 지어내지 않는다).
+       */}
+      {sellVerdictCopy && (
+        <div
+          data-testid="market-sell-verdict"
+          className="mt-2 flex flex-wrap items-baseline justify-between gap-x-2"
+        >
+          <span className="text-[11px] text-text-secondary">{SELL_VERDICT_HEADING}</span>
+          <span
+            data-testid="market-sell-verdict-title"
+            className="text-sm font-semibold text-text-primary"
+          >
+            {sellVerdictCopy.icon} {sellVerdictCopy.title}
+          </span>
+        </div>
+      )}
+
+      {/**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔵🔵🔵 CORE-UX-SELLER-01 ② — **「얼마에 팔면 되는가」가 그 다음이다**
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * 🔴🔴 **WU-140 ② 의 「시장 블록이 먼저다」를 CPO 가 다시 뒤집었다**(2026-10-26).
+       * ```
+       * WU-140      🇰🇷 국내 → 🌎 해외 → 판단 결과      (근거 먼저 · 요약 나중)
+       * CORE-UX-01  ① 판매판단 → ② 권장가 → ③ 근거 → ④ ⓘ   ← **지금 이것이다**
+       * ```
+       * 🔴 이유가 바뀌었다 — WU-140 의 걱정은 「요약 한 줄만 읽고 판단한다」였고, 지금은
+       *    **결론 다음에 근거가 바로 붙어 있다**(③ 가 접히지 않는다) ⟹ 셀러는 판단을
+       *    먼저 받고 **같은 화면에서** 근거를 확인한다. 🟢 블록 **내용은 이동뿐** 이다.
+       * 🔴 `market-next-step-line`(설명문 ≤ 1줄)·`₩ 1개` 계약은 **그대로** 다.
+       * 🔴 ⓘ 는 이 블록에 **없다** — ③ 근거 **뒤** 로 내려갔다(④ · CPO 고정 순서).
+       */}
+      {(nextSteps.length > 0 || recommendedPriceKrw != null) && (
+        <div data-testid="market-next-step" className="mt-3">
+          <p className="text-[11px] font-medium text-text-secondary">{NEXT_STEP_HEADING}</p>
+          {nextSteps.map((line) => (
+            <p key={line} data-testid="market-next-step-line" className="text-[11px] text-text-tertiary">
+              {line}
+            </p>
+          ))}
+          {recommendedPriceKrw != null && (
+            <>
+              {/**
+               * 🟢 CEO 요구(CORE-2AO-R2)와 같은 층위 — **셀러가 읽을 숫자는 크게.**
+               * 🔴 「시장 평균/적정가」가 아니다 — 라벨 owner 가 그 뜻을 들고 있다.
+               */}
+              <div
+                data-testid="market-recommended-price"
+                className="mt-1 flex flex-wrap items-baseline justify-between gap-x-2"
+              >
+                <span className="text-[11px] text-text-secondary">{RECOMMENDED_PRICE_LABEL}</span>
+                <span
+                  data-testid="market-recommended-price-amount"
+                  className="text-lg font-semibold tabular-nums text-text-primary"
+                >
+                  {formatKrw(recommendedPriceKrw)}
+                </span>
+              </div>
+              {/**
+               * 🔵🔵 CORE-UX-SELLER-01 ② — **「그 가격으로 하겠다」를 그 자리에서 끝낸다.**
+               *
+               * 🔴 **새 가격을 만들지 않는다** — `CommerceWorkspace` 가 묶어 넘긴
+               *    `() => updateSalePriceKrw(recommendedPriceKrw)` 하나를 부른다 ⟹
+               *    `PriceEditor` 의 「최종 판매가격에 적용」(:158)과 **같은 handler** 다.
+               * 🔴 **금액을 문구에 담지 않는다**(1차 `₩ 1개` 계약) · 핸들러가 없으면
+               *    **버튼을 그리지 않는다**(갈 곳 없는 버튼 금지).
+               */}
+              {onApplyRecommendedPrice && (
+                <button
+                  type="button"
+                  data-testid="market-apply-recommended-price"
+                  onClick={onApplyRecommendedPrice}
+                  className="mt-1 rounded border border-border px-2 py-1 text-[11px] font-medium text-text-primary hover:bg-surface"
+                >
+                  {APPLY_RECOMMENDED_PRICE_LABEL}
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔴🔴🔴 ③ 가격 판단 근거 — **🇰🇷 국내 · 🌎 해외**(WU-140 ② 의 그 블록)
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * 🔴 CORE-UX-SELLER-01 에서 **순서만** 바뀌었다(① ② 뒤로). 블록 **안쪽은 불변** 이다.
+       *
+       * 🔴🔴 **성공 기준이 「위로 올라갔다」가 아니다**(CPO): 「페이지를 열었을 때 셀러가
+       *    **후보 목록을 읽지 않아도** 🇰🇷/🌎 의 동일상품 수 · 판매중 수 · 확인 가격 ·
+       *    가격 확인 필요 여부를 **먼저** 이해할 수 있는가」.
+       * 🟢 그래서 블록 **안쪽** 은 한 글자도 새로 계산하지 않는다 — `buildPriceGuide` 가
+       *    이미 내는 시장별 수치를 그 자리로 **옮긴** 것이다(집계 0 · 판정 0 · 환산 0).
        *
        * 🔴🔴 **성공 기준이 「위로 올라갔다」가 아니다**(CPO): 「페이지를 열었을 때 셀러가
        *    **후보 목록을 읽지 않아도** 🇰🇷/🌎 의 동일상품 수 · 판매중 수 · 확인 가격 ·
@@ -316,65 +441,29 @@ export function MarketPriceComparison({
       </div>
 
       {/**
-       * 🔴 CPO 가 고정한 **세 번째 블록** — 「그래서 내가 얼마를 기준으로 팔면 되는가」.
-       *    🔴 설명문은 **최대 한 줄** 이다(`nextStepLines` 가 그것을 보증한다).
-       *    🔴 추천 판매가 **계산 0** — 비용 축 문장들은 상세로 내려갔다(`costHoldLines`).
-       */}
-      {/**
-       * 🔵🔵🔵 CORE-NEXT STEP 4 — **「그래서 얼마에 팔면 되는가」가 이 블록에서 끝난다.**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔵🔵🔵 CORE-UX-SELLER-01 ④ — **「왜 그 가격인가」로 가는 통로**
+       * ══════════════════════════════════════════════════════════════════════
        *
-       * 🔴 전까지 이 블록은 **가이드 한 줄** 뿐이었고, 그 답(권장 판매가격)은
-       *    ③ 등록 준비의 확정 카드까지 내려가야 보였다. 🔴 그리고 거기서 「가격 계산
-       *    기준 보기 →」를 눌러도 **아무 일도 일어나지 않았다** — 앵커가 WU-152 에서
-       *    `presentation="HIDDEN"` 이 된 MI 패널 **안** 에 있어 도착지를 잃었기 때문이다.
-       * 🟢 그래서 ⒜ A 를 이 자리에 세우고 ⒝ 같은 핸들러로 **상세 계산을 되살린다**.
-       * 🔴 **영역이 늘어난 것이 아니다** — 세 번째 블록(`market-next-step`) 안이고,
-       *    `market-next-step-line`(설명문 ≤ 1줄) 계약은 그대로다(다른 testid 를 쓴다).
-       * 🔴 A 가 없으면(원본가/배송비 미확인) **아무것도 그리지 않는다.**
+       * 🔴 CPO 고정 순서의 **마지막** 이다 — ① 판매판단 → ② 권장가 → ③ 근거 → **④ 기준**.
+       *    🔴 ③ «뒤» 에 두는 것이 설계다: 셀러는 근거를 본 뒤에 「그 숫자가 어떻게
+       *       나왔나」를 묻는다. ② 에 붙여 두면 근거를 읽기 **전** 에 계산식으로 빠진다.
+       * 🔴🔴 **이 버튼은 A 전용** 이다 — B(🇰🇷 국내 참고가격)를 설명하지 않는다
+       *    (`PRICE_CALCULATION_LINK_TEXT` 가 그 뜻을 들고 있고 계약 UX-05 가 문다).
+       * 🔴 A 가 없거나 도착지(핸들러)가 없으면 **그리지 않는다** — 갈 곳 없는 버튼이
+       *    바로 CORE-NEXT STEP 4 가 고친 그 결함이다(앵커가 HIDDEN 패널에 갇혀 있었다).
+       * 🟢 조건은 **이동 전과 같다** — 전에는 `market-next-step` 안에서
+       *    `recommendedPriceKrw != null` 가지 아래 `onOpenPriceCalculation &&` 였다.
        */}
-      {(nextSteps.length > 0 || recommendedPriceKrw != null) && (
-        <div data-testid="market-next-step" className="mt-3">
-          <p className="text-[11px] font-medium text-text-secondary">{NEXT_STEP_HEADING}</p>
-          {nextSteps.map((line) => (
-            <p key={line} data-testid="market-next-step-line" className="text-[11px] text-text-tertiary">
-              {line}
-            </p>
-          ))}
-          {recommendedPriceKrw != null && (
-            <>
-              {/**
-               * 🟢 CEO 요구(CORE-2AO-R2)와 같은 층위 — **셀러가 읽을 숫자는 크게.**
-               * 🔴 「시장 평균/적정가」가 아니다 — 라벨 owner 가 그 뜻을 들고 있다.
-               */}
-              <div
-                data-testid="market-recommended-price"
-                className="mt-1 flex flex-wrap items-baseline justify-between gap-x-2"
-              >
-                <span className="text-[11px] text-text-secondary">{RECOMMENDED_PRICE_LABEL}</span>
-                <span
-                  data-testid="market-recommended-price-amount"
-                  className="text-lg font-semibold tabular-nums text-text-primary"
-                >
-                  {formatKrw(recommendedPriceKrw)}
-                </span>
-              </div>
-              {/**
-               * 🔴 **도착지가 없으면 버튼을 그리지 않는다** — 갈 곳 없는 버튼이
-               *    바로 이 WU 가 고치는 그 모양이다(`PriceEditor` 와 같은 규약).
-               */}
-              {onOpenPriceCalculation && (
-                <button
-                  type="button"
-                  data-testid="market-price-calculation-link"
-                  onClick={onOpenPriceCalculation}
-                  className="mt-0.5 text-[11px] font-medium text-primary hover:underline"
-                >
-                  {PRICE_CALCULATION_LINK_TEXT}
-                </button>
-              )}
-            </>
-          )}
-        </div>
+      {recommendedPriceKrw != null && onOpenPriceCalculation && (
+        <button
+          type="button"
+          data-testid="market-price-calculation-link"
+          onClick={onOpenPriceCalculation}
+          className="mt-2 text-[11px] font-medium text-primary hover:underline"
+        >
+          {PRICE_CALCULATION_LINK_TEXT}
+        </button>
       )}
 
       {/**

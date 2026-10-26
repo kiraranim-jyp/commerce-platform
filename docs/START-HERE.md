@@ -11,13 +11,13 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   CORE-UX-SELLER-01   (셀러 화면 재배치 · presentation layer 전용)
-NEXT         조사 없이 «구현»     (owner 6건 + CPO 판정 확정 · §9)
-STEP 5       CLOSED              (CPO 2026-10-26 · 재개 조건 1건 · §10)
-CEO ACTION   STEP 4 화면 확인 1회 (§18 · UX01 구현 뒤 한 번에 봐도 된다)
+CURRENT WU   CORE-UX-SELLER-01  🟢 **구현·검증·배포 완료** — 남은 것은 CEO 확인 1회
+NEXT WU      **CORE-PRICE-SAME-01**  (CPO 예약 · §9-NEXT) — 🔴 CTO 가 먼저 착수하지 않는다
+STEP 5       CLOSED             (CPO 2026-10-26 · 재개 조건 1건 · §10)
+CEO ACTION   **화면 확인 1회** — UX01 9항 + STEP 4 를 **한 번에**(§18)
 ```
 
-🔴 **CTO 가 지금 해야 할 것은 §9 구현 하나다.** 선제적으로 다른 WU 를 만들지 않는다.
+🔴 **CTO 가 할 코드 작업이 없다.** 다음 범위(`CORE-PRICE-SAME-01`)는 **CPO 가 발행** 한다.
 
 ---
 
@@ -201,7 +201,71 @@ STEP 4               권장 판매가격 A 1차 노출 + **ⓘ 가격 계산 기
 
 ---
 
-## 9. 🔵🔵🔵 CURRENT WU — **CORE-UX-SELLER-01** (착수점 · 조사 끝 · 구현부터)
+## 9. 🟢🟢 **CORE-UX-SELLER-01 — 구현·배포 완료**(CEO 확인 1회만 남았다)
+
+> 🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **§9-NEXT** 이고 **CPO 가 발행** 한다.
+
+### 🟢 실행 완료 기록 (2026-10-26)
+
+```
+① 판매판단   왼쪽 📊 1차에 `market-sell-verdict` — 🔴 오른쪽 Action Center **유지**
+             owner 하나: resolveSellVerdict(CW:727) → FINAL_VERDICT_COPY(Panel:873)
+             🟢 좌우가 **글자 그대로 같은 식** 이다(계약 UX-02-b 가 둘 다 문다)
+② 권장가 ₩A  `market-recommended-price` + **CTA `market-apply-recommended-price`**
+             🔴 CTA = `() => updateSalePriceKrw(recommendedPriceKrw)` — PriceEditor:158 과
+                **같은 함수**(새 handler 0 · 새 state 0 · 재계산 0)
+③ 근거       🇰🇷/🌎 `market-blocks` — **순서만** 이동(블록 안쪽 불변)
+④ ⓘ          `market-price-calculation-link` 를 ③ **뒤** 로 이동(기존 핸들러·앵커 그대로)
+🟢 새 prop **정확히 둘** — `sellVerdictCopy` · `onApplyRecommendedPrice`
+🟢 새 어휘 둘은 기존 copy owner 에 — `APPLY_RECOMMENDED_PRICE_LABEL` · `SELL_VERDICT_HEADING`
+🔴 MI · SAME · 국내가격 수집/자격 · priceTierFromLink · aggregation · 환율 ·
+   profitability · A/B 계산 · API · DB · schema **전부 변경 0**
+```
+
+🔴🔴 **그 과정에서 알게 된 것 — 「💡 판매 판단」과 「판매 판단」은 다른 것이다**:
+```
+MARKET_RESULT_HEADING  「💡 판매 판단」 = 결론 «문장» 블록(seller-decision) 제목 · **상세에 있다**
+                        🔴 계약 둘이 「1차로 되돌아오면 FAIL」을 문다(core-2v:232 · wu-146:222)
+SELL_VERDICT_HEADING   「판매 판단」   = 한 줄 verdict 의 머리말 · **1차에 있다**(이번 WU)
+⟹ 🔴 둘을 합치면 그 계약 둘이 FAIL 한다. **그것이 가드가 맞는 것이다.**
+```
+
+### 🔴 검증 결과
+
+```
+계약 신규 **24**(`core-ux-seller-01-decision-order` · UX-01~06) — 마운트 DOM + 소스 배선
+변이 **M1~M6 전부 FAIL → 바이트 복구**(md5 일치 · 흔적 0)
+  M1 판매판단 제거 **4F** · M2 A 제거 **8F** · M3 CTA 배선 제거 **1F** ·
+  M4 B→A 자리 **1F**(기존 D-6 이 잡았다) · M5 ⓘ→B **2F** · M6 오른쪽 제거 **1F**
+회귀 **677 files / 9,205 passed / 0 failed / 140 skipped** · typecheck 0 · build 0
+🔴 기존 계약 1건(`core-2r5` A-2·A-4-b)이 FAIL 했고 **의도된 순서 변경** 이라 앵커를
+   갱신·**강화** 했다 — 슬라이스 기준을 «순서» 에서 «층»(상세 접힘 앞)으로 바꾸고
+   **새 순서를 직접 단언** 하도록 더했다(약화 0)
+```
+
+---
+
+## 9-NEXT. 🔵 **다음 WU 예약 — `CORE-PRICE-SAME-01`**(CPO 발행 대기)
+
+> 🔴 **CTO 가 먼저 착수하지 않는다.** 아래는 CPO 가 예약한 **범위와 금지** 다.
+
+```
+목적   「SAME 상품의 국내가격만 국내 참고가격에 반영되는지」를 **증거로 확인** 하고,
+       연결이 끊어진 부분을 **최소 수정** 한다.
+목표   원상품 → SAME 판별 → SAME 신뢰 후보 → 국내 가격 → 국내 참고가격
+       → 판매판단 → 권장 판매가격
+🔴 **먼저 측정** 한다 — 지금 국내가격 aggregation 에 **실제로 어떤 후보가 들어가는지**,
+   SAME 판정과 **어디서 갈라지는지** 만 증거로 확인한다(SAME 알고리즘을 뜯지 않는다).
+🔴 그대로 유지 — STEP 5 CLOSED · MI 8축 · threshold · COLOR/FIT · description 금지 ·
+   이미지 축 금지 · `priceTierFromLink` · 국내가격 수집 로직
+```
+
+🟡 **이 트랙의 전략 문장(§10 과 같다)** — 「국내가격을 **많이** 가져오는 시스템」이 아니라
+「**같은 상품** 의 국내가격을 근거로 판매결정을 내리는 시스템」이다. 순서를 뒤집지 않는다.
+
+---
+
+## 9-ARCHIVE. 🔵 [기준선] CORE-UX-SELLER-01 좌표 — 재조사 금지
 
 > 🔴 **presentation layer 전용** — 계산 · MI · API · DB **전부 금지**.
 > 🟢 owner 6건과 CPO 판정이 **확정**됐다. **재조사하지 않는다.**
@@ -408,7 +472,7 @@ PRICE_CALCULATION_ANCHOR_ID          🔴 STEP 4 가 되살린 앵커 — 지우
 ## 14. TEST RULE — 분모를 반드시 적는다
 
 ```
-676 files / **9,181 passed** / 0 failed / 140 skipped   ← 기준선(apps/admin · 2026-10-26 실측)
+677 files / **9,205 passed** / 0 failed / 140 skipped   ← 기준선(apps/admin · CORE-UX-SELLER-01 후)
 typecheck PASS (0)      build PASS (exit 0)
 🔴 라이브 네트워크 하니스 **2건이 병렬에서 간헐 FAIL · 단독 PASS** —
    `p54c1-grounding-redirect`(CPO 가 합산 제외한 baseline) ·
@@ -479,7 +543,26 @@ CEO 는 코드·계약·commit 을 검토하지 않는다. **배포 전에는 �
 테스트 URL:      테스트 상품:      테스트 순서:      예상 결과:
 ```
 
-### 🟡 지금 열려 있는 CEO Action — **STEP 4 화면 1회**
+### 🟡 지금 열려 있는 CEO Action — **화면 1회**(UX01 + STEP 4 를 한 번에)
+
+🔵 **UX01 확인 9항** — `/pipeline` 에서 아무 상품 1개(「새 상품 분석」 또는 「🔄 다시 분석」):
+
+```
+[ ] 왼쪽 📊 영역에 **판매판단** 이 보인다
+[ ] 오른쪽 Action Center 가 **그대로** 있다
+[ ] 왼쪽/오른쪽 판매판단이 **동일하다**
+[ ] 권장 판매가격 **₩A** 가 눈에 띈다
+[ ] **[이 가격으로 설정]** 이 직관적이다
+[ ] 🇰🇷 국내 참고가격이 **시장 근거** 로 이해된다
+[ ] 🌎 해외 최저 소싱가가 명확하다
+[ ] **ⓘ** 를 누르면 **A 의 가격 계산 기준** 이 열린다
+[ ] 국내가격 B 를 권장 판매가격 A 로 **오해하지 않는다**
+```
+
+🔴 **세 질문에 즉시 답할 수 있어야 한다** — 「팔아도 돼?」 → 판매판단 · 「얼마에 팔아?」 →
+권장 판매가격 · 「왜 그 가격이야?」 → 근거 + 계산 기준. **답이 안 나오면 UX01 FAIL** 이다.
+
+### 🟡 같이 보는 것 — **STEP 4 화면**
 
 ```
 테스트 URL   https://ttaejyo.vercel.app/pipeline   (로그인 필요)
