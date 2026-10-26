@@ -247,9 +247,79 @@ SELL_VERDICT_HEADING   「판매 판단」   = 한 줄 verdict 의 머리말 · 
 
 ---
 
-## 9-NEXT. 🔵 **다음 WU — `CORE-PRICE-SAME-01` STEP 1**(🔴 CPO 지시서 발행 대기)
+## 9-NEXT. 🟢🟢 **`CORE-PRICE-SAME-01` STEP 1 — 측정 완료**(🔴 CPO 판정 대기 · 운영 코드 0)
 
-> 🔴🔴 **CTO 가 임의 착수하지 않는다**(CPO 명시 2026-10-26). 아래는 **발행될 범위** 다.
+> 🔴 **CTO 가 할 코드 작업이 없다.** 처방은 **CPO 가 A/B/C/D 중 하나를 고른다.**
+
+### 🟢 lineage 7칸 (라이브 실측 · `CORE_STEP5_PROBE=1 core-step5-domestic-lineage`)
+
+```
+host              human  verdict        truth              display        tier        market   가격        SAME축 참고가격
+biskuit.kr        SAME   PRESUMED_SAME  TEXT_CONFIRMED     PRESUMED_SAME  COMPARISON  KR       KRW 88,000  ✗     **O**
+m.luxboy.com      DIFF   PRESUMED_SAME  TEXT_CONFIRMED     PRESUMED_SAME  COMPARISON  UNKNOWN  KRW 59,000  ✗     ✗
+www.donokids.com  없음   PRESUMED_SAME  TEXT_CONFIRMED     PRESUMED_SAME  COMPARISON  UNKNOWN  KRW 88,000  ✗     ✗
+www.beaumonde.co.kr SAME SAME           STRONG_IDENTIFIER  SAME           EXACT       KR       KRW 83,600  **O** **O**
+🔴 **beaumonde 는 B226AC010 이다**(AC009 가 아니다 · 지시서 전제 정정) · AC009 는 3곳이다
+```
+
+### 🔴🔴 사슬 좌표 — **`priceTier` 는 SAME verdict 를 «읽지 않는다»**
+
+```
+verdict ──→ truth ──────────────────→ priceTier ──→ eligibility ──→ domesticReference
+(cross-seller) (deriveMatchTruth)     (priceTierFromLink)  (market-intelligence)
+
+match-truth.ts:**233**  crossSellerReserved = (verdict === "PRESUMED_SAME")
+match-truth.ts:**237**  !observedDifference && !crossSellerReserved && !colorUnverified 일 때만
+                        품번 경로(exact → EXACT_IDENTIFIER/STRONG_IDENTIFIER)
+match-truth.ts:**283**  SAME → STRONG_IDENTIFIER · **PRESUMED_SAME → TEXT_CONFIRMED** · UNKNOWN → INSUFFICIENT
+domestic-product-link.ts:**86**  priceTier = f(matchTruth, verified) — 🔴 verdict 를 **안 본다**
+                        EXACT_IDENTIFIER|STRONG → EXACT · **TEXT_CONFIRMED → COMPARISON** ·
+                        SIMILAR → REFERENCE · CONFLICT|INSUFFICIENT → EXCLUDED ·
+                        matchTruth 없음 → `verified ? EXACT : COMPARISON`
+market-intelligence.ts:**232·318**  market==="KR" && priceKrw != null && tier ∈ {EXACT, COMPARISON}
+                        🔴 **SAME 을 직접 검사하지 않는다**
+run-domestic-price-check.ts:**230**  priceTierWithVerifiedSame — 사람 확정 SAME 이면 **EXACT 로 덮는다**(2번째 경로)
+```
+
+🟢 **그래서 biskuit 의 COMPARISON 이 증명된다** — 품번이 **exact 인데도** `PRESUMED_SAME` 이
+`crossSellerReserved` 로 품번 경로를 막아 `TEXT_CONFIRMED` 로 내려가고, 그것이 `COMPARISON` 이 된다.
+(blockers `BRAND_MISMATCH`·`NO_TITLE_OVERLAP` 이 verdict 를 SAME 으로 못 가게 한 것이 머리다.)
+
+### 🔴🔴🔴 CPO Q8 의 답 — **아니오**
+
+```
+biskuit.kr  →  🇰🇷 국내 참고가격 **O**  ·  SAME 축 **✗**
+⟹ 셀러가 보는 AC009 의 KRW 88,000 은 **SAME 으로 확정된 상품의 가격이 아니다**(PRESUMED_SAME).
+   🟡 사람(GT)은 SAME 이라 했지만 **시스템은 그렇게 말하지 않았다** — 설명 근거가 lineage 에 없다.
+🟢 AC010 beaumonde 는 반대다 — verdict SAME · truth STRONG_IDENTIFIER · tier EXACT ⟹ **설명 가능**.
+```
+
+### 🔴🔴 그리고 더 중요한 것 — **DIFFERENT 를 막은 것은 SAME 축이 아니다**
+
+```
+m.luxboy.com  human **DIFFERENT** · tier **COMPARISON**(자격 있음) · KRW 59,000
+  🔴 제외된 이유는 **market = UNKNOWN**(`.com` + KRW → KR 증거 없음 · classifyCandidateMarket)
+  ⟹ 🔴🔴 **그 후보가 `.kr` 도메인이었다면 human DIFFERENT 상품의 가격이 국내 참고가격에
+     들어간다.** 지금 그것을 막고 있는 것은 **동일성 축이 아니라 TLD** 다.
+donokids 도 같다(market UNKNOWN · 그래서 빠졌다 · tier 는 COMPARISON 이었다)
+```
+
+### 🔴 반사실 — **SAME-only 는 AC009 에서 순손실**(재확인)
+
+```
+AC009  현행 {count 1 · KRW 88,000 · COMPARISON}  →  SAME-only **{count 0}**   (1 → 0)
+AC010  현행 {count 1 · KRW 83,600 · EXACT}       →  SAME-only {count 1}       (1 → 1 · 불변)
+```
+
+🔴 **측정불가로 남긴 것** — `luksusbaby.kr`(facts 없음) · `kream.co.kr`(⑧ `EVIDENCE_NOT_WORTHWHILE`) ·
+`candidate_reviews` 의 AC009 75행 중 `market=KR` 기록은 **miniboutique.co.kr 1행**(KRW 88,000)이고
+지목 4곳의 system 값은 그 테이블에 **없다**(biskuit·luxboy 는 `GT_IMPORT` 행 · donokids·beaumonde 는 0행)
+⟹ 🔴 그 테이블은 **사람 검토 저장소** 이고 집계 입력이 아니다. 위 표는 **라이브 운영 경로** 산출이다.
+
+---
+
+### 🔵 [원래 범위] STEP 1 지시 — 재조사 금지
+
 > 🔴 **STEP 1 은 측정 전용** 이다 — 구현이 아니다.
 
 ```
