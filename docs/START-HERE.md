@@ -11,7 +11,7 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-SAME-SPRINT-09** — 🔴🔴 **「BRAND+CODE⟹SAME」은 CEO 가 폐기한 규칙**(§9-S · 운영 0)
+CURRENT WU   **CORE-SAME-SPRINT-10** — 🟢 **description recovery = DIFFERENT 보호 강화**(§9-T · 운영 0)
 NEXT         🔵 **CPO 가 다음 Evidence Layer 범위 지정** — 🔴 CTO 선제 작업 0
 CEO ACTION   🟡 **없다**
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-SAME-SPRINT-09 — Evidence Chain 측정 · **반례가 GT 안에 있다**(§9-S) · CPO 판정 대기
+CURRENT    CORE-SAME-SPRINT-10 — description recovery **운영 경로 재확인**(§9-T) · CPO 판정 대기
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -2244,3 +2244,80 @@ junioredition S1-5  DIFF · **CONFLICT** 🟢(품번 충돌이 올바르게 막�
 ```
 
 **STOP — CORE-SAME-SPRINT-09 Identity Evidence Chain 측정 완료 / Evidence hierarchy ↔ MATCHING-3.1 충돌 CPO 판정 대기**
+
+---
+
+## 9-T. 🟢 **CORE-SAME-SPRINT-10 — Description Evidence Chain**(측정 · 운영 **0**)
+
+🔴 **운영 변경 0.** `identifierConfirmed → SAME` 복구 ❌ · `SAME_MIN_AXES` ❌ ·
+`NO_TITLE_OVERLAP` ❌ · MODEL_CODE conflict ❌ · seller name → brand ❌ ·
+COLOR/MATERIAL 축 승격 ❌ · IMAGE scoring ❌ · 🔴 **MATCHING-3.1 유지**(SPRINT-09 판정).
+
+### 🔴🔴 라이브 재수집이 **필수**였다
+
+```
+저장 facts 의 `description` = **0/33**(SPRINT-03 이전 스냅샷) ⟹ 그 분모로 재면
+**언제나 0** 이고 그것은 제품 사실이 아니다.
+🟢 운영 `factsFromProductUrl` 로 다시 수집했다(CPO 「operating path 에서 다시 확인」).
+```
+
+### 공급 분해 — GT 33 · 라이브 facts **26** · 🔴 제외 7(분모 밖)
+
+| 항목 | 값 |
+|---|---:|
+| description 존재 | **22/26 (84.6%)** |
+| 그중 MODEL_CODE 단일 존재 | **5/22 (22.7%)** |
+| 그중 BRAND 존재(등록부 alias) | **0/22 (0.0%)** 🔴 발화 0 ⟹ **측정불가** |
+| 둘 다 존재 | 0/22 |
+
+### 🟢 실제 recovery(**운영 경로** · 추정 아님) — MODEL_CODE **5/26**
+
+```
+C50  tinyapple      B126AC151  [human DIFFERENT]
+C05  tinyapple      B226AC009  [human SAME]
+C06  global.trenbe  B226AC009  [human DIFFERENT]  ← §12 가 적은 **현행 False EXACT** 그 건
+S1-5 junioredition  B226AC141  [human DIFFERENT]
+S1-6 tinyapple      B226AC141  [human DIFFERENT]
+```
+
+### 🟢🟢 Identity 효과 — **Precision > Recall 전략과 정확히 일치**
+
+| 단계 | SAME 회복 | 🔴 DIFF→SAME | SAME 손실 | conflict |
+|---|---:|---:|---:|---:|
+| BEFORE (description 없음) | 5/16 | +0 | 0 | 2 |
+| **AFTER-① code recovery(운영)** | 5/16 (+0) | **-1** | **0** | **5** |
+| AFTER-② + brand recovery(CF) | 5/16 (+0) | -1 (①대비 0) | 0 | 5 |
+
+🟢 **SAME 을 늘리지 않고 DIFFERENT 누출을 1건 «더 막는다»** · SAME 손실 **0**.
+🟢 conflict **2 → 5**(+3)은 **보호가 강해지는 방향** 이다(SPRINT-02/06 과 같은 모양).
+
+### 🔴 BRAND recovery 는 **측정불가**
+
+```
+등록부 alias(브랜드당 1개 · 「보보쇼즈」)가 description 에 **한 번도 걸리지 않았다**(0/22)
+🔴 「효과 0」이 아니라 **발화 0** 이다 ⟹ 「description 에서 brand 를 찾으면 된다/안 된다」를
+   **둘 다 적지 않는다**. 🔴 사전 확대는 CPO 금지이므로 **열지 않았다**.
+```
+
+### 증거
+
+```
+🔴 typecheck 가 하니스를 잡았다 — `lookupBrandByAliasInTitle` 은 `string | undefined` 다
+   (`?? null` 누락 · baseline 0 과 비교해 포착) · 🟢 고쳤다
+🟢 회귀 697 files / **9,329 passed · 0 failed · 143 skipped** · typecheck **0** · build exit **0**
+HTTP 33 회(read-only) · 운영 변경 **0** · 작업트리 clean · origin/main **0 / 0** · Deploy 없음
+```
+
+### 🟡 CPO 판정 대기
+
+```
+🟢 **이미 배포된 description → MODEL_CODE recovery 의 가치가 «운영 경로에서» 확인됐다** —
+   SPRINT-06 이 「효과 0」이라 적은 것은 **PLAIN_HTML 3건** 기준이었고, 이번 분모
+   (Shopify 포함 26)에서는 **DIFFERENT 보호 -1 · conflict +3** 이 측정됐다
+🔴 **SAME 회복은 여전히 0** 이다 ⟹ description 은 **recall 레버가 아니라 precision 레버** 다
+🟡 그러므로 다음 선택지 — ⒜ Evidence Chain 을 여기서 닫고 **Comparability(A/B)** 로 간다
+   ⒝ BRAND recovery 를 재려면 **alias 등록부 확대**가 필요하고 그것은 **CPO 금지 해제** 사안이다
+🔴 **CTO 가 고르지 않았다.**
+```
+
+**STOP — CORE-SAME-SPRINT-10 Description Evidence Chain 측정 완료 / 다음 범위 CPO 판정 대기**
