@@ -11,13 +11,13 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-SAME-08** — 🟡 **착수 대기**(CPO ⒜ 확정 · 입력 1개만 모자르다 · §9-I)
-NEXT         🟡 **원상품 URL 3개 수신 → 조사 없이 즉시 착수**(§9-I 의 「받는 즉시 할 일」)
-CEO ACTION   🟡🟡 **URL 3개** — 하의 · 원피스 · 가방 각 **해외 원상품 1개**(§9-I 의 선택 기준 4)
+CURRENT WU   **CORE-SAME-SPRINT-01** — 🟢 **STEP 1~6 완료**(Decision Matrix 측정 · §9-J)
+NEXT         🔴 **CPO 정책 결정 4건**(§9-J 의 J절) · 🟡 입력 2개(원상품 URL 3 · service-role 키)
+CEO ACTION   🟡🟡 **URL 3개** — 하의 · 원피스 · 가방(§9-I 선택 기준 4) · 🟡 **키 1회**
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SAME-03**(화면 + CEO GT 10/10) · **SAME-04**(FN 3건 원인 확정)
 Git          clean · origin/main 0/0 · Production / 200
-회귀         **688 files / 9,270 passed / 0 failed** · typecheck 0 · build 0
+회귀         **689 files / 9,273 passed / 0 failed** · typecheck 0 · build 0
 ```
 
 🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **CPO 판정** 이다 — matcher 를 CTO 가 열지 않는다.
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-SAME-08 — 착수 대기 · **원상품 URL 3개** 수신하면 즉시 진행(§9-I)
+CURRENT    CORE-SAME-SPRINT-01 — STEP 1~6 완료(§9-J) · **CPO 정책 결정 4건 대기**
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -949,6 +949,94 @@ B 가격비교 가능성   가격비교 가능 · 가격비교 불가 · 판단�
                    DESCRIPTION_MODEL_CODE · DESCRIPTION_MODEL_NAME · GARMENT_FORM ·
                    COLOR · MATERIAL · FIT · COMPOSITION · OPTION_SKU · IMAGE
 🔴 「판단불가」를 DIFFERENT 로 변환하지 않는다 · 🔴 A=SAME 을 자동으로 B=가능으로 두지 않는다
+```
+
+---
+
+## 9-J. 🟢🟢 **CORE-SAME-SPRINT-01 — Universal Identity & Comparability**(STEP 1~6 완료 · 구현 0)
+
+> 🔴 운영 변경 **0** · matcher **0** · verdict **0** · threshold **0** · 새 GT **0**.
+> 🟢 STEP 1~5 는 이 세션의 SAME-04/07/08 이 이미 측정했고, **STEP 6 Matrix 를 GT 로 채웠다**.
+
+### 🔴🔴🔴 **STEP 6 — Universal Decision Matrix**(GT 33쌍 실측 · 추측 0)
+
+| 증거 조합 | 분모 | human S/D/U | 현재 sys SAME | tier자격 | 판정 |
+|---|---:|---|---:|---:|---|
+| **Brand + Code 일치** | **2** | **0 / 2 / 0** | 0 | 2 | 🟢 막는다 — 🔴🔴 **전부 DIFFERENT** |
+| **Brand + 제품명(코드 없음)** | **12** | **9 / 3 / 0** | **7** | 9 | 🔴 **누출 있음** |
+| Title 약함 + Description 강함 | — | **측정불가** | — | — | 🔴 description 칸이 **없다** |
+| Code conflict(전체) | 4 | 3 / 1 / 0 | 0 | 0 | 🟢 막는다(교환 3↔1) |
+| Code conflict + 제목 겹침 | **0** | 측정불가 | — | — | 🔴 분모 0 |
+| Form conflict(GARMENT_FORM) | **0** | 측정불가 | — | — | 🔴 분모 0 |
+| Composition conflict(세트) | **0** | 측정불가 | — | — | 🔴 분모 0 |
+| Color variant | 2 | 0 / 2 / 0 | 0 | 2 | 🟢 막는다 |
+| Color conflict | 1 | 0 / 1 / 0 | 0 | 0 | 🟢 막는다 |
+| Image only | — | **측정불가** | — | — | 🔴 증거 **미공급** |
+| BRAND_UNCONFIRMED | 14 | 5 / 4 / 5 | 0 | 7 | 🟢 막는다 |
+| NO_TITLE_OVERLAP | 7 | 0 / 1 / 6 | 0 | 0 | 🟢 막는다 |
+| 같은 판매처 다른 리스팅 | 2 | 0 / 2 / 0 | 0 | 2 | 🟢 막는다 |
+
+🔴 `tier자격` 은 **`priceTier` 만** 본 값이다 — 실제 국내 적재는 `market=KR` **+ KRW** 가 더 필요하다
+(🔴 1차에 「가격축 진입」으로 적었고 그러면 「DIFFERENT 가 가격에 들어간다」로 **오독** 된다 ⟹ 라벨을 좁혔다).
+
+### 🔴🔴🔴 **CPO 전제 하나가 이 GT 에서 뒤집혔다**
+
+```
+CPO §1  「브랜드 + 모델코드 ⟹ 거의 즉시 SAME 후보」
+실측    그 조합 **2건이 전부 human DIFFERENT** 다(`C19`·`C20` junioredition **품번 재사용**)
+        반대로 실제 주력은 **「브랜드 + 제품명(코드 없음)」 12건** 이고 human 9/3 이다
+⟹ 🔴 **최강 증거가 최강이 아니었다** — 품번을 재사용하는 판매처가 실재한다.
+🔴 **일반화하지 않는다** — 분모 2 이고 **한 판매처(junioredition)** 다. 🟢 그러나 그것이
+   CPO 의 계층 우선순위(MODEL_CODE > BRAND > NAME)를 **이 분모에서 반증** 한다.
+🟢 그리고 「누출 2」가 **그 12건 안에** 있다(C06 · S1-6) ⟹ 개선의 실제 자리는 **거기** 다.
+```
+
+### 🔴 A/B 분리(STEP 3) — **설계 GO · 수치는 측정불가**
+
+```
+🟢 좌표 확정 — `compareComposition` 정의 cross-seller.ts:457 · 호출 :890 → conflicts.push
+   → `conflicts.length > 0` → **조기 반환 CONFLICT**(axes: []) :898
+🔴 효과 수치는 **측정불가** — 이 GT 에 `COMPOSITION` 발화가 **0** 이다.
+   CEO 가 세트로 판정한 `bornyesterdaykids` 는 **다른 풀**(core-2m·wu-112)이고
+   그 풀엔 **저장 facts 가 없다** ⟹ 네트워크-0 분모에서 잴 수 없다.
+```
+
+### 🟡 공통 ↔ 카테고리 의존(STEP 5) — **설계 가설 · 측정불가**
+
+```
+🟢 공통      BRAND(게이트) · MODEL_CODE · TITLE · CATEGORY/GARMENT_FORM · COMPOSITION · IMAGE
+🟡 카테고리 의존 COLOR · MATERIAL · FIT · SIZE/SIZE_SYSTEM · AUDIENCE/AUDIENCE_LINE
+🔴🔴 **검증 불가** — 원상품이 상의 5 · 신발 1 · 액세서리 1 이고 **신발·액세서리는 국내 후보 0**
+⟹ 🔴 「측정됐다」로 적지 않는다. 이것은 **가설** 이다.
+```
+
+### 🔴🔴 **J. CPO 정책 결정 4건**(CTO 가 하나도 열지 않았다)
+
+```
+① A/B 분리 구현 범위   🟡 설계 GO · 🔴 verdict 체계 변경이라 **범위를 CPO 가 명시** 해야 한다
+                      (COMPOSITION 을 conflicts 에서 빼는 것 = verdict 변경)
+② 품번 계층 재설계      🔴 CPO 전제가 반증됐다 ⟹ 「MODEL_CODE 최우선」을 유지할지 재확인 필요
+                      🟢 단 **완화는 여전히 NO-GO**(교환 3↔1 · CPO 이미 확정)
+③ 개선 우선순위 전환    🔴 실제 누출은 **「브랜드+제품명」 12건** 에 있다 ⟹ 그쪽이 1순위인가
+④ description 공급     🟡 Evidence Layer 로만 쓴다는 설계는 GO · 🔴 **ProductFacts 칸 추가** 가
+                      선행이고 그것은 계약 변경이다 ⟹ 범위 승인 필요
+```
+
+### 🟡 남은 **입력 2개**(CTO 범위 밖)
+
+```
+① 원상품 URL 3개(하의·원피스·가방) — §9-I 의 선택 기준 4 그대로
+② `SUPABASE_SERVICE_ROLE_KEY`(읽기) — 판매판단 E2E 차단 해제(§9-G)
+🟢 둘은 **독립** 이다 — 하나만 와도 그 축은 진행된다
+```
+
+### 🟢 재사용 하니스
+
+```
+core-sprint01-decision-matrix  3(네트워크 0 · CI 상주) — Matrix 측정 · A/B 반사실 · 공통/의존 분류
+core-same07-criteria-survey    5  10축 ↔ 코드 전수 · A/B 혼입 좌표 · 품번 교환 분모
+core-same05-gt(모듈) + baseline 5 + counterfactual 7   GT 33쌍 · 발화 확인 · leakage
+core-same06-safety-gt-search   4  라벨 전수(행 102 · 고유 70) · 발화 × 라벨 교차표
 ```
 
 ---
