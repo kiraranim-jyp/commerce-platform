@@ -11,7 +11,7 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-SAME-SPRINT-02** — 🟢🟢 **production integration 완료 · 배포**(§9-L)
+CURRENT WU   **CORE-SAME-SPRINT-03** — 🟢🟢 **Evidence Layer 정식화 완료 · 배포 `793bd099`**(§9-M)
 NEXT         🔵 **CPO 가 다음 Evidence Layer 범위 지정** — 🔴 CTO 선제 작업 0
 CEO ACTION   🟡 **없다**
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-SAME-SPRINT-02 — Evidence 공급 **배포 완료**(§9-L) · CPO 다음 범위 지정 대기
+CURRENT    CORE-SAME-SPRINT-03 — `ProductFacts.description` **정식화·배포**(§9-M) · CPO 판단 대기
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -1588,3 +1588,74 @@ CLOSED = 닫힌 것      HOLD = 보류된 것
 🔴 **후보를 많이 보여주는 것이 목적이 아니다.** 동일상품을 정확히 찾아 **2~3개의 가격
 근거** 로 셀러가 「팔아도 되는가 → 얼마에 팔 것인가 → 왜 그런가」를 한 화면에서 판단하게
 하는 것이 목적이다.
+
+---
+
+## 9-M. 🟢🟢 **CORE-SAME-SPRINT-03 — `ProductFacts.description` 정식화 «배포 완료»**
+
+🔴 **판정 변경 0.** threshold · `SAME_MIN_AXES` · 8축 · `NO_TITLE_OVERLAP` · BRAND · COLOR ·
+`priceTier` · `domesticReference` · 가격 파이프라인 · 셀러 UI — **전부 변경 0**.
+🔴 새 `DESCRIPTION` 축 **0** · 새 blocker/conflict **0** · 「설명이 있다/유사하다 → SAME」 **0**.
+
+### 고친 것 — 「우회」가 실제로 무엇이었는가
+
+```
+BEFORE  보강기가 facts.**materialText** 를 raw text 로 읽었다
+        🔴 그 칸은 **소재 축(compareMaterial)의 입력** 이다. 설명문이 거기 있던 이유는
+           seller-facts.ts:200 의 `material = parse(description).length > 0 ? description : null`
+           ⟹ 「소재 조성이 파싱될 때만 설명문 전문을 담는다」는 **우연한 우회** 였다
+AFTER   `ProductFacts.description`(optional · Evidence Layer 정식 칸) 신설 ·
+        Shopify 경로가 공급(`description: description || null`) · 보강기는 **그 칸만** 읽는다
+🔴 `description ?? materialText` **alias 폴백 없음**(CPO §4 금지 · 음성계약으로 잠금)
+```
+
+🟢 **부수 효과(설계된 것)** — 「소재 조성이 파싱되지 **않는** 설명문」에서도 품번을 읽는다.
+BEFORE 는 그 경우 `materialText === null` 이라 **구조적으로 못 읽었다**.
+
+🔴 **`material` 대입 조건은 한 글자도 바꾸지 않았다**(CPO §5). 그 칸을 「소재 구절」로 좁히는
+것은 **`compareMaterial` 의 분모 변경** 이라 이 Sprint 범위가 아니다 ⟹ **별도 CPO 판정 사안**.
+🔴 HTML 일반 경로는 `description` 을 **일부러 비운다** — 추정해서 채우지 않는다(계약 C).
+
+### 🟢🟢 하니스에서 «복제식» 을 제거했다 — 이것이 이번 회차의 가장 중요한 발견
+
+```
+🔴 core-sprint02-step456-matrix 가 codesIn(facts.materialText) 를 **자기가 다시 구현** 했다
+   ⟹ 운영이 정식 칸으로 옮겨가도 **FAIL 하지 않는다**(§5-B 가 경고한 바로 그 자리)
+🟢 이제 운영 `recoverModelCodeFromDetail` 을 **그대로 부른다** —
+   운영을 되돌리면(description → sellerSku) 그 하니스가 **1 FAIL** 한다(실측)
+🟢 숫자는 **동일** — 발화 3 · SAME 회수 5/17 · 누출 1/10 · 기존 FP 2→1 · TN 8→9 · 안전조건 6/6
+```
+
+🔴🔴 **저장 GT 는 «옛 계약» 이다 — 숨기지 않는다.** 그 fixture 는 `description` 이 생기기
+**전** 스냅샷이라 그 칸이 없다. 그래서 하니스에서만 원문을 정식 칸으로 **승격** 해 운영 함수에
+넘긴다. 🔴 **측정용 승격이고 운영 폴백이 아니다.** ⟹ 위 숫자는 「**description 이 공급되는
+경로에서** 이렇게 된다」는 뜻이고 「저장된 전체 후보에서 지금 이렇다」가 **아니다**.
+
+### 증거
+
+```
+계약 16 → **22**(신규 6) — Contract B 음성계약(같은 글을 materialText 에 넣으면 **읽지 않는다**) ·
+  Contract G(읽는 칸 하나 · `materialText` 어휘가 코드에 **없다**) · Shopify 공급 배선 ·
+  `material` 조건 불변 · HTML 경로 미주입 · 소재조성 없는 설명문에서 품번 읽기
+음성대조  M1(우회 복원) **8 FAIL** · M3(alias 폴백) **2 FAIL** ·
+          M2(Shopify 공급 끊기) **1 FAIL** · M4(소재 축 조건 변경) **1 FAIL** → **바이트 복구**
+회귀 692 files / **9,303 passed · 0 failed · 140 skipped** · typecheck **0** · build exit **0**
+배포 `793bd099` · 작업트리 clean · origin/main **0 / 0** · Production `/` **200**
+```
+
+### 🔴 측정불가 / 넘겨 읽지 않는 것
+
+```
+⒜ **description coverage 를 재지 않았다** — 전체 후보 중 이 칸이 실제로 채워지는 비율은
+   **미측정** 이다. 0% 도 100% 도 아니다 ⟹ CPO 판단 대기
+⒝ 공급은 **Shopify 경로뿐** 이다 — 「모든 판매처/카테고리에서 검증됐다」로 **읽지 않는다**
+⒞ 저장 GT 숫자(SAME 5/17 · FP 1)는 **승격한 입력** 기준이다(위 설명)
+⒟ 🔴 회귀 중 `docs/core-2m-visual-review.html` 이 라이브 재생성되며 국내 biskuit 후보의
+   공식 품번이 `없음 → B226AC009` 로 바뀐 것이 관측됐다. 🔴 **내 변경이 원인이라 단정하지
+   않는다** — 그 후보는 Cafe24(**HTML 경로**)이고 보강기는 Shopify 경로에만 있으며, 같은
+   diff 에 **사이트 내용 변화** 도 함께 있다. ⟹ 범위 밖 산출물이라 **커밋에서 제외** 했다
+```
+
+🔵 **다음 좌표** — CPO 가 지정한 순서는 ① description 정식화(**완료**) → ② evidence coverage
+측정 → ③ 필요한 evidence 만 Identity 에 연결 → ④ Comparability(A/B) → ⑤ 가격 형성대 →
+⑥ 판매판단. 🔴 **CTO 가 ②를 임의로 시작하지 않는다.**
