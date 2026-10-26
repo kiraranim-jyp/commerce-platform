@@ -11,13 +11,13 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-MI-PRICE-03** — 🔴 **STOP: 기존 snapshot 입력 경로 실행 불가**(§9-G)
-NEXT         🔵 **차단 해제 조건 «하나»** — `SUPABASE_SERVICE_ROLE_KEY`(읽기면 충분)
-CEO ACTION   🟡 **키 제공 1회**(또는 CPO 가 대안 경로 지정)
+CURRENT WU   **CORE-SAME-07** — 🟢 **판정 기준 v1.0 조사 완료**(§9-H · 구현 0)
+NEXT         🔴 **CPO 정책 결정 2건** — ⒜ A/B 분리(세트) ⒝ 품번 불일치 정책(교환 측정됨)
+CEO ACTION   🟡 **다중 후보 3-way GT** — 🔴 단 후보 공급이 선행이다(§9-H)
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SAME-03**(화면 + CEO GT 10/10) · **SAME-04**(FN 3건 원인 확정)
 Git          clean · origin/main 0/0 · Production / 200
-회귀         **687 files / 9,265 passed / 0 failed** · typecheck 0 · build 0
+회귀         **688 files / 9,270 passed / 0 failed** · typecheck 0 · build 0
 ```
 
 🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **CPO 판정** 이다 — matcher 를 CTO 가 열지 않는다.
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-MI-PRICE-03 — 국내 축 CLOSED · 판매판단 E2E 는 **키 부재로 차단**(§9-G)
+CURRENT    CORE-SAME-07 — 판정 기준 v1.0 조사 완료(§9-H) · **CPO 정책 결정 2건 대기**
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -757,6 +757,81 @@ B226AC010  1 · Level 1(가격대 확정 불가)      B226AC117  0 · Level 0(�
    그것이 「지금 착수 가능」이라는 신호다(쿠팡 고시 선례와 같은 모양).
 🟡 대안(CPO 결정) — 운영 `/check` 응답 1건을 받는다(CEO 화면 1회 · §12 의 ⒜ 경로)
 ```
+
+---
+
+## 9-H. 🟢🟢 **CORE-SAME-07 — 판정 기준 v1.0 조사 완료**(구현 0 · 운영 변경 0)
+
+> 🔴 새 축 **0** · matcher **0** · threshold **0** · verdict 체계 **0**.
+> 🟢 CPO 의 **10축**과 **A/B 2단계** 가 코드에 이미 있는지를 **소스에서 전수 대조** 했다.
+
+### 🟢🟢 CPO 10축 — **9/10 이 이미 코드에 있다**
+
+| | 축 | 단계 | 코드 실체 |
+|---|---|---|---|
+| ① | 브랜드 | A | 🟢 `brandKnown`·`brandOk`·BRAND_MISMATCH/UNCONFIRMED · 🔴 **축이 아니라 게이트** |
+| ② | 모델코드 | A | 🟢 `compareModelCode` · 🔴 conflict 면 **조기 종료**(CPO 요구와 충돌) |
+| ③ | 상품명 | A | 🟢 `coreTitleTokens`·NO_TITLE_OVERLAP |
+| ④ | **상세설명** | — | 🔴🔴 **코드에 없다**(`ProductFacts` 에 칸 자체가 없다) |
+| ⑤ | 상품 형태 | A | 🟢 GARMENT_FORM blocker **+** CATEGORY conflict(parkette 가 그 사례) |
+| ⑥ | 색상 | BOTH | 🟢 `compareColor` + COLOR_VARIANT · 🟡 variant 가 **보류** 로만 있다 |
+| ⑦ | 소재 | A | 🟢 축 + 보류 |
+| ⑧ | 옵션/SKU | BOTH | 🔴🔴 **`sellerSku` 가 matcher 에 «아예 없다»** — variant 구분이 **사이즈뿐** |
+| ⑨ | **세트/단품** | A | 🟢 `compareComposition` **이미 있다** · 🔴🔴 **A 의 conflict 로 들어간다** |
+| ⑩ | 이미지 | A | 🟡 축은 있는데 호출부가 증거를 **넘기지 않는다** |
+
+### 🔴🔴🔴 **A/B 혼입 — 이 WU 의 핵심 발견**
+
+```
+compareComposition  정의 cross-seller.ts:457 · 호출 :890 → **conflicts.push**
+conflicts.length > 0 → **조기 반환 CONFLICT**(axes: []) :898
+⟹ 🔴 「세트라서 **가격을 비교할 수 없다**」가 「**다른 상품이다**」와 **같은 출력** 이 된다.
+🔴 실측 대조 — CEO 는 `bornyesterdaykids`(상/하의 세트)를 「상의는 동일하지만 가격
+   비교에 부적합 ⟹ **판단불가**」로 봤고, 시스템은 **DIFFERENT** 로 처리한다.
+⟹ 🟢 **CPO 가 요구한 A/B 분리는 「새 기능」이 아니라 «이 지점을 가르는 일» 이다.**
+🔴 CTO 가 가르지 않았다 — verdict 체계 변경이고 **제품 정책** 이다.
+```
+
+### 🔴🔴 CPO 요구 ②(「품번 불일치 ≠ 자동 DIFFERENT」)는 **교환이다 — 측정됐다**
+
+```
+GT 33쌍 · 품번 «불일치»(conflict) **4건** × human 라벨:
+   🟡 human SAME **3**       ← 열리는 것(품번이 달라도 사람은 같다고 봤다)
+   🔴 human DIFFERENT **1**  ← 뚫릴 위험(품번 보호가 지금 막고 있는 것)
+⟹ 🔴 **둘이 같은 분모 안에 있다.** 「불일치 ≠ 자동 DIFFERENT」는 **3 을 열고 1 을 여는** 교환이다.
+🔴 그리고 그 정책은 §11 금지(「MODEL_CODE 정책」·품번 충돌 보호)와 **정면으로 만난다** ⟹ CPO 결정.
+```
+
+### 🟢 현재 선별 성능(CPO 성공 기준으로 다시 읽은 값)
+
+```
+SAME 회수 **5/17** · 🔴 DIFFERENT 누출 **2/10**(알려진 False EXACT C06·S1-6)
+🔴 CPO 기준은 「SAME 몇 건」이 아니라 **누출 0 + 과잉 폐기 최소** 다 —
+   지금은 **회수가 낮고 누출이 2** 다. 둘 다 숫자로 고정돼 있다.
+```
+
+### 🟢 다중 후보 3-way GT — **화면은 이미 있다. 부족한 것은 후보 공급이다**
+
+```
+🟢 재사용 — `core-same03-domestic-review-build`(`CORE_SAME03_LIVE=1`)
+   3택(동일/다른제품/판단불가) + 사유 + JSON export + 원상품별 섹션 + 측정불가 표시 **전부 있다**
+🔴 현재 국내 후보는 **상품당 2~4건** 이고 CPO 가 요구한 **5~10건** 에 못 미친다
+⟹ 🔴 그 공급 확대는 §7 ABSOLUTE FREEZE(discovery) 밖이라 **CPO 범위 결정** 이다
+🔴 그리고 카테고리 확장(상의/하의/신발/가방…)은 **원상품 자체가 없다** —
+   현재 GT 는 전부 **Bobo Choses 아동 상의** 계열이다(카테고리 공통성 **미측정**)
+```
+
+### 🟢 재사용 하니스
+
+```
+core-same07-criteria-survey  5(네트워크 0 · CI 상주)
+  10축 ↔ 코드 owner 전수(**소스 단언**) · A/B 혼입 좌표 · 품번 불일치 교환 분모 ·
+  현재 선별 성능 · 3-way 화면 재사용 가능성
+```
+
+🔴 **내 표가 틀렸고 단언이 잡았다** — ⑧ 축 owner 에 `sellerSku` 를 적었는데 `cross-seller.ts`
+에 **그 문자열이 아예 없었다**. 🟢 「판정에 쓰지 않는다」보다 **강한 사실** 이고(matcher 가
+판매처 SKU 를 **한 번도 보지 않는다**) 그것을 계약으로 잠갔다.
 
 ---
 
