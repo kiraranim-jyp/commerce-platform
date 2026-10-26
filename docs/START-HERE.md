@@ -10,7 +10,7 @@
 ## 1. CURRENT STATE
 
 ```
-현재        🔴🔴 **STEP 5-E2 측정불가(자기정정 1건) · STEP 5-1·5-2 완료 — 「SAME 아닌 후보의 가격이 국내 참고가격에 있다」가
+현재        🔴🔴 **STEP 5-E2 재측정 완료 — CASE B(축별로 갈린다) · AC009 분기는 미측정 · STEP 5-1·5-2 완료 — 「SAME 아닌 후보의 가격이 국내 참고가격에 있다」가
                실측됐다**(§6-STEP5) ⟹ 🟡 **CPO 판정 2건 대기 · STEP 5-3 착수 금지**
             🔴 반사실 — 「SAME 만 허용」하면 **AC009 국내 가격이 사라진다**(1 → 0 · 실측)
             🟢 STEP 4 구현·배포 완료(`6fe1b0bf`) — 남은 것은 **CEO 화면 확인 1회**(§6-NEXT ⑦)
@@ -237,10 +237,61 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
-## 6-STEP5-E2. 🔴🔴🔴 **STEP 5-E2 — 측정불가 · 그리고 내 직전 보고를 «정정» 한다**
+## 6-STEP5-E2R. 🟢🔴 **STEP 5-E2 재측정 — 반사실 «발화함» · CASE B(축별로 갈린다)**
+
+> 🔴 **운영 코드 0 · DB 0 · 배포 0.** 반사실을 **하니스 안에서 로컬 복제**(CPO 승인 조건) —
+> 운영이 쓰는 추출기(`extractLeadingColorPhrase`·`extractColor`·`parseMaterialComposition`·
+> `extractFitPhrase`·`extractLabeledProductCode`)를 **그대로** 불렀다(규칙 신설 0).
+> 🟢 **발화 단언 PASS** — 새 colorText **1** · 새 fitText **1** ⟹ 결과를 인용할 수 있다.
+
+### 🔴 축별 결과 (분모 **8쌍** · SAME 5 · DIFF 3 · desc 실존 **4/8**)
+
+```
+새 materialText   **0**  ⟹ 🟢 CORE-2AC 가 우려한 **거짓 MATERIAL blocker 가 이 분모에서 0**
+새 품번 exact      **0**  ⟹ 🔴 `extractLabeledProductCode(desc)` 가 네 건에서 **품번을 못 찾았다**
+새 colorText       **1** ┐
+새 fitText         **1** ┘ ⟹ 🔴 **그 1건에서 새 blocker 가 생겼다**
+precision/recall   baseline SAME **0** · CF SAME **0** ⟹ 둘 다 **측정불가/0%**(뒤집힘 0)
+```
+
+### 🔴🔴 가장 중요한 실측 — **human SAME 에 새 blocker 가 붙었다**
+
+```
+S1-1 rboutique.com  human **SAME**  blockers []  →  **[COLOR_VARIANT, FIT]**
+                    등급 UNKNOWN/EXCLUDED → PRESUMED_SAME/**COMPARISON**
+🟢 등급은 올랐다(EXCLUDED → COMPARISON = 가격 자격이 생겼다)
+🔴 그런데 **SAME 으로는 못 간다** — 새로 생긴 색상/핏 충돌이 그 문을 막는다
+🔴 위험은 CORE-2AC 가 지목한 **material 이 아니라 COLOR/FIT 에 있다**(새 사실)
+🔴 human DIFFERENT 쪽 새 blocker **0** ⟹ 「오답을 더 잘 막는 효과」도 **없다**
+```
+
+🟡 브랜드(Track E2-E · **덮어쓰기 0 · 관측만**) — `descBrandEvidence` **1/8**
+(cissywears `true` · rboutique `false`) ⟹ 🔴 상세에서 브랜드 단서가 나오는 비율이 낮다.
+
+### 🔵 CASE 판정 — **CASE B(일부 축만 안전)**
+
+```
+🟢 안전(위험 0)   materialText · brandModelCode  ← 🔴 단 **이 분모에서 효과도 0**
+🔴 위험           colorText · fitText            ← human SAME 1건에 새 blocker
+⟹ 🔴 **description 전체 연결은 승인 조건을 충족하지 못한다**(CPO §7-3)
+⟹ 🟡 남는 선택지는 **「품번만 연결」** — 위험 0 이지만 **이득도 0**(이 분모)
+```
+
+🔴🔴 **그리고 1순위가 아직 미측정이다** — CPO 가 가장 중요하다고 한
+**AC009 biskuit/luxboy 분기** 는 이 분모에 **없다**(그 둘은 live 경로 하니스 쪽).
+🔵 다음 세션은 **같은 로컬 복제를 `core-step5-domestic-lineage`(AC009) 에 넣어** 3건에서
+재야 한다 — 그것이 「상세설명이 정답과 오답을 가르는가」의 **유일한 직접 증거** 다.
+
+🔴 **한계** — ⒜ `coreTitleTokens` **재파생 안 함**(CORE-2AC 가 바꾸지 말라고 적은 자리)
+⒝ desc 실존 **4/8** ⟹ 유효 분모가 더 작다 ⒞ 하니스 fetch 는 운영
+`fetchPlainHtmlWithFinalUrl`(SSRF 가드)이 아니라 **plain fetch** 다.
+
+---
+
+## 6-STEP5-E2. 🔴🔴 **[1차] STEP 5-E2 — 측정불가 · 내 직전 보고를 «정정» 했다**
 
 > 🔴 **운영 0 · DB 0 · 배포 0.** 하니스 1개 추가(`CORE_STEP5E2_PROBE=1` 없으면 SKIP).
-> 🔴🔴 **CASE A/B/C 중 아무것도 아니다 — 반사실이 «발화하지 않았다».**
+> 🔴🔴 1차에는 **반사실이 «발화하지 않았다»** — 🟢 위 §6-STEP5-E2R 이 그것을 고쳐 재측정했다.
 
 ### 🔴🔴 자기정정 — 「연결은 인자 한 개」가 **틀렸다**
 

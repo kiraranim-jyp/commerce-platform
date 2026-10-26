@@ -9,7 +9,20 @@ import {
   productFactsFromListing,
 } from "@commerce/crawler";
 import type { ProductFacts } from "@commerce/shared";
-import { buildProductIdentityDna, productFactsFromIdentityDna } from "@commerce/shared";
+import {
+  buildProductIdentityDna,
+  /**
+   * 🔵🔵 CORE-NEXT STEP 5-E2 재측정 — **운영이 쓰는 그 추출기들을 그대로 부른다.**
+   *    🔴 규칙을 새로 쓰지 않는다(지어내면 그 측정은 제품과 무관해진다) —
+   *       `seller-facts.ts:199~215` 가 Shopify 경로에서 쓰는 **같은 네 함수** 다.
+   */
+  extractFitPhrase,
+  extractLabeledProductCode,
+  extractLeadingColorPhrase,
+  parseMaterialComposition,
+  productFactsFromIdentityDna,
+} from "@commerce/shared";
+import { extractColor } from "@commerce/crawler/src/description-facts";
 import { domesticMatchDisplay } from "../../../../pipeline/commerce/match-display";
 import { priceTierFromLink } from "../../../domestic-price-sources/_lib/domestic-product-link";
 
@@ -98,6 +111,9 @@ describe("STEP 5-E2 — 상세설명 evidence 안전성", () => {
 
     let bS = 0, bF = 0, cS = 0, cF = 0;
     let newMaterial = 0, newMaterialBlocker = 0, newMatBlkSame = 0, newMatBlkDiff = 0;
+    /** 🔵 발화 축을 **넷으로** 센다(1차 단언이 둘만 봐서 발화를 놓쳤다). */
+    let newColor = 0, newFit = 0, newBlockerSame = 0, newBlockerDiff = 0;
+    const newBlockerRows: string[] = [];
     let newCodeExact = 0, newCodeSame = 0, newCodeDiff = 0, codeConflictNew = 0;
     const flips: string[] = [];
     const brandRows: string[] = [];
@@ -126,14 +142,27 @@ describe("STEP 5-E2 — 상세설명 evidence 안전성", () => {
         brand: p.stored.brand,
         category: jsonLd?.jsonLdCategory ?? null,
       });
-      /** 🔵 반사실 = **인자 하나 추가**. 🔴 그 외는 한 글자도 다르지 않다. */
-      const cf = productFactsFromListing({
-        title: p.title,
-        url: p.url,
-        brand: p.stored.brand,
-        category: jsonLd?.jsonLdCategory ?? null,
-        description: description ?? undefined,
-      } as never);
+      /**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔵🔵🔵 반사실 — **운영 코드 0 · 하니스 안에서 «로컬 복제»**(CPO 승인 조건)
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * 🔴 1차에는 `productFactsFromListing({description})` 로 넘겼고 **그 칸이 없어서
+       *    조용히 무시** 됐다(발화 0). 🟢 그래서 이번에는 그 함수가 «할 일» 을
+       *    **운영이 쓰는 같은 추출기** 로 여기서 조립한다(`seller-facts.ts:199~215`).
+       * 🔴 **규칙을 새로 쓰지 않는다** — 네 함수의 호출 모양을 그 파일에서 그대로 베꼈다.
+       * 🔴 `coreTitleTokens` 는 **재파생하지 않았다** — 그 4번째 인자(material)를 바꾸는
+       *    것은 CORE-2AC 가 「바꾸지 않는다」고 적어 둔 자리다(한계로 보고한다).
+       */
+      const descPlain = (description ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+      const cf: ProductFacts = {
+        ...base,
+        colorText: base.colorText ?? extractLeadingColorPhrase(descPlain) ?? extractColor(descPlain) ?? null,
+        materialText:
+          base.materialText ?? (parseMaterialComposition(descPlain).length > 0 ? descPlain : null),
+        fitText: base.fitText ?? extractFitPhrase(descPlain) ?? null,
+        brandModelCode: base.brandModelCode ?? extractLabeledProductCode(descPlain) ?? null,
+      };
 
       const jb = judge(origin, base);
       const jc = judge(origin, cf);
@@ -145,6 +174,8 @@ describe("STEP 5-E2 — 상세설명 evidence 안전성", () => {
 
       /* ── Track E2-B — material false blocker ── */
       if (!base.materialText && cf.materialText) newMaterial += 1;
+      if (!base.colorText && cf.colorText) newColor += 1;
+      if (!base.fitText && cf.fitText) newFit += 1;
       const bBlk = new Set(jb.cross.blockers.map((x) => x.blocker));
       const cBlk = jc.cross.blockers.map((x) => x.blocker);
       const matNew = cBlk.includes("MATERIAL") && !bBlk.has("MATERIAL");
@@ -152,6 +183,13 @@ describe("STEP 5-E2 — 상세설명 evidence 안전성", () => {
         newMaterialBlocker += 1;
         if (p.human === "SAME") newMatBlkSame += 1;
         else newMatBlkDiff += 1;
+      }
+      /** 🔴 **새로 생긴 blocker 를 전부 센다** — false DIFFERENT 위험의 직접 지표다. */
+      const addedBlockers = cBlk.filter((x) => !bBlk.has(x));
+      if (addedBlockers.length > 0) {
+        if (p.human === "SAME") newBlockerSame += 1;
+        else newBlockerDiff += 1;
+        newBlockerRows.push(`${p.id}(${p.domain}) human=${p.human} +[${addedBlockers.join(",")}]`);
       }
       if (/organic/i.test(String(cf.materialText ?? "")) || /organic/i.test(String(origin.materialText ?? ""))) {
         organicRows.push(`${p.id} origin=${JSON.stringify(origin.materialText)?.slice(0, 50)} cand=${JSON.stringify(cf.materialText)?.slice(0, 50)} MATERIAL새로=${matNew}`);
@@ -196,6 +234,11 @@ describe("STEP 5-E2 — 상세설명 evidence 안전성", () => {
     );
     console.log(`organic 관련 쌍:\n  ${organicRows.join("\n  ") || "없음"}`);
     console.log(
+      `\n🔴 **새 blocker 가 붙은 쌍** — human SAME ${newBlockerSame} · DIFFERENT ${newBlockerDiff}` +
+        `${newBlockerRows.length ? ":\n  " + newBlockerRows.join("\n  ") : " (없음)"}` +
+        `\n   🔴 human SAME 에 새 blocker 가 붙는 것이 **false DIFFERENT 위험** 이다`,
+    );
+    console.log(
       `\n═══ 8. modelCode ═══\n새로 exact 가 된 쌍 ${newCodeExact}(human SAME ${newCodeSame} · DIFFERENT ${newCodeDiff})` +
         ` · 새 conflict ${codeConflictNew}`,
     );
@@ -218,10 +261,15 @@ describe("STEP 5-E2 — 상세설명 evidence 안전성", () => {
      *    새 품번도 하나도 안 생기면 **「측정불가」** 이고 **「안전」이 아니다.**
      * 🔴 이 단언이 FAIL 하는 동안은 E2-A/B/C 결과를 **인용하지 않는다.**
      */
-    const cfFired = newMaterial > 0 || newCodeExact > 0;
+    /**
+     * 🔴 **1차 단언이 좁았다** — `material`/`품번` 만 봤는데 실제 발화는 **color/fit**
+     *    에서 났다(S1-1 `[]→[COLOR_VARIANT,FIT]`). 🟢 그래서 **네 축 전부** 를 센다.
+     */
+    const cfFired = newMaterial > 0 || newCodeExact > 0 || newColor > 0 || newFit > 0;
     console.log(
       `\n═══ 🔴 반사실 발화 여부 ═══\n새 materialText ${newMaterial} · 새 품번 exact ${newCodeExact}` +
-        ` ⟹ ${cfFired ? "🟢 발화함(결과 인용 가능)" : "🔴 **발화하지 않음 — E2 결과는 측정불가다**"}`,
+        ` · 새 colorText ${newColor} · 새 fitText ${newFit}` +
+        ` ⟹ ${cfFired ? "🟢 **발화함**(결과 인용 가능)" : "🔴 **발화하지 않음 — 측정불가다**"}`,
     );
     expect(
       cfFired,
