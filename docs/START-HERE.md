@@ -11,13 +11,13 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-PRICE-SAME-06** — 🔴 **STOP: P1/P2 안전성 분모 확보 불가**(§9-D)
-NEXT         🟡 **CEO 가 「다른제품」을 라벨해야 열린다** — 기존 데이터로는 구조적으로 불가
-CEO ACTION   🟡 **조건부 1회** — 국내 후보(brand 공백·절단 품번)에서 DIFFERENT 라벨 확보(§9-D)
+CURRENT WU   **CORE-MI-PRICE-01** — 🔴 **STOP: Level 2(가격 형성대) 0/3**(§9-E)
+NEXT         🔴 **CPO 판정 2건** — ⒜ 밴드 집계기 ①↔② 선택 ⒝ 등록부 접근(측정불가 해소)
+CEO ACTION   🟡 **없다**
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SAME-03**(화면 + CEO GT 10/10) · **SAME-04**(FN 3건 원인 확정)
 Git          clean · origin/main 0/0 · Production / 200
-회귀         **685 files / 9,261 passed / 0 failed** · typecheck 0 · build 0
+회귀         **686 files / 9,262 passed / 0 failed** · typecheck 0 · build 0
 ```
 
 🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **CPO 판정** 이다 — matcher 를 CTO 가 열지 않는다.
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-PRICE-SAME-06 — P1/P2 안전성 분모 **확보 불가** STOP(§9-D) · **CPO 판정 대기**
+CURRENT    CORE-MI-PRICE-01 — 가격 형성대 Level 2 **0/3** STOP(§9-E) · **CPO 판정 대기**
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -556,6 +556,84 @@ DIFFERENT 출처 — wu-059:7 · wu-112:6 · core-2al:6 · wu-125:4 · wu-068:3 
 core-same06-safety-gt-search  4   검색 범위 전수(미분류 0 단언) · 라벨 분포 · offline 발화 · 라이브 대상
 🔴 라이브 — `CORE_SAME06_LIVE=1`(기존 DIFFERENT 17건 발화) ·
             `CORE_SAME06_FULL=1`(고유 URL 70 전수 교차표)
+```
+
+---
+
+## 9-E. 🔴🔴 **CORE-MI-PRICE-01 — STOP: Level 2(가격 형성대) 0/3**(운영 변경 0)
+
+> 🔴 새 가격 산식 **0** · UI **0** · matcher **0** · threshold **0**.
+> 🟢 **재조사 금지 준수** — WU-172·WU-FINAL-3 가 이미 한 E2E 를 다시 만들지 않고 **실행** 했고,
+> 그 입력(human GT 국내 URL)을 **그대로** 썼다.
+
+### 🟢🟢 먼저 — **「가격 형성대」는 이미 구현돼 있다**(§9 의 UI 계약 변경 **불필요**)
+
+```
+owner  `mi-same-candidates.ts` — buildPriceGuide · basis **SINGLE ↔ RANGE**
+       :519 「🇰🇷 국내 «시장 가격대» — 89,000 ~ 95,000 ⟹ 대략 9만원대에 형성돼 있다」
+       :522 「🔴 **1개를 가격대라고 부르지 않는다**」 · :556 「가격대 확정 불가」를 글자로 말한다
+⟹ 🟢 CPO 의 **Level 0/1/2 가 이미 코드에 있다**(WU-139/148). 🔴 Level 3(4개+ 「높은 근거」)만 없다.
+⟹ 🟢 **§9 STOP(UI 계약 변경)은 발생하지 않았다.**
+```
+
+### 🔴🔴🔴 그런데 **집계기가 «둘» 이고 Level 이 둘 다 2 에 못 닿는다**
+
+```
+① buildPriceGuide        ← **SAME tier 만** 센다(밴드 문구의 주인)
+② domesticReference      ← `priceTier` 가 **EXACT | COMPARISON**(= PRESUMED_SAME 포함 · :318)
+```
+
+| 상품 | ① SAME-only | ① Level | ② domRef | ② Level | 🔴 오염 |
+|---|---:|---|---:|---|---:|
+| B226AC009 | 0 | Level 0 | **1** (88,000) | Level 1 | 0 |
+| B226AC010 | 1 (83,600) | Level 1 | 1 (83,600) | Level 1 | 0 |
+| B226AC117 | 0 | Level 0 | 0 | Level 0 | 0 |
+| | **Level 2 = 0/3** | | **Level 2 = 0/3** | | **합 0** |
+
+🟢🟢 **DIFFERENT 오염 = 0** — `kream`(human DIFFERENT · KRW 65,000)이 CONFLICT 로 정확히 빠졌다.
+🟢 Precision 우선 원칙이 지켜졌다 — threshold 완화 **0** · 유사상품 혼입 **0**.
+
+### 🔴🔴 Level 2 를 막는 것이 **제품 사실이 아니라 하니스 한계** 일 수 있다
+
+```
+B226AC009 의 human SAME 국내 후보 4건 중 ②에 들어간 것은 **1** 이고, 빠진 셋의 이유가 갈린다:
+  beaumonde.co.kr   SIMILAR/EXCLUDED  🟢 **정확한 배제** — 그 URL 은 **AC010 상품** 이다
+  m.luxboy.com      KRW 59,000 · 🔴 market **UNKNOWN**(KRW_WITHOUT_DOMAIN_EVIDENCE)
+  donokids.com      KRW 88,000 · 🔴 market **UNKNOWN**(같은 사유)
+🔴🔴 그 둘은 `.com` 이고, `classifyCandidateMarket` 의 **등록부 분기가 하니스에서 발화하지
+   않는다**(service-role 키 없음 · SAME-03 에서 이미 기록). ⟹ **운영에서는 KR 일 수 있다.**
+🟡 그렇다면 AC009 의 ② 는 **88,000 / 59,000 / 88,000 = 3건 ⟹ Level 2** 가 된다.
+🔴🔴 **그러나 「Level 2 달성」으로 적지 않는다 — 측정불가** 다(§9 규칙).
+⟹ 🔴 **이것이 지금 이 트랙에서 가치가 가장 큰 단일 미지수** 다.
+```
+
+### 🔴 이번에 측정하지 «않은» 것 — 숨기지 않는다
+
+```
+🔴 해외 최저 소싱가 · 판매판단 · 권장 판매가격의 **재측정은 하지 않았다.**
+   사유 — ⒜ §6 이 「새 가격 계산 0」이고 그 축은 **이미 CLOSED** 다(§6 기준선
+   착지원가 ₩230,721 · A ₩295,796 · B ₩258,000) ⒝ `computeMarketIntelligence` 가
+   `fetchLiveExchangeRates()` 를 요구해 이 하니스에서 전 구간을 돌릴 수 없다(WU-021 기록).
+🔴 그래서 §12 의 「국내 가격 형성대 + 해외 최저 소싱가 → 판매판단」 **전 구간 E2E 는 미완결** 이다.
+🔴 상품 수도 **3** 이고 §7 이 요구한 **5** 가 아니다(원상품 추출이 되는 국내 GT 보유 상품이 3).
+```
+
+### 🔴🔴 상세설명(§3) — **연결돼 있지 않고, 연결은 금지축이다**
+
+```
+🔴 `ProductFacts` 에 **description 칸이 없다**(SAME-04 가 전수 확인) ⟹ 어느 축에도 안 들어간다.
+🔴 그리고 §10 STEP 5 ②가 「상세설명 직접 연결 **금지** — 정답 SAME 악화가 **서로 다른 분모에서
+   2회 재현**」으로 닫아 뒀고, §11 금지 목록에도 「description 재연결」이 있다.
+🟡 §3 의 「상세설명 기반 **후보 탐색**」은 **discovery** 이고 **SAME 축 추가와 다른 일** 이다 —
+   🔴 그 구분을 CPO 가 확정해 주지 않으면 CTO 가 열지 않는다.
+```
+
+### 🟢 재사용 하니스
+
+```
+core-mi-price-01-band  2   ①↔② 집계기 나란히 · CPO Level 매핑 · **DIFFERENT 오염 단언**
+                           🔴 `CORE_MI_PRICE_01_LIVE=1`
+기존(재사용) WU_172_PROBE=1 (상품 3종 퍼널) · WU_F3_PROBE=1 (자동 공급 0 확인)
 ```
 
 ---
