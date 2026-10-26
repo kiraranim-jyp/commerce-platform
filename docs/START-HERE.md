@@ -15,7 +15,7 @@
                                     STEP 3(IMAGE) 🟡 **NOT MEASURED** — ⏸ 착수 대기
 트랙 B (화면)  CORE-UX-SELLER-01 🟢 CLOSED → **CORE-UX-SELLER-02 착수점**(§9-UX02)
                🟢 조사 끝 · 설계 확정 · **다음 세션은 조사 없이 구현**(1차에 한 줄 추가)
-BLOCKING       🟡🟡 **CEO 답변 «한 글자»**(A/B/C/D · §18) — STEP 3 착수 여부가 여기서 갈린다
+BLOCKING       🟡🟡 **CEO 육안 판정 11건**(§9-EV2 · docs/core-2m-visual-review.html) ← 지금 이것이다
 CEO ACTION     ① **A/B/C/D 한 글자**   ② 화면 확인 1회(UX01 9항 + STEP 4)
 STEP 5         CLOSED (CPO 2026-10-26 · 재개 조건 1건 · §10)
 ```
@@ -33,7 +33,7 @@ STEP 5         CLOSED (CPO 2026-10-26 · 재개 조건 1건 · §10)
 진입점       docs/START-HERE.md (MASTER HANDOFF) — 이것만 읽는다
 트랙 A       CORE-PRICE-SAME-01 — STEP 1·2·2-R CLOSED · STEP 3(IMAGE) 착수 대기
 트랙 B       CORE-UX-SELLER-01 CLOSED → CORE-UX-SELLER-02 발행 대기
-BLOCKING     CEO 답변 한 글자(A/B/C/D)
+BLOCKING     CEO 육안 판정 11건(docs/core-2m-visual-review.html · §9-EV2)
 이 페이지 역할  CPO / CTO / CEO 검증  (하나를 고른다)
 재조사 금지   STEP 1·2·2-R 결론 · owner 6건 · A/B 가격 정책 · STEP 5 · MI 8축 · threshold
 금지         SAME-only · EXACT-only · description 무조건 연결 · COLOR/FIT 완화 ·
@@ -323,6 +323,38 @@ M5 MI_SAME_AREA_SCOPE 연결 제거 · M6 CTA wiring 제거 · M7 금지 리터�
 
 🔴 **보고는 「CEO Production UX 확인 대기」로 끝낸다**(CPO §12) ·
 🔴 `Production HTTP PASS ≠ Production UI PASS`(로그인 뒤 화면은 CTO 가 못 본다).
+
+---
+
+## 9-EV2. 🟡🟡 **`CORE-PRICE-SAME-02` — CEO 판정 화면 «준비 완료»**(운영 0 · CEO 육안 대기)
+
+```
+산출물   docs/core-2m-visual-review.html   **7.91MB · 자립형**(원격 이미지 0 · data: URI)
+검토 대상 **11건** · 🟢 CPO 가 지목한 10곳 **전부 포함** + 충돌 후보 tinyapple
+이미지   biskuit 1/1 · tinyapple 2/2 · stockmann 1/1 · bobochoses 3/3 · junioredition 3/3 ·
+         cissywears 3/3 · kids21 3/3 · parkette 2/2 · luxboy 1/1 · bornyesterdaykids 3/3 · donokids 1/1
+제외     global.trenbe · thefrontshop(시스템 확정 SAME · 충돌 아님) ·
+         🔴 miniboutique.co.kr **UNREACHABLE**(측정불가 — 화면에 넣지 않았다)
+```
+
+🟢 **기존 빌더를 재사용했다**(새 화면 0) — `core-2m-visual-review-build`. 바꾼 것 넷:
+```
+① 「유사」 → **「다른제품」**   CPO 확정. 🔴 전 라운드의 「유사」는 CPO 가 내부 calibration 에서
+                              DIFFERENT 로 **변환** 했고 그 변환이 CEO 뜻과 같은지 확인된 적이 없다
+② **사유 입력**(textarea) 신설 · 복사 버튼 산출에 `why` 포함
+③ 시스템 판정을 **실제 값으로** 분기해 적는다 — 🔴 전까지 모든 카드가 「확정하지 못했습니다」
+   한 문장이었고, 시스템이 SAME 이라 한 후보에서는 그것이 **거짓** 이었다
+④ **충돌 배지** — 과거 판정이 갈린 후보에 「꼭 다시 봐 주십시오」 표시
+   🔴 그리고 **충돌 후보는 «확정 SAME 이어도» 화면에 넣는다**(안 그러면 tinyapple 이 사라진다 · 실측)
+```
+
+🔴 **내가 두 번 틀렸고 둘 다 가드가 잡았다** — ⒜ 템플릿 리터럴 안에 **JSX 주석 `{/* */}`** 을 써서
+화면에 글자로 찍힐 상태였다(제거) ⒝ `verdict` 를 **날것으로** 적어 **내부 토큰 노출 금지 계약이
+FAIL** 했다(`PRESUMED_SAME`) ⟹ 🟢 `humanWord()` 로 **셀러의 말** 로 바꿨다.
+
+🔴 **CTO 는 판정하지 않았다** — 미리 선택된 칸 **0**(계약이 단언) · 사유 칸 비어 있음.
+🟡 **CEO 는 11건에 「동일 / 다른제품 / 판단불가 + 사유」를 주시면 된다.** 🔴 판단불가는 실패가
+아니다 — 증거가 부족하면 그대로 남기는 것이 **정답** 이다(CTO 가 변환하지 않는다).
 
 ---
 

@@ -104,6 +104,32 @@ const val = (v: unknown): string => {
   return s ? esc(s) : '<span class="na">없음</span>';
 };
 
+/**
+ * 🔵🔵🔵 CORE-PRICE-SAME-02 — **과거 판정이 서로 달랐던 후보.**
+ *
+ * 🔴 `core-2ah`(GT 합집합)가 URL 중복을 합칠 때 **판정 충돌로 제외한 건** 들이고,
+ *    `core-2m-ceo-visual-gt.json` 의 `historicalConflicts` 가 같은 사실을 적어 뒀다.
+ * 🔴🔴 **CTO 가 어느 쪽이 맞는지 고르지 않는다** — 화면에 「다시 봐 주십시오」로 **표시만** 한다.
+ *    (그 한 건이 CORE-2I/2J/2K/2L 의 핵심 반례였고, 그래서 코드 해석이 금지다)
+ * 🟡 `villagekids.co.uk` · `tinyapple.net` 은 **DB 기록에서** 양쪽 라벨이 관측됐다 —
+ *    이 화면의 후보 집합에 있으면 같이 표시된다(없으면 아무 일도 하지 않는다).
+ */
+/**
+ * 🔴 **내부 토큰을 화면에 적지 않는다**(이 파일의 전수 단언이 그것을 문다 — 실제로 내가
+ *    `verdict` 를 날것으로 적어 **FAIL 했다**). 🟢 CEO 가 쓰는 세 단어로만 바꾼다.
+ * 🔴 모르는 값은 **지어내지 않고** 그대로 돌려준다(라벨 체계가 늘 때 조용히 틀리지 않게).
+ */
+const humanWord = (v: string): string =>
+  v === "SAME" ? "동일" : v === "DIFFERENT" ? "다른제품" : v === "UNCERTAIN" ? "판단불가" : v;
+
+const CONFLICT_DOMAINS = new Set([
+  "m.luxboy.com",
+  "bornyesterdaykids.com",
+  "villagekids.co.uk",
+  "tinyapple.net",
+  "www.tinyapple.net",
+]);
+
 interface Cand {
   label: string;
   url: string;
@@ -192,7 +218,19 @@ describe("CORE-2M — MI Failure Visual Review 생성 (운영 변경 0)", () => 
        * 🔴 **MI 가 확실하게 SAME 을 만든 후보는 화면에서 뺀다**(CPO §1) —
        *    「SAME + 식별자 등급」이 그 조건이다. 그 둘은 가격 근거로 바로 간다.
        */
-      const settled = cross.verdict === "SAME" && (truth === "EXACT_IDENTIFIER" || truth === "STRONG_IDENTIFIER");
+      /**
+       * 🔵🔵🔵 CORE-PRICE-SAME-02 — **충돌 후보는 «확정 SAME 이어도» 화면에 넣는다**(CPO §2).
+       *
+       * 🔴 과거 판정이 서로 달랐던 후보(`tinyapple.net` 등)는 **CEO 가 다시 봐야 하는 바로 그
+       *    건** 이다. 그런데 위 `settled` 규칙이 「시스템이 SAME 이면 뺀다」라서 **그 건이
+       *    화면에서 사라졌다**(실측 — tinyapple 이 제외됐다).
+       * 🟢 그래서 **충돌 집합에만** 예외를 둔다 — 나머지 확정 SAME 은 그대로 제외된다
+       *    (CPO §1 의 원래 규칙을 넓히지 않는다).
+       */
+      const settled =
+        cross.verdict === "SAME" &&
+        (truth === "EXACT_IDENTIFIER" || truth === "STRONG_IDENTIFIER") &&
+        !CONFLICT_DOMAINS.has(t.label);
       if (settled) {
         sameCount += 1;
         console.log(`    ${t.label.padEnd(22)} 🟢 MI 확정 SAME — 화면에서 제외`);
@@ -318,7 +356,15 @@ describe("CORE-2M — MI Failure Visual Review 생성 (운영 변경 0)", () => 
     <h2><span class="n">${String(i + 1).padStart(2, "0")}</span>${esc(c.label)}</h2>
     <a href="${esc(c.url)}" target="_blank" rel="noreferrer">판매처 페이지 ↗</a>
   </div>
-  <p class="mi">시스템은 이 후보를 <b>같은 상품이라고 확정하지 못했습니다.</b></p>
+  <p class="mi">${
+    c.verdict === "SAME"
+      ? "시스템은 이 후보를 <b>같은 상품으로 봤습니다.</b>"
+      : "시스템은 이 후보를 <b>같은 상품이라고 확정하지 못했습니다.</b>"
+  }${c.human && c.human !== "라벨없음" ? ` · 이전에 <b>${esc(humanWord(c.human))}</b>으로 기록된 적이 있습니다.` : ""}${
+    CONFLICT_DOMAINS.has(c.label)
+      ? ' <span class="conflict">🔴 과거 판정이 서로 달랐던 후보입니다 — 이 건은 꼭 다시 봐 주십시오</span>'
+      : ""
+  }</p>
 
   <div class="pics">
     <figure><figcaption><span>원본 상품</span></figcaption>${frame(originImg, "원본 상품")}</figure>
@@ -335,9 +381,12 @@ describe("CORE-2M — MI Failure Visual Review 생성 (운영 변경 0)", () => 
     <span class="q">이 자료로 판단되십니까?</span>
     <div class="seg">
       <label><input type="radio" name="j${i}" value="동일"><span>동일</span></label>
-      <label><input type="radio" name="j${i}" value="유사"><span>유사</span></label>
+      <label><input type="radio" name="j${i}" value="다른제품"><span>다른제품</span></label>
       <label><input type="radio" name="j${i}" value="판단불가"><span>판단불가</span></label>
     </div>
+    <label class="why"><span>사유(선택 — 무엇을 보고 판단하셨는지)</span>
+      <textarea name="r${i}" rows="2" placeholder="예: 브랜드 + 품번 동일 / 상품 유형이 다름 / 사진으로 색이 다름"></textarea>
+    </label>
   </div>
 
   <details><summary>판단이 안 되시면 — 추가 정보</summary>
@@ -443,6 +492,13 @@ td.flag{width:86px;white-space:nowrap}
 .judge{margin-top:18px;padding-top:14px;border-top:1px solid var(--line);
   display:flex;gap:14px;align-items:center;flex-wrap:wrap}
 .judge .q{font-size:13px;color:var(--muted);flex:1;min-width:150px}
+/* 🔵 CORE-PRICE-SAME-02 — 사유 입력(선택) · 충돌 배지 */
+.judge .why{flex-basis:100%;display:flex;flex-direction:column;gap:4px}
+.judge .why span{font-size:12px;color:var(--muted)}
+.judge .why textarea{width:100%;font:inherit;font-size:13px;padding:6px 8px;
+  border:1px solid var(--line);border-radius:3px;background:#fff;resize:vertical}
+.conflict{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:3px;
+  background:#fdecec;color:#a11;font-size:12px;font-weight:600}
 .seg{display:flex;border:1px solid var(--line);border-radius:3px;overflow:hidden}
 .seg label{position:relative;cursor:pointer}
 .seg input{position:absolute;inset:0;opacity:0;cursor:pointer}
@@ -496,9 +552,13 @@ pre{background:var(--card);border:1px solid var(--line);border-radius:3px;paddin
     <p>아래 ${cands.length}건은 <b>시스템이 「같은 상품」이라고 확정하지 못한 후보</b>입니다.
       <b>사진과 핵심 항목</b>만 먼저 보시고 판단되시면 바로 고르십시오.
       판단이 안 되실 때만 아래 <b>추가 정보 → 기타 정보</b>를 펼치십시오.</p>
-    <p><b>유사</b>는 비슷하지만 같은 상품이라고 확정할 수 없다는 뜻이고,
-      <b>판단불가</b>는 이 자료로는 알 수 없다는 뜻입니다 — 그것도 필요한 답입니다.
+    <p><b>다른제품</b>은 같은 상품이 아니라는 뜻이고,
+      <b>판단불가</b>는 이 자료로는 알 수 없다는 뜻입니다 — <b>그것도 필요한 답입니다.</b>
+      사진·상세정보·품번이 부족해 확정할 수 없으면 <b>판단불가</b>로 남겨 주십시오
+      (억지로 동일/다른제품으로 고르지 않으셔도 됩니다).
       키보드 <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> 으로도 고르실 수 있습니다.</p>
+    <p><b>사유</b>를 한 줄 적어 주시면 가장 도움이 됩니다 — 무엇을 보고 판단하셨는지가
+      다음 단계에서 쓰입니다.</p>
     <p>표의 <b>표기 같음 / 표기 다름</b> 칩은 <b>적혀 있는 글자</b>를 맞춰 본 것일 뿐이고,
       같은 상품인지에 대한 판단이 아닙니다.</p>
   </div>
@@ -521,7 +581,7 @@ document.addEventListener("change", function (e) {
 });
 
 /* 🟢 숫자키 1·2·3 — 10건이면 마우스보다 훨씬 빠르다. 보고 있는 카드에 적용한다. */
-var VALUES = ["동일", "유사", "판단불가"];
+var VALUES = ["동일", "다른제품", "판단불가"];
 document.addEventListener("keydown", function (e) {
   var k = VALUES[["1", "2", "3"].indexOf(e.key)];
   if (!k || e.metaKey || e.ctrlKey || e.altKey) return;
@@ -539,7 +599,14 @@ document.addEventListener("keydown", function (e) {
 document.getElementById("copy").addEventListener("click", function () {
   var out = LABELS.map(function (c, i) {
     var el = document.querySelector('input[name="j' + i + '"]:checked');
-    return { domain: c.domain, url: c.url, ceo: el ? el.value : "미선택" };
+    /* 🔴 CORE-PRICE-SAME-02 — **사유를 같이 내보낸다**(없으면 빈 문자열). */
+    var why = document.querySelector('textarea[name="r' + i + '"]');
+    return {
+      domain: c.domain,
+      url: c.url,
+      ceo: el ? el.value : "미선택",
+      why: why && why.value ? why.value.trim() : "",
+    };
   });
   var txt = JSON.stringify(out, null, 2);
   document.getElementById("out").textContent = txt;
