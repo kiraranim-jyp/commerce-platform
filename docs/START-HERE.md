@@ -11,9 +11,9 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-DESC-REVIEW** — 🟡 **CEO 육안 검증 대기**(§9-V · 운영 0 · 조서 11건)
+CURRENT WU   **CORE-DESC-REVIEW** — 🟢 **CEO 조서 11/11 수신 · GT 고정**(§9-V · 🔴 C06 정정)
 NEXT         🔵 **CPO 가 다음 Evidence Layer 범위 지정** — 🔴 CTO 선제 작업 0
-CEO ACTION   🟡 **있다 — 조서 11건 확인 1회**(§9-V · 질문 6개)
+CEO ACTION   🟡 **없다** — 조서 11/11 수신 완료
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SAME-03**(화면 + CEO GT 10/10) · **SAME-04**(FN 3건 원인 확정)
 Git          clean · origin/main 0/0 · Production / 200
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-DESC-REVIEW — 상세설명 증거 조서 **11건 게시**(§9-V) · 🟡 **CEO 확인 1회 대기**
+CURRENT    CORE-DESC-REVIEW — 조서 **11/11 수신·고정**(§9-V) · 🔴 FP 2→1 정정 · CPO Sprint 작성 대기
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -2494,3 +2494,74 @@ https://claude.ai/code/artifact/c25d189e-ab42-42ba-8040-655e49b7dd7c
 ```
 
 **STOP — CORE-DESC-REVIEW 조서 게시 + 입력 보강 완료 / CEO 답변 1회 대기**
+
+---
+
+## 9-W. 🟢🟢 **CEO 조서 11/11 수신 · GT 고정**(2026-10-27 · 운영 **0**)
+
+🔴 fixture `fixtures/core-desc-review-ceo-gt.json` — **CEO 답을 그대로** 담았다
+(CTO 가 해석해 고치지 않았고 **미응답도 미응답으로** 남겼다 · 키는 **사건 id**).
+
+### 🔴🔴🔴 CPO 가 Sprint 를 쓰기 **전**에 알아야 할 정정 하나 — **C06 이 뒤집혔다**
+
+```
+C06(global.trenbe.com)  기존 GT **DIFFERENT** → 이번 조서 **SAME**
+🔴 §12 는 그 건을 「현행 **False EXACT** 1건 · precision 11/12」로 적고 WU-060 이
+   원인까지 확정했다 ⟹ 🔴 **그 「False EXACT」는 사실이 아니다**
+🟢 운영 판정이 **SAME** 이고 CEO 도 SAME 이므로 **그 판정이 옳았다**
+⟹ 🔴🔴 **FP 2 → 1 · SAME 회복 5/17 → 6/18**(운영 판정 불변 · 라벨만 반영)
+   **SPRINT-07 · 09 · 10 이 쓴 FP 분모 2 가 1 로 바뀐다** — 낡은 분모로 설계하면 틀린다
+🟢 C06 의 품번은 **unavailable** ⟹ **품번 없이 올바른 SAME** 이 실증됐다
+🟢 나머지 10건은 기존 GT 와 **전부 일치**(뒤집힘 1건뿐)
+```
+
+### 🔴🔴 핵심 — 상세설명 Evidence 가 **충분해도** DIFFERENT 가 나온다
+
+브랜드·품번·형태·색상소재를 **전부** 얻은 사건 **8건** 중 CEO 판정 **DIFFERENT 6건**:
+
+| 건 | CEO 가 적은 이유 |
+|---|---|
+| C50 | 「전혀 다른 제품이지만 상세설명에 정보가 다 있다」 |
+| C19 · C20 | 「품번이 동일하나 다른 제품 / 컬러가 다르다 — **이미지 확인** 해야 한다」 |
+| C25 | 「동일제품 그러나 컬러가 다름」 |
+| S1-5 · S1-6 | 「동일 디자인이나 **긴팔 ↔ 반팔**」 |
+
+⟹ 🔴 **「DESCRIPTION 점수 하나를 SAME 에 더하는」 설계는 성립하지 않는다**(계약으로 단언).
+
+### 🟢 그 밖에 확정된 것 셋
+
+```
+🟢 **품번은 필수조건이 아니다** — 설명에서 품번을 못 얻었는데 SAME 인 사건 **2건**(C27 · C42)
+🔴 **CEO 가 「이미지 확인 필요」라 직접 적은 사건 3건** — C22 · C19 · C20
+   ⟹ 🟢 「IMAGE 는 마지막 검증층」이 **육안으로도 확인됐다**. 그 3건이 **다음 단계의 분모** 다
+🔴 **C27 은 상세설명이 아니라 «상품명» 에 브랜드·품번이 있었다**(설명 기준 둘 다 no)
+   ⟹ 🔴 Evidence source 는 **TITLE 과 DESCRIPTION 을 따로** 봐야 한다
+🔴 미응답 **1칸** — `S1-5.set`. 「아니오」로 바꾸지 않았다
+```
+
+### 🟢🟢 내가 전에 만든 계약이 이 fixture 추가를 **잡았다**
+
+```
+`core-same06` 의 「fixture 를 전수 훑고 **미분류가 있으면 FAIL**」이 발화했다.
+🟢 조용히 빼지 않고 **등록 + 한계 명시** 했다 — 이 조서는 **URL 키가 없어**
+   그 URL 단위 검색의 분모에 **들어갈 수 없다**(키가 사건 id 다).
+```
+
+### 증거
+
+```
+🟢 계약 **4**(고정 · 대조 · 재계산 · 핵심) · 회귀 698 files / **9,333 passed · 0 failed** ·
+   typecheck **0** · 운영 변경 **0** · 작업트리 clean · origin/main **0 / 0**
+```
+
+### 🔵 다음 — **CPO 가 Sprint 를 쓴다**(CTO 선제 구현 **0**)
+
+```
+🟡 CPO 가 닫은 GO 넷 — ① 상세설명은 충분한 Evidence source ② 구조화 추출 ③ BRAND+CODE 는
+   단독 결정자가 아니다 ④ 텍스트가 충돌하면 **IMAGE 가 마지막 검증층**
+🔴 그리고 CPO 가 명시했다 — 「CTO 에 새 구현을 던지기보다 **전체 구현 Sprint 를 한 번에 작성**」
+   ⟹ 🔴 **CTO 는 시작하지 않는다.** 이번 회차에 한 것은 **GT 고정과 분모 정정** 뿐이다
+🔴 그 Sprint 는 **FP 1**(2 가 아니다)을 기준선으로 써야 한다
+```
+
+**STOP — CEO 조서 11/11 고정 완료 / `DESCRIPTION → Structured Evidence` 구현 Sprint CPO 작성 대기**
