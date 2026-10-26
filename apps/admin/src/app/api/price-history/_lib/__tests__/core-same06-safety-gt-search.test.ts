@@ -109,6 +109,18 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
     scanned.push("core-2m-ceo-visual-gt.json");
   }
 
+  /**
+   * 🔵 CORE-DESC-REVIEW(2026-10-27) — **CEO 상세설명 조서 11건**.
+   *
+   * 🔴 이 fixture 는 **URL 키가 없다** — 키가 **GT 사건 id**(C27 · C05 …)이고 후보 URL 을
+   *    담지 않는다 ⟹ 🔴 **이 검색(URL 단위 라벨 분포)의 분모에 들어갈 수 없다**.
+   * 🟢 그래도 `scanned` 에 **등록** 한다 — 그러지 않으면 「미분류」로 남아 이 계약이
+   *    **FAIL 한다**(실제로 FAIL 했고 그것이 이 가드가 살아 있다는 증거다). 🔴 조용히
+   *    빼면 「전수」가 **거짓** 이 된다.
+   * 🟢 그 조서의 라벨 고정·대조·재계산은 `core-desc-review-gt.test.ts` 가 소유한다.
+   */
+  scanned.push("core-desc-review-ceo-gt.json");
+
   /* 행 단위 originCode + verdict 계열 */
   for (const [file, src, codeKey, verdictKey] of [
     ["wu-112-human-gt.json", "wu-112", "originCode", "verdict"],

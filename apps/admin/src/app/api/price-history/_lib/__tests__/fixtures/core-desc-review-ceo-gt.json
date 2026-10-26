@@ -1,0 +1,106 @@
+{
+  "review": "CORE-DESC-REVIEW",
+  "receivedAt": "2026-10-27",
+  "note": "CEO 육안 조서 11건. 🔴 키는 GT 사건 id 다(WU-095 교훈 — 인덱스로 붙이지 않는다). 🔴 answers 의 brand/code/form/colmat/set 은 「상세설명만으로 그것을 알 수 있는가」이고 상품 동일성 판정이 아니다. verdict 가 동일성 판정이다.",
+  "cases": 11,
+  "answers": {
+    "C27": {
+      "brand": "no",
+      "code": "no",
+      "form": "no",
+      "colmat": "no",
+      "set": "no",
+      "phrase": "상세설명이 아닌 상품명에 : 브랜드와 품번이 존재함.\n보보쇼즈 26FW 아동 긴팔 티셔츠 Booty Ghosts T-shirt B226AC010\n브랜드는 영어와 한글 차이이고, 품번이 존재",
+      "verdict": "SAME"
+    },
+    "C50": {
+      "brand": "yes",
+      "code": "yes",
+      "form": "yes",
+      "colmat": "yes",
+      "set": "no",
+      "phrase": "전혀 다른 제품이지만, \n상세설명에 다양한 정보들이 포함되어 있음",
+      "verdict": "DIFFERENT"
+    },
+    "C22": {
+      "brand": "yes",
+      "code": "yes",
+      "form": "no",
+      "colmat": "no",
+      "set": "no",
+      "phrase": "상세설명이 아닌 상품명에 : 브랜드와 품번이 존재함.\n[[메인스토리] Bubble Sweatshirt _Conker Stripe #AW26MS185]\n브랜드는 영어와 한글 차이이고, 품번이 존재\n육안 확인때 다른 제품임, 이건 사이트에서 품번 잘못 등록한거 같음 이런 경우는 이미지 비교 필요",
+      "verdict": "DIFFERENT"
+    },
+    "C05": {
+      "brand": "yes",
+      "code": "yes",
+      "form": "yes",
+      "colmat": "yes",
+      "set": "no",
+      "phrase": "상세설명에 \nTinyapple | FW26 Bobo Choses | Hug Hairy Monster T-shirt, Light Blue 100% Organic Cotton Wash Cold-30° Do Not Bleach Iron Low Do not Dry-clean Do Not Tumble Dry B226AC009\n모든 정보 다있음",
+      "verdict": "SAME"
+    },
+    "C06": {
+      "brand": "yes",
+      "code": "yes",
+      "form": "yes",
+      "colmat": "yes",
+      "set": "no",
+      "phrase": "상세설명에 다 존재함.\nGender : Men Brand : BOBO CHOSES Product Name : Bobo Choses Kids Hug Hairy Monster Long Sleeve T-Shirt (Light Blue) B226AC009 451 160484657 [P] Color : Light Blue SKU : 26FW B226AC009 451 trenbe Code : 160484657",
+      "verdict": "SAME"
+    },
+    "C19": {
+      "brand": "yes",
+      "code": "yes",
+      "form": "yes",
+      "colmat": "yes",
+      "set": "no",
+      "phrase": "다 똑같고, 사이트도 동일하다 junioredition 그러나, main story 제품의 품번이 동일하나 다른 제품임.\n이미지 확인해서 다른걸 확인해야 함",
+      "verdict": "DIFFERENT"
+    },
+    "C20": {
+      "brand": "yes",
+      "code": "yes",
+      "form": "yes",
+      "colmat": "yes",
+      "set": "no",
+      "phrase": "다 똑같고, 사이트도 동일하다 junioredition 그러나, main story 제품의 품번이 동일하나 컬러가 다른 제품임.\n이미지 확인해서 다른걸 확인해야 함",
+      "verdict": "DIFFERENT"
+    },
+    "C42": {
+      "brand": "yes",
+      "code": "no",
+      "form": "yes",
+      "colmat": "yes",
+      "set": "no",
+      "phrase": "동일 제품임",
+      "verdict": "SAME"
+    },
+    "C25": {
+      "brand": "yes",
+      "code": "yes",
+      "form": "yes",
+      "colmat": "yes",
+      "set": "no",
+      "phrase": "상세설명에 다있음.\n동일제품 그러나 컬러가 다름",
+      "verdict": "DIFFERENT"
+    },
+    "S1-5": {
+      "brand": "yes",
+      "code": "yes",
+      "form": "yes",
+      "colmat": "yes",
+      "phrase": "동일 디자인이지만, 제품이 다름 긴팔과 반팔 임",
+      "verdict": "DIFFERENT"
+    },
+    "S1-6": {
+      "brand": "yes",
+      "code": "yes",
+      "form": "yes",
+      "colmat": "yes",
+      "set": "no",
+      "phrase": "동일 디자인이지만, 제품이 다름 긴팔과 반팔 임",
+      "verdict": "DIFFERENT"
+    }
+  }
+}
