@@ -11,7 +11,7 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-SAME-SPRINT-10** — 🟢 **description recovery = DIFFERENT 보호 강화**(§9-T · 운영 0)
+CURRENT WU   **CORE-MI-COMP-01** — 🔴🔴 **Comparability 는 Identity 의 1:1 파생이다**(§9-U · 운영 0)
 NEXT         🔵 **CPO 가 다음 Evidence Layer 범위 지정** — 🔴 CTO 선제 작업 0
 CEO ACTION   🟡 **없다**
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-SAME-SPRINT-10 — description recovery **운영 경로 재확인**(§9-T) · CPO 판정 대기
+CURRENT    CORE-MI-COMP-01 — A/B 분리 **실측 완료**(§9-U) · 독립 축 부재 확정 · CPO 판정 대기
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -2321,3 +2321,91 @@ HTTP 33 회(read-only) · 운영 변경 **0** · 작업트리 clean · origin/ma
 ```
 
 **STOP — CORE-SAME-SPRINT-10 Description Evidence Chain 측정 완료 / 다음 범위 CPO 판정 대기**
+
+---
+
+## 9-U. 🔴🔴 **CORE-MI-COMP-01 — Identity → Comparability 분리 실측**(운영 **0**)
+
+🔴 **운영 변경 0 · 새 enum 0 · 가격 계산식 0.** threshold ❌ · BRAND+CODE shortcut ❌ ·
+MODEL_CODE conflict ❌ · `NO_TITLE_OVERLAP` ❌ · alias 확대 ❌ · COLOR/MATERIAL 축 ❌ ·
+IMAGE scoring ❌ · A/B 통합 ❌ · 🔴 **MATCHING-3.1 유지**.
+
+### 🔴🔴🔴 먼저 — `PRICE_COMPARABLE` 은 운영 코드에 **없다**
+
+```
+전수 grep — 나오는 두 곳은 naver `registered-change.ts` 와 내 SPRINT-01 «하니스» 다
+🟢 Comparability 의 **운영 owner 는 `DomesticPriceTier`** 이고 그 파일 주석(:59-62)이
+   의미를 **직접** 말한다:
+     EXACT      「가격비교 허용」     ⟹ COMPARABLE
+     COMPARISON 「제한적 가격 참고」   ⟹ COMPARABLE(제한적)
+     REFERENCE  「경쟁상품 참고」     ⟹ UNDETERMINED(재조회엔 남는다 · :74)
+     EXCLUDED   「가격비교 제외」     ⟹ NOT_COMPARABLE
+🔴 그래서 **새 enum 을 만들지 않고** 그 축을 읽었다
+```
+
+### 8칸 표 (라이브 **26** · 🔴 제외 7 · 운영 lineage 그대로)
+
+| Identity | Comparability | 후보 | 국내자격 | 국내 KRW | human 분포 |
+|---|---|---:|---:|---:|---|
+| SAME | COMPARABLE | 6 | 0 | — | SAME 5 · **DIFFERENT 1** |
+| DIFFERENT | NOT_COMPARABLE | 5 | 0 | — | DIFFERENT 3 · SAME 2 |
+| UNDETERMINED | COMPARABLE | 11 | **1** | **83,600** | SAME 7 · **DIFFERENT 4** |
+| UNDETERMINED | NOT_COMPARABLE | 4 | 0 | — | DIFFERENT 2 · SAME 2 |
+
+🔴 빈 칸 넷(`SAME∧NOT_COMPARABLE` · `SAME∧UND` · `DIFFERENT∧COMPARABLE` · `UND∧UND`)은
+**구조적으로 비어 있다** — 아래가 그 이유다.
+
+### 🔴🔴🔴 Q1 — 「SAME 이면 비교 가능한가」는 **질문이 성립하지 않는다**
+
+```
+system SAME **6/6 전부 COMPARABLE** 이고 그것은 우연이 아니다 —
+`priceTierFromLink` 는 `matchTruth` 의 **1:1 함수** 이고 `matchTruth` 는 `verdict` 에서 파생된다
+⟹ 🔴🔴 **Comparability 가 Identity 의 «파생값» 이고 독립 축이 아니다**
+⟹ 🔴 「세트 ↔ 단품」·「동일 모델 다른 구성」을 가를 **술어가 코드에 없다**(8축에 0)
+```
+
+### 🟢 Q2 — 운영은 DIFFERENT 를 가격 축에 **넣지 않는다**
+
+```
+system DIFFERENT ∧ COMPARABLE = **0** · 🟢 **human DIFFERENT ∧ 국내 가격 자격 = 0**
+```
+
+### 🔴🔴 Q3 — UNDETERMINED 15 중 **11 이 COMPARABLE** 이다
+
+```
+그중 **human DIFFERENT 4건** 이 들어 있다 ⟹ WU-123/125 가 지적한 **그 모양** 이다
+  (`PRESUMED_SAME` → matchTruth `TEXT_CONFIRMED` → tier **COMPARISON**)
+🔴 **CTO 가 승격하지 않았다** — 「현재 운영이 그렇게 한다」는 **관측** 이다
+```
+
+### 🔴🔴 국내 가격 형성대는 이 분모에서 **만들어지지 않는다**
+
+```
+국내 자격 **1/26**(KRW 83,600) ⟹ `buildPriceGuide` 에서 **SINGLE** 이고
+「가격대」가 아니다(WU-139 계약) ⟹ 🔴 sellability · 권장 판매가격까지는 **연결 측정 불가**
+```
+
+### 🔴 측정불가 · 하니스 결함
+
+```
+🔴 세트/구성 축 — `bornyesterdaykids` 행이 이 GT 에 **0건** 이고 운영에 그 술어가 **없다**
+🔴 하니스 둘 — ⒜ `classifyCandidateMarket` owner 를 crawler 로 추측(**실제 apps/admin**)
+   ⒝ 입력 모양을 `price` 로 추측(**실제 `currency`·`isRegisteredDomesticShop`·`marketEvidence`**)
+   🟢 둘 다 타입에서 읽어 고쳤다. 🔴 `isRegisteredDomesticShop` 은 **false** —
+      등록부를 못 읽는 하니스에서 true 를 넣으면 **KR 을 «만들어» 측정이 거짓이 된다**
+🟢 회귀 697 files / **9,329 passed · 0 failed · 144 skipped** · typecheck 0 · build exit 0
+작업트리 clean · origin/main **0 / 0** · 🔴 Deploy 없음
+```
+
+### 🟡 CPO 판정 대기 — 이번에 올리는 것은 **구조 사실** 하나다
+
+```
+🔴 **A/B 를 분리하려면 «새 축» 이 필요하다** — 현재 `priceTier` 는 Identity 의 파생이라
+   그 안에서 「동일상품이지만 가격 비교 부적합」을 **표현할 자리가 없다**
+🟡 선택지 — ⒜ Comparability 를 **별도 필드로 신설**(세트/구성/옵션 축이 필요하고 그것은
+   **새 Evidence** 다) ⒝ 현재 구조를 유지하고 **UNDETERMINED∧COMPARABLE 11건** 을 먼저 좁힌다
+   (그 11 안에 human DIFFERENT 4 가 있다 · WU-123/125 의 최소안이 그 자리다)
+🔴 **CTO 가 고르지 않았다.** ⒝ 는 **가격 집계 변경** 이라 §00-B 보류에 걸린다
+```
+
+**STOP — CORE-MI-COMP-01 Comparability 측정 완료 / CPO 판정 대기**
