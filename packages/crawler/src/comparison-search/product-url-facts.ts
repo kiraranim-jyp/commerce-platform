@@ -6,6 +6,7 @@ import { decodeHtmlEntities } from "./html-entities";
 import { extractMarketEvidence } from "./market-evidence";
 /** 🔵 CORE-SAME-SPRINT-02 — 후보 상세설명의 품번을 기존 MODEL_CODE 증거로 «보강» 한다(새 축 0). */
 import { recoverModelCodeFromDetail } from "./model-code-from-detail";
+import { attachProductEvidence } from "./product-evidence";
 import { productFactsFromListing, productFactsFromShopifyProduct } from "./seller-facts";
 import { jsonLdProductDescription } from "./jsonld-product-description";
 import { classifyUrlShape, toCrawlerUrl } from "./url-shape";
@@ -335,7 +336,13 @@ export async function factsFromProductUrl(url: string): Promise<ProductUrlFactsR
      *    `ProductFacts.description`** 을 싣는다(`seller-facts.ts`). 보강기는 그 칸만
      *    읽는다 — 🔴 `materialText` 폴백 **없음**(CPO §4 alias 금지).
      */
-    const suppliedFacts = recoverModelCodeFromDetail(facts);
+    /**
+     * 🔵🔵 **CORE-DESC-EVIDENCE-01 — 증거를 «붙이기만» 한다**(2026-10-27).
+     *    🔴 `recoverModelCodeFromDetail` 「뒤」에 둔다 — 그 보강이 끝난 **최종 facts** 하나에
+     *       증거를 단다(두 객체가 서로 다른 증거를 들고 다니지 않게).
+     *    🔴 **판정 입력이 아니다**(계약 P2) ⟹ verdict · tier · 가격은 **변하지 않는다**.
+     */
+    const suppliedFacts = attachProductEvidence(recoverModelCodeFromDetail(facts));
     return {
       status: "OK",
       crawlerUrl,
@@ -501,7 +508,13 @@ async function htmlPath(
    *    후보측만 보고 · 충돌을 **완화하지 않는다**(원상품과 다르면 기존 `compareModelCode`
    *    가 conflict 를 내고 그 보호가 그대로 작동한다 ⟹ **차단이 강해지는 방향**).
    */
-  const suppliedFacts = recoverModelCodeFromDetail(facts);
+  /**
+   * 🔵🔵 **CORE-DESC-EVIDENCE-01** — Shopify 경로(:338)와 **같은 모양** 으로 증거를 단다.
+   *    🔴 이 경로의 `description` 은 JSON-LD `Product.description` **하나** 라서
+   *       DESCRIPTION source 의 증거도 그만큼만 나온다 — 그것이 **정상 상태** 다.
+   *    🟢 TITLE source 는 이 경로에서도 **그대로 산다**(C27 이 그 자리다).
+   */
+  const suppliedFacts = attachProductEvidence(recoverModelCodeFromDetail(facts));
   /**
    * 🔴 WU-151 — 고도몰 **판매가** 필드가 **마지막 자리** 다(추가 전용).
    *    구조화 데이터(JSON-LD · microdata)가 값을 주면 그쪽이 언제나 이긴다 ⟹

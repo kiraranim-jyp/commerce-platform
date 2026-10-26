@@ -11,13 +11,15 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-DESC-EVIDENCE-01** — 🟡 **지시서 고정 · 구현 착수점**(§9-Y · 조사 0)
-NEXT         🔵 **CPO 가 다음 Evidence Layer 범위 지정** — 🔴 CTO 선제 작업 0
-CEO ACTION   🟡 **없다** — 조서 11/11 수신 완료
+CURRENT WU   **CORE-DESC-EVIDENCE-01** — 🟢🟢 **구현·배포 완료**(§9-Z) · matcher 변화 **0**
+NEXT         🔵 **CPO 판정** — ⒜ Evidence 를 Comparability 로 넘길지 ⒝ **IMAGE**(C19·C20·C22)
+             ⒞ BRAND alias 확대(🔴 SPRINT-08 HOLD 해제 사안) — 🔴 **CTO 선제 작업 0**
+CEO ACTION   🟡 **없다** — 이 WU 는 화면을 바꾸지 않는다(셀러 UI 변경 0)
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
-             **SAME-03**(화면 + CEO GT 10/10) · **SAME-04**(FN 3건 원인 확정)
+             **SAME-03**(화면 + CEO GT 10/10) · **SAME-04**(FN 3건 원인 확정) ·
+             **DESC-EVIDENCE-01**(provenance + 6축 + probe 4축 · 운영 2경로 배선)
 Git          clean · origin/main 0/0 · Production / 200
-회귀         **692 files / 9,297 passed / 0 failed** · typecheck 0 · build 0
+회귀         **699 files / 9,360 passed / 0 failed / 146 skipped** · typecheck 0 · build 0
 ```
 
 🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **CPO 판정** 이다 — matcher 를 CTO 가 열지 않는다.
@@ -2760,3 +2762,93 @@ Text Evidence 충분 → Identity        Text Evidence 충돌/애매 → **IMAGE
 ```
 
 **STOP — `CORE-DESC-EVIDENCE-01` 착수점 고정 완료 / 다음 세션이 조사 없이 구현 시작**
+
+---
+
+## 9-Z. 🟢🟢 **`CORE-DESC-EVIDENCE-01` — Evidence Layer 구현·배포 완료**(2026-10-27)
+
+🔴🔴 **성공 정의를 먼저 적는다 — 「SAME 을 늘린 것」이 아니다.**
+원문의 사실을 **TITLE / DESCRIPTION 두 출처로 갈라** 보존하고, 기존 Identity ·
+Comparability · Price 를 **한 글자도 건드리지 않은 것** 이 성공이다.
+🟢 **matcher verdict / tier 변화 = 0**(저장 GT 33 전수 계약 + 라이브 26건 실측).
+
+```
+① `ProductFacts.evidence?` **optional** 추가 — 기존 칸 타입/의미 변경 **0**(계약 P1~P4)
+   `EvidenceItem { value, source }` · source ∈ { TITLE, DESCRIPTION } · 축마다 **배열**
+   🔴 배열인 이유 — 같은 축을 두 원문이 말하면 하나만 남길 때 **출처가 사라진다**
+② 추출기 `product-evidence.ts` — Identity 6축(BRAND · MODEL_CODE · PRODUCT_NAME ·
+   FORM · COLOR · MATERIAL) + 🟡 **관측 전용 4축**(FIT · COMPOSITION · SET · OPTION_SKU)
+   🟢 **기존 owner 재사용** — `extractDetailModelCodes` · `resolveGarmentForms` ·
+      `parseMaterialComposition` · `extractColor*` · `extractFitPhrase` · 등록부 alias
+   🔴 **새로 쓴 것은 「라벨이 붙은 값」 읽기뿐**(조서 원문 `Brand :` · `Color :` · `SKU :`)
+③ 운영 배선 **2경로**(Shopify :338 · HTML :504) — `attachProductEvidence(recover…)`
+   🔴 개수(=2)로 계약을 걸었다 — 한 경로만 배선하면 비-Shopify 에서 조용히 사라진다
+```
+
+### 🟢 라이브 coverage(운영 `factsFromProductUrl` · GT 33 → **facts 26** · 🔴 제외 7)
+
+| 축 | 전체 | TITLE | DESCRIPTION | 🔴 DESCRIPTION 에서만 |
+|---|---:|---:|---:|---|
+| BRAND | 2/26 (7.7%) | 1 | 1 | **1** (C06) |
+| MODEL_CODE | 9/26 (34.6%) | 3 | 7 | **6** |
+| PRODUCT_NAME | 26/26 (100%) | 26 | 1 | 0 |
+| FORM | 21/26 (80.8%) | 20 | 17 | **1** |
+| COLOR | 15/26 (57.7%) | 4 | 14 | **11** |
+| MATERIAL | 16/26 (61.5%) | **0** | 16 | **16** |
+
+🟡 관측 전용 — FIT 8/26 · COMPOSITION 16/26 · SET **0/26** · OPTION_SKU 1/26.
+🟢 `description` 존재 **22/26 (84.6%)** — SPRINT-10 과 **한 자리도 다르지 않다**(교차 확인).
+
+```
+🟢🟢 **두 출처를 가른 것이 값을 한다** — MATERIAL 은 TITLE 에서 **0/26** 이고 전부
+   설명문에서만 나온다. COLOR 도 11건이 설명문 전용이다 ⟹ 출처를 뭉갰으면
+   「상품명만으로 충분하다」는 **거짓 결론** 이 나왔을 자리다.
+🟢 C27 이 운영 경로에서 **그대로 재현됐다** — `beaumonde.co.kr` · description **없음** ·
+   BRAND:TITLE + MODEL_CODE:TITLE ⟹ 「설명엔 없고 상품명에 있다」가 **표현 가능해졌다**
+🔴 BRAND 2/26 은 **등록부 alias 의 한계** 다 — 「보보쇼즈」는 걸리고 영문 「Bobo Choses」는
+   alias 에 **없다**. 🔴 「description 에서 brand 를 못 읽는다」로 적지 않는다 —
+   **사전 확대가 SPRINT-08 HOLD** 라 열지 않았다(발화 조건 미충족 · 측정불가)
+🔴 C22 의 `#AW26MS185` 는 **승인 품번 패턴 밖** 이라 읽지 않았다(새 패턴 = CPO 판정)
+```
+
+### 🔴 변이 M1~M6 — 전부 FAIL → 바이트 복구(적용은 `grep -c` 로 확인)
+
+```
+M1 DESCRIPTION 추출 배선 제거      **5 FAIL**
+M2 TITLE source 제거               **3 FAIL**
+M3 설명문 MODEL_CODE recovery 제거 **1 FAIL**
+M4 provenance 제거(출처 단일화)     **4 FAIL**
+M5 description rich → SAME         🔴 **1차 0 FAIL** → 계약 보강 후 **1 FAIL**
+M6 brand + modelCode → SAME        **2 FAIL** (C19 · C20)
+```
+
+🔴🔴 **M5 가 1차에 뚫렸고 그 이유를 적는다** — 내 계약 쌍이 **형태 충돌** 이라
+`cross-seller.ts:895` 에서 **조기 반환** 됐고, 점수 자리에 넣은 shortcut 이 **실행조차
+되지 않았다**. 🟢 「충돌이 없어 점수 로직까지 가는」 쌍(계약 7-b2)을 더해 잠갔다.
+🔴 이 트랙이 네 번째 겪는 **「단언 좌표가 틀렸다」** 다.
+
+🔴 **내가 틀린 것 하나 더** — 계약 8-b 를 「관측 전용 축 이름이 비교 모듈에 없다」로
+썼다가 FAIL 했다. `FIT`·`COMPOSITION`·`SET` 은 **이 Sprint 이전부터** `cross-seller.ts`
+에 있던 축 이름이다(실측 5·2·1) ⟹ 🟢 **코드가 맞고 내 단언이 틀렸다.** 이름을 옮기지
+않고(같은 개념을 가리킨다) **승격 «경로»**(import)를 잠그는 쪽으로 고쳤다.
+
+### 증거
+
+```
+계약 신규 **27**(순수 · 네트워크 0) · 라이브 측정 1(env `CORE_DESC_EVIDENCE_LIVE=1`)
+회귀 **699 files / 9,360 passed / 0 failed / 146 skipped**(기준선 698/9,333/145 대비
+     +1 file · +27 tests · +1 skip — **전부 이 WU 산출물로 설명된다**)
+typecheck **0** · build exit **0** · 운영 파일 **3**(shared 1 · crawler 2)
+🔴 matcher · threshold · MATCHING-3.1 · priceTier · domesticReference · 국내가격 ·
+   A/B 가격 · 셀러 UI · IMAGE — **전부 변경 0**
+```
+
+### 🔴 다음(CPO 판정 · CTO 가 고르지 않았다)
+
+```
+⒜ Evidence 를 **Comparability** 축으로 넘길 것인가(🔴 Identity 와 합치지 않는다)
+⒝ **IMAGE** — C19 · C20 · C22 셋이 「text 는 완비인데 DIFFERENT」 분모다
+⒞ BRAND alias 확대(🔴 SPRINT-08 HOLD 해제 사안) — 지금은 2/26 이 그 한계다
+```
+
+**STOP — `CORE-DESC-EVIDENCE-01` 구현·검증·배포 완료 / 다음 범위 CPO 지정**

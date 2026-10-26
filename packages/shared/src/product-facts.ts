@@ -643,6 +643,69 @@ export function resolveAdultGender(signals: string[]): GenderGroup | null {
   return null;
 }
 
+/* ──────────────────── Evidence provenance(출처가 살아 있는 증거) ──────────────────── */
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 CORE-DESC-EVIDENCE-01 — **같은 값이라도 «어디서 왔는지» 를 잃지 않는다**
+ * ════════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **이것은 판정 축이 아니다.** 증거를 «보존» 하는 자리이고, 늘어난 증거가
+ *    그 자체로 SAME 을 만들지 않는다. 금지는 아래 셋이고 계약으로 잠겨 있다:
+ * ```
+ * ❌ description 이 풍부하다 → SAME        ❌ evidence 개수/점수 → SAME
+ * ❌ BRAND + MODEL_CODE 가 둘 다 있다 → SAME
+ * 🟢 허용 — 원문의 사실을 구조화해 **보존** 하고 그 **출처를 추적 가능** 하게 두는 것
+ * ```
+ *
+ * 🔴 **왜 출처를 갈라야 하는가 — CEO 조서 C27 이 그 이유다**(2026-10-27):
+ * ```
+ * C27  「상세설명이 아닌 **상품명에** : 브랜드와 품번이 존재함」 → human SAME
+ * ⟹ 같은 BRAND 값이라도 TITLE 에서 온 것과 DESCRIPTION 에서 온 것을 뭉개면
+ *    「설명에 아무것도 없다」와 「상품명에 다 있다」가 **같은 모양** 이 된다.
+ * ```
+ */
+export type EvidenceSource = "TITLE" | "DESCRIPTION";
+
+/**
+ * 🔴 Identity 축 — 기존 비교 축과 **이름이 대응** 한다(새 축을 만들지 않는다).
+ *    🔴 그렇다고 이 칸이 비교에 **입력되는 것은 아니다** — 보존과 추적이 전부다.
+ */
+export const IDENTITY_EVIDENCE_AXES = [
+  "BRAND",
+  "MODEL_CODE",
+  "PRODUCT_NAME",
+  "FORM",
+  "COLOR",
+  "MATERIAL",
+] as const;
+
+/**
+ * 🟡 **관측 전용 축**(CPO §10 — 「추출했다고 바로 matcher axis 로 승격하지 않는다」).
+ *    추출 «가능성과 coverage» 만 재고, 판정에 **넣지 않는다**.
+ *    🔴 이 배열이 그 경계를 기계로 읽을 수 있게 해 준다 — 계약이 이 목록을 돌려
+ *       「이 축들이 비교 입력에 등장하지 않는다」를 단언한다.
+ */
+export const PROBE_EVIDENCE_AXES = ["FIT", "COMPOSITION", "SET", "OPTION_SKU"] as const;
+
+export type IdentityEvidenceAxis = (typeof IDENTITY_EVIDENCE_AXES)[number];
+export type ProbeEvidenceAxis = (typeof PROBE_EVIDENCE_AXES)[number];
+export type EvidenceAxis = IdentityEvidenceAxis | ProbeEvidenceAxis;
+
+export interface EvidenceItem {
+  /** 원문에서 읽은 값. 🔴 **추정해서 채우지 않는다** — 없으면 항목 자체가 없다. */
+  value: string;
+  source: EvidenceSource;
+}
+
+/**
+ * 🔴 축마다 **배열** 인 이유 — 같은 축을 TITLE 과 DESCRIPTION 이 **둘 다** 말할 수 있고
+ *    (C05 는 설명에, C27 은 상품명에, C06 은 설명에 품번이 있다), 하나만 남기면
+ *    남기지 않은 쪽의 출처가 **그 순간 사라진다**. 보존이 목적이므로 둘 다 담는다.
+ * 🔴 축이 없으면 키 자체가 없다 — 빈 배열로 「찾아봤지만 없다」를 적지 않는다.
+ */
+export type ProductEvidence = Partial<Record<EvidenceAxis, EvidenceItem[]>>;
+
 /* ───────────────────────────── 상품 사실 묶음 ───────────────────────────── */
 
 /**
@@ -701,6 +764,25 @@ export interface ProductFacts {
    * 🔴 **Contract D — optional 이다.** 기존 생성 지점에 breaking change 를 만들지 않는다.
    */
   description?: string | null;
+  /**
+   * ════════════════════════════════════════════════════════════════════════════
+   * 🔵🔵 **출처가 살아 있는 구조화 증거**(CORE-DESC-EVIDENCE-01 · 2026-10-27)
+   * ════════════════════════════════════════════════════════════════════════════
+   *
+   * `title` 과 `description` 이라는 **두 원문** 에서 읽은 사실을 축별로 담고,
+   * 각 항목이 **어느 원문에서 왔는지** 를 같이 들고 있다(`ProductEvidence`).
+   *
+   * 🔴 **Contract P1 — optional 이다.** 기존 생성 지점 어디에도 breaking change 가 없다
+   *    (`description` 이 그랬던 것과 같은 모양 · 계약 D).
+   * 🔴 **Contract P2 — 비교 입력이 아니다.** `compareCrossSellerProducts` ·
+   *    `compareModelCode` · `deriveMatchTruth` · `priceTierFromLink` 는 이 칸을
+   *    **읽지 않는다**. 늘어난 증거가 verdict 를 바꾸면 그것은 **실패** 다.
+   * 🔴 **Contract P3 — 기존 칸을 덮지 않는다.** `brand` · `brandModelCode` ·
+   *    `colorText` · `materialText` 의 값과 의미는 **한 글자도 바뀌지 않는다**.
+   *    증거는 그 칸들 **옆에** 선다(side-by-side).
+   * 🔴 **Contract P4 — 부재가 정상이다.** 못 읽으면 축 키가 **없다**(빈 배열 아님).
+   */
+  evidence?: ProductEvidence | null;
 }
 
 const TITLE_STOPWORDS = normalizedWordSet(["the", "an", "for", "and", "with", "by", "in", "of", "et", "le", "la"]);
