@@ -3672,7 +3672,62 @@ export function CommerceWorkspace({
              *    🔴 이 영역에서 계산하지 않는다(추천가·마진·예상수익 **0** · §3 금지축).
              */
             costPriceKrw={marketComparison?.costPriceKrw ?? null}
+            /**
+             * ══════════════════════════════════════════════════════════════
+             * 🔵🔵🔵 CORE-NEXT STEP 4 — **A 는 여기서 «이미» 만들어져 있다**
+             * ══════════════════════════════════════════════════════════════
+             *
+             * 🟢 `recommendedPriceKrw`(:1996)는 `resolveListingPrice()` 를 「확정값이
+             *    없다고 가정하고」 한 번 부른 값이고, **`PriceEditor` 에 넘기는 그 값과
+             *    같은 변수** 다 ⟹ 결론 영역과 확정 카드가 **다른 권장가를 말할 수 없다**.
+             * 🔴 새 산식을 만들지 않았다 — 이 WU 의 계산 추가는 **0** 이다.
+             */
+            recommendedPriceKrw={recommendedPriceKrw}
+            /**
+             * 🔴 B 는 **서버 산출**(`computePriceRecommendation`)이고 패널이 올려보낸
+             *    값이다. 🔴 A 와 합치지 않는다 — 상세의 **근거 한 줄** 로만 쓰인다.
+             */
+            marketPriceKrw={marketComparison?.marketPriceKrw ?? null}
+            marketPriceMarginPercent={marketComparison?.marketPriceMarginPercent ?? null}
+            /**
+             * 🟢 **`PriceEditor` 와 같은 핸들러** 다(사본 0) — 두 진입점이 같은
+             *    상세 계산 노드 하나로 모인다.
+             */
+            onOpenPriceCalculation={handleOpenPriceCalculation}
           />
+          {/**
+           * ══════════════════════════════════════════════════════════════════
+           * 🔵🔵🔵 CORE-NEXT STEP 4 ③ — **죽어 있던 「가격 계산 기준」을 되살린다**
+           * ══════════════════════════════════════════════════════════════════
+           *
+           * 🔴🔴 **원인(실측)** — `PRICE_CALCULATION_ANCHOR_ID` 는
+           *    `DomesticPriceIntelligencePanel:3724` 안에 있고, 그 패널은 WU-152 에서
+           *    `presentation="HIDDEN"` 이 되어 **훅만 돌고 `return null`** 한다 ⟹
+           *    `handleOpenPriceCalculation` 의 스크롤이 **도착지를 잃었다**(버튼 둘이
+           *    눌려도 아무 일도 일어나지 않는 상태였다).
+           *
+           * 🔴 **전체 MI 패널을 되살리지 않는다**(CPO 금지) — 되살리면 CEO 가 FAIL 로
+           *    지목한 「또 하나의 거대한 판단 화면」이 돌아온다. 🟢 되살리는 것은
+           *    **상세 계산 노드 하나와 그 앵커** 뿐이고, **셀러가 ⓘ 를 누른 뒤에만** 선다.
+           *
+           * 🔴🔴 **`PriceEditor` 자리(③ 등록 준비)에 두지 않은 이유 — 거기서는 보이지
+           *    않는다.** 그 카드는 `CollapsibleSection`(`open={priceOpen}`) 안이고 그
+           *    컴포넌트는 **닫혀 있으면 children 을 렌더하지 않는다**(`alwaysRenderChildren`
+           *    미사용). 그 접힘 상태의 owner 는 `StageBody` 내부 state 라 이 핸들러가
+           *    열 수 없다 ⟹ 같은 「갈 곳 없는 버튼」이 다시 된다.
+           * 🟢 그래서 **ⓘ 를 누른 그 자리 바로 아래** 에 선다(진입점과 도착지가 같은 화면).
+           *
+           * 🔴 노드는 **하나** 다 — `priceCalculationDetail`(:2025)을 그대로 쓴다(사본 0).
+           *    패널에도 같은 노드를 계속 넘기지만 그쪽은 `HIDDEN` 이라 **렌더되지 않는다**
+           *    (전달 줄은 기존 계약 `price-single-surface` 가 글자로 물고 있어 뺄 수 없다).
+           *    🔴 그래서 패널의 `presentation` 이 `HIDDEN` 이 아니게 되는 날에는
+           *    **앵커가 둘** 이 된다 — 그 사실을 계약이 소스로 잠근다.
+           */}
+          {priceDetailRequest > 0 && (
+            <div id={PRICE_CALCULATION_ANCHOR_ID} className="mt-2 scroll-mt-4">
+              {priceCalculationDetail}
+            </div>
+          )}
         </div>
       )}
 

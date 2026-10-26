@@ -154,10 +154,20 @@ describe("CORE-2AO-R1 — 배포 전 화면 실측(마운트 DOM)", () => {
     ]) {
       expect(all, `🔴 상세로 «옮긴» 문장이 아예 사라졌다: ${kept}`).toContain(kept);
     }
-    /** 🔴 추천 판매가·환산은 **여전히 0** 이다(이 WU 가 연 축이 아니다). */
-    for (const bad of ["추천 판매가", "권장 판매가", "적정 판매가", "약 ₩"]) {
+    /**
+     * 🔴 추천 판매가·환산은 **여전히 0** 이다(이 WU 가 연 축이 아니다).
+     *
+     * 🔵🔵 **CORE-NEXT STEP 4 — 「권장 판매가격」만 방향이 뒤집혔다**(CPO 2026-10-26):
+     *    그 값(A = `breakdown.suggestedPriceKrw`)은 **prop 으로 넘어올 때만** 선다.
+     *    이 마운트는 A 를 **넘기지 않으므로** 여기서는 여전히 **0 이어야 한다** —
+     *    즉 이 단언은 「영역이 **스스로** 권장가를 만들지 않는다」를 계속 문다.
+     *    🟢 A 가 있을 때의 모양은 `core-next-step4-recommended-price` 가 담당한다.
+     */
+    for (const bad of ["추천 판매가", "적정 판매가", "약 ₩"]) {
       expect(all, `🔴 금지 축이 열렸다: ${bad}`).not.toContain(bad);
     }
+    expect(all, "🔴 영역이 스스로 권장 판매가격을 만들었다").not.toContain("권장 판매가");
+    expect(all, "🔴 A 를 넘기지 않았는데 원화 금액이 생겼다").not.toMatch(/[₩€$£¥]/);
   });
 });
 

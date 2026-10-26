@@ -1746,6 +1746,22 @@ export interface MarketComparisonInput {
    * 🔴 `null` 은 **「아직 없다」** 이고 **실패가 아니다**(그 구분이 §5-⑤ 의 전부다).
    */
   costPriceKrw: number | null;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵 CORE-NEXT STEP 4 ① — **B(시장가격) 두 칸.** 🔴 A 와 합치지 않는다
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🟢 **새 API·새 계산이 0 이다** — 이 패널이 이미 받은 응답의
+   *    `recommendation.{recommendedPrice,estimatedMarginPercent}` 그대로다
+   *    (`computePriceRecommendation()` 산출 · 서버가 이미 냈다).
+   * 🔴 `null` 은 **「국내 EXACT 근거가 없다」**(marketCase D)이고 실패가 아니다 —
+   *    그때 받는 쪽은 **줄을 만들지 않는다**(없는 말을 지어내지 않는다).
+   * 🔴🔴 **생산자를 늘릴 때 「읽는 쪽 다섯 자리」를 같이 고친다**(바로 위
+   *    `domesticListingEvidence` 가 남긴 그 함정) — 타입 · useMemo · **deps** ·
+   *    Workspace 전달 · 영역 prop. 하나라도 빠지면 **조용히** 사라진다.
+   */
+  marketPriceKrw: number | null;
+  marketPriceMarginPercent: number | null;
 }
 
 export function DomesticPriceIntelligencePanel({
@@ -2038,6 +2054,13 @@ export function DomesticPriceIntelligencePanel({
        *    🔴 지어내지 않는다 — 응답에 없으면 `null`(= 「아직 없다」)이다.
        */
       costPriceKrw: data?.currentPrice?.costPriceKrw ?? null,
+      /**
+       * 🔵 CORE-NEXT STEP 4 ① — **B 를 그대로 올려보낸다**(가공 0 · 계산 0).
+       *    🔴 「A 가 없을 때 B 로 대신 채운다」를 하지 않는다 — 그것이 두 값을
+       *       합치는 것이고 CPO 가 금지한 승격이다.
+       */
+      marketPriceKrw: data?.recommendation?.recommendedPrice ?? null,
+      marketPriceMarginPercent: data?.recommendation?.estimatedMarginPercent ?? null,
     };
   }, [
     geminiEvidence,
@@ -2049,6 +2072,9 @@ export function DomesticPriceIntelligencePanel({
     overseasReference,
     /** 🔴 deps 에 빠지면 원가를 입력해도 결론이 **보류로 남는다**(CORE-2R-5 의 그 함정). */
     data?.currentPrice?.costPriceKrw,
+    /** 🔵 CORE-NEXT STEP 4 — 같은 함정. 빠지면 B 가 **영원히 null 로 보인다**. */
+    data?.recommendation?.recommendedPrice,
+    data?.recommendation?.estimatedMarginPercent,
   ]);
   const onMarketComparisonChangeRef = useRef(onMarketComparisonChange);
   onMarketComparisonChangeRef.current = onMarketComparisonChange;

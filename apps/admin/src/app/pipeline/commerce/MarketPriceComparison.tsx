@@ -71,6 +71,17 @@ import {
   type MiSameSelection,
 } from "./mi-same-candidates";
 import { priceText, stockText, type GeminiTransientRow } from "./GeminiTransientCandidates";
+import {
+  /**
+   * 🔵 CORE-NEXT STEP 4 — **A(권장 판매가격)의 말 owner.** 🔴 이 영역은 A 를
+   *    **계산하지 않는다** — 문구조차 자기가 들지 않는다(그 파일 머리가 이유를 든다).
+   */
+  marketPriceBasisLine,
+  PRICE_CALCULATION_LINK_TEXT,
+  RECOMMENDED_PRICE_LABEL,
+} from "./recommended-price-copy";
+/** 🟢 `PriceEditor` 가 쓰는 **그 포맷터** 다 — 두 화면이 같은 숫자를 다르게 적지 않는다. */
+import { formatKrw } from "@commerce/pricing";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -125,6 +136,32 @@ export interface MarketPriceComparisonProps {
    *    currentPrice.costPriceKrw` 로 **이미 응답에 있다**(새 API 0 · 새 계산 0).
    */
   costPriceKrw?: number | null;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 CORE-NEXT STEP 4 — **A 권장 판매가격**(CPO 확정 2026-10-26)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 **이 영역이 만들지 않는다.** `CommerceWorkspace` 가 `resolveListingPrice()`
+   *    하나로 낸 값(`recommendedPriceKrw`)을 그대로 받는다 — 즉 **`PriceEditor` 의
+   *    「권장 판매가격」과 정의상 같은 숫자** 다(두 화면이 갈릴 경로가 없다).
+   * 🔴 `null` = 원본가/배송비를 몰라 **계산 자체가 성립하지 않는 상태** 다 ⟹
+   *    그때는 **줄을 만들지 않는다**(「₩0」 같은 거짓 숫자 금지 · P0-D 선례).
+   */
+  recommendedPriceKrw?: number | null;
+  /**
+   * 🔴 **B 시장가격** — `computePriceRecommendation()` 이 낸 값(국내 EXACT 최저가 기반).
+   * 🔴🔴 **A 와 합치지 않는다 · 「권장 판매가격」으로 승격하지 않는다** —
+   *    이 둘은 **근거 한 줄**(상세)로만 쓰인다(CPO FAIL 조건).
+   */
+  marketPriceKrw?: number | null;
+  /** 🔴 B 를 따랐을 때의 예상 마진율. 🟢 **서버가 이미 낸 값** 이다(여기서 계산 0). */
+  marketPriceMarginPercent?: number | null;
+  /**
+   * 🟢 「ⓘ 가격 계산 기준 보기」 — **화면 이동 하나뿐** 이다(계산·조회 0).
+   * 🔴 `PriceEditor` 의 「가격 계산 기준 보기 →」와 **같은 핸들러** 를 받는다
+   *    (도착지가 둘이 되면 셀러가 두 설명을 비교한다).
+   */
+  onOpenPriceCalculation?: () => void;
 }
 
 export function MarketPriceComparison({
@@ -132,6 +169,10 @@ export function MarketPriceComparison({
   domesticReference,
   overseasReference,
   costPriceKrw,
+  recommendedPriceKrw,
+  marketPriceKrw,
+  marketPriceMarginPercent,
+  onOpenPriceCalculation,
 }: MarketPriceComparisonProps): JSX.Element | null {
   const domestic = selectMiSameCandidates(rows, "KR");
   const overseas = selectMiSameCandidates(rows, "OVERSEAS");
@@ -167,6 +208,15 @@ export function MarketPriceComparison({
   /** 🔴 CORE-2AO-R2 — 1차는 **한 줄**, 비용 축은 **상세** 로 갈렸다(문장 삭제 0). */
   const nextSteps = nextStepLines(basis.length > 0);
   const costHolds = costHoldLines(basis.length > 0, costPriceKrw);
+  /**
+   * 🔵 CORE-NEXT STEP 4 — **B 근거 한 줄**(상세에서만 선다).
+   * 🔴 금액 **0** · 계산 **0** — 서버가 낸 마진율과 A 와의 대소 비교뿐이다.
+   */
+  const marketBasis = marketPriceBasisLine({
+    marketPriceKrw,
+    marketPriceMarginPercent,
+    recommendedPriceKrw,
+  });
   /**
    * 🔴 WU-133 — **시장과 무관하게** 센다. 「국내/해외로 갈려서 안 보인다」가 아니라
    *    「판정이 보류돼서 안 보인다」가 사실이고, 그 사실은 시장별로 나누면 흐려진다.
@@ -270,7 +320,19 @@ export function MarketPriceComparison({
        *    🔴 설명문은 **최대 한 줄** 이다(`nextStepLines` 가 그것을 보증한다).
        *    🔴 추천 판매가 **계산 0** — 비용 축 문장들은 상세로 내려갔다(`costHoldLines`).
        */}
-      {nextSteps.length > 0 && (
+      {/**
+       * 🔵🔵🔵 CORE-NEXT STEP 4 — **「그래서 얼마에 팔면 되는가」가 이 블록에서 끝난다.**
+       *
+       * 🔴 전까지 이 블록은 **가이드 한 줄** 뿐이었고, 그 답(권장 판매가격)은
+       *    ③ 등록 준비의 확정 카드까지 내려가야 보였다. 🔴 그리고 거기서 「가격 계산
+       *    기준 보기 →」를 눌러도 **아무 일도 일어나지 않았다** — 앵커가 WU-152 에서
+       *    `presentation="HIDDEN"` 이 된 MI 패널 **안** 에 있어 도착지를 잃었기 때문이다.
+       * 🟢 그래서 ⒜ A 를 이 자리에 세우고 ⒝ 같은 핸들러로 **상세 계산을 되살린다**.
+       * 🔴 **영역이 늘어난 것이 아니다** — 세 번째 블록(`market-next-step`) 안이고,
+       *    `market-next-step-line`(설명문 ≤ 1줄) 계약은 그대로다(다른 testid 를 쓴다).
+       * 🔴 A 가 없으면(원본가/배송비 미확인) **아무것도 그리지 않는다.**
+       */}
+      {(nextSteps.length > 0 || recommendedPriceKrw != null) && (
         <div data-testid="market-next-step" className="mt-3">
           <p className="text-[11px] font-medium text-text-secondary">{NEXT_STEP_HEADING}</p>
           {nextSteps.map((line) => (
@@ -278,6 +340,40 @@ export function MarketPriceComparison({
               {line}
             </p>
           ))}
+          {recommendedPriceKrw != null && (
+            <>
+              {/**
+               * 🟢 CEO 요구(CORE-2AO-R2)와 같은 층위 — **셀러가 읽을 숫자는 크게.**
+               * 🔴 「시장 평균/적정가」가 아니다 — 라벨 owner 가 그 뜻을 들고 있다.
+               */}
+              <div
+                data-testid="market-recommended-price"
+                className="mt-1 flex flex-wrap items-baseline justify-between gap-x-2"
+              >
+                <span className="text-[11px] text-text-secondary">{RECOMMENDED_PRICE_LABEL}</span>
+                <span
+                  data-testid="market-recommended-price-amount"
+                  className="text-lg font-semibold tabular-nums text-text-primary"
+                >
+                  {formatKrw(recommendedPriceKrw)}
+                </span>
+              </div>
+              {/**
+               * 🔴 **도착지가 없으면 버튼을 그리지 않는다** — 갈 곳 없는 버튼이
+               *    바로 이 WU 가 고치는 그 모양이다(`PriceEditor` 와 같은 규약).
+               */}
+              {onOpenPriceCalculation && (
+                <button
+                  type="button"
+                  data-testid="market-price-calculation-link"
+                  onClick={onOpenPriceCalculation}
+                  className="mt-0.5 text-[11px] font-medium text-primary hover:underline"
+                >
+                  {PRICE_CALCULATION_LINK_TEXT}
+                </button>
+              )}
+            </>
+          )}
         </div>
       )}
 
@@ -314,6 +410,19 @@ export function MarketPriceComparison({
             />
           ))}
         </div>
+
+        {/**
+         * 🔵🔵 CORE-NEXT STEP 4 ④ — **B(시장가격) 근거 한 줄.**
+         *
+         * 🔴 **1차에 두지 않는다** — 1차의 답은 A 하나다(둘을 나란히 두면 셀러가
+         *    「어느 쪽에 팔아야 하나」를 다시 고른다 = CPO FAIL 조건).
+         * 🔴 **금액을 적지 않는다**(금액 owner 는 시장 블록) · **계산 0**.
+         */}
+        {marketBasis && (
+          <p data-testid="market-price-basis-line" className="mt-2 text-[11px] text-text-tertiary">
+            {marketBasis}
+          </p>
+        )}
 
         {/** 🔴 비용 축 — 1차의 한 줄에서 내려온 나머지(글자 불변 · 계산 0). */}
         {costHolds.length > 0 && (
