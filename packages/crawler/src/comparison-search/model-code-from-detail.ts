@@ -20,17 +20,21 @@ import type { ProductFacts } from "@commerce/shared";
  *   C50  B126AC151 ↔ 원상품 B226AC117  conflict → 차단 강화      (human DIFFERENT)
  * ```
  *
- * ── 🔴🔴 `materialText` 를 «description 계약» 으로 인정하지 않는다(CPO §8) ──
+ * ── 🟢🟢 **SPRINT-03 에서 우회 구조가 «제거» 됐다**(CPO 정식화 2026-10-26) ──
  * ```
- * 실측 — 상세설명 전문이 **Shopify 경로에서만** `materialText` 로 들어온다
- *        (`productFactsFromShopifyProduct` 가 `body_html` 을 받아 `plainText()` 한다).
- *        🔴 HTML 경로는 `description`/`material` 을 **일부러 넘기지 않는다**
- *           (거짓 MATERIAL blocker 때문 · `productFactsFromListing` 주석).
- * ⟹ 🔴 그래서 이 함수는 그 칸을 **읽기 전용 raw text** 로만 쓴다.
- *    ❌ material 축 의미 변경 ❌ comparator 변경 ❌ 새 DESCRIPTION 축
- *    ❌ `materialText` 를 공식 description 계약으로 선언
- * 🟡 `ProductFacts.description` 정식 필드 도입은 **별도 Sprint** 다(CPO 확정).
+ * BEFORE  facts.**materialText** 를 raw text 로 읽었다 — 🔴 그 칸은 **소재 축의 입력** 이고
+ *         설명문이 들어온 것은 `material = parse(…).length > 0 ? description : null`
+ *         (`seller-facts.ts:200`)라는 **우연한 우회** 였다
+ * AFTER   facts.**description** 만 읽는다 — `ProductFacts` 의 **정식 Evidence Layer 칸**
+ * ⟹ 🔴 `description ?? materialText` 같은 **alias 폴백을 두지 않았다**(CPO §4 금지).
+ *    그래서 「소재 조성이 파싱되지 않는 설명문」에서도 품번을 읽을 수 있게 됐고
+ *    (BEFORE 는 그 경우 materialText 가 null 이라 **구조적으로 못 읽었다**),
+ *    동시에 **소재 축의 의미에 손대지 않는다**(❌ comparator ❌ material 입력 변경).
+ * 🔴 HTML 일반 경로는 `description` 을 **일부러 비운다** — 추정해서 채우지 않는다(계약 C).
  * ```
+ *
+ * 🔴 여전히 하지 않는 것 — ❌ 새 DESCRIPTION 축 ❌ threshold ❌ blocker/conflict 생성
+ *    ❌ 「설명이 있다/유사하다 → SAME」 ❌ 원상품 설명 참조.
  */
 
 /**
@@ -57,11 +61,15 @@ export function extractDetailModelCodes(raw: string | null | undefined): string[
  * 🔴🔴 **Contract C — 둘 이상이면 고르지 않는다.** 지어내기 금지.
  * 🔴🔴 **Contract E — 충돌을 완화하지 않는다.** 복원값이 원상품과 다르면 기존
  *    `compareModelCode` 가 **conflict** 를 내고 그 보호가 그대로 작동한다(의도된 결과다).
+ * 🔴🔴 **Contract G(SPRINT-03) — 읽는 칸은 `description` «하나» 다.**
+ *    🔴 `materialText` 로 폴백하지 않는다 — 그러면 소재 축의 칸이 다시 **설명문 계약** 이
+ *       되어 CPO §4 금지(「alias 처럼 계속 사용」)를 되돌린다.
  */
 export function recoverModelCodeFromDetail(facts: ProductFacts): ProductFacts {
   /** Contract A — 값이 있으면 **그대로 돌려준다**(같은 객체 · 할당 0). */
   if (facts.brandModelCode) return facts;
-  const found = extractDetailModelCodes(facts.materialText);
+  /** 🔴 Contract G — 정식 Evidence Layer 칸만 본다(소재 칸 폴백 **없음**). */
+  const found = extractDetailModelCodes(facts.description);
   /** Contract C — 정확히 1개일 때만 보강한다. */
   if (found.length !== 1) return facts;
   return { ...facts, brandModelCode: found[0] };

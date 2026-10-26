@@ -329,8 +329,10 @@ export async function factsFromProductUrl(url: string): Promise<ProductUrlFactsR
      *
      * 🟢 실측(GT 33쌍) — SAME 회수 **5/17 유지** · DIFFERENT 누출 **2 → 1** ·
      *    기존 FP **2 → 1** · TN **8 → 9** · 안전조건 **6/6 PASS**.
-     * 🔴 `materialText` 를 **description 계약으로 인정하지 않는다** — 읽기 전용이다
-     *    (CPO §8 · 정식 `ProductFacts.description` 도입은 **별도 Sprint**).
+     * 🟢🟢 **SPRINT-03 — 우회가 «제거» 됐다.** 이 경로의 `facts` 는
+     *    `productFactsFromShopifyProduct` 산출이고 그 함수가 이제 **정식
+     *    `ProductFacts.description`** 을 싣는다(`seller-facts.ts`). 보강기는 그 칸만
+     *    읽는다 — 🔴 `materialText` 폴백 **없음**(CPO §4 alias 금지).
      */
     const suppliedFacts = recoverModelCodeFromDetail(facts);
     return {

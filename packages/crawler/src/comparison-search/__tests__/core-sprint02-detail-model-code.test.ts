@@ -28,6 +28,7 @@ const facts = (over: Partial<ProductFacts> = {}): ProductFacts => ({
   categoryText: "T-shirt",
   colorText: "Light Blue",
   materialText: null,
+  description: null,
   fitText: null,
   ageRangeText: null,
   sizeLabels: [],
@@ -38,7 +39,7 @@ const facts = (over: Partial<ProductFacts> = {}): ProductFacts => ({
 
 describe("SPRINT-02 Contract A — 기존 brandModelCode 를 «절대» 덮지 않는다", () => {
   it("설명에 다른 품번이 있어도 기존 값을 유지한다", () => {
-    const f = facts({ brandModelCode: "B226AC010", materialText: "… REF: B226AC141 …" });
+    const f = facts({ brandModelCode: "B226AC010", description: "… REF: B226AC141 …" });
     const out = recoverModelCodeFromDetail(f);
     expect(out.brandModelCode, "🔴 덮어쓰면 기존 MODEL_CODE 충돌 보호가 무너진다").toBe("B226AC010");
     /** 🟢 같은 객체를 돌려준다 — 불필요한 사본을 만들지 않는다. */
@@ -46,7 +47,7 @@ describe("SPRINT-02 Contract A — 기존 brandModelCode 를 «절대» 덮지 �
   });
 
   it("설명에 같은 품번이 있어도 기존 값을 그대로 둔다(동작 동일)", () => {
-    const f = facts({ brandModelCode: "B226AC009", materialText: "… B226AC009 …" });
+    const f = facts({ brandModelCode: "B226AC009", description: "… B226AC009 …" });
     expect(recoverModelCodeFromDetail(f).brandModelCode).toBe("B226AC009");
   });
 });
@@ -67,18 +68,18 @@ describe("SPRINT-02 Contract B — 후보측만 본다(원상품 설명은 구�
 
 describe("SPRINT-02 Contract C — 품번이 둘 이상이면 고르지 않는다", () => {
   it("서로 다른 품번 2개면 보강하지 않는다", () => {
-    const f = facts({ materialText: "… B226AC009 … 관련상품 B226AC010 …" });
+    const f = facts({ description: "… B226AC009 … 관련상품 B226AC010 …" });
     expect(recoverModelCodeFromDetail(f).brandModelCode, "🔴 하나를 고르면 그것이 지어내기다").toBeNull();
   });
 
   it("같은 품번이 여러 번 나오면 하나로 보고 보강한다", () => {
-    const f = facts({ materialText: "B226AC009 … 다시 B226AC009 … b226ac009" });
+    const f = facts({ description: "B226AC009 … 다시 B226AC009 … b226ac009" });
     expect(recoverModelCodeFromDetail(f).brandModelCode).toBe("B226AC009");
   });
 
   it("0개면 그대로 둔다", () => {
-    expect(recoverModelCodeFromDetail(facts({ materialText: "100% Organic Cotton" })).brandModelCode).toBeNull();
-    expect(recoverModelCodeFromDetail(facts({ materialText: null })).brandModelCode).toBeNull();
+    expect(recoverModelCodeFromDetail(facts({ description: "100% Organic Cotton" })).brandModelCode).toBeNull();
+    expect(recoverModelCodeFromDetail(facts({ description: null })).brandModelCode).toBeNull();
   });
 });
 
@@ -115,7 +116,7 @@ describe("SPRINT-02 Contract E·F — 핵심 3건(실측 문자열 그대로)", 
    */
   it("C05 — 품번 일치 ⟹ SAME 근거 보강(human SAME)", () => {
     const f = facts({
-      materialText:
+      description:
         "Tinyapple | FW26 Bobo Choses | Hug Hairy Monster T-shirt, Light Blue 100% Organic Cotton Wash Cold-30° B226AC009",
     });
     expect(recoverModelCodeFromDetail(f).brandModelCode).toBe("B226AC009");
@@ -123,7 +124,7 @@ describe("SPRINT-02 Contract E·F — 핵심 3건(실측 문자열 그대로)", 
 
   it("S1-6 — 품번 «불일치» 를 복원한다 ⟹ 기존 conflict 보호가 차단한다(human DIFFERENT)", () => {
     const f = facts({
-      materialText:
+      description:
         "Tinyapple | FW26 Bobo Choses | Booty Ghosts T-shirt 100% Organic Cotton Wash Cold-30° REF: B226AC141",
     });
     const out = recoverModelCodeFromDetail(f);
@@ -137,13 +138,13 @@ describe("SPRINT-02 Contract E·F — 핵심 3건(실측 문자열 그대로)", 
   });
 
   it("C50 — 다른 시즌/라인 품번도 그대로 복원해 충돌을 드러낸다(human DIFFERENT)", () => {
-    const f = facts({ materialText: "… B126AC151 …" });
+    const f = facts({ description: "… B126AC151 …" });
     expect(recoverModelCodeFromDetail(f).brandModelCode).toBe("B126AC151");
   });
 
   /** 🔴 **Contract F** — 보강은 **brandModelCode 한 칸만** 바꾼다(SAME 을 깨뜨릴 다른 칸 0). */
   it("brandModelCode 외의 칸을 하나도 바꾸지 않는다", () => {
-    const f = facts({ materialText: "… B226AC009 …" });
+    const f = facts({ description: "… B226AC009 …" });
     const out = recoverModelCodeFromDetail(f);
     for (const k of Object.keys(f) as (keyof ProductFacts)[]) {
       if (k === "brandModelCode") continue;
@@ -172,8 +173,86 @@ describe("SPRINT-02 — 배선과 금지 범위를 소스에서 잠근다", () =
     for (const token of ["SAME_MIN_AXES", "threshold", "NO_TITLE_OVERLAP", "blocker", "conflict", "verdict", "axes"]) {
       expect(own, `🔴 「${token}」이 있으면 이 파일이 판정에 손을 댄 것이다`).not.toContain(token);
     }
-    /** 🔴 `materialText` 를 **읽기만** 한다 — 쓰지 않는다. */
-    expect(own).toContain("facts.materialText");
-    expect(own, "🔴 materialText 에 값을 넣으면 소재 축의 의미가 바뀐다").not.toMatch(/materialText\s*:/);
+    /**
+     * 🔵🔵 **SPRINT-03 Contract G — 읽는 칸이 `description` «하나» 다.**
+     *
+     * 🔴 `materialText` 가 **코드에서 사라져야** 한다(주석은 벗기고 본다). 남아 있으면
+     *    소재 축의 칸이 다시 설명문 계약이 되어 CPO §4 금지를 되돌린다.
+     */
+    expect(own, "🔴 정식 Evidence Layer 칸을 읽어야 한다").toContain("facts.description");
+    expect(own, "🔴 materialText 를 읽으면 SPRINT-03 의 우회 제거가 되돌아간다").not.toContain(
+      "materialText",
+    );
+    /** 🔴 alias 폴백(`description ?? materialText`)을 두지 않았다. */
+    expect(own, "🔴 ?? 폴백은 alias 사용이다").not.toMatch(/description\s*\?\?/);
+    /** 🔴 그 칸에 **쓰지** 않는다 — 읽기 전용이다. */
+    expect(own, "🔴 description 에 값을 넣으면 공급자가 둘이 된다").not.toMatch(/description\s*:/);
+  });
+});
+
+describe("SPRINT-03 Contract B — `description` 과 `materialText` 는 «서로의 alias 가 아니다»", () => {
+  /**
+   * 🔴🔴 **이것이 이 Sprint 의 핵심 음성 계약이다.** 같은 문자열을 소재 칸에 넣으면
+   *    **발화하지 않아야** 한다. 발화하면 우회가 살아 있다는 뜻이다.
+   */
+  it("같은 설명문을 `materialText` 에 넣으면 품번을 읽지 «않는다»", () => {
+    const raw = "Tinyapple | FW26 Bobo Choses | Hug Hairy Monster T-shirt B226AC009";
+    /** 🟢 정식 칸에 있으면 읽는다(대조군 — 이 단언이 통과해야 아래가 의미를 갖는다). */
+    expect(recoverModelCodeFromDetail(facts({ description: raw })).brandModelCode).toBe("B226AC009");
+    /** 🔴 소재 칸에만 있으면 읽지 않는다. */
+    expect(
+      recoverModelCodeFromDetail(facts({ materialText: raw })).brandModelCode,
+      "🔴 읽히면 `materialText` 가 여전히 description 계약으로 쓰이는 것이다",
+    ).toBeNull();
+  });
+
+  it("소재 축의 입력(`materialText`)을 한 글자도 바꾸지 않는다", () => {
+    const f = facts({ materialText: "100% Organic Cotton", description: "… B226AC009 …" });
+    const out = recoverModelCodeFromDetail(f);
+    expect(out.materialText, "🔴 소재 칸이 바뀌면 compareMaterial 의 의미가 바뀐다").toBe(
+      "100% Organic Cotton",
+    );
+    expect(out.description, "🔴 설명 원문도 보존한다").toBe("… B226AC009 …");
+    expect(out.brandModelCode).toBe("B226AC009");
+  });
+
+  /**
+   * 🟢🟢 **SPRINT-03 이 «실제로 늘린» 공급 범위** — BEFORE 는 구조적으로 못 읽던 모양이다.
+   *
+   * `seller-facts.ts:200` 의 `material` 은 「소재 조성이 파싱될 때만」 설명문을 담았다 ⟹
+   * 🔴 소재 조성이 없는 설명문은 `materialText === null` 이라 **품번이 있어도 못 읽었다**.
+   */
+  it("소재 조성이 «없는» 설명문에서도 품번을 읽는다(BEFORE 는 불가능했다)", () => {
+    const noComposition = "Bobo Choses Hug Hairy Monster T-shirt. Ref B226AC009. Made in Spain.";
+    expect(recoverModelCodeFromDetail(facts({ description: noComposition })).brandModelCode).toBe(
+      "B226AC009",
+    );
+  });
+});
+
+describe("SPRINT-03 — Shopify 공급을 소스에서 잠근다", () => {
+  const SELLER = readFileSync(join(__dirname, "../seller-facts.ts"), "utf8");
+  const SRC = SELLER.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/.*$/gm, " ");
+
+  it("Shopify facts 가 `description` 을 싣는다", () => {
+    /** 🔴 배선이 끊기면 보강기가 읽을 입력이 **구조적으로 없다**. */
+    expect(SRC, "🔴 Shopify 경로가 정식 칸을 공급해야 한다").toMatch(/description:\s*description\s*\|\|\s*null/);
+  });
+
+  it("`material` 조건을 바꾸지 않았다 — 소재 축 입력 불변", () => {
+    /** 🔴 CPO §5 — 이 줄이 바뀌면 `compareMaterial` 의 분모가 바뀐다. */
+    expect(SRC).toMatch(/const material =\s*parseMaterialComposition\(description\)\.length > 0 \? description : null/);
+  });
+
+  it("HTML 일반 경로를 description 으로 «억지로 채우지» 않았다", () => {
+    /**
+     * 🔴 CPO §4 — 「입력이 없는 것을 추정해서 채우지 않는다」.
+     * `productFactsFromListing` 산출에 description 공급이 **없어야** 한다.
+     */
+    const listing = SRC.slice(SRC.indexOf("export function productFactsFromListing"));
+    const body = listing.slice(0, listing.indexOf("\n}"));
+    expect(body, "🔴 목록/HTML 경로에 description 을 채우면 거짓 증거가 된다").not.toContain(
+      "description:",
+    );
   });
 });

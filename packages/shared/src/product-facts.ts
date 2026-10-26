@@ -675,6 +675,32 @@ export interface ProductFacts {
   /** breadcrumb 조각, 상품 태그 등 대상 연령/성별을 읽을 수 있는 원문 조각들. */
   audienceSignals: string[];
   imageUrls: string[];
+  /**
+   * ════════════════════════════════════════════════════════════════════════════
+   * 🔵🔵 **Evidence Layer — 판매처가 적어 둔 상품 상세설명 «원문»**
+   *      (CORE-SAME-SPRINT-03 · CPO 정식화 2026-10-26)
+   * ════════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 **이 칸은 «판정 축» 이 아니다.** 증거 추출기들이 읽는 **raw text 저장소** 다.
+   * ```
+   * ❌ description 이 «있다» → SAME        ❌ description «유사도» → SAME
+   * ❌ 길이/존재를 축 점수로 쓴다            ❌ 새 DESCRIPTION axis / blocker / conflict
+   * 🟢 허용 — 이 원문에서 **이미 있는 축의 증거**(예: 품번)를 뽑아 공급하는 것
+   * ```
+   *
+   * 🔴 **Contract A — 후보측 전용이다.** 원상품 설명을 후보 증거로 쓰지 않는다.
+   * 🔴 **Contract B — `materialText` 와 «의미가 다르다».**
+   *    `materialText` 는 **소재 축(`compareMaterial`)의 입력** 이고 이 칸은 **설명 원문** 이다.
+   *    🔴 그래서 둘을 서로의 alias 로 쓰지 않는다(`description ?? materialText` **금지**).
+   *    🟡 다만 `productFactsFromShopifyProduct` 는 **역사적으로** 소재 조성이 파싱될 때
+   *       `materialText` 에 설명문 전문을 담아 왔다(`seller-facts.ts` 의 `material`).
+   *       🔴 그 칸을 좁히는 것은 **`compareMaterial` 의 입력 변경** 이라 이 Sprint 범위가
+   *          아니다(CPO §5 「material axis 변경 0」) ⟹ **별도 CPO 판정 사안** 으로 남긴다.
+   * 🔴 **Contract C — 부재가 «정상» 이다.** 없으면 `null`/생략이고 **추정해서 채우지 않는다.**
+   *    HTML 일반 경로는 **일부러 비운다**(거짓 MATERIAL blocker 실측 · `productFactsFromListing`).
+   * 🔴 **Contract D — optional 이다.** 기존 생성 지점에 breaking change 를 만들지 않는다.
+   */
+  description?: string | null;
 }
 
 const TITLE_STOPWORDS = normalizedWordSet(["the", "an", "for", "and", "with", "by", "in", "of", "et", "le", "la"]);

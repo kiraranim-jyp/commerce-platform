@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { compareModelCode } from "@commerce/crawler/src/comparison-search/model-code";
 import { compareCrossSellerProducts } from "@commerce/crawler/src/comparison-search/cross-seller";
 import { deriveMatchTruth } from "@commerce/crawler/src/comparison-search/match-truth";
+import { recoverModelCodeFromDetail } from "@commerce/crawler/src/comparison-search/model-code-from-detail";
 import type { ProductFacts } from "@commerce/shared";
 import { SAME05_PAIRS, type Same05Pair } from "./core-same05-gt";
 import { priceTierFromLink } from "../../../domestic-price-sources/_lib/domestic-product-link";
@@ -31,14 +32,26 @@ const codesIn = (s: string | null): string[] =>
 
 /**
  * 🟢 **행 ②** — description → MODEL_CODE 증거 공급.
- * 🔴 `materialText` 가 현재 설명문이 실려 오는 칸이다(SPRINT-02 STEP 3-b 실측).
- *    🔴 그 칸을 「소재」로 쓰는 기존 축은 **건드리지 않는다** — 읽기만 한다.
+ *
+ * 🔵🔵 **SPRINT-03 에서 «복제식을 버리고 운영 함수를 부른다».**
+ * ```
+ * BEFORE  이 하니스가 codesIn(p.facts.materialText) 를 **자기가 다시 구현** 했다
+ *         ⟹ 🔴 운영이 정식 칸으로 옮겨가도 **FAIL 하지 않는다**(§5-B 가 경고한 자리)
+ * AFTER   운영 `recoverModelCodeFromDetail` 을 **그대로 부른다** ⟹ 계약이 깨지면 여기도 깨진다
+ * ```
+ *
+ * 🔴🔴 **저장 facts 는 «옛 계약» 이다 — 이 승격을 숨기지 않는다.**
+ *    GT 는 `description` 이 생기기 «전» 에 저장된 스냅샷이라 그 칸이 **없다**. 설명문은
+ *    `materialText` 에 들어와 있다(`seller-facts.ts:200` 의 조건부 대입 때문).
+ *    ⟹ 그래서 **이 하니스에서만** 그 원문을 정식 칸으로 승격해 운영 함수에 넘긴다.
+ * 🔴 이것은 **측정용 승격** 이고 **운영 폴백이 아니다** — 운영 코드에는 `description ??
+ *    materialText` 가 **없다**(그 금지는 `core-sprint02-detail-model-code` 가 잠근다).
+ * 🔴 그러므로 이 표의 숫자는 「**description 이 공급되는 경로에서** 이렇게 된다」는 뜻이고,
+ *    「저장된 전체 후보에서 지금 이렇게 된다」가 **아니다**(그 coverage 는 측정불가).
  */
 function cfDescriptionCode(p: Same05Pair): ProductFacts {
-  if (p.facts.brandModelCode) return p.facts; // 🔴 값이 있으면 덮지 않는다
-  const found = codesIn(p.facts.materialText);
-  if (found.length !== 1) return p.facts; // 🔴 둘 이상이면 고르지 않는다(지어내기 금지)
-  return { ...p.facts, brandModelCode: found[0] };
+  const promoted: ProductFacts = { ...p.facts, description: p.facts.materialText };
+  return recoverModelCodeFromDetail(promoted);
 }
 
 /**

@@ -217,6 +217,17 @@ export function productFactsFromShopifyProduct(input: ShopifyProductLike, domain
     sizeLabels: shopifySizeLabels(input),
     audienceSignals: [...shopifyTags(input), ...(input.type ? [input.type] : [])],
     imageUrls: shopifyImages(input),
+    /**
+     * 🔵 **CORE-SAME-SPRINT-03 — Evidence Layer 정식 공급**(CPO 2026-10-26).
+     *
+     * 🟢 이 변수는 **이미 위에서 만들어져** 색상·핏·품번 라벨 추출에 쓰이고 있었다
+     *    (`plainText(input.description ?? input.body)`) ⟹ **새 fetch 0 · 새 파싱 0**.
+     * 🔴 `materialText` 와 값이 같아질 수 있지만 **같은 칸이 아니다**(계약 B) —
+     *    `material`(:200) 에는 「소재 조성이 파싱될 때만」이라는 **소재 축 조건** 이 붙고,
+     *    이 칸은 **조건 없는 설명 원문** 이다. 🔴 그래서 둘을 alias 로 쓰지 않는다.
+     * 🔴 빈 문자열은 `null` 로 둔다 — 「없다」와 「비었다」를 한 모양으로 만든다(계약 C).
+     */
+    description: description || null,
   };
 }
 
