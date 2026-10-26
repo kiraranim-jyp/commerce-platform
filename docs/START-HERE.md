@@ -11,9 +11,9 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-SAME-07** — 🟢 **판정 기준 v1.0 조사 완료**(§9-H · 구현 0)
-NEXT         🔴 **CPO 정책 결정 2건** — ⒜ A/B 분리(세트) ⒝ 품번 불일치 정책(교환 측정됨)
-CEO ACTION   🟡 **다중 후보 3-way GT** — 🔴 단 후보 공급이 선행이다(§9-H)
+CURRENT WU   **CORE-SAME-08** — 🔴 **STOP: 착수 조건 불성립**(원상품·국내후보 부족 · §9-I)
+NEXT         🔴 **CPO 공급 결정** — 하의/원피스/가방 원상품 **0** · 국내 후보 최대 **3**
+CEO ACTION   🟡 **없다** — 판정할 후보가 CPO 요구 수준에 못 미친다
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SAME-03**(화면 + CEO GT 10/10) · **SAME-04**(FN 3건 원인 확정)
 Git          clean · origin/main 0/0 · Production / 200
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-SAME-07 — 판정 기준 v1.0 조사 완료(§9-H) · **CPO 정책 결정 2건 대기**
+CURRENT    CORE-SAME-08 — 다중 카테고리 GT **착수 조건 불성립** STOP(§9-I)
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -832,6 +832,75 @@ core-same07-criteria-survey  5(네트워크 0 · CI 상주)
 🔴 **내 표가 틀렸고 단언이 잡았다** — ⑧ 축 owner 에 `sellerSku` 를 적었는데 `cross-seller.ts`
 에 **그 문자열이 아예 없었다**. 🟢 「판정에 쓰지 않는다」보다 **강한 사실** 이고(matcher 가
 판매처 SKU 를 **한 번도 보지 않는다**) 그것을 계약으로 잠갔다.
+
+---
+
+## 9-I. 🔴🔴 **CORE-SAME-08 — STOP: 착수 조건 불성립**(조사만 · 코드 0)
+
+> 🔴 §4-C 용량 판단을 **착수 «전»** 에 했다. CPO 가 요구한 「다중 카테고리 × 후보 5~10개」가
+> **현재 데이터로 성립하지 않는다** — 하니스를 만들어 중간에 끊지 않고 **조사 결과로 닫는다**.
+
+### 🟢 CPO 결정 반영(코드 변경 0)
+
+```
+세트 감지 로직        🟢 유지(건드리지 않았다)
+A/B 구조 분리         🟢 설계 GO · 🔴 **판정 정책은 HOLD** ⟹ verdict 변경 **0**
+세트 자동 SAME 승격    🔴 HOLD — 하지 않았다
+품번 불일치 완화       🔴 **NO-GO** — `compareModelCode` 보호 **그대로**(측정된 교환 SAME 3 ↔ DIFF 1)
+sellerSku            🟢 matcher 기준에서 제외 — 🔴 애초에 **참조되지 않는다**(SAME-07 실측)
+```
+
+### 🔴🔴🔴 착수 조건 — **원상품 가용성 전수**(fixture 실측)
+
+| 원상품 | 품번 | 브랜드 | 카테고리 | 후보 | 🇰🇷 국내 후보 |
+|---|---|---|---|---:|---:|
+| S1 | B226AC010 | Bobo Choses | 상의 | 8 | **1** |
+| S2 | B226AC009 | Bobo Choses | 상의 | 6 | **1** |
+| S3 | B126AI018 | Bobo Choses | 액세서리(수영모) | 4 | 🔴 **0** |
+| S4 | AW26MS185 | **Main Story** | 상의 | 6 | **1** |
+| S5 | 01195-VERNICE-NERO | **Pèpè Shoes** | **신발** | 1 | 🔴 **0** |
+| S6 | (품번없음) | Bobo Choses | 상의/아웃터 | 8 | **3** |
+| SM430632 | — | Bobo Choses | 상의 | — | — |
+
+```
+🟢 브랜드는 **3종** 이다(Bobo Choses · Main Story · Pèpè Shoes) — 하나에 고정돼 있지 않다
+🟢 카테고리 원상품 — 상의 **5** · 신발 **1** · 액세서리 **1**
+🔴🔴 **하의 0 · 원피스 0 · 가방 0** ⟹ CPO 요구 5개 카테고리 중 **2~3개가 아예 없다**
+🔴🔴 그리고 **신발·액세서리는 원상품이 있는데 국내 후보가 0** 이다
+   ⟹ 카테고리 공통성을 **그 두 카테고리에서도 측정할 수 없다**
+🔴 국내 후보 최대 **3**(S6) — CPO 요구 **5~10** 에 전 상품이 미달
+```
+
+### 🔴 그래서 **STOP 이 맞다** — 지금 GT 를 받으면 무엇이 틀리는가
+
+```
+🔴 상의(Bobo Choses)만으로 A/B 기준을 세우면 그것은 **「공통 기준」이 아니다** —
+   CPO 가 §3 에서 지목한 그 함정(「GT 가 전부 Bobo Choses 아동 상의」)을 그대로 반복한다.
+🔴 그리고 A/B 를 분리한 **뒤** 에 GT 를 받아야 한다 — 지금 받으면 같은 후보를
+   **두 번** 판정하게 된다(선택지 의미가 달라지므로).
+```
+
+### 🔵 착수 가능해지는 조건 — **공급 하나**(CTO 범위 밖)
+
+```
+① 하의 · 원피스 · 가방 **원상품 URL**(각 1개 이상) — 🔴 CPO/CEO 가 지정
+② 신발 · 액세서리의 **국내 후보** — 🔴 discovery 범위(§7 ABSOLUTE FREEZE 밖)
+③ 상품당 국내 후보 **5~10** — 같은 공급 문제
+🟢 셋이 열리면 **화면·하니스는 이미 있다** —
+   `core-same03-domestic-review-build`(3택+사유+export) 에 **B 축(가격비교 3택)과
+   증거 13칸 기록** 을 더하면 끝이다(새 인프라 0 · 그 설계는 아래에 적어 뒀다).
+```
+
+### 🟢 다음 세션이 **조사 없이** 쓸 A/B GT 스키마(설계 확정 · 구현 0)
+
+```
+A 상품 동일성     동일 · 다른상품 · 판단불가
+B 가격비교 가능성   가격비교 가능 · 가격비교 불가 · 판단불가
+증거 13칸(제공 여부) TITLE · BRAND · MODEL_CODE · DESCRIPTION_BRAND ·
+                   DESCRIPTION_MODEL_CODE · DESCRIPTION_MODEL_NAME · GARMENT_FORM ·
+                   COLOR · MATERIAL · FIT · COMPOSITION · OPTION_SKU · IMAGE
+🔴 「판단불가」를 DIFFERENT 로 변환하지 않는다 · 🔴 A=SAME 을 자동으로 B=가능으로 두지 않는다
+```
 
 ---
 
