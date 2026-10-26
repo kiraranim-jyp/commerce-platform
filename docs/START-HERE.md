@@ -11,13 +11,13 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-SAME-SPRINT-02** — 🟢 **STEP 1~3 완료 · 분리축 발견**(§9-K)
-NEXT         🔵 **STEP 4~6** — description 품번 복원 전체 GT 반사실 + 5행 표(준비 끝)
+CURRENT WU   **CORE-SAME-SPRINT-02** — 🟢🟢 **STEP 1~6 완료 · 안전조건 6/6 PASS**(§9-K)
+NEXT         🔵 **CPO GO/HOLD/NO-GO 1건** — 누출 **2→1** · SAME 손실 0 · 운영 반영 미실행
 CEO ACTION   🟡 **없다**
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SAME-03**(화면 + CEO GT 10/10) · **SAME-04**(FN 3건 원인 확정)
 Git          clean · origin/main 0/0 · Production / 200
-회귀         **690 files / 9,278 passed / 0 failed** · typecheck 0 · build 0
+회귀         **691 files / 9,281 passed / 0 failed** · typecheck 0 · build 0
 ```
 
 🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **CPO 판정** 이다 — matcher 를 CTO 가 열지 않는다.
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-SAME-SPRINT-02 — 분리축 발견(§9-K) · STEP 4~6 이 다음(준비 끝)
+CURRENT    CORE-SAME-SPRINT-02 — STEP 1~6 완료 · 6/6 PASS(§9-K) · **CPO GO 판정 대기**
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -1101,7 +1101,54 @@ SAME 에만 있는 신호     2 — 보류:FIT · 값:fit
 🔴 단 **운영에 넣지 않았다** — 전체 GT 반사실(STEP 5)과 FP 영향 측정이 선행이다.
 ```
 
-### 🔵 다음 세션이 **조사 없이** 할 STEP 4~6
+### 🟢🟢🟢 STEP 4~5 — **5행 표 완성**(GT 33쌍 · 운영 반영 0)
+
+| 개선안 | 발화 | SAME 회수 | 🔴 누출 | UND(sysSAME) | 기존FP | 생산적용 |
+|---|---:|---:|---:|---:|---:|---|
+| Baseline | 0 | 5/17 | **2**/10 | 6(0) | 2 | — |
+| **Description→MODEL_CODE** | **3** | **5/17** | **1**/10 | 6(0) | **2→1** | 🟢 **안전**(누출 **-1** · SAME ±0) |
+| Form/category | — | 측정불가 | — | — | — | 🔴 이 GT 에 `GARMENT_FORM` 발화 **0** |
+| 기존 evidence 조합 | 1 | 5/17 | 2/10 | 6(0) | 2→2 | 🟢 안전(누출 ±0 · SAME ±0) |
+| **Integrated** | **4** | **5/17** | **1**/10 | 6(0) | **2→1** | 🟢 **안전**(누출 **-1** · SAME ±0) |
+
+**발화 3건 — 전부 같은 샵(`tinyapple`)이다**
+
+```
+C50  human DIFFERENT  복원 B126AC151 ↔ 원상품 B226AC117 ⟹ conflict · sys **CONFLICT** 🟢 차단 강화
+C05  human SAME       복원 B226AC009 ↔ 원상품 B226AC009 ⟹ exact    · sys **SAME**     🟢 근거 보강
+S1-6 human DIFFERENT  복원 B226AC141 ↔ 원상품 B226AC010 ⟹ conflict · sys **CONFLICT** 🟢🟢 **FP → TN**
+```
+
+🟢🟢 **TN 8 → 9** — DIFFERENT 보호가 **강화** 됐다(완화가 아니다).
+🔴 **남은 누출 1 = `C06`**(global.trenbe) — 후보 설명이 **비어 있다** ⟹ 이 증거로 못 막는다.
+🔴🔴 **발화 3/3 이 한 샵이다** ⟹ 「모든 판매처에서 작동한다」로 **일반화하지 않는다**.
+
+### 🟢🟢 STEP 6 — **안전조건 6/6 PASS**
+
+```
+🟢 ① FP 증가 0              baseline 2 → description 1 → integrated 1
+🟢 ② seller brand 오염 0    선언된 brand 를 덮은 건 **0**(전수)
+🟢 ③ MODEL_CODE 보호 유지    값 덮어쓴 건 **0** · 품번재사용 2건(C19·C20) **전부 non-SAME**
+🟢 ④ NO_TITLE_OVERLAP 완화 0 제목 토큰 변경 **0**
+🟢 ⑤ threshold 완화 0        운영 함수를 그대로 호출 · 상수 변경 0
+🟢 ⑥ 기존 DIFFERENT 보호     TN **8 → 9**(줄지 않았다 · 늘었다)
+```
+
+🔴 **운영 반영은 하지 않았다**(CPO 지시) — 이 표가 **GO/HOLD/NO-GO 판정 재료** 다.
+
+### 🔵 CPO 가 GO 를 주면 **조사 없이** 할 일
+
+```
+① 공급 지점 하나 — 후보 `brandModelCode` 가 **null 일 때만** 후보측 설명에서
+   `/B\d{3}[A-Z]{2}\d{3}/` 로 **정확히 1개** 찾히면 채운다
+   🔴 값이 있으면 덮지 않는다 · 🔴 둘 이상이면 고르지 않는다 · 🔴 원상품 설명은 안 본다
+② 계약 + 변이(발화 3건이 FAIL 로 뒤집히는지) + 회귀 + typecheck + build + 배포
+🔴 새 축 0 · threshold 0 · NO_TITLE_OVERLAP 0 · A/B 분리는 **별개**(여전히 HOLD)
+🔴 그리고 설명문이 `materialText` 로 오는 것은 **현재 공급 경로의 성질** 이다 —
+   그 칸의 「소재」 용도를 바꾸지 않는다(읽기만 한다)
+```
+
+### 🔵 [완료] 다음 세션이 **조사 없이** 할 STEP 4~6
 
 ```
 ① 품번 추출 술어는 이미 있다 — `/B\d{3}[A-Z]{2}\d{3}/`(원상품과 **같은 모양만**)
