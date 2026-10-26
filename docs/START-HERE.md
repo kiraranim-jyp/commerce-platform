@@ -11,13 +11,13 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-SAME-SPRINT-01** — 🟢 **STEP 1~6 완료**(Decision Matrix 측정 · §9-J)
-NEXT         🔴 **CPO 정책 결정 4건**(§9-J 의 J절) · 🟡 입력 2개(원상품 URL 3 · service-role 키)
-CEO ACTION   🟡🟡 **URL 3개** — 하의 · 원피스 · 가방(§9-I 선택 기준 4) · 🟡 **키 1회**
+CURRENT WU   **CORE-SAME-SPRINT-02** — 🟢 **STEP 1~3 완료 · 분리축 발견**(§9-K)
+NEXT         🔵 **STEP 4~6** — description 품번 복원 전체 GT 반사실 + 5행 표(준비 끝)
+CEO ACTION   🟡 **없다**
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SAME-03**(화면 + CEO GT 10/10) · **SAME-04**(FN 3건 원인 확정)
 Git          clean · origin/main 0/0 · Production / 200
-회귀         **689 files / 9,273 passed / 0 failed** · typecheck 0 · build 0
+회귀         **690 files / 9,278 passed / 0 failed** · typecheck 0 · build 0
 ```
 
 🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **CPO 판정** 이다 — matcher 를 CTO 가 열지 않는다.
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-SAME-SPRINT-01 — STEP 1~6 완료(§9-J) · **CPO 정책 결정 4건 대기**
+CURRENT    CORE-SAME-SPRINT-02 — 분리축 발견(§9-K) · STEP 4~6 이 다음(준비 끝)
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -1037,6 +1037,90 @@ core-sprint01-decision-matrix  3(네트워크 0 · CI 상주) — Matrix 측정 
 core-same07-criteria-survey    5  10축 ↔ 코드 전수 · A/B 혼입 좌표 · 품번 교환 분모
 core-same05-gt(모듈) + baseline 5 + counterfactual 7   GT 33쌍 · 발화 확인 · leakage
 core-same06-safety-gt-search   4  라벨 전수(행 102 · 고유 70) · 발화 × 라벨 교차표
+```
+
+---
+
+## 9-K. 🟢🟢🟢 **CORE-SAME-SPRINT-02 STEP 1~3 — 분리축을 찾았다**(구현 0)
+
+> 🔴 운영 변경 **0** · matcher **0** · threshold **0** · 새 GT **0** · 네트워크 **0**.
+> 🟡 STEP 4~6(전체 GT 반사실 · 5행 표)은 **다음 세션** 이다 — 🟢 준비는 끝났다(아래).
+
+### 🟢 STEP 1~2 — CPO 가 지목한 12건 재현 + 전수 증거
+
+```
+집합 술어 — `code unavailable` + TITLE 축 있음 + BRAND 보류 없음 ⟹ **12건 재현**
+human SAME **9** · DIFFERENT **3** · 누출 **2**(C06 · S1-6 · 둘 다 truth STRONG_IDENTIFIER · tier EXACT)
+```
+
+### 🔴🔴 STEP 3-a — **기존 증거 어휘로는 가를 수 없다**(먼저 적는다)
+
+```
+DIFFERENT 에만 있는 신호 2 — 축:MODEL_CODE · 보류:COLOR_VARIANT
+SAME 에만 있는 신호     2 — 보류:FIT · 값:fit
+🔵 **완전 분리축**(DIFFERENT 전건 보유 ∧ SAME 전건 미보유) = **0**
+⟹ 🔴 「SAME 9 유지 + DIFFERENT 3 차단」은 **지금 있는 신호의 조합으로는 불가능** 하다.
+🔴 threshold·NO_TITLE_OVERLAP 완화로는 DIFFERENT 가 같이 열린다(WU-093 선례).
+```
+
+### 🟢🟢🟢 STEP 3-b — **그런데 전수 출력이 분리축을 드러냈다**
+
+```
+🔴 SAME-04 는 「`ProductFacts` 에 description 칸이 없다」로 닫았다. **그 말은 맞다** —
+   🟢 **그런데 설명문 전문이 `materialText` 로 «이미» 흘러들어오고 있다**(전수 출력 실측).
+🔴🔴 그리고 그 안에 **품번이 적혀 있다**:
+   C05  후보 소재 「Tinyapple | FW26 Bobo Choses | Hug Hairy Monster … **B226AC009**」
+        ⟹ 원상품 `B226AC009` **일치**      human **SAME** 🟢
+   S1-6 후보 소재 「Tinyapple | FW26 Bobo Choses | Booty Ghosts … **REF: B226AC141**」
+        ⟹ 원상품 `B226AC010` **불일치**    human **DIFFERENT** 🔴
+⟹ 🟢🟢 **같은 샵(tinyapple)·같은 sys verdict(SAME) 두 건이 그 품번으로 갈린다.**
+```
+
+**반사실 측정(12건 · `facts` 변경 0)**
+
+| | 결과 |
+|---|---:|
+| 🟢 DIFFERENT 를 **차단할 근거가 생긴 건** | **1** (`S1-6`) |
+| 🟢 SAME 에 **근거가 보강된 건** | **1** (`C05`) |
+| 🔴 후보 설명에 품번이 없어 **변화 0** | **10** |
+
+```
+🟢🟢 **그리고 SAME 9 중 하나도 깨지지 않는다** — 불일치가 난 것은 DIFFERENT 쪽 1건뿐이다.
+🔴 전건을 가르지는 **못한다** — `C06`(global.trenbe)은 후보 설명이 **비어 있다** ⟹ **측정불가**.
+   `C25`(main-story)는 품번이 없지만 **이미 `COLOR_VARIANT` 로 차단** 돼 있다(PRESUMED_SAME).
+⟹ 🟡 누출 2 중 **1 을 막을 근거** 가 생겼고, 나머지 1 은 **다른 증거** 가 필요하다.
+```
+
+### 🔵 왜 이것이 CPO 설계와 정확히 맞는가
+
+```
+🟢 **새 SAME 축이 아니다** — 기존 `MODEL_CODE` 축에 **증거를 공급** 하는 것이다.
+🟢 CPO ④ 「description → model code 복원 · Evidence Layer」와 **글자 그대로 일치** 한다.
+🟢 금지축을 하나도 열지 않는다 — threshold 0 · NO_TITLE_OVERLAP 0 ·
+   품번 **충돌 보호 유지**(오히려 **강화** 하는 방향이다 · 불일치를 새로 발견한다).
+🔴 단 **운영에 넣지 않았다** — 전체 GT 반사실(STEP 5)과 FP 영향 측정이 선행이다.
+```
+
+### 🔵 다음 세션이 **조사 없이** 할 STEP 4~6
+
+```
+① 품번 추출 술어는 이미 있다 — `/B\d{3}[A-Z]{2}\d{3}/`(원상품과 **같은 모양만**)
+   🔴 느슨한 숫자 매칭 금지 · 🔴 **후보측 설명만** 본다(원상품 설명을 후보 증거로 쓰면 오염)
+② 전체 GT 33쌍 + 기존 FP 2 에 반사실 적용 → CPO 5행 표를 채운다
+③ 표 행 — Baseline / Description / Form·category / 기존 축 조합 / Integrated
+🟢 하니스 재사용 — `core-sprint02-brandname-separability`(5건) · `core-same05-gt` 모듈
+🔴 안전조건 6(CPO §6)은 그대로 — FP 증가 0 · seller brand 오염 0 · MODEL_CODE 보호 유지 ·
+   NO_TITLE_OVERLAP 완화 0 · threshold 완화 0 · 기존 DIFFERENT 보호
+```
+
+### 🔴 CPO 결정 반영(이번 세션)
+
+```
+① A/B 분리        🟢 설계 GO · 🔴 verdict 변경 **0**(COMPOSITION 분모 0 이라 수치 측정불가)
+② MODEL_CODE      🟢 **현재 구조 유지** · 완화 **0** — 🟢 이번 발견은 그 보호를 **강화** 한다
+③ Brand+제품명     🔵 **이번 스프린트** — 분리축 **1 발견**(위)
+④ description     🟢 Evidence Layer 공급 GO — 🔴 반사실까지만 · 운영 적용 **0**
+🟡 URL 3개 수신 보류(CPO 확정) — 현재 병목이 카테고리 수가 아니라는 실측과 일치
 ```
 
 ---
