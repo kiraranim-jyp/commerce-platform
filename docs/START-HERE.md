@@ -11,7 +11,7 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-SAME-SPRINT-07** — 🟢🟢 **Evidence Utility 측정 · 추천 1개**(§9-Q · 운영 변경 0)
+CURRENT WU   **CORE-SAME-SPRINT-08** — 🔴 **STOP: BRAND 를 고쳐도 SAME 이 늘지 않는다**(§9-R · 운영 0)
 NEXT         🔵 **CPO 가 다음 Evidence Layer 범위 지정** — 🔴 CTO 선제 작업 0
 CEO ACTION   🟡 **없다**
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-SAME-SPRINT-07 — Evidence Utility **측정 완료**(§9-Q) · 추천 = BRAND quality · CPO 판정 대기
+CURRENT    CORE-SAME-SPRINT-08 — BRAND 측정 완료 · **production 후보 없음**(§9-R) · CPO 판정 대기
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -2051,3 +2051,100 @@ DESCRIPTION 효과 — 저장 facts 공급 **0/33** ⟹ 이 분모에서 **발�
 ```
 
 **STOP — CORE-SAME-SPRINT-07 Evidence Utility 측정 완료 / 다음 Evidence Layer 1개 우선순위 CPO 판정 대기**
+
+---
+
+## 9-R. 🔴🔴 **CORE-SAME-SPRINT-08 — BRAND Evidence Quality / 🔴 STOP**(운영 변경 **0**)
+
+🔴 **measurement-first · production code change 0 · 네트워크 0.** BRAND gate ·
+`BRAND_MISMATCH` · `BRAND_UNCONFIRMED` 통과 규칙 · threshold · `NO_TITLE_OVERLAP` ·
+MODEL_CODE conflict · 새 axis · seller name 승격 · 사전 확대 · fuzzy/substring ·
+`priceTier` · `domesticReference` · A/B 가격 — **전부 변경 0**. 🔴 `WU-080 REJECT` 유지.
+
+### 🟢 실제 BRAND source hierarchy (가설이 아니라 **코드에서 읽었다**)
+
+```
+PLAIN_HTML  `brandFromHtml`(product-url-facts.ts:244) 순서대로
+  ① meta og:brand  ② meta product:brand  ③ JSON-LD "brand".name
+  ④ og:title → **등록부 alias**(`lookupBrandByAliasInTitle` · WU-151)  ⑤ microdata → null
+SHOPIFY     `productFactsFromShopifyProduct`(seller-facts.ts:190)
+  ① `brandFromTitleByClause(title ∩ vendor)` ② 검증된 vendor ③ `OFFICIAL_STORE_BRANDS` → null
+```
+
+### 🔴🔴 Step 1 — `BRAND_UNCONFIRMED` 5건이 **전부 `BRAND_MISSING`** 이고 **절반이 원상품 공백**
+
+| 건 | host | 비어 있는 쪽 | 근거 |
+|---|---|---|---|
+| C27 | beaumonde.co.kr | 후보 | title 에 「보보쇼즈」가 **있다** |
+| C11 | bobochoses.co.jp | 후보 | title 에 브랜드가 없다 |
+| C37 | bobochoses.co.jp | 후보 | C11 과 같은 상품 |
+| C48 | bobochoses.com | 🔴 **원상품** | 후보엔 "Bobo Choses" 있다 |
+| C14 | kihanan.com | 🔴 **원상품** | 후보엔 "BOBOCHOSES ボボショーズ" 있다 |
+
+🔴 「후보 공급 문제」로 적을 수 없다 — **2/5 가 원상품 공백** 이고 그것을 메우는 것은
+WU-080 이 **악화로 측정해 REJECT** 했다(SAME 4 더 막힘 · DIFFERENT 2 열림).
+
+### 🔴🔴🔴 Step 4 결정적 측정 — brand 를 **채워도 SAME 이 안 된다**
+
+등록부에 「보보쇼즈」 alias 가 **이미 있다**(`brand-alias.ts:42`) ⟹ counterfactual A 가 C27 을 채웠다.
+
+```
+전  PRESUMED_SAME   blockers [BRAND_UNCONFIRMED]   conflicts []
+후  PRESUMED_SAME   blockers []                    conflicts []   ← 🔴 **blocker 가 전부 사라졌다**
+```
+
+⟹ 🔴🔴 **남은 관문은 blocker 가 아니라 «축 수»** 다(`corePoints >= SAME_MIN_AXES`).
+🟢 SPRINT-07 의 「(blocker 0) **3**」과 **같은 모양** 이다.
+🔴 축 수를 올리는 것은 **threshold 변경** 이고 **CPO 금지** 다.
+
+### 결정 매트릭스 (baseline SAME 5/17 · FP 2/10)
+
+| BRAND source | 발화 | SAME 회복 | 🔴 DIFF→SAME | SAME 손실 | Production |
+|---|---:|---:|---:|---:|---|
+| 현재 baseline | 0 | 5/17 | +0 | 0 | — |
+| A 등록부 alias → 후보 title | **1** | **+0** | **+0** | 0 | 🔴 **효과 0** |
+| B 원상품 brand 투사 | — | 금지 | — | — | 🔴 WU-080 REJECT |
+| C domain → brand | — | 금지 | — | — | 🔴 계약이 2 FAIL 로 잠근다 |
+| D seller/store name 승격 | — | 금지 | — | — | 🔴 CPO 명시 금지 |
+
+⟹ 🔴🔴 **production 후보가 «없다». 구현 0 · STOP.**
+
+### 🟡 Step 3 — seller/store 오염 의심 **7/33** 인데 **전부 공식몰** 이다
+
+```
+bobochoses.com ×3 · main-story.com ×2 · kids21.com ×2
+🔴 그 호스트에서는 **호스트 라벨 == 브랜드가 정답** 이다(WU-076 이 같은 것을 기록했다)
+⟹ 🟢 **진짜 오염은 0** 이고 내 술어가 **공식몰을 오탐** 한다
+🔴 알려진 음역 사례(biskuit 「비스킷」)는 **이 분모에 0건** 이다(다른 GT)
+🔴 「오염 7」은 **하한** 이다 — 음역/번역 상점명은 이 술어로 잡히지 않는다
+```
+
+### 최종 질문 5
+
+```
+1 원인?            🔴 **전부 BRAND_MISSING** · 2/5 는 **원상품** 공백
+2 seller 오염?      🟢 **진짜 0**(의심 7 은 전부 공식몰 · 하한)
+3 가장 안전한 source? 🟡 **A**(등록부 alias · 새 사전 0 · 누출 0) — 🔴 단 **효과 0**
+4 그 source 의 누출?  🟢 **0건**(발화 1 · DIFF→SAME +0)
+5 production 가치?   🔴 **없다** — brand 를 채워도 **축 수** 에서 막힌다
+```
+
+### 증거
+
+```
+회귀 696 files / **9,326 passed · 0 failed · 142 skipped** · typecheck **0** · build exit **0**
+운영 변경 **0** · 네트워크 **0** · 작업트리 clean · origin/main **0 / 0** · 🔴 Deploy 없음
+CPO GO 기준 10 — ①~⑨ 전부 측정됨 · ⑩ **추천할 source 가 없다** ⟹ **STOP**
+```
+
+### 🔵 다음 좌표 — 데이터가 가리키는 곳이 **바뀌었다**
+
+```
+🔴 BRAND 는 **필요조건이지만 충분조건이 아니다** — 고쳐도 SAME 이 늘지 않는다
+🟢 남은 병목은 **축 수** 이고, 그것을 늘리는 길은 **threshold 가 아니라 다른 Evidence 공급** 이다
+🟡 SPRINT-07 공급률이 그 후보를 말한다 — FIT **7/33** · COLOR **15/33** · MATERIAL **16/33** ·
+   CATEGORY **19/33**. 🔴 단 ablation 에서 CATEGORY 는 **효과 0** 이고 FIT 는 **막는 쪽** 이었다
+🔴 **CTO 가 다음 범위를 고르지 않았다** — CPO 판정 사안이다
+```
+
+**STOP — CORE-SAME-SPRINT-08 BRAND Evidence Quality 측정 완료 / Production 적용 여부 CPO 판정 대기**
