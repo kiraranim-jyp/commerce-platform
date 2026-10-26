@@ -11,9 +11,9 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-MI-COMP-01** — 🔴🔴 **Comparability 는 Identity 의 1:1 파생이다**(§9-U · 운영 0)
+CURRENT WU   **CORE-DESC-REVIEW** — 🟡 **CEO 육안 검증 대기**(§9-V · 운영 0 · 조서 11건)
 NEXT         🔵 **CPO 가 다음 Evidence Layer 범위 지정** — 🔴 CTO 선제 작업 0
-CEO ACTION   🟡 **없다**
+CEO ACTION   🟡 **있다 — 조서 11건 확인 1회**(§9-V · 질문 6개)
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SAME-03**(화면 + CEO GT 10/10) · **SAME-04**(FN 3건 원인 확정)
 Git          clean · origin/main 0/0 · Production / 200
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-MI-COMP-01 — A/B 분리 **실측 완료**(§9-U) · 독립 축 부재 확정 · CPO 판정 대기
+CURRENT    CORE-DESC-REVIEW — 상세설명 증거 조서 **11건 게시**(§9-V) · 🟡 **CEO 확인 1회 대기**
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -2409,3 +2409,60 @@ system DIFFERENT ∧ COMPARABLE = **0** · 🟢 **human DIFFERENT ∧ 국내 가
 ```
 
 **STOP — CORE-MI-COMP-01 Comparability 측정 완료 / CPO 판정 대기**
+
+---
+
+## 9-V. 🟡 **CORE-DESC-REVIEW — 상세설명 증거 조서**(CEO 확인 대기 · 운영 **0**)
+
+🔴🔴 **Comparability 구현을 «멈췄다»**(CPO 정정) — 「데이터에 맞춰 전략을 바꾸는 게 아니라
+**CEO 가 실제 상품에서 확인한 Evidence 를 기준으로** 데이터를 제대로 추출하게 만든다」.
+🔴 운영 변경 **0** · 판정 **0** · 추출기 수정 **0** · 새 축 **0**.
+
+### 🟡🟡 CEO Action — **딱 1회**
+
+```
+https://claude.ai/code/artifact/c25d189e-ab42-42ba-8040-655e49b7dd7c
+(사본: docs/core-desc-evidence-review.html · 자립형 60KB)
+대상 **11건** — C27 · C05 · C06 · C19 · C20 · C50 · S1-5 · S1-6 · C22 · C42 · C25
+```
+
+사건마다 **상세설명 전문이 원상품 ↔ 후보 나란히** 있고, 묻는 것은 여섯이다:
+
+```
+① 브랜드 ② 품번 ③ 상품 형태 ④ 색상·소재 ⑤ 세트/구성 을 **상세설명만으로** 알 수 있는가
+🔴 ⑥ **동일상품이라고 판단되는 «결정적 문구» 가 어디에 있는가**(그 문장을 알려 주십시오)
+```
+
+### 🔴🔴 화면에 «한계» 를 먼저 적었다 — 이것이 이 작업의 핵심이다
+
+```
+⒜ **현재 BRAND 추출기는 상세설명을 읽지 않는다**(SPRINT-08 코드 추적) ⟹
+   SPRINT-10 의 「설명에서 브랜드 0/22」는 **효과 0 이 아니라 읽는 경로가 없다는 뜻** 이다
+⒝ **형태·색상·소재·세트 구성도 상세설명에서 추출하는 경로가 0** 이다 ⟹
+   빈 칸을 「그 상품에 없다」로 읽지 않는다
+⒞ 🔴 CPO 가 지목한 **biskuit · luxboy · bornyesterdaykids 는 이 묶음에 없다**
+   (SPRINT-09 실측) — 화면에 **명시** 했다. 「없는 것」을 조용히 빼면 분모를 잘못 읽는다
+```
+
+### 증거
+
+```
+🟢 후보 상세설명 공급 **10/11** · 원상품 **11/11** · 빈 칸 1(그 1칸도 「못 읽었다」로 표시)
+🔴 **CTO 는 판정을 한 칸도 채우지 않았다** — 계약으로 단언(`judgedByCto`/`"ceo":` 부재)
+🟢 라이브 재수집(HTTP 15) · 실패 시 저장 스냅샷으로 내려가고 **어느 쪽인지 카드에 적는다**
+🟢 번호 ①→⑥ 은 **CPO 가 고정한 Evidence 사슬** 이고 후보 쪽 빈 행은 **줄을 그어** 표시한다
+   ⟹ 사슬이 어디서 끊기는지 한눈에 보인다(11/11 사건에서 발화 · 실측)
+🟢 회귀 697 files / **9,329 passed · 0 failed · 145 skipped** · typecheck 0
+작업트리 clean · origin/main **0 / 0** · 🔴 Deploy 없음(운영 코드 0)
+```
+
+### 🔵 다음 — **CEO 답을 받은 뒤에** 설계한다
+
+```
+🟡 CEO 가 「상세설명에 브랜드·품번·특징이 다 있다」고 하면 ⟹
+   **Description Parser → Structured Evidence → 기존 Identity** 를 만든다
+   🔴 새 DESCRIPTION 축을 더하는 것이 **아니다** — 설명문을 **기존 칸으로 분해 공급** 한다
+🔴 **CTO 가 먼저 시작하지 않는다.** 그리고 Comparability 는 그 뒤다
+```
+
+**STOP — CORE-DESC-REVIEW 조서 게시 완료 / CEO 육안 확인 1회 대기**
