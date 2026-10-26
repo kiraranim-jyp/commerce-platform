@@ -334,6 +334,14 @@ describe("CORE-PRICE-SAME-04 — CEO SAME 3건 evidence trace (운영 변경 0)"
         if (t.conflicts.some((c) => spec.conflicts.includes(c.conflict))) return "CONFLICT";
         const bk = t.blockers.find((b) => spec.blockers.includes(b.blocker));
         if (bk) return bk.blocker === "BRAND_UNCONFIRMED" ? "UNKNOWN" : "FAIL";
+        /**
+         * 🔴 **BRAND 는 «축» 이 아니라 «게이트» 다** — `CrossSellerAxis` 에 BRAND 가 없고
+         *    `brandOk`(`:808`)가 SAME 승격을 직접 가른다.
+         * 🔴 1차 출력이 그 자리를 `UNKNOWN` 으로 적었다 — 보류가 없으면 `spec.axis` 가
+         *    없어서 기본값으로 떨어졌기 때문이다. 🔴 그러면 **게이트를 통과한 것** 이
+         *    「모른다」로 보여 CPO 판단을 **과소 서술** 한다. 🟢 게이트 결과로 적는다.
+         */
+        if (name === "BRAND") return t.brandOkInferred ? "PASS(게이트)" : "UNKNOWN";
         if (spec.axis && t.axes.some((a) => a.axis === spec.axis)) return "PASS";
         if (t.conflicts.length > 0 && t.axes.length === 0) return "측정불가";
         return "UNKNOWN";
