@@ -11,7 +11,7 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-SAME-SPRINT-05** — 🟢🟢 **HTML description 공급 가능 4/6 측정**(§9-O · 구현 0)
+CURRENT WU   **CORE-SAME-SPRINT-06** — 🟢🟢 **PLAIN_HTML Evidence 공급 구현·배포**(§9-P)
 NEXT         🔵 **CPO 가 다음 Evidence Layer 범위 지정** — 🔴 CTO 선제 작업 0
 CEO ACTION   🟡 **없다**
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-SAME-SPRINT-05 — HTML description **공급 가능 확인**(§9-O) · production 적용 CPO 판단 대기
+CURRENT    CORE-SAME-SPRINT-06 — HTML 공급 **배포**(§9-P · DIFFERENT→SAME 0 · 효과 0) · CPO 판정 대기
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -1865,3 +1865,92 @@ HTTP — `factsFromProductUrl` 33 + PLAIN_HTML 원문 6 (read-only) · 운영 �
 ```
 
 **STOP — CORE-SAME-SPRINT-05 Universal Evidence Supply 측정 완료 / CPO production 적용 판단 대기**
+
+---
+
+## 9-P. 🟢🟢 **CORE-SAME-SPRINT-06 — PLAIN_HTML Evidence Supply Integration**(배포)
+
+🔴 **새 SAME 축 0 · 새 matcher 0 · meta 0 · 추가 HTTP 0.** CPO 금지 14항 전수 준수 —
+`NO_TITLE_OVERLAP` · SAME threshold · BRAND · MODEL_CODE conflict policy · material parser ·
+FIT · COLOR · CATEGORY · COMPOSITION · IMAGE scoring · OPTION/SKU · `priceTier` ·
+`domesticReference` · A/B 가격 **전부 변경 0**. 🔴 `materialText` 의미 **불변**.
+
+### 구현 (운영 4파일)
+
+```
+(신규) jsonld-product-description.ts  JSON-LD **@type=Product 의 description 만**
+seller-facts.ts      ListingProductLike.description? + listing facts 공급
+                     🔴 materialText 는 **계속 null**(계약 B)
+product-url-facts.ts htmlPath 가 **이미 받아 둔 HTML** 에서 공급(추가 HTTP **0**)
+                     + 기존 `recoverModelCodeFromDetail` **재사용**(새 정책 0)
+```
+
+### 공급 실측
+
+```
+PLAIN_HTML URL 13 · facts 확보 6 · **description 공급 3/6**
+  🟢 donokids 53자 · rboutique 136자 · stockmann 398자
+  🔴 미공급 3 — beaumonde · stadtlandkind · wconcept (**JSON-LD Product.description 부재**)
+🔴 SPRINT-05 의 `FOUND_AND_EXTRACTABLE 4` 와 다르다 — 그 2건은 **meta 기반** 이었고
+   CPO ⒜ 가 meta 를 **HOLD** 했다 ⟹ **JSON-LD 기준으로는 3** 이다
+```
+
+### 🟢🟢 Identity 영향 matrix — **CPO STOP 게이트 통과**
+
+| 효과 | 건수 |
+|---|---:|
+| human SAME → SAME 유지 | **5** |
+| human SAME → 이탈 | **0** |
+| human DIFFERENT → 차단 유지 | **9** |
+| 🔴 **human DIFFERENT → SAME** | **0** ← 합격선 |
+| system SAME→비SAME / 비SAME→SAME | 0 / **0** |
+| MODEL_CODE conflict | **5 → 5**(보호 불변) · PLAIN_HTML code 판정 변화 **0/6** |
+
+### 🔴🔴 「변화 0」을 «안전» 으로만 적지 않는다 — **효과도 0** 이다
+
+공급된 3건의 description 에 **품번이 없다** ⟹ 회복 **0**. 🔴 SPRINT-05 가 본 유일한 회복
+후보(wconcept `B224AC128`)는 **meta** 에 있었고 JSON-LD 가 없어 **공급되지 않았다**.
+🟢 발화 단언(`supplied > 0`)이 통과했으므로 「공급이 안 돼서 0」은 **아니다**.
+
+### 🔴🔴 음성 대조가 «계약 공백» 을 찾았다 — 이 Sprint 의 가장 중요한 기록
+
+```
+`@type === "Product"` 게이트를 **지워도 기존 계약이 하나도 FAIL 하지 않았다**
+🔴 소스 문자열 계약은 **배선** 을 보고 **동작** 을 보지 않는다(WU-110 과 같은 자리)
+🟢 그래서 **행동 계약 15건** 을 신설했다(`core-sprint06-jsonld-description`) —
+   WebPage · Organization · BreadcrumbList · CollectionPage 의 description 을 **읽지 않는다**
+변이 — N1 게이트 제거 **5 FAIL** · N2 배선 끊기 **2 FAIL** ·
+       N3 meta 폴백 **1 FAIL** · N4 소재 칸 오염 **3 FAIL** → **바이트 복구**(적용 확인 포함)
+```
+
+### 🟢 기존 계약 둘이 이 변경을 잡았고 «지우지 않고 강화» 했다
+
+```
+core-2ab AB-S2  금지 목록에서 `description` **하나만** 빼고 body/html/plainText 는 **유지**
+                (이 함수는 **원문을 파싱하지 않는다**) + `materialText: null` 단언 **추가**
+                🟢 그 계약의 실패 메시지가 「비대칭이 해소됐는지 다시 측정한다」였다 —
+                   SPRINT-04/05 가 실제로 측정했고 이번에 그 자리가 열렸다
+core-2ac AC-4   **material 금지는 그대로** 두고 description 은 **source 를 못 박았다**
+core-sprint02   「공급 지점 하나」 → **「경로마다 하나」**(둘 · 각 하나)
+```
+
+### 증거
+
+```
+회귀 694 files / **9,320 passed · 0 failed · 142 skipped** · typecheck **0** · build exit **0**
+배포 Ready · Production `/` **200** · 작업트리 clean · origin/main **0 / 0**
+```
+
+### 🟡 CPO 판정 대기
+
+```
+🟢 성공 기준 10 — 1~8 전부 성립(후보 식별 기준 · 분류 근거 · 공급 가능 · materialText 불변 ·
+   matcher 결과 불변 · conflict 보호 불변 · 회귀 악화 0 · URL/host/path 분모)
+🔴 **그러나 Evidence 회복은 0 이다.** 「JSON-LD 기반 공급의 안전성이 검증됐다」까지가
+   이번 판정 범위다(CPO 문장) — 「HTML 공급이 끝났다」가 **아니다**
+🟡 다음 결정 재료 — ⒜ meta 를 열면 +2 공급(그중 1건이 품번 보유) · 🔴 단 SPRINT-05 에서
+   meta 는 **2/5 UNSAFE** 였다 ⒝ 공급 3/6 의 분모가 작다(표본 확대) ⒞ C(핵심 정보 부족)로 이동
+🔴 **CTO 가 고르지 않았다.**
+```
+
+**STOP — CORE-SAME-SPRINT-06 PLAIN_HTML Evidence Supply Integration 완료 / Identity 영향 검증 후 CPO 판정 대기**
