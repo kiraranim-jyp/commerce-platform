@@ -1,0 +1,533 @@
+<!doctype html><meta charset="utf-8"><title>상세설명 Evidence 육안 검증</title>
+<style>
+ body{font:14px/1.6 -apple-system,"Segoe UI",system-ui,sans-serif;margin:0;padding:24px;background:#f6f7f9;color:#111}
+ h1{font-size:20px;margin:0 0 8px}
+ .intro{background:#fff;border:1px solid #e3e6ea;border-radius:10px;padding:16px;margin-bottom:20px}
+ .intro ul{margin:8px 0 0 18px;padding:0}
+ .warn{background:#fff6f6;border-color:#f0c9c9}
+ .card{background:#fff;border:1px solid #e3e6ea;border-radius:10px;padding:16px;margin-bottom:20px}
+ h2{font-size:16px;margin:0 0 8px}
+ .meta{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:#555;margin-bottom:12px}
+ .meta .src{color:#888}
+ table.ev{width:100%;border-collapse:collapse;margin-bottom:12px;table-layout:fixed}
+ table.ev th,table.ev td{border:1px solid #e3e6ea;padding:8px;vertical-align:top;word-break:break-word;font-size:13px}
+ table.ev thead th{background:#f0f2f5;text-align:left}
+ table.ev tbody th{width:210px;background:#fafbfc;text-align:left;font-weight:600}
+ table.ev tbody th em{display:block;font-style:normal;font-size:11px;color:#b00;font-weight:400;margin-top:2px}
+ .na{color:#b00}
+ .descs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+ @media(max-width:900px){.descs{grid-template-columns:1fr}}
+ .desc{background:#fafbfc;border:1px solid #e3e6ea;border-radius:8px;padding:10px;font-size:13px}
+ .desc p{white-space:pre-wrap;margin:6px 0 0;max-height:320px;overflow:auto}
+ .desc.empty{background:#fff6f6;border-color:#f0c9c9}
+ .auto,.ask,.judge{background:#fafbfc;border:1px solid #e3e6ea;border-radius:8px;padding:10px;font-size:13px;margin-bottom:10px}
+ .ask{background:#fffdf3;border-color:#e8dca8}
+ .auto ul,.ask ol{margin:6px 0 0 18px;padding:0}
+ .links a{display:inline-block;margin-right:12px;font-size:13px}
+</style>
+<h1>상세설명 Evidence 육안 검증 — 11건</h1>
+<div class="intro">
+ <b>왜 이 화면인가</b>
+ <ul>
+  <li>지금까지 우리는 <b>코드가 가진 칸</b>(브랜드·색상·소재)만 파고들었습니다. 대표님 말씀대로
+      <b>상세설명 하나만 제대로 읽어도</b> 필요한 정보가 대부분 나올 수 있습니다.</li>
+  <li>그래서 이 화면은 <b>상세설명 전문을 그대로</b> 보여 주고, 아래 여섯 질문만 묻습니다.</li>
+  <li>🔴 시스템 판정은 <b>참고용</b>입니다. 대표님 판단이 기준입니다.</li>
+  <li>🔴 <b>CTO 는 이 화면에서 아무 판정도 채우지 않았습니다.</b></li>
+ </ul>
+</div>
+<div class="intro warn">
+ <b>🔴 먼저 알려 드릴 한계 둘</b>
+ <ul>
+  <li><b>현재 BRAND 추출기는 상세설명을 읽지 않습니다.</b> 그래서 「설명에서 브랜드를 찾은 건수 0」은
+      <b>효과가 0이라는 뜻이 아니라 읽는 경로가 없다는 뜻</b>입니다.</li>
+  <li><b>형태·색상·소재·세트 구성도 상세설명에서 추출하는 경로가 없습니다.</b></li>
+  <li>🔴 CPO 가 지목한 <b>biskuit · luxboy · bornyesterdaykids</b> 는 현재 이 비교 묶음에
+      <b>들어 있지 않습니다</b>(다른 조사에서 쓴 라벨입니다). 분모를 11건으로 읽어 주십시오.</li>
+ </ul>
+</div>
+
+<section class="card">
+  <h2>C27 · beaumonde.co.kr</h2>
+  <div class="meta">
+    <span>CEO 이전 판정: <b>SAME</b></span>
+    <span>시스템 판정: <b>PRESUMED_SAME</b></span>
+    <span>품번 비교: <b>unavailable</b></span>
+    <span class="src">원상품 facts: 라이브 재수집 · 후보 facts: 라이브 재수집</span>
+  </div>
+  <table class="ev">
+    <thead><tr><th>Evidence</th><th>해외 원상품</th><th>국내/해외 후보</th></tr></thead>
+    <tbody><tr><th>① 상품명 (TITLE)</th><td>Booty Ghosts Long Sleeve T-Shirt by Bobo Choses</td><td>보보쇼즈 26FW 아동 긴팔 티셔츠 Booty Ghosts T-shirt B226AC010</td></tr><tr><th>② 브랜드 (BRAND)</th><td>Bobo Choses</td><td>Bobo Choses</td></tr><tr><th>③ 품번 (MODEL CODE)</th><td>B226AC010</td><td><span class="na">없음</span></td></tr><tr><th>⑤ 색상 (COLOR)</th><td>Heather Grey</td><td><span class="na">없음</span></td></tr><tr><th>⑤ 소재 (MATERIAL)<em>🔴 Shopify 경로는 이 칸에 설명문 전문이 들어온다</em></th><td>Booty Ghosts Long Sleeve T-Shirt by Bobo Choses. Relaxed fit tee in heather grey, featuring long sleeves, a round neck and a large Bobo Choses ghosts print across the front. Colour - Heather Grey. 100% Organic Cotton. Product code B226AC010 AW26 Made in Portugal.</td><td><span class="na">없음</span></td></tr><tr><th>⑤ 형태/분류 (FORM)</th><td>T Shirt</td><td><span class="na">없음</span></td></tr><tr><th>⑤ 핏 (FIT)</th><td>relaxed fit</td><td><span class="na">없음</span></td></tr><tr><th>— 판매처 SKU<em>🔴 matcher 가 읽지 않는다(보존만)</em></th><td><span class="na">없음</span></td><td><span class="na">없음</span></td></tr><tr><th>⑥ 이미지 수<em>🔴 이미지 비교는 구현돼 있지 않다</em></th><td>1</td><td>0</td></tr></tbody>
+  </table>
+  <div class="descs">
+    <div class="desc"><b>원상품 상세설명</b><p>Booty Ghosts Long Sleeve T-Shirt by Bobo Choses. Relaxed fit tee in heather grey, featuring long sleeves, a round neck and a large Bobo Choses ghosts print across the front. Colour - Heather Grey. 100% Organic Cotton. Product code B226AC010 AW26 Made in Portugal.</p></div>
+    <div class="desc empty"><b>후보 상세설명</b><p>🔴 이 경로에서 상세설명이 <b>공급되지 않았다</b> — 「상세설명이 없는 상품」이 아니라 <b>우리가 읽지 못한 것</b>일 수 있습니다.</p></div>
+  </div>
+  <div class="auto">
+    <b>④ 상세설명에서 «자동으로» 찾은 것</b>
+    <ul>
+      <li>품번: 🔴 못 찾음</li>
+      <li>브랜드: 🔴 <b>현재 BRAND 추출기는 상세설명을 읽지 않습니다</b>(SPRINT-08 코드 추적) —
+          그래서 여기가 비는 것은 「설명에 브랜드가 없다」는 뜻이 <b>아닙니다</b>.</li>
+      <li>형태 · 색상 · 소재 · 세트/구성: 🔴 <b>상세설명에서 추출하는 경로가 없습니다</b>.</li>
+    </ul>
+  </div>
+  <div class="ask">
+    <b>🟡 대표님께 묻는 것</b>
+    <ol>
+      <li>상세설명만으로 <b>브랜드</b>를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>품번</b>을 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>상품 형태</b>(티셔츠/가디건/세트 등)를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>색상·소재</b>를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>세트/구성</b>(단품인가 세트인가)을 알 수 있습니까?</li>
+      <li>🔴 <b>동일상품이라고 판단되는 «결정적 문구»가 어디에 있습니까?</b> (그 문장을 알려 주십시오)</li>
+    </ol>
+  </div>
+  <div class="links">
+    <a href="https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses" target="_blank" rel="noreferrer">원상품 페이지 열기</a>
+    <a href="https://www.beaumonde.co.kr/goods/goods_view.php?goodsNo=1000014021" target="_blank" rel="noreferrer">후보 페이지 열기</a>
+  </div>
+  <div class="judge">
+    시스템 보류/충돌 사유: <span class="na">없음</span>
+  </div>
+</section>
+<section class="card">
+  <h2>C50 · tinyapple.net</h2>
+  <div class="meta">
+    <span>CEO 이전 판정: <b>DIFFERENT</b></span>
+    <span>시스템 판정: <b>CONFLICT</b></span>
+    <span>품번 비교: <b>conflict</b></span>
+    <span class="src">원상품 facts: 라이브 재수집 · 후보 facts: 라이브 재수집</span>
+  </div>
+  <table class="ev">
+    <thead><tr><th>Evidence</th><th>해외 원상품</th><th>국내/해외 후보</th></tr></thead>
+    <tbody><tr><th>① 상품명 (TITLE)</th><td>B.C. Embossed tracksuit jacket</td><td>Bobo Choses Bobo Choses Modern tracksuit jacket, Multicolor</td></tr><tr><th>② 브랜드 (BRAND)</th><td><span class="na">없음</span></td><td>Bobo Choses</td></tr><tr><th>③ 품번 (MODEL CODE)</th><td>B226AC117</td><td>B126AC151</td></tr><tr><th>⑤ 색상 (COLOR)</th><td>blue</td><td><span class="na">없음</span></td></tr><tr><th>⑤ 소재 (MATERIAL)<em>🔴 Shopify 경로는 이 칸에 설명문 전문이 들어온다</em></th><td>Blue outerwear. Recycled Polyamide 100%, Polyester 100%. Relaxed fit. Responsibly made in China.</td><td>Tinyapple | SS26 Bobo Choses | Bobo Choses Modern tracksuit jacket, Multicolor Multicolor outerwear. Designed with long sleeves, zipped, elasticated bottom, elasticated cuffs, mesh lining, high neck, seam pocket and lightweight fabric. 100% Polyester, 100% Recycled Polyamide Wash Cold-30° Do Not Bleach Iron Low(*) Do not Dry-clean Do Not Tumble Dry B126AC151</td></tr><tr><th>⑤ 형태/분류 (FORM)</th><td>Outerwear</td><td>Top</td></tr><tr><th>⑤ 핏 (FIT)</th><td>relaxed fit</td><td><span class="na">없음</span></td></tr><tr><th>— 판매처 SKU<em>🔴 matcher 가 읽지 않는다(보존만)</em></th><td><span class="na">없음</span></td><td><span class="na">없음</span></td></tr><tr><th>⑥ 이미지 수<em>🔴 이미지 비교는 구현돼 있지 않다</em></th><td>9</td><td>4</td></tr></tbody>
+  </table>
+  <div class="descs">
+    <div class="desc"><b>원상품 상세설명</b><p>Blue outerwear. Recycled Polyamide 100%, Polyester 100%. Relaxed fit. Responsibly made in China.</p></div>
+    <div class="desc"><b>후보 상세설명</b><p>Tinyapple | SS26 Bobo Choses | Bobo Choses Modern tracksuit jacket, Multicolor Multicolor outerwear. Designed with long sleeves, zipped, elasticated bottom, elasticated cuffs, mesh lining, high neck, seam pocket and lightweight fabric. 100% Polyester, 100% Recycled Polyamide Wash Cold-30° Do Not Bleach Iron Low(*) Do not Dry-clean Do Not Tumble Dry B126AC151</p></div>
+  </div>
+  <div class="auto">
+    <b>④ 상세설명에서 «자동으로» 찾은 것</b>
+    <ul>
+      <li>품번: <b>B126AC151</b></li>
+      <li>브랜드: 🔴 <b>현재 BRAND 추출기는 상세설명을 읽지 않습니다</b>(SPRINT-08 코드 추적) —
+          그래서 여기가 비는 것은 「설명에 브랜드가 없다」는 뜻이 <b>아닙니다</b>.</li>
+      <li>형태 · 색상 · 소재 · 세트/구성: 🔴 <b>상세설명에서 추출하는 경로가 없습니다</b>.</li>
+    </ul>
+  </div>
+  <div class="ask">
+    <b>🟡 대표님께 묻는 것</b>
+    <ol>
+      <li>상세설명만으로 <b>브랜드</b>를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>품번</b>을 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>상품 형태</b>(티셔츠/가디건/세트 등)를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>색상·소재</b>를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>세트/구성</b>(단품인가 세트인가)을 알 수 있습니까?</li>
+      <li>🔴 <b>동일상품이라고 판단되는 «결정적 문구»가 어디에 있습니까?</b> (그 문장을 알려 주십시오)</li>
+    </ol>
+  </div>
+  <div class="links">
+    <a href="https://bobochoses.co.jp/products/b226ac117-b-c-embossed-tracksuit-jacket" target="_blank" rel="noreferrer">원상품 페이지 열기</a>
+    <a href="https://www.tinyapple.net/products/bobo-choses-bobo-choses-modern-tracksuit-jacket-multicolor" target="_blank" rel="noreferrer">후보 페이지 열기</a>
+  </div>
+  <div class="judge">
+    시스템 보류/충돌 사유: MODEL_CODE
+  </div>
+</section>
+<section class="card">
+  <h2>C22 · donokids.com</h2>
+  <div class="meta">
+    <span>CEO 이전 판정: <b>DIFFERENT</b></span>
+    <span>시스템 판정: <b>SIMILAR</b></span>
+    <span>품번 비교: <b>unavailable</b></span>
+    <span class="src">원상품 facts: 라이브 재수집 · 후보 facts: 라이브 재수집</span>
+  </div>
+  <table class="ev">
+    <thead><tr><th>Evidence</th><th>해외 원상품</th><th>국내/해외 후보</th></tr></thead>
+    <tbody><tr><th>① 상품명 (TITLE)</th><td>Bubble Sweatshirt in Grey Melange by Main Story</td><td>[[메인스토리] Bubble Sweatshirt _Conker Stripe #AW26MS185]</td></tr><tr><th>② 브랜드 (BRAND)</th><td>Main Story</td><td><span class="na">없음</span></td></tr><tr><th>③ 품번 (MODEL CODE)</th><td>AW26MS185</td><td><span class="na">없음</span></td></tr><tr><th>⑤ 색상 (COLOR)</th><td>Grey Melange</td><td><span class="na">없음</span></td></tr><tr><th>⑤ 소재 (MATERIAL)<em>🔴 Shopify 경로는 이 칸에 설명문 전문이 들어온다</em></th><td>Bubble Sweatshirt by Main Story. A relaxed fit sweatshirt with dropped shoulders and a large Main Story print across the chest, finished with ribbed cuffs, hem and neckline. Colour - Grey Melange. 100% Organic Cotton. From Main Story AW26 Collection. Product code AW26MS185 Made in Portugal.</td><td><span class="na">없음</span></td></tr><tr><th>⑤ 형태/분류 (FORM)</th><td>Sweatshirt</td><td>MAIN STORY (대) &gt; F/W 2026 (중)</td></tr><tr><th>⑤ 핏 (FIT)</th><td>relaxed fit</td><td><span class="na">없음</span></td></tr><tr><th>— 판매처 SKU<em>🔴 matcher 가 읽지 않는다(보존만)</em></th><td><span class="na">없음</span></td><td><span class="na">없음</span></td></tr><tr><th>⑥ 이미지 수<em>🔴 이미지 비교는 구현돼 있지 않다</em></th><td>7</td><td>0</td></tr></tbody>
+  </table>
+  <div class="descs">
+    <div class="desc"><b>원상품 상세설명</b><p>Bubble Sweatshirt by Main Story. A relaxed fit sweatshirt with dropped shoulders and a large Main Story print across the chest, finished with ribbed cuffs, hem and neckline. Colour - Grey Melange. 100% Organic Cotton. From Main Story AW26 Collection. Product code AW26MS185 Made in Portugal.</p></div>
+    <div class="desc"><b>후보 상세설명</b><p>[[메인스토리] Bubble Sweatshirt _Conker Stripe #AW26MS185]</p></div>
+  </div>
+  <div class="auto">
+    <b>④ 상세설명에서 «자동으로» 찾은 것</b>
+    <ul>
+      <li>품번: 🔴 못 찾음</li>
+      <li>브랜드: 🔴 <b>현재 BRAND 추출기는 상세설명을 읽지 않습니다</b>(SPRINT-08 코드 추적) —
+          그래서 여기가 비는 것은 「설명에 브랜드가 없다」는 뜻이 <b>아닙니다</b>.</li>
+      <li>형태 · 색상 · 소재 · 세트/구성: 🔴 <b>상세설명에서 추출하는 경로가 없습니다</b>.</li>
+    </ul>
+  </div>
+  <div class="ask">
+    <b>🟡 대표님께 묻는 것</b>
+    <ol>
+      <li>상세설명만으로 <b>브랜드</b>를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>품번</b>을 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>상품 형태</b>(티셔츠/가디건/세트 등)를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>색상·소재</b>를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>세트/구성</b>(단품인가 세트인가)을 알 수 있습니까?</li>
+      <li>🔴 <b>동일상품이라고 판단되는 «결정적 문구»가 어디에 있습니까?</b> (그 문장을 알려 주십시오)</li>
+    </ol>
+  </div>
+  <div class="links">
+    <a href="https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story?_pos=1&amp;_sid=a0738e824&amp;_ss=r" target="_blank" rel="noreferrer">원상품 페이지 열기</a>
+    <a href="https://www.donokids.com/m/product.html?branduid=3362912" target="_blank" rel="noreferrer">후보 페이지 열기</a>
+  </div>
+  <div class="judge">
+    시스템 보류/충돌 사유: BRAND_UNCONFIRMED
+  </div>
+</section>
+<section class="card">
+  <h2>C05 · tinyapple.net</h2>
+  <div class="meta">
+    <span>CEO 이전 판정: <b>SAME</b></span>
+    <span>시스템 판정: <b>SAME</b></span>
+    <span>품번 비교: <b>exact</b></span>
+    <span class="src">원상품 facts: 라이브 재수집 · 후보 facts: 라이브 재수집</span>
+  </div>
+  <table class="ev">
+    <thead><tr><th>Evidence</th><th>해외 원상품</th><th>국내/해외 후보</th></tr></thead>
+    <tbody><tr><th>① 상품명 (TITLE)</th><td>Hug Hairy Monster T-Shirt by Bobo Choses</td><td>Bobo Choses Hug Hairy Monster T-shirt, Light Blue</td></tr><tr><th>② 브랜드 (BRAND)</th><td>Bobo Choses</td><td>Bobo Choses</td></tr><tr><th>③ 품번 (MODEL CODE)</th><td>B226AC009</td><td>B226AC009</td></tr><tr><th>⑤ 색상 (COLOR)</th><td>Light Blue</td><td>shirt light blue</td></tr><tr><th>⑤ 소재 (MATERIAL)<em>🔴 Shopify 경로는 이 칸에 설명문 전문이 들어온다</em></th><td>Hug Hairy Monster T-Shirt by Bobo Choses. Relaxed fit tee in a soft blue, featuring long sleeves, a round neck and a large monster hug print across the front. Colour - Light Blue. 100% Organic Cotton. Product code B226AC009 AW26 Made in Portugal.</td><td>Tinyapple | FW26 Bobo Choses | Hug Hairy Monster T-shirt, Light Blue 100% Organic Cotton Wash Cold-30° Do Not Bleach Iron Low Do not Dry-clean Do Not Tumble Dry B226AC009</td></tr><tr><th>⑤ 형태/분류 (FORM)</th><td>T Shirt</td><td>Cardigans and Sweaters</td></tr><tr><th>⑤ 핏 (FIT)</th><td>relaxed fit</td><td><span class="na">없음</span></td></tr><tr><th>— 판매처 SKU<em>🔴 matcher 가 읽지 않는다(보존만)</em></th><td><span class="na">없음</span></td><td><span class="na">없음</span></td></tr><tr><th>⑥ 이미지 수<em>🔴 이미지 비교는 구현돼 있지 않다</em></th><td>2</td><td>2</td></tr></tbody>
+  </table>
+  <div class="descs">
+    <div class="desc"><b>원상품 상세설명</b><p>Hug Hairy Monster T-Shirt by Bobo Choses. Relaxed fit tee in a soft blue, featuring long sleeves, a round neck and a large monster hug print across the front. Colour - Light Blue. 100% Organic Cotton. Product code B226AC009 AW26 Made in Portugal.</p></div>
+    <div class="desc"><b>후보 상세설명</b><p>Tinyapple | FW26 Bobo Choses | Hug Hairy Monster T-shirt, Light Blue 100% Organic Cotton Wash Cold-30° Do Not Bleach Iron Low Do not Dry-clean Do Not Tumble Dry B226AC009</p></div>
+  </div>
+  <div class="auto">
+    <b>④ 상세설명에서 «자동으로» 찾은 것</b>
+    <ul>
+      <li>품번: <b>B226AC009</b></li>
+      <li>브랜드: 🔴 <b>현재 BRAND 추출기는 상세설명을 읽지 않습니다</b>(SPRINT-08 코드 추적) —
+          그래서 여기가 비는 것은 「설명에 브랜드가 없다」는 뜻이 <b>아닙니다</b>.</li>
+      <li>형태 · 색상 · 소재 · 세트/구성: 🔴 <b>상세설명에서 추출하는 경로가 없습니다</b>.</li>
+    </ul>
+  </div>
+  <div class="ask">
+    <b>🟡 대표님께 묻는 것</b>
+    <ol>
+      <li>상세설명만으로 <b>브랜드</b>를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>품번</b>을 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>상품 형태</b>(티셔츠/가디건/세트 등)를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>색상·소재</b>를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>세트/구성</b>(단품인가 세트인가)을 알 수 있습니까?</li>
+      <li>🔴 <b>동일상품이라고 판단되는 «결정적 문구»가 어디에 있습니까?</b> (그 문장을 알려 주십시오)</li>
+    </ol>
+  </div>
+  <div class="links">
+    <a href="https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses" target="_blank" rel="noreferrer">원상품 페이지 열기</a>
+    <a href="https://www.tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue" target="_blank" rel="noreferrer">후보 페이지 열기</a>
+  </div>
+  <div class="judge">
+    시스템 보류/충돌 사유: <span class="na">없음</span>
+  </div>
+</section>
+<section class="card">
+  <h2>C06 · global.trenbe.com</h2>
+  <div class="meta">
+    <span>CEO 이전 판정: <b>DIFFERENT</b></span>
+    <span>시스템 판정: <b>SAME</b></span>
+    <span>품번 비교: <b>exact</b></span>
+    <span class="src">원상품 facts: 라이브 재수집 · 후보 facts: 라이브 재수집</span>
+  </div>
+  <table class="ev">
+    <thead><tr><th>Evidence</th><th>해외 원상품</th><th>국내/해외 후보</th></tr></thead>
+    <tbody><tr><th>① 상품명 (TITLE)</th><td>Hug Hairy Monster T-Shirt by Bobo Choses</td><td>Bobo Choses Kids Hug Hairy Monster Long Sleeve T-Shirt (Light Blue) B226AC009 451 160484657 [P]</td></tr><tr><th>② 브랜드 (BRAND)</th><td>Bobo Choses</td><td>BOBO CHOSES</td></tr><tr><th>③ 품번 (MODEL CODE)</th><td>B226AC009</td><td>B226AC009</td></tr><tr><th>⑤ 색상 (COLOR)</th><td>Light Blue</td><td>shirt light blue</td></tr><tr><th>⑤ 소재 (MATERIAL)<em>🔴 Shopify 경로는 이 칸에 설명문 전문이 들어온다</em></th><td>Hug Hairy Monster T-Shirt by Bobo Choses. Relaxed fit tee in a soft blue, featuring long sleeves, a round neck and a large monster hug print across the front. Colour - Light Blue. 100% Organic Cotton. Product code B226AC009 AW26 Made in Portugal.</td><td><span class="na">없음</span></td></tr><tr><th>⑤ 형태/분류 (FORM)</th><td>T Shirt</td><td>NEW</td></tr><tr><th>⑤ 핏 (FIT)</th><td>relaxed fit</td><td><span class="na">없음</span></td></tr><tr><th>— 판매처 SKU<em>🔴 matcher 가 읽지 않는다(보존만)</em></th><td><span class="na">없음</span></td><td><span class="na">없음</span></td></tr><tr><th>⑥ 이미지 수<em>🔴 이미지 비교는 구현돼 있지 않다</em></th><td>2</td><td>5</td></tr></tbody>
+  </table>
+  <div class="descs">
+    <div class="desc"><b>원상품 상세설명</b><p>Hug Hairy Monster T-Shirt by Bobo Choses. Relaxed fit tee in a soft blue, featuring long sleeves, a round neck and a large monster hug print across the front. Colour - Light Blue. 100% Organic Cotton. Product code B226AC009 AW26 Made in Portugal.</p></div>
+    <div class="desc"><b>후보 상세설명</b><p>Gender : Men Brand : BOBO CHOSES Product Name : Bobo Choses Kids Hug Hairy Monster Long Sleeve T-Shirt (Light Blue) B226AC009 451 160484657 [P] Color : Light Blue SKU : 26FW B226AC009 451 trenbe Code : 160484657</p></div>
+  </div>
+  <div class="auto">
+    <b>④ 상세설명에서 «자동으로» 찾은 것</b>
+    <ul>
+      <li>품번: <b>B226AC009</b></li>
+      <li>브랜드: 🔴 <b>현재 BRAND 추출기는 상세설명을 읽지 않습니다</b>(SPRINT-08 코드 추적) —
+          그래서 여기가 비는 것은 「설명에 브랜드가 없다」는 뜻이 <b>아닙니다</b>.</li>
+      <li>형태 · 색상 · 소재 · 세트/구성: 🔴 <b>상세설명에서 추출하는 경로가 없습니다</b>.</li>
+    </ul>
+  </div>
+  <div class="ask">
+    <b>🟡 대표님께 묻는 것</b>
+    <ol>
+      <li>상세설명만으로 <b>브랜드</b>를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>품번</b>을 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>상품 형태</b>(티셔츠/가디건/세트 등)를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>색상·소재</b>를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>세트/구성</b>(단품인가 세트인가)을 알 수 있습니까?</li>
+      <li>🔴 <b>동일상품이라고 판단되는 «결정적 문구»가 어디에 있습니까?</b> (그 문장을 알려 주십시오)</li>
+    </ol>
+  </div>
+  <div class="links">
+    <a href="https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses" target="_blank" rel="noreferrer">원상품 페이지 열기</a>
+    <a href="https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p" target="_blank" rel="noreferrer">후보 페이지 열기</a>
+  </div>
+  <div class="judge">
+    시스템 보류/충돌 사유: <span class="na">없음</span>
+  </div>
+</section>
+<section class="card">
+  <h2>C19 · junioredition.com</h2>
+  <div class="meta">
+    <span>CEO 이전 판정: <b>DIFFERENT</b></span>
+    <span>시스템 판정: <b>PRESUMED_SAME</b></span>
+    <span>품번 비교: <b>exact</b></span>
+    <span class="src">원상품 facts: 라이브 재수집 · 후보 facts: 라이브 재수집</span>
+  </div>
+  <table class="ev">
+    <thead><tr><th>Evidence</th><th>해외 원상품</th><th>국내/해외 후보</th></tr></thead>
+    <tbody><tr><th>① 상품명 (TITLE)</th><td>Bubble Sweatshirt in Grey Melange by Main Story</td><td>Bubble Sweatshirt in Conker Stripe by Main Story</td></tr><tr><th>② 브랜드 (BRAND)</th><td>Main Story</td><td>Main Story</td></tr><tr><th>③ 품번 (MODEL CODE)</th><td>AW26MS185</td><td>AW26MS185</td></tr><tr><th>⑤ 색상 (COLOR)</th><td>Grey Melange</td><td>Conker Stripe</td></tr><tr><th>⑤ 소재 (MATERIAL)<em>🔴 Shopify 경로는 이 칸에 설명문 전문이 들어온다</em></th><td>Bubble Sweatshirt by Main Story. A relaxed fit sweatshirt with dropped shoulders and a large Main Story print across the chest, finished with ribbed cuffs, hem and neckline. Colour - Grey Melange. 100% Organic Cotton. From Main Story AW26 Collection. Product code AW26MS185 Made in Portugal.</td><td>Bubble Sweatshirt by Main Story. A relaxed fit sweatshirt with dropped shoulders and a small Main Story logo embroidered on the chest, finished with ribbed cuffs, hem and neckline. Colour - Conker Stripe. 100% Organic Cotton. From Main Story AW26 Collection. Product code AW26MS185 Made in Portugal.</td></tr><tr><th>⑤ 형태/분류 (FORM)</th><td>Sweatshirt</td><td>Sweatshirt</td></tr><tr><th>⑤ 핏 (FIT)</th><td>relaxed fit</td><td>relaxed fit</td></tr><tr><th>— 판매처 SKU<em>🔴 matcher 가 읽지 않는다(보존만)</em></th><td><span class="na">없음</span></td><td><span class="na">없음</span></td></tr><tr><th>⑥ 이미지 수<em>🔴 이미지 비교는 구현돼 있지 않다</em></th><td>7</td><td>6</td></tr></tbody>
+  </table>
+  <div class="descs">
+    <div class="desc"><b>원상품 상세설명</b><p>Bubble Sweatshirt by Main Story. A relaxed fit sweatshirt with dropped shoulders and a large Main Story print across the chest, finished with ribbed cuffs, hem and neckline. Colour - Grey Melange. 100% Organic Cotton. From Main Story AW26 Collection. Product code AW26MS185 Made in Portugal.</p></div>
+    <div class="desc"><b>후보 상세설명</b><p>Bubble Sweatshirt by Main Story. A relaxed fit sweatshirt with dropped shoulders and a small Main Story logo embroidered on the chest, finished with ribbed cuffs, hem and neckline. Colour - Conker Stripe. 100% Organic Cotton. From Main Story AW26 Collection. Product code AW26MS185 Made in Portugal.</p></div>
+  </div>
+  <div class="auto">
+    <b>④ 상세설명에서 «자동으로» 찾은 것</b>
+    <ul>
+      <li>품번: 🔴 못 찾음</li>
+      <li>브랜드: 🔴 <b>현재 BRAND 추출기는 상세설명을 읽지 않습니다</b>(SPRINT-08 코드 추적) —
+          그래서 여기가 비는 것은 「설명에 브랜드가 없다」는 뜻이 <b>아닙니다</b>.</li>
+      <li>형태 · 색상 · 소재 · 세트/구성: 🔴 <b>상세설명에서 추출하는 경로가 없습니다</b>.</li>
+    </ul>
+  </div>
+  <div class="ask">
+    <b>🟡 대표님께 묻는 것</b>
+    <ol>
+      <li>상세설명만으로 <b>브랜드</b>를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>품번</b>을 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>상품 형태</b>(티셔츠/가디건/세트 등)를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>색상·소재</b>를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>세트/구성</b>(단품인가 세트인가)을 알 수 있습니까?</li>
+      <li>🔴 <b>동일상품이라고 판단되는 «결정적 문구»가 어디에 있습니까?</b> (그 문장을 알려 주십시오)</li>
+    </ol>
+  </div>
+  <div class="links">
+    <a href="https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story?_pos=1&amp;_sid=a0738e824&amp;_ss=r" target="_blank" rel="noreferrer">원상품 페이지 열기</a>
+    <a href="https://www.junioredition.com/products/bubble-sweatshirt-in-conker-stripe-by-main-story" target="_blank" rel="noreferrer">후보 페이지 열기</a>
+  </div>
+  <div class="judge">
+    시스템 보류/충돌 사유: SAME_SELLER_DISTINCT_LISTING
+  </div>
+</section>
+<section class="card">
+  <h2>C20 · junioredition.com</h2>
+  <div class="meta">
+    <span>CEO 이전 판정: <b>DIFFERENT</b></span>
+    <span>시스템 판정: <b>PRESUMED_SAME</b></span>
+    <span>품번 비교: <b>exact</b></span>
+    <span class="src">원상품 facts: 라이브 재수집 · 후보 facts: 라이브 재수집</span>
+  </div>
+  <table class="ev">
+    <thead><tr><th>Evidence</th><th>해외 원상품</th><th>국내/해외 후보</th></tr></thead>
+    <tbody><tr><th>① 상품명 (TITLE)</th><td>Bubble Sweatshirt in Grey Melange by Main Story</td><td>Bubble Sweatshirt in Graystone by Main Story</td></tr><tr><th>② 브랜드 (BRAND)</th><td>Main Story</td><td>Main Story</td></tr><tr><th>③ 품번 (MODEL CODE)</th><td>AW26MS185</td><td>AW26MS185</td></tr><tr><th>⑤ 색상 (COLOR)</th><td>Grey Melange</td><td>Graystone</td></tr><tr><th>⑤ 소재 (MATERIAL)<em>🔴 Shopify 경로는 이 칸에 설명문 전문이 들어온다</em></th><td>Bubble Sweatshirt by Main Story. A relaxed fit sweatshirt with dropped shoulders and a large Main Story print across the chest, finished with ribbed cuffs, hem and neckline. Colour - Grey Melange. 100% Organic Cotton. From Main Story AW26 Collection. Product code AW26MS185 Made in Portugal.</td><td>Bubble Sweatshirt by Main Story. A relaxed fit sweatshirt with dropped shoulders and a large Main Story print across the chest, finished with ribbed cuffs, hem and neckline. Colour - Graystone. 100% Organic Cotton. From Main Story AW26 Collection. Product code AW26MS185 Made in Portugal.</td></tr><tr><th>⑤ 형태/분류 (FORM)</th><td>Sweatshirt</td><td>Sweatshirt</td></tr><tr><th>⑤ 핏 (FIT)</th><td>relaxed fit</td><td>relaxed fit</td></tr><tr><th>— 판매처 SKU<em>🔴 matcher 가 읽지 않는다(보존만)</em></th><td><span class="na">없음</span></td><td><span class="na">없음</span></td></tr><tr><th>⑥ 이미지 수<em>🔴 이미지 비교는 구현돼 있지 않다</em></th><td>7</td><td>8</td></tr></tbody>
+  </table>
+  <div class="descs">
+    <div class="desc"><b>원상품 상세설명</b><p>Bubble Sweatshirt by Main Story. A relaxed fit sweatshirt with dropped shoulders and a large Main Story print across the chest, finished with ribbed cuffs, hem and neckline. Colour - Grey Melange. 100% Organic Cotton. From Main Story AW26 Collection. Product code AW26MS185 Made in Portugal.</p></div>
+    <div class="desc"><b>후보 상세설명</b><p>Bubble Sweatshirt by Main Story. A relaxed fit sweatshirt with dropped shoulders and a large Main Story print across the chest, finished with ribbed cuffs, hem and neckline. Colour - Graystone. 100% Organic Cotton. From Main Story AW26 Collection. Product code AW26MS185 Made in Portugal.</p></div>
+  </div>
+  <div class="auto">
+    <b>④ 상세설명에서 «자동으로» 찾은 것</b>
+    <ul>
+      <li>품번: 🔴 못 찾음</li>
+      <li>브랜드: 🔴 <b>현재 BRAND 추출기는 상세설명을 읽지 않습니다</b>(SPRINT-08 코드 추적) —
+          그래서 여기가 비는 것은 「설명에 브랜드가 없다」는 뜻이 <b>아닙니다</b>.</li>
+      <li>형태 · 색상 · 소재 · 세트/구성: 🔴 <b>상세설명에서 추출하는 경로가 없습니다</b>.</li>
+    </ul>
+  </div>
+  <div class="ask">
+    <b>🟡 대표님께 묻는 것</b>
+    <ol>
+      <li>상세설명만으로 <b>브랜드</b>를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>품번</b>을 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>상품 형태</b>(티셔츠/가디건/세트 등)를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>색상·소재</b>를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>세트/구성</b>(단품인가 세트인가)을 알 수 있습니까?</li>
+      <li>🔴 <b>동일상품이라고 판단되는 «결정적 문구»가 어디에 있습니까?</b> (그 문장을 알려 주십시오)</li>
+    </ol>
+  </div>
+  <div class="links">
+    <a href="https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story?_pos=1&amp;_sid=a0738e824&amp;_ss=r" target="_blank" rel="noreferrer">원상품 페이지 열기</a>
+    <a href="https://www.junioredition.com/products/bubble-sweatshirt-in-graystone-by-main-story" target="_blank" rel="noreferrer">후보 페이지 열기</a>
+  </div>
+  <div class="judge">
+    시스템 보류/충돌 사유: COLOR_VARIANT · SAME_SELLER_DISTINCT_LISTING
+  </div>
+</section>
+<section class="card">
+  <h2>C42 · main-story.com</h2>
+  <div class="meta">
+    <span>CEO 이전 판정: <b>SAME</b></span>
+    <span>시스템 판정: <b>SAME</b></span>
+    <span>품번 비교: <b>unavailable</b></span>
+    <span class="src">원상품 facts: 라이브 재수집 · 후보 facts: 라이브 재수집</span>
+  </div>
+  <table class="ev">
+    <thead><tr><th>Evidence</th><th>해외 원상품</th><th>국내/해외 후보</th></tr></thead>
+    <tbody><tr><th>① 상품명 (TITLE)</th><td>Bubble Sweatshirt in Grey Melange by Main Story</td><td>Bubble Sweatshirt - Grey Melange</td></tr><tr><th>② 브랜드 (BRAND)</th><td>Main Story</td><td>Main Story</td></tr><tr><th>③ 품번 (MODEL CODE)</th><td>AW26MS185</td><td><span class="na">없음</span></td></tr><tr><th>⑤ 색상 (COLOR)</th><td>Grey Melange</td><td>our grey</td></tr><tr><th>⑤ 소재 (MATERIAL)<em>🔴 Shopify 경로는 이 칸에 설명문 전문이 들어온다</em></th><td>Bubble Sweatshirt by Main Story. A relaxed fit sweatshirt with dropped shoulders and a large Main Story print across the chest, finished with ribbed cuffs, hem and neckline. Colour - Grey Melange. 100% Organic Cotton. From Main Story AW26 Collection. Product code AW26MS185 Made in Portugal.</td><td>Our Grey Melange oversized Bubble Sweatshirt is made from soft organic cotton jersey fleece, with a relaxed, wide fit and dropped shoulders that combines comfort and a laid-back look. Garment-dyed for extra softness, it delivers a gentle, cosy feel against the skin. Main Story Start Date Print on the chest Embroidered Logo 100% Organic Cotton Responsibly Made in Portugal</td></tr><tr><th>⑤ 형태/분류 (FORM)</th><td>Sweatshirt</td><td><span class="na">없음</span></td></tr><tr><th>⑤ 핏 (FIT)</th><td>relaxed fit</td><td><span class="na">없음</span></td></tr><tr><th>— 판매처 SKU<em>🔴 matcher 가 읽지 않는다(보존만)</em></th><td><span class="na">없음</span></td><td><span class="na">없음</span></td></tr><tr><th>⑥ 이미지 수<em>🔴 이미지 비교는 구현돼 있지 않다</em></th><td>7</td><td>6</td></tr></tbody>
+  </table>
+  <div class="descs">
+    <div class="desc"><b>원상품 상세설명</b><p>Bubble Sweatshirt by Main Story. A relaxed fit sweatshirt with dropped shoulders and a large Main Story print across the chest, finished with ribbed cuffs, hem and neckline. Colour - Grey Melange. 100% Organic Cotton. From Main Story AW26 Collection. Product code AW26MS185 Made in Portugal.</p></div>
+    <div class="desc"><b>후보 상세설명</b><p>Our Grey Melange oversized Bubble Sweatshirt is made from soft organic cotton jersey fleece, with a relaxed, wide fit and dropped shoulders that combines comfort and a laid-back look. Garment-dyed for extra softness, it delivers a gentle, cosy feel against the skin. Main Story Start Date Print on the chest Embroidered Logo 100% Organic Cotton Responsibly Made in Portugal</p></div>
+  </div>
+  <div class="auto">
+    <b>④ 상세설명에서 «자동으로» 찾은 것</b>
+    <ul>
+      <li>품번: 🔴 못 찾음</li>
+      <li>브랜드: 🔴 <b>현재 BRAND 추출기는 상세설명을 읽지 않습니다</b>(SPRINT-08 코드 추적) —
+          그래서 여기가 비는 것은 「설명에 브랜드가 없다」는 뜻이 <b>아닙니다</b>.</li>
+      <li>형태 · 색상 · 소재 · 세트/구성: 🔴 <b>상세설명에서 추출하는 경로가 없습니다</b>.</li>
+    </ul>
+  </div>
+  <div class="ask">
+    <b>🟡 대표님께 묻는 것</b>
+    <ol>
+      <li>상세설명만으로 <b>브랜드</b>를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>품번</b>을 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>상품 형태</b>(티셔츠/가디건/세트 등)를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>색상·소재</b>를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>세트/구성</b>(단품인가 세트인가)을 알 수 있습니까?</li>
+      <li>🔴 <b>동일상품이라고 판단되는 «결정적 문구»가 어디에 있습니까?</b> (그 문장을 알려 주십시오)</li>
+    </ol>
+  </div>
+  <div class="links">
+    <a href="https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story?_pos=1&amp;_sid=a0738e824&amp;_ss=r" target="_blank" rel="noreferrer">원상품 페이지 열기</a>
+    <a href="https://main-story.com/products/bubble-sweatshirt-grey-melange-1" target="_blank" rel="noreferrer">후보 페이지 열기</a>
+  </div>
+  <div class="judge">
+    시스템 보류/충돌 사유: <span class="na">없음</span>
+  </div>
+</section>
+<section class="card">
+  <h2>C25 · main-story.com</h2>
+  <div class="meta">
+    <span>CEO 이전 판정: <b>DIFFERENT</b></span>
+    <span>시스템 판정: <b>PRESUMED_SAME</b></span>
+    <span>품번 비교: <b>unavailable</b></span>
+    <span class="src">원상품 facts: 라이브 재수집 · 후보 facts: 라이브 재수집</span>
+  </div>
+  <table class="ev">
+    <thead><tr><th>Evidence</th><th>해외 원상품</th><th>국내/해외 후보</th></tr></thead>
+    <tbody><tr><th>① 상품명 (TITLE)</th><td>Bubble Sweatshirt in Grey Melange by Main Story</td><td>Bubble Sweatshirt - Graystone</td></tr><tr><th>② 브랜드 (BRAND)</th><td>Main Story</td><td>Main Story</td></tr><tr><th>③ 품번 (MODEL CODE)</th><td>AW26MS185</td><td><span class="na">없음</span></td></tr><tr><th>⑤ 색상 (COLOR)</th><td>Grey Melange</td><td>sweatshirt in graystone</td></tr><tr><th>⑤ 소재 (MATERIAL)<em>🔴 Shopify 경로는 이 칸에 설명문 전문이 들어온다</em></th><td>Bubble Sweatshirt by Main Story. A relaxed fit sweatshirt with dropped shoulders and a large Main Story print across the chest, finished with ribbed cuffs, hem and neckline. Colour - Grey Melange. 100% Organic Cotton. From Main Story AW26 Collection. Product code AW26MS185 Made in Portugal.</td><td>Our oversized Bubble Sweatshirt in a Graystone shade is made from soft organic cotton jersey fleece, with a relaxed, wide fit and dropped shoulders that combines comfort and a laid-back look. Garment-dyed for extra softness, it delivers a gentle, cosy feel against the skin. Main Story Start Date Print on the chest Embroidered Logo 100% Organic Cotton Responsibly Made in Portugal</td></tr><tr><th>⑤ 형태/분류 (FORM)</th><td>Sweatshirt</td><td><span class="na">없음</span></td></tr><tr><th>⑤ 핏 (FIT)</th><td>relaxed fit</td><td><span class="na">없음</span></td></tr><tr><th>— 판매처 SKU<em>🔴 matcher 가 읽지 않는다(보존만)</em></th><td><span class="na">없음</span></td><td><span class="na">없음</span></td></tr><tr><th>⑥ 이미지 수<em>🔴 이미지 비교는 구현돼 있지 않다</em></th><td>7</td><td>5</td></tr></tbody>
+  </table>
+  <div class="descs">
+    <div class="desc"><b>원상품 상세설명</b><p>Bubble Sweatshirt by Main Story. A relaxed fit sweatshirt with dropped shoulders and a large Main Story print across the chest, finished with ribbed cuffs, hem and neckline. Colour - Grey Melange. 100% Organic Cotton. From Main Story AW26 Collection. Product code AW26MS185 Made in Portugal.</p></div>
+    <div class="desc"><b>후보 상세설명</b><p>Our oversized Bubble Sweatshirt in a Graystone shade is made from soft organic cotton jersey fleece, with a relaxed, wide fit and dropped shoulders that combines comfort and a laid-back look. Garment-dyed for extra softness, it delivers a gentle, cosy feel against the skin. Main Story Start Date Print on the chest Embroidered Logo 100% Organic Cotton Responsibly Made in Portugal</p></div>
+  </div>
+  <div class="auto">
+    <b>④ 상세설명에서 «자동으로» 찾은 것</b>
+    <ul>
+      <li>품번: 🔴 못 찾음</li>
+      <li>브랜드: 🔴 <b>현재 BRAND 추출기는 상세설명을 읽지 않습니다</b>(SPRINT-08 코드 추적) —
+          그래서 여기가 비는 것은 「설명에 브랜드가 없다」는 뜻이 <b>아닙니다</b>.</li>
+      <li>형태 · 색상 · 소재 · 세트/구성: 🔴 <b>상세설명에서 추출하는 경로가 없습니다</b>.</li>
+    </ul>
+  </div>
+  <div class="ask">
+    <b>🟡 대표님께 묻는 것</b>
+    <ol>
+      <li>상세설명만으로 <b>브랜드</b>를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>품번</b>을 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>상품 형태</b>(티셔츠/가디건/세트 등)를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>색상·소재</b>를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>세트/구성</b>(단품인가 세트인가)을 알 수 있습니까?</li>
+      <li>🔴 <b>동일상품이라고 판단되는 «결정적 문구»가 어디에 있습니까?</b> (그 문장을 알려 주십시오)</li>
+    </ol>
+  </div>
+  <div class="links">
+    <a href="https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story?_pos=1&amp;_sid=a0738e824&amp;_ss=r" target="_blank" rel="noreferrer">원상품 페이지 열기</a>
+    <a href="https://main-story.com/collections/shop/products/bubble-sweatshirt-graystone" target="_blank" rel="noreferrer">후보 페이지 열기</a>
+  </div>
+  <div class="judge">
+    시스템 보류/충돌 사유: COLOR_VARIANT
+  </div>
+</section>
+<section class="card">
+  <h2>S1-5 · junioredition.com</h2>
+  <div class="meta">
+    <span>CEO 이전 판정: <b>DIFFERENT</b></span>
+    <span>시스템 판정: <b>CONFLICT</b></span>
+    <span>품번 비교: <b>conflict</b></span>
+    <span class="src">원상품 facts: 라이브 재수집 · 후보 facts: 라이브 재수집</span>
+  </div>
+  <table class="ev">
+    <thead><tr><th>Evidence</th><th>해외 원상품</th><th>국내/해외 후보</th></tr></thead>
+    <tbody><tr><th>① 상품명 (TITLE)</th><td>Booty Ghosts Long Sleeve T-Shirt by Bobo Choses</td><td>Booty Ghosts T-Shirt by Bobo Choses</td></tr><tr><th>② 브랜드 (BRAND)</th><td>Bobo Choses</td><td>Bobo Choses</td></tr><tr><th>③ 품번 (MODEL CODE)</th><td>B226AC010</td><td>B226AC141</td></tr><tr><th>⑤ 색상 (COLOR)</th><td>Heather Grey</td><td>Light Blue</td></tr><tr><th>⑤ 소재 (MATERIAL)<em>🔴 Shopify 경로는 이 칸에 설명문 전문이 들어온다</em></th><td>Booty Ghosts Long Sleeve T-Shirt by Bobo Choses. Relaxed fit tee in heather grey, featuring long sleeves, a round neck and a large Bobo Choses ghosts print across the front. Colour - Heather Grey. 100% Organic Cotton. Product code B226AC010 AW26 Made in Portugal.</td><td>Booty Ghosts T-Shirt by Bobo Choses. Relaxed fit light blue tee featuring short sleeves, a ribbed neckline and a large playful print across the front of two ghosts wearing booties. Colour - Light Blue. 100% Organic Cotton. Product code B226AC141 AW26 Made in Portugal.</td></tr><tr><th>⑤ 형태/분류 (FORM)</th><td>T Shirt</td><td>T Shirt</td></tr><tr><th>⑤ 핏 (FIT)</th><td>relaxed fit</td><td>relaxed fit</td></tr><tr><th>— 판매처 SKU<em>🔴 matcher 가 읽지 않는다(보존만)</em></th><td><span class="na">없음</span></td><td><span class="na">없음</span></td></tr><tr><th>⑥ 이미지 수<em>🔴 이미지 비교는 구현돼 있지 않다</em></th><td>1</td><td>4</td></tr></tbody>
+  </table>
+  <div class="descs">
+    <div class="desc"><b>원상품 상세설명</b><p>Booty Ghosts Long Sleeve T-Shirt by Bobo Choses. Relaxed fit tee in heather grey, featuring long sleeves, a round neck and a large Bobo Choses ghosts print across the front. Colour - Heather Grey. 100% Organic Cotton. Product code B226AC010 AW26 Made in Portugal.</p></div>
+    <div class="desc"><b>후보 상세설명</b><p>Booty Ghosts T-Shirt by Bobo Choses. Relaxed fit light blue tee featuring short sleeves, a ribbed neckline and a large playful print across the front of two ghosts wearing booties. Colour - Light Blue. 100% Organic Cotton. Product code B226AC141 AW26 Made in Portugal.</p></div>
+  </div>
+  <div class="auto">
+    <b>④ 상세설명에서 «자동으로» 찾은 것</b>
+    <ul>
+      <li>품번: <b>B226AC141</b></li>
+      <li>브랜드: 🔴 <b>현재 BRAND 추출기는 상세설명을 읽지 않습니다</b>(SPRINT-08 코드 추적) —
+          그래서 여기가 비는 것은 「설명에 브랜드가 없다」는 뜻이 <b>아닙니다</b>.</li>
+      <li>형태 · 색상 · 소재 · 세트/구성: 🔴 <b>상세설명에서 추출하는 경로가 없습니다</b>.</li>
+    </ul>
+  </div>
+  <div class="ask">
+    <b>🟡 대표님께 묻는 것</b>
+    <ol>
+      <li>상세설명만으로 <b>브랜드</b>를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>품번</b>을 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>상품 형태</b>(티셔츠/가디건/세트 등)를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>색상·소재</b>를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>세트/구성</b>(단품인가 세트인가)을 알 수 있습니까?</li>
+      <li>🔴 <b>동일상품이라고 판단되는 «결정적 문구»가 어디에 있습니까?</b> (그 문장을 알려 주십시오)</li>
+    </ol>
+  </div>
+  <div class="links">
+    <a href="https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses" target="_blank" rel="noreferrer">원상품 페이지 열기</a>
+    <a href="https://www.junioredition.com/en-kr/products/booty-ghosts-t-shirt-by-bobo-choses" target="_blank" rel="noreferrer">후보 페이지 열기</a>
+  </div>
+  <div class="judge">
+    시스템 보류/충돌 사유: COLOR · MODEL_CODE
+  </div>
+</section>
+<section class="card">
+  <h2>S1-6 · tinyapple.net</h2>
+  <div class="meta">
+    <span>CEO 이전 판정: <b>DIFFERENT</b></span>
+    <span>시스템 판정: <b>CONFLICT</b></span>
+    <span>품번 비교: <b>conflict</b></span>
+    <span class="src">원상품 facts: 라이브 재수집 · 후보 facts: 라이브 재수집</span>
+  </div>
+  <table class="ev">
+    <thead><tr><th>Evidence</th><th>해외 원상품</th><th>국내/해외 후보</th></tr></thead>
+    <tbody><tr><th>① 상품명 (TITLE)</th><td>Booty Ghosts Long Sleeve T-Shirt by Bobo Choses</td><td>Bobo Choses Booty Ghosts T-shirt</td></tr><tr><th>② 브랜드 (BRAND)</th><td>Bobo Choses</td><td>Bobo Choses</td></tr><tr><th>③ 품번 (MODEL CODE)</th><td>B226AC010</td><td>B226AC141</td></tr><tr><th>⑤ 색상 (COLOR)</th><td>Heather Grey</td><td><span class="na">없음</span></td></tr><tr><th>⑤ 소재 (MATERIAL)<em>🔴 Shopify 경로는 이 칸에 설명문 전문이 들어온다</em></th><td>Booty Ghosts Long Sleeve T-Shirt by Bobo Choses. Relaxed fit tee in heather grey, featuring long sleeves, a round neck and a large Bobo Choses ghosts print across the front. Colour - Heather Grey. 100% Organic Cotton. Product code B226AC010 AW26 Made in Portugal.</td><td>Tinyapple | FW26 Bobo Choses | Booty Ghosts T-shirt 100% Organic Cotton Wash Cold-30° Do Not Bleach Do Not Iron Do not Dry-clean Do Not Tumble Dry REF: B226AC141</td></tr><tr><th>⑤ 형태/분류 (FORM)</th><td>T Shirt</td><td>Cardigans and Sweaters</td></tr><tr><th>⑤ 핏 (FIT)</th><td>relaxed fit</td><td><span class="na">없음</span></td></tr><tr><th>— 판매처 SKU<em>🔴 matcher 가 읽지 않는다(보존만)</em></th><td><span class="na">없음</span></td><td><span class="na">없음</span></td></tr><tr><th>⑥ 이미지 수<em>🔴 이미지 비교는 구현돼 있지 않다</em></th><td>1</td><td>1</td></tr></tbody>
+  </table>
+  <div class="descs">
+    <div class="desc"><b>원상품 상세설명</b><p>Booty Ghosts Long Sleeve T-Shirt by Bobo Choses. Relaxed fit tee in heather grey, featuring long sleeves, a round neck and a large Bobo Choses ghosts print across the front. Colour - Heather Grey. 100% Organic Cotton. Product code B226AC010 AW26 Made in Portugal.</p></div>
+    <div class="desc"><b>후보 상세설명</b><p>Tinyapple | FW26 Bobo Choses | Booty Ghosts T-shirt 100% Organic Cotton Wash Cold-30° Do Not Bleach Do Not Iron Do not Dry-clean Do Not Tumble Dry REF: B226AC141</p></div>
+  </div>
+  <div class="auto">
+    <b>④ 상세설명에서 «자동으로» 찾은 것</b>
+    <ul>
+      <li>품번: <b>B226AC141</b></li>
+      <li>브랜드: 🔴 <b>현재 BRAND 추출기는 상세설명을 읽지 않습니다</b>(SPRINT-08 코드 추적) —
+          그래서 여기가 비는 것은 「설명에 브랜드가 없다」는 뜻이 <b>아닙니다</b>.</li>
+      <li>형태 · 색상 · 소재 · 세트/구성: 🔴 <b>상세설명에서 추출하는 경로가 없습니다</b>.</li>
+    </ul>
+  </div>
+  <div class="ask">
+    <b>🟡 대표님께 묻는 것</b>
+    <ol>
+      <li>상세설명만으로 <b>브랜드</b>를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>품번</b>을 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>상품 형태</b>(티셔츠/가디건/세트 등)를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>색상·소재</b>를 알 수 있습니까?</li>
+      <li>상세설명만으로 <b>세트/구성</b>(단품인가 세트인가)을 알 수 있습니까?</li>
+      <li>🔴 <b>동일상품이라고 판단되는 «결정적 문구»가 어디에 있습니까?</b> (그 문장을 알려 주십시오)</li>
+    </ol>
+  </div>
+  <div class="links">
+    <a href="https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses" target="_blank" rel="noreferrer">원상품 페이지 열기</a>
+    <a href="https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt" target="_blank" rel="noreferrer">후보 페이지 열기</a>
+  </div>
+  <div class="judge">
+    시스템 보류/충돌 사유: MODEL_CODE
+  </div>
+</section>
