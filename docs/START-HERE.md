@@ -11,7 +11,7 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-SAME-SPRINT-04** — 🟢🟢 **Evidence Coverage 측정 완료**(§9-N · 운영 변경 0)
+CURRENT WU   **CORE-SAME-SPRINT-05** — 🟢🟢 **HTML description 공급 가능 4/6 측정**(§9-O · 구현 0)
 NEXT         🔵 **CPO 가 다음 Evidence Layer 범위 지정** — 🔴 CTO 선제 작업 0
 CEO ACTION   🟡 **없다**
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
@@ -32,7 +32,7 @@ Git          clean · origin/main 0/0 · Production / 200
 [PROJECT RESUME] 따져(TTAEJYO) — 스마트스토어 상품자동등록
 
 진입점     docs/START-HERE.md  ← **이것만 읽고 시작한다**(과거 세션 내용을 붙이지 않는다)
-CURRENT    CORE-SAME-SPRINT-04 — coverage **측정 완료**(§9-N) · 다음 Evidence 우선순위 CPO 판단 대기
+CURRENT    CORE-SAME-SPRINT-05 — HTML description **공급 가능 확인**(§9-O) · production 적용 CPO 판단 대기
 역할       이 페이지는 [ CPO / CTO / CEO ] 중 하나다
 금지       matcher · threshold · 8축 · priceTier · domesticReference · 국내가격 pipeline ·
            A/B 가격 · 셀러 UI · description 연결 · image scoring — **전부 변경 0**
@@ -1761,3 +1761,107 @@ HTTP 33 회(read-only) · 운영 변경 **0** · 작업트리 clean · origin/ma
 ```
 
 **STOP — CORE-SAME-SPRINT-04 Evidence Coverage 측정 완료 / 다음 Evidence Layer 우선순위 CPO 판단 대기**
+
+---
+
+## 9-O. 🟢🟢 **CORE-SAME-SPRINT-05 — HTML description 공급 가능성**(측정 · 구현 **0**)
+
+🔴 **production code change 0.** test-only 하니스 1파일(`core-sprint05-html-description.test.ts`).
+CPO 금지 **16항 전수 준수** — SAME threshold · `NO_TITLE_OVERLAP` · MODEL_CODE conflict ·
+BRAND · TITLE · 새 axis · description similarity · material parser · `materialText` 의미 ·
+`priceTier` · `domesticReference` · A/B 가격 · IMAGE scoring · OPTION/SKU · category matcher.
+
+### 분모 (🔴 섞지 않는다)
+
+```
+candidate rows 33 · unique URL 33 · facts 확보 **26/33**
+SHOPIFY_JSON 20(facts 20) · PLAIN_HTML 13(facts **6**)
+🔴 facts 미확보 **7** — REDIRECTED_AWAY 5 · UNREACHABLE 2 ⟹ **별도 분모**(없음으로 세지 않는다)
+```
+
+### PLAIN_HTML description 4분류 (분모 = facts 확보 6)
+
+| 분류 | 수 | 호스트 · 근거 |
+|---|---:|---|
+| `FOUND_AND_EXTRACTABLE` | **4** | rboutique(JSON-LD) · stockmann(JSON-LD) · stadtlandkind(meta) · wconcept(meta) |
+| `FOUND_BUT_UNSAFE` | 2 | beaumonde「너무 짧다(9자)」 · donokids「제목과 사실상 같다」 |
+| `NOT_FOUND` | **0** | — |
+| `ACCESS_UNAVAILABLE` | 7 | facts 미확보분 |
+
+🟢 source 별 — **JSON-LD `Product.description` 3/6(50.0%)** · meta 5/6(83.3%) · og 5/6(83.3%).
+🔴 `@type === "Product"` 가 아닌 description(BreadcrumbList·Organization·WebPage)은 **읽지 않았다**.
+
+### 🔴🔴 비교표 — `description` 을 «두 행» 으로 갈랐다(1차 표가 거짓이었다)
+
+| Evidence | SHOPIFY_JSON | PLAIN_HTML | 전체 |
+|---|---:|---:|---:|
+| facts | 20/20 (100.0%) | 6/13 (46.2%) | 26/33 (78.8%) |
+| **description(현재공급)** | 19/20 (95.0%) | **0/6 (0.0%)** | 19/26 (73.1%) |
+| description(후보상한) | 19/20 (95.0%) | **6/6 (100%)** | 25/26 (96.2%) |
+| 후보 품번(상한) | 5/20 (25.0%) | 1/6 (16.7%) | 6/26 (23.1%) |
+| brand | 18/20 (90.0%) | 4/6 (66.7%) | 22/26 (84.6%) |
+| model code | 12/20 (60.0%) | **0/6 (0.0%)** | 12/26 (46.2%) |
+| category/form | 18/20 (90.0%) | 2/6 (33.3%) | 20/26 (76.9%) |
+| color | 13/20 (65.0%) | 1/6 (16.7%) | 14/26 (53.8%) |
+| material | 16/20 (80.0%) | **0/6 (0.0%)** | 16/26 (61.5%) |
+| fit | 7/20 (35.0%) | **0/6 (0.0%)** | 7/26 (26.9%) |
+| image URL | 20/20 (100.0%) | **0/6 (0.0%)** | 20/26 (76.9%) |
+
+🔴 1차 표는 후보 폴백만 써서 PLAIN_HTML 을 **6/6** 으로 적었다 ⟹ 「HTML 도 이미 공급된다」는
+**거짓 결론 직전** 이었다.
+
+### Q1~Q6 — 실측
+
+```
+Q1 HTML description 공급 가능?   🟢 **4/6**(facts 확보분) · 🔴 URL 전체로는 **4/13**
+Q2 가장 신뢰할 수 있는 source?    🟢 **JSON-LD `Product.description`**(3/6 · 스키마가 스스로
+                                「그 상품의 설명」이라 말하는 칸) · meta 는 2건에서 **UNSAFE** 로 걸렸다
+Q3 Evidence 회복량?              🟢 MODEL_CODE 없음 → 단일 품번 **1/4**(wconcept `B224AC128`) ·
+                                BRAND 없음 → 설명문 존재 1/4 · 🔴 나머지 축은 **측정 범위 밖**
+Q4 구조적 차이?                   🔴 **PLAIN_HTML 은 model code · material · fit · image 가 전부 0** 이고
+                                facts 확보율도 46.2% 다 ⟹ 공백이 **description 하나가 아니다**
+Q5 Identity 정책을 건드리는가?     🟢 **아니다** — 공급은 `ProductFacts` 한 칸이고 matcher 는 그 칸을
+                                읽지 않는다(SPRINT-03 계약). 🔴 단 품번 회복은 **conflict 를 만들 수 있다**
+                                (wconcept 품번이 원상품과 다르면 차단이 **강해진다** · SPRINT-02 와 같은 모양)
+Q6 다음 우선순위 하나?            🟡 **CPO 선택** — 아래
+```
+
+### 🔴🔴 하니스 결함 셋 — 셋 다 거짓 결론 직전이었다
+
+```
+⒜ `fetchPlainHtmlWithFinalUrl` owner 경로가 §12 기록과 달랐다(실제 `src/shopify-product-json`)
+⒝ 비교표 description 행이 후보를 포함해 **거짓 100%** 였다
+⒞ 🔴 **내 materialText 단언이 틀렸다** — 「값이 같으면 계약 B 위반」으로 썼으나
+   계약 B 는 「**값이 같아질 수 있으나 같은 칸이 아니다**」다(Shopify 는 정상적으로 같다).
+   🟢 「그 칸이 **변하지 않았다**」로 고쳤다 — PLAIN_HTML material **0/6 불변**
+```
+
+### STOP 조건 점검 — 🟢 하나도 발생하지 않았다
+
+```
+body 전체 사용 ❌ · 상품 description 과 일반 텍스트 구분 불가 ❌(4분류가 2건을 UNSAFE 로 걸렀다) ·
+materialText 오염 ❌(0/6) · seller/title/breadcrumb 혼입 ❌(판정 규칙이 막는다) ·
+matcher 결과 변화 ❌(운영 변경 0) · MODEL_CODE conflict 약화 ❌ · matcher 정책 변경 필요 ❌
+```
+
+### 증거
+
+```
+회귀 693 files / **9,304 passed · 0 failed · 141 skipped** · typecheck **0** · build exit **0**
+HTTP — `factsFromProductUrl` 33 + PLAIN_HTML 원문 6 (read-only) · 운영 변경 **0**
+작업트리 clean · origin/main **0 / 0** · 🔴 Deploy 없음(test-only)
+```
+
+### 🟡 CPO production 적용 판단 대기
+
+```
+🔵 구현을 **하지 않았다** — CPO 최종 STOP 문구가 「production 적용 판단 대기」다
+🟢 적용한다면 범위는 좁다 — `ListingProductLike` 에 `description?` 추가 + htmlPath 가
+   **이미 받아 둔 HTML** 에서 JSON-LD `Product.description` 을 읽어 넘긴다(**추가 HTTP 0**)
+🔴 그때 결정해야 할 것 둘 — ⒜ meta description 을 **포함할지**(2건이 UNSAFE 였다 ·
+   JSON-LD 만 쓰면 3/6) ⒝ 품번 회복이 **conflict 를 만드는 것**을 수용할지(안전 방향이지만
+   SAME 이 늘지 않는다)
+🔴 **CTO 가 고르지 않았다.**
+```
+
+**STOP — CORE-SAME-SPRINT-05 Universal Evidence Supply 측정 완료 / CPO production 적용 판단 대기**
