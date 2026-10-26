@@ -237,6 +237,91 @@ MI blocker           1차 **건수만** · 사유는 `▸ MI 상세 분석`(2차
 
 ---
 
+## 6-STEP5-0. 🔴🔴🔴 **STEP 5-0 완료 — SAME 전략 4단계 중 «①만» 실행된다**
+
+> 🔴 **운영 0 · 테스트 0 · 배포 0.** 하니스 1개(`core-step5-domestic-lineage` · LIVE 게이트).
+> 🔴 **CASE A 확정** — SAME 판정 로직은 정상 존재하고 생산 경로에서 돈다. 그런데
+> `TEXT_CONFIRMED`(= `PRESUMED_SAME` 의 매핑)가 **가격 등급에서 SAME 을 우회** 한다.
+> 🔴 그리고 전략 **②③④ 가 현재 생산 경로에 «연결되어 있지 않다».**
+
+### 🟢 CPO 전략 ↔ 현재 코드 대응표 (실측 · AC009/AC010)
+
+| CPO 전략 | 코드 owner | 실행? | 실측 근거 |
+|---|---|---|---|
+| ① 품번/모델코드 | `confirmBrandCodeInTitle` → `compareModelCode`(run-domestic-price-check **:687·699**) | 🟢 **돈다** | `modelCodeEvidence` = **exact 3/4**(biskuit·luxboy·beaumonde) |
+| ② 품번 없을 때 상품명 **+ 상세** | 상품명 = `coreTitleTokens`(TITLE 축) 🟢 / **상세 = 칸이 없다** 🔴 | 🟡 **절반** | `ProductFacts` 에 **상세설명 원문 칸이 없다**(파생 칸 `materialText`·`fitText`·`ageRangeText`·`categoryText`만) · 국내 후보 **전건 null** |
+| ③ 브랜드 없을 때 **상세에서 브랜드 단서** | `siteBrandName`(WU-134 · `og:site_name`/`Organization.name`) | 🔴 **아니다** | 상세설명 **본문을 보지 않는다** · donokids `brand=null` → `BRAND_UNCONFIRMED` 그대로 |
+| ③-b 품번으로 브랜드 확인(WU-143 **C3**) | `cross-seller.ts:806 codeEvidence` | 🔴 **구현 보류** | 그 자리 주석이 직접: 「**구현하지 않았다** — 전체 회귀가 12파일 16건을 잡았다」 |
+| ④ 이미지 비교 | `compareCrossSellerProducts(a,b,**image?**)` | 🔴🔴 **미발화** | 운영 호출부 `match.ts:661` 이 **3번째 인자를 넘기지 않는다** · `IMAGE` 축은 `corePoints` 에서도 **제외**(:1149) · `facts.imageUrls` **원상품조차 0** |
+| ⑤ 8축 MI 연결 | `compareCrossSellerProducts` 14축 | 🟢 돈다 | 축 이름 실측 — MODEL_CODE·COLOR·IMAGE·BRAND_*·TITLE·MATERIAL·CATEGORY·GARMENT_FORM·AUDIENCE_LINE·SIZE_SYSTEM·COLOR_VARIANT·SAME_SELLER_DISTINCT_LISTING |
+
+### 🔴🔴 AC009 후보별 증거 lineage (실측 · 운영 함수 · 실제 HTTP)
+
+| 후보 | human | 품번축 | blockers | cross verdict | matchTruth | display | tier | 가격 | 참고가격 |
+|---|---|---|---|---|---|---|---|---:|---|
+| biskuit.kr | **SAME** | **exact B226AC009** | BRAND_MISMATCH · NO_TITLE_OVERLAP | PRESUMED_SAME | TEXT_CONFIRMED | PRESUMED_SAME | COMPARISON | 88,000 | **O** |
+| m.luxboy.com | **DIFFERENT** | **exact B226AC009** | NO_TITLE_OVERLAP | PRESUMED_SAME | TEXT_CONFIRMED | PRESUMED_SAME | COMPARISON | 59,000 | X(market UNKNOWN) |
+| donokids.com | (라벨없음) | unavailable | BRAND_UNCONFIRMED | PRESUMED_SAME | TEXT_CONFIRMED | PRESUMED_SAME | COMPARISON | 88,000 | X(market UNKNOWN) |
+| beaumonde(AC010) | **SAME** | **exact B226AC010** | **없음** | **SAME** | STRONG_IDENTIFIER | **SAME** | EXACT | 83,600 | **O** |
+
+🔴🔴 **가장 중요한 사실 — 증거 축으로 biskuit(정답)과 luxboy(오답)가 «역전» 돼 있다.**
+둘 다 **품번 exact** · 둘 다 `NO_TITLE_OVERLAP` · 둘 다 `TEXT_CONFIRMED/COMPARISON` 이고,
+**biskuit 쪽이 blocker 가 하나 더 많다**(BRAND_MISMATCH — 샵이 brand 칸에 자기 이름 「비스킷」).
+⟹ 🔴 **「BRAND 를 완화해 biskuit 을 열자」는 luxboy 를 같이 열지 않지만, 「NO_TITLE_OVERLAP 을
+완화」하면 luxboy 가 «먼저» 열린다**(WU-138 이 순손실로 측정한 그 모양).
+🔴 그리고 **지금 88,000 이 정답인 것은 「우연」이다** — luxboy(human DIFFERENT)를 막은 것은
+MI 가 아니라 **market 축**(`.com`+KRW → UNKNOWN)이다. 「MI 가 걸러냈다」로 적으면 틀린다.
+
+### 🟢 Q1~Q7 (STEP 5-0)
+
+```
+Q1 품번을 비교하는가            🟢 **한다** — exact 3/4. 등록부 추출기와 무관하게
+                               `confirmBrandCodeInTitle` 이 제목에서 찾는다(:687)
+Q2 품번 없을 때 상품명+상세      🟡 상품명 **O**(donokids conf 0.82 · 「유사도 80%」) ·
+                               🔴 **상세는 들어가지 않는다**(facts 에 칸이 없다)
+Q3 브랜드 없을 때 상세에서 회수  🔴 **안 한다**(`og:site_name` 축뿐) · C3 는 **구현 보류**
+Q4 이미지 비교가 들어가는가      🔴🔴 **안 들어간다**(인자 미전달 · corePoints 제외)
+Q5 이미지 ↔ TEXT_CONFIRMED      🔴 **연결 없음**(미발화) · 설계상도 SIMILAR→PRESUMED 보강까지
+Q6 TEXT_CONFIRMED 의 뜻          🔴🔴 **두 뜻이 한 값에 겹쳐 있다**(match-truth.ts:255·287):
+                                 ⒜ 텍스트 등급 high 이상(`textOnly`)
+                                 ⒝ **cross-seller `PRESUMED_SAME` 의 매핑**(`fromCross`)
+Q7 PRESUMED_SAME = SAME 인가     🔴 **아니다.** 코드가 그것을 「확정하지 않았다」로 쓴다 —
+                                 `crossSellerReserved`(:233)가 **식별자 승격을 막는 입력** 이다
+                                 ⟹ 🔴 **국내 가격 자격을 그 값에 연결하면 보류를 확정으로 쓴다**
+```
+
+### 🔴 SAME 이 막히는 실제 지점 (코드 좌표)
+
+```
+match-truth.ts:237   if (!observedDifference && !crossSellerReserved && !colorUnverified)
+                        → modelCode exact ⟹ EXACT_IDENTIFIER / STRONG_IDENTIFIER
+🔴 biskuit 은 **세 조건 중 둘이 참** 이라 그 문을 통과하지 못한다:
+   observedDifference ← BRAND_MISMATCH(샵 이름) · crossSellerReserved ← PRESUMED_SAME
+🔴 그 다음 줄이 전부다 — `fromCross: PRESUMED_SAME → "TEXT_CONFIRMED"`(:287)
+   → `priceTierFromLink:88 TEXT_CONFIRMED → "COMPARISON"`
+   → `market-intelligence.ts:318` 이 COMPARISON 을 **참고가격 입력으로 받는다**
+```
+
+### 🟡 CPO 결정 필요 (CTO 가 고르지 않았다 · 전부 금지축과 맞닿는다)
+
+```
+⒜ **WU-143 C3 를 열 것인가**(품번 exact ⟹ 브랜드 확인됨) — 그 자리가 전략 ③의 코드 자리다.
+   🔴 선행 조건이 주석에 적혀 있다 — **GT 63쌍 precision 재측정 + false SAME 전수**.
+   🔴 그리고 **`NO_TITLE_OVERLAP` 완화와 절대 같이 가면 안 된다**(luxboy 가 뚫린다 · 주석 명시)
+⒝ **상세설명을 facts 에 들일 것인가**(전략 ②) — `ProductFacts` 에 칸 신설 = **계약 변경** 이고
+   CORE-2AC 가 「소재는 **채우지 않는다**」를 계약으로 잠근 자리와 충돌한다
+⒞ **이미지 축을 운영에 연결할 것인가**(전략 ④) — 인자 한 개지만 ⒤ 이미지 해시 계산 비용
+   ⒥ `facts.imageUrls` 가 **원상품조차 0** 이라 **공급부터 없다**
+⒟ 국내 가격 자격(STEP 5-1 의 ⒜) — 🔴 ⒜~⒞ 가 정해지기 전에는 **그 줄을 건드리지 않는다**
+```
+
+🔴 **하니스를 두 번 틀렸고 둘 다 사전에 잡았다** — ⒜ `facts.brandModelCode` 를 읽어 「품번
+전건 null」이 나왔다(**실제 입력은 제목 건초더미** ⟹ 「품번 축 미발화」라는 거짓 결론 직전)
+⒝ `j.best.modelCodeEvidence` 를 읽어 `undefined`(**그 칸은 `j` 에 있다** · JUDGED payload :966).
+🔴 이 트랙이 반복해 온 **「칸 이름·측정 위치 추측」** 함정이고 숫자를 믿기 전에 owner 를 읽어야 한다.
+
+---
+
 ## 6-STEP5. 🔴🔴🔴 **CORE-NEXT STEP 5-1·5-2 완료 — 「SAME 아닌 가격」이 실측됐다**
 
 > 🔴 **운영 코드 변경 0 · DB 0 · 배포 0.** 하니스 1개(`core-step5-domestic-lineage` ·

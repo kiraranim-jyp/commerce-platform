@@ -149,6 +149,11 @@ describe("CORE-NEXT STEP 5-1/5-2 — 국내 참고가격 lineage", () => {
       console.log(`② 후보 풀 — usable ${pool.metrics.usableProductUrls}/${c.gt.length}`);
 
       const rows: GeminiTransientRow[] = [];
+      /** 🔴 판정에 **실제로 들어간** 후보 객체(품번 축 입력을 그 자리에서 읽는다). */
+      const bestByUrl = new Map<
+        string,
+        { modelCodeEvidence?: string | null; matchedModelName?: string | null; colorText?: string | null }
+      >();
       const byUrl = new Map<string, Row>();
       for (const g of c.gt) {
         byUrl.set(loose(g.url), {
@@ -205,6 +210,17 @@ describe("CORE-NEXT STEP 5-1/5-2 — 국내 참고가격 lineage", () => {
           }
           continue;
         }
+        /**
+         * 🔴 **`j.best` 가 아니라 `j` 가 들고 있다**(`:966` JUDGED payload) —
+         *    `modelCodeEvidence` · `domesticModelCode` 는 **판정 결과의 칸** 이다.
+         *    🔴 1차에 `j.best` 를 읽어 `undefined` 가 나왔다 — 「품번 축 미발화」로
+         *       적었으면 거짓 결론이었다(칸 이름 추측 함정 · 사전에 잡았다).
+         */
+        bestByUrl.set(loose(j.best.url), {
+          modelCodeEvidence: j.modelCodeEvidence ?? null,
+          matchedModelName: j.domesticModelCode ?? null,
+          colorText: (j.best as unknown as { colorText?: string | null }).colorText ?? null,
+        });
         const m = classifyCandidateMarket({
           domain: res.domain,
           currency: j.best.price?.currency ?? null,
@@ -314,6 +330,55 @@ describe("CORE-NEXT STEP 5-1/5-2 — 국내 참고가격 lineage", () => {
             ` · display=${transientDisplayTier(row)} · tier=${row.priceTier}` +
             ` · ${row.priceCurrency ?? "-"} ${row.priceAmount ?? "-"}`,
         );
+        /**
+         * 🔵🔵 STEP 5-0 — **CPO 가 요구한 「증거 원자료」.** 🔴 판정하지 않는다.
+         *    「품번 → 상품명 → 브랜드 → 상세 → 이미지」가 실제로 무엇을 들고 있었는지
+         *    그대로 적는다(그 순서가 코드에서 실행되는지의 근거가 이 값들이다).
+         */
+        console.log(
+          `       evidence — blockers=[${(row.crossSellerBlockers ?? []).join(",")}]` +
+            ` conflicts=[${(row.crossSellerConflicts ?? []).join(",")}]` +
+            ` verdict=${row.crossSellerVerdict} conf=${row.confidence}`,
+        );
+        console.log(`       reasons — ${(row.matchReasons ?? []).join(" | ").slice(0, 300)}`);
+        /**
+         * 🔴🔴 **품번 축의 «실제 입력» 은 `facts.brandModelCode` 가 아니다.**
+         *    운영 러너가 `confirmBrandCodeInTitle(원상품품번, 후보제목)` 으로 찾아
+         *    `compareModelCode` 에 넣는다(run-domestic-price-check:687·699) ⟹
+         *    그 산출(`modelCodeEvidence`)을 찍는다. 🔴 facts 칸을 읽고 「품번 없음」으로
+         *    적으면 **거짓 결론** 이다(이 트랙의 반복 함정 · 사전에 잡았다).
+         */
+        const b = bestByUrl.get(loose(row.discoveredUrl));
+        console.log(
+          `       품번축 — modelCodeEvidence=${String(b?.modelCodeEvidence)}` +
+            ` matchedModelName=${JSON.stringify(b?.matchedModelName ?? null)}` +
+            ` colorText=${JSON.stringify(b?.colorText ?? null)}`,
+        );
+      }
+      /** 🔴 원상품/후보의 **facts 칸** 을 그대로 찍는다(상세 유래 칸이 비었는지 본다). */
+      const of = query.facts as unknown as Record<string, unknown>;
+      console.log(
+        `⑤-원상품 facts — code=${String(of.brandModelCode)} brand=${JSON.stringify(of.brand)}` +
+          ` titleTokens=${JSON.stringify(of.coreTitleTokens)} color=${JSON.stringify(of.colorText)}` +
+          ` material=${JSON.stringify(of.materialText)} fit=${JSON.stringify(of.fitText)}` +
+          ` age=${JSON.stringify(of.ageRangeText)} category=${JSON.stringify(of.categoryText)}` +
+          ` audience=${JSON.stringify(of.audienceSignals)} images=${(of.imageUrls as string[] | undefined)?.length ?? 0}`,
+      );
+      for (const res of pool.searchResults) {
+        for (const cand of res.candidates ?? []) {
+          const cf = (cand as unknown as { facts?: Record<string, unknown> }).facts;
+          if (!cf) {
+            console.log(`⑤-후보 facts — ${res.domain}: 🔴 facts 없음`);
+            continue;
+          }
+          console.log(
+            `⑤-후보 facts — ${res.domain} code=${String(cf.brandModelCode)} brand=${JSON.stringify(cf.brand)}` +
+              ` titleTokens=${JSON.stringify(cf.coreTitleTokens)} color=${JSON.stringify(cf.colorText)}` +
+              ` material=${JSON.stringify(cf.materialText)} fit=${JSON.stringify(cf.fitText)}` +
+              ` age=${JSON.stringify(cf.ageRangeText)} category=${JSON.stringify(cf.categoryText)}` +
+              ` audience=${JSON.stringify(cf.audienceSignals)} images=${(cf.imageUrls as string[] | undefined)?.length ?? 0}`,
+          );
+        }
       }
       all.push(...byUrl.values());
     }
