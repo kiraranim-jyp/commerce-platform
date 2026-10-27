@@ -11,9 +11,9 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-FINAL-VISUAL-01** — 🟢🟢 **TEST/QA X-Ray 화면 구축·배포**(§9-AC)
-NEXT         🔵 **CEO 가 실제 상품을 TEST 화면에서 확인** → 문제 사례만 하나씩 개선
-             🔴 **CTO 가 threshold · matcher · AI · Comparability · BRAND alias 를 열지 않는다**
+CURRENT WU   **DISCOVERY CORE** — 🔴🔴 **HOLD · blocker = B(Search Execution)**(§9-AD)
+NEXT         🔴🔴 **Search Provider 단독 의사결정**(CPO/CEO) — 🔴 그 전까지 Registry 확대 금지
+             🔵 전략은 **docs/DISCOVERY-STRATEGY-LOCK.md** 에 고정됐다(세션 바뀌어도 남는다)
 CEO ACTION   🔵🔵 **있다** — 배포된 **/qa/evidence** 에서 실제 상품을 넣어 확인(§9-AC)
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SAME-03**(화면 + CEO GT 10/10) · **SAME-04**(FN 3건 원인 확정) ·
@@ -22,7 +22,7 @@ CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **IMAGE-EVIDENCE-02**(C22 공급 0→1 · 정규화 Evidence · READY) ·
              **FINAL-VISUAL-01**(QA X-Ray · 운영 UI 격리 · 운영 파일 변경 0)
 Git          clean · origin/main 0/0 · Production / 200
-회귀         **703 files / 9,434 passed / 0 failed / 148 skipped** · typecheck 0 · build 0
+회귀         **703 files / 9,435 passed / 0 failed / 148 skipped** · typecheck 0 · build 0
 ```
 
 🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **CPO 판정** 이다 — matcher 를 CTO 가 열지 않는다.
@@ -3158,3 +3158,63 @@ https://ttaejyo.vercel.app/qa/evidence   (로그인 필요)
 함수다) ⒞ 한글 형태 어휘는 **관측된 것만** 담았다 — 없는 말은 대응되지 않고 그것이 정상이다.
 
 **STOP — `CORE-FINAL-VISUAL-01` 완료 / `EXISTING JUDGMENT = REUSED` · `MI VISUAL VALIDATION = READY`**
+
+---
+
+## 9-AD. 🔴🔴 **DISCOVERY CORE — 전략 LOCK 고정 · `HOLD`(blocker = B)**(2026-10-27)
+
+🔵🔵🔵 **전략은 이제 `docs/DISCOVERY-STRATEGY-LOCK.md` 에 있다.**
+🔴 Discovery 관련 작업을 시작하는 **모든 새 세션/페이지는 그 문서를 먼저** 읽는다.
+🔴 §0 이 회전해도 **그 파일은 남는다** — 이번에 전략을 잃어버린 원인이 그것이었다.
+
+### 최종 제품 흐름(변경 금지)
+
+```
+상품 URL → Query Planner → **자동 Search** → Candidate URLs → Crawl → Evidence
+→ Identity → 국내 참고가격 → 해외 최저 소싱가 → MI → 판매판단 → 등록
+🔴 사용자는 Discovery 과정에 **개입하지 않는다**. 북마크릿은 **임시 수단** 이지 최종 구조가 아니다.
+```
+
+### 🔴 STEP 1~2 결과 — 막힌 칸은 **하나** 다
+
+| 칸 | 상태 | 위치 |
+|---|---|---|
+| A Query Planner | 🟢 **동작**(순수 · HTTP 0) | `discovery-core/query-planner.ts` |
+| **B Search Execution** | 🔴🔴 **없다 — BLOCKER** | 서버측 실행자 **0건**(전수 grep) |
+| C Candidate URL | 🟢 | `url-candidate-pool.ts` |
+| D~I Crawl · Evidence · Identity · 국내가 · 해외가 · MI | 🟢 | 기존 pipeline |
+
+🔴 **실행수단 전수 검토(실측)** — 유료 API **미도입** · Gemini **flag OFF**(402 실측) ·
+DuckDuckGo 서버 파싱 **403**(Origin 헤더 · 실측) · 소매처 직접은 **Registry 상한**(WU-007 증분 0/6) ·
+북마크릿은 **최종 구조 아님**. ⟹ 🔴 **비용 0 으로 서비스가 스스로 검색할 수단이 없다.**
+
+🔴 **「CTO 의 WebSearch 로 됐다」를 근거로 쓰지 않는다** — 그것은 개발자 도구이고
+배포된 서비스의 capability 가 아니다(과거 `cto-websearch` 표기 주의).
+
+### 🟢 이번에 «한» 것(STEP 3 은 조건 불성립이라 하지 않았다)
+
+```
+🟢 QA X-Ray 에 **Discovery 단계** 추가 — 생성된 검색어 목록 + **실행자 부재(BLOCKED)** 를 적는다
+   🔴 `buildDiscoveryQuerySet` 은 **순수 함수** 다 ⟹ 이 배선이 검색을 **실행하지 않는다**
+   🟢 계약이 그 사실을 잠근다 — 실행자가 생기면 그 계약이 FAIL 하고 **그것이 열렸다는 증거** 다
+🔴 Registry 확대 0 · Adapter 0 · Gemini 0 · 유료 API 0 · Identity/MI/가격 변경 0
+```
+
+### 🔴 전략을 잃어버린 지점(재발 방지)
+
+```
+CONFIRMED = C + D (부분 E)
+  C 채택 전략 둘이 **실행 불가** 라 실제로 도는 등록부 경로로 모든 WU 가 수렴했다
+  D 이전 측정이 **등록부를 분모** 로 삼았고 그것이 다음 WU 의 출발점이 됐다
+  E START-HERE §0 에 **Discovery 전략 줄이 없었다**
+🟢 ⟹ `DISCOVERY-STRATEGY-LOCK.md` 를 만들어 §0 과 **분리해** 고정했다
+```
+
+### 증거
+
+```
+회귀 **703 files / 9,435 passed / 0 failed / 148 skipped**(직전 703/9,434 대비 **+1 test**)
+typecheck **0** · build **0** · 운영 변경 = QA 경로 **3 파일**(운영 셀러 화면 **0**)
+```
+
+**STOP — `DISCOVERY CORE = HOLD` · blocker **B(Search Execution)** / 다음은 Search Provider 결정**

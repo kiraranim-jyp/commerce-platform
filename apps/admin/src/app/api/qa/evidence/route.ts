@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { factsFromProductUrl } from "@commerce/crawler";
 import { explainEvidence } from "@commerce/crawler/src/comparison-search/evidence-explain";
+/** 🔴 **순수 함수**(HTTP 0) — 검색어를 «만들기만» 한다. 실행자는 이 저장소에 없다. */
+import { buildDiscoveryQuerySet } from "@commerce/crawler/src/discovery-core/query-planner";
 import type { ProductFacts } from "@commerce/shared";
 import { requireUser } from "@/lib/auth/require-user";
 import { computeMarketIntelligence } from "../../price-history/_lib/market-intelligence";
@@ -51,6 +53,45 @@ export async function POST(request: Request) {
       };
       /** 🔴 facts 를 못 얻으면 **지어내지 않는다** — 상태만 돌려준다. */
       response.explanation = facts ? explainEvidence(facts) : null;
+
+      /**
+       * ════════════════════════════════════════════════════════════════════════
+       * 🔵🔵 **DISCOVERY-CORE — Query Planner 산출을 «보여만» 준다**(2026-10-27)
+       * ════════════════════════════════════════════════════════════════════════
+       *
+       * 🔴🔴 **검색을 실행하지 않는다.** `buildDiscoveryQuerySet` 은 **순수 함수(HTTP 0)**
+       *    이고, 이 라우트는 그 결과를 **화면에 적기만** 한다.
+       * 🔴 그래서 이 줄이 Discovery 를 «자동화하지 않는다» — 자동화를 막는 것은
+       *    **검색 «실행자»** 이고 그것이 저장소에 **없다**(STEP 2 결론).
+       * 🟢 그 사실을 CEO 가 화면에서 직접 보게 하는 것이 이 블록의 목적이다.
+       */
+      if (facts) {
+        const queries = buildDiscoveryQuerySet({
+          brand: facts.brand,
+          productName: facts.title,
+          productType: facts.categoryText,
+          genderAge: null,
+          color: facts.colorText,
+          size: null,
+          season: null,
+          productCode: facts.brandModelCode,
+          /** 🔴 아래 넷은 **Query Planner 가 쓰지 않는 칸** 이다 — 지어내지 않고 원본만 싣는다. */
+          sourceUrl: facts.sourceUrl,
+          sourceSite: null,
+          sourceCountry: null,
+          market: null,
+        });
+        response.discovery = {
+          queries: queries.map((q) => ({ axis: q.axis, text: q.text })),
+          /** 🔴 **실행 수단이 없다** — 이 값을 「실패」가 아니라 **blocker** 로 읽는다. */
+          searchExecutor: null,
+          blocker: "B_SEARCH_EXECUTION",
+          note:
+            "검색어 생성은 동작합니다. 🔴 그러나 이 검색어를 «서비스가 스스로» 실행할 수단이 " +
+            "현재 없습니다(무료 실행자 0 · Gemini flag OFF · 유료 API 미도입). " +
+            "그래서 후보 URL 자동 수집이 열리지 않습니다.",
+        };
+      }
     } catch (error) {
       response.extraction = { status: "THREW", error: error instanceof Error ? error.message : "알 수 없는 오류" };
       response.explanation = null;

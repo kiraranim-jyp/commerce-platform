@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { EvidenceExplanation } from "@commerce/crawler/src/comparison-search/evidence-explain";
 import type { JudgmentReadiness } from "@/app/api/price-history/_lib/judgment-readiness";
-import { QaEvidenceView, QaJudgmentPanel } from "./QaEvidenceView";
+import { QaDiscoveryPanel, QaEvidenceView, QaJudgmentPanel, type QaDiscovery } from "./QaEvidenceView";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════════
@@ -21,6 +21,7 @@ interface QaResponse {
   extraction?: { status?: string; fetchPath?: string; httpCalls?: number | null; error?: string };
   explanation?: EvidenceExplanation | null;
   judgment?: JudgmentReadiness | null;
+  discovery?: QaDiscovery | null;
   judgmentError?: string;
 }
 
@@ -108,6 +109,7 @@ export default function QaEvidencePage() {
         </p>
       )}
 
+      {result?.discovery && <QaDiscoveryPanel discovery={result.discovery} />}
       {result?.explanation && <QaEvidenceView explanation={result.explanation} />}
       {result && !result.explanation && url && (
         <p style={{ fontSize: 13, color: "#b45309" }}>

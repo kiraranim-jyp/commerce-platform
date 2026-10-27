@@ -8,7 +8,7 @@ import type { ProductFacts } from "@commerce/shared";
 import { explainEvidence } from "@commerce/crawler/src/comparison-search/evidence-explain";
 import { attachProductEvidence } from "@commerce/crawler/src/comparison-search/product-evidence";
 import { stripComments } from "@/app/pipeline/commerce/__tests__/source-text";
-import { QaEvidenceView, QaJudgmentPanel } from "@/app/qa/evidence/QaEvidenceView";
+import { QaDiscoveryPanel, QaEvidenceView, QaJudgmentPanel } from "@/app/qa/evidence/QaEvidenceView";
 import { summarizeJudgmentReadiness } from "../judgment-readiness";
 import { SAME05_BASELINE, SAME05_PAIRS, same05Judge, same05Tally } from "./core-same05-gt";
 
@@ -362,6 +362,30 @@ describe("CORE-FINAL-VISUAL-01 §마운트 DOM — 화면이 실제로 그린다
   });
   const at = (id: string): string =>
     container.querySelector('[data-testid="' + id + '"]')?.textContent ?? "";
+
+  /**
+   * 🔵🔵 **DISCOVERY-CORE** — 검색어 생성은 되고 **실행자가 없다**는 사실이 화면에 있어야 한다.
+   *    🔴 이 계약은 「자동 Discovery 가 된다」를 단언하지 않는다 — **막힌 칸을 숨기지 않는다**를
+   *       단언한다. 실행자가 생기면 이 계약이 FAIL 하고 그것이 **열렸다는 증거** 다.
+   */
+  it("Discovery — 검색어는 보이고 실행자 부재(BLOCKED)가 화면에 적힌다", () => {
+    act(() =>
+      root.render(
+        createElement(QaDiscoveryPanel, {
+          discovery: {
+            queries: [{ axis: "BRAND_CODE", text: '"Bobo Choses" "B226AC010"' }],
+            searchExecutor: null,
+            blocker: "B_SEARCH_EXECUTION",
+            note: "검색어 생성은 동작합니다. 🔴 그러나 서비스가 스스로 실행할 수단이 없습니다.",
+          },
+        }),
+      ),
+    );
+    expect(at("qa-discovery-queries")).toContain("B226AC010");
+    expect(at("qa-discovery-executor")).toContain("없음");
+    expect(at("qa-discovery-executor")).toContain("B_SEARCH_EXECUTION");
+    expect(at("qa-discovery-note")).toContain("실행할 수단이 없습니다");
+  });
 
   it("HOLD 면 «이유» 가 화면에 실제로 렌더된다", () => {
     const r = summarizeJudgmentReadiness({

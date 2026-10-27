@@ -59,6 +59,44 @@ export function QaJudgmentPanel({ judgment }: { judgment: JudgmentReadiness }) {
   );
 }
 
+export interface QaDiscovery {
+  queries: { axis: string; text: string }[];
+  searchExecutor: string | null;
+  blocker: string | null;
+  note: string;
+}
+
+/**
+ * 🔵 **Discovery 단계** — 검색어 생성까지는 동작하고, 그 뒤가 막혀 있다는 사실을
+ *    화면이 **직접** 말한다. 🔴 이 패널은 검색을 실행하지 않는다.
+ */
+export function QaDiscoveryPanel({ discovery }: { discovery: QaDiscovery }) {
+  return (
+    <Section title="⓪ Discovery — 검색어 생성 / 자동 검색 실행">
+      <p style={{ fontSize: 13, margin: "0 0 8px" }} data-testid="qa-discovery-executor">
+        자동 검색 실행자:{" "}
+        <strong style={{ color: discovery.searchExecutor ? "#15803d" : "#b91c1c" }}>
+          {discovery.searchExecutor ?? "없음 (BLOCKED)"}
+        </strong>
+        {discovery.blocker && <span style={{ color: "#6b7280" }}> · blocker {discovery.blocker}</span>}
+      </p>
+      <p style={{ fontSize: 13, margin: "0 0 10px", color: "#b45309" }} data-testid="qa-discovery-note">
+        {discovery.note}
+      </p>
+      <strong style={{ fontSize: 13 }}>생성된 검색어 {discovery.queries.length}개</strong>
+      <ol style={{ margin: "6px 0 0", paddingLeft: 20, fontSize: 13 }} data-testid="qa-discovery-queries">
+        {discovery.queries.length === 0 && <li>(증거가 부족해 검색어를 만들지 못했습니다)</li>}
+        {discovery.queries.map((q) => (
+          <li key={`${q.axis}-${q.text}`}>
+            <code>{q.text}</code>
+            <span style={{ color: "#6b7280" }}> · {q.axis}</span>
+          </li>
+        ))}
+      </ol>
+    </Section>
+  );
+}
+
 export function QaEvidenceView({ explanation }: { explanation: EvidenceExplanation }) {
   const { titleStructure: ts, language, image, sleeve } = explanation;
   return (
