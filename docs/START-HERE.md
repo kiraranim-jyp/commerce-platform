@@ -11,10 +11,10 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **DISCOVERY E2E** — 🟢 AI Search → 기존 동일상품 판단 **PASS** · 🟡 CEO 육안 3건
+CURRENT WU   **DISCOVERY E2E** — 🟡 **E2E 기술 PASS / 동일상품 검증 HOLD**(CEO 3건 대기)
 NEXT         🔵 **실제 상품에서 Candidate URL → Crawl → Evidence → Identity 확인**(MI 는 그 다음)
              🔵 전략은 **docs/DISCOVERY-STRATEGY-LOCK.md** 에 고정됐다(세션 바뀌어도 남는다)
-CEO ACTION   🔵🔵 **있다** — 실제 URL **3건** 이 원상품(B226AC009)과 동일상품인지 육안 확인
+CEO ACTION   🔵🔵 **있다 · 3건뿐** — 11st · danawa · answear 가 B226AC009 와 **동일/비동일** 인지만
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SAME-03**(화면 + CEO GT 10/10) · **SAME-04**(FN 3건 원인 확정) ·
              **DESC-EVIDENCE-01**(provenance + 6축 + probe 4축 · 운영 2경로 배선) ·
@@ -32,7 +32,7 @@ CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SEARCH-PROVIDER-12**(🔴🔴 입구 손실의 절반이 **우리 분류기** · 1-hop 은 이미 작동) ·
              **SEARCH-PROVIDER-13**(`-item-{id}.aspx` 상품 분류 · UNKNOWN→PRODUCT 50 · 오분류 0 · 🔴 회수 0) ·
              **SEARCH-PROVIDER-14**(직접 vs 1-hop 분리 · 1-hop 증분 Evidence **4**(+6%) · 오염 0) ·
-             **DISCOVERY E2E**(Search 1회 → 후보 3 → 전부 PRESUMED_SAME · tier COMPARISON · 🇰🇷1 🌎1)
+             **DISCOVERY E2E**(Search 1회 → 후보 3 → 전부 PRESUMED_SAME · 🔴 사람 확인 0/3 ⟹ **HOLD**)
 Git          clean · origin/main 0/0 · Production / 200
 회귀         **716 files / 9,544 passed / 0 failed / 153 skipped** · typecheck 0 · build 0
 ```

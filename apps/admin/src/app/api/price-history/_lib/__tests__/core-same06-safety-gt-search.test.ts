@@ -151,6 +151,12 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
    *    SAME/DIFFERENT 라벨이 **0** 이다. 🔴 운영 분류기로 역수입하지 않는다(계약).
    */
   scanned.push("search-provider-13-aspx-evidence.json");
+  /**
+   * 🔵 DISCOVERY E2E(2026-10-27) — CEO 육안 검증 **대기** 3건.
+   * 🔴 **아직 human GT 가 아니다** — `human` 칸이 전건 `null` 이다(CTO 가 판정하지 않았다).
+   * 🟢 CEO 라벨이 들어오면 그 칸이 채워지고, **그때** 분모에 들어갈지 CPO 가 정한다.
+   */
+  scanned.push("discovery-e2e-ceo-check.json");
 
   /* 행 단위 originCode + verdict 계열 */
   for (const [file, src, codeKey, verdictKey] of [

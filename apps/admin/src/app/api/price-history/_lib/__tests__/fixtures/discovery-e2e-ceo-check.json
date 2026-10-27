@@ -1,0 +1,51 @@
+{
+ "note": "🔵 DISCOVERY E2E 의 CEO 육안 검증 3건. 🔴 `human` 은 **비어 있다** — CTO 가 동일상품을 판정하지 않았다. CEO 라벨이 들어오면 이 칸만 채운다(그때 동일상품 경로 GO/HOLD 가 닫힌다). 🔴 이 파일은 human GT 가 아니다(아직 라벨 0).",
+ "capturedAt": "2026-10-27",
+ "origin": {
+  "id": "S2",
+  "brand": "Bobo Choses",
+  "code": "B226AC009",
+  "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+  "color": "Light Blue",
+  "sourceUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses"
+ },
+ "search": {
+  "query": "\"B226AC009\"",
+  "searches": 1,
+  "organicResults": 9,
+  "productPages": 7,
+  "candidates": 3
+ },
+ "candidates": [
+  {
+   "domain": "11st.co.kr",
+   "url": "https://www.11st.co.kr/products/9589851221",
+   "engineVerdict": "PRESUMED_SAME",
+   "matchTruth": "TEXT_CONFIRMED",
+   "priceTier": "COMPARISON",
+   "market": "KR",
+   "codeInUrl": false,
+   "human": null
+  },
+  {
+   "domain": "m.danawa.com",
+   "url": "https://m.danawa.com/product/product.html?code=123688298",
+   "engineVerdict": "PRESUMED_SAME",
+   "matchTruth": "TEXT_CONFIRMED",
+   "priceTier": "COMPARISON",
+   "market": "UNKNOWN",
+   "codeInUrl": false,
+   "human": null
+  },
+  {
+   "domain": "answear.com",
+   "url": "https://answear.com/p/bobo-choses-longsleeve-dzieciecy-bawelniany-hug-hairy-monster-niebieski-b226ac009-1720719",
+   "engineVerdict": "PRESUMED_SAME",
+   "matchTruth": "TEXT_CONFIRMED",
+   "priceTier": "COMPARISON",
+   "market": "OVERSEAS",
+   "codeInUrl": true,
+   "human": null
+  }
+ ]
+}

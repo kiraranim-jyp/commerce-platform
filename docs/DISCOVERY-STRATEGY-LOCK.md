@@ -1308,4 +1308,20 @@ answear.com    tier COMPARISON  market **OVERSEAS**  truth TEXT_CONFIRMED
 🟢 단 **가격 비교에는 들어간다**(tier COMPARISON) — 「아무것도 안 나온다」가 아니다.
 ```
 
-**🔵 판정 — `PASS`(흐름은 끝까지 작동한다). 🟡 남은 것은 CEO 육안 3건 하나다.**
+### 🔵🔵 판정(CPO 정정 2026-10-27) — **`E2E 기술 PASS / 동일상품 검증 HOLD`**
+
+🔴 **CTO 가 「최종 PASS」로 닫은 것은 과했다**(CPO 정정). 기술 흐름은 끝까지 작동하지만,
+「AI Search 가 찾아온 URL 중 **실제 동일상품** 을 기존 엔진이 골라냈는가」는 **측정불가** 다 —
+엔진은 `PRESUMED_SAME 3` 을 냈고 **사람이 동일상품이라 확인한 것은 0** 이다.
+
+🟡 **CEO Action — 3건 · 「동일 / 비동일」 두 글자뿐.** 라벨이 들어갈 자리는
+`fixtures/discovery-e2e-ceo-check.json` 의 `human` 칸이고 **지금은 전건 `null`** 이다.
+🔴 CTO 가 미리 채우지 않았다.
+
+```
+3/3 SAME   → 동일상품 판단 경로 GO
+2/3 SAME   → 원인 분석
+1/3 이하   → 동일상품 판단 경로 HOLD
+```
+
+🔴 그 라벨이 오기 전에는 이 항목을 **`PASS` 로 인용하지 않는다** — 「E2E 기술 PASS」까지만 쓴다.
