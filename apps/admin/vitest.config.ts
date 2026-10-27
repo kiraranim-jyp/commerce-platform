@@ -54,6 +54,12 @@ export default defineConfig({
       // **한 번도 실행된 적이 없었다**. 등록 payload를 만드는 코드는 회귀가 곧
       // 실제 등록 실패라 반드시 여기서 잡는다.
       "../../packages/listing/src/**/__tests__/**/*.test.ts",
+      // CORE-IMAGE-EVIDENCE-02(2026-10-27) — image도 같은 처지였다(러너 없음 ·
+      // 테스트 0건). 🔴 그리고 **sharp 가 이 패키지에만 설치돼 있어서** 비교용
+      // 정규화 계약은 여기서만 돌릴 수 있다(apps/admin 쪽에서 import 하면
+      // "Failed to load url sharp" 로 죽는다 — 실제로 났다). 위 주석의 원칙
+      // 그대로, 러너를 또 만들지 않고 이 하나에 붙인다.
+      "../../packages/image/src/**/__tests__/**/*.test.ts",
     ],
   },
 });

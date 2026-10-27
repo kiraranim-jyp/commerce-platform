@@ -8,7 +8,7 @@ import { extractMarketEvidence } from "./market-evidence";
 import { recoverModelCodeFromDetail } from "./model-code-from-detail";
 import { attachProductEvidence } from "./product-evidence";
 import { productFactsFromListing, productFactsFromShopifyProduct } from "./seller-facts";
-import { jsonLdProductDescription } from "./jsonld-product-description";
+import { jsonLdProductDescription, jsonLdProductImages } from "./jsonld-product-description";
 import { classifyUrlShape, toCrawlerUrl } from "./url-shape";
 import { extractShopifyHandle, fetchPlainHtmlWithFinalUrl } from "../shopify-product-json";
 import { fetchWithDomainRateLimit } from "../rate-limit/domain-rate-limiter";
@@ -497,6 +497,15 @@ async function htmlPath(
      *    **기존 MODEL_CODE 축** 에 증거를 넣는 것까지가 전부다.
      */
     description: jsonLdProductDescription(html),
+    /**
+     * 🔵🔵 **CORE-IMAGE-EVIDENCE-02 — PLAIN_HTML 이미지 공급**(2026-10-27).
+     *
+     * 🔴 **고친 것** — 이 경로가 이미지를 **한 장도 넘기지 않아** `imageUrls` 가 늘 `[]`
+     *    였다(C22 실측 0장). 🟢 이제 `description` 과 **같은 JSON-LD 블록** 에서 읽는다
+     *    ⟹ 새 파서 0 · **추가 HTTP 0**.
+     * 🔴 `<img>` 태그 · `og:image` 는 **쓰지 않는다**(추천상품/배너 혼입 · CPO §5).
+     */
+    imageUrls: jsonLdProductImages(html),
   });
   /**
    * 🔵🔵 **SPRINT-06 — 기존 recovery 경로를 «그대로» 쓴다**(새 정책 0).

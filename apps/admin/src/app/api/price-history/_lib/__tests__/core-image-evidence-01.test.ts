@@ -62,9 +62,14 @@ const facts = (over: Partial<ProductFacts>): ProductFacts => ({
 });
 
 describe("CORE-IMAGE-EVIDENCE-01 §I1 — IMAGE evidence 는 출처를 잃지 않는다", () => {
+  /**
+   * 🔴 **CORE-IMAGE-EVIDENCE-02 에서 이 계약이 FAIL 했고 «의도된 변경» 이라 갱신했다** —
+   *    대표 표시(`representative`)가 칸으로 추가됐다. 🟢 느슨하게 하지 않고 **그 칸까지
+   *    단언** 하도록 강화했다(전체 회귀가 잡아 줬다 · 단일 파일 실행으로는 안 보였다).
+   */
   it("I1-a — 이미지 URL 이 있으면 axis IMAGE · source IMAGE 로 보존된다", () => {
     const ev = extractProductEvidence({ title: null, description: null, imageUrls: [IMG] });
-    expect(items(ev, "IMAGE")).toEqual([{ value: IMG, source: "IMAGE" }]);
+    expect(items(ev, "IMAGE")).toEqual([{ value: IMG, source: "IMAGE", representative: true }]);
   });
 
   it("I1-b — 운영 facts 경유(`attachProductEvidence`)로도 보존된다", () => {

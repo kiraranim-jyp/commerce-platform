@@ -8,6 +8,8 @@ export * from "./config/marketplace-policy";
 export * from "./utils/hash.util";
 export * from "./utils/storage-paths.util";
 export * from "./utils/jpeg.util";
+/** 🔵 CORE-IMAGE-EVIDENCE-02 — 비교용 정규화 파생표현(🔴 판정 아님 · threshold 0). */
+export * from "./utils/visual-signature.util";
 
 // providers
 export * from "./providers/classifier/gemini.provider";

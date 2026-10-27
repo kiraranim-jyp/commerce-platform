@@ -244,6 +244,9 @@ importers:
       typescript:
         specifier: ^5.5.4
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.4
+        version: 2.1.9(@types/node@20.19.43)(jsdom@30.0.1)(lightningcss@1.33.0)
 
   packages/listing:
     dependencies:
@@ -7523,7 +7526,7 @@ snapshots:
   vite@5.4.21(@types/node@20.19.43)(lightningcss@1.33.0):
     dependencies:
       esbuild: 0.21.5
-      postcss: 8.5.19
+      postcss: 8.5.28
       rollup: 4.62.4
     optionalDependencies:
       '@types/node': 20.19.43

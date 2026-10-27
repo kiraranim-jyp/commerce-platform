@@ -11,16 +11,18 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-IMAGE-EVIDENCE-01** — 🟢🟢 **조사 완료 · `IMAGE EVIDENCE = GO`**(§9-AA)
-NEXT         🔵 **CPO 지정** — §16 규칙상 GO ⟹ 다음은 **IMAGE Evidence production 설계**
-             🔴 **CTO 가 다음 WU 를 고르지 않는다** · BRAND alias 확대는 **HOLD 유지**
+CURRENT WU   **CORE-IMAGE-EVIDENCE-02** — 🟢🟢 **구현·배포 완료**(§9-AB) · `NORMALIZED EVIDENCE = READY`
+NEXT         🔵 **CPO 지정** — 이제 처음으로 「어느 정도의 이미지 차이를 SAME/DIFFERENT
+             Evidence 로 볼 것인가」를 검토할 수 있다. 🔴 **CTO 가 threshold · image matcher ·
+             AI · Comparability 승격 · BRAND alias 를 임의로 열지 않는다**
 CEO ACTION   🟡 **없다** — 화면 변경 0
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SAME-03**(화면 + CEO GT 10/10) · **SAME-04**(FN 3건 원인 확정) ·
              **DESC-EVIDENCE-01**(provenance + 6축 + probe 4축 · 운영 2경로 배선) ·
-             **IMAGE-EVIDENCE-01**(공급 32/32 · 판별 실증 · GO)
+             **IMAGE-EVIDENCE-01**(공급 32/32 · 판별 실증 · GO) ·
+             **IMAGE-EVIDENCE-02**(C22 공급 0→1 · 정규화 Evidence · READY)
 Git          clean · origin/main 0/0 · Production / 200
-회귀         **700 files / 9,379 passed / 0 failed / 147 skipped** · typecheck 0 · build 0
+회귀         **702 files / 9,406 passed / 0 failed / 148 skipped** · typecheck 0 · build 0
 ```
 
 🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **CPO 판정** 이다 — matcher 를 CTO 가 열지 않는다.
@@ -2973,3 +2975,100 @@ GO ⟹ **IMAGE Evidence production integration 설계**
 ```
 
 **STOP — `CORE-IMAGE-EVIDENCE-01` 조사 완료 / `IMAGE EVIDENCE = GO` / 다음 범위 CPO 지정**
+
+---
+
+## 9-AB. 🟢🟢 **`CORE-IMAGE-EVIDENCE-02` — 공급 보강 + 정규화 Evidence**(2026-10-27)
+
+🔴🔴 **threshold 를 만들지 않았다.** 저장소 어디에도 「dHash < X → SAME」이 **없다**.
+matcher · MATCHING-3.1 · Identity · Comparability · price · priceTier · 추천가 ·
+seller UI · AI/embedding — **전부 변경 0**.
+
+### 🟢 A. PLAIN_HTML 이미지 공급 — **C22 가 0 → 1**(운영 경로 실측)
+
+```
+원인  htmlPath 가 `productFactsFromListing` 에 **이미지를 한 장도 넘기지 않았다**
+해결  `jsonLdProductImages(html)` — 🟢 `description` 과 **같은 JSON-LD 블록** 을 읽는다
+      (LD 파서는 **이 파일 하나** · 새 파서 0 · **추가 HTTP 0**)
+🔴 `<img>` 태그 ❌  C22 페이지 img **39개** 중 대다수가 **추천상품 썸네일**(`*_represent`)
+🔴 `og:image` ❌    C22 에는 **아예 없다**(실측 0건)
+🟢 결과  C19 6 · C20 8 · **C22 0 → 1** · C25 5 · C42 6   (운영 `factsFromProductUrl`)
+🟢 그 1장이 **C19 와 같은 Conker Stripe** 상품컷이다(CTO 육안 + 정규화 거리 **4**)
+```
+
+### 🟢 B. 정규화 — `computeVisualSignature`(`packages/image` · sharp **재사용** · 새 dep 0)
+
+```
+orientation(EXIF) → trim → 규격 resize → { rawDHash · normalizedDHash · aHash · color }
+🔴 **정규화 전/후를 둘 다** 낸다 — 하나로 합치면 어느 쪽을 보는지 알 수 없다
+🔴 digest = `d1:<normalizedDHash>:<r,g,b>` — **binary 를 저장하지 않는다**
+🔴 decode 실패는 **던진다**(호출부가 삼킨다 · 0 을 지어내지 않는다)
+```
+
+### 🟢 C. control set 재측정 — 01 과 **한 자리도 다르지 않다**
+
+| 원상품 대비 | raw | **normalized** | 색거리 |
+|---|---:|---:|---:|
+| **C42 human SAME** | 26 | 🟢 **3** | **0** |
+| C19 DIFFERENT | 14 | 16 | 33 |
+| C20 DIFFERENT | 11 | 17 | **157** |
+| C25 DIFFERENT | 27 | 17 | **156** |
+| C22 DIFFERENT | 24 | 20 | 24 |
+
+```
+🟢 같은 상품·다른 판매처  C19 ↔ C22   raw 18 → **norm 4**
+🟢 같은 color variant     C20 ↔ C25   raw 32 → **norm 2**
+🟢 정규화 후 SAME **3** < DIFFERENT 최소 **16** ⟹ **분리된다**
+🔴🔴 raw 로 재면 C42(SAME) **26** > C20(DIFFERENT) **11** — **여전히 역전한다**
+   ⟹ 정규화는 선택이 아니라 **전제** 다
+실패 **0/6** · 평균 **350KB** · 🔴 **822 ms/장**(디코드 4패스 — 01 의 80ms 는 1패스였다)
+```
+
+🔴 **표본은 한 상품군이다**(SAME쌍 1 · DIFFERENT쌍 4) ⟹ **threshold 를 정하지 않았다.**
+
+### 🔴 계약 I7~I12 + 변이 M7~M10
+
+```
+I7  원본 URL 보존 · 대표는 **칸으로** 표시 · digest 는 짧은 문자열(binary 0)
+I8  normalized representation 생성   I9  종횡비 달라도 정규화가 **차이를 줄인다**
+I10 trim 전/후 분리 · 규격 상수 하나  I11 decode/정규화 실패가 facts 를 안 깨뜨린다
+I12 GT 33 verdict·tier **불변** · 🔴 **모든 상품에 같은 digest 를 줘도 SAME 이 아니다**
+M7 공급 배선 제거 **1 FAIL** · M8 정규화 제거 **2 FAIL** ·
+M9 IMAGE→SAME **3 FAIL** · M10 IMAGE→DIFFERENT **2 FAIL** → 전부 바이트 복구
+```
+
+🔴 **기존 계약 하나가 FAIL 했고 «의도된 변경» 이라 갱신·강화했다** — 01 의 `I1-a` 가
+`{value, source}` 만 단언하고 있었다(이제 `representative` 까지). 🔴 **단일 파일
+실행으로는 안 보였고 전체 회귀가 잡았다** — 그래서 전체 회귀를 생략하지 않는다.
+
+### 🔴 구조 변경 둘(숨기지 않는다)
+
+```
+① `apps/admin/vitest.config.ts` 에 **packages/image** 추가 — 그 패키지엔 러너가 없었고
+   🔴 **sharp 가 거기에만 설치돼 있어** apps/admin 에서 import 하면 죽는다(실측).
+   🟢 config 주석의 기존 원칙(「러너를 또 만들지 않는다」) 그대로 따랐다
+② `packages/image` 에 **vitest devDependency** 추가 — crawler·shared·pricing·listing
+   **넷 다 이미 그렇게 돼 있다**(이 패키지만 테스트가 없어서 빠져 있었다).
+   🔴 AI/embedding 의존성이 **아니다** · lockfile 변경 **4줄**
+```
+
+### 증거
+
+```
+회귀 **702 files / 9,406 passed / 0 failed / 148 skipped**
+(직전 700/9,379/147 대비 **+2 files · +27 tests · +1 skip** — 전부 이 WU 산출물)
+typecheck admin **0** · image **0** · build exit **0** · 운영 파일 **4** + 신규 **1**
+```
+
+### 🔵 다음(🔴 CTO 가 고르지 않았다)
+
+```
+이제 처음으로 「어느 정도의 차이를 SAME/DIFFERENT Evidence 로 볼 것인가」를 검토할 수 있다.
+🔴 그때 반드시 안고 가야 할 것 셋 —
+   ⒜ **정규화 없이는 순서가 뒤집힌다**(raw 에서 재현됨)
+   ⒝ **dHash 단독 금지** — 색을 같이 본다(Grey Melange ↔ Graystone 색거리 157)
+   ⒞ **표본이 한 상품군** 이다 — threshold 는 더 큰 분모에서 정한다
+🔴 822 ms/장 · 350KB 는 **후보마다 이미지를 받는 설계의 비용** 이다(현재 운영 배선 0)
+```
+
+**STOP — `CORE-IMAGE-EVIDENCE-02` 완료 / `IMAGE NORMALIZED EVIDENCE = READY` / 다음은 CPO**

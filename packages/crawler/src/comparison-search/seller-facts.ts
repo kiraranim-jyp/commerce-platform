@@ -269,6 +269,15 @@ export interface ListingProductLike {
   sellerSku?: string | null;
   imageUrl?: string | null;
   /**
+   * 🔵🔵 **CORE-IMAGE-EVIDENCE-02 — 상세 경로의 이미지 목록**(CPO GO 2026-10-27).
+   *
+   * 🔴 **JSON-LD `@type=Product` 의 `image` 만** 들어온다(`jsonLdProductImages`).
+   *    `<img>` 태그 · `og:image` 는 **넣지 않는다** — C22 페이지의 img 39개 중
+   *    대다수가 **추천상품 썸네일** 이고, og:image 는 그 페이지에 **아예 없다**(실측).
+   * 🔴 목록 경로는 이 칸을 **넘기지 않는다**(undefined ⟹ 기존 `imageUrl` 동작 그대로).
+   */
+  imageUrls?: string[] | null;
+  /**
    * 🔵🔵 **CORE-SAME-SPRINT-06 — Evidence Layer 공급**(CPO GO 2026-10-26).
    *
    * 🔴 **JSON-LD `@type=Product` 의 `description` 만** 들어온다
@@ -346,7 +355,14 @@ export function productFactsFromListing(input: ListingProductLike): ProductFacts
      *    PLAIN_HTML 에는 tags 가 없으므로 **분류 하나** 다. 🔴 지어내지 않는다.
      */
     audienceSignals: category ? [category] : [],
-    imageUrls: input.imageUrl ? [input.imageUrl] : [],
+    /**
+     * 🔵🔵 **CORE-IMAGE-EVIDENCE-02** — 목록 경로는 `imageUrl`(한 장), 상세 경로는
+     *    `imageUrls`(JSON-LD `Product.image` 전부)를 넘긴다.
+     * 🔴 **원본 목록을 버리지 않는다**(CPO §10) — 대표 1장은 Evidence 층이 고르고
+     *    이 칸은 **전부** 들고 있는다(첫 장이 틀린 경우가 실재한다).
+     * 🔴 둘 다 오면 `imageUrls` 가 이긴다 — 상세가 목록보다 많은 정보를 준다.
+     */
+    imageUrls: input.imageUrls?.length ? [...input.imageUrls] : input.imageUrl ? [input.imageUrl] : [],
     /**
      * 🔵 **SPRINT-06 — Evidence Layer 공급**(JSON-LD `Product.description` 만).
      *
