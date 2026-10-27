@@ -1,0 +1,493 @@
+{
+ "note": "🔴 운영 DB 의 canonicalProduct 그대로다 — 품번이 «구조적으로» 없는 실제 상품 2개(SP-09 가 질의에 쓴 그 제목의 스냅샷). CTO 가 값을 만들지 않았다.",
+ "origins": {
+  "S5": {
+   "canonicalProduct": {
+    "sku": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "brand": {
+     "value": "The Animals Observatory",
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "color": {
+     "value": "Medium Grey Heather",
+     "source": "ORIGINAL",
+     "confidence": 0.7
+    },
+    "price": {
+     "value": {
+      "amount": 38,
+      "currency": "EUR"
+     },
+     "source": "USER_EDITED",
+     "confidence": 1
+    },
+    "title": {
+     "value": "Pupfish Kid T-Shirt in Grey Heather by The Animals Observatory",
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "images": [
+     {
+      "id": "0001",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/1b32cdc3-1c68-4099-ba7d-81a156f51c32-0001.jpg",
+      "classification": "PRODUCT",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": true,
+      "useInDescription": false,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0002",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/a11251a8-14a0-4e03-936e-373fab0001f4-0002.jpg",
+      "classification": "MODEL",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0003",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/a7399280-329e-47c3-adb2-8d395b12f8b5-0003.jpg",
+      "classification": "MODEL",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0004",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/a28866f6-c09c-4ab2-94f2-00ff80feddc5-0004.jpg",
+      "classification": "PRODUCT",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     }
+    ],
+    "options": {
+     "value": [
+      "Size"
+     ],
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "titleKo": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "keywords": {
+     "value": [],
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "material": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "seoTitle": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "variants": [
+     {
+      "id": "55615006867832",
+      "sku": "IE21-2",
+      "price": {
+       "amount": 52,
+       "currency": "GBP"
+      },
+      "optionValues": {
+       "Size": "4 Years"
+      },
+      "stockQuantity": 2
+     },
+     {
+      "id": "55615006900600",
+      "sku": "IE21-2",
+      "price": {
+       "amount": 52,
+       "currency": "GBP"
+      },
+      "optionValues": {
+       "Size": "6 Years"
+      },
+      "stockQuantity": 3
+     },
+     {
+      "id": "55615006933368",
+      "sku": "IE21-2",
+      "price": {
+       "amount": 52,
+       "currency": "GBP"
+      },
+      "optionValues": {
+       "Size": "8 Years"
+      },
+      "stockQuantity": 3
+     },
+     {
+      "id": "55615006966136",
+      "sku": "IE21-2",
+      "price": {
+       "amount": 52,
+       "currency": "GBP"
+      },
+      "optionValues": {
+       "Size": "10 Years"
+      },
+      "stockQuantity": 2
+     },
+     {
+      "id": "55615006998904",
+      "sku": "IE21-2",
+      "price": {
+       "amount": 52,
+       "currency": "GBP"
+      },
+      "optionValues": {
+       "Size": "12 Years"
+      },
+      "stockQuantity": 2
+     }
+    ],
+    "sourceUrl": "https://www.junioredition.com/collections/the-animals-observatory/products/pupfish-kid-t-shirt-in-grey-heather-by-the-animals-observatory",
+    "description": {
+     "value": "Pupfish Kid T-Shirt by The Animals Observatory. A heather grey tee that embraces timeless simplicity, its bold logo and minimal back detail makes it the perfect basic for this autumn. Perfect for little thinkers who see magic everywhere. Colour - Medium Grey Heather. 100% Organic Cotton. Made in Portugal. Product Code F26100 208_DW",
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "shippingFee": {
+     "value": 0,
+     "source": "DEFAULT",
+     "confidence": 0.5
+    },
+    "shopifyTags": "10-years, 11-years, 12-years, 13-years, 2-years, 3-years, 4-years, 5-years, 6-years, 7-years, 8-years, all-tops, t-shirts, the-animals-observatory, tops",
+    "manufacturer": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "optionGroups": [
+     {
+      "name": "Size",
+      "values": [
+       "4 Years",
+       "6 Years",
+       "8 Years",
+       "10 Years",
+       "12 Years"
+      ]
+     }
+    ],
+    "returnPolicy": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "certification": {
+     "value": "",
+     "source": "DEFAULT",
+     "confidence": 1
+    },
+    "descriptionKo": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "stockQuantity": {
+     "value": 999,
+     "source": "DEFAULT",
+     "confidence": 0.5
+    },
+    "priceBreakdown": {
+     "feePercent": 10,
+     "shippingKrw": 0,
+     "marginPercent": 12
+    },
+    "recommendedAge": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "seoDescription": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "brandResolution": {
+     "raw": "The Animals Observatory AW26",
+     "confidence": "HIGH",
+     "ruleApplied": [
+      "SEASON_CODE"
+     ]
+    },
+    "countryOfOrigin": {
+     "value": "Portugal",
+     "source": "ORIGINAL",
+     "confidence": 0.75
+    },
+    "careInstructions": {
+     "value": "",
+     "source": "DEFAULT",
+     "confidence": 0
+    },
+    "priceOverrideKrw": {
+     "value": 69800,
+     "source": "USER_EDITED",
+     "confidence": 1
+    },
+    "shopifyProductType": "T Shirt",
+    "categoryResolverKpi": {
+     "evidence": [
+      "✓ URL 경로에서 연령대 \"kid\" 발견 → kids",
+      "✓ 상품 유형 키워드 \"t-shirt\" 발견 → 티셔츠",
+      "✓ Predict API: \"남아 라운드티셔츠\"(코드 85582, 유사도 95%) — 등록 전 최종 확인이 필요합니다.",
+      "✓ 쿠팡 카테고리 메타 조회로 실제 존재/등록 가능이 확인됐습니다."
+     ],
+     "predictResult": {
+      "code": 85867,
+      "name": "공용 라운드티셔츠"
+     },
+     "manualOverride": true,
+     "selectedResult": {
+      "code": 85582,
+      "name": "남아 라운드티셔츠"
+     },
+     "similarityScore": 95,
+     "resolverDecision": "AUTO_SELECT"
+    }
+   }
+  },
+  "S6": {
+   "canonicalProduct": {
+    "sku": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "brand": {
+     "value": "Konges Slojd Clothing",
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "color": {
+     "value": "Erba Stripe",
+     "source": "ORIGINAL",
+     "confidence": 0.7
+    },
+    "price": {
+     "value": {
+      "amount": 139500,
+      "currency": "KRW"
+     },
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "title": {
+     "value": "Jody Teddy Onesie in Erba Stripe by Konges Sløjd",
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "images": [
+     {
+      "id": "0001",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/5e1d2e10-99fe-455c-b696-c53bae566fdd-0001.jpg",
+      "classification": "PRODUCT",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0002",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/eba7f134-f249-4a68-bdd5-fd414bbc1f64-0002.jpg",
+      "classification": "PRODUCT",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": true,
+      "useInDescription": false,
+      "useInProductGallery": true
+     }
+    ],
+    "options": {
+     "value": [
+      "Size"
+     ],
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "titleKo": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "keywords": {
+     "value": [],
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "material": {
+     "value": "100% Cotton",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "seoTitle": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "variants": [
+     {
+      "id": "55615326585208",
+      "sku": "QF31-2",
+      "price": {
+       "amount": 139500,
+       "currency": "KRW"
+      },
+      "optionValues": {
+       "Size": "3 Months"
+      },
+      "stockQuantity": 2
+     },
+     {
+      "id": "55615326617976",
+      "sku": "QF31-2",
+      "price": {
+       "amount": 139500,
+       "currency": "KRW"
+      },
+      "optionValues": {
+       "Size": "6 Months"
+      },
+      "stockQuantity": 2
+     },
+     {
+      "id": "55615326650744",
+      "sku": "QF31-2",
+      "price": {
+       "amount": 139500,
+       "currency": "KRW"
+      },
+      "optionValues": {
+       "Size": "9 Months"
+      },
+      "stockQuantity": 2
+     },
+     {
+      "id": "55615326683512",
+      "sku": "QF51-2",
+      "price": {
+       "amount": 139500,
+       "currency": "KRW"
+      },
+      "optionValues": {
+       "Size": "12 Months"
+      },
+      "stockQuantity": 2
+     },
+     {
+      "id": "55615326716280",
+      "sku": "QF51-2",
+      "price": {
+       "amount": 139500,
+       "currency": "KRW"
+      },
+      "optionValues": {
+       "Size": "18 Months"
+      },
+      "stockQuantity": 1
+     }
+    ],
+    "sourceUrl": "https://www.junioredition.com/en-kr/collections/konges-slojd-baby-clothing/products/jody-teddy-onesie-in-erba-stripe-by-konges-slojd",
+    "description": {
+     "value": "Jody Teddy Onesie by Konges Sløjd. Hooded one piece in soft and comfortable pile fleece material. Designed with a full front zipper closure and warm inside fleece lining. Ideal as an insulating layer for nap time in the stroller or pram. Colour - Erba Stripe. 100% Recycled Polyester, 100% Cotton Lining. Product Code KS105721 Made in China.",
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "shippingFee": {
+     "value": 0,
+     "source": "DEFAULT",
+     "confidence": 0.5
+    },
+    "shopifyTags": "0-3-months, 1-year, 3-6-months, 6-12-months, konges-slojd, new baby, outerwear, pc-made-in-china",
+    "manufacturer": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "optionGroups": [
+     {
+      "name": "Size",
+      "values": [
+       "3 Months",
+       "6 Months",
+       "9 Months",
+       "12 Months",
+       "18 Months"
+      ]
+     }
+    ],
+    "returnPolicy": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "certification": {
+     "value": "",
+     "source": "DEFAULT",
+     "confidence": 1
+    },
+    "descriptionKo": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "stockQuantity": {
+     "value": 999,
+     "source": "DEFAULT",
+     "confidence": 0.5
+    },
+    "recommendedAge": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "seoDescription": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "brandResolution": {
+     "raw": "Konges Slojd Clothing AW26 Drop 1",
+     "confidence": "HIGH",
+     "ruleApplied": [
+      "SEASON_CODE"
+     ]
+    },
+    "countryOfOrigin": {
+     "value": "China",
+     "source": "ORIGINAL",
+     "confidence": 0.75
+    },
+    "careInstructions": {
+     "value": "",
+     "source": "DEFAULT",
+     "confidence": 0
+    },
+    "priceOverrideKrw": {
+     "value": 169700,
+     "source": "USER_EDITED",
+     "confidence": 1
+    },
+    "shopifyProductType": "Baby One-Piece"
+   }
+  }
+ }
+}

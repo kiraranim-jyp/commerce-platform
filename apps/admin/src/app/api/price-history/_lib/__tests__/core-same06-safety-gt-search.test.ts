@@ -137,6 +137,14 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
    * 🟢 소유자는 `search-provider-05-qa.test.ts`. 🟢 이번에도 이 가드가 **FAIL 로 먼저 잡았다**.
    */
   scanned.push("search-provider-05-raw.json");
+  /**
+   * 🔵 SEARCH-PROVIDER-11(2026-10-27) — funnel 측정의 **입력** 둘.
+   * 🔴 둘 다 **human GT 가 아니다** — `-origins` 는 운영 canonicalProduct 사본(상품 2개),
+   *    `-code-rate` 는 품번 부재율 측정용 **운영 전수 투영**(133건)이다. 라벨 **0**.
+   * 🟢 소유자는 `search-provider-11-funnel.test.ts`. 🟢 이번에도 이 가드가 먼저 잡았다.
+   */
+  scanned.push("search-provider-11-origins.json");
+  scanned.push("search-provider-11-code-rate.json");
 
   /* 행 단위 originCode + verdict 계열 */
   for (const [file, src, codeKey, verdictKey] of [

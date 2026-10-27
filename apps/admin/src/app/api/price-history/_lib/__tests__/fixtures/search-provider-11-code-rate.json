@@ -1,0 +1,5674 @@
+{
+ "note": "🔴 운영 product_snapshots 의 canonicalProduct 중 **DNA 빌더가 읽는 칸만** 추린 것(원본 URL 기준 중복 제거). images 는 측정에 쓰지 않아 비웠다. CTO 가 값을 만들지 않았다.",
+ "products": [
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "BOBO CHOSES ",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "color": {
+    "value": "Light blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Beast Tag polo sweatshirt",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "modelName": {
+    "value": "Beast Tag polo sweatshirt",
+    "source": "ORIGINAL",
+    "confidence": 0.8
+   },
+   "sourceUrl": "https://bobochoses.co.jp/products/b226ac041-beast-tag-polo-sweatshirt",
+   "description": {
+    "value": "Light blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "color": {
+    "value": "Blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "B.C. Embossed tracksuit jacket",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "B.C. Embossed tracksuit jacket",
+    "source": "ORIGINAL",
+    "confidence": 0.8
+   },
+   "sourceUrl": "https://bobochoses.co.jp/products/b226ac117-b-c-embossed-tracksuit-jacket",
+   "description": {
+    "value": "Blue outerwear. Recycled Polyamide 100%, Polyester 100%. Relaxed fit. Responsibly made in China.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "color": {
+    "value": "Blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "B.C. Embossed tracksuit jacket",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "B.C. Embossed tracksuit jacket",
+    "source": "ORIGINAL",
+    "confidence": 0.8
+   },
+   "sourceUrl": "https://bobochoses.co.jp/products/b226ac117-b-c-embossed-tracksuit-jacket?utm_source=chatgpt.com",
+   "description": {
+    "value": "Blue outerwear. Recycled Polyamide 100%, Polyester 100%. Relaxed fit. Responsibly made in China.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "보보쇼즈",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "color": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "title": {
+    "value": "Almost Moiré all over reversible anorak",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "modelName": {
+    "value": "Almost Moiré all over reversible anorak",
+    "source": "ORIGINAL",
+    "confidence": 0.8
+   },
+   "sourceUrl": "https://bobochoses.com/en-de/products/b226ac100-almost-moire-all-over-reversible-anorak",
+   "description": {
+    "value": "Fuchsia outerwear. Recycled Polyamide 100%, Recycled Polyamide 100%. Relaxed fit. Responsibly made in China.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "보보쇼즈",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "color": {
+    "value": "Red",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Bobo Choses knitted beanie",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "modelName": {
+    "value": "Bobo Choses knitted beanie",
+    "source": "ORIGINAL",
+    "confidence": 0.8
+   },
+   "sourceUrl": "https://bobochoses.com/en-de/products/b226ai038-bobo-choses-knitted-beanie",
+   "description": {
+    "value": "Red beanie. Recycled Acrylic 100%. Responsibly made in China.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "AW26",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "title": {
+    "value": "Bobo Choses Bolder half zipped sweatshirt",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://bobochoses.com/en-int/products/b226ac114-bobo-choses-bolder-half-zipped-sweatshirt?utm_source=chatgpt.com",
+   "description": {
+    "value": "Light heather grey sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Light blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Hug Hairy Monster T-shirt",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "Hug Hairy Monster T-shirt",
+    "source": "ORIGINAL",
+    "confidence": 0.8
+   },
+   "sourceUrl": "https://bobochoses.com/en-kr/products/b226ac009-hug-hairy-monster-t-shirt",
+   "description": {
+    "value": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "color": {
+    "value": "Lavender",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Mystery BC half zipped sweatshirt",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "Mystery BC half zipped sweatshirt",
+    "source": "ORIGINAL",
+    "confidence": 0.8
+   },
+   "sourceUrl": "https://bobochoses.com/en-kr/products/b226ac042-mystery-bc-half-zipped-sweatshirt?pr_prod_strat=similar&pr_rec_id=793ca40cb&pr_rec_pid=15692661588351&pr_ref_pid=15692661621119&pr_seq=uniform",
+   "description": {
+    "value": "Lavender sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "AW26",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Navy blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Mystery BC half zipped sweatshirt",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://bobochoses.com/en-kr/products/b226ac043-mystery-bc-half-zipped-sweatshirt",
+   "description": {
+    "value": "Navy blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "color": {
+    "value": "Offwhite",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Bobo Choses Pop T-shirt",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "Bobo Choses Pop T-shirt",
+    "source": "ORIGINAL",
+    "confidence": 0.8
+   },
+   "sourceUrl": "https://bobochoses.com/en-kr/products/b226ac112-bobo-choses-pop-t-shirt",
+   "description": {
+    "value": "Offwhite t-shirt. Organic Cotton 100%. Responsibly made in Portugal.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "AW26",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "title": {
+    "value": "Bobo Choses Bolder half zipped sweatshirt",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://bobochoses.com/en-kr/products/b226ac114-bobo-choses-bolder-half-zipped-sweatshirt",
+   "description": {
+    "value": "Light heather grey sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "AW26",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Bobo Choses Embossed denim pants",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://bobochoses.com/en-kr/products/b226ac120-bobo-choses-embossed-denim-pants",
+   "description": {
+    "value": "Blue pants. Organic Cotton 100%. Relaxed fit. Responsibly made in Portugal.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "color": {
+    "value": "Jade green",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Furry monster sweatshirt",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "Furry monster sweatshirt",
+    "source": "ORIGINAL",
+    "confidence": 0.8
+   },
+   "sourceUrl": "https://bobochoses.com/en-kr/products/b226tc176-furry-monster-sweatshirt",
+   "description": {
+    "value": "Jade green sweatshirt. Cotton 50%, Recycled Polyester 50%. Loose fit. Responsibly made in Spain.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "color": {
+    "value": "Green",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Dog knitted vest",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "Dog knitted vest",
+    "source": "ORIGINAL",
+    "confidence": 0.8
+   },
+   "sourceUrl": "https://bobochoses.com/en-kr/products/b226tc179-dog-knitted-vest",
+   "description": {
+    "value": "Green jumper. Recycled Polyamide 35%, Viscose 30%, Recycled Wool 16%, Wool 14%, Cashmere 5%. Loose fit. Responsibly made in Spain.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "color": {
+    "value": "Light blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Hug Hairy Monster T-shirt",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "Hug Hairy Monster T-shirt",
+    "source": "ORIGINAL",
+    "confidence": 0.8
+   },
+   "sourceUrl": "https://bobochoses.com/ko-kr/products/b226ac009-hug-hairy-monster-t-shirt",
+   "description": {
+    "value": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "AW26",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "title": {
+    "value": "Pixel Abduction all over jogging pants",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://bobochoses.com/products/b226ab069-pixel-abduction-all-over-jogging-pants",
+   "description": {
+    "value": "Light heather grey pants. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "AW26",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Heather grey",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Boo Bo Choses T-shirt",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://bobochoses.com/products/b226ac002-boo-bo-choses-t-shirt",
+   "description": {
+    "value": "Heather grey t-shirt. Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "color": {
+    "value": "Light blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Hug Hairy Monster T-shirt",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "Hug Hairy Monster T-shirt",
+    "source": "ORIGINAL",
+    "confidence": 0.8
+   },
+   "sourceUrl": "https://bobochoses.com/products/b226ac009-hug-hairy-monster-t-shirt",
+   "description": {
+    "value": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "AW26",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Midnight blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "All About Monsters T-shirt",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://bobochoses.com/products/b226ac018-all-about-monsters-t-shirt",
+   "description": {
+    "value": "Midnight blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Spain.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "AW26",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Navy blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Mystery BC half zipped sweatshirt",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://bobochoses.com/products/b226ac043-mystery-bc-half-zipped-sweatshirt",
+   "description": {
+    "value": "Navy blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "AW26",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "title": {
+    "value": "Bobo Choses Embossed T-shirt",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://bobochoses.com/products/b226ac110-bobo-choses-embossed-t-shirt",
+   "description": {
+    "value": "Multicolor t-shirt. Cotton 100%. Responsibly made in Portugal.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "color": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "title": {
+    "value": "Bobo Choses Embossed T-shirt",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://bobochoses.com/products/b226ac111-bobo-choses-embossed-t-shirt",
+   "description": {
+    "value": "Multicolor t-shirt. Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "AW26",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "title": {
+    "value": "Bobo Choses Bolder half zipped sweatshirt",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://bobochoses.com/products/b226ac114-bobo-choses-bolder-half-zipped-sweatshirt",
+   "description": {
+    "value": "Light heather grey sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "AW26",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "title": {
+    "value": "Bobo Choses Bolder half zipped sweatshirt",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://bobochoses.com/products/b226ac114-bobo-choses-bolder-half-zipped-sweatshirt?utm_source=chatgpt.com",
+   "description": {
+    "value": "Light heather grey sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "color": {
+    "value": "Blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "B.C. Embossed tracksuit jacket",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://bobochoses.com/products/b226ac117-b-c-embossed-tracksuit-jacket",
+   "description": {
+    "value": "Blue outerwear. Recycled Polyamide 100%, Polyester 100%. Relaxed fit. Responsibly made in China.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "BOSS",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "White",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Baby Boys White Logo Top",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "100% Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://designerkidswear.com/collections/new-in/products/hugo-boss-kids-baby-boys-top-white-j53497-10p",
+   "description": {
+    "value": "Clean and stylish Hugo Boss baby boys long-sleeve top for baby boys in crisp white cotton. Features a subtle repeated BOSS logo graphic across the chest in soft grey and light blue tones for understated designer appeal. The crew neck includes a thin contrasting trim, while practical snap-button shoulders make dressing easy for little ones. Smooth finish with long sleeves and a neat, polished look. 100% Cotton Imported",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Mini rodini",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "title": {
+    "value": "Violas aop Winter jacket",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://houseofkids.com/products/mini-rodini-violas-aop-winter-jacket-blue",
+   "description": {
+    "value": "The Violas winter jacket from Mini Rodini is made from 100% recycled polyester and features a stylish all-over print. A simple winter jacket for cold days and outdoor play. 100% recycled polyester Blue with all-over print Winter jacket for cold days A functional choice for everyday winter wear when your child needs to stay warm outdoors.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "alpen:6010790315_60107903150055868",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "brand": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "color": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "title": {
+    "value": "【楽天市場】テーラーメイド Qi35 ゴルフ ドライバー 2025年モデル メンズ TaylorMade：アルペン楽天市場店",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://item.rakuten.co.jp/alpen/6010790315/?variantId=60107903150055868",
+   "description": {
+    "value": "テーラーメイド Qi35 ゴルフ ドライバー 2025年モデル メンズ TaylorMade",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "ezaki-g:bs-phyzpm-ball_1895791",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "brand": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "color": {
+    "value": "GOLD",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "【楽天市場】【9/15 エントリー/抽選で最大100%ポイントバック】 BRIDGESTONE GOLF ブリヂストンゴルフ日本正規品 PHYZ Premium GOLD PEARL (ファイズプレミアム) ゴルフボール1ダース(12個入) 【当店在庫品】：ＥＺＡＫＩ　ＮＥＴ　ＧＯＬＦ",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://item.rakuten.co.jp/ezaki-g/bs-phyzpm-ball/?variantId=1895791",
+   "description": {
+    "value": "【人気激安お得ボール！】。【9/15 エントリー/抽選で最大100%ポイントバック】 BRIDGESTONE GOLF ブリヂストンゴルフ日本正規品 PHYZ Premium GOLD PEARL (ファイズプレミアム) ゴルフボール1ダース(12個入) 【当店在庫品】",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "8445782240008",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "title": {
+    "value": "[K*B 24FW 1차] B.C vintage ranglan sleeve sweatshirt",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "modelName": {
+    "value": "B.C vintage ranglan sleeve sweatshirt",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "sourceUrl": "https://kurate.co.kr/products/k-b-24fw-1%EC%B0%A8-b-c-vintage-ranglan-sleeve-sweatshirt",
+   "description": {
+    "value": "버건디 레드 색상의 'B.C Vintage' 래글런 소매 스웨트셔츠가 있다면 힘 들이지 않아도 특별한 것이 일상이 됩니다. 이 옷은 소년 소녀들이 자신을 표현하고, 자신의 고유함을 축하하는 동시에 재미있는 시간을 보내고 창의력을 발휘하도록 초대합니다. 세상을 더 나은 곳으로 만드는 영감을 주는 이야기를 함께 만들어 봅시다.. . 주요 특징:. . 디자인: 긴소매, 래글런 소매, 리브드 마감 소맷단, 원단 대비 디테일, 루즈 핏, 리브드 마감 밑단, 라운드 넥, 내부 기모 처리. 소재: 100% 유기농 면. 품질: GOTS 인증. 제조국 스페인.",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "brand": {
+    "value": "Louise Misha",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "color": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "title": {
+    "value": "Louise Misha Reversible Coat Jasmina - Cream Pink Sorrel",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "modelName": {
+    "value": "Reversible Coat Jasmina - Cream Pink Sorrel",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "sourceUrl": "https://louisemisha.com/en/products/girl-coat-jasmina-cream-pink-sorrel",
+   "description": {
+    "value": "The details we love:\n\nReversible quilted coat with a small round collar.\nOne side in double cotton gauze with a mix of prints.\nThe other in soft faux fur.\nPatch pockets on both sides.\nSnap button placket.\nNote: the double gauze is made from organic cotton.\n\nPiece imagined in Paris by Marie Pidancet and her team.",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Grey",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Bobo Choses Heather Grey Doggy Mate Sweatshirt",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "100% Organic Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "Bobo Choses Heather Grey Doggy Mate Sweatshirt",
+    "source": "ORIGINAL",
+    "confidence": 0.8
+   },
+   "sourceUrl": "https://luksusbaby.kr/products/bobo-choses-heather-grey-doggy-mate-sweatshirt",
+   "description": {
+    "value": "Discover the delightful charm of the Bobo Choses Heather Grey Doggy Mate Sweatshirt, perfect for your little one's wardrobe. Crafted from cozy, soft material, it features an adorable doggy print that adds a touch of whimsy. Available in soothing heather grey, this sweatshirt is designed for both style and comfort, making it a versatile choice for playdates or quiet days at home. Easy to care for and durable, it ensures that keeping up with your child’s active lifestyle is a breeze. Materials: 100% Organic Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "color": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "title": {
+    "value": "Search: 289 results found for &quot;Roses Dress&quot;",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "Search: 289 results found for &quot;Roses Dress&quot;",
+    "source": "ORIGINAL",
+    "confidence": 0.8
+   },
+   "sourceUrl": "https://tinycottons.com/en-int/search?q=Roses+Dress",
+   "description": {
+    "value": "Moda infantil y de mujer. Ropa hecha de forma ética para llevar toda la vida. Alta calidad y Diseño único desde Barcelona.",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "1035911",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "title": {
+    "value": "티셔츠 Multicolor ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.babyshop.com/ko-kr/p/-multicolor-v30543/BC-B226AC110-991",
+   "description": {
+    "value": "Bobo Choses의 이 긴팔 티셔츠는 강렬한 빨강과 파랑 줄무늬와 가슴 부분에 돋보이는 BOBO CHOSES 로고가 특징입니다. 100% 면으로 제작된 이 부드러운 저지 티셔츠는 학교, 놀이 시간, 주말 나들이 등 일상에서 편안하게 입기 좋습니다. 이 크루넥 티셔츠는 리브 디테일의 소매 끝단과 여유로운 핏을 갖추고 있어 계절이 바뀔 때도 레이어드하기 좋습니다. 이 세련된 아동용 티셔츠는 청바지, 조거 팬츠, 반바지와 잘 어울려 간편하면서도 멋진 스타일을 완성해 주는 다용도 필수 아이템입니다.",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "1044944",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Tinycottons",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "title": {
+    "value": "Flower 패딩 재킷 Multicolor ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.babyshop.com/ko-kr/p/flower-multicolor/TC-AW26-036-008",
+   "description": {
+    "value": "이 Tinycottons 패딩 재킷은 시선을 사로잡는 대담한 플라워 프린트와 쌀쌀한 날씨에 어울리는 따뜻한 패딩 디자인을 자랑합니다. 100% 면 겉감, 폴리에스터 안감, 폴리에스터 충전재로 제작된 이 아동용 겨울 재킷은 ECO WDR 마감 처리와 500–800pa의 발수 기능을 갖추어 가랑비나 바람이 부는 날씨에도 착용하기 좋습니다. 이 실용적인 코트는 하이넥 디자인, 풀 지퍼 여밈, 앞면 스냅 단추 플래킷, 그리고 스냅 단추로 덮개 길이를 조절할 수 있는 탈부착형 후드를 갖추고 있습니다. 셰르파 안감이 들어간 포켓은 편안함을 더해 주며, 이 제품은 일상에서 입기 좋은 세련되고 기능적인 아우터입니다.",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "633403",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "brand": {
+    "value": "Stella McCartney",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "color": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "title": {
+    "value": "Home",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.childrensalon.com/stella-mccartney-kids-girls-black-cotton-halloween-logo-sweatshirt-633403.html",
+   "description": {
+    "value": "A playful welcome to the spooky season, this black Stella McCartney Kids sweatshirt features all her favourite Halloween graphics. Made in soft brushed-back cotton jersey, it has a cosy feel and an easy-to-wear crew neckline.",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "brandResolution": {
+    "raw": "Stella McCartney Kids",
+    "confidence": "LOW",
+    "ruleApplied": [
+     "MARKETING_SUFFIX"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "026002000004",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "color": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "title": {
+    "value": "[메인스토리] Bubble Sweatshirt _Grey Melange  #AW26MS185 #Drop-2",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "[메인스토리] Bubble Sweatshirt _Grey Melange  #AW26MS185 #Drop-2",
+    "source": "ORIGINAL",
+    "confidence": 0.8
+   },
+   "sourceUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362908",
+   "description": {
+    "value": "[[메인스토리] Bubble Sweatshirt _Grey Melange  #AW26MS185 #Drop-2] ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "040000079427",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "MYMY",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "title": {
+    "value": "26FW1차 [마이마이]532 캐너피슈즈 canopy shoes_실버",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.foretforet.com/shop/shopdetail.html?branduid=10278273",
+   "description": {
+    "value": "[26FW1차 [마이마이]532 캐너피슈즈 canopy shoes_실버] ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "040000079427",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "MYMY",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "title": {
+    "value": "26FW1차 [마이마이]532 캐너피슈즈 canopy shoes_실버",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.foretforet.com/shop/shopdetail.html?branduid=10278273&search=%EC%8B%A0%EB%B0%9C&sort=&xcode=040&mcode=000&scode=&GfDT=Z2p3Vw%3D%3D",
+   "description": {
+    "value": "[26FW1차 [마이마이]532 캐너피슈즈 canopy shoes_실버] ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Heather Grey",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+   "description": {
+    "value": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses. Relaxed fit tee in heather grey, featuring long sleeves, a round neck and a large Bobo Choses ghosts print across the front. Colour - Heather Grey. 100% Organic Cotton. Product code B226AC010 AW26 Made in Portugal.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Bobo Choses AW26 Drop 1",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "B226AC009",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Light Blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Hug Hairy Monster T-Shirt by Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "description": {
+    "value": "Hug Hairy Monster T-Shirt by Bobo Choses. Relaxed fit tee in a soft blue, featuring long sleeves, a round neck and a large monster hug print across the front. Colour - Light Blue. 100% Organic Cotton. Product code B226AC009 AW26 Made in Portugal.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Bobo Choses AW26 Drop 1",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Bonjour",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "title": {
+    "value": "Handsmock Dress in Vence Floral by Bonjour",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "modelName": {
+    "value": "BJ1_AW26",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.junioredition.com/collections/bonjour/products/handsmock-dress-in-vence-floral-by-bonjour",
+   "description": {
+    "value": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful floral fabric with removable crochet collar. Colour - Vence Floral. 100% Cotton. Size Guide: 2 Years: Length 56cm, Chest 30cm, Sleeve Length 32cm. 4 Years: Length 60cm, Chest 31cm, Sleeve Length 34cm. 6 Years: Length 64cm, Chest 32cm, Sleeve Length 36cm. 8 Years: Length 68cm, Chest 31cm, Sleeve Length 34cm. 10 Years: Length 72cm, Chest 34cm, Sleeve Length 40cm. 12 Years: Length 76cm, Chest 35cm, Sleeve Length 42cm. Product Code BJ1_AW26",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Bonjour AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Bonjour",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "title": {
+    "value": "Tunique With Hair Clip in Blue Flower Field by Bonjour",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.junioredition.com/collections/bonjour/products/tunique-with-hair-clip-in-blue-flower-field-by-bonjour",
+   "description": {
+    "value": "Tunique with hair clip by Bonjour. Pretty blue and burgundy floral blouse which can be worn as a dress. Beautiful hand smocked nude check collar tied with a red bow, elasticated puff sleeves and Bonjour's signature smocking. Complete with matching hair bow clip. Colour - Blue Flower Field. 100% Cotton. Size Guide: 2 Years: Length 52cm, Chest 30cm, Sleeve Length 32cm. 4 Years: Length 56cm, Chest 31cm, Sleeve Length 34cm. 6 Years: Length 60cm, Chest 32cm, Sleeve Length 36cm. 8 Years: Length 64cm, Chest 33cm, Sleeve Length 38cm. 10 Years: Length 68cm, Chest 34cm, Sleeve Length 40cm. 12 Years: Length 72cm, Chest 35cm, Sleeve Length 42cm. Made in India. Product Code BJ36_AW26",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Bonjour AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "2672012913",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Mini Rodini",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Beige",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Elephant Shrew Tee in Beige by Mini Rodini",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/collections/mini-rodini/products/elephant-shrew-aop-tee-in-beige-by-mini-rodini",
+   "description": {
+    "value": "Elephant Shrew AOP Tee by Mini Rodini. Ultra-soft, extra comfortable t-shirt with all over Elephant Shrew print, crafted from organic cotton for everyday comfort. Colour - Beige. 100% Organic Cotton. Made in Türkiye. Product code 2672012913",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Mini Rodini AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "26710102",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Mini Rodini",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Violas Puffer Jacket in Blue by Mini Rodini",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/collections/mini-rodini/products/violas-puffer-jacket-in-blue-by-mini-rodini",
+   "description": {
+    "value": "Violas Puffer Jacket by Mini Rodini. Soft padded viola flower puffer coat with zipper closure, snap button placket and extra spacious front pockets. Colour - Blue. 100% Recycled Polyester Made in China. Product Code 26710102",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Mini Rodini AW26 Chapter 1",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "The Animals Observatory",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Navy",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "타오 26FW TAO 햄스터캡 네이비 모자 Hamster Kid Cap The Animals Observatory",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "images": [],
+   "material": {
+    "value": "100% cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/collections/the-animals-observatory/products/hamster-kid-cap-in-navy-by-the-animals-observatory",
+   "description": {
+    "value": "Hamster Kid Cap by The Animals Observatory. A navy blue 100% cotton cap featuring The Animals Observatory branding across the front. The perfect accessory for the seasonal transition. Colour - Navy. 100% Cotton. Made in China. ",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "brandResolution": {
+    "raw": "The Animals Observatory AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "The Animals Observatory",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Medium Grey Heather",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "타오 26FW Pupfish Kid T-Shirt The Animals Observatory",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/collections/the-animals-observatory/products/pupfish-kid-t-shirt-in-grey-heather-by-the-animals-observatory",
+   "description": {
+    "value": "Pupfish Kid T-Shirt by The Animals Observatory. A heather grey tee that embraces timeless simplicity, its bold logo and minimal back detail makes it the perfect basic for this autumn. Perfect for little thinkers who see magic everywhere. Colour - Medium Grey Heather. 100% Organic Cotton. Made in Portugal. ",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "brandResolution": {
+    "raw": "The Animals Observatory AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "WK21W97",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Wynken",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Ecru Mix",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Mixed Media Jacket in Ecru Mix by Wynken",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "100% Polyester",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "Mixed Media Jacket in Ecru Mix",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.junioredition.com/collections/wynken/products/mixed-media-jacket-in-ecru-mix-by-wynken",
+   "description": {
+    "value": "Mixed Media Jacket by Wynken. This mixed media jacket is perfect for colder days, combining warmth with playful style. The ecru faux fur exterior adds texture and character, while the Wynken stitching in a painter’s palette shape gives a subtle, creative detail. A collar keeps little ones extra cosy, and pockets are perfect for keeping hands warm. Soft, comfortable, and easy to layer, this teddy fleece jacket balances practicality, style, and character, making it a versatile choice for chilly days and playful adventures. Colour - Ecru Mix. Shell: 100% Polyester. Panel: 100% Nylon. Made in China. Product Code WK21W97 AW26",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Wynken AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "KS105090",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Konges Sløjd Clothing",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Stripie Stripe",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Short Sleeve Polo in Stripie Stripe by Konges Sløjd - Last One In Stock - 3 Years",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/all-sale/products/spotty-short-sleeve-polo-in-stripie-stripe-by-konges-slojd",
+   "description": {
+    "value": "Short Sleeve Polo by Konges Sløjd. Classic polo shirt with short sleeves crafted in a slightly heavier organic cotton fabric. Designed in a relaxed silhouette with a classic collar, button placket, and rib hems. Colour - Stripie Stripe. 100% Organic Cotton. Product Code KS105090 SS26 Made in China.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Konges Sløjd Clothing 50% Off Sale",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "MARKETING_SUFFIX"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "B226AC035",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Beige",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Beast Sweatshirt by Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "34% Organic Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/beast-sweatshirt-by-bobo-choses",
+   "description": {
+    "value": "Beast Sweatshirt by Bobo Choses. Soft beige sweatshirt in a relaxed fit featuring ribbed cuffs, bottom and neck and a small Bobo Choses print above the bottom hem and a large beast design on the back. Perfect for keeping cosy and stylish during Autumn and Winter. Colour - Beige. 66% Cotton 34% Organic Cotton. Product code B226AC035 AW26 Made in Spain.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Bobo Choses AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "B226AC058",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Bobo Choses Pop Jogging Pants by Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "17% Recycled Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/bobo-choses-pop-jogging-pants-by-bobo-choses",
+   "description": {
+    "value": "Bobo Choses Pop Jogging Pants by Bobo Choses. Blue sweatpants designed with an elasticated waistband and ankles, loose fit and side pockets. Colour - Blue. 66% Organic Cotton 17% Recycled Cotton 17% Cotton. Product code B226AC058 AW26 Made in Spain.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Bobo Choses AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "B226AC067",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Booo Bo Choses Tag Woven Pants by Bobo Choses!",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "images": [],
+   "material": {
+    "value": "3% Elastomultiester",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/booo-bo-choses-tag-woven-pants-by-bobo-choses",
+   "description": {
+    "value": "Booo Bo Choses Tag Woven Pants by Bobo Choses. Washed blue trousers designed with an elasticated waistband, loose fit, long length and seam pockets. Colour - Blue. 97% Organic Cotton 3% Elastomultiester. Product code B226AC067 AW26 Made in Spain.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Bobo Choses AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "B226AC010",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Heather Grey",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+   "description": {
+    "value": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses. Relaxed fit tee in heather grey, featuring long sleeves, a round neck and a large Bobo Choses ghosts print across the front. Colour - Heather Grey. 100% Organic Cotton. Product code B226AC010 AW26 Made in Portugal.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Bobo Choses AW26 Drop 1",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "B226AC038",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Hidden Monster Sweatshirt by Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "17% Recycled Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hidden-monster-sweatshirt-by-bobo-choses",
+   "description": {
+    "value": "Hidden Monster Sweatshirt by Bobo Choses. Washed blue sweatshirt in a relaxed fit featuring ribbed cuffs, bottom and neck. Featuring a fun print across the chest of a monster hiding behind a lamp, the perfect playful layer. Colour - Blue. 66% Organic Cotton 17% Recycled Cotton 17% Cotton. Product code B226AC038 AW26 Made in Spain.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Bobo Choses AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "B226AI001",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Light Heather",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Hug Hairy Monster Short Socks by Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "74% Organic Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-short-socks-by-bobo-choses",
+   "description": {
+    "value": "Hug Hairy Monster Short Socks by Bobo Choses. Cotton blend socks in light heather grey featuring a playful hairy monster design. EU Shoe size / UK Shoe Size / Approximate age: 23-25 / 6-7.5 UK Shoe size / 2-3 Years 26-28 / 8.5-10 UK Shoe size / 4-5 Years 29-31 / 11-12.5 UK Shoe size / 6-7 Years 32-34 / 13-1.5 UK Shoe size / 8-9 Years 35-37 / 2.5-4 UK Shoe size / 10-11 Years 38-40 / 5-6 UK Shoe size / 11+ Years Colour - Light Heather. 74% Organic Cotton 24% Polyamide 2% Elastane. Product code B226AI001 AW26 Made in Spain.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Bobo Choses AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "B226AC009",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Light Blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Hug Hairy Monster T-Shirt by Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "description": {
+    "value": "Hug Hairy Monster T-Shirt by Bobo Choses. Relaxed fit tee in a soft blue, featuring long sleeves, a round neck and a large monster hug print across the front. Colour - Light Blue. 100% Organic Cotton. Product code B226AC009 AW26 Made in Portugal.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Bobo Choses AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "B226AC037",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Off White",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Mr. Footish Raglan Sweatshirt by Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "34% Organic Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/mr-footish-raglan-sweatshirt-by-bobo-choses",
+   "description": {
+    "value": "Mr. Footish Raglan Sweatshirt by Bobo Choses. Off white sweatshirt in a relaxed fit featuring ribbed cuffs, bottom and contrast raglan sleeves in green. Finished with a fun Mr. Footish print, the perfect playful layer. Colour - Off White. 66% Cotton 34% Organic Cotton. Product code B226AC037 AW26 Made in Spain.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Bobo Choses AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "title": {
+    "value": "Stamp Bloom All Over Denim Pants by Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/stamp-bloom-all-over-denim-pants-by-bobo-choses",
+   "description": {
+    "value": "Stamp Bloom All Over Denim Pants by Bobo Choses. Dark blue denim trousers designed with an elasticated waistband with button closure, wide legs and front patch pockets. Colour - Navy Blue. 100% Organic Cotton. Product code B226AC070 AW26 Made in Portugal.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Bobo Choses AW26 Drop 2",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "B226AC040",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Lavender",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Watercolor All Over Cropped Sweatshirt by Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "17% Recycled Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/watercolor-all-over-cropped-sweatshirt-by-bobo-choses",
+   "description": {
+    "value": "Watercolor All Over Cropped Sweatshirt by Bobo Choses. Relaxed fit cropped sweatshirt in lavender with an all over watercolour print. Featuring contrast ribbed cuffs and neckline. Colour - Lavender. 66% Organic Cotton 17% Recycled Cotton 17% Cotton. Product code B226AC040 AW26 Made in Spain.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Bobo Choses AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "color": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "title": {
+    "value": "Bonjour",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/bonjour",
+   "description": {
+    "value": "Bonjour was created in 2014 by Anne Millet. After many years as a stylist in the children",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Bonjour",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Burgundy",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "EXCLUSIVE Corduroy Jacket in Burgundy by Bonjour - PREORDER",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "100% Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/bonjour/products/exclusive-corduroy-jacket-in-burgundy-by-bonjour",
+   "description": {
+    "value": "EXCLUSIVE TO JUNIOR EDITION Corduroy Jacket by Bonjour. Beautiful corduroy coat in burgundy with ivory embroidered 'B', burgundy cashmere print lining and brass snap closure. PREORDER - item is already en route from Bonjour and due to arrive the first week of October. Please be aware that any orders containing preorder items will not ship until the preorder item arrives and you will need to place a separate order if you require shipment of your other in-stock items urgently. We have collaborated on an exclusive collection with Bonjour designer Anne Millet (Bonjour Diary) to produce five very special pieces exclusively for Junior Edition in the prints and colours of the AW26 collection. Don't miss this very special collaboration, whilst stock lasts. We have selected our customer's favourite Bonjour shapes in new season colours which will effortlessly slip into your Autumn / Winter wardrobe. Colour - Burgundy. 100% Cotton. Size Guide (total length from the shoulder. All measurements are approximate and offered as a guide only): 2 Years - Length 37cm. 4 Years - Length 40cm. 6 Years - Length 43cm. 8 Years - Length 46cm. 10 Years - Length 49cm. 12 Years - Length 52cm. Made in India.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Bonjour AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "AW26MS185",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Main Story",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Grey Melange",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Bubble Sweatshirt in Grey Melange by Main Story",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "100% Organic Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/kids-clothing/products/bubble-sweatshirt-in-grey-melange-by-main-story",
+   "description": {
+    "value": "Bubble Sweatshirt by Main Story. A relaxed fit sweatshirt with dropped shoulders and a large Main Story print across the chest, finished with ribbed cuffs, hem and neckline. Colour - Grey Melange. 100% Organic Cotton. From Main Story AW26 Collection. Product code AW26MS185 Made in Portugal.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Main Story AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Konges Slojd Clothing",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Erba Stripe",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Jody Teddy Onesie in Erba Stripe by Konges Sløjd",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "100% Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/konges-slojd-baby-clothing/products/jody-teddy-onesie-in-erba-stripe-by-konges-slojd",
+   "description": {
+    "value": "Jody Teddy Onesie by Konges Sløjd. Hooded one piece in soft and comfortable pile fleece material. Designed with a full front zipper closure and warm inside fleece lining. Ideal as an insulating layer for nap time in the stroller or pram. Colour - Erba Stripe. 100% Recycled Polyester, 100% Cotton Lining. Product Code KS105721 Made in China.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Konges Slojd Clothing AW26 Drop 1",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Konges Slojd Clothing",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Rosetto",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Minnie Newborn Body in Rosetto by Konges Sløjd",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/konges-slojd/products/minnie-newborn-body-in-rosetto-by-konges-slojd",
+   "description": {
+    "value": "Minnie Newborn Body by Konges Sløjd. Soft body suit with decorative pointelle and easy wrap closure. Snap buttons along the side of the body and crotch for easy dressing. Colour - Rosetto. 100% Organic Cotton. Product Code KS106168-P05261 AW26 Made in China.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Konges Slojd Clothing AW26 Drop 1",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "2672013228",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Mini Rodini",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Pink",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Elephant Shrew Chenille Sweatshirt in Pink by Mini Rodini",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/mini-rodini/products/elephant-shrew-chenille-sweatshirt-in-pink-by-mini-rodini",
+   "description": {
+    "value": "Elephant Shrew Chenille Sweatshirt by Mini Rodini. Cosy sweatshirt, featuring the Elephant Shrew chenille appliqué, crafted in a soft, organic cotton. Colour - Pink. 100% Organic Cotton. Made in Türkiye. Product code 2672013228",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Mini Rodini AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "2671010400",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Mini Rodini",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Multi",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Kittens Faux Fur Collar Puffer Jacket in Multi by Mini Rodini",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "100% Recycled Polyester",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/mini-rodini/products/kittens-faux-fur-collar-puffer-jacket-in-multi-by-mini-rodini",
+   "description": {
+    "value": "Kittens Faux Fur Collar Puffer Jacket by Mini Rodini. Warm puffer jacket with Kittens print, removable hood, faux-fur collar, weather-resistant zip-and-snap fastening, pockets. Colour - Multi. 100% Recycled Polyester Made in China. Product Code 2671010400",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Mini Rodini AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Misha & Puff",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "title": {
+    "value": "Voyage Dress in Bright Sky Blossom Plaid by Misha & Puff",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/misha-and-puff-sale/products/voyage-dress-in-bright-sky-blossom-plaid-by-misha-puff",
+   "description": {
+    "value": "Voyage Dress by Misha &amp; Puff. A dress in lightweight organic cotton plaid, with a woven textured design, rounded collar, elbow-length sleeves, gathered waist, ruffle trim with edge detail, and a double-breasted corozo button closure. Lined in cotton voile and finished with French seams. Colour - Bright Sky Blossom Plaid. 100% Organic Cotton. Product Code: K5152S26-0C8 Made in Peru.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Misha & Puff 50% Off Sale",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "MARKETING_SUFFIX"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "B1408F26-670",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Misha & Puff Fall 26 Drop 2",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Antique Rose",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Baby Circus Stripe Cardigan in Antique Rose by Misha & Puff",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/misha-puff/products/baby-circus-stripe-cardigan-in-antique-rose-by-misha-puff",
+   "description": {
+    "value": "Baby Circus Stripe Cardigan by Misha &amp; Puff. From the Misha &amp; Puff archives, a seamlessly knit cardigan in Merino wool, with dolman sleeves, and tapered stripes. Finished with hand-crocheted trim and crochet button closure. Colour - Antique Rose. 100% Super Wash Merino Wool. Product Code: B1408F26-670 Made in Peru.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Pèpè Shoes",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Bruno Cut Out Sandals in Lobelia Blue by PèPè - Last Ones In Stock - 20 EUR / 34 EUR",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "100% leather",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/pepe-shoes-sale/products/bruno-cut-out-sandals-in-lobelia-sapphire-by-pepe",
+   "description": {
+    "value": "Bruno cut out sandals by PèPè shoes. B uckled T bar shoes in vegetally tanned cobalt blue leather with cut out details . Soft and flexible leather sole. Lined with 100% leather. Handmade using traditional methods in Italy. Article code: 01026-SOUFFLE-LOBELIA We recommend allowing an extra +0.5\" / +1.3cm for growth. Approximate inner length: EUR 17 / UK 1 / 11.3cm EUR 18 / UK 2 / 11.9cm EUR 19 / UK 2.5 / 12.5cm EUR 20 / UK 3 / 13.1cm EUR 21 / UK 4 / 13.7cm EUR 22 / UK 5 / 14.4cm EUR 23 / UK 6 / 15cm EUR 24 / UK 7 / 15.7cm EUR 25 / UK 7.5 / 16.4cm EUR 26 / UK 8 / 17cm EUR 27 / UK 9 / 17.7cm EUR 28 / UK 10 / 18.4cm EUR 29 / UK 11 / 19cm EUR 30 / UK 11.5 / 19.7cm EUR 31 / UK 12 / 20.4cm EUR 32 / UK 13 / 21cm EUR 33 / UK 1 / 21.6cm EUR 34 / UK 2 / 22.3cm Please note this is a handmade product and small variations will occur. Colour - Lobelia (Cobalt Blue). Leather upper with leather lining. Handmade leather sole. We love these handmade iconic shoes by Pèpè.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Pèpè Shoes 60% Off",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "MARKETING_SUFFIX"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Pèpè Shoes",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "title": {
+    "value": "Darlyn Glitter Ballet Slippers in Miele by PèPè",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/pepe-shoes/products/darlyn-glitter-ballet-slippers-in-miele-by-pepe",
+   "description": {
+    "value": "Darlyn ballet slippers by PèPè shoes. Sparkly glitter ballet slippers with a leather lining and rubber sole. Elastic strap. Handmade using traditional methods in Italy. PèPè shoes are handcrafted in Italy using traditional artisanal skills and techniques. The shapes are iconic and refined in butter-soft leathers, a benchmark of Italian craftsmanship. Only a limited quantity are made to order each season, with many colours and leathers exclusive to us at Junior Edition. They are an extra special product to be treasured and appreciated by parents and children alike. Product code: 00278 Galassia Mosc Miele. We recommend allowing an extra +0.5\" / +1.3cm for growth. Approximate inner length: EUR 17 / UK 1 / 11.3cm EUR 18 / UK 2 / 11.9cm EUR 19 / UK 2.5 / 12.5cm EUR 20 / UK 3 / 13.1cm EUR 21 / UK 4 / 13.7cm EUR 22 / UK 5 / 14.4cm EUR 23 / UK 6 / 15cm EUR 24 / UK 7 / 15.7cm EUR 25 / UK 7.5 / 16.4cm EUR 26 / UK 8 / 17cm EUR 27 / UK 9 / 17.7cm EUR 28 / UK 10 / 18.4cm EUR 29 / UK 11 / 19cm EUR 30 / UK 11.5 / 19.7cm EUR 31 / UK 12 / 20.4cm EUR 32 / UK 13 / 21cm EUR 33 / UK 1 / 21.6cm EUR 34 / UK 2 / 22.3cm Please note this is a handmade product and small variations will occur. Colour - Miele (Gold Honey). Paillettes / Glitter upper with leather lining and a rubber sole.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Pèpè Shoes",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "color": {
+    "value": "Black Patent",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Ginevra Patent Leather Ballet Slippers in Black by PèPè",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/pepe-shoes/products/ginevra-patent-leather-ballet-slippers-in-black-by-pepe",
+   "description": {
+    "value": "Ginevra patent leather ballet slippers by PèPè shoes. Shiny patent leather velcro strap slippers with a leather lining and rubber sole. The velcro strap is fully adjustable for a perfect fit. Handmade using traditional methods in Italy. PèPè shoes are handcrafted in Italy using traditional artisanal skills and techniques. The shapes are iconic and refined in butter-soft leathers, a benchmark of Italian craftsmanship. Only a limited quantity are made to order each season, with many colours and leathers exclusive to us at Junior Edition. They are an extra special product to be treasured and appreciated by parents and children alike. Product code: 00287 Vernice Nero. We recommend allowing an extra +0.5\" / +1.3cm for growth. Approximate inner length: EUR 17 / UK 1 / 11.3cm EUR 18 / UK 2 / 11.9cm EUR 19 / UK 2.5 / 12.5cm EUR 20 / UK 3 / 13.1cm EUR 21 / UK 4 / 13.7cm EUR 22 / UK 5 / 14.4cm EUR 23 / UK 6 / 15cm EUR 24 / UK 7 / 15.7cm EUR 25 / UK 7.5 / 16.4cm EUR 26 / UK 8 / 17cm EUR 27 / UK 9 / 17.7cm EUR 28 / UK 10 / 18.4cm EUR 29 / UK 11 / 19cm EUR 30 / UK 11.5 / 19.7cm EUR 31 / UK 12 / 20.4cm EUR 32 / UK 13 / 21cm EUR 33 / UK 1 / 21.6cm EUR 34 / UK 2 / 22.3cm Please note this is a handmade product and small variations will occur. Colour - Black Patent. Patent leather upper with leather lining and a rubber sole.",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Pèpè Shoes",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Kava Brown",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Lucy Cut Out Sandals in Kava Brown by PèPè",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "100% leather",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/pepe-shoes/products/lucy-cut-out-sandals-in-kava-brown-by-pepe",
+   "description": {
+    "value": "Lucy cut out sandals by PèPè shoes. Velcro fastening buckle T bar shoes in vegetally tanned brown leather with cut out details. Features velcro for easy on-off, and an adjustable buckle for the perfect fit. Soft and flexible hand made leather sole. Lined with 100% leather. Handmade using traditional methods in Italy. PèPè shoes are handcrafted in Italy using traditional artisanal skills and techniques. The shapes are iconic and refined in butter-soft leathers, a benchmark of Italian craftsmanship. Only a limited quantity are made to order each season, with many colours and leathers exclusive to us at Junior Edition. They are an extra special product to be treasured and appreciated by parents and children alike. Article code: LUCY/FAU-KASC and LUCY/FV-KASC. We recommend allowing an extra +0.5\" / +1.3cm for growth. Approximate inner length: EUR 17 / UK 1 / 11.3cm EUR 18 / UK 2 / 11.9cm EUR 19 / UK 2.5 / 12.5cm EUR 20 / UK 3 / 13.1cm EUR 21 / UK 4 / 13.7cm EUR 22 / UK 5 / 14.4cm EUR 23 / UK 6 / 15cm EUR 24 / UK 7 / 15.7cm EUR 25 / UK 7.5 / 16.4cm EUR 26 / UK 8 / 17cm EUR 27 / UK 9 / 17.7cm EUR 28 / UK 10 / 18.4cm EUR 29 / UK 11 / 19cm EUR 30 / UK 11.5 / 19.7cm EUR 31 / UK 12 / 20.4cm EUR 32 / UK 13 / 21cm EUR 33 / UK 1 / 21.6cm EUR 34 / UK 2 / 22.3cm Please note this is a handmade product and small variations will occur. Colour - Kava Brown. Leather upper with leather lining. Handmade leather sole. We love these handmade iconic shoes by Pèpè.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Pèpè Shoes",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "title": {
+    "value": "Lulu T Bar Shoes in Vernice Nero by PèPè - Last Ones In Stock - 28-29 EUR",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "100% leather",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/pepe-shoes/products/lulu-t-bar-shoes-in-vernice-nero-by-pepe",
+   "description": {
+    "value": "Lulu T bar by PèPè shoes. Button T bar shoes in black patent leather with low T bar detail . Soft and flexible leather sole. Lined with 100% leather. Handmade using traditional methods in Italy. PèPè shoes are handcrafted in Italy using traditional artisanal skills and techniques. The shapes are iconic and refined in butter-soft leathers, a benchmark of Italian craftsmanship. Only a limited quantity are made to order each season, with many colours and leathers exclusive to us at Junior Edition. They are an extra special product to be treasured and appreciated by parents and children alike. Article code: 01195-VERNICE-NERO. We recommend allowing an extra +0.5\" / +1.3cm for growth. Approximate inner length: EUR 17 / UK 1 / 11.3cm EUR 18 / UK 2 / 11.9cm EUR 19 / UK 2.5 / 12.5cm EUR 20 / UK 3 / 13.1cm EUR 21 / UK 4 / 13.7cm EUR 22 / UK 5 / 14.4cm EUR 23 / UK 6 / 15cm EUR 24 / UK 7 / 15.7cm EUR 25 / UK 7.5 / 16.4cm EUR 26 / UK 8 / 17cm EUR 27 / UK 9 / 17.7cm EUR 28 / UK 10 / 18.4cm EUR 29 / UK 11 / 19cm EUR 30 / UK 11.5 / 19.7cm EUR 31 / UK 12 / 20.4cm EUR 32 / UK 13 / 21cm EUR 33 / UK 1 / 21.6cm EUR 34 / UK 2 / 22.3cm Please note this is a handmade product and small variations will occur. Colour - Vernice Nero (Black Patent). Leather upper with leather lining. Handmade leather sole. We love these handmade iconic shoes by Pèpè.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Konges Sløjd Summer 26 Drop 1",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Lemon",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Lemon Teether by Konges Sløjd",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/teething-pacifiers/products/lemon-teether-by-konges-slojd",
+   "description": {
+    "value": "Lemon Teether by Konges Sløjd. Cute little teether toy made in the signature lemon design that is easy to grab and hold. The teether is crafted from 100% natural rubber and designed with smooth edges without any holes, making it a safe and sanitary choice for your baby. Handcrafted and handpainted with natural pigments. Colour - Lemon. 100% Natural Rubber. Age 0 months+. Product Code KS105446 SS26 Made in China.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "The Animals Observatory",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Brown",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Hamster Kid Cap in Brown by The Animals Observatory",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "100% cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/the-animals-observatory/products/hamster-kid-cap-in-brown-by-the-animals-observatory",
+   "description": {
+    "value": "Hamster Kid Cap by The Animals Observatory. A chocolate brown 100% cotton cap featuring The Animals Observatory branding across the front. The perfect accessory for the seasonal transition. Colour - Brown. 100% Cotton. Made in China. Product Code F26190 162_EX",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "The Animals Observatory AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "The Animals Observatory",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Navy",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "타오 26FW Hamster Kid Cap The Animals Observatory",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "images": [],
+   "material": {
+    "value": "100% cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/the-animals-observatory/products/hamster-kid-cap-in-navy-by-the-animals-observatory",
+   "description": {
+    "value": "Hamster Kid Cap by The Animals Observatory. A navy blue 100% cotton cap featuring The Animals Observatory branding across the front. The perfect accessory for the seasonal transition. Colour - Navy. 100% Cotton. Made in China.",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "brandResolution": {
+    "raw": "The Animals Observatory AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "The Animals Observatory",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Medium Grey Heather",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "타오 25FW 티셔츠 Pupfish Kid T-Shirt The Animals Observatory",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/the-animals-observatory/products/pupfish-kid-t-shirt-in-grey-heather-by-the-animals-observatory",
+   "description": {
+    "value": "Pupfish Kid T-Shirt by The Animals Observatory. A heather grey tee that embraces timeless simplicity, its bold logo and minimal back detail makes it the perfect basic for this autumn. Perfect for little thinkers who see magic everywhere. Colour - Medium Grey Heather. 100% Organic Cotton. Made in Portugal.",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "brandResolution": {
+    "raw": "The Animals Observatory AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "WK21A165",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Wynken",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Blue / Soft Tan",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Double Deerstalker Cap in Blue / Soft Tan by Wynken",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "100% Polyester",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "Double Deerstalker Cap in Blue / Soft Tan by Wynken",
+    "source": "ORIGINAL",
+    "confidence": 0.8
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/collections/wynken/products/double-deerstalker-cap-in-blue-soft-tan-by-wynken",
+   "description": {
+    "value": "Double Deerstalker Cap by Wynken. The Double Deerstalker is a two-in-one cap, featuring an outer cap in ultramarine blue 100% nylon with subtle tone-on-tone “wynken” embroidery, and an inner cap in soft tan faux fur with a cotton lining. Each piece can be worn separately or snapped together with press studs, making this two-in-one hat both practical and versatile. Lightweight and cosy, this faux fur and nylon cap is easy to style on its own or layered for added warmth. A tactile, playful accessory that adds texture, sophistication and a creative twist to your everyday look. Colour - Blue / Soft Tan. Outer: 100% Nylon. Inner: 100% Polyester. Lining: 100% Cotton. Made in China. Product Code WK21A165 AW26",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Wynken AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "AW26MS185",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Main Story",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Grey Melange",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Bubble Sweatshirt in Grey Melange by Main Story",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "100% Organic Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story?_pos=1&_sid=a0738e824&_ss=r",
+   "description": {
+    "value": "Bubble Sweatshirt by Main Story. A relaxed fit sweatshirt with dropped shoulders and a large Main Story print across the chest, finished with ribbed cuffs, hem and neckline. Colour - Grey Melange. 100% Organic Cotton. From Main Story AW26 Collection. Product code AW26MS185 Made in Portugal.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Main Story AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "B126AI018",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Green",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Curious Turnip All Over Swim Cap by Bobo Choses - Last One In Stock - 2-6 Years",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "88% Polyester, 12% Elastane",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/products/curious-turnip-all-over-swim-cap-by-bobo-choses",
+   "description": {
+    "value": "Curious Turnip All Over Swim Cap by Bobo Choses. Colour - Green. 88% Polyester, 12% Elastane. Hat Size Guide (Approximate): 52 / 2-6 years. 54 / 6-10 years. Product code B126AI018 SS26 Made in China.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Bobo Choses 60% Off Sale",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "MARKETING_SUFFIX"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "2672013275",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Mini Rodini",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Green",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Elephant Shrew Chenille Sweatshirt in Green by Mini Rodini",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/products/elephant-shrew-chenille-sweatshirt-in-green-by-mini-rodini?_pos=2&_psq=Elephant+Shrew+Chenille+Sweatshirt+in+Pink+by+Mini+Rodini&_psid=dd45fd9e4&_ss=e",
+   "description": {
+    "value": "Elephant Shrew Chenille Sweatshirt by Mini Rodini. Cosy sweatshirt, featuring the Elephant Shrew chenille appliqué, crafted in a soft, organic cotton. Colour - Green. 100% Organic Cotton. Made in Türkiye. Product code 2672013275",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Mini Rodini AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "2672014894",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Mini Rodini",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Grey Melange",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Heart Appliqué Sweatshirt in Grey Melange by Mini Rodini",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "100% Organic Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/products/heart-applique-sweatshirt-in-grey-melange-by-mini-rodini?_pos=2&_sid=8982e10d3&_ss=r",
+   "description": {
+    "value": "Heart Appliqué Sweatshirt by Mini Rodini. Cosy and warm sweatshirt with a heart appliqué design, crafted in a sumptuously ultra soft organic cotton for comfortable, everyday wear. Colour - Grey Melange. 100% Organic Cotton. Made in Türkiye. Product code 2672014894",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Mini Rodini AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "01195-NEVADA-TOBACCO",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Pèpè Shoes",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Tobacco",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Lulu T Bar Shoes in Tobacco by PèPè",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "100% leather",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/products/lulu-t-bar-shoes-in-tobacco-by-pepe",
+   "description": {
+    "value": "Lulu T bar by PèPè shoes. Button T bar shoes in vegetally tanned brown leather with low T bar detail . Soft and flexible leather sole. Lined with 100% leather. Handmade using traditional methods in Italy. PèPè shoes are handcrafted in Italy using traditional artisanal skills and techniques. The shapes are iconic and refined in butter-soft leathers, a benchmark of Italian craftsmanship. Only a limited quantity are made to order each season, with many colours and leathers exclusive to us at Junior Edition. They are an extra special product to be treasured and appreciated by parents and children alike. Article code: 01195-NEVADA-TOBACCO. We recommend allowing an extra +0.5\" / +1.3cm for growth. Approximate inner length: EUR 17 / UK 1 / 11.3cm EUR 18 / UK 2 / 11.9cm EUR 19 / UK 2.5 / 12.5cm EUR 20 / UK 3 / 13.1cm EUR 21 / UK 4 / 13.7cm EUR 22 / UK 5 / 14.4cm EUR 23 / UK 6 / 15cm EUR 24 / UK 7 / 15.7cm EUR 25 / UK 7.5 / 16.4cm EUR 26 / UK 8 / 17cm EUR 27 / UK 9 / 17.7cm EUR 28 / UK 10 / 18.4cm EUR 29 / UK 11 / 19cm EUR 30 / UK 11.5 / 19.7cm EUR 31 / UK 12 / 20.4cm EUR 32 / UK 13 / 21cm EUR 33 / UK 1 / 21.6cm EUR 34 / UK 2 / 22.3cm Please note this is a handmade product and small variations will occur. Colour - Tobacco. Leather upper with leather lining. Handmade leather sole. We love these handmade iconic shoes by Pèpè.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "01195-NEVADA-TOBACCO",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Pèpè Shoes",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Tobacco",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Lulu T Bar Shoes in Tobacco by PèPè",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "100% leather",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/products/lulu-t-bar-shoes-in-tobacco-by-pepe?_pos=2&_psq=Lulu+T+Bar+Shoes+in+Vernice+Nero+by+P%C3%A8P%C3%A8+-+Last+Ones+In+Stock+-+28-29+EUR&_psid=5b9ca5c42&_ss=e&variant=40096037535807",
+   "description": {
+    "value": "Lulu T bar by PèPè shoes. Button T bar shoes in vegetally tanned brown leather with low T bar detail . Soft and flexible leather sole. Lined with 100% leather. Handmade using traditional methods in Italy. PèPè shoes are handcrafted in Italy using traditional artisanal skills and techniques. The shapes are iconic and refined in butter-soft leathers, a benchmark of Italian craftsmanship. Only a limited quantity are made to order each season, with many colours and leathers exclusive to us at Junior Edition. They are an extra special product to be treasured and appreciated by parents and children alike. Article code: 01195-NEVADA-TOBACCO. We recommend allowing an extra +0.5\" / +1.3cm for growth. Approximate inner length: EUR 17 / UK 1 / 11.3cm EUR 18 / UK 2 / 11.9cm EUR 19 / UK 2.5 / 12.5cm EUR 20 / UK 3 / 13.1cm EUR 21 / UK 4 / 13.7cm EUR 22 / UK 5 / 14.4cm EUR 23 / UK 6 / 15cm EUR 24 / UK 7 / 15.7cm EUR 25 / UK 7.5 / 16.4cm EUR 26 / UK 8 / 17cm EUR 27 / UK 9 / 17.7cm EUR 28 / UK 10 / 18.4cm EUR 29 / UK 11 / 19cm EUR 30 / UK 11.5 / 19.7cm EUR 31 / UK 12 / 20.4cm EUR 32 / UK 13 / 21cm EUR 33 / UK 1 / 21.6cm EUR 34 / UK 2 / 22.3cm Please note this is a handmade product and small variations will occur. Colour - Tobacco. Leather upper with leather lining. Handmade leather sole. We love these handmade iconic shoes by Pèpè.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "01195-VERNICE-NERO",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Pèpè Shoes",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "title": {
+    "value": "Lulu T Bar Shoes in Vernice Nero by PèPè - Last Ones In Stock - 28-29 EUR",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "100% leather",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "Pèpè Shoes",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/products/lulu-t-bar-shoes-in-vernice-nero-by-pepe",
+   "description": {
+    "value": "Lulu T bar by PèPè shoes. Button T bar shoes in black patent leather with low T bar detail . Soft and flexible leather sole. Lined with 100% leather. Handmade using traditional methods in Italy. PèPè shoes are handcrafted in Italy using traditional artisanal skills and techniques. The shapes are iconic and refined in butter-soft leathers, a benchmark of Italian craftsmanship. Only a limited quantity are made to order each season, with many colours and leathers exclusive to us at Junior Edition. They are an extra special product to be treasured and appreciated by parents and children alike. Article code: 01195-VERNICE-NERO. We recommend allowing an extra +0.5\" / +1.3cm for growth. Approximate inner length: EUR 17 / UK 1 / 11.3cm EUR 18 / UK 2 / 11.9cm EUR 19 / UK 2.5 / 12.5cm EUR 20 / UK 3 / 13.1cm EUR 21 / UK 4 / 13.7cm EUR 22 / UK 5 / 14.4cm EUR 23 / UK 6 / 15cm EUR 24 / UK 7 / 15.7cm EUR 25 / UK 7.5 / 16.4cm EUR 26 / UK 8 / 17cm EUR 27 / UK 9 / 17.7cm EUR 28 / UK 10 / 18.4cm EUR 29 / UK 11 / 19cm EUR 30 / UK 11.5 / 19.7cm EUR 31 / UK 12 / 20.4cm EUR 32 / UK 13 / 21cm EUR 33 / UK 1 / 21.6cm EUR 34 / UK 2 / 22.3cm Please note this is a handmade product and small variations will occur. Colour - Vernice Nero (Black Patent). Leather upper with leather lining. Handmade leather sole. We love these handmade iconic shoes by Pèpè.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "01195-VERNICE-NERO",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Pèpè Shoes",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "title": {
+    "value": "Lulu T Bar Shoes in Vernice Nero by PèPè - Last Ones In Stock - 28-29 EUR",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "100% leather",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/products/lulu-t-bar-shoes-in-vernice-nero-by-pepe?_pos=2&_psq=Lulu+T+Bar+Shoes&_psid=cb87b4e28&_ss=e",
+   "description": {
+    "value": "Lulu T bar by PèPè shoes. Button T bar shoes in black patent leather with low T bar detail . Soft and flexible leather sole. Lined with 100% leather. Handmade using traditional methods in Italy. PèPè shoes are handcrafted in Italy using traditional artisanal skills and techniques. The shapes are iconic and refined in butter-soft leathers, a benchmark of Italian craftsmanship. Only a limited quantity are made to order each season, with many colours and leathers exclusive to us at Junior Edition. They are an extra special product to be treasured and appreciated by parents and children alike. Article code: 01195-VERNICE-NERO. We recommend allowing an extra +0.5\" / +1.3cm for growth. Approximate inner length: EUR 17 / UK 1 / 11.3cm EUR 18 / UK 2 / 11.9cm EUR 19 / UK 2.5 / 12.5cm EUR 20 / UK 3 / 13.1cm EUR 21 / UK 4 / 13.7cm EUR 22 / UK 5 / 14.4cm EUR 23 / UK 6 / 15cm EUR 24 / UK 7 / 15.7cm EUR 25 / UK 7.5 / 16.4cm EUR 26 / UK 8 / 17cm EUR 27 / UK 9 / 17.7cm EUR 28 / UK 10 / 18.4cm EUR 29 / UK 11 / 19cm EUR 30 / UK 11.5 / 19.7cm EUR 31 / UK 12 / 20.4cm EUR 32 / UK 13 / 21cm EUR 33 / UK 1 / 21.6cm EUR 34 / UK 2 / 22.3cm Please note this is a handmade product and small variations will occur. Colour - Vernice Nero (Black Patent). Leather upper with leather lining. Handmade leather sole. We love these handmade iconic shoes by Pèpè.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "L.F.Markey",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Puzzle Embroidery",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Mason Jeans in Puzzle Embroidery by L.F.Markey",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "100% Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/products/mason-jeans-in-puzzle-embroidery-by-l-f-markey?_pos=2&_sid=855d2eb0e&_ss=r",
+   "description": {
+    "value": "Mason Jeans by L.F.Markey. A special edition of L.F.Markeys iconic women's Mason Jean. Cut with the signature high waist and sculptural balloon leg, this version is crafted from premium 12oz cotton denim with an all-over embroidered modernist motif. Colour - Puzzle Embroidery. 100% Cotton. We would recommend sizing up for a more relaxed fit around the waist. Please refer to our size guide below for measurements. Size Guide: UK 8: Waist 70cm, Hip 120cm, Length 99cm. UK 10: Waist 74cm, Hip 124cm, Length 99.5cm. UK 12: Waist 78cm, Hip 128cm, Length 100cm. UK 14: Waist 82cm, Hip 132cm, Length 100.5cm.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "L.F.Markey AW26 Drop 1",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "B126AC096",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Prussian Blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Pickles The Dog All Over Light Denim Pants by Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "100% Organic Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/products/pickles-the-dog-all-over-light-denim-pants-by-bobo-choses?_pos=10&_sid=ecbae3eef&_ss=r",
+   "description": {
+    "value": "Pickles The Dog All Over Light Denim Pants by Bobo Choses. Prussian blue denim trousers designed with an elasticated waistband, straight fit, long length, a patch pocket and seam pockets. Colour - Prussian Blue. 100% Organic Cotton. Product code B126AC096 SS26 Made in Spain.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Bobo Choses 60% Off Sale",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "MARKETING_SUFFIX"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "B126AC083",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Purple",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Tangerine All Over Leggings by Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "94% Organic Cotton, 6% Elastane",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/en-kr/products/tangerine-all-over-leggings-by-bobo-choses?_pos=6&_sid=ecbae3eef&_ss=r",
+   "description": {
+    "value": "Tangerine All Over Leggings by Bobo Choses. Purple pants with an elasticated waistband, slim fit and ankle length, featuring an all over tangerines print. Colour - Purple. 94% Organic Cotton, 6% Elastane. Product code B126AC083 SS26 Made in Spain.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Bobo Choses 60% Off Sale",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "MARKETING_SUFFIX"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Multi",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Bobo Choses Color Block Zipped Sweatshirt by Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/products/bobo-choses-color-block-zipped-sweatshirt-by-bobo-choses",
+   "description": {
+    "value": "Bobo Choses Color Block Zipped Sweatshirt by Bobo Choses. Multicolour sweatshirt featuring a front zip fastening, elasticated bottom, elasticated cuffs, a loose fit and a high neck. Colour - Multi. 72% Organic Cotton, 28% Recycled Polyester. Product code B126AC050 SS26 Made in Spain.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Bobo Choses SS26 50% Off Sale",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE",
+     "MARKETING_SUFFIX"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Pèpè Shoes",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Pink",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Giulia Flower Sandals in Ombretto Pink by PèPè",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "100% leather",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/products/giulia-flower-sandals-in-ombretto-pink-by-pepe",
+   "description": {
+    "value": "Giulia Flower sandals by PèPè shoes. Flower front sandals in a blush pink vitello calfskin leather with adjustable velcro ankle strap fastening. Soft and flexible leather sole. Lined with 100% leather. Handmade using traditional methods in Italy. PèPè shoes are handcrafted in Italy using traditional artisanal skills and techniques. The shapes are iconic and refined in butter-soft leathers, a benchmark of Italian craftsmanship. Only a limited quantity are made to order each season, with many colours and leathers exclusive to us at Junior Edition. They are an extra special product to be treasured and appreciated by parents and children alike. Article code: 01325/VLC-VDMSC Vitello DM. We recommend allowing an extra +0.5\" / +1.3cm for growth. Approximate inner length: EUR 17 / UK 1 / 11.3cm EUR 18 / UK 2 / 11.9cm EUR 19 / UK 2.5 / 12.5cm EUR 20 / UK 3 / 13.1cm EUR 21 / UK 4 / 13.7cm EUR 22 / UK 5 / 14.4cm EUR 23 / UK 6 / 15cm EUR 24 / UK 7 / 15.7cm EUR 25 / UK 7.5 / 16.4cm EUR 26 / UK 8 / 17cm EUR 27 / UK 9 / 17.7cm EUR 28 / UK 10 / 18.4cm EUR 29 / UK 11 / 19cm EUR 30 / UK 11.5 / 19.7cm EUR 31 / UK 12 / 20.4cm EUR 32 / UK 13 / 21cm EUR 33 / UK 1 / 21.6cm EUR 34 / UK 2 / 22.3cm Please note this is a handmade product and small variations will occur. Colour - Ombretto (Blush Pink). Leather upper with leather lining. Handmade leather sole. We love these handmade iconic sandals by Pèpè.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Pèpè Shoes 50% Off",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "MARKETING_SUFFIX"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Misha & Puff Winter 25",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "title": {
+    "value": "Skating Pond Skirt in Snowglobe Confetti by Misha & Puff - Last Ones In Stock - 4-8 Years",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.junioredition.com/products/skating-pond-skirt-in-snowglobe-confetti-by-misha-puff",
+   "description": {
+    "value": "Skating Pond Skirt by Misha &amp; Puff. Misha &amp; Puff's signature pleated skirt in Merino Wool knit. A hand-knit skirt featuring attached bloomers with ribbed cuffs and a ribbed waistband with a popcorn-tie drawstring for a secure fit. Colour - Snowglobe Confetti 907. 100% Merino Wool. Product Code: K1003W25-907 Made in Peru.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Misha & Puff Winter 25 50% Off Sale",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "MARKETING_SUFFIX"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "B226AC062",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Lavender",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Watercolor All Over Cocoon Jogging Pants by Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "17% Recycled Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.junioredition.com/products/watercolor-all-over-cocoon-jogging-pants-by-bobo-choses?_pos=1&_psq=Cocoon%20Jogging%20Pants&_psid=ff7b0214a&_ss=e",
+   "description": {
+    "value": "Watercolor All Over Cocoon Jogging Pants by Bobo Choses. Lavender sweatpants with an all over watercolour print designed with an elasticated waistband and side pockets. Colour - Lavender. 66% Organic Cotton 17% Recycled Cotton 17% Cotton. Product code B226AC062 AW26 Made in Spain.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": {
+    "raw": "Bobo Choses AW26",
+    "confidence": "HIGH",
+    "ruleApplied": [
+     "SEASON_CODE"
+    ]
+   }
+  },
+  {
+   "sku": {
+    "value": "AAA1804532",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "Blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "All About Monsters Washed T-shirt Organic cotton | Blue",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/all-about-monsters-washed-t-shirt-organic-cotton-blue-bobo-choses-430632?algsearch=0bf345b776eec78c2df693b192ecdfea",
+   "description": {
+    "value": "  SIZE AND FIT    Loose fit    COMPOSITION    100% Organic Cotton    Find out more    Wash Cold-30°  Made in Spain  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1620718",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Louise Misha",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "Cream",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Astrid Organic Cotton Jacket | Cream",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "100% Organic Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/astrid-organic-cotton-jacket-cream-louise-misha-381712?algsearch=48969d3225d283713f07c3321bb8da9f",
+   "description": {
+    "value": "  DETAILS     \nLove of detail: Quilted jacket in floral cotton voile. Lightweight topstitching and padding. Front button placket. Two front patch pockets. Lined. This piece was imagined by Marie Pidancet and her passionate team.    COMPOSITION    100% Organic Cotton    Find out more    Made in India  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1804641",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "Navy",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "B.C. Organic Cotton Zipped Sweatshirt | Navy blue",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "17% Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/b.c.-organic-cotton-zipped-sweatshirt-navy-blue-bobo-choses-430651?algsearch=9e788afefac49cc096585322e2f7b039",
+   "description": {
+    "value": "  SIZE AND FIT    Loose fit    COMPOSITION    17% Cotton, 66% Organic Cotton, 17% Recycled Cotton    Find out more    Wash Cold-30°  Made in Spain  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1804939",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "Blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "BC Recycled Fiber Tracksuit Jacket | Blue",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "100% Polyester",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/bc-recycled-fiber-tracksuit-jacket-blue-bobo-choses-430704",
+   "description": {
+    "value": "  SIZE AND FIT    Relaxed fit    COMPOSITION    100% Polyester, 100% Recycled Polyamide    Find out more    Wash Cold-30°  Made in China  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "BLUE",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "title": {
+    "value": "Bobo Choses 26FW Straight Jogging Pants ",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "images": [],
+   "material": {
+    "value": "17% Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/bobo-choses-organic-cotton-ample-joggers-lavender-bobo-choses-430663?algsearch=6058a0602a6084ec8d2519120d168bd8",
+   "description": {
+    "value": "  SIZE AND FIT    Loose fit    COMPOSITION    17% Cotton, 66% Organic Cotton, 17% Recycled Cotton    Find out more    Wash Cold-30°  Made in Spain  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1804916",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "title": {
+    "value": "Bobo Choses Organic Cotton T-shirt | Ecru",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/bobo-choses-organic-cotton-t-shirt-ecru-bobo-choses-430700",
+   "description": {
+    "value": "  COMPOSITION    100% Organic Cotton    Find out more    Wash Cold-30°  Made in Portugal  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1804922",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "grey",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Bobo Choses Zipped Sweat Organic Cotton | Heather grey",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/bobo-choses-zipped-sweat-organic-cotton-heather-grey-bobo-choses-430701",
+   "description": {
+    "value": "  SIZE AND FIT    Loose fit    COMPOSITION    100% Organic Cotton    Find out more    Wash Cold-30°  Made in Portugal  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1822268",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Louise Misha",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "title": {
+    "value": "Dalila Reversible Fur Coat Carreaux | Framboise",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "100% organic cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/dalila-reversible-fur-coat-carreaux-framboise-louise-misha-434530",
+   "description": {
+    "value": "  Description     \n \nReversible quilted coat with a small round collar. \nOne side is made of yarn-dyed Vichy check cotton flannel. \nThe other side is made of super-soft faux fur. \nPatch pockets with embroidery and picot trim on the Vichy check side and faux fur on the other side. \nSnap-button placket. \nCroquet details hand-embroidered on the Vichy side. \nNote: The flannel is made from organically grown cotton. \n \n    DETAILS    Attention to detail: \n \nReversible quilted coat with a small round collar. \nOne side is made of yarn-dyed Vichy check cotton flannel. \nThe other side is made of soft faux fur. \nPatch pockets with embroidery and picot trim on the Vichy check side and faux fur on the other side. \nSnap-fastened placket. \nCroquet details hand-embroidered on the Vichy side. \nNote: The flannel is made from organically grown cotton. \n    COMPOSITION    100% organic cotton woven    Find out more    Wash at 30°C on the delicate cycle; do not bleach; do not tumble dry  Made in India  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1822268",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Louise Misha",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "title": {
+    "value": "Dalila Reversible Fur Coat Carreaux | Framboise",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "100% organic cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "Reversible Coat Jasmina - Raspberry Checks",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/dalila-reversible-fur-coat-carreaux-framboise-louise-misha-434530?algsearch=2f18424060b698b7c70307cf3272af13",
+   "description": {
+    "value": "  Description     \n \nReversible quilted coat with a small round collar. \nOne side is made of yarn-dyed Vichy check cotton flannel. \nThe other side is made of super-soft faux fur. \nPatch pockets with embroidery and picot trim on the Vichy check side and faux fur on the other side. \nSnap-button placket. \nCroquet details hand-embroidered on the Vichy side. \nNote: The flannel is made from organically grown cotton. \n \n    DETAILS    Attention to detail: \n \nReversible quilted coat with a small round collar. \nOne side is made of yarn-dyed Vichy check cotton flannel. \nThe other side is made of soft faux fur. \nPatch pockets with embroidery and picot trim on the Vichy check side and faux fur on the other side. \nSnap-fastened placket. \nCroquet details hand-embroidered on the Vichy side. \nNote: The flannel is made from organically grown cotton. \n    COMPOSITION    100% organic cotton woven    Find out more    Wash at 30°C on the delicate cycle; do not bleach; do not tumble dry  Made in India  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1822268",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Louise Misha",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "title": {
+    "value": "Dalila Reversible Fur Coat Carreaux | Framboise",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "100% organic cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/dalila-reversible-fur-coat-carreaux-framboise-louise-misha-434530?algsearch=2f18424060b698b7c70307cf3272af13&utm_source=chatgpt.com",
+   "description": {
+    "value": "  Description     \n \nReversible quilted coat with a small round collar. \nOne side is made of yarn-dyed Vichy check cotton flannel. \nThe other side is made of super-soft faux fur. \nPatch pockets with embroidery and picot trim on the Vichy check side and faux fur on the other side. \nSnap-button placket. \nCroquet details hand-embroidered on the Vichy side. \nNote: The flannel is made from organically grown cotton. \n \n    DETAILS    Attention to detail: \n \nReversible quilted coat with a small round collar. \nOne side is made of yarn-dyed Vichy check cotton flannel. \nThe other side is made of soft faux fur. \nPatch pockets with embroidery and picot trim on the Vichy check side and faux fur on the other side. \nSnap-fastened placket. \nCroquet details hand-embroidered on the Vichy side. \nNote: The flannel is made from organically grown cotton. \n    COMPOSITION    100% organic cotton woven    Find out more    Wash at 30°C on the delicate cycle; do not bleach; do not tumble dry  Made in India  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1847110",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Louis Louise",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "Pink",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Holly Hearts Ribbed Velvet Baby Pants | Pale Pink",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "100% Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/holly-hearts-ribbed-velvet-baby-pants-pale-pink-louis-louise-441173",
+   "description": {
+    "value": "  Description    Material: Corduroy. Baby pants in powder pink corduroy. They feature two heart-shaped patches on the knees printed with floral motifs. Their soft, slightly flared cut includes an elastic waistband for easy dressing and plenty of freedom of movement.    DETAILS    • Flared-leg pants \n• Heart-shaped knee patches \n• Elastic waistband    COMPOSITION    100% Cotton    Find out more    Made in India  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1847114",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Louis Louise",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "Blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Jean Holly Baby Hearts | Blue",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "100% Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/jean-holly-baby-hearts-blue-louis-louise-441174",
+   "description": {
+    "value": "  Description    Material: Denim. Blue denim baby pants. They feature two large heart-shaped patches on the knees with a red bandana pattern. The relaxed, slightly flared cut includes a very comfortable elastic waistband that makes dressing easy and ensures plenty of freedom of movement.    DETAILS    • Flared-leg pants \n• Heart-shaped knee patches \n• Elastic waistband    COMPOSITION    100% Cotton    Find out more    Made in India  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1769665",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Bonpoint",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "title": {
+    "value": "Lilibet Fleurie Embroidered Dress | Ecru",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/lilibet-fleurie-embroidered-dress-ecru-bonpoint-419597?algsearch=57b88a7b77847661e7aaf8e9ab5187a6",
+   "description": {
+    "value": "  Description    The Lilibet dress for girls features a steamy tulle underskirt and delicate mother-of-pearl buttons. Lined in cotton voile, it combines elegance and comfort. Majority cotton Cotton voile lining Buttoned back opening    COMPOSITION    57% Cotton - 33% Polyester - 10% Polyamide    Find out more    Made in Madagascar  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1725660",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Liewood",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "Pink",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Max Hearts Recycled Fiber UV Protection Swimsuit | Pink",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/max-hearts-recycled-fiber-uv-protection-swimsuit-pink-liewood-409775?algsearch=b5431da021abba9c8fe830c20241f5b6",
+   "description": {
+    "value": "  Description    The MAX long-sleeve swim jumpsuit offers full coverage with a soft, stretchy fit for all-day comfort. Crafted from quick-drying fabric with UV40+ protection, it is ideal for sunny days spent by the pool or at the beach.    COMPOSITION    LINING: 100% Recycled Polyester; SHELL: 82% Recycled Polyester, 18% Elastane    Find out more    Machine wash temperature 30°, Do not dry clean, Do not tumble dry , Do not iron , Do not bleach  Made in China  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1725870",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Liewood",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "Beige",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Nolan Pandas Recycled Fiber Sherpa Jacket | Beige",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "modelName": {
+    "value": "Liewood Nolan printed fleece jacket",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/nolan-pandas-recycled-fiber-sherpa-jacket-beige-liewood-409800",
+   "description": {
+    "value": "  Description      Comfortable, practical, and ideal for outdoor play. The soft NOLAN fleece jacket is your child's durable outerwear staple that can be used on its own or as an extra warm layer. It features a high stand-up collar for additional wind protection, a full-front zip with an internal wind flap, and extra pockets for small treasures.custom_93      COMPOSITION    100% GRS-certified recycled polyester    Find out more    Machine wash temperature 30°, Close zipper, velcro and buttons before washing, Do not tumble dry , Do not iron , Do not bleach  Made in China  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1725878",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Liewood",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "Pink",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Nolan Sherpa Jacket Recycled Fiber Hearts | Pink",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "100% Recycled Polyester",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "Nolan Sherpa Jacket Recycled Fiber Hearts | Pink",
+    "source": "ORIGINAL",
+    "confidence": 0.8
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/nolan-sherpa-jacket-recycled-fiber-hearts-pink-liewood-409801",
+   "description": {
+    "value": "  Description    Comfortable, practical, and ideal for outdoor play. The soft NOLAN fleece jacket is your child's durable outerwear staple that can be used on its own or as an extra warm layer. It features a high stand-up collar for additional wind protection, a full-front zip with an internal wind flap, and extra pockets for small treasures. Want your own pile jacket? Match your mini with the NELSON pile jacket for grown-ups.    COMPOSITION    100% Recycled Polyester    Find out more    Machine wash temperature 30°, Do not dry clean, Do not tumble dry , Do not iron , Do not bleach  Made in China  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1804944",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "grey",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Organic Cotton Bobo Ample Joggers | Heather grey",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/organic-cotton-bobo-ample-joggers-heather-grey-bobo-choses-430705",
+   "description": {
+    "value": "  COMPOSITION    100% Organic Cotton    Find out more    Wash Cold-30°  Made in Portugal  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AW26-371-107",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "brand": {
+    "value": "Tinycottons",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "Navy",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "타이니코튼 26FW 컬러블록 스웨트셔츠 키즈 남아 맨투맨 티셔츠",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "images": [],
+   "material": {
+    "value": "100% organic cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "TINY COLOR BLOCK SWEATSHIRT",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/organic-cotton-colorblock-sweatshirt-navy-blue-tinycottons-438377?algsearch=bad8760dc8f95659246b1e0a011bc251",
+   "description": {
+    "value": "  Description    This color-block sweatshirt is crafted from 100% organic cotton. It features a comfy, relaxed silhouette with a round neckline and ribbed cuffs, and showcases the Tiny print on the front, adding a playful and distinctive touch to any outfit.    COMPOSITION    100% organic cotton    Find out more    machine wash cold,do not bleach,do not tumble dry,warm iron on reverse side,do not dry clean,wash with similar colors  Made in China  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1854817",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "title": {
+    "value": "Organic Cotton Embroidered Shirt and Pants Set | Ecru",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/organic-cotton-embroidered-shirt-and-pants-set-ecru-bobo-choses-443816",
+   "description": {
+    "value": "  COMPOSITION    100 % Organic Cotton \n    Find out more    Wash Cold-30°  Made in China  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1765118",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Tumble N'Dry",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "title": {
+    "value": "Oversize Maringa organic cotton T-shirt | Ecru",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "100% Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/oversize-maringa-organic-cotton-t-shirt-ecru-tumble-n-dry-418300?algsearch=4636e30288299191c840a728ae28c732",
+   "description": {
+    "value": "  Description    Tshirt, oversized, ribbed along neck, soft structure quality, embroidery on chest, print at the back. Made of organic cotton    COMPOSITION    100% Cotton (Organic)    Find out more    Made in India  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1626438",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Arsène et Les Pipelettes",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "Pink",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Short Fiorenza | Pink",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/short-fiorenza-pink-arsene-et-les-pipelettes-382822?algsearch=1fcb8306faa05ef1672bf036c872d5cb",
+   "description": {
+    "value": "  DETAILS    We recommend that you machine-wash your cotton, linen and hemp garments at 30 degrees on the cotton cycle, inside out. Ironing is also best done inside out.    COMPOSITION    100% Woven cotton    Find out more    Made in India  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1775452",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Sofie Schnoor",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Striped Juliette Ruffle Blouse | Pale blue",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "100% Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/striped-juliette-ruffle-blouse-pale-blue-sofie-schnoor-421024?algsearch=97210736124a4ea1905ad2c6ab3f7750",
+   "description": {
+    "value": "  Description    • Top with frill sleeve  \n• Front opening with 3 bow´s  \n• Cutline in waist with wrinkels     COMPOSITION    100% Cotton    Find out more    Made in China  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1804933",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "Blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Striped organic cotton polo neck sweater | Blue",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/striped-organic-cotton-polo-neck-sweater-blue-bobo-choses-430703",
+   "description": {
+    "value": "  SIZE AND FIT    Loose fit    COMPOSITION    100% Organic Cotton    Find out more    Wash Cold-30°  Made in Spain  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1804629",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Bobo Choses",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "Blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "보보쇼즈 26FW 비스트 태그 폴로 스웻셔츠 블루",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/sweat-polo-organic-cotton-blue-bobo-choses-430649?algsearch=66612fcf0a9dd5f9976155eaf6032fd2",
+   "description": {
+    "value": "  SIZE AND FIT    Loose fit    COMPOSITION    17% Cotton, 66% Organic Cotton, 17% Recycled Cotton    Find out more    Wash Cold-30°  Made in Spain  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1822293",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Louise Misha",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "Cream",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Tender coat | Cream",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "100% polyester",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "Louise Misha Tender coat",
+    "source": "USER_EDITED",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.smallable.com/en/product/tender-coat-cream-louise-misha-434534?algsearch=bd88bec681e216813f323c42195b3213",
+   "description": {
+    "value": "  Description     \n \nWater-repellent quilted parka with a mix of floral prints. \nHood. \nPatch pockets on the front. \nSnap-button placket with a concealed zipper. \nRibbed velvet trim. \nLined with faux fur. \n \n    DETAILS    Attention to detail: \n \nWater-repellent quilted parka with a mix of floral prints. \nHood. \nPatch pockets on the front. \nSnap-button placket with a hidden zipper. \nRibbed velvet trim. \nLined with faux fur. \n    COMPOSITION    100% polyester woven    Find out more    Wash at 30°C on the delicate cycle; do not bleach; do not tumble dry  Made in China  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1789529",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Hundred Pieces",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "title": {
+    "value": "Bermuda Denim Conrad | Bleu jean",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.smallable.com/fr/product/bermuda-denim-conrad-bleu-jean-hundred-pieces-426478?algsearch=5430666895b200cfaceb26e3aaba026b",
+   "description": {
+    "value": "  DÉTAILS    - Bermuda 5 poches \n- Coupe baggy oversized \n- Rivet(s) \n- Pression à la taille jusqu'à la taille 8 ans, puis bouton jeans \n- Système de resserrage dans la ceinture jusqu'au 14 ans \n- Braguette zippée    COMPOSITION    80% Coton - 20% Coton Recyclé    En savoir plus    Laver en machine à l’envers avec couleurs similaires - Risque de dégorgement \nNe pas utiliser de javel  \nSèche linge autorisé \nRepasser à l’envers \nNettoyage à sec possible \nSéchage naturel recommandé \nTenir éloigné du feu  Fabrication : Tunisie  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1598428",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Emile et Ida",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "title": {
+    "value": "Jupe Iris | Ecru",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.smallable.com/fr/product/jupe-iris-ecru-emile-et-ida-376765?algsearch=ac4bd11f40c22debc5631df72f6babaa",
+   "description": {
+    "value": "  Description    Jupe courte en coton Dobby écru ligné de rayures mates et brillantes sur lesquelles sont imprimées de délicates fleurettes bleues, aussi bien alignées que dans un jardin à la française. Vous apprécierez la qualité et la finesse de la matière toute douce et la forme ample que procurent les fronces soutenues par une ceinture élastiquée avec un effet volanté et les poches plaquées entourées d'un froufrou qui dissimuleront le moindre trésor. \n Une jupe toute doublée qui n'attend que le printemps pour sortir ! \n Le tissage Dobby, du nom du métier à tisser sur lequel il est produit, permet de créer des reliefs, des motifs, des effets de couleurs, d'ajouter de la texture afin qu'il procure des sensations visuelles et tactiles comme le nid d'abeille, le gaufré, le piqué et… le tissu de cette robe.    COMPOSITION    100% COTON    En savoir plus    Fabrication : Inde  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1832449",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "the new society",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "title": {
+    "value": "Robe Fleckers | Bleu",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.smallable.com/fr/product/robe-fleckers-bleu-the-new-society-437193?algfrom=similarProduct",
+   "description": {
+    "value": "  Description    Robe en coton ornée d'un ravissant imprimé floral, dotée d'un col délicatement brodé qui rend cette pièce vraiment unique. Cintrée à la taille et dotée de poignets à volants, elle présente une ouverture en forme de trou de serrure dans le dos, fermée par un bouton, ainsi qu'une doublure intérieure douce.    COMPOSITION    100 % COTON    En savoir plus    Fabrication : Portugal  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "AAA1785571",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brand": {
+    "value": "Smallable Kid",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "color": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "title": {
+    "value": "Short Ample Tom Rayé | Rouge cerise",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.smallable.com/fr/product/short-ample-tom-raye-rouge-cerise-smallable-kid-424671?algsearch=0aea26e49a07142d64a7928d6b43b944",
+   "description": {
+    "value": "  DÉTAILS    - Short ample \n- Taille élastiquée \n- Poches latérales \n- Poche dos plaquée (à droite au porté)    COMPOSITION    100% Coton    En savoir plus    Laver en machine à l’envers avec couleurs similaires \nNe pas utiliser de javel \nNe pas sécher au sèche linge \nSéchage naturel recommandé \nRepasser sur l’envers à température moyenne \nNettoyage à sec possible \nTenir éloigné du feu  Fabrication : Inde  ",
+    "source": "ORIGINAL",
+    "confidence": 0.9
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "color": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "title": {
+    "value": "Smallable Kid - T-shirt Nils Coton Bio - Rouge foncé | Smallable",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.smallable.com/fr/product/t-shirt-nils-coton-bio-rouge-fonce-smallable-kid-427130?algsearch=c586ab7f9ddfea00f2a2b4f807be970c",
+   "description": {
+    "value": "Nouveau ! Retrouvez sur Smallable : Smallable Kid - T-shirt Nils Coton Bio - Rouge foncé. Découvrez aussi notre sélection de blouse t shirt adolescent.",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "STMDPPBL1",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "brand": {
+    "value": "Sergio Tacchini",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "color": {
+    "value": "Humus",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Sergio Tacchini Men's Damarindo Pique Polo",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "images": [],
+   "material": {
+    "value": "100% Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.tennis-warehouse.com/Sergio_Tacchini_Mens_Damarindo_Pique_Polo/descpageMASGT-STMDPP.html?color=BL",
+   "description": {
+    "value": "Overview\nKey Features\nMade with Cotton\nMade with Cotton\n\nThe Sergio Tacchini Men's Damarindo Pique Polo delivers style that goes beyond the court. This sporty polo has a 3-button placket, rib-knit collar with contrast tipping, yarn-dyed stripes across the chest, back and sleeves, side hem vents, and an embroidered 'ST' monogram logo on the left chest.\n\nContent: 100% Cotton Pique\n3-Button placket\nColors:\nHumus\nWhite\n\nModel is 5'11\" and 195 lbs. He is wearing size Medium.\n\nOverall Sizing\nOverall Fit Learn More\nSmall\nTrue to Size\nLarge\nOverall Fit\nClothing Fit Learn More\nCompression\nSlim\nRegular\nRelaxed\nShirt Length\nClothing Fit Learn More\nShorter\nRegular\nLonger",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "STMCTSWH1",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "brand": {
+    "value": "Sergio Tacchini",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "color": {
+    "value": "Brilliant White",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Sergio Tacchini Men's Fall Cericho T-Shirt",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "images": [],
+   "material": {
+    "value": "100% Cotton",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.tennis-warehouse.com/Sergio_Tacchini_Mens_Fall_Cericho_T-Shirt/descpageMASGT-STMCTS.html?color=WH",
+   "description": {
+    "value": "Overview\nKey Features\nMade with Cotton\nMade with Cotton\n\nPlay it sporty and cool in-between matches with the Sergio Tacchini Men's Cericho T-Shirt. This soft cotton tee has a ribbed crewneck with interior taping, printed Sergio Tacchini logo graphic on the back and a logo on the left chest.\n\nContent: 100% Cotton\nRibbed crewneck\nPrinted graphics\nColors: Brilliant White\n\nModel is 6'2\" and 170 lbs. He is wearing size Medium.\n\nOverall Sizing\nOverall Fit Learn More\nSmall\nTrue to Size\nLarge\nOverall Fit\nClothing Fit Learn More\nCompression\nSlim\nRegular\nRelaxed\nShirt Length\nClothing Fit Learn More\nShorter\nRegular\nLonger",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "STMFFZJBK01",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "brand": {
+    "value": "Sergio Tacchini",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "color": {
+    "value": "Black Beauty",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Sergio Tacchini Men's Fall Fico Full Zip Track Jacket",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "images": [],
+   "material": {
+    "value": "100% Polyester",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.tennis-warehouse.com/Sergio_Tacchini_Mens_Fall_Fico_Full_Zip_Track_Jacket/descpageMASGT-STMFFZJ.html?color=BK",
+   "description": {
+    "value": "Overview\n\nOn and off the court, the sporty style of the Sergio Tacchini Men's Fico Full Zip Track Jacket will get attention. It features a colorblock design with stripe details, stand-up collar, zippered front pockets, full lining, elasticized hem and sleeve cuffs, and an embroidered Sergio Tacchini logo on the left chest.\n\nContent: 100% Polyester\nZippered front pockets\nFull lining\nColors: Black Beauty\n\nModel is 6'2\" and 170 lbs. He is wearing size Medium.\n\nOverall Sizing\nOverall Fit Learn More\nSmall\nTrue to Size\nLarge\nOverall Fit\nClothing Fit Learn More\nCompression\nSlim\nRegular\nRelaxed\nShirt Length\nClothing Fit Learn More\nShorter\nRegular\nLonger",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "STMFGTSBL1",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "brand": {
+    "value": "Sergio Tacchini",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "color": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "title": {
+    "value": "Sergio Tacchini Men's Fall Giocare T-Shirt",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "images": [],
+   "material": {
+    "value": "65% Cotton, 30% Polyester, 5% Elastane",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.tennis-warehouse.com/Sergio_Tacchini_Mens_Fall_Giocare_T-Shirt/descpageMASGT-STMFGTS.html?color=BL",
+   "description": {
+    "value": "Overview\nKey Features\nMoisture Wicking\nMoisture Wicking\nMade with Cotton\nMade with Cotton\n\nBold graphics make this Sergio Tacchini Men's Giocare T-Shirt a standout on and off the court. It features a cotton-blend pique fabric, ribbed crewneck, colorful Sergio Tacchini graphic printed on the front, and moisture wicking comfort.\n\nContent: 65% Cotton, 30% Polyester, 5% Elastane\nRibbed crewneck\nPique texture\nMoisture wicking\nColors: Troposphere Heather Blue\n\nModel is 6'2\" and 170 lbs. He is wearing size Medium.\n\nOverall Sizing\nOverall Fit Learn More\nSmall\nTrue to Size\nLarge\nOverall Fit\nClothing Fit Learn More\nCompression\nSlim\nRegular\nRelaxed\nShirt Length\nClothing Fit Learn More\nShorter\nRegular\nLonger",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "STMMLSWH1",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "brand": {
+    "value": "Sergio Tacchini",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "color": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "title": {
+    "value": "Sergio Tacchini Men's Magro Long Sleeve",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.tennis-warehouse.com/Sergio_Tacchini_Mens_Magro_Long_Sleeve/descpageMASGT-STMMLS.html?color=WH",
+   "description": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "STMRPWH2",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "brand": {
+    "value": "Sergio Tacchini",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "color": {
+    "value": "Brilliant White",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Sergio Tacchini Men's Racchetto Polo",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "images": [],
+   "material": {
+    "value": "100% Polyester",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "Sergio Tacchini Men's Racchetto Polo",
+    "source": "ORIGINAL",
+    "confidence": 0.8
+   },
+   "sourceUrl": "https://www.tennis-warehouse.com/Sergio_Tacchini_Mens_Racchetto_Polo/descpageMASGT-STMRP.html?color=WH",
+   "description": {
+    "value": "Overview\nKey Features\nMoisture Wicking\nMoisture Wicking\n\nThe Sergio Tacchini Men's Racchetto Polo serves up court style that transitions easily to the clubhouse. This lightweight pique polo has a contrast three-button placket with rib-knit collar, side hem vents, moisture wicking performance and a Sergio Tacchini monogram logo at the left chest.\n\nContent: 100% Polyester\nThree-button placket\nMoisture wicking\nColors: Brilliant White\n\nModel is 5'11\" and 195 lbs. He is wearing size Medium.\n\nOverall Sizing\nOverall Fit Learn More\nSmall\nTrue to Size\nLarge\nOverall Fit\nClothing Fit Learn More\nCompression\nSlim\nRegular\nRelaxed\nShirt Length\nClothing Fit Learn More\nShorter\nRegular\nLonger",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "STMFTPBL1",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "brand": {
+    "value": "Sergio Tacchini",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "color": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "title": {
+    "value": "Sergio Tacchini Men's Trattino Polo",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.tennis-warehouse.com/Sergio_Tacchini_Mens_Trattino_Polo/descpageMASGT-STMFTP.html?color=BL",
+   "description": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "STMFTS0BL01",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "brand": {
+    "value": "Sergio Tacchini",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "color": {
+    "value": "Galaxy Blue",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Sergio Tacchini Men's Trattino Short",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "images": [],
+   "material": {
+    "value": "86% Polyester, 14% Elastane",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "sourceUrl": "https://www.tennis-warehouse.com/Sergio_Tacchini_Mens_Trattino_Short/descpageMASGT-STMFTS0.html?color=BL",
+   "description": {
+    "value": "Overview\nKey Features\nMoisture Wicking\nMoisture Wicking\n\nShow off your competitive spirit in the Sergio Tacchini Men's Trattino Short. This stretchy woven short features an elastic waistband with exterior drawcord, side pockets, a zippered back pocket, contrast mesh fabric inserts on the sides, and a Sergio Tacchini logo on the left thigh.\n\nContent: 86% Polyester, 14% Elastane\nInseam: 7\" (size M)\nSide pockets\nZippered back pocket\nMesh fabric inserts\nMoisture wicking\nColors: Galaxy Blue\n\nModel is 6'2\" and 170 lbs. He is wearing size Medium.\n\nOverall Sizing\nOverall Fit Learn More\nSmall\nTrue to Size\nLarge\nOverall Fit\nClothing Fit Learn More\nCompression\nSlim\nRegular\nRelaxed\nInseam Length\nClothing Fit Learn More\n5\"\n6\"\n7\"\n8\"\n9\"\n10\"+",
+    "source": "ORIGINAL",
+    "confidence": 0.85
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "The Animals Observatory",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "Pink",
+    "source": "ORIGINAL",
+    "confidence": 0.7
+   },
+   "title": {
+    "value": "Soft Pink Pika Headband",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "modelName": {
+    "value": "",
+    "source": "REQUIRED",
+    "confidence": 0
+   },
+   "sourceUrl": "https://www.theanimalsobservatory.com/ko-kr/products/soft-pink-pika-headband-f26021-044-zz?_pos=3&_sid=4a54dd5e7&_ss=r",
+   "description": {
+    "value": "Padded soft pink headband with a contrasting interior and gold side detail. A practical and easy-to-style everyday accessory.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  },
+  {
+   "sku": {
+    "value": "",
+    "source": "ORIGINAL",
+    "confidence": 0
+   },
+   "brand": {
+    "value": "Wynken",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "color": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "title": {
+    "value": "Mixed Media Jacket - Ecru Mix",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "images": [],
+   "material": {
+    "value": "",
+    "source": "DETAIL_PAGE_REFERENCE",
+    "confidence": 1
+   },
+   "modelName": {
+    "value": "Mixed Media Jacket - Ecru Mix",
+    "source": "ORIGINAL",
+    "confidence": 0.8
+   },
+   "sourceUrl": "https://www.wynken.co.uk/products/mixed-media-jacket-ecru-mix?_pos=1&_sid=323acca5d&_ss=r",
+   "description": {
+    "value": "This mixed media jacket is perfect for colder days, combining warmth with playful style. The ecru faux fur exterior adds texture and character, while the Wynken stitching in a painter’s palette shape gives a subtle, creative detail. A collar keeps little ones extra cosy, and pockets are perfect for keeping hands warm. Soft, comfortable, and easy to layer, this mixed media jacket balances practicality, style, and character, making it a versatile choice for chilly days and playful adventures.",
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "brandResolution": null
+  }
+ ]
+}
