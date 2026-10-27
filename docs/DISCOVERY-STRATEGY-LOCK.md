@@ -360,3 +360,52 @@ DISCOVERY CORE = 🟡 HOLD — 운영 배선은 **CPO 결정** 이다(이번에 
 
 🔵 **CPO 결정 필요** — Q1 유지 / Q2 채택 / Q3 채택 / Query Set 다중 실행(비용 ×N) 중 하나.
 🔴 CTO 는 고르지 않았다. 🔴 `.aspx` 는 **HOLD 유지**(이번에 건드리지 않았다).
+
+---
+
+## 🔵🔵🔵 CPO 결정 — **Query 전략 확정**(2026-10-27 · SPRINT-03 결과 기준)
+
+🔴 **이 결정은 세션이 바뀌어도 유지된다.** 다시 묻지 않는다.
+
+| 항목 | 판정 |
+|---|---|
+| Apify Search 실행 | 🟢 **PASS** |
+| `Q1 "BRAND" "CODE"` 단독 | 🔴 **폐기** |
+| `Q2 BRAND CODE` | 🟢 **채택** |
+| `Q3 BRAND CODE + 디자인명` | 🟢 **채택** |
+| 채택 형태 | 🟢 **Q2 + Q3 병행**(상품당 Search **2회**) |
+| Search 결과 비결정성 | ⚠️ **운영상 인정** — 단일 측정으로 Recall 확정 금지 |
+| `.aspx` | 🟡 HOLD |
+| Discovery 운영 배선 | 🟡 **HOLD** — 별도 작업(SPRINT-04) |
+
+```
+🔴 **이번 결과로 Discovery Core 를 PASS 시키지 않는다.**
+   입증된 것은 **「Search Provider 가 채택 가능한 수준」** 까지다.
+```
+
+### 운영 배선 전에 고정할 계약 10(CPO)
+
+```
+① 상품당 Search **2회**        ② **Q1 사용 금지**        ③ Q2/Q3 결과 합산
+④ URL dedupe                   ⑤ 기존 `classifyUrlShape` 적용
+⑥ Crawl/Evidence 는 기존 파이프라인 그대로
+⑦ 🔴 Search 결과 자체를 **SAME 판정에 직접 사용하지 않는다**
+⑧ `.aspx` 수정 금지            ⑨ 국내 Registry 를 Discovery 엔진으로 확대 금지
+⑩ Apify 비용은 **실제 Billing 기준으로 추후 검증**
+```
+
+### 🔴🔴 SPRINT-04 착수 전 알아야 할 «범위 사실»(CTO 실측 2026-10-27)
+
+```
+🔴 **Q2 · Q3 는 현재 Query Planner 에 «존재하지 않는 축» 이다.**
+   `query-planner.ts:124-132` — **8개 축 전부가 `quote()` 로 감싼다**.
+   ⟹ Q2(`BRAND CODE` 따옴표 없음)는 내가 하니스에서 **따옴표를 떼어** 만든 것이고,
+      Q3(`BRAND CODE DESIGN`)도 축이 없다(`BRAND_DESIGN` 은 **품번이 빠진** `"brand" "design"`).
+⟹ 🔴 SPRINT-04 는 「기존 축 2개를 고르는 일」이 **아니다** —
+   **Planner 가 무따옴표 축 2개를 새로 내도록** 하는 **운영 변경** 이다.
+🔴 그리고 기존 계약이 그 자리를 잠그고 있다 —
+   `core-1-query-planner.test.ts:137` 가 **`qs[0].axis === "BRAND_CODE"`**(= Q1 이 1순위)를
+   단언한다. Q1 을 폐기하면 **그 계약이 FAIL 하고 그것이 의도된 변경의 증거** 다.
+```
+
+🔵 **다음 작업** = `DISCOVERY-SEARCH-PROVIDER-04 — Q2+Q3 운영 배선`(CPO 지시 대기).
