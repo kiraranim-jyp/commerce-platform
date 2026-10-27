@@ -131,6 +131,12 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
    * 🟢 이 파일의 소유자는 `search-provider-04-qa.test.ts`(QA 육안 비교 화면)다.
    */
   scanned.push("search-provider-04-raw.json");
+  /**
+   * 🔵 DISCOVERY-SEARCH-PROVIDER-05(2026-10-27) — **정의된 Query 전수** 검색 raw(64 run · 526 URL).
+   * 🔴 같은 성질이다 — SAME/DIFFERENT 라벨 **0** 이므로 분모에 들어갈 수 없다.
+   * 🟢 소유자는 `search-provider-05-qa.test.ts`. 🟢 이번에도 이 가드가 **FAIL 로 먼저 잡았다**.
+   */
+  scanned.push("search-provider-05-raw.json");
 
   /* 행 단위 originCode + verdict 계열 */
   for (const [file, src, codeKey, verdictKey] of [

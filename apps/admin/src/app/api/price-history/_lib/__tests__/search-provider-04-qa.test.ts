@@ -72,7 +72,12 @@ describe("SEARCH-PROVIDER-04 QA §마운트 DOM — 화면이 실제로 그린�
     container.remove();
   });
 
-  it("Q2 와 Q3 가 상품마다 나란히 그려지고 원본 URL 이 링크로 나온다", () => {
+  /**
+   * 🔴 SPRINT-05 에서 배치가 **2단 나란히 → 질의별 세로 나열** 로 바뀌었다(질의가 상품당
+   *    13~17개라 두 칸에 안 들어간다). 🟢 이 계약이 보는 것은 **배치가 아니라 「둘 다 있다」** 이고
+   *    그 성질은 그대로다 — 그래서 이름만 정정한다.
+   */
+  it("Q2 와 Q3 가 상품마다 **둘 다** 그려지고 원본 URL 이 링크로 나온다", () => {
     const views = buildRunViews(RAW);
     act(() => root.render(createElement(SearchCompareView, { origins: RAW.origins, runs: views })));
     const text = container.textContent ?? "";

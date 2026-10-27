@@ -498,3 +498,79 @@ Q3 약점  Crawl/Evidence «개수» 가 낮다(11) — 단 그 분모가 다양
 🟢 **S2 가 Q2/Q3 차이를 가장 크게 보여준다** — Q2 는 **판매처 1곳**, Q3 는 **7곳**.
 
 **🔵 다음 — CPO 육안 검증 후 단일 Query 확정.** 🔴 CTO 는 고르지 않았다.
+
+---
+
+## 부록 — `SEARCH-PROVIDER-05` 정의된 Query **전수** 실검색 (2026-10-27)
+
+### ① 「Q1~Q5」라는 이름이 이 저장소에 **세 벌** 있다 (CPO §2 의 답)
+
+| 체계 | 정의 위치 | 내용 |
+|---|---|---|
+| **운영 열거기** | `discovery-core/query-generator.ts:30-39` · 타입 `types.ts:50` | 🟢 **Q1~Q8 이 literal 로 실재한다** — Q1 상품명 / Q2 브랜드+상품명 / Q3 상품명+색상 / Q4 브랜드+상품명+색상 / Q5 상품코드 / Q6 브랜드+상품코드 / Q7 상품명+buy / Q8 브랜드+상품명+buy |
+| **운영 Planner** | `discovery-core/query-planner.ts:66-83` | 이름 있는 **8축**(BRAND_CODE · BRAND_CODE_KO · CODE_ONLY · BRAND_DESIGN · BRAND_DESIGN_KO · PURCHASE_KO · PRICE_KO · SHOP_EN) — **Q 번호가 없다** |
+| **SPRINT-03/04 하니스** | `__tests__/search-provider-03-query-width.test.ts:17-19` | 🔴 거기의 Q1/Q2/Q3 는 **위 Q1~Q3 와 뜻이 완전히 다르다**(따옴표 제거 변형) |
+
+🔴🔴 **그러므로 「Q4/Q5 는 정의 없음」이 아니다** — 운영 코드가 **Q1~Q8** 을 정의한다.
+🟢 이번에는 **세 체계를 전부** 만들고 **문자열로 dedupe** 한 뒤 전수 실행했다(`G-` · `P-` · `H-` 접두).
+
+### ② 실행 — 상품 4 × 정의된 질의 전수 = **64회 · 결과 526건**
+
+🟢 상품 정의는 **기존 GT fixture**(`wu-059-gt-facts.json` canonicalProduct) 그대로다(새 상품 0).
+🔴 `sourceUrl` 은 Query 축이 **한 번도 읽지 않는다**(SPECS 의 fields 는 brand/productName/color/productCode) ⟹ URL 을 지어내지 않았다.
+🟢 Apify 설정은 전 질의 **동일**(maxPagesPerQuery 1 · resultsPerPage 20) — 변수는 `queries` 문자열 하나뿐.
+
+### ③ Query 축 집계 — 🔴 **CTO 가 1위를 고르지 않았다**
+
+```
+Query                 상품  결과 상품URL 판매처 Crawl Evid  Evid판매처 품번  0건
+G-Q3  상품명+색상        4   35    26    19    21   21      14     2   0
+G-Q7  상품명+buy        4   36    22    18    18   18      14     3   0
+G-Q1  상품명            4   36    21    18    17   17      14     3   0
+G-Q5  품번 단독          4   36    21    21    14   14      14     4   0
+P-BRAND_DESIGN        4   36    20    15    18   18      13     2   0
+P-CODE_ONLY           4   35    23    20    14   14      13     3   0
+G-Q2  브랜드+상품명      4   36    23    17    18   18      12     1   0
+G-Q8  브랜드+상품명+buy  4   36    18    15    15   15      12     3   0
+P-BRAND_CODE          4   27    20    16    17   15      12     6   1
+H-Q3  (03/04 라벨)      4   36    23    14    20   20      11     1   0
+G-Q4  브랜드+상품명+색상 4   36    19    16    14   14      11     0   0
+P-SHOP_EN             4   28    22    16    17   11      11     5   1
+P-PURCHASE_KO         3   26    16    14    11   10       9     2   0
+G-Q6  브랜드+품번        4   37    22    10    20   20       8     2   0
+P-BRAND_CODE_KO       3   15    10     7     8    8       6     3   1
+P-PRICE_KO            3   17     8     7     6    6       6     1   1
+P-BRAND_DESIGN_KO     3   18     5     4     5    4       3     1   1
+```
+
+🔴🔴 **가장 중요한 관측 — 「브랜드+품번」이 Evidence 판매처가 «가장 적다»**:
+```
+G-Q6 「Bobo Choses B226AC010」 — 결과 37(최다) · Crawl 20(최다급) 인데
+     **판매처 10 · Evidence 판매처 8**(전 질의 중 최하위권)
+🟢 이유가 화면에 보인다 — **같은 브랜드 공식몰의 로케일 URL 이 자리를 먹는다**
+   (실측: S2 G-Q6 는 결과 9건이 **bobochoses.com 한 곳**)
+🔴 즉 **결과 개수로 Query 를 고르면 정확히 반대로 고른다**(CPO §9 가 경고한 그것).
+```
+🔴 그리고 **한글 브랜드 축(KO)은 상품 3개에서만 생성된다**(Main Story 는 alias 가 없다) ⟹ 분모가 다르다. 🔴 **합계를 평균으로 환산하지 않았다.**
+
+### ④ 🔴🔴 「결과 0」을 「결과 없음」으로 읽지 않는다 — **2/5 가 재현되지 않았다**
+
+```
+S1 P-BRAND_CODE_KO   0 → 재확인 **0**
+S1 P-BRAND_DESIGN_KO 0 → 재확인 **0**
+S1 P-PRICE_KO        0 → 재확인 **9**   🔴 재현 안 됨
+S3 P-BRAND_CODE      0 → 재확인 **1**   🔴 재현 안 됨
+S3 P-SHOP_EN         0 → 재확인 **0**
+```
+🟢 1차 값을 **덮어쓰지 않고** `recheckOrganicCount` 로 **같이** 적었고, 화면이 그 경고를 직접 말한다.
+🔴 **Google/Apify 결과는 실행마다 달라진다** — 이 Sprint 의 모든 숫자는 **그 시점의 1회 관측** 이다.
+
+### ⑤ 화면 — `/qa/search` (인증 뒤) · `docs/search-provider-05-urls.html` (로그인 없이)
+
+🔴 로컬 실측 `/qa/search` → **307 → /login** ⟹ 클릭 검증이 로그인에 막히지 않도록 **같은 컴포넌트** 로
+자립형 HTML(489KB · 링크 **526**)을 같이 떨궜다. 🔴 생성기는 `CORE_SP05_HTML=1` 일 때만 쓴다
+(회귀마다 산출물이 바뀌어 작업트리를 더럽히는 선례를 피한다).
+
+🔴 화면은 **판정하지 않는다** — MI 0 · SAME/DIFFERENT 0 · **A/B/C/D 자동 분류 0**(기준만 적고 판단은 사람이 한다).
+
+**🔵 상태 — `DISCOVERY SEARCH QUERY SELECTION = HOLD`. CPO 가 육안 확인 후 단일 Query 를 고른다.**
