@@ -1041,3 +1041,76 @@ ALL    151    85      51     51      46     51    11     24     1    20
 **🔵 다음 — CPO 판정.** 이 데이터가 가리키는 자리는 둘이다: **① 상품상세가 아닌 URL 44%**
 (입구 손실)와 **② 원상품 품번 부재 47%**(현재 운영 Query 가 작동하지 않는 구간).
 🔴 CTO 는 둘 다 **열지 않았다**.
+
+---
+
+## 🔴🔴🔴 `SEARCH-PROVIDER-12` — **입구 손실 44% 의 절반은 «우리 분류기» 였다** (2026-10-27)
+
+🔴 추가 Search **0** · Query 변경 0 · 1-hop **구현 0** · MI 0 · Identity 0 · Registry 0 · 재시도 0.
+🟢 입력은 **이미 확보한 URL** 뿐이고, 1차 분류는 **운영 `classifyUrlShape`** 가 한다.
+
+### ① 유형별 — 상품상세 아님 **60건 / 143**
+
+```
+유형                 건수  샘플
+OTHER                 41  farfetch.com/fi/shopping/kids/bobo-choses-booty-ghost-print-long-sleeve-…
+LISTING_CATEGORY      12  kobitodepunch.com/categories/1367770
+BRAND_STORE_HOME       3  kinuandkotta.shop-pro.jp/?mode=cate&…
+MARKETPLACE            2  ebay.com/shop/bobo-choses
+SEARCH_PAGE            1  lfmall.co.kr/app/search/result/보보쇼즈…
+SOCIAL_NOISE           1  youtube.com/watch?v=…
+```
+🔴 유형 라벨은 **보고용 관측** 이고 운영 규칙이 아니다(운영 코드가 import 하지 않음을 계약이 잠근다).
+
+### 🔴🔴 ② 1차 측정이 «순환» 이었다 — 같은 게이트를 두 번 쟀다
+
+```
+`factsFromProductUrl` 에 넣었더니 **60/60 전부 `NOT_PRODUCT_URL`** → 「놓친 상품 0건」.
+🔴 그 함수는 **안에서 `classifyUrlShape` 로 먼저 막는다** — 내가 검증하려던 바로 그 분류기다.
+   (WU-120 이 기록한 「모양 게이트를 두 번 쟀다」의 재발 · 그대로 보고했으면 거짓 결론)
+```
+
+### 🟢🟢 ②-b **raw fetch 로 다시 물었다 — 27건이 스스로 「상품」이라 한다**
+
+```
+raw fetch 성공 **47/60** · 페이지가 `@type:Product` 또는 `og:type=product` 를 **스스로 적은 것 27건**
+   OTHER 23  ·  LISTING_CATEGORY 4
+샘플 — farfetch.com/{fi,ph,sg,om,jp,ro,uk,hk}/shopping/kids/…-item-{id}.aspx
+```
+🔴🔴 ⟹ **입구 손실의 절반 가까이가 검색 품질이 아니라 «우리 URL 분류기» 다.**
+`farfetch` 의 `/{locale}/shopping/kids/{slug}-item-{id}.aspx` 는 `classifyUrlShape` 의
+상품 경로 목록(`products|product|dp|itm|goods|p`)에 **없어서** `UNKNOWN_PAGE` 로 떨어진다.
+🔴 이것은 SPRINT-03 이 **「`.aspx` 분류 확장 = HOLD」** 로 닫아 둔 바로 그 자리다 ⟹ **CPO 판정 사안**.
+
+🔴 과장하지 않는다 — `og:type=product` 를 목록 페이지가 다는 경우가 있다(LISTING_CATEGORY 4건이
+그 모양일 수 있다). 🔴 **「27건이 전부 진짜 상품」으로 적지 않는다** — 「스스로 상품이라 적었다」가 정확하다.
+
+### ③ 현재 운영 1-hop 모듈로 상세를 얻는가 — **얻는다(14건)**
+
+```
+`collectDomesticListingUrls`(기존 모듈 · 새 구현 0) 로 목록/홈 **16곳** 시도 → **상세 URL 14건**
+막힌 사유 — NO_BRAND_LISTING 5 · URL_CODE 4 · NO_BRAND_BLOCK 4 · ROBOTS_DISALLOW_ALL 2 · ENTRY_TEXT 1
+```
+🟢 즉 **1-hop 은 이미 있고 실제로 작동한다**. 🔴 운영에 켜는 것은 CPO 결정이다(이번에 켜지 않았다).
+
+### ④ SP-11 의 「Crawl 실패(사유 미기록) 16」 — **미지의 실패가 아니었다**
+
+```
+URL 을 **하나씩** pool 에 넣으니 사유가 전부 나온다:
+   상품상세 83건 중 후보 성립 **65** · 탈락 18
+   UNREACHABLE 14 · NO_FACTS 3 · REDIRECTED_AWAY 1
+```
+🔴 SP-11 에서 사유가 비었던 것은 **배치 안에서 사유가 다른 URL 에 귀속된 것** 이고
+「알 수 없는 실패」가 아니었다. 🟢 **「측정불가」를 실패 원인으로 해석하지 않는다**(CPO 지시 그대로).
+
+### 🔴 측정 한계
+
+```
+⒜ URL 수가 SP-11 의 151 이 아니라 **143** 이다 — 여기서는 (상품, loose URL) 로 **중복을 접었다**.
+⒝ raw fetch 실패 13건은 **측정불가** 다(「상품이 아니다」가 아니다).
+⒞ `og:type=product` 는 **사이트의 자기 선언** 이다 — 동일상품 여부와 무관하다.
+⒟ 1차 관측 · 상품 6개. SP-10 의 변동성이 그대로 걸린다.
+```
+
+**🔵 다음 — CPO 판정 둘.** ① `classifyUrlShape` 에 `.aspx`/`/shopping/` 류를 열 것인가
+(SPRINT-03 HOLD 해제) ② 운영에서 **목록 → 1-hop 상세** 를 켤 것인가. 🔴 CTO 는 둘 다 열지 않았다.
