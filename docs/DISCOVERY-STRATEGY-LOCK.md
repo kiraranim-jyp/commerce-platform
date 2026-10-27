@@ -1325,3 +1325,74 @@ answear.com    tier COMPARISON  market **OVERSEAS**  truth TEXT_CONFIRMED
 ```
 
 🔴 그 라벨이 오기 전에는 이 항목을 **`PASS` 로 인용하지 않는다** — 「E2E 기술 PASS」까지만 쓴다.
+
+---
+
+## 🔴🔴🔴 `DISCOVERY E2E-03` — 국내 후보는 **화면 배선**에서 사라졌다 (2026-10-28)
+
+### 결론 한 줄
+
+> **CASE E.** Search 도 Crawl 도 Identity 도 아니다 — `webSearchEvidence` 를
+> **패널이 읽지 않아서** AI Search 의 국내 후보가 화면에서 통째로 사라졌다.
+
+### 추적 — 🟢 추가 Search **0**(Apify 보관 run 재사용)
+
+CEO 캡처 세션의 run 이 서버에 그대로 남아 있었다. 내 E2E run 과 **대조** 했다:
+
+```
+13:25 (CTO E2E)   9건 · 🇰🇷 6 · 🌎 3
+20:14 (CEO 화면)  9건 · 🇰🇷 6 · 🌎 3     ← **URL 9건이 완전히 동일**(겹침 9/9)
+🇰🇷 gmarket ×2 · 11st · coupang · danawa · lfmall
+🌎 babyshop · rakuten · answear
+```
+⟹ 🔴 **CASE A(Search 가 국내를 안 준다)는 배제됐다.** 국내 URL 은 **6건 들어왔다**.
+
+### 대표 3 URL 추적
+
+| URL | Search | Pool | Crawl | Evidence | Identity | UI |
+|---|---|---|---|---|---|---|
+| 11st | **O** | O | O | O | PRESUMED_SAME | 🔴 **X** |
+| Danawa | **O** | O | O | O | PRESUMED_SAME | 🔴 **X** |
+| Answear | **O** | O | O | O | PRESUMED_SAME | 🔴 **X** |
+
+🔴 셋 다 **Identity 까지 통과** 했는데 **UI 에서만** 사라졌다.
+🟡 나머지 국내 3건(gmarket ×2 · coupang · lfmall)은 Pool/Crawl 단계에서 빠졌다 —
+   lfmall 은 **검색결과 페이지** 라 올바른 탈락이다. 🔴 나머지는 이번 범위에서 **조사하지 않았다**.
+
+### 🔴🔴 원인 — **같은 함정을 두 번 밟았다**
+
+```
+CORE-2R-4  `domesticListingEvidence` 를 MI 입력에만 넘기고 패널이 안 읽었다
+           ⟹ 국내 후보 둘이 사라졌다(CORE-2R-5 가 고쳤고 **주석까지 남겼다**)
+SP-07      `webSearchEvidence` 로 **똑같이** 반복했다  ← 이번 건
+```
+🔴 그 주석이 「생산자를 늘릴 때 **읽는 쪽 다섯 자리** 를 같이 고쳐라」고 적어 뒀는데
+**주석은 막지 못했다.**
+
+### 수정 — 운영 **1 파일 · 8 자리**(최소)
+
+```
+state · 응답타입 ×2 · setter ×2(자동 1회차 · 다시 분석) · anyEvidence · rows 펼침 · deps
+🔴 그 외 **아무것도 바꾸지 않았다** — Search/Query/Identity/MI/threshold/Evidence/
+   Crawl/Registry/1-hop/`PRESUMED_SAME`/`crossSellerReserved` **전부 0**.
+```
+
+### 🟢 그리고 **주석 대신 계약** 으로 막았다
+
+`e2e03-evidence-reaches-screen.test.ts` — 생산자 목록을 **손으로 적지 않고**
+runner 의 결과 타입에서 `…Evidence` 칸을 **전수로 뽑아** 네 자리를 전부 확인한다.
+⟹ 🟢 **일곱 번째 생산자를 만들고 화면 배선을 빠뜨리면 FAIL 한다.**
+
+음성 대조 **7종 전부 FAIL** — M1 자동1회차 setter · M2 다시분석 setter · M3 rows 펼침 ·
+M4 anyEvidence · M5 deps · M6 내부 id 노출 · M7 state 이름 바꿔치기.
+🔴 1차에 **앵커가 CRLF 라 M1~M5 가 「미적용」** 이었다 — 「미적용」을 「통과」로 읽지 않고 재측정했다.
+
+### 🔴 국내 참고가격과 AI Search 를 **분리해서** 적는다
+
+```
+`KRW 88,000`  ← 기존 `domestic_price_sources` 경로(등록부). **AI Search 와 무관** 하다.
+AI Search 국내 후보  ← 11st · danawa. **이번 수정 전까지 화면에 0건** 이었다.
+🔴 화면에 국내 숫자가 있다는 이유로 「AI Search 가 국내를 찾았다」고 적지 않는다.
+```
+
+**🔵 상태 — 수정·배포 완료. 🟡 남은 것은 CEO 화면 확인 1회(국내 후보가 뜨는가).**

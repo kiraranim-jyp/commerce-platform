@@ -1972,6 +1972,20 @@ export function DomesticPriceIntelligencePanel({
    */
   const [domesticListingEvidence, setDomesticListingEvidence] = useState<GeminiTransientRow[] | null>(null);
   /**
+   * 🔴🔴🔴 E2E-03 UI FIX — **여섯 번째 출처(웹 검색)가 여기 없었다. 바로 위 함정의 재발이다.**
+   *
+   * SP-07 이 `webSearchEvidence` 를 만들어 **MI 입력(check/route)에는** 넘겼는데
+   * **이 패널이 그 칸을 읽지 않았다** ⟹ AI Search 가 찾아온 **국내 후보가 화면에서
+   * 통째로 사라졌다**(CEO 캡처에 해외 후보만 보였다).
+   *
+   * 🔴 실측으로 확정했다 — 같은 상품의 Search raw 에 **🇰🇷 URL 이 6건** 있었고
+   *    (gmarket ×2 · 11st · coupang · danawa · lfmall) 그중 **11st · danawa 가 후보까지**
+   *    왔는데도 화면에 서지 못했다 ⟹ 탈락 지점은 Search 도 Crawl 도 Identity 도 아니다.
+   * 🔴 바로 위 주석이 「생산자를 늘릴 때 **읽는 쪽 다섯 자리** 를 같이 고쳐야 한다」고
+   *    적어 뒀는데 내가 그대로 밟았다.
+   */
+  const [webSearchEvidence, setWebSearchEvidence] = useState<GeminiTransientRow[] | null>(null);
+  /**
    * 🔴🔴 WU-049 — **해외 참고가격.** MI 가 이미 계산한 집계를 받는다.
    *    🟢 이 값은 **이번 확인에만** 산다 — GET 경로는 transient 를 넘기지 않아
    *       항상 비어 있다(설계). 그래서 상태로 들고 다른 값을 덮어쓰지 않는다.
@@ -2005,6 +2019,8 @@ export function DomesticPriceIntelligencePanel({
         reviewedSameEvidence?: GeminiTransientRow[] | null;
         /** 🔴 CORE-2R-4 — 국내 목록 탐색이 찾아낸 후보. **자동 1회차에서도 채워진다.** */
         domesticListingEvidence?: GeminiTransientRow[] | null;
+        /** 🔴 E2E-03 — **여섯 번째 출처(웹 검색).** 자동 1회차에서도 채워진다. */
+        webSearchEvidence?: GeminiTransientRow[] | null;
       } | null;
     };
     setOverseasReference(j.overseasReference ?? null);
@@ -2015,6 +2031,8 @@ export function DomesticPriceIntelligencePanel({
     setReviewedSameEvidence(j.domesticShop?.reviewedSameEvidence ?? null);
     /** 🔴 CORE-2R-5 UI FIX — 이 줄이 없어서 국내 후보가 화면에 **한 번도** 서지 못했다. */
     setDomesticListingEvidence(j.domesticShop?.domesticListingEvidence ?? null);
+    /** 🔴 E2E-03 UI FIX — **같은 이유로 AI Search 국내 후보가 사라졌다.** */
+    setWebSearchEvidence(j.domesticShop?.webSearchEvidence ?? null);
   }, [autoCheckResult]);
   /**
    * ══════════════════════════════════════════════════════════════════════════
@@ -2036,7 +2054,9 @@ export function DomesticPriceIntelligencePanel({
       overseasAutoEvidence != null ||
       reviewedSameEvidence != null ||
       /** 🔴 CORE-2R-5 UI FIX — 다섯 번째 출처. 빠지면 국내 후보가 화면에서 사라진다. */
-      domesticListingEvidence != null;
+      domesticListingEvidence != null ||
+      /** 🔴 E2E-03 UI FIX — **여섯 번째 출처(웹 검색).** 같은 이유로 빠뜨렸다. */
+      webSearchEvidence != null;
     return {
       rows: anyEvidence
         ? [
@@ -2045,6 +2065,8 @@ export function DomesticPriceIntelligencePanel({
             ...(overseasAutoEvidence ?? []),
             ...(reviewedSameEvidence ?? []),
             ...(domesticListingEvidence ?? []),
+            /** 🔴 E2E-03 UI FIX — 웹 검색 후보. 이 줄이 없어서 국내 후보가 사라졌다. */
+            ...(webSearchEvidence ?? []),
           ]
         : null,
       domesticReference,
@@ -2068,6 +2090,8 @@ export function DomesticPriceIntelligencePanel({
     overseasAutoEvidence,
     reviewedSameEvidence,
     domesticListingEvidence,
+    /** 🔴 E2E-03 — **deps 를 빠뜨리면 첫 응답 뒤 값이 갱신되지 않는다**(같은 함정의 네 번째 칸). */
+    webSearchEvidence,
     domesticReference,
     overseasReference,
     /** 🔴 deps 에 빠지면 원가를 입력해도 결론이 **보류로 남는다**(CORE-2R-5 의 그 함정). */
@@ -2322,6 +2346,8 @@ export function DomesticPriceIntelligencePanel({
             reviewedSameEvidence?: GeminiTransientRow[] | null;
             /** 🔴 CORE-2R-4 — 국내 목록 탐색이 찾아낸 후보(「🔄 다시 분석」 경로). */
             domesticListingEvidence?: GeminiTransientRow[] | null;
+            /** 🔴 E2E-03 — **웹 검색 후보.** 이 경로에도 같은 칸이 필요하다. */
+            webSearchEvidence?: GeminiTransientRow[] | null;
             urlCandidateMetrics?: {
               suppliedUrls: number;
               acceptedUrls: number;
@@ -2343,6 +2369,8 @@ export function DomesticPriceIntelligencePanel({
         setReviewedSameEvidence(json.domesticShop?.reviewedSameEvidence ?? null);
         /** 🔴 CORE-2R-5 UI FIX — 「🔄 다시 분석」 경로에도 같은 줄이 빠져 있었다. */
         setDomesticListingEvidence(json.domesticShop?.domesticListingEvidence ?? null);
+        /** 🔴 E2E-03 UI FIX — 「🔄 다시 분석」 경로에도 같은 줄이 필요하다(둘 다 고친다). */
+        setWebSearchEvidence(json.domesticShop?.webSearchEvidence ?? null);
         setUrlCandidateNotice(describeUrlCandidateMetrics(json.domesticShop?.urlCandidateMetrics ?? null));
         setOverseasReference(json.overseasReference ?? null);
         setDomesticReference(json.domesticReference ?? null);

@@ -11,7 +11,7 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **DISCOVERY E2E-02** — 🟡 **따져 실제 화면 확인 대기**(CTO 는 볼 수 없다 · CEO 전용)
+CURRENT WU   **DISCOVERY E2E-03** — 🟢 국내 후보 **화면 배선 수정·배포** · 🟡 CEO 확인 1회
 NEXT         🔵 **실제 상품에서 Candidate URL → Crawl → Evidence → Identity 확인**(MI 는 그 다음)
              🔵 전략은 **docs/DISCOVERY-STRATEGY-LOCK.md** 에 고정됐다(세션 바뀌어도 남는다)
 CEO ACTION   🔵🔵 **있다** — docs/DISCOVERY-E2E-02-SCREEN-CHECK.md 절차대로 **「새 상품 분석」** 1회
@@ -34,7 +34,7 @@ CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SEARCH-PROVIDER-14**(직접 vs 1-hop 분리 · 1-hop 증분 Evidence **4**(+6%) · 오염 0) ·
              **DISCOVERY E2E**(Search 1회 → 후보 3 → 전부 PRESUMED_SAME · 🔴 사람 확인 0/3 ⟹ **HOLD**)
 Git          clean · origin/main 0/0 · Production / 200
-회귀         **716 files / 9,544 passed / 0 failed / 153 skipped** · typecheck 0 · build 0
+회귀         **717 files / 9,549 passed / 0 failed / 153 skipped** · typecheck 0 · build 0
 ```
 
 🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **CPO 판정** 이다 — matcher 를 CTO 가 열지 않는다.
