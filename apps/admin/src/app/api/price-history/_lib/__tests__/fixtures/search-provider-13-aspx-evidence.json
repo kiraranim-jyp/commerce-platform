@@ -1,0 +1,355 @@
+{
+ "note": "🔴 SP-12 corpus 의 `.aspx` URL 전수에 대한 raw fetch 관측이다(추가 Search 0). 🔴 `og:type`/JSON-LD 는 **사이트의 자기 선언** 이고 동일상품 판정이 아니다. 🔴 운영 분류기로 역수입하지 않는다 — 이 파일은 **검증 증거** 다.",
+ "observed": [
+  {
+   "url": "https://www.farfetch.com/bg/shopping/kids/bobo-choses-booty-ghosts-graphic-print-short-sleeve-t-shirt-item-37620093.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/id/shopping/kids/bobo-choses-booty-ghosts-graphic-print-short-sleeve-t-shirt-item-37620093.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/fi/shopping/kids/bobo-choses-booty-ghost-print-long-sleeve-t-shirt-item-37035483.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/gr/shopping/kids/bobo-choses-booty-ghost-print-long-sleeve-t-shirt-item-37035483.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/shopping/kids/bobo-choses-graphic-print-long-sleeve-t-shirt-item-37597390.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/ph/shopping/kids/bobo-choses-booty-ghost-print-long-sleeve-t-shirt-item-37035483.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/shopping/kids/bobo-choses-langrmet-t-shirt-med-grafisk-tryk-item-37597390.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/shopping/kids/bobo-choses-booty-ghost-print-long-sleeve-t-shirt-item-37035483.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/my/shopping/kids/bobo-choses-booty-ghosts-graphic-print-short-sleeve-t-shirt-item-37620093.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/au/shopping/kids/bobo-choses-graphic-print-long-sleeve-t-shirt-item-37597390.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/sa/shopping/kids/bobo-choses-graphic-print-long-sleeve-t-shirt-item-37597390.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/ca/shopping/kids/bobo-choses-booty-ghost-print-long-sleeve-t-shirt-item-37035483.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/kw/shopping/kids/bobo-choses-booty-ghosts-graphic-print-short-sleeve-t-shirt-item-37620093.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/id/shopping/kids/bobo-choses-booty-ghost-print-long-sleeve-t-shirt-item-37035483.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/sg/shopping/kids/bobo-choses-booty-ghost-print-long-sleeve-t-shirt-item-37035483.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/hk/shopping/kids/bobo-choses-hug-hairy-monster-long-sleeve-t-shirt-item-37620037.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/fi/shopping/kids/bobo-choses-hug-hairy-monster-long-sleeve-t-shirt-item-37620037.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/pt/shopping/kids/bobo-choses-hug-hairy-monster-long-sleeve-t-shirt-item-37620037.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/ma/shopping/kids/bobo-choses-t-shirt-hug-hairy-monster-a-manches-longues-item-37620037.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/jp/shopping/kids/bobo-choses-hug-hairy-monster-t-item-37620037.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/ca/shopping/kids/bobo-choses-curious-turnip-long-sleeve-high-neck-swim-t-shirt-item-33844474.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/ge/shopping/kids/bobo-choses-cotton-cap-item-28866463.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/ao/shopping/kids/bobo-choses-striped-sleeve-t-shirt-item-34467606.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/uz/shopping/kids/bobo-choses-pixel-daisy-twill-cap-item-38124503.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/uz/shopping/kids/bobo-choses-graphic-print-bucket-hat-item-33811070.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/bn/shopping/kids/bobo-choses-all-over-pattern-jacket-item-32166627.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/shopping/kids/bobo-choses-curious-turnip-long-sleeve-high-neck-swim-t-shirt-item-33844474.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/ao/shopping/kids/bobo-choses-curious-turnip-graphic-print-t-shirt-item-33807885.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/id/shopping/kids/bobo-choses-curious-turnip-graphic-print-t-shirt-item-33807885.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/ph/shopping/kids/bobo-choses-curious-turnip-graphic-print-t-shirt-item-33807885.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/ao/shopping/kids/bobo-choses-curious-turnip-long-sleeve-high-neck-swim-t-shirt-item-33844474.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/pt/shopping/kids/bobo-choses-curious-turnip-graphic-print-t-shirt-item-33807885.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/my/shopping/kids/bobo-choses-curious-turnip-graphic-print-t-shirt-item-33807885.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/uk/shopping/kids/bobo-choses-hug-hairy-monster-long-sleeve-t-shirt-item-37620037.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/vn/shopping/kids/bobo-choses-curious-turnip-graphic-print-t-shirt-item-33807885.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/az/shopping/kids/bobo-choses-curious-turnip-long-sleeve-high-neck-swim-t-shirt-item-33844474.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/ro/shopping/kids/bobo-choses-hug-hairy-monster-long-sleeve-t-shirt-item-37620037.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/cn/shopping/kids/bobo-choses-hug-hairy-monster-long-sleeve-t-shirt-item-37620037.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/za/shopping/kids/bobo-choses-hug-hairy-monster-long-sleeve-t-shirt-item-37620037.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/hk/shopping/kids/bobo-choses-booty-ghost-print-long-sleeve-t-shirt-item-37035483.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/om/shopping/kids/bobo-choses-booty-ghost-print-long-sleeve-t-shirt-item-37035483.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/pl/shopping/kids/bobo-choses-hug-hairy-monster-long-sleeve-t-shirt-item-37620037.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/om/shopping/kids/bobo-choses-hug-hairy-monster-long-sleeve-t-shirt-item-37620037.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/jo/shopping/kids/bobo-choses-hug-hairy-monster-long-sleeve-t-shirt-item-37620037.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/id/shopping/kids/bobo-choses-curious-turnip-long-sleeve-high-neck-swim-t-shirt-item-33844474.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/cy/shopping/kids/bobo-choses-curious-turnip-graphic-print-t-shirt-item-33807885.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/nz/shopping/kids/bobo-choses-curious-turnip-long-sleeve-high-neck-swim-t-shirt-item-33844474.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/hk/shopping/kids/bobo-choses-curious-turnip-graphic-print-t-shirt-item-33807885.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/th/shopping/kids/bobo-choses-curious-turnip-graphic-print-t-shirt-item-33807885.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  },
+  {
+   "url": "https://www.farfetch.com/gr/shopping/kids/bobo-choses-curious-turnip-graphic-print-t-shirt-item-33807885.aspx",
+   "status": 403,
+   "jsonLdProduct": false,
+   "ogTypeProduct": false,
+   "title": ""
+  }
+ ]
+}

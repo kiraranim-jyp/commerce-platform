@@ -58,13 +58,20 @@ describe("DISCOVERY-SEARCH-PROVIDER-01 STEP 5 — 분류기 과매치(순수 · 
     expect(String(classifyUrlShape(u))).toBe("PRODUCT_PAGE");
   });
 
-  it("🟢 Apify 산출에서 PRODUCT_PAGE 가 0 → 1 이 됐다(분모 7 유지)", () => {
+  /**
+   * 🟢🟢 **이 계약이 FAIL 로 뒤집혔고 그것이 수정의 증거다.** SPRINT-02 가 1 로 올렸고,
+   *    SPRINT-13(CPO GO)이 farfetch 5건을 더 올려 **6/6** 이 됐다.
+   * 🔴 **분모는 그대로 6** 이다 — 늘린 것은 분자뿐이다.
+   * 🔴🔴 그리고 **「후보가 늘었다」로 읽지 않는다** — SP-13 실측에서 그 도메인은
+   *    Chrome UA 로도 50/50 **HTTP 403** 이었다(분류 정확성과 실제 회수는 다른 축이다).
+   */
+  it("🟢 Apify 산출에서 PRODUCT_PAGE 가 0 → 1 → **6** 이 됐다(분모 6 유지)", () => {
     const shapes = APIFY_URLS.map((u) => String(classifyUrlShape(u)));
     /** 🔴 분모를 바꾸지 않는다 — SPRINT-01 과 **같은 6 URL** 이다. */
     expect(APIFY_URLS).toHaveLength(6);
-    expect(shapes.filter((s) => s === "PRODUCT_PAGE")).toHaveLength(1);
-    /** 🔴 farfetch 5건은 **아직** UNKNOWN 이다(`.aspx` 미지원 · CPO 판정 대기). */
-    expect(shapes.filter((s) => s === "UNKNOWN_PAGE")).toHaveLength(5);
+    expect(shapes.filter((s) => s === "PRODUCT_PAGE")).toHaveLength(6);
+    /** 🟢 SP-13 — farfetch 5건이 UNKNOWN 에서 올라왔다. */
+    expect(shapes.filter((s) => s === "UNKNOWN_PAGE")).toHaveLength(0);
     expect(shapes.filter((s) => s === "LISTING_PAGE")).toHaveLength(0);
   });
 });

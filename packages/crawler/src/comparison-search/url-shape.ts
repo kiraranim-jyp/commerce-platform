@@ -86,6 +86,28 @@ const NON_PRODUCT_FILE =
  */
 const LISTING_PATH = /(?:^|\/)(?:collections|collection|category|categories|search|shop|brands?|c)(?:\/|$)/i;
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵 **DISCOVERY-SEARCH-PROVIDER-13 — `-item-{id}.aspx` 상품 상세**(2026-10-27)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * SP-12 실측 — 검색 입구 손실(비상품 60건) 중 가장 큰 덩어리가 이 모양이었고,
+ * raw fetch 에서 **페이지가 스스로 `@type: Product` 를 적었다**:
+ * ```
+ * /fi/shopping/kids/bobo-choses-booty-ghost-print-long-sleeve-t-shirt-item-37035483.aspx
+ * /shopping/kids/bobo-choses-curious-turnip-…-item-33844474.aspx        (로케일 없음)
+ * ```
+ * 🔴 **`.aspx` 전체를 상품으로 보지 않는다**(CPO 명시 금지) · 🔴 `shopping` **포함만으로도**
+ *    보지 않는다 · 🔴 `og:type=product` 를 분류 근거로 **역수입하지 않는다**.
+ * 🟢 요구하는 것은 **셋 동시** 다 — `shopping` **세그먼트** · 그 아래 슬러그 ·
+ *    **`-item-{숫자}.aspx` 로 끝남**. 목록/카테고리는 그 꼬리를 갖지 않는다.
+ *
+ * 🔴🔴 **이 분류가 후보를 «늘린다» 고 적지 않는다** — SP-13 실측에서 그 도메인은
+ *    Chrome UA 로도 **50/50 전부 HTTP 403** 이었다. 고쳐지는 것은 **분류의 정확성** 이고
+ *    실제 회수는 그 사이트의 차단 정책에 달려 있다(간헐적 · 측정일 기준).
+ */
+const PRODUCT_ITEM_ID_SUFFIX = /(?:^|\/)shopping\/[^?#]+-item-\d+\.aspx$/i;
+
 export function classifyUrlShape(url: string): UrlShape {
   let pathname: string;
   try {
@@ -107,6 +129,17 @@ export function classifyUrlShape(url: string): UrlShape {
    */
   if (NON_PRODUCT_FILE.test(pathname)) return "UNKNOWN_PAGE";
   if (PRODUCT_PATH.test(pathname)) return "PRODUCT_PAGE";
+  /**
+   * 🔵 SP-13 — `-item-{숫자}.aspx` 상품 상세.
+   *
+   * 🔴🔴 **순서는 이 줄의 계약이 «아니다».** 1차 주석에 「`LISTING_PATH` 보다 먼저 본다」고
+   *    적었는데 **음성 대조(M6)가 그것을 반증했다** — 이 줄을 `LISTING_PATH` 뒤로 옮겨도
+   *    **아무 테스트도 깨지지 않는다**. 이유: SPRINT-02 가 `LISTING_PATH` 끝을
+   *    `(?:\/|$)` 로 바꿔서 `shopping` 세그먼트가 `shop` 토큰에 **더는 걸리지 않는다**.
+   * 🟢 그래서 위치는 **읽기 좋은 자리** 일 뿐이고, 사실을 주석에 그대로 적는다.
+   * 🟢 `NON_PRODUCT_FILE` 은 이미 지나왔다 ⟹ `search.aspx` 류는 여기까지 오지 않는다.
+   */
+  if (PRODUCT_ITEM_ID_SUFFIX.test(pathname)) return "PRODUCT_PAGE";
   if (PRODUCT_SUFFIX.test(pathname)) {
     // 🔴 확실히 상품이 아닌 파일명은 목록 쪽으로도 올리지 않는다 — «모른다» 가 답이다.
     return NON_PRODUCT_FILE.test(pathname) ? "UNKNOWN_PAGE" : "PRODUCT_PAGE";

@@ -1114,3 +1114,73 @@ URL 을 **하나씩** pool 에 넣으니 사유가 전부 나온다:
 
 **🔵 다음 — CPO 판정 둘.** ① `classifyUrlShape` 에 `.aspx`/`/shopping/` 류를 열 것인가
 (SPRINT-03 HOLD 해제) ② 운영에서 **목록 → 1-hop 상세** 를 켤 것인가. 🔴 CTO 는 둘 다 열지 않았다.
+
+---
+
+## 🟢 `SEARCH-PROVIDER-13` — `-item-{id}.aspx` 상품 분류 (2026-10-27 · 운영 1줄)
+
+🔴 추가 Search **0** · Query 0 · 1-hop **0** · MI 0 · Identity 0 · Registry 0 · 재시도 0.
+
+### 추가한 것 — **구체 패턴 하나**
+
+```ts
+const PRODUCT_ITEM_ID_SUFFIX = /(?:^|\/)shopping\/[^?#]+-item-\d+\.aspx$/i;
+```
+🔴 **`.aspx` 전체 금지** · 🔴 **`shopping` 포함만으로도 금지** · 🔴 `og:type` 역수입 금지 ·
+🔴 **호스트 이름을 보지 않는다**(사이트 전용 규칙 금지 — 계약이 `hostname`/`farfetch` 를 막는다).
+
+### 수치 — corpus **749 URL**(SP-12 확보분 · 추가 Search 0)
+
+```
+Farfetch .aspx 대상
+- 총 대상            50
+- PRODUCT → PRODUCT   0
+- UNKNOWN → PRODUCT  **50**
+- LISTING → PRODUCT   0
+- 기타 오분류          0
+
+Negative
+- 기존 non-product   699
+- PRODUCT 로 잘못 바뀐 수  **0**
+
+전체 corpus
+- 변경 전 PRODUCT_PAGE  467  → 후 **517**
+- 변경 전 LISTING_PAGE   64  → 후  64
+- 변경 전 UNKNOWN_PAGE  218  → 후 **168**
+- 새로 회수된 상품 후보   **50**
+- 행동 손실               0
+- 오분류                  0
+```
+🟢 「새로 상품이 된 것이 **전부 그 패턴**」을 계약이 **수식으로** 단언한다(차이 == 적중 수).
+
+### 🔴🔴 그러나 — **실제 회수는 현재 0 이다**
+
+```
+그 도메인에 **Chrome UA 로** 다시 요청 → **50/50 전부 HTTP 403**(전수 고정 · 증거 fixture).
+⟹ 분류를 고쳐도 지금은 후보가 생기지 않는다. 🔴 「funnel 이 좋아졌다」로 적지 않는다.
+🟡 단 **간헐적** 이다 — 같은 날 SP-12 의 raw fetch 에서는 23건이 열렸다.
+```
+🟢 그래도 패턴을 넣는 이유는 **분류가 틀린 것은 사실** 이기 때문이고, 차단은 **다른 축** 이다.
+🔴 **STOP-RISK** — 이 URL 들이 이제 pool 로 들어가 `UNREACHABLE` 로 떨어진다 ⟹
+   **HTTP 비용이 늘고 회수는 0** 일 수 있다. 되돌리는 비용은 **1줄** 이다.
+
+### 음성 대조 6종
+
+```
+M1 패턴 제거 4F · M2 `.aspx` 전체 허용 1F · M3 `shopping` 포함만 2F ·
+M4 id 숫자 아님 허용 1F · M5 호스트 종속 규칙 3F
+🔴 **M6(LISTING 뒤로 이동) 0F — 순서는 계약이 아니었다.** 1차 주석이 「먼저 본다」고
+   암시했는데 **반증됐다**(SPRINT-02 가 `shop` 토큰에 세그먼트 경계를 넣어서 `shopping` 이
+   애초에 걸리지 않는다) ⟹ 🟢 가짜 계약을 만들지 않고 **주석을 사실로 고쳤다**.
+🔴 M4 는 1차에 **쉘이 백슬래시를 먹어** 미적용이었다(문서화된 그 함정) — 파일 스크립트로 재측정.
+```
+
+### 기존 계약 3건이 FAIL → **갱신**(그것이 수정의 증거다)
+
+```
+search-provider-02  「`.aspx` 는 아직 상품이 아니다」 → 상품이다 + **`about/sale.aspx` 는 아니다** 추가
+search-provider-01  PRODUCT_PAGE 1 → **6**(분모 6 불변) + 「403 이라 회수와 다르다」 주석
+core-same06         증거 fixture 등록(미분류 0 유지)
+```
+
+**🔵 다음 — SP-14(1-hop 활성화 여부)는 CPO 가 연다.** 🔴 CTO 는 열지 않았다.

@@ -41,13 +41,22 @@ describe("DISCOVERY-SEARCH-PROVIDER-02 §M1 — `shopping` 은 목록이 아니�
    *       **없어서**(PoC 실측 0/6) PRODUCT_PAGE 가 돼도 Evidence 가 안 나온다
    *    ⟹ **CPO 판정 사안으로 올린다.** 이 계약은 **현재 상태를 고정** 하고, 열면 FAIL 한다.
    */
-  it("M1 — shopping 과매치가 사라진다(🔴 단 `.aspx` 는 아직 상품 접미가 아니다)", () => {
+  /**
+   * 🟢🟢 **이 계약이 FAIL 로 뒤집혔고 그것이 수정의 증거다**(쿠팡 고시 선례).
+   *    SPRINT-02 는 「`.aspx` 는 아직 상품 접미가 아니다」를 **현재 상태로 고정** 했고,
+   *    SPRINT-13 이 CPO GO 로 **구체 패턴**(`/shopping/…-item-{숫자}.aspx`)을 열었다.
+   * 🟢 그때 적어 둔 우려 ⒜(「`about.aspx` 류가 상품으로 올라간다」)는 **발생하지 않는다** —
+   *    꼬리가 `-item-{숫자}.aspx` 여야 하기 때문이다. 아래 두 줄이 그것을 **같이** 잠근다.
+   */
+  it("M1 — shopping 과매치가 사라진다(🟢 SP-13 에서 `-item-{id}.aspx` 가 상품이 됐다)", () => {
     const farfetch =
       "https://www.farfetch.com/id/shopping/kids/bobo-choses-booty-ghost-print-long-sleeve-t-shirt-item-37035483.aspx";
     /** 🟢 이 Sprint 가 고친 것 — 더 이상 목록이 아니다. */
     expect(classifyUrlShape(farfetch)).not.toBe("LISTING_PAGE");
-    /** 🔴 아직 남은 것 — `.aspx` 미지원이라 「모른다」에 머문다(CPO 판정 대기). */
-    expect(classifyUrlShape(farfetch)).toBe("UNKNOWN_PAGE");
+    /** 🟢 SP-13 — 이제 상품이다. 🔴 **구체 패턴이라서** 그렇다(아래 두 줄이 범위를 가른다). */
+    expect(classifyUrlShape(farfetch)).toBe("PRODUCT_PAGE");
+    expect(classifyUrlShape("https://www.farfetch.com/id/shopping/kids/about.aspx")).not.toBe("PRODUCT_PAGE");
+    expect(classifyUrlShape("https://www.farfetch.com/id/shopping/kids/sale.aspx")).not.toBe("PRODUCT_PAGE");
     /** 🟢 같은 모양이 `.html` 이면 **상품으로 올라간다** — 막는 것이 확장자뿐임을 고정한다. */
     expect(
       classifyUrlShape("https://www.farfetch.com/id/shopping/kids/bobo-choses-item-37035483.html"),

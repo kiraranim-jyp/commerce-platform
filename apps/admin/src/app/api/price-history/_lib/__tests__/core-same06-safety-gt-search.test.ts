@@ -145,6 +145,12 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
    */
   scanned.push("search-provider-11-origins.json");
   scanned.push("search-provider-11-code-rate.json");
+  /**
+   * 🔵 SEARCH-PROVIDER-13(2026-10-27) — `.aspx` URL 전수의 **raw fetch 관측**(50건).
+   * 🔴 human GT 가 아니다 — HTTP 상태와 페이지 자기 선언(`@type:Product`)뿐이고
+   *    SAME/DIFFERENT 라벨이 **0** 이다. 🔴 운영 분류기로 역수입하지 않는다(계약).
+   */
+  scanned.push("search-provider-13-aspx-evidence.json");
 
   /* 행 단위 originCode + verdict 계열 */
   for (const [file, src, codeKey, verdictKey] of [

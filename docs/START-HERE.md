@@ -11,7 +11,7 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **DISCOVERY-SEARCH-PROVIDER-12** — 🟡 **입구 손실 분해 완료 · CPO 판정 2건 대기**
+CURRENT WU   **DISCOVERY-SEARCH-PROVIDER-13** — 🟢 `-item-{id}.aspx` 분류 추가·배포 · 🔴 실제 회수는 403 으로 0
 NEXT         🔵 **실제 상품에서 Candidate URL → Crawl → Evidence → Identity 확인**(MI 는 그 다음)
              🔵 전략은 **docs/DISCOVERY-STRATEGY-LOCK.md** 에 고정됐다(세션 바뀌어도 남는다)
 CEO ACTION   🔵🔵 **있다** — 실제 상품에서 「🔄 다시 분석」 1회 → 🌐 웹 검색 후보가 국내+해외로 뜨는지 확인
@@ -29,9 +29,10 @@ CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SEARCH-PROVIDER-09**(판매처 Signal PoC · 🟢 품번 없어도 Search 0 아님 · 구현 0) ·
              **SEARCH-PROVIDER-10**(안정성 2회 관측 · 🔴 URL 겹침 3~30% · 국내 82%가 한 상품 · HOLD) ·
              **SEARCH-PROVIDER-11**(파이프라인 전수 · 🔴 원상품 47%가 품번 없음 · 입구 손실 44%) ·
-             **SEARCH-PROVIDER-12**(🔴🔴 입구 손실의 절반이 **우리 분류기** · 1-hop 은 이미 작동)
+             **SEARCH-PROVIDER-12**(🔴🔴 입구 손실의 절반이 **우리 분류기** · 1-hop 은 이미 작동) ·
+             **SEARCH-PROVIDER-13**(`-item-{id}.aspx` 상품 분류 · UNKNOWN→PRODUCT 50 · 오분류 0)
 Git          clean · origin/main 0/0 · Production / 200
-회귀         **713 files / 9,530 passed / 0 failed / 153 skipped** · typecheck 0 · build 0
+회귀         **714 files / 9,540 passed / 0 failed / 153 skipped** · typecheck 0 · build 0
 ```
 
 🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **CPO 판정** 이다 — matcher 를 CTO 가 열지 않는다.
