@@ -53,6 +53,7 @@ describe("SEARCH-PROVIDER-05 QA §fixture — 저장된 원본이 그대로 있�
         startedAt: string;
         alsoFrom?: string[];
         accidentalDuplicateOf?: string;
+        pocRepeat?: boolean;
       }[];
     };
     const byKey = new Map<string, typeof raw.runs>();
@@ -66,22 +67,39 @@ describe("SEARCH-PROVIDER-05 QA §fixture — 저장된 원본이 그대로 있�
      * 🟢 숨기지 않고 `accidentalDuplicateOf` 로 표시했고, **정확히 2건** 으로 잠근다 —
      *    새 중복 검색이 하나라도 생기면 이 계약이 **FAIL** 한다.
      */
+    /**
+     * 🟢 **검색 횟수 = 서로 다른 `startedAt` 의 수** 다(같은 stamp 를 공유하는 행은 복사본).
+     *    그래서 둘을 갈라서 본다:
+     * ```
+     * ① 같은 stamp 안의 여분 행   ⟹ **복사본** 이므로 `alsoFrom` 이 있어야 한다(과금 0)
+     * ② stamp 가 하나 더 늘어난 것 ⟹ **실제로 한 번 더 검색** 했다는 뜻이고, 둘 중
+     *    하나로 설명돼야 한다:
+     *      pocRepeat              🟢 SPRINT-10 안정성 2차 관측 — **CPO 명시 승인**
+     *      accidentalDuplicateOf  🔴 하니스 사고 — **2건으로 못박혀** 있다
+     * ```
+     * 🔴 설명 없는 추가 stamp 는 **설명되지 않은 과금** 이다 ⟹ FAIL.
+     */
     let accidental = 0;
     for (const [k, group] of byKey) {
       if (group.length === 1) continue;
-      const stamps = new Set(group.map((g) => g.startedAt));
-      if (stamps.size === 1) {
-        expect(group.filter((g) => (g.alsoFrom?.length ?? 0) > 0).length, `${k} — 복사본에 출처가 없다`).toBe(
-          group.length - 1,
+      const byStamp = new Map<string, typeof group>();
+      for (const g of group) byStamp.set(g.startedAt, [...(byStamp.get(g.startedAt) ?? []), g]);
+      for (const [stamp, rows] of byStamp) {
+        expect(rows.filter((r) => (r.alsoFrom?.length ?? 0) > 0).length, `${k} @${stamp} — 복사본에 출처가 없다`).toBe(
+          rows.length - 1,
         );
-        continue;
       }
-      /** 🔴 실제로 두 번 검색된 것은 **표시돼 있어야** 한다. */
-      const marked = group.filter((g) => Boolean(g.accidentalDuplicateOf));
-      expect(marked.length, `${k} — 같은 질의를 두 번 검색했는데 표시가 없다(과금 중복)`).toBe(group.length - 1);
-      accidental += marked.length;
+      const extraSearches = byStamp.size - 1;
+      if (extraSearches === 0) continue;
+      const explained = [...byStamp.values()].filter((rows) =>
+        rows.some((r) => r.pocRepeat === true || Boolean(r.accidentalDuplicateOf)),
+      ).length;
+      expect(explained, `${k} — 같은 질의를 ${byStamp.size}번 검색했는데 설명이 ${explained}건뿐이다`).toBe(
+        extraSearches,
+      );
+      accidental += group.filter((g) => Boolean(g.accidentalDuplicateOf)).length;
     }
-    expect(accidental, "중복 검색이 늘었다 — 2건(알려진 사고)을 넘으면 안 된다").toBe(2);
+    expect(accidental, "중복 검색 **사고** 가 늘었다 — 2건(알려진 사고)을 넘으면 안 된다").toBe(2);
   });
 
   it("🔴 세 출처가 **같은 표** 에 있다 — 운영 열거기 · 운영 Planner · 하니스 라벨", () => {
@@ -224,6 +242,38 @@ describe("SEARCH-PROVIDER-05 QA §fixture — 저장된 원본이 그대로 있�
       (x) => x.label === "S-A" && /\s(in|with|by|for|and|of)$/i.test(x.query),
     );
     expect(tailed.length, "꼬리 결함이 하나도 없으면 이 CONTROL 은 의미가 없다").toBeGreaterThan(0);
+  });
+
+  it("🔵🔵 SPRINT-10 — 안정성 2차 관측이 **정확히 18건** 이고 전부 PoC 표시가 있다", () => {
+    const raw = RAW as unknown as {
+      runs: { productId: string; label: string; query: string; pocRepeat?: boolean; repeatOf?: string }[];
+    };
+    const repeats = raw.runs.filter((r) => r.pocRepeat);
+    /** 🔴 CPO §4 — **18회를 넘지 않는다**. 늘어나면 이 계약이 FAIL 한다. */
+    expect(repeats).toHaveLength(18);
+    expect([...new Set(repeats.map((r) => r.productId))].sort()).toEqual(["S1", "S2", "S3", "S4", "S5", "S6"]);
+    expect([...new Set(repeats.map((r) => r.repeatOf))].sort()).toEqual(["S-A", "S-C", "S-D"]);
+    for (const r of repeats) {
+      /** 🔴🔴 2차 관측은 1차와 **질의 문자열이 같아야** 한다 — 아니면 안정성 측정이 아니다. */
+      const first = raw.runs.find((x) => x.productId === r.productId && x.label === r.repeatOf);
+      expect(first, `${r.productId} ${r.repeatOf} 1차가 없다`).toBeTruthy();
+      expect(r.query, `${r.productId} ${r.label}`).toBe(first!.query);
+    }
+  });
+
+  it("🔴🔴 2차 관측은 **PoC 전용** 이다 — 운영 retry 로 읽히지 않게 표시돼 있다", () => {
+    const raw = RAW as unknown as { runs: { label: string; pocRepeat?: boolean; source: string }[] };
+    /** 🟢 `#2` 라벨과 `pocRepeat` 가 **정확히 같은 집합** 이어야 한다(한쪽만 있으면 거짓 표시다). */
+    const byLabel = raw.runs.filter((r) => r.label.endsWith("#2")).length;
+    const byFlag = raw.runs.filter((r) => r.pocRepeat === true).length;
+    expect(byLabel).toBe(byFlag);
+    for (const r of raw.runs.filter((x) => x.pocRepeat)) expect(r.source).toBe("STABILITY");
+    /** 🔴 **운영 계약은 그대로다** — 운영 검색 생산자는 상품당 1회이고 이 PoC 와 무관하다. */
+    const pool = stripComments(
+      readFileSync(join(__dirname, "../web-search-pool.ts"), "utf8").replace(/\r\n/g, "\n"),
+    );
+    expect(pool).toContain("MAX_SEARCHES_PER_PRODUCT = 1");
+    expect(pool).not.toContain("pocRepeat");
   });
 
   it("🟢 Query 간 겹침을 **관측** 으로 적는다(같은 URL 이 다른 Query 에도 나온다)", () => {

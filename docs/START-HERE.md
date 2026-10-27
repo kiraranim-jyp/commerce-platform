@@ -11,7 +11,7 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **DISCOVERY-SEARCH-PROVIDER-07** — 🟢 **단일 Query `"{MODEL_CODE}"` 운영 배선 완료 · 배포됨**
+CURRENT WU   **DISCOVERY-SEARCH-PROVIDER-10** — 🟡 **Query Selection HOLD**(안정성 부족 · CPO 판정 대기)
 NEXT         🔵 **실제 상품에서 Candidate URL → Crawl → Evidence → Identity 확인**(MI 는 그 다음)
              🔵 전략은 **docs/DISCOVERY-STRATEGY-LOCK.md** 에 고정됐다(세션 바뀌어도 남는다)
 CEO ACTION   🔵🔵 **있다** — 실제 상품에서 「🔄 다시 분석」 1회 → 🌐 웹 검색 후보가 국내+해외로 뜨는지 확인
@@ -26,9 +26,10 @@ CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SEARCH-PROVIDER-06**(목적형 I-1~I-3 · 🔴 상품명 영어 Query 는 국내 0 · 품번 축만 섞인다) ·
              **SEARCH-PROVIDER-07**(🟢 단일 Query 운영 배선 · 1 Product = 1 Search · MI 미연결) ·
              **SEARCH-PROVIDER-08**(목적 문구 PoC · 🔴 효과는 「목적」이 아니라 「한국어」 · 구현 0) ·
-             **SEARCH-PROVIDER-09**(판매처 Signal PoC · 🟢 품번 없어도 Search 0 아님 · 구현 0)
+             **SEARCH-PROVIDER-09**(판매처 Signal PoC · 🟢 품번 없어도 Search 0 아님 · 구현 0) ·
+             **SEARCH-PROVIDER-10**(안정성 2회 관측 · 🔴 URL 겹침 3~30% · 국내 82%가 한 상품 · HOLD)
 Git          clean · origin/main 0/0 · Production / 200
-회귀         **711 files / 9,523 passed / 0 failed / 153 skipped** · typecheck 0 · build 0
+회귀         **711 files / 9,525 passed / 0 failed / 153 skipped** · typecheck 0 · build 0
 ```
 
 🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **CPO 판정** 이다 — matcher 를 CTO 가 열지 않는다.

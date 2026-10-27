@@ -959,6 +959,136 @@ describe.skipIf(!SIGNAL_LIVE)("SEARCH-PROVIDER-09 §Signal — 실제 검색(라
   );
 });
 
+/* ───────────── §10 SPRINT-10 — **Query 안정성 2회 관측**(정확히 18회) ───────────── */
+
+/**
+ * 🔵🔵🔵 CPO 지시(2026-10-27) — SP-09 가 찾은 **검색 자체의 변동성** 을 먼저 통제한다.
+ *    (같은 질의를 몇 분 뒤 돌렸더니 S6 는 8↔9건 중 **3건만** 겹쳤다.)
+ *
+ * ── 🔴 계약 ───────────────────────────────────────────────────────────────
+ * ```
+ * 대상      S-A · S-C · S-D **셋만**(S-B 탈락 · 새 Query 발명 금지)
+ * 표본      SP-09 와 **같은 6 상품**(품번 있음 4 + **실제 code-less 2**)
+ * 실행      각 조건 **정확히 1회 추가** ⟹ 6 × 3 = **18회**. 🔴 그 이상 돌리지 않는다
+ * 기존      SP-09 1차 관측을 **버리지 않는다** ⟹ 조건당 **총 2회 관측**
+ * ```
+ * 🔴🔴 **POC_REPEAT = true · OPERATING_SEARCH = 0** — 이 2차 관측은 **PoC 전용** 이고
+ *    운영 계약 **「1 Product = 1 Search」는 그대로** 다(운영 retry 가 아니다).
+ */
+const STABILITY_LABELS = ["S-A", "S-C", "S-D"] as const;
+/** 🔴 **상한이자 기대값** 이다 — 넘으면 호출하지 않고 멈춘다(CPO §4 STOP). */
+const SP10_EXPECTED_SEARCHES = 18;
+
+const STABILITY_LIVE = process.env.CORE_SP10_LIVE === "1";
+
+describe.skipIf(!STABILITY_LIVE)("SEARCH-PROVIDER-10 §안정성 — 2차 관측(라이브 · 정확히 18회)", () => {
+  it(
+    "S-A/S-C/S-D × 상품 6 — 같은 질의를 **한 번 더** 돌려 변동을 잰다",
+    async () => {
+      const token = process.env.APIFY_API_TOKEN?.trim();
+      expect(token, "APIFY_API_TOKEN 이 없다").toBeTruthy();
+      const fsmod = await import("node:fs");
+      const file = JSON.parse(fsmod.readFileSync(OUT, "utf8")) as {
+        runs: {
+          productId: string;
+          label: string;
+          source: string;
+          axis: string;
+          alsoFrom: string[];
+          query: string;
+          startedAt: string;
+          results: { url: string; title?: string; displayedUrl?: string; description?: string }[];
+          pocRepeat?: boolean;
+          repeatOf?: string;
+        }[];
+      };
+      const flush = () => fsmod.writeFileSync(OUT, `${JSON.stringify(file, null, 1)}\n`);
+
+      /**
+       * 🔴🔴 **여기서는 dedupe 를 «일부러» 하지 않는다.** 같은 질의를 다시 도는 것이
+       *    이 실험의 목적이기 때문이다. 🟢 대신 `pocRepeat` 로 **운영 retry 와 구별** 한다.
+       */
+      const pending: { productId: string; label: string; query: string }[] = [];
+      for (const p of SP09_PRODUCTS) {
+        for (const label of STABILITY_LABELS) {
+          const first = file.runs.find((r) => r.productId === p.id && r.label === label);
+          if (!first) {
+            console.log(`  🔴 ${p.id} ${label} — 1차 관측이 없다(건너뛴다)`);
+            continue;
+          }
+          if (file.runs.some((r) => r.productId === p.id && r.label === `${label}#2`)) continue;
+          pending.push({ productId: p.id, label, query: first.query });
+        }
+      }
+      /** 🔴 **18회를 넘으면 호출하지 않고 멈춘다**(CPO §4). */
+      expect(pending.length, `추가 검색이 ${pending.length}회다 — 18회를 넘으면 STOP`).toBeLessThanOrEqual(
+        SP10_EXPECTED_SEARCHES,
+      );
+      console.log(
+        `  추가 검색 ${pending.length}회 · 예상 $${(pending.length * USD_PER_SEARCH_PAGE).toFixed(3)} · POC_REPEAT=true · OPERATING_SEARCH=0`,
+      );
+
+      const runOne = async (x: (typeof pending)[number]) => {
+        const startedAt = new Date().toISOString();
+        try {
+          const res = await fetch(
+            `https://api.apify.com/v2/acts/${ACTOR}/run-sync-get-dataset-items?token=${encodeURIComponent(token!)}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              /** 🔴 **설정이 1차와 한 글자도 다르지 않다** — 변동만 보려는 실험이다. */
+              body: JSON.stringify({
+                queries: x.query,
+                maxPagesPerQuery: 1,
+                resultsPerPage: 20,
+                saveHtml: false,
+                saveHtmlToKeyValueStore: false,
+              }),
+            },
+          );
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const items = (await res.json()) as SearchItem[];
+          const results = (items[0]?.organicResults ?? [])
+            .filter((o): o is { url: string } & typeof o => Boolean(o.url))
+            .map((o) => ({ url: o.url, title: o.title, displayedUrl: o.displayedUrl, description: o.description }));
+          return {
+            productId: x.productId,
+            label: `${x.label}#2`,
+            source: "STABILITY",
+            axis: `${x.label} 2차 관측(PoC 전용 반복)`,
+            alsoFrom: [],
+            query: x.query,
+            startedAt,
+            results,
+            /** 🔴🔴 **운영 retry 가 아니다** — 이 두 칸이 그것을 구별한다. */
+            pocRepeat: true,
+            repeatOf: x.label,
+          };
+        } catch (err) {
+          console.log(`  🔴 ${x.productId} ${x.label}#2 실패(기록하지 않는다) — ${String(err).slice(0, 90)}`);
+          return null;
+        }
+      };
+
+      let done = 0;
+      for (let i = 0; i < pending.length; i += 4) {
+        const got = await Promise.all(pending.slice(i, i + 4).map(runOne));
+        for (const r of got) {
+          if (!r) continue;
+          file.runs.push(r);
+          done += 1;
+          console.log(`  ${pad(r.productId, 4)} ${pad(r.label, 7)} 결과 ${padL(String(r.results.length), 2)}`);
+        }
+        flush();
+      }
+      flush();
+      console.log(`  ✅ 추가 검색 ${done}회 수행(상한 ${SP10_EXPECTED_SEARCHES})`);
+      expect(done).toBeLessThanOrEqual(SP10_EXPECTED_SEARCHES);
+    },
+    3 * 60 * 60_000,
+  );
+});
+
 /* ───────────── §4-b 「결과 0」이 진짜 0 인지 재확인 ───────────── */
 
 const RECHECK = process.env.CORE_SP05_RECHECK === "1";
