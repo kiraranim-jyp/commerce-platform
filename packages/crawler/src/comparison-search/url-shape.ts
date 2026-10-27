@@ -43,7 +43,15 @@ export type UrlShape = "PRODUCT_PAGE" | "LISTING_PAGE" | "UNKNOWN_PAGE" | "NOT_F
  *    (저장소 scripts/register-voyage-dress-live.ts 에 그대로 있다). 순서를 뒤집으면
  *    진짜 상품 URL 이 LISTING_PAGE 로 버려진다.
  */
-const PRODUCT_PATH = /(?:^|\/)(?:products|product|dp|itm|goods)\/[^/]+/i;
+/**
+ * 🔵🔵 **DISCOVERY-SEARCH-PROVIDER-02 — `p` 를 «하나» 더했다**(2026-10-27).
+ *    실측: `answear.ro/p/bobo-choses-…-**b226ac010**-1843935` 가 진짜 상품 상세인데
+ *    `UNKNOWN_PAGE` 로 떨어졌다(🔴 그 URL 에 **우리 품번이 그대로** 있었다).
+ * 🔴 **범용 shortcut 이 아니다** — 뒤의 `\/[^/]+` 가 **슬러그를 요구** 하므로
+ *    `/p` · `/p/` 는 상품이 되지 않고, `NON_PRODUCT_FILE` 이 **먼저** 돌아
+ *    `/p/index.html` 도 걸러진다. 기존 `dp`(Amazon) · `itm`(eBay)과 **같은 종류** 다.
+ */
+const PRODUCT_PATH = /(?:^|\/)(?:products|product|dp|itm|goods|p)\/[^/]+/i;
 /** 지시서 §2-A 가 `/...html` 을 상품 후보로 넣었다(실측 근거: wonderforkids 의
  *  `main-story-bubble-sweatshirt-grey-melange-fleece.html`). 🔴 다만 `.html` «자체» 는
  *  상품의 증거가 아니다 — 아래 제외 목록이 없으면 `about.html`·`index.html` 까지
@@ -53,8 +61,30 @@ const PRODUCT_SUFFIX = /\.html?$/i;
  *  넣으면 진짜 상품을 버린다. 확실한 것만 적는다. */
 const NON_PRODUCT_FILE =
   /(?:^|\/)(?:index|default|home|main|about|about-?us|contact|contact-?us|terms|privacy|policy|faq|help|login|signin|register|cart|checkout|sitemap|search|category|categories|collection|collections|list|brand|brands)\.html?$/i;
-/** 🔴 `/shop/`·`/search/` 는 목록이다. 단 위 상품 패턴이 먼저 걸리면 상품이다. */
-const LISTING_PATH = /(?:^|\/)(?:collections|collection|category|categories|search|shop|brands?|c)\/?/i;
+/**
+ * 🔴 `/shop/`·`/search/` 는 목록이다. 단 위 상품 패턴이 먼저 걸리면 상품이다.
+ *
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴🔴 **DISCOVERY-SEARCH-PROVIDER-02 — 세그먼트 «경계» 를 넣었다**(2026-10-27)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 전에는 끝이 `\/?`(**선택**)이라 토큰이 **세그먼트 일부만 먹어도 매치** 됐다.
+ * 실측 피해:
+ * ```
+ * /shopping/kids/…-item-37035483.aspx  → `shop` 매치   🔴 상품 상세가 LISTING_PAGE
+ * /clothing/mens/shirt                 → **`c` 매치**   🔴🔴 c 로 시작하는 «모든» 세그먼트
+ * /cart/view · /contact                → `c` 매치       🔴 같은 이유
+ * ```
+ * 🔴 즉 `c` 토큰 때문에 **「c 로 시작하는 모든 경로 세그먼트」가 목록** 이었다.
+ *    Apify PoC 가 드러냈지만 **Apify 와 무관한 전역 결함** 이다(WU-073 이 「양방향
+ *    오류」로 기록해 둔 바로 그 자리 · WU-052 HOLD).
+ *
+ * 🟢 고친 것은 **끝의 `\/?` → `(?:\/|$)`** 하나다. 토큰 목록은 **한 글자도 바꾸지
+ *    않았다** ⟹ 「진짜 목록」의 판정은 그대로이고(M2 전수 계약), 사라지는 것은
+ *    **부분문자열 매치뿐** 이다.
+ * 🔴 `includes("shop")` 같은 부분문자열 판정으로 **되돌아가지 않는다**.
+ */
+const LISTING_PATH = /(?:^|\/)(?:collections|collection|category|categories|search|shop|brands?|c)(?:\/|$)/i;
 
 export function classifyUrlShape(url: string): UrlShape {
   let pathname: string;

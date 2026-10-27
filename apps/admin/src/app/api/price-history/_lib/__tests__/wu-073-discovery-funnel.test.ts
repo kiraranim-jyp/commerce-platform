@@ -118,8 +118,28 @@ describe("WU-073 — 후보 발견 funnel (GT 캐시 필요)", () => {
     expect(A.kr).toBe(46);
     /** 🔴 ② 가 최대 손실 구간이다 — 국내 46 → 30. */
     expect(B.kr).toBe(30);
-    expect(X.n).toBe(91);
-    expect(reasons.NOT_PRODUCT_PAGE).toBe(87);
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🟢🟢 **DISCOVERY-SEARCH-PROVIDER-02 — 91 → 89 로 «줄었다»**(2026-10-27)
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 이 숫자가 내려간 것은 **회귀가 아니라 수정의 결과** 다 — 이 파일 머리가
+     *    적어 둔 「`classifyUrlShape` 가 **양방향으로** 틀린다」의 한쪽을 고쳤다.
+     *
+     * 이 코퍼스(AI URL **181**)에서 분류가 바뀐 것은 **정확히 3건** 이다:
+     * ```
+     * 🟢 UNKNOWN → PRODUCT  answear.com/p/…-**b226ac117**-1746932  ← 우리 품번이 URL 에 있다
+     * 🟢 UNKNOWN → PRODUCT  babyshop.com/…-turtledove `/p/` 340481
+     * 🟡 LISTING → UNKNOWN  m.gsshop.com/section/`brandSect`/263304
+     *    🔴 위 줄에서 `**p**` 뒤에 슬래시를 붙이면 `*` + `*` + `/` 가 **`*​/`** 가 되어
+     *       **블록 주석이 거기서 끝난다**(이 편집에서 실제로 났고 typecheck 가 잡았다).
+     *    (`brand` 가 `brandSect` 안에서 매치되던 것 · 🟢 **행동 변화 0** —
+     *     `toCrawlerUrl` 은 `PRODUCT_PAGE` 가 **아닌 것을 전부** 버린다)
+     * ```
+     * ⟹ 🟢 **진짜 상품 2건 회수 · 행동상 손실 0.**
+     */
+    expect(X.n).toBe(89);
+    expect(reasons.NOT_PRODUCT_PAGE).toBe(85);
     expect(reasons.SELF_REFERENCE).toBe(4);
     /** 🔴🔴 분류기가 **양방향으로** 틀린다 — 둘 다 0 이 아니다. */
     expect(falsePass).toHaveLength(5);

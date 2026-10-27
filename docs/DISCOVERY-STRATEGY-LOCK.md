@@ -235,7 +235,7 @@ Query  [BRAND_CODE] "Bobo Choses" "B226AC010"   ← 기존 Query Planner 1순위
 
 ```
 APIFY SEARCH EXECUTION = PASS   (B 는 실행된다 · 비용 단위가 명확하고 통제 가능하다)
-APIFY AS SEARCH PROVIDER = HOLD (기존 Candidate URL 계약 통과 0/6)
+APIFY AS SEARCH PROVIDER = HOLD (SPRINT-02 에서 0/6 → **1/6** · 아래 부록)
 DISCOVERY CORE = HOLD           (blocker 가 B → **C 의 URL 분류기** 로 «이동» 했다)
 ```
 
@@ -243,3 +243,61 @@ DISCOVERY CORE = HOLD           (blocker 가 B → **C 의 URL 분류기** 로 �
 ① `classifyUrlShape` 과매치 수정을 **열 것인가**(WU-052 HOLD 해제 · 이 PoC 가 새 증거다)
 ② farfetch 류 **JS 렌더 사이트**를 공급원으로 볼 것인가(현재 PLAIN_HTML 로는 못 읽는다)
 ③ Query Planner 질의 **폭**(따옴표 2개 → 결과 7건) — 넓힐지 여부
+
+---
+
+## 부록 — `DISCOVERY-SEARCH-PROVIDER-02` URL 분류 정확성 복구 (2026-10-27)
+
+🔴 **Apify 를 위한 새 기능이 아니다** — 기존 Candidate URL 계약의 **거짓 음성 제거** 다.
+
+### Before → After (동일 Apify 결과 · 분모 유지)
+
+| | Before | After |
+|---|---:|---:|
+| PRODUCT_PAGE | **0/6** | 🟢 **1/6** |
+| LISTING_PAGE | 5/6 | **0/6** |
+| UNKNOWN_PAGE | 1/6 | 5/6 |
+| `factsFromProductUrl` 성공 | **0/6** | 🟢 **1/6** |
+
+🟢🟢 **①(우리 분류기)이 ②(공급 품질)를 따라잡았다** — 둘 다 **1/6** 이다.
+⟹ 🔴 **이제 분류기는 병목이 아니다.** 남은 한계는 **farfetch 의 JSON-LD 부재**(JS 렌더)다.
+
+### 고친 것 — 두 줄
+
+```
+① `LISTING_PATH` 끝 `\/?`(선택) → **`(?:\/|$)`(세그먼트 경계)**
+   🔴🔴 **보고보다 결함이 넓었다** — `c` 토큰 때문에 **「c 로 시작하는 모든 세그먼트」**
+      가 목록이었다(`/clothing/…` · `/cart/…` · `/contact`). Apify 와 **무관한 전역 결함**.
+   🟢 토큰 목록은 **한 글자도 안 바꿨다** ⟹ 진짜 목록 판정 불변(M2 전수 계약)
+② `PRODUCT_PATH` 에 **`p` 하나** 추가 — 뒤의 `\/[^/]+` 가 슬러그를 요구하므로
+   `/p` · `/p/` 는 상품이 아니고 `NON_PRODUCT_FILE` 이 먼저 돌아 `/p/index.html` 도 걸린다
+```
+
+### 🟢 독립 코퍼스(AI URL **181**) 교차검증 — 탈락 **91 → 89**
+
+```
+🟢 UNKNOWN → PRODUCT  answear.com/p/…-**b226ac117**-…   ← 우리 품번이 URL 에 있다
+🟢 UNKNOWN → PRODUCT  babyshop.com/…-turtledove `/p/` 340481
+🟡 LISTING → UNKNOWN  m.gsshop.com/section/`brandSect`/263304
+   (`brand` ⊂ `brandSect` · 🟢 **행동 변화 0** — `toCrawlerUrl` 은 PRODUCT_PAGE 아닌 것을 전부 버린다)
+⟹ 🟢 **진짜 상품 2건 회수 · 행동상 손실 0**
+```
+
+### 🔴 남은 세 번째 결함 — **고치지 않았다**(CPO 판정 대기)
+
+```
+farfetch 5건이 **UNKNOWN_PAGE** 에 머문다 — `PRODUCT_SUFFIX` 가 **`.html` 만** 본다(**`.aspx`** 미지원)
+🔴 넣지 않은 이유 ⒜ `NON_PRODUCT_FILE` 도 같이 넓혀야 하고 그러면 `about.aspx` 가 상품이 된다
+                 ⒝ 근거가 **N=1 사이트** 이고 🔴 그 사이트는 **JSON-LD Product 가 없다**(0/6)
+                    ⟹ PRODUCT_PAGE 가 돼도 Evidence 가 안 나온다
+```
+
+### 🔴 URL 분류 ≠ HTML 렌더 ≠ Evidence — 갈라서 적는다
+
+| farfetch | 결과 |
+|---|---|
+| URL classification | 🟡 UNKNOWN_PAGE (`.aspx` 미지원) |
+| Crawl(HTTP) | 🟢 **200** |
+| Evidence | 🔴 **JSON-LD Product 없음**(JS 렌더) ⟹ PLAIN_HTML 로는 **못 읽는다** |
+
+🔴 **억지로 성공 처리하지 않았다.** Farfetch JS 렌더는 이번 범위가 아니다.

@@ -37,21 +37,35 @@ describe("DISCOVERY-SEARCH-PROVIDER-01 STEP 5 — 분류기 과매치(순수 · 
    * 🔴🔴 **이 계약은 「현재 동작」을 고정한다** — 고치면 FAIL 하고 **그것이 수정의 증거** 다
    *    (WU-052 가 HOLD 한 자리라 CTO 가 임의로 고치지 않는다 · 쿠팡 고시 선례와 같은 방식).
    */
-  it("🔴 `shopping` 안의 `shop` 이 매치되어 상품 상세가 LISTING_PAGE 가 된다", () => {
+  /**
+   * ════════════════════════════════════════════════════════════════════════════
+   * 🟢🟢 **아래 셋은 SPRINT-01 에서 «결함을 고정» 해 둔 계약이었고, SPRINT-02 에서
+   *       FAIL 로 뒤집혔다. 그 뒤집힘이 «수정의 증거» 다**(쿠팡 고시 선례).
+   * ════════════════════════════════════════════════════════════════════════════
+   * 🔴 약화한 것이 아니라 **기대값을 고친 뒤 더 강하게** 단언한다 —
+   *    「과매치가 사라졌다」 + 「진짜 목록은 그대로」를 **같이** 본다.
+   */
+  it("🟢 `shopping` 과매치가 «사라졌다»(SPRINT-02)", () => {
     const u = "https://www.farfetch.com/id/shopping/kids/bobo-choses-item-37035483.aspx";
-    expect(String(classifyUrlShape(u))).toBe("LISTING_PAGE");
-    /** 🟢 `shopping` 이 아닌 진짜 목록은 그대로 LISTING 이어야 한다(과수정 방지). */
+    expect(String(classifyUrlShape(u))).not.toBe("LISTING_PAGE");
+    /** 🟢 진짜 목록은 그대로 LISTING 이어야 한다(과수정 방지). */
     expect(String(classifyUrlShape("https://x.test/collections/kids"))).toBe("LISTING_PAGE");
+    expect(String(classifyUrlShape("https://x.test/shop/kids"))).toBe("LISTING_PAGE");
   });
 
-  it("🔴 `/p/` 상세 경로가 PRODUCT_PAGE 로 인식되지 않는다", () => {
+  it("🟢 `/p/` 상세 경로가 이제 PRODUCT_PAGE 다(SPRINT-02)", () => {
     const u = "https://answear.ro/p/bobo-choses-longsleeve-booty-ghosts-b226ac010-1843935";
-    expect(String(classifyUrlShape(u))).not.toBe("PRODUCT_PAGE");
+    expect(String(classifyUrlShape(u))).toBe("PRODUCT_PAGE");
   });
 
-  it("Apify 산출 전건의 현재 분류를 고정한다(PRODUCT_PAGE 0)", () => {
+  it("🟢 Apify 산출에서 PRODUCT_PAGE 가 0 → 1 이 됐다(분모 7 유지)", () => {
     const shapes = APIFY_URLS.map((u) => String(classifyUrlShape(u)));
-    expect(shapes.filter((s) => s === "PRODUCT_PAGE")).toHaveLength(0);
+    /** 🔴 분모를 바꾸지 않는다 — SPRINT-01 과 **같은 6 URL** 이다. */
+    expect(APIFY_URLS).toHaveLength(6);
+    expect(shapes.filter((s) => s === "PRODUCT_PAGE")).toHaveLength(1);
+    /** 🔴 farfetch 5건은 **아직** UNKNOWN 이다(`.aspx` 미지원 · CPO 판정 대기). */
+    expect(shapes.filter((s) => s === "UNKNOWN_PAGE")).toHaveLength(5);
+    expect(shapes.filter((s) => s === "LISTING_PAGE")).toHaveLength(0);
   });
 });
 
