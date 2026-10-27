@@ -27,6 +27,18 @@
    "code": "AW26MS185",
    "name": "Bubble Sweatshirt in Grey Melange by Main Story",
    "color": "Grey Melange"
+  },
+  "S5": {
+   "brand": "The Animals Observatory",
+   "code": null,
+   "name": "Pupfish Kid T-Shirt in Grey Heather by The Animals Observatory",
+   "color": "Medium Grey Heather"
+  },
+  "S6": {
+   "brand": "Konges Slojd Clothing",
+   "code": null,
+   "name": "Jody Teddy Onesie in Erba Stripe by Konges Sløjd",
+   "color": "Erba Stripe"
   }
  },
  "runs": [
@@ -5933,7 +5945,1910 @@
      "description": "MAIN STORY. 기본 정보. 상품명, [메인스토리] SS25MS185 - Bubble Sweatshirt - Driftwood. 상품요약정보, SS25. 판매가, 88,000원 재입고 알림 SMS. 할인판매가, 50% ...Read more"
     }
    ]
+  },
+  {
+   "productId": "S1",
+   "label": "S-A",
+   "source": "SIGNAL",
+   "axis": "기준선 — BRAND + 상품명 + [품번]",
+   "alsoFrom": [
+    "A"
+   ],
+   "query": "Bobo Choses B226AC010 Booty Ghosts Long Sleeve",
+   "startedAt": "2026-10-27T06:16:24.572Z",
+   "results": [
+    {
+     "url": "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt-heather-grey?srsltid=AYCX9vKHCbjCtHkExwrZuQeti-DNbwbu0xcJdVvk_Y9n5byGSDf7KBO2",
+     "title": "Bobo Choses Booty Ghosts T-shirt, Heather Grey",
+     "displayedUrl": "https://www.tinyapple.net › products › bobo-choses-boot...",
+     "description": "Bobo Choses Booty Ghosts T-shirt, Heather Grey. $58.00 USD. off. Pay in 4 interest ... B226AC010. Bobo Choses Booty Ghosts T-shirt, Heather Grey. $58.00 USD.Read more"
+    },
+    {
+     "url": "https://www.cettire.com/bh/products/bobo-choses-booty-ghosts-long-sleeve-t-shirt-967579868/cmVhY3Rpb24vcHJvZHVjdDpKYWhycXI2bWtlQmNNZzV3Nw==?lng=en",
+     "title": "Bobo Choses Booty Ghosts Long-Sleeve T-Shirt",
+     "displayedUrl": "https://www.cettire.com › products › bobo-choses-boot...",
+     "description": ""
+    },
+    {
+     "url": "https://bobochoses.com/en-it/products/b226ac031-booty-ghosts-sweatshirt",
+     "title": "Booty Ghosts sweatshirt",
+     "displayedUrl": "https://bobochoses.com › en-it › products › b226ac031...",
+     "description": "Light blue sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal. Kids SWEATSHIRT Booty Ghosts sweatshirt. Sleeve lenght 24.50 D"
+    },
+    {
+     "url": "https://www.farfetch.com/fi/shopping/kids/bobo-choses-booty-ghost-print-long-sleeve-t-shirt-item-37035483.aspx",
+     "title": "Bobo Choses Booty ghost-print long-sleeve T-shirt | Grey",
+     "displayedUrl": "https://www.farfetch.com › ... › Boys T-Shirts",
+     "description": "grey cotton ghost print logo print to the front round neck long sleeves straight hem Composition Organic Cotton 100% Washing instructions. ID: B226AC010"
+    },
+    {
+     "url": "https://bobochoses.com/en-kr/products/b226ac141-booty-ghosts-t-shirt",
+     "title": "Booty Ghosts blue T-shirt",
+     "displayedUrl": "https://bobochoses.com › en-kr › products › b226ac14...",
+     "description": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal. Kids T-SHIRT Booty Ghosts. Sleeve lenght 16.00 D"
+    },
+    {
+     "url": "https://www.nordstrom.com/s/booty-ghosts-organic-cotton-t-shirt/9202229?srsltid=AYCX9vJHB3LnZuo5JO-JFO1y-KrTqBwyGK5lgU5Rq3BxAjtN0664VCO_",
+     "title": "Bobo Choses Booty Ghosts Organic Cotton T-Shirt",
+     "displayedUrl": "https://www.nordstrom.com › ... › Kids' Clothing › Shirts",
+     "description": "Baby will have a spooktacular time in this relaxed-fit T-shirt made from breathable organic cotton and sporting a playful ghost graphic. 100% organic cotton ...Read more"
+    },
+    {
+     "url": "https://www.farfetch.com/ph/shopping/kids/bobo-choses-booty-ghost-print-long-sleeve-t-shirt-item-37035483.aspx",
+     "title": "Bobo Choses Booty ghost-print long-sleeve T-shirt | Grey",
+     "displayedUrl": "https://www.farfetch.com › ... › Boys T-Shirts",
+     "description": "Bobo Choses Booty ghost-print long-sleeve T-shirt. Original price$38 Final price $29 Promo … grey cotton ghost print logo print to the front round neck long ..."
+    },
+    {
+     "url": "https://www.farfetch.com/sg/shopping/kids/bobo-choses-booty-ghost-print-long-sleeve-t-shirt-item-37035483.aspx",
+     "title": "Bobo Choses Booty ghost-print long-sleeve T-shirt | Grey",
+     "displayedUrl": "https://www.farfetch.com › ... › Boys T-Shirts",
+     "description": "grey cotton ghost print logo print to the front round neck long sleeves straight hem Composition Organic Cotton 100% ID: B226AC010"
+    },
+    {
+     "url": "https://editorialist.com/p/bobo-choses-mini-booty-ghosts-unisex-baby-t-shirt/?size=12M&sku=174380678_42231585&pla=true",
+     "title": "Bobo Choses Mini Booty Ghosts\" Baby Long Sleeve T-Shirt",
+     "displayedUrl": "https://editorialist.com › bobo-choses-mini-booty-ghost...",
+     "description": "Crafted from 100% cotton, this unisex baby t-shirt features a playful \"booty ghosts\" graphic and the BOBO CHOSES logo. Available Size 9M, 6M, 12M"
+    }
+   ]
+  },
+  {
+   "productId": "S1",
+   "label": "S-A2",
+   "source": "SIGNAL",
+   "axis": "🔴 CONTROL — 기준선에서 **끊긴 전치사만** 제거(운영 변경 0)",
+   "alsoFrom": [
+    "A"
+   ],
+   "query": "Bobo Choses B226AC010 Booty Ghosts Long Sleeve",
+   "startedAt": "2026-10-27T06:16:24.572Z",
+   "results": [
+    {
+     "url": "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt-heather-grey?srsltid=AYCX9vKHCbjCtHkExwrZuQeti-DNbwbu0xcJdVvk_Y9n5byGSDf7KBO2",
+     "title": "Bobo Choses Booty Ghosts T-shirt, Heather Grey",
+     "displayedUrl": "https://www.tinyapple.net › products › bobo-choses-boot...",
+     "description": "Bobo Choses Booty Ghosts T-shirt, Heather Grey. $58.00 USD. off. Pay in 4 interest ... B226AC010. Bobo Choses Booty Ghosts T-shirt, Heather Grey. $58.00 USD.Read more"
+    },
+    {
+     "url": "https://www.cettire.com/bh/products/bobo-choses-booty-ghosts-long-sleeve-t-shirt-967579868/cmVhY3Rpb24vcHJvZHVjdDpKYWhycXI2bWtlQmNNZzV3Nw==?lng=en",
+     "title": "Bobo Choses Booty Ghosts Long-Sleeve T-Shirt",
+     "displayedUrl": "https://www.cettire.com › products › bobo-choses-boot...",
+     "description": ""
+    },
+    {
+     "url": "https://bobochoses.com/en-it/products/b226ac031-booty-ghosts-sweatshirt",
+     "title": "Booty Ghosts sweatshirt",
+     "displayedUrl": "https://bobochoses.com › en-it › products › b226ac031...",
+     "description": "Light blue sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal. Kids SWEATSHIRT Booty Ghosts sweatshirt. Sleeve lenght 24.50 D"
+    },
+    {
+     "url": "https://www.farfetch.com/fi/shopping/kids/bobo-choses-booty-ghost-print-long-sleeve-t-shirt-item-37035483.aspx",
+     "title": "Bobo Choses Booty ghost-print long-sleeve T-shirt | Grey",
+     "displayedUrl": "https://www.farfetch.com › ... › Boys T-Shirts",
+     "description": "grey cotton ghost print logo print to the front round neck long sleeves straight hem Composition Organic Cotton 100% Washing instructions. ID: B226AC010"
+    },
+    {
+     "url": "https://bobochoses.com/en-kr/products/b226ac141-booty-ghosts-t-shirt",
+     "title": "Booty Ghosts blue T-shirt",
+     "displayedUrl": "https://bobochoses.com › en-kr › products › b226ac14...",
+     "description": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal. Kids T-SHIRT Booty Ghosts. Sleeve lenght 16.00 D"
+    },
+    {
+     "url": "https://www.nordstrom.com/s/booty-ghosts-organic-cotton-t-shirt/9202229?srsltid=AYCX9vJHB3LnZuo5JO-JFO1y-KrTqBwyGK5lgU5Rq3BxAjtN0664VCO_",
+     "title": "Bobo Choses Booty Ghosts Organic Cotton T-Shirt",
+     "displayedUrl": "https://www.nordstrom.com › ... › Kids' Clothing › Shirts",
+     "description": "Baby will have a spooktacular time in this relaxed-fit T-shirt made from breathable organic cotton and sporting a playful ghost graphic. 100% organic cotton ...Read more"
+    },
+    {
+     "url": "https://www.farfetch.com/ph/shopping/kids/bobo-choses-booty-ghost-print-long-sleeve-t-shirt-item-37035483.aspx",
+     "title": "Bobo Choses Booty ghost-print long-sleeve T-shirt | Grey",
+     "displayedUrl": "https://www.farfetch.com › ... › Boys T-Shirts",
+     "description": "Bobo Choses Booty ghost-print long-sleeve T-shirt. Original price$38 Final price $29 Promo … grey cotton ghost print logo print to the front round neck long ..."
+    },
+    {
+     "url": "https://www.farfetch.com/sg/shopping/kids/bobo-choses-booty-ghost-print-long-sleeve-t-shirt-item-37035483.aspx",
+     "title": "Bobo Choses Booty ghost-print long-sleeve T-shirt | Grey",
+     "displayedUrl": "https://www.farfetch.com › ... › Boys T-Shirts",
+     "description": "grey cotton ghost print logo print to the front round neck long sleeves straight hem Composition Organic Cotton 100% ID: B226AC010"
+    },
+    {
+     "url": "https://editorialist.com/p/bobo-choses-mini-booty-ghosts-unisex-baby-t-shirt/?size=12M&sku=174380678_42231585&pla=true",
+     "title": "Bobo Choses Mini Booty Ghosts\" Baby Long Sleeve T-Shirt",
+     "displayedUrl": "https://editorialist.com › bobo-choses-mini-booty-ghost...",
+     "description": "Crafted from 100% cotton, this unisex baby t-shirt features a playful \"booty ghosts\" graphic and the BOBO CHOSES logo. Available Size 9M, 6M, 12M"
+    }
+   ]
+  },
+  {
+   "productId": "S2",
+   "label": "S-A",
+   "source": "SIGNAL",
+   "axis": "기준선 — BRAND + 상품명 + [품번]",
+   "alsoFrom": [
+    "A"
+   ],
+   "query": "Bobo Choses B226AC009 Hug Hairy Monster T-Shirt",
+   "startedAt": "2026-10-27T06:27:35.747Z",
+   "results": [
+    {
+     "url": "https://www.boozt.com/se/sv/bobo-choses/hug-hairy-monster-t-shirt_33137367",
+     "title": "Bobo Choses - Hug Hairy Monster T Shirt",
+     "displayedUrl": "https://www.boozt.com › hug-hair...",
+     "description": "Produktinformation ; Om produkten. Material: 100% ekologisk bomull; Handtvätt ; Viktiga funktioner. Mjukt tyg för komfort hela dagen; Avslappnad passform ...Read more"
+    },
+    {
+     "url": "https://www.zalando.dk/bobo-choses-hug-hairy-monster-unisex-langarmet-t-shirt-light-blue-b5t26g030-k11.html?size=92/98",
+     "title": "Bobo Choses HUG HAIRY MONSTER UNISEX",
+     "displayedUrl": "https://www.zalando.dk › bobo-ch...",
+     "description": "Shop Bobo Choses HUG HAIRY MONSTER UNISEX - Langærmet T-shirt - light blue/lyseblå til 298,51 kr (26.10.2026). Gratis levering ved køb for minimum 349 kr.*"
+    },
+    {
+     "url": "https://www.boozt.com/fr/fr/bobo-choses/hug-hairy-monster-t-shirt-top_33137337",
+     "title": "Hug Hairy Monster T-shirt top - Bobo Choses",
+     "displayedUrl": "https://www.boozt.com › ... › Hauts",
+     "description": "Ce haut à manches longues présente un imprimé graphique ludique d'un monstre amical et d'une personne s'étreignant, ajoutant une touche joyeuse à n'importe ...Read more"
+    },
+    {
+     "url": "https://www.zalando.fr/bobo-choses-hug-hairy-monster-unisex-t-shirt-a-manches-longues-light-blue-b5t26g030-k11.html?size=10A",
+     "title": "Bobo Choses HUG HAIRY MONSTER UNISEX - light blue",
+     "displayedUrl": "https://www.zalando.fr › bobo-cho...",
+     "description": "HUG HAIRY MONSTER UNISEX - T-shirt à manches longues - light blue. 40,00 €TVA incluse. Couleur actuellement sélectionnéeCouleur: light blue.Read more"
+    },
+    {
+     "url": "https://www.zalando.it/bobo-choses-hug-hairy-monster-unisex-maglietta-a-manica-lunga-light-blue-b5t26g030-k11.html?size=116/122",
+     "title": "Bobo Choses HUG HAIRY MONSTER UNISEX - light blue",
+     "displayedUrl": "https://www.zalando.it › bobo-cho...",
+     "description": "HUG HAIRY MONSTER UNISEX - Maglietta a manica lunga - light blue. 40,00 €IVA inclusa. Colore attualmente selezionatoColore: light blue.Read more"
+    },
+    {
+     "url": "https://www.zalando.it/bobo-choses-hug-hairy-monster-unisex-maglietta-a-manica-lunga-light-blue-b5t26g030-k11.html?size=152",
+     "title": "Bobo Choses HUG HAIRY MONSTER UNISEX - light blue",
+     "displayedUrl": "https://www.zalando.it › bobo-cho...",
+     "description": "HUG HAIRY MONSTER UNISEX - Maglietta a manica lunga - light blue. 40,00 €IVA inclusa. Colore attualmente selezionatoColore: light blue.Read more"
+    },
+    {
+     "url": "https://www.farfetch.com/jp/shopping/kids/bobo-choses-hug-hairy-monster-t-item-37620037.aspx",
+     "title": "Bobo Choses Hug Hairy Monster ロングTシャツ | ブルー",
+     "displayedUrl": "https://www.farfetch.com › kids",
+     "description": "商品詳細 · ブルー · 前面にグラフィックプリント · クルーネック · ロングスリーブ · ドロップショルダー · リラックスフィット · ストレートヘム ...Read more"
+    },
+    {
+     "url": "https://www.zalando.it/bobo-choses-hug-hairy-monster-unisex-maglietta-a-manica-lunga-light-blue-b5t26g030-k11.html?size=140/146",
+     "title": "Bobo Choses HUG HAIRY MONSTER UNISEX - light blue",
+     "displayedUrl": "https://www.zalando.it › bobo-cho...",
+     "description": "HUG HAIRY MONSTER UNISEX - Maglietta a manica lunga - light blue. 40,00 €IVA inclusa. Colore attualmente selezionatoColore: light blue.Read more"
+    },
+    {
+     "url": "https://www.babyknitcostume.com/product/bobo-choses-light-blue-hug-hairy-monster-t-shirt/",
+     "title": "Bobo Choses Light Blue Hug Hairy Monster T-Shirt",
+     "displayedUrl": "https://www.babyknitcostume.com › Blouses",
+     "description": "Crafted from 100% organic cotton, this adorable light blue t-shirt is gentle on the skin, making it perfect for everyday wear. It features a unique hairy ...Read more"
+    }
+   ]
+  },
+  {
+   "productId": "S2",
+   "label": "S-A2",
+   "source": "SIGNAL",
+   "axis": "🔴 CONTROL — 기준선에서 **끊긴 전치사만** 제거(운영 변경 0)",
+   "alsoFrom": [
+    "A"
+   ],
+   "query": "Bobo Choses B226AC009 Hug Hairy Monster T-Shirt",
+   "startedAt": "2026-10-27T06:27:35.747Z",
+   "results": [
+    {
+     "url": "https://www.boozt.com/se/sv/bobo-choses/hug-hairy-monster-t-shirt_33137367",
+     "title": "Bobo Choses - Hug Hairy Monster T Shirt",
+     "displayedUrl": "https://www.boozt.com › hug-hair...",
+     "description": "Produktinformation ; Om produkten. Material: 100% ekologisk bomull; Handtvätt ; Viktiga funktioner. Mjukt tyg för komfort hela dagen; Avslappnad passform ...Read more"
+    },
+    {
+     "url": "https://www.zalando.dk/bobo-choses-hug-hairy-monster-unisex-langarmet-t-shirt-light-blue-b5t26g030-k11.html?size=92/98",
+     "title": "Bobo Choses HUG HAIRY MONSTER UNISEX",
+     "displayedUrl": "https://www.zalando.dk › bobo-ch...",
+     "description": "Shop Bobo Choses HUG HAIRY MONSTER UNISEX - Langærmet T-shirt - light blue/lyseblå til 298,51 kr (26.10.2026). Gratis levering ved køb for minimum 349 kr.*"
+    },
+    {
+     "url": "https://www.boozt.com/fr/fr/bobo-choses/hug-hairy-monster-t-shirt-top_33137337",
+     "title": "Hug Hairy Monster T-shirt top - Bobo Choses",
+     "displayedUrl": "https://www.boozt.com › ... › Hauts",
+     "description": "Ce haut à manches longues présente un imprimé graphique ludique d'un monstre amical et d'une personne s'étreignant, ajoutant une touche joyeuse à n'importe ...Read more"
+    },
+    {
+     "url": "https://www.zalando.fr/bobo-choses-hug-hairy-monster-unisex-t-shirt-a-manches-longues-light-blue-b5t26g030-k11.html?size=10A",
+     "title": "Bobo Choses HUG HAIRY MONSTER UNISEX - light blue",
+     "displayedUrl": "https://www.zalando.fr › bobo-cho...",
+     "description": "HUG HAIRY MONSTER UNISEX - T-shirt à manches longues - light blue. 40,00 €TVA incluse. Couleur actuellement sélectionnéeCouleur: light blue.Read more"
+    },
+    {
+     "url": "https://www.zalando.it/bobo-choses-hug-hairy-monster-unisex-maglietta-a-manica-lunga-light-blue-b5t26g030-k11.html?size=116/122",
+     "title": "Bobo Choses HUG HAIRY MONSTER UNISEX - light blue",
+     "displayedUrl": "https://www.zalando.it › bobo-cho...",
+     "description": "HUG HAIRY MONSTER UNISEX - Maglietta a manica lunga - light blue. 40,00 €IVA inclusa. Colore attualmente selezionatoColore: light blue.Read more"
+    },
+    {
+     "url": "https://www.zalando.it/bobo-choses-hug-hairy-monster-unisex-maglietta-a-manica-lunga-light-blue-b5t26g030-k11.html?size=152",
+     "title": "Bobo Choses HUG HAIRY MONSTER UNISEX - light blue",
+     "displayedUrl": "https://www.zalando.it › bobo-cho...",
+     "description": "HUG HAIRY MONSTER UNISEX - Maglietta a manica lunga - light blue. 40,00 €IVA inclusa. Colore attualmente selezionatoColore: light blue.Read more"
+    },
+    {
+     "url": "https://www.farfetch.com/jp/shopping/kids/bobo-choses-hug-hairy-monster-t-item-37620037.aspx",
+     "title": "Bobo Choses Hug Hairy Monster ロングTシャツ | ブルー",
+     "displayedUrl": "https://www.farfetch.com › kids",
+     "description": "商品詳細 · ブルー · 前面にグラフィックプリント · クルーネック · ロングスリーブ · ドロップショルダー · リラックスフィット · ストレートヘム ...Read more"
+    },
+    {
+     "url": "https://www.zalando.it/bobo-choses-hug-hairy-monster-unisex-maglietta-a-manica-lunga-light-blue-b5t26g030-k11.html?size=140/146",
+     "title": "Bobo Choses HUG HAIRY MONSTER UNISEX - light blue",
+     "displayedUrl": "https://www.zalando.it › bobo-cho...",
+     "description": "HUG HAIRY MONSTER UNISEX - Maglietta a manica lunga - light blue. 40,00 €IVA inclusa. Colore attualmente selezionatoColore: light blue.Read more"
+    },
+    {
+     "url": "https://www.babyknitcostume.com/product/bobo-choses-light-blue-hug-hairy-monster-t-shirt/",
+     "title": "Bobo Choses Light Blue Hug Hairy Monster T-Shirt",
+     "displayedUrl": "https://www.babyknitcostume.com › Blouses",
+     "description": "Crafted from 100% organic cotton, this adorable light blue t-shirt is gentle on the skin, making it perfect for everyday wear. It features a unique hairy ...Read more"
+    }
+   ]
+  },
+  {
+   "productId": "S3",
+   "label": "S-A",
+   "source": "SIGNAL",
+   "axis": "기준선 — BRAND + 상품명 + [품번]",
+   "alsoFrom": [
+    "A"
+   ],
+   "query": "Bobo Choses B126AI018 Curious Turnip All Over",
+   "startedAt": "2026-10-27T06:33:08.451Z",
+   "results": [
+    {
+     "url": "https://www.garmentory.com/sale/bobo-choses/kids-tops/3063010-kids-bobo-choses-curious-turnip-print-baby-t-shirt-yellow?ref=sidebar",
+     "title": "KIDS Bobo Choses Curious Turnip Print Baby T-Shirt",
+     "displayedUrl": "https://www.garmentory.com › Bobo Choses › Tops",
+     "description": "Bobo Choses. KIDS Bobo Choses Curious Turnip Print Baby T-Shirt - Yellow. $37.00$22.0041% OFF.Read more"
+    },
+    {
+     "url": "https://www.ladida.com/products/bobo-choses-green-curious-turnip-all-over-swim-t-shirt?srsltid=AYCX9vK9RgM6jXeKH_K-7XZOQb0x6sh363eyQjr1_rHLzsGT63tA2aIq",
+     "title": "Bobo Choses Green Curious Turnip All Over Swim T-Shirt",
+     "displayedUrl": "https://www.ladida.com › products › bobo-choses-gree...",
+     "description": "Green Curious Turnip All Over Swim T-Shirt. $43.00 $86.00. Final sale.Read more"
+    },
+    {
+     "url": "https://www.farfetch.com/ao/shopping/kids/bobo-choses-curious-turnip-long-sleeve-high-neck-swim-t-shirt-item-33844474.aspx",
+     "title": "Bobo Choses Curious Turnip long-sleeve high-neck Swim ...",
+     "displayedUrl": "https://www.farfetch.com › ... › Sun Protection",
+     "description": "Bobo Choses. Curious Turnip long-sleeve high-neck swim T-shirt. $88. $58. -30%. Size guide. Select size. Add To Bag. Estimated delivery. Aug 21 - Aug 28 ...Read more"
+    },
+    {
+     "url": "https://www.ladida.com/products/bobo-choses-green-curious-turnip-all-over-swim-trunks?srsltid=AYCX9vLlW4Am6pmw53lNCjmxK_kaZowOPXJftBgPaat2GcJ7cZOzWTOm",
+     "title": "Bobo Choses Green Curious Turnip All Over Swim Trunks",
+     "displayedUrl": "https://www.ladida.com › products › bobo-choses-gree...",
+     "description": "Green Curious Turnip All Over Swim Trunks. $39.50 $79.00. Final sale.Read more"
+    },
+    {
+     "url": "https://www.farfetch.com/ao/shopping/kids/bobo-choses-curious-turnip-graphic-print-t-shirt-item-33807885.aspx",
+     "title": "Bobo Choses Curious Turnip graphic-print T-shirt | Yellow",
+     "displayedUrl": "https://www.farfetch.com › ... › Tops › Baby T-Shirts",
+     "description": "Bobo Choses. Curious Turnip graphic-print T-shirt. $45. $22. -50%. Size guide. Select size. Add To Bag. Estimated delivery. Aug 21 - Aug 27 ...Read more"
+    },
+    {
+     "url": "https://www.farfetch.com/pt/shopping/kids/bobo-choses-curious-turnip-graphic-print-t-shirt-item-33807885.aspx",
+     "title": "Bobo Choses Curious Turnip graphic-print T-shirt | Yellow",
+     "displayedUrl": "https://www.farfetch.com › ... › Tops › Baby T-Shirts",
+     "description": "Bobo Choses. Curious Turnip graphic-print T-shirt. Original price40 €. Sale price 20 €. Final price 16 €. VAT included. Sale discount-50%.Read more"
+    },
+    {
+     "url": "https://bridge.babyshop.com/en-pt/p/curious-turnip-all-over-swim-trunks-green/BC-B126AC131-311",
+     "title": "Curious Turnip All Over Swim Trunks Green - Babyshop",
+     "displayedUrl": "https://bridge.babyshop.com › en-pt › curious-turnip-all-...",
+     "description": "This Bobo Choses kids' swim shorts feature a vibrant turquoise base and a playful orange fruit print that stands out at the pool or beach. This children's swim ...Read more"
+    },
+    {
+     "url": "https://www.farfetch.com/my/shopping/kids/bobo-choses-curious-turnip-graphic-print-t-shirt-item-33807885.aspx",
+     "title": "Bobo Choses Curious Turnip graphic-print T-shirt | Yellow",
+     "displayedUrl": "https://www.farfetch.com › ... › Tops › Baby T-Shirts",
+     "description": "Bobo Choses. Curious Turnip graphic-print T-shirt. $45. $28. -35%. Size guide. Select size. Add To Bag. Estimated delivery. Aug 18 - Aug 24 ...Read more"
+    },
+    {
+     "url": "https://shopjambaby.com/products/curious-turnip-t-shirt?srsltid=AYCX9vJ9xgKzIqPOkq8Jb3m1M8i1PWInZsdaJCAP7uBIOwDrCXXocTrG",
+     "title": "Curious Turnip T-shirt",
+     "displayedUrl": "https://shopjambaby.com › products › curious-turnip-t-s...",
+     "description": "Bobo Choses. Curious Turnip T-shirt. $47.00 $28.00. or 4 payments of $7.00 with Sezzle. i. Size. 9m, 12m, 18m, 24m. 9m; 12m; 18m; 24m. Only 1 left. 9m, 12m ...Read more"
+    }
+   ]
+  },
+  {
+   "productId": "S3",
+   "label": "S-A2",
+   "source": "SIGNAL",
+   "axis": "🔴 CONTROL — 기준선에서 **끊긴 전치사만** 제거(운영 변경 0)",
+   "alsoFrom": [
+    "A"
+   ],
+   "query": "Bobo Choses B126AI018 Curious Turnip All Over",
+   "startedAt": "2026-10-27T06:33:08.451Z",
+   "results": [
+    {
+     "url": "https://www.garmentory.com/sale/bobo-choses/kids-tops/3063010-kids-bobo-choses-curious-turnip-print-baby-t-shirt-yellow?ref=sidebar",
+     "title": "KIDS Bobo Choses Curious Turnip Print Baby T-Shirt",
+     "displayedUrl": "https://www.garmentory.com › Bobo Choses › Tops",
+     "description": "Bobo Choses. KIDS Bobo Choses Curious Turnip Print Baby T-Shirt - Yellow. $37.00$22.0041% OFF.Read more"
+    },
+    {
+     "url": "https://www.ladida.com/products/bobo-choses-green-curious-turnip-all-over-swim-t-shirt?srsltid=AYCX9vK9RgM6jXeKH_K-7XZOQb0x6sh363eyQjr1_rHLzsGT63tA2aIq",
+     "title": "Bobo Choses Green Curious Turnip All Over Swim T-Shirt",
+     "displayedUrl": "https://www.ladida.com › products › bobo-choses-gree...",
+     "description": "Green Curious Turnip All Over Swim T-Shirt. $43.00 $86.00. Final sale.Read more"
+    },
+    {
+     "url": "https://www.farfetch.com/ao/shopping/kids/bobo-choses-curious-turnip-long-sleeve-high-neck-swim-t-shirt-item-33844474.aspx",
+     "title": "Bobo Choses Curious Turnip long-sleeve high-neck Swim ...",
+     "displayedUrl": "https://www.farfetch.com › ... › Sun Protection",
+     "description": "Bobo Choses. Curious Turnip long-sleeve high-neck swim T-shirt. $88. $58. -30%. Size guide. Select size. Add To Bag. Estimated delivery. Aug 21 - Aug 28 ...Read more"
+    },
+    {
+     "url": "https://www.ladida.com/products/bobo-choses-green-curious-turnip-all-over-swim-trunks?srsltid=AYCX9vLlW4Am6pmw53lNCjmxK_kaZowOPXJftBgPaat2GcJ7cZOzWTOm",
+     "title": "Bobo Choses Green Curious Turnip All Over Swim Trunks",
+     "displayedUrl": "https://www.ladida.com › products › bobo-choses-gree...",
+     "description": "Green Curious Turnip All Over Swim Trunks. $39.50 $79.00. Final sale.Read more"
+    },
+    {
+     "url": "https://www.farfetch.com/ao/shopping/kids/bobo-choses-curious-turnip-graphic-print-t-shirt-item-33807885.aspx",
+     "title": "Bobo Choses Curious Turnip graphic-print T-shirt | Yellow",
+     "displayedUrl": "https://www.farfetch.com › ... › Tops › Baby T-Shirts",
+     "description": "Bobo Choses. Curious Turnip graphic-print T-shirt. $45. $22. -50%. Size guide. Select size. Add To Bag. Estimated delivery. Aug 21 - Aug 27 ...Read more"
+    },
+    {
+     "url": "https://www.farfetch.com/pt/shopping/kids/bobo-choses-curious-turnip-graphic-print-t-shirt-item-33807885.aspx",
+     "title": "Bobo Choses Curious Turnip graphic-print T-shirt | Yellow",
+     "displayedUrl": "https://www.farfetch.com › ... › Tops › Baby T-Shirts",
+     "description": "Bobo Choses. Curious Turnip graphic-print T-shirt. Original price40 €. Sale price 20 €. Final price 16 €. VAT included. Sale discount-50%.Read more"
+    },
+    {
+     "url": "https://bridge.babyshop.com/en-pt/p/curious-turnip-all-over-swim-trunks-green/BC-B126AC131-311",
+     "title": "Curious Turnip All Over Swim Trunks Green - Babyshop",
+     "displayedUrl": "https://bridge.babyshop.com › en-pt › curious-turnip-all-...",
+     "description": "This Bobo Choses kids' swim shorts feature a vibrant turquoise base and a playful orange fruit print that stands out at the pool or beach. This children's swim ...Read more"
+    },
+    {
+     "url": "https://www.farfetch.com/my/shopping/kids/bobo-choses-curious-turnip-graphic-print-t-shirt-item-33807885.aspx",
+     "title": "Bobo Choses Curious Turnip graphic-print T-shirt | Yellow",
+     "displayedUrl": "https://www.farfetch.com › ... › Tops › Baby T-Shirts",
+     "description": "Bobo Choses. Curious Turnip graphic-print T-shirt. $45. $28. -35%. Size guide. Select size. Add To Bag. Estimated delivery. Aug 18 - Aug 24 ...Read more"
+    },
+    {
+     "url": "https://shopjambaby.com/products/curious-turnip-t-shirt?srsltid=AYCX9vJ9xgKzIqPOkq8Jb3m1M8i1PWInZsdaJCAP7uBIOwDrCXXocTrG",
+     "title": "Curious Turnip T-shirt",
+     "displayedUrl": "https://shopjambaby.com › products › curious-turnip-t-s...",
+     "description": "Bobo Choses. Curious Turnip T-shirt. $47.00 $28.00. or 4 payments of $7.00 with Sezzle. i. Size. 9m, 12m, 18m, 24m. 9m; 12m; 18m; 24m. Only 1 left. 9m, 12m ...Read more"
+    }
+   ]
+  },
+  {
+   "productId": "S4",
+   "label": "S-A",
+   "source": "SIGNAL",
+   "axis": "기준선 — BRAND + 상품명 + [품번]",
+   "alsoFrom": [
+    "A"
+   ],
+   "query": "Main Story AW26MS185 Bubble Sweatshirt in Melange",
+   "startedAt": "2026-10-27T06:36:58.633Z",
+   "results": [
+    {
+     "url": "https://main-story.com/products/bubble-sweatshirt-winter-sky?srsltid=AYCX9vKSJqKDETY-tmpgTW6vg00KGsMovipV33_WKthj_dVm9IBW4hI1",
+     "title": "Bubble Sweatshirt - Winter Sky",
+     "displayedUrl": "https://main-story.com › products › bubble-sweatshirt-wi...",
+     "description": "Oversized Bubble Sweatshirt in Winter Sky with relaxed fit, dropped shoulders, and soft organic cotton fleece. Regular price £56.00 Sale price£28.00"
+    },
+    {
+     "url": "https://main-story.com/products/bubble-sweatshirt-vintage-indigo-stripe?srsltid=AYCX9vJtbDmyklWXu5hNz051EJAk6emtqws47T1jpngNTsBkVW7DQjIN",
+     "title": "Bubble Sweatshirt - Vintage Indigo Stripe",
+     "displayedUrl": "https://main-story.com › products › bubble-sweatshirt-vi...",
+     "description": "Vintage Indigo Stripe Bubble Sweatshirt with oversized fit, dropped shoulders, and embroidered logo. Made from soft, yarn-dyed organic cotton."
+    },
+    {
+     "url": "https://main-story.com/products/bubble-sweatshirt-thistle?srsltid=AYCX9vLwKHkg3KtqjZ0BCP7erjBk7n3Xqta_zj0hPycMYDQLohPrqdyH",
+     "title": "Bubble Sweatshirt Thistle",
+     "displayedUrl": "https://main-story.com › products › bubble-sweatshirt-thi...",
+     "description": "Our Bubble Sweatshirt in thistle crafted from a soft organic 100% cotton jersey. Regular price £57.00 Sale price£22.80 /"
+    },
+    {
+     "url": "https://main-story.com/products/bubble-sweatshirt-graystone-blue?srsltid=AYCX9vIW44idtgnExFo-OcMSIbFYgFBEEpVD5vk3rW2oGrq0N-NWVESY",
+     "title": "Bubble Sweatshirt - Graystone Blue",
+     "displayedUrl": "https://main-story.com › products › bubble-sweatshirt-gr...",
+     "description": "Oversized Bubble Sweatshirt in Graystone Blue with relaxed fit, dropped shoulders, and soft organic cotton fleece. Regular price £56.00 Sale price£28.00"
+    },
+    {
+     "url": "https://main-story.com/products/bubble-sweatshirt-wind-chime?srsltid=AYCX9vLZR8V7FW2lvlibVQrK_UGE9OrRIffnkSacBgOB8KU50F1anaNr",
+     "title": "Bubble Sweatshirt Wind Chime",
+     "displayedUrl": "https://main-story.com › products › bubble-sweatshirt-wi...",
+     "description": "Our Bubble Sweatshirt in a wind chime, crafted from a soft organic cotton jersey fleece. Regular price £64.00 Sale price£25.60 ・ cotton jersey fleece ・ 100% ..."
+    },
+    {
+     "url": "https://main-story.com/products/bubble-sweatshirt-cranberry?srsltid=AYCX9vIYtif6rCrwqsfK3c01_nImaBot91jSZC3GyCqvh9eR94c9WYvY",
+     "title": "Bubble Sweatshirt - Cranberry",
+     "displayedUrl": "https://main-story.com › products › bubble-sweatshirt-cr...",
+     "description": "Cosy oversized Bubble Sweatshirt in Cranberry, soft organic cotton with relaxed fit. Embroidered logo. Regular price £56.00 Sale price£28.00. In stock, ready ..."
+    },
+    {
+     "url": "https://www.smallable.com/en/product/bubble-sweat-grey-main-story-370040",
+     "title": "Main Story - Bubble Sweat - Grey",
+     "displayedUrl": "https://www.smallable.com › ... › Girl › Sweatshirts",
+     "description": "Main Story Bubble Sweat | Grey $76.00 Size Size. Round neck sweatshirts. Brand-specific size guides can be found on product pages."
+    },
+    {
+     "url": "https://kinuandkotta.shop-pro.jp/?pid=187005189",
+     "title": "40%off AW25 Main Story Bubble Sweatshirt",
+     "displayedUrl": "https://kinuandkotta.shop-pro.jp › ...",
+     "description": "40%off AW25 Main Story Bubble Sweatshirt - Vintage Indigo Stripe 2Y ・ 13,860円(税1,260円) size 2Y ・  Composition 100% Organic Cotton"
+    },
+    {
+     "url": "https://littleluna.co.kr/product/main-story-ms185-bubble-sweatshirt-wind-chime/2466/",
+     "title": "MAIN STORY 메인스토리",
+     "displayedUrl": "https://littleluna.co.kr › product",
+     "description": "MAIN STORY. 기본 정보. 상품명, [메인스토리] MS185 - Bubble Sweatshirt - Wind Chime. 상품요약정보, FW24. 판매가, 107,000원. 할인판매가, 60%42,800원 ( 64,200원 ...Read more"
+    }
+   ]
+  },
+  {
+   "productId": "S4",
+   "label": "S-A2",
+   "source": "SIGNAL",
+   "axis": "🔴 CONTROL — 기준선에서 **끊긴 전치사만** 제거(운영 변경 0)",
+   "alsoFrom": [
+    "A"
+   ],
+   "query": "Main Story AW26MS185 Bubble Sweatshirt in Melange",
+   "startedAt": "2026-10-27T06:36:58.633Z",
+   "results": [
+    {
+     "url": "https://main-story.com/products/bubble-sweatshirt-winter-sky?srsltid=AYCX9vKSJqKDETY-tmpgTW6vg00KGsMovipV33_WKthj_dVm9IBW4hI1",
+     "title": "Bubble Sweatshirt - Winter Sky",
+     "displayedUrl": "https://main-story.com › products › bubble-sweatshirt-wi...",
+     "description": "Oversized Bubble Sweatshirt in Winter Sky with relaxed fit, dropped shoulders, and soft organic cotton fleece. Regular price £56.00 Sale price£28.00"
+    },
+    {
+     "url": "https://main-story.com/products/bubble-sweatshirt-vintage-indigo-stripe?srsltid=AYCX9vJtbDmyklWXu5hNz051EJAk6emtqws47T1jpngNTsBkVW7DQjIN",
+     "title": "Bubble Sweatshirt - Vintage Indigo Stripe",
+     "displayedUrl": "https://main-story.com › products › bubble-sweatshirt-vi...",
+     "description": "Vintage Indigo Stripe Bubble Sweatshirt with oversized fit, dropped shoulders, and embroidered logo. Made from soft, yarn-dyed organic cotton."
+    },
+    {
+     "url": "https://main-story.com/products/bubble-sweatshirt-thistle?srsltid=AYCX9vLwKHkg3KtqjZ0BCP7erjBk7n3Xqta_zj0hPycMYDQLohPrqdyH",
+     "title": "Bubble Sweatshirt Thistle",
+     "displayedUrl": "https://main-story.com › products › bubble-sweatshirt-thi...",
+     "description": "Our Bubble Sweatshirt in thistle crafted from a soft organic 100% cotton jersey. Regular price £57.00 Sale price£22.80 /"
+    },
+    {
+     "url": "https://main-story.com/products/bubble-sweatshirt-graystone-blue?srsltid=AYCX9vIW44idtgnExFo-OcMSIbFYgFBEEpVD5vk3rW2oGrq0N-NWVESY",
+     "title": "Bubble Sweatshirt - Graystone Blue",
+     "displayedUrl": "https://main-story.com › products › bubble-sweatshirt-gr...",
+     "description": "Oversized Bubble Sweatshirt in Graystone Blue with relaxed fit, dropped shoulders, and soft organic cotton fleece. Regular price £56.00 Sale price£28.00"
+    },
+    {
+     "url": "https://main-story.com/products/bubble-sweatshirt-wind-chime?srsltid=AYCX9vLZR8V7FW2lvlibVQrK_UGE9OrRIffnkSacBgOB8KU50F1anaNr",
+     "title": "Bubble Sweatshirt Wind Chime",
+     "displayedUrl": "https://main-story.com › products › bubble-sweatshirt-wi...",
+     "description": "Our Bubble Sweatshirt in a wind chime, crafted from a soft organic cotton jersey fleece. Regular price £64.00 Sale price£25.60 ・ cotton jersey fleece ・ 100% ..."
+    },
+    {
+     "url": "https://main-story.com/products/bubble-sweatshirt-cranberry?srsltid=AYCX9vIYtif6rCrwqsfK3c01_nImaBot91jSZC3GyCqvh9eR94c9WYvY",
+     "title": "Bubble Sweatshirt - Cranberry",
+     "displayedUrl": "https://main-story.com › products › bubble-sweatshirt-cr...",
+     "description": "Cosy oversized Bubble Sweatshirt in Cranberry, soft organic cotton with relaxed fit. Embroidered logo. Regular price £56.00 Sale price£28.00. In stock, ready ..."
+    },
+    {
+     "url": "https://www.smallable.com/en/product/bubble-sweat-grey-main-story-370040",
+     "title": "Main Story - Bubble Sweat - Grey",
+     "displayedUrl": "https://www.smallable.com › ... › Girl › Sweatshirts",
+     "description": "Main Story Bubble Sweat | Grey $76.00 Size Size. Round neck sweatshirts. Brand-specific size guides can be found on product pages."
+    },
+    {
+     "url": "https://kinuandkotta.shop-pro.jp/?pid=187005189",
+     "title": "40%off AW25 Main Story Bubble Sweatshirt",
+     "displayedUrl": "https://kinuandkotta.shop-pro.jp › ...",
+     "description": "40%off AW25 Main Story Bubble Sweatshirt - Vintage Indigo Stripe 2Y ・ 13,860円(税1,260円) size 2Y ・  Composition 100% Organic Cotton"
+    },
+    {
+     "url": "https://littleluna.co.kr/product/main-story-ms185-bubble-sweatshirt-wind-chime/2466/",
+     "title": "MAIN STORY 메인스토리",
+     "displayedUrl": "https://littleluna.co.kr › product",
+     "description": "MAIN STORY. 기본 정보. 상품명, [메인스토리] MS185 - Bubble Sweatshirt - Wind Chime. 상품요약정보, FW24. 판매가, 107,000원. 할인판매가, 60%42,800원 ( 64,200원 ...Read more"
+    }
+   ]
+  },
+  {
+   "productId": "S1",
+   "label": "S-B",
+   "source": "SIGNAL",
+   "axis": "+ 동일상품 판매처",
+   "alsoFrom": [],
+   "query": "Bobo Choses B226AC010 Booty Ghosts Long Sleeve 동일상품 판매처",
+   "startedAt": "2026-10-27T09:57:37.998Z",
+   "results": [
+    {
+     "url": "https://www.cettire.com/bh/products/bobo-choses-booty-ghosts-long-sleeve-t-shirt-967579868/cmVhY3Rpb24vcHJvZHVjdDpKYWhycXI2bWtlQmNNZzV3Nw==?lng=en",
+     "title": "Bobo Choses Booty Ghosts Long-Sleeve T-Shirt",
+     "displayedUrl": "https://www.cettire.com › products › bobo-choses-boot...",
+     "description": ""
+    },
+    {
+     "url": "https://www.babyshop.com/en-kz/p/heather-grey-2-3-y-142794/BC-B226AC010-041",
+     "title": "Booty Ghosts T-shirt Heather Grey - Babyshop",
+     "displayedUrl": "https://www.babyshop.com › en-kz › BC-B226AC010-041",
+     "description": "This Bobo Choses sweatshirt is made from 100% cotton, giving it a soft ... Booty Ghosts T-shirt Heather Grey. New. $54,90 USD. Average rating: 0.0 ...Read more"
+    },
+    {
+     "url": "https://www.farfetch.com/gr/shopping/kids/bobo-choses-booty-ghost-print-long-sleeve-t-shirt-item-37035483.aspx",
+     "title": "Bobo Choses Booty ghost-print long-sleeve T-shirt | Grey",
+     "displayedUrl": "https://www.farfetch.com › ... › Boys T-Shirts",
+     "description": "Highlights. grey; cotton; ghost print; logo print to the front; round neck; long sleeves; straight hem. Composition. Organic Cotton 100% ...Read more"
+    },
+    {
+     "url": "https://bobochoses.com/en-kr/products/b226ac141-booty-ghosts-t-shirt",
+     "title": "Booty Ghosts blue T-shirt",
+     "displayedUrl": "https://bobochoses.com › en-kr › products › b226ac141...",
+     "description": "Booty Ghosts T‑shirt ... Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal. Find your perfect fit in our Size guide.Read more"
+    },
+    {
+     "url": "https://www.farfetch.com/hk/shopping/kids/bobo-choses-booty-ghost-print-long-sleeve-t-shirt-item-37035483.aspx",
+     "title": "Bobo Choses Booty ghost-print long-sleeve T-shirt | Grey",
+     "displayedUrl": "https://www.farfetch.com › ... › Boys T-Shirts",
+     "description": "Booty ghost-print long-sleeve T-shirt. HK$299. Import duties included.Read more"
+    },
+    {
+     "url": "https://bobochoses.com/en-int/products/b226ab061-booty-ghosts-sweatshirt",
+     "title": "Booty Ghosts sweatshirt",
+     "displayedUrl": "https://bobochoses.com › en-int › products › b226ab06...",
+     "description": "Light blue sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal. ... Find your perfect fit in our Size guide. 3M Variant sold ...Read more"
+    },
+    {
+     "url": "https://editorialist.com/p/bobo-choses-booty-ghosts-t-shirt-in-light-grey-cotton/",
+     "title": "Bobo Choses Long Sleeve Graphic T-Shirt - Grey",
+     "displayedUrl": "https://editorialist.com › bobo-choses-booty-ghosts-t-shi...",
+     "description": "The front of the garment showcases a playful \"Booty Ghosts\" graphic print. The material composition is organic cotton, ensuring a soft and breathable feel ...Read more"
+    },
+    {
+     "url": "https://www.tinyapple.net/ko/products/bobo-choses-booty-ghosts-t-shirt-heather-grey?srsltid=AYCX9vLdVw3aGAIrZCsmpbU5cPCuaXJ_t3iE6TQ0INfQaGkmVQUGhTVy",
+     "title": "Bobo Choses Booty Ghosts T-shirt, Heather Grey",
+     "displayedUrl": "https://www.tinyapple.net › products › bobo-choses-boot...",
+     "description": "Bobo Choses Booty Ghosts T-shirt, Heather Grey. $58.00 USD. off. 을(를) 통해 ... B226AC010. Bobo Choses Booty Ghosts T-shirt, Heather Grey. $58.00 USD.Read more"
+    },
+    {
+     "url": "https://www.farfetch.com/kw/shopping/kids/bobo-choses-booty-ghosts-graphic-print-short-sleeve-t-shirt-item-37620093.aspx",
+     "title": "Bobo Choses Booty Ghosts graphic-print short-sleeve T-shirt",
+     "displayedUrl": "https://www.farfetch.com › ... › Boys T-Shirts",
+     "description": "Bobo Choses. Booty Ghosts graphic-print short-sleeve T-shirt. $43.Read more"
+    }
+   ]
+  },
+  {
+   "productId": "S1",
+   "label": "S-C",
+   "source": "SIGNAL",
+   "axis": "+ 국내외 판매처",
+   "alsoFrom": [],
+   "query": "Bobo Choses B226AC010 Booty Ghosts Long Sleeve 국내외 판매처",
+   "startedAt": "2026-10-27T09:57:38.019Z",
+   "results": [
+    {
+     "url": "https://zozo.jp/shop/pipinghotfuture/goods/108721765/?srsltid=AYCX9vLtjju5AgxEJwn3aWr3TtlSpFMGQntnFjHuXR6FHJY_cVD4RuI1",
+     "title": "Booty Ghosts T-shirt（Tシャツ/カットソー）",
+     "displayedUrl": "https://zozo.jp › shop › goods",
+     "description": "日常のスタイリングに大活躍し、どんなボトムスとも相性抜群なクリーンな杢グレーをベースカラーに採用。 フロント中央には、存在感のあるブラックの「BOBO CHOSES」 ..."
+    },
+    {
+     "url": "https://m.gmarket.co.kr/vi/product/4812110143",
+     "title": "보보쇼즈 26FW 아동 반팔 티셔츠 Booty Ghosts T-shirt ...",
+     "displayedUrl": "https://m.gmarket.co.kr › pr...",
+     "description": "보보쇼즈 26FW 아동 반팔 티셔츠 Booty Ghosts T-shirt B226AC141 · 판매가77,000원 · 판매자할인-1,540원 · 할인가75,460원."
+    },
+    {
+     "url": "https://www.buyma.com/rank/_BOBO-CHOSES-%E3%83%9C%E3%83%9C%E3%82%B7%E3%83%A7%E3%83%BC%E3%82%BA/women/tops/?srsltid=AYCX9vIzAvMRBr00yEe6MmHJtwWj8NcjOLqABsHNOO5gI0BU1upkHMsR",
+     "title": "BOBO CHOSES(ボボショーズ)のレディース トップス おすすめ ...",
+     "displayedUrl": "https://www.buyma.com › t...",
+     "description": "13 сент. 2026 г. — 【BUYMA】BOBO CHOSES(ボボショーズ)のトップスで今売れている人気アイテムをランキングでご紹介。おすすめアイテムがひと目でわかります。"
+    },
+    {
+     "url": "https://www.feelway.com/gl_BOBO_CHOSES_5110000000.html",
+     "title": "보보 쇼즈(BOBO CHOSES) 중고 명품",
+     "displayedUrl": "https://www.feelway.com › g...",
+     "description": "보보 쇼즈(BOBO CHOSES) 중고 명품 2036건 - 필웨이 No.1 명품 플랫폼 / 전문 거래 / 흥정가능한 명품 / 믿을 수 있는 감정 / 명품 감정센터 / 빠른 배송 / 안전결제."
+    },
+    {
+     "url": "https://kream.co.kr/products/346198?srsltid=AYCX9vL7W_u3i204bAzaxOE5rkEGSFBldnW-lfJZ-xcwFKM7_iCXZPJH",
+     "title": "KREAM | 트렌드를 거래하다",
+     "displayedUrl": "https://kream.co.kr › products",
+     "description": "트렌드를 거래하다."
+    },
+    {
+     "url": "https://www.kobitodepunch.com/categories/1367770?srsltid=AYCX9vLRk1cTGC_uuSxclGX6C3LSxueVm5wYmgLObh-1bGefiMllDKlM",
+     "title": "BOBO CHOSES",
+     "displayedUrl": "https://www.kobitodepunch.com › ...",
+     "description": "世界各国からセレクトしたキッズ服やクスッと笑っちゃうような雑貨を集めた、セレクトショップ kobito de punch ( コビトデパンチ ) です。"
+    },
+    {
+     "url": "https://www.lfmall.co.kr/app/search/result/%EB%B3%B4%EB%B3%B4%EC%87%BC%EC%A6%88+%EB%8B%88%ED%8A%B8?srsltid=AYCX9vL9optCwOk0Tk_6MU4smdfJFKrajrSnYzwzOfptYvRdtIooTtmW",
+     "title": "보보쇼즈+니트 검색 결과 및 상품 가이드",
+     "displayedUrl": "https://www.lfmall.co.kr › ...",
+     "description": "'보보쇼즈+니트' 검색 결과 337건. 주요 브랜드는 보보쇼즈, 타이니코튼, 가격대는 40,090~269,000원, 주요 카테고리는 수입명품 의류·아동의류·수입명품 패션소품입니다."
+    },
+    {
+     "url": "https://fruitsfamily.com/brand/Bobo%20Choses?srsltid=AYCX9vL70l0OREn58ZrH03h1qlgxXqvIkjUFbAklMgLdcf2yO0-s7tCf",
+     "title": "Bobo Choses - 보보쇼즈",
+     "displayedUrl": "https://fruitsfamily.com › B...",
+     "description": "대담한 컬러와 독창적인 그래픽, 지속 가능한 소재를 활용한 디자인이 특징입니다. 아동복을 넘어 성인 라인까지 확장하며 독보적인 미학을 구축했으며, 높은 리세일 가치 ..."
+    },
+    {
+     "url": "https://stores.jp/hashtag/%E3%83%9C%E3%83%9C%E3%82%B7%E3%83%A7%E3%83%BC%E3%82%BA",
+     "title": "ボボショーズ",
+     "displayedUrl": "https://stores.jp › hashtag",
+     "description": "無料で簡単にオンラインストアが作れるSTORESで販売されている、ボボショーズ関連のアイテム一覧です。 こちらでは、40%OFF!【Bobo Choses】KNITTED JUMPER ALMA S.B. AO（ ..."
+    }
+   ]
+  },
+  {
+   "productId": "S1",
+   "label": "S-D",
+   "source": "SIGNAL",
+   "axis": "**품번 제외** + 동일상품 판매처",
+   "alsoFrom": [],
+   "query": "Bobo Choses Booty Ghosts Long Sleeve 동일상품 판매처",
+   "startedAt": "2026-10-27T09:57:38.021Z",
+   "results": [
+    {
+     "url": "https://bobochoses.com/en-us/products/b226ac141-booty-ghosts-t-shirt",
+     "title": "Booty Ghosts blue T-shirt",
+     "displayedUrl": "https://bobochoses.com › en-us › products › b226ac14...",
+     "description": "Booty Ghosts T‑shirt ... Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal. Find your perfect fit in our Size guide."
+    },
+    {
+     "url": "https://www.farfetch.com/om/shopping/kids/bobo-choses-booty-ghost-print-long-sleeve-t-shirt-item-37035483.aspx",
+     "title": "Bobo Choses Booty ghost-print long-sleeve T-shirt | Grey",
+     "displayedUrl": "https://www.farfetch.com › ... › Boys T-Shirts",
+     "description": "Highlights. grey; cotton; ghost print; logo print to the front; round neck; long sleeves; straight hem. Composition. Organic Cotton 100% ..."
+    },
+    {
+     "url": "https://www.cettire.com/bh/products/bobo-choses-booty-ghosts-long-sleeve-t-shirt-967579936/cmVhY3Rpb24vcHJvZHVjdDp3UGJDNlJyQVRBdnRaZzJHZQ==?lng=en",
+     "title": "Bobo Choses Booty Ghosts Long-Sleeve T-Shirt",
+     "displayedUrl": "https://www.cettire.com › products › bobo-choses-boot...",
+     "description": "Grey melange colour · 100% cotton construction · Long-sleeve design · Crew neck · Relaxed straight silhouette · Front graphic print."
+    },
+    {
+     "url": "https://bobochoses.com/products/b226ab061-booty-ghosts-sweatshirt",
+     "title": "Booty Ghosts blue baby sweatshirt",
+     "displayedUrl": "https://bobochoses.com › products › b226ab061-booty-...",
+     "description": "Booty Ghosts sweatshirt ... Light blue sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal. ... Find your perfect fit in our Size guide. 3M ..."
+    },
+    {
+     "url": "https://bobochoses.com/products/b226ac010-booty-ghosts-t-shirt",
+     "title": "Booty Ghosts T-shirt | Bobo Choses for Kids",
+     "displayedUrl": "https://bobochoses.com › products › b226ac010-booty-...",
+     "description": "Booty Ghosts T‑shirt ... Heather grey t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal. Find your perfect fit in our Size guide."
+    },
+    {
+     "url": "https://www.tinyapple.net/ko/products/bobo-choses-booty-ghosts-t-shirt-heather-grey?srsltid=AYCX9vIzqYcSat5fJdPm5E8nFJmZGTh7snz-jos5WJeNM_jd8YUvS430",
+     "title": "Bobo Choses Booty Ghosts T-shirt, Heather Grey",
+     "displayedUrl": "https://www.tinyapple.net › products › bobo-choses-boot...",
+     "description": "Bobo Choses Booty Ghosts T-shirt, Heather Grey. $58.00 USD. off. 을(를) 통해 ... The Animals Observatory Scamper Kid Long Sleeve T-shirt, Pink. $108.00 USD."
+    },
+    {
+     "url": "https://bobochoses.com/en-us/products/b226ab129-booty-ghosts-sweatshirt",
+     "title": "Booty Ghosts pink baby sweatshirt",
+     "displayedUrl": "https://bobochoses.com › en-us › products › b226ab12...",
+     "description": "Pink sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal. ... Find your perfect fit in our Size guide. 3M Variant sold out ..."
+    },
+    {
+     "url": "https://www.ebay.com/shop/bobo-choses?_nkw=bobo+choses",
+     "title": "25+ BOBO CHOSES for sale | Updated Oct 2026",
+     "displayedUrl": "https://www.ebay.com › shop › bobo-choses",
+     "description": "Bobo Choses All Over Mr. Mushroom Baby Kids One-Piece Jumpsuit Unisex - Size 12M. Bobo Choses. New (Other). $90.00. Buy It Now. Free delivery."
+    },
+    {
+     "url": "https://editorialist.com/p/bobo-choses-booty-ghosts-t-shirt-in-light-grey-cotton/",
+     "title": "Bobo Choses Long Sleeve Graphic T-Shirt - Grey",
+     "displayedUrl": "https://editorialist.com › bobo-choses-booty-ghosts-t-shi...",
+     "description": "The front of the garment showcases a playful \"Booty Ghosts\" graphic print. The material composition is organic cotton, ensuring a soft and breathable feel ..."
+    }
+   ]
+  },
+  {
+   "productId": "S2",
+   "label": "S-B",
+   "source": "SIGNAL",
+   "axis": "+ 동일상품 판매처",
+   "alsoFrom": [],
+   "query": "Bobo Choses B226AC009 Hug Hairy Monster T-Shirt 동일상품 판매처",
+   "startedAt": "2026-10-27T09:57:38.022Z",
+   "results": [
+    {
+     "url": "https://bridge.babyshop.com/en-om/p/hug-hairy-monster-t-shirt-light-blue/BC-B226AC009-451",
+     "title": "Hug Hairy Monster T-shirt Light Blue - Babyshop",
+     "displayedUrl": "https://bridge.babyshop.com › BC-B226AC009-451",
+     "description": "This Bobo Choses T-shirt is a soft everyday tee made from 100% cotton for ... Hug Hairy Monster T-shirt Light Blue. New. $54,90 USD. Average rating: 0.0 ...Read more"
+    },
+    {
+     "url": "https://www.farfetch.com/za/shopping/kids/bobo-choses-hug-hairy-monster-long-sleeve-t-shirt-item-37620037.aspx",
+     "title": "Bobo Choses Hug Hairy Monster long-sleeve T-shirt | Blue",
+     "displayedUrl": "https://www.farfetch.com › ... › Boys T-Shirts",
+     "description": "T-shirt $47 Size … blue graphic print on the front crewneck long sleeves dropped shoulders loose fit straight hem Composition Outer: Fabric 100% Washing ..."
+    },
+    {
+     "url": "https://www.farfetch.com/pl/shopping/kids/bobo-choses-hug-hairy-monster-long-sleeve-t-shirt-item-37620037.aspx",
+     "title": "Bobo Choses Hug Hairy Monster long-sleeve T-shirt | Blue",
+     "displayedUrl": "https://www.farfetch.com › ... › Boys T-Shirts",
+     "description": "Bobo Choses Hug Hairy Monster long-sleeve T-shirt. blue graphic print on the front crewneck long sleeves dropped shoulders loose fit straight hem Composition ..."
+    },
+    {
+     "url": "https://www.tinyapple.net/products/bobo-choses-hug-hairy-monster-sweatshirt-beige?srsltid=AYCX9vI89n3QlPenyWUvda5KeqYS82Iy3Vy7Bav4wO7YBI2tqIzaVNk5",
+     "title": "Bobo Choses Hug Hairy Monster sweatshirt, Beige",
+     "displayedUrl": "https://www.tinyapple.net › products › bobo-choses-hug-...",
+     "description": "Bobo Choses Hug Hairy Monster sweatshirt, Beige $89.00 USD off free installments of $22.25. T-shirt, Red $58.00 USD … 605 Call Us: 201–585-0222"
+    },
+    {
+     "url": "https://bridge.babyshop.com/en-it/p/hug-hairy-monster-t-shirt-light-blue/BC-B226AC009-451",
+     "title": "Hug Hairy Monster T-shirt Light Blue - Babyshop",
+     "displayedUrl": "https://bridge.babyshop.com › en-it › BC-B226AC009-451",
+     "description": "This Bobo Choses T-shirt is a soft everyday tee made from 100% cotton for breathable comfort and easy wear. This lightweight top feels gentle on the skin ...Read more"
+    },
+    {
+     "url": "https://www.cettire.com/es/products/bobo-choses-hug-hairy-monster-print-sweatshirt-967585648/cmVhY3Rpb24vcHJvZHVjdDpKSnVYaW5MeGNmNXpSYnY4Wg==?lng=en",
+     "title": "Bobo Choses Hug Hairy Monster Print Sweatshirt",
+     "displayedUrl": "https://www.cettire.com › products › bobo-choses-hug-...",
+     "description": ""
+    },
+    {
+     "url": "https://www.farfetch.com/hk/shopping/kids/bobo-choses-hug-hairy-monster-long-sleeve-t-shirt-item-37620037.aspx",
+     "title": "Bobo Choses Hug Hairy Monster long-sleeve T-shirt | Blue",
+     "displayedUrl": "https://www.farfetch.com › ... › Boys T-Shirts",
+     "description": "Hug Hairy Monster long-sleeve T-shirt. HK$399. Import duties included.Read more"
+    },
+    {
+     "url": "https://www.boozt.com/eu/en/bobo-choses/hug-hairy-monster-t-shirt-top_33137337",
+     "title": "Hug Hairy Monster T-shirt top - Bobo Choses",
+     "displayedUrl": "https://www.boozt.com › Kids › Clothing › Tops",
+     "description": "Hug Hairy Monster T-shirt top - Long-sleeved t-shirts. 40 €. Colour:BLUE. BLUE. Select Size (EU). 98 110 122 134 148 155. Size guide. Add to cart.Read more"
+    },
+    {
+     "url": "https://www.farfetch.com/ro/shopping/kids/bobo-choses-hug-hairy-monster-long-sleeve-t-shirt-item-37620037.aspx",
+     "title": "Bobo Choses Hug Hairy Monster long-sleeve T-shirt | Blue",
+     "displayedUrl": "https://www.farfetch.com › ... › Boys T-Shirts",
+     "description": "Bobo Choses Hug Hairy Monster long-sleeve T-shirt. blue graphic print on the front crewneck long sleeves dropped shoulders loose fit straight hem. ID: B226AC ..."
+    }
+   ]
+  },
+  {
+   "productId": "S2",
+   "label": "S-C",
+   "source": "SIGNAL",
+   "axis": "+ 국내외 판매처",
+   "alsoFrom": [],
+   "query": "Bobo Choses B226AC009 Hug Hairy Monster T-Shirt 국내외 판매처",
+   "startedAt": "2026-10-27T09:58:57.322Z",
+   "results": [
+    {
+     "url": "https://www.farfetch.com/ro/shopping/kids/bobo-choses-hug-hairy-monster-long-sleeve-t-shirt-item-37620037.aspx",
+     "title": "Bobo Choses Hug Hairy Monster long-sleeve T-shirt | Blue",
+     "displayedUrl": "https://www.farfetch.com › ... › Boys T-Shirts",
+     "description": "Bobo Choses Hug Hairy Monster long-sleeve T-shirt. blue graphic print on the front crewneck long sleeves dropped shoulders loose fit straight hem. ID: B226AC ..."
+    },
+    {
+     "url": "https://bridge.babyshop.com/en-om/p/hug-hairy-monster-t-shirt-light-blue/BC-B226AC009-451",
+     "title": "Hug Hairy Monster T-shirt Light Blue - Babyshop",
+     "displayedUrl": "https://bridge.babyshop.com › BC-B226AC009-451",
+     "description": "This Bobo Choses T-shirt is a soft everyday tee made from 100% cotton for ... Hug Hairy Monster T-shirt Light Blue. New. $54,90 USD. Average rating: 0.0 ...Read more"
+    },
+    {
+     "url": "https://www.farfetch.com/uk/shopping/kids/bobo-choses-hug-hairy-monster-long-sleeve-t-shirt-item-37620037.aspx",
+     "title": "Bobo Choses Hug Hairy Monster long-sleeve T-shirt | Blue",
+     "displayedUrl": "https://www.farfetch.com › ... › Tops › T-Shirts",
+     "description": "Shop Bobo Choses Hug Hairy Monster long-sleeve T-shirt. ... Brand style ID: B226AC009. Delivery, Returns & Seller. Recommendations. Showing ...Read more"
+    },
+    {
+     "url": "https://www.farfetch.com/hk/shopping/kids/bobo-choses-hug-hairy-monster-long-sleeve-t-shirt-item-37620037.aspx",
+     "title": "Bobo Choses Hug Hairy Monster long-sleeve T-shirt | Blue",
+     "displayedUrl": "https://www.farfetch.com › ... › Boys T-Shirts",
+     "description": "Bobo Choses Hug Hairy Monster long-sleeve T-shirt. blue graphic print on the front crewneck long sleeves dropped shoulders loose fit straight hem Composition ..."
+    },
+    {
+     "url": "https://www.cettire.com/eg/products/bobo-choses-hug-hairy-monster-print-sweatshirt-967585648/cmVhY3Rpb24vcHJvZHVjdDp4ZkZMWVJ1d2RySjY3MndqeA==?lng=en",
+     "title": "Bobo Choses Hug Hairy Monster Print Sweatshirt",
+     "displayedUrl": "https://www.cettire.com › products › bobo-choses-hug-...",
+     "description": ""
+    },
+    {
+     "url": "https://bridge.babyshop.com/en-it/p/hug-hairy-monster-t-shirt-light-blue/BC-B226AC009-451",
+     "title": "Hug Hairy Monster T-shirt Light Blue - Babyshop",
+     "displayedUrl": "https://bridge.babyshop.com › en-it › BC-B226AC009-451",
+     "description": "This Bobo Choses T-shirt is a soft everyday tee made from 100% cotton for breathable comfort and easy wear. This lightweight top feels gentle on the skin ...Read more"
+    },
+    {
+     "url": "https://www.boozt.com/eu/en/bobo-choses/hug-hairy-monster-t-shirt-top_33137337",
+     "title": "Hug Hairy Monster T-shirt top - Bobo Choses",
+     "displayedUrl": "https://www.boozt.com › Kids › Clothing › Tops",
+     "description": "Hug Hairy Monster T-shirt top - Long-sleeved t-shirts. 40 €. Colour:BLUE. BLUE. Select Size (EU). 98 110 122 134 148 155. Size guide. Add to cart.Read more"
+    },
+    {
+     "url": "https://www.tinyapple.net/products/bobo-choses-hug-hairy-monster-sweatshirt-beige?srsltid=AYCX9vIulMV8kclnn-ZZimFRywL1LQBnfsCHGBZIAsYOoRh1Om2WpTfC",
+     "title": "Bobo Choses Hug Hairy Monster sweatshirt, Beige",
+     "displayedUrl": "https://www.tinyapple.net › products › bobo-choses-hug-...",
+     "description": "Bobo Choses Hug Hairy Monster sweatshirt, Beige $89.00 USD off installments of $22.25. Call Us: 201–585-0222"
+    },
+    {
+     "url": "https://bobochoses.co.jp/products/b226ab040-hug-hairy-monster-t-shirt",
+     "title": "Hug Hairy Monster baby T-shirt",
+     "displayedUrl": "https://bobochoses.co.jp › products › b226ab040-hug-h...",
+     "description": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal. Baby Hug Hairy Monster baby T‐shirt price ¥7,150. Free shipping for orders ..."
+    }
+   ]
+  },
+  {
+   "productId": "S2",
+   "label": "S-D",
+   "source": "SIGNAL",
+   "axis": "**품번 제외** + 동일상품 판매처",
+   "alsoFrom": [],
+   "query": "Bobo Choses Hug Hairy Monster T-Shirt 동일상품 판매처",
+   "startedAt": "2026-10-27T09:58:57.323Z",
+   "results": [
+    {
+     "url": "https://bobochoses.com/en-us/products/b226ab040-hug-hairy-monster-t-shirt",
+     "title": "Hug Hairy Monster T-shirt",
+     "displayedUrl": "https://bobochoses.com › en-us › products › b226ab04...",
+     "description": "Hug Hairy Monster T‑shirt ... Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal. Find your perfect fit in our Size guide.Read more"
+    },
+    {
+     "url": "https://bobochoses.com/en-us/products/b226ac009-hug-hairy-monster-t-shirt",
+     "title": "Hug Hairy Monster T-shirt",
+     "displayedUrl": "https://bobochoses.com › en-us › products › b226ac009...",
+     "description": "Hug Hairy Monster T‑shirt ... Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal. Find your perfect fit in our Size guide.Read more"
+    },
+    {
+     "url": "https://enjoykidsus.com/products/bobo-choses-hug-hairy-monster-t-shirt?srsltid=AYCX9vLjUygHh82RLNda9NGM39b17WsGqRhJYuoF44bf3qpe2opzwSS9",
+     "title": "Bobo Choses Hug Hairy Monster T-Shirt",
+     "displayedUrl": "https://enjoykidsus.com › products › bobo-choses-hug-...",
+     "description": "Bobo Choses Hug Hairy Monster baby T-shirt in light blue organic cotton. in 100% organic cotton with a loose fit. Responsibly made in Portugal. , only 1 item ..."
+    },
+    {
+     "url": "https://www.thefrontshop.com/products/hug-hairy-monster-t-shirt?srsltid=AYCX9vIyTWMBnmKSklibDZTmxhwjFjEyujlRW_6HHCqdp-zHsHeVaXCC",
+     "title": "Hug Hairy Monster T-Shirt - Bobo Choses",
+     "displayedUrl": "https://www.thefrontshop.com › products › hug-hairy-...",
+     "description": "Soft cotton long-sleeve tee with a comfortable, breathable feel· Features a playful monster hug graphic in vibrant colors· Classic crewneck … $58.00 off Final ..."
+    },
+    {
+     "url": "https://summermade.com/products/hug-hairy-monster-t-shirt?srsltid=AYCX9vIP6cc8-BVbe3vlTlxTAzxWNprDte50uhmG-HIB9yIArh3l8tGI",
+     "title": "Hug Hairy Monster T‑shirt",
+     "displayedUrl": "https://summermade.com › products › hug-hairy-monster...",
+     "description": "Bobo Choses Hug Hairy Monster T‐shirt Sale price€40.00. Size:4-5Y 4-5Y 6-7Y 8-9Y. Composition: Organic Cotton 100% Responsibly made in Portugal."
+    },
+    {
+     "url": "https://bobochoses.com/en-us/collections/t-shirts-for-kid",
+     "title": "Children's T-shirts - Creative Prints",
+     "displayedUrl": "https://bobochoses.com › collections › t-shirts-for-kid",
+     "description": "Hug Hairy Monster T-shirt. Hug Hairy Monster T-shirt Regular price $58.00. Explore our collection of T-shirts for boys and girls."
+    },
+    {
+     "url": "https://www.boozt.com/eu/en/bobo-choses/hug-hairy-monster-t-shirt-top_33137337",
+     "title": "Hug Hairy Monster T-shirt top - Bobo Choses",
+     "displayedUrl": "https://www.boozt.com › Kids › Clothing › Tops",
+     "description": "Hug Hairy Monster T-shirt top - Long-sleeved t-shirts. 40 €. Colour:BLUE. BLUE. Select Size (EU). 98 110 122 134 148 155. Size guide. Add to cart.Read more"
+    },
+    {
+     "url": "https://urbanlooks.boutique/products/bobo-choses-hug-hairy-monster-t-shirt?srsltid=AYCX9vJ5WbN-MEwwMx72GCG2HyREvD-tmzuj8V5xi9SvlP-ubQnh4RWK",
+     "title": "BOBO CHOSES Hug Hairy Monster T-shirt",
+     "displayedUrl": "https://urbanlooks.boutique › products › bobo-choses-h...",
+     "description": "Organic Cotton 100%. Regular price $59.00 Sale price $59.00. Responsibly made in Portugal. Size: 2-3 years … price $59.00 Sale price $59.00"
+    },
+    {
+     "url": "https://bobochoses.com/en-us/collections/all-kids",
+     "title": "All Kids",
+     "displayedUrl": "https://bobochoses.com › en-us › collections › all-kids",
+     "description": "Hug Hairy Monster T ... Hug Hairy Monster T-shirt. Regular price $58.00. Regular price Sale price ...Read more"
+    }
+   ]
+  },
+  {
+   "productId": "S3",
+   "label": "S-B",
+   "source": "SIGNAL",
+   "axis": "+ 동일상품 판매처",
+   "alsoFrom": [],
+   "query": "Bobo Choses B126AI018 Curious Turnip All Over 동일상품 판매처",
+   "startedAt": "2026-10-27T09:58:57.323Z",
+   "results": [
+    {
+     "url": "https://www.babyshop.com/en-ba/p/curious-turnip-all-over-swim-t-shirt-green/BC-B126AC130-311",
+     "title": "Curious Turnip All Over Swim T-Shirt Green | Babyshop",
+     "displayedUrl": "https://www.babyshop.com › en-ba › curious-turnip-all-...",
+     "description": "This Bobo Choses long-sleeve swim top features a vivid green base with playful orange fruit faces for a fresh, modern look. Made from 81% polyamide and 19%"
+    },
+    {
+     "url": "https://www.junioredition.com/products/curious-turnip-all-over-swim-cap-by-bobo-choses?srsltid=AYCX9vLseoyNOsxH2I6k1uNnzJXNBDEjC8xRQiCwsRIzuqt6CAv72Ek5",
+     "title": "Curious Turnip All Over Swim Cap | Bobo Choses",
+     "displayedUrl": "https://www.junioredition.com › products › curious-tur...",
+     "description": "Bobo Choses Curious Turnip All Over Swim Cap in Green. Stretchy polyester kids swim cap, sizes 2–10 years. Sale price £21.60 Regular price £54.00. Colour - ..."
+    },
+    {
+     "url": "https://bobochoses.co.jp/products/b126ai018-curious-turnip-all-over-swim-cap",
+     "title": "B126AI018 Curious Turnip all over swim cap",
+     "displayedUrl": "https://bobochoses.co.jp › products › b126ai018-curiou...",
+     "description": "Green cap. Made in China. Composition: Polyester 88%, Elastane 12%. Curious Turnip all over swim cap Ref.B126AI018 Regular price ¥4,840 Regular price ¥9,680 ..."
+    },
+    {
+     "url": "https://www.boutiquelittle.com/products/curious-turnip-t-shirt?srsltid=AYCX9vKBLyjSxprWssM2yUj0AlZAmpIDovvC3rtKI-6sIIIgdjBXZsYp",
+     "title": "curious turnip t-shirt - Bobo Choses",
+     "displayedUrl": "https://www.boutiquelittle.com › products › curious-tur...",
+     "description": "Discover comfort with the Curious Turnip T-Shirt, crafted from 50% organic cotton. $47.00 Sale price $37.60"
+    },
+    {
+     "url": "https://www.farfetch.com/shopping/kids/bobo-choses-curious-turnip-long-sleeve-high-neck-swim-t-shirt-item-33844474.aspx",
+     "title": "Curious Turnip long-sleeve high-neck swim T-shirt",
+     "displayedUrl": "https://www.farfetch.com › shopping › kids › bobo-cho...",
+     "description": "Bobo Choses Curious Turnip long-sleeve high-neck swim T-shirt. Sorry, this piece is currently out of stock … all-over print Imported Composition Fabric 100% ..."
+    },
+    {
+     "url": "https://www.ladida.com/products/bobo-choses-green-curious-turnip-all-over-swim-trunks?srsltid=AYCX9vLVFyw41DfuZZdvRkIgMFPWP0rE-m1uO_wKA_5ez15RyThYQ_c1",
+     "title": "Bobo Choses Green Curious Turnip All Over Swim Trunks",
+     "displayedUrl": "https://www.ladida.com › products › bobo-choses-gree...",
+     "description": "Bobo Choses Green Curious Turnip All Over Swim Trunks … runks $39.50 $79.00 Final sale. Size 2-3Y 2-3Y 4-5Y 6-7Y 8-9Y 2-3Y"
+    },
+    {
+     "url": "https://kids21.com/products/700002027grn?srsltid=AYCX9vKv4set-cHgkF6Uo31IqH9vK4JyYYjiHP36qAu4nvv2MKP3Qwxr",
+     "title": "Bobo Choses Curious Turnip All Over Swim T-shirt",
+     "displayedUrl": "https://kids21.com › products",
+     "description": "Material composition: Organic cotton recycled fibers … and LENZINGTM Lyocell) All Over Swim T-shirt , cotton), and LENZINGTM Lyocell) 3 payments of $18.00"
+    },
+    {
+     "url": "https://hosieryplus.com/products/bobo-choses-curious-turnip-bloomer-set-b126ab011-set?srsltid=AYCX9vLvoADO4_HGispioXELDI33fg6Drch7rWg-zaO08z1Wj4eWywXx",
+     "title": "Bobo Choses Curious Turnip Bloomer Set - B126AB011-SET",
+     "displayedUrl": "https://hosieryplus.com › products › bobo-choses-curiou...",
+     "description": "Bobo Choses Curious Turnip Bloomer Set - B126AB011-SET. Bobo Choses Curious Turnip Bloomer Set - B126AB011-SET. SKU:99337420. Regular price $90.00.Read more"
+    },
+    {
+     "url": "https://bobochoses.com/en-us/collections/all-baby?page=2",
+     "title": "All Baby – Page 2",
+     "displayedUrl": "https://bobochoses.com › All Baby",
+     "description": "All Baby · Forest Scene cardigan · Forest Scene cardigan · Plaid all over shirt · Plaid all over shirt · Taxi Saurus Tag denim pants · Taxi Saurus Tag denim pants.Read more"
+    }
+   ]
+  },
+  {
+   "productId": "S3",
+   "label": "S-C",
+   "source": "SIGNAL",
+   "axis": "+ 국내외 판매처",
+   "alsoFrom": [],
+   "query": "Bobo Choses B126AI018 Curious Turnip All Over 국내외 판매처",
+   "startedAt": "2026-10-27T09:58:57.323Z",
+   "results": [
+    {
+     "url": "https://shopping.naver.com/style/style/stores/100087551/products/5009064410?NaPm=ct%3Dkcfrfejg%7Cci%3Dshoppingwindow%7Ctr%3Dswl%7Chk%3Df8047e3299419b22e45c3fa98fe30cf7835d3eda%7Ctrx%3D",
+     "title": "https://shopping.naver.com/style/style/stores/1000...",
+     "displayedUrl": "https://shopping.naver.com › stores",
+     "description": "No information is available for this page."
+    },
+    {
+     "url": "https://kream.co.kr/products/478376?srsltid=AYCX9vIIxSCw-k7w6tWNPtGEI6aveja7ObPoadoY2AeV0VJTFyWWy_Kw",
+     "title": "KREAM | 트렌드를 거래하다",
+     "displayedUrl": "https://kream.co.kr › products",
+     "description": "트렌드를 거래하다."
+    },
+    {
+     "url": "https://kream.co.kr/products/437221?srsltid=AYCX9vJPpKaH4eagKdpCGzBmR92jqc6STscW33RATGyR-WEhjwi89vli",
+     "title": "KREAM | 트렌드를 거래하다",
+     "displayedUrl": "https://kream.co.kr › products",
+     "description": "트렌드를 거래하다."
+    },
+    {
+     "url": "https://onthelook.co.kr/brand/16194?srsltid=AYCX9vIkUKafMKZdravxmyTQ4tFA_rmcbXitLk5BmEOttbqUQa5ZhsnD",
+     "title": "https://onthelook.co.kr/brand/16194?srsltid=AYCX9v...",
+     "displayedUrl": "https://onthelook.co.kr › brand",
+     "description": "No information is available for this page."
+    },
+    {
+     "url": "http://shop141908.wepas.co.kr/mall/m_mall_detail.php?ps_ctid=04010000&ps_goid=9216&ps_page=2",
+     "title": "http://shop141908.wepas.co.kr/mall/m_mall_detail.p...",
+     "displayedUrl": "http://shop141908.wepas.co.kr › mall",
+     "description": "No information is available for this page."
+    }
+   ]
+  },
+  {
+   "productId": "S3",
+   "label": "S-D",
+   "source": "SIGNAL",
+   "axis": "**품번 제외** + 동일상품 판매처",
+   "alsoFrom": [],
+   "query": "Bobo Choses Curious Turnip All Over 동일상품 판매처",
+   "startedAt": "2026-10-27T10:00:08.124Z",
+   "results": [
+    {
+     "url": "https://www.yellow-turtle.com/bobo-curious-turnip-t-shirt-yellow.html?srsltid=AYCX9vIlKMU0qB81UDUPkZ4zKBfBTpO5MXn-5cTdEAu0bjbBhvz_itxM",
+     "title": "Bobo Choses Curious Turnip T‑shirt",
+     "displayedUrl": "https://www.yellow-turtle.com › bobo-curious-turnip-t-...",
+     "description": "Yellow t-shirt. Designed with short sleeves, dropped shoulder, shoulder snap fastening, loose fit and round neck. Made in Spain.Read more"
+    },
+    {
+     "url": "https://www.babyshop.com/en-ee/p/curious-turnip-all-over-swim-t-shirt-green/BC-B126AC130-311",
+     "title": "Curious Turnip All Over Swim T-Shirt Green - Babyshop",
+     "displayedUrl": "https://www.babyshop.com › en-ee › curious-turnip-all-o...",
+     "description": "This Bobo Choses long-sleeve swim top features a vivid green base with playful orange fruit faces for a fresh, modern look. Made from 81% polyamide and 19%"
+    },
+    {
+     "url": "https://www.boutiquelittle.com/products/curious-turnip-t-shirt?srsltid=AYCX9vJytObdoy-H5hcAwChGtRc4qZm1Y74j3nwaem5OzAYFt69RUueD",
+     "title": "curious turnip t-shirt - Bobo Choses",
+     "displayedUrl": "https://www.boutiquelittle.com › products › curious-tur...",
+     "description": "Discover comfort with the Curious Turnip T-Shirt, crafted from 50% organic cotton. Available in versatile sizes and perfect for everyday wear."
+    },
+    {
+     "url": "https://www.farfetch.com/shopping/kids/bobo-choses-curious-turnip-long-sleeve-high-neck-swim-t-shirt-item-33844474.aspx",
+     "title": "Curious Turnip long-sleeve high-neck swim T-shirt",
+     "displayedUrl": "https://www.farfetch.com › shopping › kids › bobo-cho...",
+     "description": "Bobo Choses Curious Turnip long-sleeve high-neck swim T-shirt · Sorry, this piece is currently out of stock · The Details · Follow us · FARFETCH App.Read more"
+    },
+    {
+     "url": "https://kids21.com/products/700002027grn?srsltid=AYCX9vLZrvvgZnrVnV-THRJRTxTt0V9lnmo4fVcS1PM5GxHRg2l2HIOk",
+     "title": "Bobo Choses Curious Turnip All Over Swim T-shirt",
+     "displayedUrl": "https://kids21.com › products",
+     "description": "Material composition: Organic cotton recycled fibers (polyester, polyamide, cotton), and LENZING™ Lyocell). Your Cart Subtotal$54.00; Your Cart Subtotal ...Read more"
+    },
+    {
+     "url": "https://www.ladida.com/products/bobo-choses-green-curious-turnip-all-over-swim-trunks?srsltid=AYCX9vLTRYks-VCAXJFv3erUm8-XUl6eHtBIFrJDiKxLWMnY0LX-DYeA",
+     "title": "Bobo Choses Green Curious Turnip All Over Swim Trunks",
+     "displayedUrl": "https://www.ladida.com › products › bobo-choses-gree...",
+     "description": "Green Curious Turnip All Over Swim Trunks. $39.50 $79.00. Final sale.Read more"
+    },
+    {
+     "url": "https://theshoppemiami.com/products/bobo-choses-curious-turnip-t-shirt?srsltid=AYCX9vKlZyt7bDzIf223Ao7l9atl6IfIMP6khLeaRz7jYbUBp5w4LVZZ",
+     "title": "Bobo Choses Curious Turnip T-shirt",
+     "displayedUrl": "https://theshoppemiami.com › products › bobo-choses-c...",
+     "description": "Bobo Choses Curious Turnip T-shirt. $48.00. $24.99.Read more"
+    },
+    {
+     "url": "https://www.junioredition.com/products/curious-turnip-all-over-swim-cap-by-bobo-choses?srsltid=AYCX9vIWz4WmbKap40Zxxq8Nw_VqEhAK7qBrKZKRpody0hEx70-S0T3k",
+     "title": "Curious Turnip All Over Swim Cap | Bobo Choses",
+     "displayedUrl": "https://www.junioredition.com › products › curious-tur...",
+     "description": "Curious Turnip All Over Swim Cap by Bobo Choses. Colour - Green. 88% Polyester, 12% Elastane. Hat Size Guide (Approximate):. 52 / 2-6 years. 54 / 6-10 years.Read more"
+    },
+    {
+     "url": "https://kolkid.ca/products/bobo-choses-curious-turnip-all-over-swim-trunks?srsltid=AYCX9vK8aZkiFnIQe6k7oJv4jpo3JSY55DoFz9c-dLAZTGEu7SU534lA",
+     "title": "Bobo Choses Curious Turnip all over swim trunks",
+     "displayedUrl": "https://kolkid.ca › products › bobo-choses-curious-turni...",
+     "description": "Bobo Choses Curious Turnip all over swim trunks. No reviews. $88.00. Unit price /. Unavailable. Color. Green. Green. Size. 4-5. 2-3 Sold out; 4-5.Read more"
+    }
+   ]
+  },
+  {
+   "productId": "S4",
+   "label": "S-B",
+   "source": "SIGNAL",
+   "axis": "+ 동일상품 판매처",
+   "alsoFrom": [],
+   "query": "Main Story AW26MS185 Bubble Sweatshirt in Melange 동일상품 판매처",
+   "startedAt": "2026-10-27T10:00:08.125Z",
+   "results": [
+    {
+     "url": "https://main-story.com/products/bubble-sweatshirt-grey-melange-1?srsltid=AYCX9vIKtDtokgd6ly5qmZTH21WNeyiMcige1LzGGTXONEU0OVH43yFg",
+     "title": "Bubble Sweatshirt - Grey Melange",
+     "displayedUrl": "https://main-story.com › products › bubble-sweatshirt-gr...",
+     "description": "Grey Melange Bubble Sweatshirt in soft organic cotton fleece with an oversized fit, Start Date chest print and embroidered logo. Regular price£57.00 / In stock ..."
+    },
+    {
+     "url": "https://main-story.com/products/bubble-sweatshirt-graystone-blue?srsltid=AYCX9vLnspwvtnIFBNqUX3vN7d1kL1iCK8fEguXA4lsWrjxfWGfzyUrZ",
+     "title": "Bubble Sweatshirt - Graystone Blue",
+     "displayedUrl": "https://main-story.com › products › bubble-sweatshirt-gr...",
+     "description": "Oversized Bubble Sweatshirt in Graystone Blue with relaxed fit, dropped shoulders, and soft organic cotton fleece. Garment-dyed for extra softness. £56.00 Sale ..."
+    },
+    {
+     "url": "https://bebedeshop.com/category/mainstory/169/",
+     "title": "MAINSTORY - bebede'shop",
+     "displayedUrl": "https://bebedeshop.com › category",
+     "description": "SS26MS185 - Bubble Sweatshirt - Ecru Melange 판매가 : KRW 108,000 할인판매가 : KRW 64,800 40% TUNIQUE WITH HAIR CLIP"
+    },
+    {
+     "url": "https://littleluna.co.kr/product/main-story-ms185-bubble-sweatshirt-wind-chime/2466/",
+     "title": "MAIN STORY 메인스토리",
+     "displayedUrl": "https://littleluna.co.kr › product",
+     "description": "[메인스토리] MS185 - Bubble Sweatshirt - Wind Chime ; 택배 · 3,500원 (70,000원 이상 구매 시 무료) · MAIN STORY · 110 · 시즌오프 및 세일상품은 교환/반품이 불가합니다.Read more"
+    },
+    {
+     "url": "https://littleluna.co.kr/product/%EB%A9%94%EC%9D%B8%EC%8A%A4%ED%86%A0%EB%A6%AC-ss25ms185-bubble-sweatshirt-driftwood/2801/",
+     "title": "Main Story 메인스토리",
+     "displayedUrl": "https://littleluna.co.kr › product",
+     "description": "MAIN STORY. 기본 정보. 상품명, [메인스토리] SS25MS185 - Bubble Sweatshirt - Driftwood. 상품요약정보, SS25. 판매가, 88,000원 재입고 알림 SMS. 할인판매가, 50% ...Read more"
+    },
+    {
+     "url": "https://kinuandkotta.shop-pro.jp/?pid=187005189",
+     "title": "40%off AW25 Main Story Bubble Sweatshirt",
+     "displayedUrl": "https://kinuandkotta.shop-pro.jp › ...",
+     "description": "40%off AW25 Main Story Bubble Sweatshirt - Vintage Indigo Stripe 2Y 定価 13,860円(税1,260円) size 2Y …  Composition 100% Organic Cotton"
+    },
+    {
+     "url": "https://jp.mercari.com/en/item/m44255217211?srsltid=AYCX9vITMq5z3OH2abqGplvrfFeGfLZa3TKYjHWm1thLhSXEY4Zca77J",
+     "title": "main story スウェット 6Y 水色 - メルカリ",
+     "displayedUrl": "https://jp.mercari.com › item",
+     "description": "色 Size : 130cm US$ 36.69 … 24MS185 Bubble Sweatshirt Blue Fog 6Y シンプルなスウェットです。 迷いながらの出品です。 サイズ 130cm Item condition"
+    }
+   ]
+  },
+  {
+   "productId": "S4",
+   "label": "S-C",
+   "source": "SIGNAL",
+   "axis": "+ 국내외 판매처",
+   "alsoFrom": [],
+   "query": "Main Story AW26MS185 Bubble Sweatshirt in Melange 국내외 판매처",
+   "startedAt": "2026-10-27T10:00:08.127Z",
+   "results": [
+    {
+     "url": "https://anoutfit.co.kr/product/detail.html?product_no=1762&page_6=1",
+     "title": "https://anoutfit.co.kr/product/detail.html?product...",
+     "displayedUrl": "https://anoutfit.co.kr › product › d...",
+     "description": "No information is available for this page."
+    },
+    {
+     "url": "https://shopping.naver.com/style/fashionbrand/stores/100137045/products/3890209335",
+     "title": "https://shopping.naver.com/style/fashionbrand/stor...",
+     "displayedUrl": "https://shopping.naver.com › stores",
+     "description": "No information is available for this page."
+    },
+    {
+     "url": "https://onthelook.co.kr/product/259142?srsltid=AYCX9vKd7omZO9xrZZoPP8FCiXS-2b3I4bdpguEP84PK4SqxwGHU8Kkv",
+     "title": "https://onthelook.co.kr/product/259142?srsltid=AYC...",
+     "displayedUrl": "https://onthelook.co.kr › product",
+     "description": "No information is available for this page."
+    },
+    {
+     "url": "https://www.dollmore.com/m/product_detail.html?brand_uid=274755",
+     "title": "https://www.dollmore.com/m/product_detail.html?bra...",
+     "displayedUrl": "https://www.dollmore.com › prod...",
+     "description": ""
+    },
+    {
+     "url": "https://www.11st.co.kr/products/8966920361?srsltid=AYCX9vII9jSa-6N5aiNt36F1Gu6o8n0Se7DCvdKkI_yrl6As1bzH5eDC",
+     "title": "11번가",
+     "displayedUrl": "https://www.11st.co.kr › products",
+     "description": ""
+    }
+   ]
+  },
+  {
+   "productId": "S4",
+   "label": "S-D",
+   "source": "SIGNAL",
+   "axis": "**품번 제외** + 동일상품 판매처",
+   "alsoFrom": [],
+   "query": "Main Story Bubble Sweatshirt in Melange 동일상품 판매처",
+   "startedAt": "2026-10-27T10:00:08.127Z",
+   "results": [
+    {
+     "url": "https://checkanddot.com/product/main-story-bubble-sweatshirt-citadel/12715/",
+     "title": "[MAIN STORY] Bubble Sweatshirt - Citadel",
+     "displayedUrl": "https://checkanddot.com › product",
+     "description": "[MAIN STORY] Bubble Sweatshirt - Citadel. 공급사 바로가기. [MAIN STORY] Bubble Sweatshirt - Citadel. 상품 정보. 소비자가, 0원. 판매가, 96,000원Read more"
+    },
+    {
+     "url": "https://checkanddot.com/category/23fw-main-story/425/",
+     "title": "23FW MAIN STORY",
+     "displayedUrl": "https://checkanddot.com › category",
+     "description": "[MAIN STORY] Bubble Sweatshirt - Citadel. 관심상품 등록 전. [MAIN STORY] Bubble Sweatshirt - Citadel. [MAIN STORY] Bubble Sweatshirt - Citadel. 0원; 96,000원 ...Read more"
+    },
+    {
+     "url": "https://shop.cirkel-mote.com/items/82027266",
+     "title": "《main story 2024SS》Bubble Sweatshirt / Bonnie Blue / 2Y",
+     "displayedUrl": "https://shop.cirkel-mote.com › items",
+     "description": "薄手のスウェット。 目にも鮮やかな水色の生地にグリーンの斜めラインが加わっています。 適度に肩のラインが落ちるオーバーサイズの作りです。Read more"
+    },
+    {
+     "url": "https://shopping.naver.com/style/fashionbrand/stores/100035168/products/4151054704",
+     "title": "https://shopping.naver.com/style/fashionbrand/stor...",
+     "displayedUrl": "https://shopping.naver.com › style › stores › products",
+     "description": "No information is available for this page."
+    },
+    {
+     "url": "https://jp.mercari.com/item/m40483505180?srsltid=AYCX9vJWr280inqwFOsVCX3eXjByI6Z89EJhnYZrHxQCWi9D34eoJcuh",
+     "title": "main story 2y スウェット Bubble Sweatshirt - メルカリ - Mercari",
+     "displayedUrl": "https://jp.mercari.com › item",
+     "description": "商品の情報 ; ブランド. Misha＆Puff ; サイズ. 110cm ; 商品の状態. 新品、未使用. 新品で購入し、一度も使用していない ; 配送料の負担. 送料込み(出品者負担) ; 配送の方法.Read more"
+    },
+    {
+     "url": "https://m.cn.mainbooth.co.kr/product/list_zoom.html?cate_no=70&sort_method=5",
+     "title": "STORE",
+     "displayedUrl": "https://m.cn.mainbooth.co.kr › list_...",
+     "description": "MAINBOOTH OFFICIAL STORE 加入收藏商品前. Chocolate Hood Zip-up(BROWN) $88.15"
+    },
+    {
+     "url": "https://kinuandkotta.shop-pro.jp/?mode=cate&cbid=2355406&csid=49&sort=n&page=12",
+     "title": "Main story",
+     "displayedUrl": "https://kinuandkotta.shop-pro.jp › ...",
+     "description": "クリックポスト(ポスト投函）. ※厚さ3センチ以内の商品でご利用頂けるポスト投函サービスです。非常に安価な発送方法ですが、商品に対しての破損 ...Read more"
+    },
+    {
+     "url": "https://shop.cirkel-mote.com/items/63718425",
+     "title": "《main story 2022AW》Zipped Hoodie / Colorblock Cloud / 2Y",
+     "displayedUrl": "https://shop.cirkel-mote.com › items",
+     "description": "カラーブロッキングが目を惹くフーディ。爽やかな配色も魅力です。ラグランスリーブで、身幅も着丈もゆったりしたシルエット。裏起毛でふんわり柔らかな着心地です。"
+    }
+   ]
+  },
+  {
+   "productId": "S5",
+   "label": "S-A",
+   "source": "SIGNAL",
+   "axis": "기준선 — BRAND + 상품명 + [품번]",
+   "alsoFrom": [],
+   "query": "The Animals Observatory Pupfish Kid T-Shirt in",
+   "startedAt": "2026-10-27T10:02:19.631Z",
+   "results": [
+    {
+     "url": "https://www.theanimalsobservatory.com/en-us/products/deep-blue-pupfish-t-shirt-s26001-234-dw?srsltid=AYCX9vK-p7guL6IYzSoj0fDs3nydcpCD79zgpQ6wvgBeOTZ_mCuKoan8",
+     "title": "Deep Blue Pupfish T-Shirt",
+     "displayedUrl": "https://www.theanimalsobservatory.com › products › de...",
+     "description": "Deep Blue Pupfish T-Shirt $57.00 Taxes. A deep blue t-shirt its bold logo and minimal back detail. Composition 100% cotton Deep"
+    },
+    {
+     "url": "https://www.jeanandhadley.com/product-page/the-animals-observatory-pupfish-kid-t-shirt-navy?srsltid=AYCX9vJdAvUBmlAAKaNCGh-YmA_xL3JfJFozIoZBYk4FaJExlcMGK4nw",
+     "title": "The Animals Observatory Pupfish Kid T-shirt (Navy)",
+     "displayedUrl": "https://www.jeanandhadley.com › product-page › the-ani...",
+     "description": "The Animals Observatory Pupfish Kid T-shirt (Navy). $56.00Price. Size*. Select, 2y, 3y, 4y, 6y, 8y, 10y. Quantity*. Add to Cart. Brand - The Animals ...Read more"
+    },
+    {
+     "url": "https://www.theanimalsobservatory.com/en-us?srsltid=AYCX9vL4r--fioOM7nFE0AmGseOErqi4grvE1zPTEfJpXzpcCY4JKkfG",
+     "title": "Kids clothes online",
+     "displayedUrl": "https://www.theanimalsobservatory.com › en-us",
+     "description": "Shop online at The Animals Observatory -made artistic kids clothes online. Pupfish T-shirt $57.00 2y. Brown Pupfish T-shirt $57.00. Sold -shirt $57.00"
+    },
+    {
+     "url": "https://www.theanimalsobservatory.com/en-kr/products/brown-pupfish-t-shirt-f26100-162-dw?srsltid=AYCX9vL0qq8Fe5Ny7blfhUDjAFGvjbFpfR7KosLxUcaE0S6w71fDiXdQ",
+     "title": "Brown Pupfish T-shirt",
+     "displayedUrl": "https://www.theanimalsobservatory.com › products › br...",
+     "description": "Short-sleeve T-shirt in brown for kids with branding on the chest. Made from organic cotton, designed for everyday wear: soft, durable and breathable.Read more"
+    },
+    {
+     "url": "https://www.jeanandhadley.com/product-page/the-animals-observatory-pupfish-kid-t-shirt-soft-pink?srsltid=AYCX9vIuvFYQ25_x_CQ3BE4vxZbK6GwlnOKo-f18Rv6LhzVU_uUKJQxD",
+     "title": "The Animals Observatory Pupfish Kid T-shirt (Soft Pink)",
+     "displayedUrl": "https://www.jeanandhadley.com › product-page › the-ani...",
+     "description": "The Animals Observatory Pupfish Kid T-shirt (Soft Pink) $40.00 Regular Price $24.00Sale 100% Cotton Machine wash up to 30°C-86°F/Do"
+    },
+    {
+     "url": "https://www.theanimalsobservatory.com/en-us/products/grey-pupfish-t-shirt-f26100-208-dw?srsltid=AYCX9vLwNK_ASMN4EehwVACZNu7zCLOS8Ag2vUvDaBrbukrC6ey6UcfI",
+     "title": "Grey Pupfish T-shirt",
+     "displayedUrl": "https://www.theanimalsobservatory.com › products › gr...",
+     "description": "$57.00 Taxes & Duties included! Short-sleeve T-shirt in grey for kids with branding on the chest. Made from organic cotton, designed for everyday wear: ...Read more"
+    },
+    {
+     "url": "https://www.goldfish.be/the-animals-observatory?srsltid=AYCX9vICcydoIOkk_6VJ8HWnCsKOxOMMoNJia6P0wJH4OvzyuzKYGT-4",
+     "title": "The Animals Observatory | Kids Fashion",
+     "displayedUrl": "https://www.goldfish.be › the-animals-observatory",
+     "description": "Pupfish Kid T-shirt Dusty Blue. €30.00 ; Pupfish Kid T-shirt Medium Grey Heather. €30.00 ; Pupfish Kid T-shirt Navy. €30.00 ; Collie Kid T-shirt Pink. €55.00 ...Read more"
+    },
+    {
+     "url": "https://www.amie-select.com/items/152513171?srsltid=AYCX9vJ_M5PtleLkCHWK7mliWeep_-09X1ICOgAiap8qxkQHJKmRB7cv",
+     "title": "the animal observatory / PUPFISH KID T-SHIRT (NVY) 26AW",
+     "displayedUrl": "https://www.amie-select.com › items",
+     "description": "¥5,940 税込 ... the animal observatory(TAO)は、スペイン バルセロナ発のキッズブランド。 アートと遊び心を取り入れた大胆なカラーやグラフィックが魅力で、子供の自由な ...Read more"
+    },
+    {
+     "url": "https://www.theanimalsobservatory.com/en-lt/products/raw-white-pupfish-t-shirt-s26001-221-dw?srsltid=AYCX9vLbtvN_qaBufCPVu_YkpJch6Ylsa6XMJPfFhJ3jtyFwcm1iL1M2",
+     "title": "Raw White Pupfish T-Shirt",
+     "displayedUrl": "https://www.theanimalsobservatory.com › products › ra...",
+     "description": "Discover the Raw White Pupfish T-Shirt from our SS26 collection and shop online for stylish kid's clothes at The Animals Observatory."
+    }
+   ]
+  },
+  {
+   "productId": "S5",
+   "label": "S-A2",
+   "source": "SIGNAL",
+   "axis": "🔴 CONTROL — 기준선에서 **끊긴 전치사만** 제거(운영 변경 0)",
+   "alsoFrom": [],
+   "query": "The Animals Observatory Pupfish Kid T-Shirt",
+   "startedAt": "2026-10-27T10:02:19.631Z",
+   "results": [
+    {
+     "url": "https://www.theanimalsobservatory.com/en-us/products/grey-pupfish-t-shirt-f26100-208-dw?srsltid=AYCX9vLtrfXrblQv2gFyCRIQs90fGQvN5-CDfiUXOMGjbl9uL6B9TM1k",
+     "title": "Grey Pupfish T-shirt",
+     "displayedUrl": "https://www.theanimalsobservatory.com › products › gr...",
+     "description": "Pupfish T-shirt $57.00. Short-sleeve T-shirt in grey for kids with branding on the chest. Made from organic cotton, designed for everyday wear: soft, durable ..."
+    },
+    {
+     "url": "https://www.theanimalsobservatory.com/en-us/products/raw-white-pupfish-t-shirt-s26001-221-dw?srsltid=AYCX9vJ1NIU1ho_4Z-mr13lNmq70nP-nqebDzRTZbXebDdqYhFbqSMsz",
+     "title": "Raw White Pupfish T-Shirt",
+     "displayedUrl": "https://www.theanimalsobservatory.com › products › ra...",
+     "description": "Raw White Pupfish T-Shirt $57.00. A raw white t-shirt its bold logo and minimal back detail. Perfect kids clothes for little thinkers who see magic everywhere."
+    },
+    {
+     "url": "https://www.theanimalsobservatory.com/en-us?srsltid=AYCX9vKL4B2Q_dgIhR47xhFDIy_Wga96_mFRPM8BEH2ES361Q56DkPFb",
+     "title": "Kids clothes online",
+     "displayedUrl": "https://www.theanimalsobservatory.com › en-us",
+     "description": "Shop online at The Animals Observatory designer-made artistic kids clothes online. Pupfish T-shirt $57.00. Brown Pupfish T-shirt $57.00. Blue Pupfish T-shirt $ ..."
+    },
+    {
+     "url": "https://www.jeanandhadley.com/product-page/the-animals-observatory-pupfish-kid-t-shirt-soft-pink?srsltid=AYCX9vKNbbcW9-Vlrj-6vopoz2y8q1TZUdbmyiYZo0012ZT_3IIBbDgK",
+     "title": "The Animals Observatory Pupfish Kid T-shirt (Soft Pink)",
+     "displayedUrl": "https://www.jeanandhadley.com › product-page › the-ani...",
+     "description": "The Animals Observatory Pupfish Kid T-shirt (Soft Pink) $40.00 Regular Price $24.00Sale 100% Cotton Machine wash up to 30°C-86°F/Do"
+    },
+    {
+     "url": "https://www.theanimalsobservatory.com/en-us/products/deep-blue-pupfish-t-shirt-s26001-234-dw?srsltid=AYCX9vJ09vIPatnVu0ORXB27pBxOK5IXllfr_hzRDVcMf-R-2oqVeCwv",
+     "title": "Deep Blue Pupfish T-Shirt",
+     "displayedUrl": "https://www.theanimalsobservatory.com › products › de...",
+     "description": "Deep Blue Pupfish T-Shirt $57.00 Taxes. A deep blue t-shirt its bold logo and minimal back detail. Composition 100% cotton Deep"
+    },
+    {
+     "url": "https://www.theanimalsobservatory.com/en-gb/products/brown-pupfish-t-shirt-f26100-162-dw?srsltid=AYCX9vKHjdZ5pqkdfUhtI9Kt7GGbLAxoQh7apnKP2D0aAHOA2LwDaEyX",
+     "title": "Brown Pupfish T-shirt",
+     "displayedUrl": "https://www.theanimalsobservatory.com › products › br...",
+     "description": "£39.00 Taxes & Duties included! Short-sleeve T-shirt in brown for kids with branding on the chest. Made from organic cotton, designed for everyday wear: ...Read more"
+    },
+    {
+     "url": "https://www.jeanandhadley.com/product-page/the-animals-observatory-pupfish-kid-t-shirt-navy?srsltid=AYCX9vLggSXuKmHjfxve8AS2Qf9DXawzGOWdvMvSUzo6MHJRpNj9Xnnu",
+     "title": "The Animals Observatory Pupfish Kid T-shirt (Navy)",
+     "displayedUrl": "https://www.jeanandhadley.com › product-page › the-ani...",
+     "description": "The Animals Observatory Pupfish Kid T-shirt (Navy) $56.00Price Size* Select 2y 3y 4y 6y 8y 10y"
+    },
+    {
+     "url": "https://www.theanimalsobservatory.com/en-jp/products/soft-pink-pupfish-t-shirt-s26001-045-dw?srsltid=AYCX9vIHoaFbN2OySt_SxcUfvbTPW7t4ds8v1jRKArR-50PuRnxoG7YX",
+     "title": "Soft Pink Pupfish T-Shirt",
+     "displayedUrl": "https://www.theanimalsobservatory.com › products › so...",
+     "description": "Soft Pink Pupfish T-Shirt. Its clean design, featuring our signature logo and a minimalist back detail, GAL Composition 100% cotton Soft Pink"
+    },
+    {
+     "url": "https://www.amie-select.com/items/152513171?srsltid=AYCX9vLpATCMwyQFOBQuZoDGJsShAz86WdIVV5yCt9dB18a4itHE9t6T",
+     "title": "the animal observatory / PUPFISH KID T-SHIRT (NVY) 26AW",
+     "displayedUrl": "https://www.amie-select.com › items",
+     "description": "¥5,940 税込 ... the animal observatory(TAO)は、スペイン バルセロナ発のキッズブランド。 アートと遊び心を取り入れた大胆なカラーやグラフィックが魅力で、子供の自由な ...Read more"
+    }
+   ]
+  },
+  {
+   "productId": "S5",
+   "label": "S-B",
+   "source": "SIGNAL",
+   "axis": "+ 동일상품 판매처",
+   "alsoFrom": [],
+   "query": "The Animals Observatory Pupfish Kid T-Shirt in 동일상품 판매처",
+   "startedAt": "2026-10-27T10:02:19.631Z",
+   "results": [
+    {
+     "url": "https://www.zalando.it/the-animals-observatory-pupfish-unisex-t-shirt-con-stampa-off-white-thv26g02e-a11.html",
+     "title": "THE ANIMALS OBSERVATORY PUPFISH UNISEX - T-shirt ...",
+     "displayedUrl": "https://www.zalando.it › the-anima...",
+     "description": "THE ANIMALS OBSERVATORY PUPFISH UNISEX - T-shirt con stampa - off-white/bianco sporco a 21,09 € (27/09/2026)"
+    },
+    {
+     "url": "https://www.boozt.com/no/no/animal-observatory/pupfish-kid-t-shirt-brown_33143457",
+     "title": "PUPFISH KID T-SHIRT MEDIUM GREY HEATHER",
+     "displayedUrl": "https://www.boozt.com › pupfish-...",
+     "description": "THE ANIMALS OBSERVATORY Pupfish Kid T-shirt Medium Grey Heather. Multipack 1-pack Om produktet Materiale: 100 ved maks. forhandler av THE ANIMALS OBSERVATORY"
+    },
+    {
+     "url": "https://www.boozt.com/dk/da/animal-observatory/pupfish-kid-t-shirt-soft-brown-2y_33080291",
+     "title": "THE ANIMALS OBSERVATORY Pupfish Kid T-shirt Raw ...",
+     "displayedUrl": "https://www.boozt.com › pupfish-...",
+     "description": "THE ANIMALS OBSERVATORY Pupfish Kid T-shirt Raw White 6y … 269 kr -50% Deal Gem. Materiale: 100% bomuld Finvask"
+    },
+    {
+     "url": "https://www.zalando.it/the-animals-observatory-pupfish-unisex-t-shirt-con-stampa-deep-blue-thv26g02e-k11.html?size=38",
+     "title": "THE ANIMALS OBSERVATORY PUPFISH UNISEX - T-shirt ...",
+     "displayedUrl": "https://www.zalando.it › the-anima...",
+     "description": "THE ANIMALS OBSERVATORY PUPFISH UNISEX - T-shirt con stampa - deep blue/blu scuro a 18,99 € (13/10/2026)"
+    },
+    {
+     "url": "https://www.boozt.com/no/no/animal-observatory/pupfish-kid-t-shirt-soft-brown-2y_33080291",
+     "title": "PUPFISH KID T-SHIRT RAW WHITE 6y - Kortermede",
+     "displayedUrl": "https://www.boozt.com › pupfish-...",
+     "description": "THE ANIMALS OBSERVATORY Pupfish Kid T-shirt Raw White 6y … kr 399 kr -40% Deal. Materiale: 100% bomull Finvask ved maks."
+    },
+    {
+     "url": "http://m.bebedeshop.cafe24.com/product/list.html?cate_no=60&sort_method=6&page=4",
+     "title": "THE ANIMALS OBSERVATORY - bebede'shop",
+     "displayedUrl": "http://m.bebedeshop.cafe24.com › ...",
+     "description": "THE ANIMALS OBSERVATORY. DRACO KIDS PANTS Yellow. KIDS T-SHIRT Turquoise. Turquoise 품절 KRW 91,000 KRW 9,100. BIG ROOSTER KIDS T-SHIRT Grey. WORLD SHIPPING ..."
+    },
+    {
+     "url": "https://www.boozt.com/nl/nl/animal-observatory/pupfish-kid-t-shirt-soft-brown-2y_33080291",
+     "title": "THE ANIMALS OBSERVATORY Pupfish Kid T-shirt Raw ...",
+     "displayedUrl": "https://www.boozt.com › ... › Tops",
+     "description": "THE ANIMALS OBSERVATORY Pupfish Kid T-shirt Raw White 8y … 21 € 35 € -40% Materiaal: 100% katoen van 110°C Chemisch"
+    },
+    {
+     "url": "https://www.boozt.com/ee/et/animal-observatory/pupfish-kid-t-shirt-brown_33143457",
+     "title": "PUPFISH KID T-SHIRT MEDIUM GREY HEATHER",
+     "displayedUrl": "https://www.boozt.com › ... › Topid",
+     "description": "PUPFISH KID T-SHIRT MEDIUM GREY HEATHER - Lühikeste varrukatega T-särgid. 35 €. Värv:GREY HEATHER. GREY HEATHER BROWN NAVY DUSTY BLUE. Valige suurus (EU).Read more"
+    },
+    {
+     "url": "https://www.zalando.no/the-animals-observatory-pupfish-unisex-t-shirts-med-print-off-white-thv26g02e-a11.html",
+     "title": "T-shirts med print - off-white/offwhite",
+     "displayedUrl": "https://www.zalando.no › the-ani...",
+     "description": "PUPFISH UNISEX - T-shirts med print - off-white. 266,00 krinkl. mva. Normalpris:409,00 kr-35%. Valgt, deep blue. Ikke valgt, off-white.Read more"
+    }
+   ]
+  },
+  {
+   "productId": "S5",
+   "label": "S-C",
+   "source": "SIGNAL",
+   "axis": "+ 국내외 판매처",
+   "alsoFrom": [],
+   "query": "The Animals Observatory Pupfish Kid T-Shirt in 국내외 판매처",
+   "startedAt": "2026-10-27T10:02:19.631Z",
+   "results": [
+    {
+     "url": "https://www.theanimalsobservatory.com/en-us/collections/kids-tops-and-tshirts?srsltid=AYCX9vLqGNTrkXpHgiFmZ1wbq2XUOQdvs06RtQnVftwp5aozc2HRm34Y",
+     "title": "Tops and T-shirts for kids",
+     "displayedUrl": "https://www.theanimalsobservatory.com › Home › KID",
+     "description": "Dusty Blue Pupfish T-shirt. $57.00. Variants. Brown Pupfish T-shirt; Grey Pupfish T-shirt; Navy Pupfish T-shirt. COLLIE COVER. ‹ › Quick add. Horse Collie T- ...Read more"
+    },
+    {
+     "url": "https://www.jeanandhadley.com/product-page/the-animals-observatory-pupfish-kid-t-shirt-navy?srsltid=AYCX9vJ-8FcyndNhuRzcH2AGmqQaQ_cUHa3HCfJVCamFH0FYSZ97QQHh",
+     "title": "The Animals Observatory Pupfish Kid T-shirt (Navy)",
+     "displayedUrl": "https://www.jeanandhadley.com › product-page › the-ani...",
+     "description": "The Animals Observatory Pupfish Kid T-shirt (Navy). $56.00Price. Size*. Select, 2y, 3y, 4y, 6y, 8y, 10y. Quantity*. Add to Cart. Brand - The Animals ...Read more"
+    },
+    {
+     "url": "https://www.junioredition.com/products/pupfish-kid-t-shirt-in-brown-by-the-animals-observatory?srsltid=AYCX9vKgfTAUhhwdlGGB6qdtXuYLOs0H1OXiVwzjprJMisuEGHTDqQd1",
+     "title": "Pupfish Kid T-Shirt in Brown | The Animals Observatory",
+     "displayedUrl": "https://www.junioredition.com › products › pupfish-kid...",
+     "description": "The Animals Observatory Pupfish Kid T-Shirt in Brown, 100% cotton tee with bold logo and minimal back detail. Made in Portugal."
+    },
+    {
+     "url": "https://www.theanimalsobservatory.com/en-us?srsltid=AYCX9vIjQzIR4p6Wl4k4YSJXXXD1uTdjrySLi5LjZtsz4_pAY-6UftUu",
+     "title": "Kids clothes online",
+     "displayedUrl": "https://www.theanimalsobservatory.com › en-us",
+     "description": "Shop online at The Animals Observatory where you can find designer-made artistic kids clothes online. Pupfish T-shirt $57.00. Sold -shirt $57.00"
+    },
+    {
+     "url": "https://www.amie-select.com/items/152512408?srsltid=AYCX9vISep0kA8QthMLc_J0ORIyfJ7wISNS6qGULnqjnHmu33xnRccBX",
+     "title": "the animal observatory / PUPFISH KID T-SHIRT (MGR) 26AW",
+     "displayedUrl": "https://www.amie-select.com › items",
+     "description": "DESCRIPTION //商品名：PUPFISH KID T-SHIRTカラー：MGRサイズ：2y,3y,4y,6y,8y素材：オーガニックコットン100％SIZE//2y : 着丈39cm、身幅34.5cm3y : 着丈41cm、 ..."
+    },
+    {
+     "url": "https://www.booztlet.com/eu/en/animal-observatory/pupfish-kid-t-shirt-soft-brown-2y_33080291",
+     "title": "PUPFISH KID T-SHIRT RAW WHITE 6y - Short-sleeved",
+     "displayedUrl": "https://www.booztlet.com › Kids › Clothing › Tops",
+     "description": "PUPFISH KID T-SHIRT RAW WHITE 6y - Short-sleeved. 3 styles sold recently. 21 €. 35 €. -40%. off. Colour:RAW WHITE. RAW WHITE DEEP BLUE SOFT BROWN.Read more"
+    },
+    {
+     "url": "https://www.goldfish.be/the-animals-observatory?srsltid=AYCX9vKXi0oIWiHJcQppQ4z2QzTIBcXh38Va0eosl0Got7eIpEHoJzy5",
+     "title": "The Animals Observatory | Kids Fashion",
+     "displayedUrl": "https://www.goldfish.be › the-animals-observatory",
+     "description": "Pupfish Kid T-shirt Dusty Blue. €30.00 ; Pupfish Kid T-shirt Medium Grey Heather. €30.00 ; Pupfish Kid T-shirt Navy. €30.00 ; Collie Kid T-shirt Pink. €55.00 ...Read more"
+    },
+    {
+     "url": "https://m.checkanddot.com/product/the-animals-observatory-pupfish-kid-t-shirt-soft-brown-4y-6y-8y-10y-14/17734/",
+     "title": "[The Animals Observatory] PUPFISH KID T-SHIRT SOFT ...",
+     "displayedUrl": "https://m.checkanddot.com › the-a...",
+     "description": "[The Animals Observatory] PUPFISH KID T-SHIRT SOFT … 판매가 68,000원 [품절] 4Y [품절] 6Y [품절] 8Y [품절] 10Y [품절] 12Y [품절] 14Y [품절]"
+    },
+    {
+     "url": "https://babybubble.co.kr/category/the-animals-observatory/94/",
+     "title": "+BRAND - The Animals Observatory",
+     "displayedUrl": "https://babybubble.co.kr › category",
+     "description": "F/W 2024 (). 총250개의 상품. - 정렬방식 -, 신상품, 상품명, 낮은가격, 높은가격, 사용 ... 상품명 : PUPFISH KID T-SHIRT - MEDIUM GREY HEATHER. 단독구매상품. 판매가 ...Read more"
+    },
+    {
+     "url": "https://www.boozt.com/eu/en/animal-observatory/kids/tops/t-shirts",
+     "title": "Animal Observatory t-shirts for kids",
+     "displayedUrl": "https://www.boozt.com › ... › Animal Observatory",
+     "description": "THE ANIMALS OBSERVATORY HOGFISH KID LONG SLEEVE T-SHIRT NAVY - T-shirts - · THE ANIMALS OBSERVATORY PUPFISH KID T-SHIRT MEDIUM GREY HEATHER - T-shirts - · THE ...Read more"
+    }
+   ]
+  },
+  {
+   "productId": "S5",
+   "label": "S-D",
+   "source": "SIGNAL",
+   "axis": "**품번 제외** + 동일상품 판매처",
+   "alsoFrom": [],
+   "query": "The Animals Observatory Pupfish Kid T-Shirt in 동일상품 판매처",
+   "startedAt": "2026-10-27T10:03:43.982Z",
+   "results": [
+    {
+     "url": "https://www.zalando.it/the-animals-observatory-pupfish-unisex-t-shirt-con-stampa-off-white-thv26g02e-a11.html",
+     "title": "THE ANIMALS OBSERVATORY PUPFISH UNISEX - T-shirt ...",
+     "displayedUrl": "https://www.zalando.it › the-anima...",
+     "description": "THE ANIMALS OBSERVATORY PUPFISH UNISEX - T-shirt con stampa - off-white/bianco sporco a 21,09 € (27/09/2026)"
+    },
+    {
+     "url": "https://www.boozt.com/no/no/animal-observatory/pupfish-kid-t-shirt-brown_33143457",
+     "title": "PUPFISH KID T-SHIRT MEDIUM GREY HEATHER",
+     "displayedUrl": "https://www.boozt.com › pupfish-...",
+     "description": "THE ANIMALS OBSERVATORY Pupfish Kid T-shirt Medium Grey Heather. Multipack 1-pack Om produktet Materiale: 100 ved maks. forhandler av THE ANIMALS OBSERVATORY"
+    },
+    {
+     "url": "https://www.boozt.com/dk/da/animal-observatory/pupfish-kid-t-shirt-soft-brown-2y_33080291",
+     "title": "THE ANIMALS OBSERVATORY Pupfish Kid T-shirt Raw ...",
+     "displayedUrl": "https://www.boozt.com › pupfish-...",
+     "description": "THE ANIMALS OBSERVATORY Pupfish Kid T-shirt Raw White 6y … 269 kr -50% Deal Gem. Materiale: 100% bomuld Finvask"
+    },
+    {
+     "url": "https://www.zalando.it/the-animals-observatory-pupfish-unisex-t-shirt-con-stampa-deep-blue-thv26g02e-k11.html?size=38",
+     "title": "THE ANIMALS OBSERVATORY PUPFISH UNISEX - T-shirt ...",
+     "displayedUrl": "https://www.zalando.it › the-anima...",
+     "description": "THE ANIMALS OBSERVATORY PUPFISH UNISEX - T-shirt con stampa - deep blue/blu scuro a 18,99 € (13/10/2026)"
+    },
+    {
+     "url": "https://www.boozt.com/no/no/animal-observatory/pupfish-kid-t-shirt-soft-brown-2y_33080291",
+     "title": "PUPFISH KID T-SHIRT RAW WHITE 6y - Kortermede",
+     "displayedUrl": "https://www.boozt.com › pupfish-...",
+     "description": "THE ANIMALS OBSERVATORY Pupfish Kid T-shirt Raw White 6y … kr 399 kr -40% Deal. Materiale: 100% bomull Finvask ved maks."
+    },
+    {
+     "url": "http://m.bebedeshop.cafe24.com/product/list.html?cate_no=60&sort_method=6&page=4",
+     "title": "THE ANIMALS OBSERVATORY - bebede'shop",
+     "displayedUrl": "http://m.bebedeshop.cafe24.com › ...",
+     "description": "THE ANIMALS OBSERVATORY. DRACO KIDS PANTS Yellow. KIDS T-SHIRT Turquoise. Turquoise 품절 KRW 91,000 KRW 9,100. BIG ROOSTER KIDS T-SHIRT Grey. WORLD SHIPPING ..."
+    },
+    {
+     "url": "https://www.boozt.com/ee/et/animal-observatory/pupfish-kid-t-shirt-brown_33143457",
+     "title": "PUPFISH KID T-SHIRT MEDIUM GREY HEATHER",
+     "displayedUrl": "https://www.boozt.com › ... › Topid",
+     "description": "PUPFISH KID T-SHIRT MEDIUM GREY HEATHER - Lühikeste varrukatega T-särgid. 35 €. Värv:GREY HEATHER. GREY HEATHER BROWN NAVY DUSTY BLUE. Valige suurus (EU).Read more"
+    },
+    {
+     "url": "https://www.boozt.com/nl/nl/animal-observatory/pupfish-kid-t-shirt-soft-brown-2y_33080291",
+     "title": "THE ANIMALS OBSERVATORY Pupfish Kid T-shirt Raw ...",
+     "displayedUrl": "https://www.boozt.com › ... › Tops",
+     "description": "THE ANIMALS OBSERVATORY Pupfish Kid T-shirt Raw White 8y … 21 € 35 € -40% Materiaal: 100% katoen van 110°C Chemisch"
+    },
+    {
+     "url": "https://www.zalando.no/the-animals-observatory-pupfish-unisex-t-shirts-med-print-off-white-thv26g02e-a11.html",
+     "title": "T-shirts med print - off-white/offwhite",
+     "displayedUrl": "https://www.zalando.no › the-ani...",
+     "description": "PUPFISH UNISEX - T-shirts med print - off-white. 266,00 krinkl. mva. Normalpris:409,00 kr-35%. Valgt, deep blue. Ikke valgt, off-white.Read more"
+    }
+   ],
+   "accidentalDuplicateOf": "S-B"
+  },
+  {
+   "productId": "S6",
+   "label": "S-A",
+   "source": "SIGNAL",
+   "axis": "기준선 — BRAND + 상품명 + [품번]",
+   "alsoFrom": [],
+   "query": "Konges Slojd Clothing Jody Teddy Onesie in",
+   "startedAt": "2026-10-27T10:03:43.982Z",
+   "results": [
+    {
+     "url": "https://kongessloejd.com/products/ks105720-jody-teddy-jacket-grs-teddy-fleece-swan",
+     "title": "JODY TEDDY JACKET - swan",
+     "displayedUrl": "https://kongessloejd.com › products › ks105720-jody-t...",
+     "description": "Warm pile fleece jacket with a smooth and soft inside fleece lining. Designed with a high collar and elasticated cuffs, and a full zipper closure in front ..."
+    },
+    {
+     "url": "https://kongessloejd.com/en-us/collections/teddy-jackets",
+     "title": "Kids Fleece Jackets & Teddy Jackets",
+     "displayedUrl": "https://kongessloejd.com › en-us › collections › teddy-j...",
+     "description": "Beautiful kids fleece jackets from recycled polyester. JODY TEDDY ONESIE $122.00. Discover a range of fleece and teddy jackets, designed to keep your child ..."
+    },
+    {
+     "url": "https://mudpie-sf.com/products/jody-teddy-swan-onesie-konges-slojd?srsltid=AYCX9vJz6o0yvGMbast1PspqF5Sz-XFnK4cBtTYTjLFOybwiZVUvQfhW",
+     "title": "Jody Teddy Swan Onesie - Konges Slojd",
+     "displayedUrl": "https://mudpie-sf.com › products › jody-teddy-swan-one...",
+     "description": "Hooded onesie in our soft and comfortable pile fleece material. Designed with a full front zipper closure and warm inside fleece lining."
+    },
+    {
+     "url": "https://shopcrushboutique.com/products/konges-slojd-jody-teddy-onesie-in-green-stripe?srsltid=AYCX9vLhLOlYJXko-UWhWK248czVgR_oIAwOxkjZKIRcFYw6p-QfTGU0",
+     "title": "Konges Slojd Jody Teddy Onesie in Green Stripe",
+     "displayedUrl": "https://shopcrushboutique.com › products › konges-slojd...",
+     "description": "Hooded onesie in our soft and comfortable pile fleece material. Designed with a full front zipper closure and warm inside fleece lining. Ideal as an insulating ...Read more"
+    },
+    {
+     "url": "https://kongessloejd.com/en-us/products/ks106047-jody-teddy-half-zip-grs-teddy-fleece-rainbow-star",
+     "title": "JODY TEDDY HALF ZIP - rainbow star",
+     "displayedUrl": "https://kongessloejd.com › en-us › products › ks10604...",
+     "description": "Warm pile fleece jacket with a smooth and soft inside fleece lining. Designed with a high collar and elasticated cuffs, and a sporty half zip feature in ..."
+    },
+    {
+     "url": "https://kongessloejd.be/products/ks105721-jody-teddy-onesie-grs-teddy-fleece-swan",
+     "title": "JODY TEDDY ONESIE - swan - Konges Sløjd",
+     "displayedUrl": "https://kongessloejd.be › products › ks105721-jody-ted...",
+     "description": "Hooded onesie in our soft and comfortable pile fleece material. Designed with a full front zipper closure and warm inside fleece lining."
+    },
+    {
+     "url": "https://www.mytheresa.com/us/en/kids/konges-slojd-baby-jody-hooded-striped-terry-onesie-beige-p01207505",
+     "title": "Konges Sløjd Baby Jody hooded striped teddy onesie",
+     "displayedUrl": "https://www.mytheresa.com › ... › Clothing › One-pieces",
+     "description": "The Jody onesie is crafted from soft teddy fabric and features ears on the hood and an all-over striped motif. Material: 100% polyester Care instructions: ..."
+    },
+    {
+     "url": "https://kongessloejd.com/en-us/collections/fleece",
+     "title": "Kids Fleece | Fleecewear for Kids & Children",
+     "displayedUrl": "https://kongessloejd.com › en-us › collections › fleece",
+     "description": "Thoughtfully crafted kids fleecewear for little adventurers. S TEDDY & FLEECE. JODY TEDDY ONESIE $122.00 Konges"
+    },
+    {
+     "url": "https://kongessloejd.com/en-us/collections/onesies",
+     "title": "Baby Onesies | Shop Newborn Grows",
+     "displayedUrl": "https://kongessloejd.com › en-us › collections › onesies",
+     "description": "Konges Sløjd A/S TEDDY & FLEECE erba stripe. Quick add. JODY TEDDY ONESIE. $122.00.Read more"
+    }
+   ]
+  },
+  {
+   "productId": "S6",
+   "label": "S-A2",
+   "source": "SIGNAL",
+   "axis": "🔴 CONTROL — 기준선에서 **끊긴 전치사만** 제거(운영 변경 0)",
+   "alsoFrom": [],
+   "query": "Konges Slojd Clothing Jody Teddy Onesie",
+   "startedAt": "2026-10-27T10:03:43.982Z",
+   "results": [
+    {
+     "url": "https://kongessloejd.com/products/ks105720-jody-teddy-jacket-grs-teddy-fleece-swan",
+     "title": "JODY TEDDY JACKET - swan",
+     "displayedUrl": "https://kongessloejd.com › products › ks105720-jody-t...",
+     "description": "Warm pile fleece jacket with a smooth and soft inside fleece lining. Designed with a high collar and elasticated cuffs, and a full zipper closure in front ..."
+    },
+    {
+     "url": "https://mudpie-sf.com/products/jody-teddy-swan-onesie-konges-slojd?srsltid=AYCX9vI2J8QFrdwIs-TRa_OxDoBTcMa1JbGhNTt2szYQFLCo2b33P6_R",
+     "title": "Jody Teddy Swan Onesie - Konges Slojd",
+     "displayedUrl": "https://mudpie-sf.com › products › jody-teddy-swan-one...",
+     "description": "Hooded onesie in our soft and comfortable pile fleece material. Designed front zipper closure and warm inside fleece lining. Regular price $122.00 USD. Hooded  ..."
+    },
+    {
+     "url": "https://kongessloejd.com/en-us/collections/teddy-jackets",
+     "title": "Kids Fleece Jackets & Teddy Jackets",
+     "displayedUrl": "https://kongessloejd.com › en-us › collections › teddy-j...",
+     "description": "Beautiful kids fleece jackets from recycled polyester. onesies tops bottoms. JODY TEDDY ONESIE $122.00 … baby onesies & rompers can provide additional warmth. ..."
+    },
+    {
+     "url": "https://helloarchie.com/en/products/jody-teddy-onesie-swan-konges-slojd",
+     "title": "Jody Teddy onesie Swan | Konges Slojd",
+     "displayedUrl": "https://helloarchie.com › products › jody-teddy-onesie-...",
+     "description": "This teddy onesie made of soft and comfortable fleece features a full-length front zipper and a warm lining on the inside. €84,95 Sizes* 0-1M. Material: 100% ..."
+    },
+    {
+     "url": "https://shopcrushboutique.com/products/konges-slojd-jody-teddy-onesie-in-green-stripe?srsltid=AYCX9vKxudmtqpeeWXdFeZAzLSx2Ctek_kRDWlxlMSYb8Fr9VZOYkj-y",
+     "title": "Konges Slojd Jody Teddy Onesie in Green Stripe",
+     "displayedUrl": "https://shopcrushboutique.com › products › konges-slojd...",
+     "description": "Hooded onesie in our soft and comfortable pile fleece material. Designed with a full front zipper closure and warm inside fleece lining. Ideal as an insulating ...Read more"
+    },
+    {
+     "url": "https://www.mytheresa.com/us/en/kids/konges-slojd-baby-jody-hooded-striped-terry-onesie-beige-p01207505",
+     "title": "Konges Sløjd Baby Jody hooded striped teddy onesie",
+     "displayedUrl": "https://www.mytheresa.com › ... › Clothing › One-pieces",
+     "description": "The Jody onesie is crafted from soft teddy fabric and features ears on the hood and an all-over striped motif. Material: 100% polyester Care instructions: ..."
+    },
+    {
+     "url": "https://kongessloejd.com/en-us/collections/fleece",
+     "title": "Kids Fleece | Fleecewear for Kids & Children",
+     "displayedUrl": "https://kongessloejd.com › en-us › collections › fleece",
+     "description": "Thoughtfully crafted kids fleecewear for little adventurers. S TEDDY & FLEECE. JODY TEDDY ONESIE $122.00 Konges"
+    },
+    {
+     "url": "https://kongessloejd.com/en-us/collections/onesies",
+     "title": "Baby Onesies | Shop Newborn Grows",
+     "displayedUrl": "https://kongessloejd.com › en-us › collections › onesies",
+     "description": "Baby grows &amp; onesies from organic cotton and cashmere. JODY TEDDY ONESIE $122.00 Konges … crafted for newborns and babies, crafted for newborns and babies,"
+    },
+    {
+     "url": "https://kongessloejd.be/products/ks105721-jody-teddy-onesie-grs-teddy-fleece-erba-stripe",
+     "title": "JODY TEDDY ONESIE - erba stripe - Konges Sløjd",
+     "displayedUrl": "https://kongessloejd.be › products › ks105721-jody-ted...",
+     "description": "Hooded onesie in our soft and comfortable pile fleece material. Designed with a full front zipper closure and warm inside fleece lining."
+    },
+    {
+     "url": "https://www.garmentory.com/sale/33166-konges-slojd/kids-onesies/3057985-kids-konges-slojd-jody-teddy-onesie",
+     "title": "KIDS konges slojd Jody Teddy Onesie",
+     "displayedUrl": "https://www.garmentory.com › konges slojd › Onesies",
+     "description": "Hooded onesie in a soft and comfortable pile fleece material. Designed with a full front zipper closure and warm inside fleece lining."
+    }
+   ]
+  },
+  {
+   "productId": "S6",
+   "label": "S-B",
+   "source": "SIGNAL",
+   "axis": "+ 동일상품 판매처",
+   "alsoFrom": [],
+   "query": "Konges Slojd Clothing Jody Teddy Onesie in 동일상품 판매처",
+   "startedAt": "2026-10-27T10:03:43.982Z",
+   "results": [
+    {
+     "url": "https://shoppeballoo.com/products/jody-teddy-onesie-grs-erba-stripe",
+     "title": "Konges Sløjd Jody Teddy Onesie GRS",
+     "displayedUrl": "https://shoppeballoo.com › products › jody-teddy-onesie...",
+     "description": "Hooded onesie in our soft and comfortable pile fleece material. Designed with a full front zipper closure and warm inside fleece lining."
+    },
+    {
+     "url": "https://www.mytheresa.com/mo/en/kids/konges-slojd-baby-jody-hooded-striped-terry-onesie-beige-p01207505",
+     "title": "Konges Sløjd Baby Jody hooded striped teddy onesie",
+     "displayedUrl": "https://www.mytheresa.com › ... › Clothing › One-pieces",
+     "description": "The Jody onesie is crafted from soft teddy fabric and features ears on the hood and an all-over striped motif. Material: 100% polyester Care instructions: ..."
+    },
+    {
+     "url": "https://www.garmentory.com/sale/33166-konges-slojd/kids-onesies/3057985-kids-konges-slojd-jody-teddy-onesie",
+     "title": "KIDS konges slojd Jody Teddy Onesie",
+     "displayedUrl": "https://www.garmentory.com › konges slojd › Onesies",
+     "description": "Hooded onesie in a soft and comfortable pile fleece material. Designed with a full front zipper closure and warm inside fleece lining. $115.00$80.0030% OFF"
+    },
+    {
+     "url": "https://www.mytheresa.com/kr/ko/kids/konges-slojd-baby-jody-hooded-printed-teddy-onesie-pink-p01207497",
+     "title": "핑크 유아 - Jody 후드 프린트 테디 원지 - Konges Slojd",
+     "displayedUrl": "https://www.mytheresa.com › kids",
+     "description": "상품 상세 설명 · 소재: 100% 폴리에스테르 · 관리방법: 물세탁 가능 (30℃) · 제조국: 중국 · 컬러: 핑크 · 디자이너 컬러명: Ma Grande Cerise Blush · 여밈 방식: 앞면 지퍼 ...Read more"
+    },
+    {
+     "url": "https://www.mytheresa.com/kr/ko/kids/konges-slojd-baby-jody-hooded-printed-teddy-onesie-blue-p01207099",
+     "title": "블루 유아 - Jody 후드 프린트 테디 우주복 - Konges Slojd",
+     "displayedUrl": "https://www.mytheresa.com › kids",
+     "description": "소재: 100% 폴리에스테르 · 관리방법: 물세탁 가능 (30℃) · 제조국: 중국 · 컬러: 블루 · 디자이너 컬러명: Swan · 여밈 방식: 앞면 부분 지퍼 · 후드 · 상품 번호: P01207099 ...Read more"
+    },
+    {
+     "url": "https://www.mytheresa.com/hk/en/kids/konges-slojd-baby-jody-hooded-striped-terry-onesie-beige-p01207505",
+     "title": "Konges Sløjd Baby Jody hooded striped teddy onesie",
+     "displayedUrl": "https://www.mytheresa.com › ... › Clothing › One-pieces",
+     "description": "The Jody onesie is crafted from soft teddy fabric and features ears on the hood and an all-over striped motif. Material: 100% polyester Care instructions: ..."
+    },
+    {
+     "url": "https://www.poppystores.com/products/jody-teddy-onesie-1",
+     "title": "jody teddy onesie",
+     "displayedUrl": "https://www.poppystores.com › products › jody-teddy-...",
+     "description": "Konges Slojd jody teddy onesie $130.00 Sale • Save Color stripe stripe Size 18m 6m 12m 18m JACKETS/COATS … save 10% on your first order."
+    },
+    {
+     "url": "https://www.youtube.com/watch?v=dK3yccJePCg",
+     "title": "夜LIVEKonges Sløjd新作紹介 JODY TEDDY ONESIE GRS",
+     "displayedUrl": "260+ views  ·  2 months ago",
+     "description": ""
+    }
+   ]
+  },
+  {
+   "productId": "S6",
+   "label": "S-C",
+   "source": "SIGNAL",
+   "axis": "+ 국내외 판매처",
+   "alsoFrom": [],
+   "query": "Konges Slojd Clothing Jody Teddy Onesie in 국내외 판매처",
+   "startedAt": "2026-10-27T10:05:17.137Z",
+   "results": [
+    {
+     "url": "https://luksusbaby.kr/products/konges-slojd-swan-jody-teddy-onesie-grs",
+     "title": "Konges Sløjd Swan Jody Teddy Onesie Grs",
+     "displayedUrl": "https://luksusbaby.kr › products",
+     "description": "프리미엄 덴마크 직구 키즈샵; 금주 201,042 WON 이하 주문시 관부과세 면제 (배송비 제외 금액); 배송 최소 5일에서 평균 7일 소요; 네이버 페이로 간편하게 결제 ...Read more"
+    },
+    {
+     "url": "https://www.mytheresa.com/kr/ko/kids/konges-slojd-baby-jody-hooded-printed-teddy-onesie-pink-p01207497",
+     "title": "핑크 유아 - Jody 후드 프린트 테디 원지 - Konges Slojd",
+     "displayedUrl": "https://www.mytheresa.com › kids",
+     "description": "상품 상세 설명 · 소재: 100% 폴리에스테르 · 관리방법: 물세탁 가능 (30℃) · 제조국: 중국 · 컬러: 핑크 · 디자이너 컬러명: Ma Grande Cerise Blush · 여밈 방식: 앞면 지퍼 ...Read more"
+    },
+    {
+     "url": "https://kongessloejd.com/en-us/products/ks105721-jody-teddy-onesie-grs-teddy-fleece-ma-grande-cerise-blush",
+     "title": "JODY TEDDY ONESIE - ma grande cerise blush",
+     "displayedUrl": "https://kongessloejd.com › en-us › products › ks10572...",
+     "description": "Hooded onesie in our soft and comfortable pile fleece material. Designed with a full front zipper closure and warm inside fleece lining.Read more"
+    },
+    {
+     "url": "https://kongessloejd.be/products/ks105721-jody-teddy-onesie-grs-teddy-fleece-swan",
+     "title": "JODY TEDDY ONESIE - swan - Konges Sløjd",
+     "displayedUrl": "https://kongessloejd.be › products › ks105721-jody-ted...",
+     "description": "Hooded onesie in our soft and comfortable pile fleece material. Designed with a full front zipper closure and warm inside fleece lining."
+    },
+    {
+     "url": "https://kongessloejd.be/products/jody-teddy-onesie-padded-onesies-amarena-rose",
+     "title": "JODY TEDDY ONESIE - amarena rose – Konges Sløjd®",
+     "displayedUrl": "https://kongessloejd.be › products › jody-teddy-onesie-...",
+     "description": "Hooded onesie in our soft and comfortable pile fleece material. Designed with a full front zipper closure and warm inside fleece lining. Material 100% RECYCLED ..."
+    },
+    {
+     "url": "https://realry.com/ko-kr/products/6a61ca5ccbcd375abe0fcbd4?srsltid=AYCX9vJZMOIzZkOQ8LhMOWEsrRc8lrbf8qdVsQJi7Gton6Cihv7sP0zm",
+     "title": "Konges Slojd 여성 Konges Sløjd Baby Girls Jody Teddy ...",
+     "displayedUrl": "https://realry.com › products",
+     "description": "Konges Slojd 여성 Konges Sløjd Baby Girls Jody Teddy Onesie in Pink 구매하기. 비슷한 제품 가격비교하고 세일중인 제품 확인하기!"
+    },
+    {
+     "url": "https://luksusbaby.kr/products/konges-slojd-mon-grand-citron-jody-teddy-onesie-grs",
+     "title": "Konges Sløjd Mon Grand Citron Jody Teddy Onesie Grs",
+     "displayedUrl": "https://luksusbaby.kr › products",
+     "description": "Konges Sløjd Mon Grand Citron Jody Teddy Onesie Grs. 리뷰 없음. ₩63,000 ₩127,000. 개별가. 구매 불가능. 품절. 50% off. 품절. 50% off. 품절. 50% off. 품절.Read more"
+    },
+    {
+     "url": "https://kongessloejd.com/en-us/collections/onesies",
+     "title": "Baby Onesies | Shop Newborn Grows",
+     "displayedUrl": "https://kongessloejd.com › en-us › collections › onesies",
+     "description": "onesies from organic cotton and cashmere. JODY TEDDY ONESIE $122.00 … crafted for newborns and babies, crafted for newborns and babies,"
+    }
+   ]
+  },
+  {
+   "productId": "S6",
+   "label": "S-D",
+   "source": "SIGNAL",
+   "axis": "**품번 제외** + 동일상품 판매처",
+   "alsoFrom": [],
+   "query": "Konges Slojd Clothing Jody Teddy Onesie in 동일상품 판매처",
+   "startedAt": "2026-10-27T10:05:17.137Z",
+   "results": [
+    {
+     "url": "https://www.poppystores.com/products/jody-teddy-onesie-1",
+     "title": "jody teddy onesie",
+     "displayedUrl": "https://www.poppystores.com › ...",
+     "description": "jody teddy onesie. Konges Slojd. jody teddy onesie. $130.00 Sale • Save. Color stripe."
+    },
+    {
+     "url": "https://littlepalette.gr/en/shop/konges-slojd-nohr-snowsuit-crocodile-antigrafi/",
+     "title": "KONGES SLØJD. Jody teddy onesie - ma grande cerise",
+     "displayedUrl": "https://littlepalette.gr › ... › Shop",
+     "description": "Hooded onesie in our soft and comfortable pile fleece material. Designed with a full front zipper closure and warm inside fleece lining."
+    },
+    {
+     "url": "https://www.mytheresa.com/kr/ko/kids/konges-slojd-baby-jody-hooded-printed-teddy-onesie-blue-p01207099",
+     "title": "블루 유아 - Jody 후드 프린트 테디 우주복 - Konges Slojd",
+     "displayedUrl": "https://www.mytheresa.com › kids",
+     "description": "소재: 100% 폴리에스테르 · 관리방법: 물세탁 가능 (30℃) · 제조국: 중국 · 컬러: 블루 · 디자이너 컬러명: Swan · 여밈 방식: 앞면 부분 지퍼 · 후드 · 상품 번호: P01207099 ..."
+    },
+    {
+     "url": "https://www.nextdirect.com/it/en/style/sv192704/q85209",
+     "title": "Konges Sløjd Brown Jody Teddy Onesie",
+     "displayedUrl": "https://www.nextdirect.com › style",
+     "description": "Hooded onesie in our soft and comfortable pile fleece material. Designed with a full front zipper closure and warm inside fleece lining."
+    },
+    {
+     "url": "https://www.nextdirect.com/th/en/style/sv192704/q85209",
+     "title": "Konges Sløjd Brown Jody Teddy Onesie",
+     "displayedUrl": "https://www.nextdirect.com › style",
+     "description": "Hooded onesie in our soft and comfortable pile fleece material. Designed with a full front zipper closure and warm inside fleece lining. Ideal as an insulating ..."
+    },
+    {
+     "url": "https://www.nextdirect.com/lb/en/style/sv192704/q85209",
+     "title": "Konges Sløjd Brown Jody Teddy Onesie",
+     "displayedUrl": "https://www.nextdirect.com › style",
+     "description": "Hooded onesie in our soft and comfortable pile fleece material. Designed with a full front zipper closure and warm inside fleece lining. Ideal as an insulating ..."
+    },
+    {
+     "url": "https://www.youtube.com/watch?v=dK3yccJePCg",
+     "title": "夜LIVEKonges Sløjd新作紹介 JODY TEDDY ONESIE GRS",
+     "displayedUrl": "Sett ca. 260 ganger  ·  for 2 måneder siden",
+     "description": ""
+    },
+    {
+     "url": "https://www.babyshop.com/en-ro/p/ma-grande-cerise-blush-9m/KS-KS105721-P00050",
+     "title": "https://www.babyshop.com/en-ro/p/ma-grande-cerise-...",
+     "displayedUrl": "https://www.babyshop.com › en-ro",
+     "description": ""
+    },
+    {
+     "url": "https://shoppeballoo.com/products/jody-teddy-onesie-grs-ma-grande-cerise-blush",
+     "title": "Konges Sløjd Jody Teddy Onesie GRS",
+     "displayedUrl": "https://shoppeballoo.com › jody-t...",
+     "description": "Hooded onesie in our soft and comfortable pile fleece material. Designed with a full front zipper closure and warm inside fleece lining."
+    }
+   ],
+   "accidentalDuplicateOf": "S-B"
   }
  ],
- "recheckNote": "🔴 1차에서 결과 0 으로 기록된 질의 5개를 한 번 더 돌린 관측이다(recheckOrganicCount). 2건이 0 으로 재현되지 않았다 ⟹ 「0건」을 「그 Query 는 결과가 없다」로 읽지 않는다. 🔴 1차 결과는 덮어쓰지 않았다."
+ "recheckNote": "🔴 1차에서 결과 0 으로 기록된 질의 5개를 한 번 더 돌린 관측이다(recheckOrganicCount). 2건이 0 으로 재현되지 않았다 ⟹ 「0건」을 「그 Query 는 결과가 없다」로 읽지 않는다. 🔴 1차 결과는 덮어쓰지 않았다.",
+ "duplicateNote": "🔴 S5·S6 의 S-D 는 품번이 없어 S-B 와 질의 문자열이 같은데, 하니스의 dedupe 맵이 루프 중 갱신되지 않아 **두 번 검색**됐다($0.009 낭비). 🟢 숨기지 않고 accidentalDuplicateOf 로 표시했고, 그 덕에 **같은 질의의 실행 간 변동** 이 측정됐다 — S5 는 9/9 동일, S6 는 **8↔9 중 3건만 겹쳤다**."
 }

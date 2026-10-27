@@ -730,6 +730,235 @@ describe.skipIf(!PURPOSE_LIVE)("SEARCH-PROVIDER-08 §목적 문구 — 실제 �
   );
 });
 
+/* ───────────── §9 SPRINT-09 — **짧은 판매처 Signal** + 품번 없는 상품 ───────────── */
+
+/**
+ * 🔵🔵🔵 CPO 판정(2026-10-27) — 목적 자연어는 **NO-GO**, 그러나 `"{MODEL_CODE}"` 단독도
+ *    **NO-GO** 다(품번 없는 상품에서 Search 가 **0** 이 된다). 기본 골격은 아래로 잠겼다:
+ * ```
+ * BRAND + PRODUCT_NAME + [MODEL_CODE 있으면]      ← 🔴 품번은 **optional**
+ * ```
+ * 이번에 찾는 것은 그 뒤에 붙일 **짧은 판매처/시장 Signal** 하나다.
+ *
+ * 🔴 **구현이 아니다 · PoC 다** — 운영 Query 를 **수정하지 않는다**(CPO 명시).
+ */
+const SIGNAL_SAME_SELLER = "동일상품 판매처";
+const SIGNAL_KR_OS_SELLER = "국내외 판매처";
+
+/**
+ * 🔴🔴 **품번이 «구조적으로» 없는 실제 상품을 넣는다**(CPO 필수 조건).
+ *
+ * 🟢 운영 DB 실측으로 골랐다 — 그 브랜드는 스냅샷 **전건** 에 `sku` 가 비어 있다
+ *    (The Animals Observatory 18/18 · Konges Slojd 12/12).
+ * 🔴 **`brand = "AW26"` 인 Bobo 스냅샷을 쓰지 않았다** — 그것들은 URL 에 품번이 있는데
+ *    추출만 실패한 것이라 「품번 없는 상품」과 **다른 조건** 이다(섞으면 원인이 뭉개진다).
+ */
+const PRODUCTS_NO_CODE: { id: string; identity: ProductIdentity }[] = [
+  {
+    id: "S5",
+    identity: baseIdentity({
+      brand: "The Animals Observatory",
+      productName: "Pupfish Kid T-Shirt in Grey Heather by The Animals Observatory",
+      color: "Medium Grey Heather",
+      productCode: null,
+    }),
+  },
+  {
+    id: "S6",
+    identity: baseIdentity({
+      brand: "Konges Slojd Clothing",
+      productName: "Jody Teddy Onesie in Erba Stripe by Konges Sløjd",
+      color: "Erba Stripe",
+      productCode: null,
+    }),
+  },
+];
+
+const SP09_PRODUCTS = [...PRODUCTS, ...PRODUCTS_NO_CODE];
+
+/**
+ * 🔴🔴 **측정 전에 발견한 교란 하나 — 질의 꼬리에 전치사가 남는다.**
+ *
+ * 운영 Planner 의 코어 토큰은 `tokens.slice(0, 4)` 라서 품번 없는 상품에서
+ * `The Animals Observatory Pupfish Kid T-Shirt **in**` 처럼 **끊긴 구** 가 된다
+ * (「Pupfish Kid T-Shirt in Grey Heather by …」의 앞 4토큰).
+ *
+ * 🔴 **운영 Planner 를 고치지 않는다**(CPO: 운영 Query 수정 금지). 대신 그 꼬리를
+ *    턴 판(`S-A2`)을 **대조군으로만** 둔다 — 그래야 결과가 나빠졌을 때
+ *    ⒜「품번이 없어서」인지 ⒝「질의가 끊겨서」인지 **가를 수 있다**.
+ * 🔴 이 목록은 **대조군 전용** 이고 운영 denylist 가 아니다.
+ */
+const TRAILING_STOPWORDS = new Set(["in", "with", "by", "for", "and", "of", "the", "a"]);
+function trimTrailingStopword(text: string): string {
+  const parts = text.trim().split(/\s+/);
+  while (parts.length > 1 && TRAILING_STOPWORDS.has(parts[parts.length - 1]!.toLowerCase())) parts.pop();
+  return parts.join(" ");
+}
+
+const SIGNAL_QUERIES: { label: string; axis: string; build: (id: ProductIdentity) => string }[] = [
+  { label: "S-A", axis: "기준선 — BRAND + 상품명 + [품번]", build: (id) => buildIntentQuery(id, "") },
+  {
+    label: "S-A2",
+    axis: "🔴 CONTROL — 기준선에서 **끊긴 전치사만** 제거(운영 변경 0)",
+    build: (id) => trimTrailingStopword(buildIntentQuery(id, "")),
+  },
+  { label: "S-B", axis: `+ ${SIGNAL_SAME_SELLER}`, build: (id) => `${buildIntentQuery(id, "")} ${SIGNAL_SAME_SELLER}` },
+  { label: "S-C", axis: `+ ${SIGNAL_KR_OS_SELLER}`, build: (id) => `${buildIntentQuery(id, "")} ${SIGNAL_KR_OS_SELLER}` },
+  {
+    label: "S-D",
+    axis: `**품번 제외** + ${SIGNAL_SAME_SELLER}`,
+    build: (id) => `${buildIntentQuery({ ...id, productCode: null }, "")} ${SIGNAL_SAME_SELLER}`,
+  },
+];
+
+describe("SEARCH-PROVIDER-09 §Signal — 질의 생성(순수 · 네트워크 0)", () => {
+  it("🔴 품번 없는 상품이 **실제로** 포함돼 있다 — 그리고 질의가 만들어진다", () => {
+    expect(PRODUCTS_NO_CODE.length).toBeGreaterThanOrEqual(1);
+    for (const p of PRODUCTS_NO_CODE) {
+      expect(p.identity.productCode, p.id).toBeNull();
+      for (const q of SIGNAL_QUERIES) {
+        const text = q.build(p.identity);
+        /** 🔴🔴 **「품번이 없으면 Search 0」이 되지 않는다** — 그것이 이 조건의 핵심이다. */
+        expect(text.trim().length, `${p.id} ${q.label}`).toBeGreaterThan(0);
+        expect(text, `${p.id} ${q.label}`).toContain(p.identity.brand!);
+      }
+    }
+  });
+
+  it("🔴 S-D 는 **품번을 쓰지 않는다**(품번 있는 상품에서도)", () => {
+    for (const p of PRODUCTS) {
+      expect(SIGNAL_QUERIES[4]!.build(p.identity), p.id).not.toContain(p.identity.productCode!);
+    }
+  });
+
+  it("🟢 S-A 는 기준선과 같은 문자열이다(재검색하지 않기 위해)", () => {
+    for (const p of SP09_PRODUCTS) {
+      expect(SIGNAL_QUERIES[0]!.build(p.identity)).toBe(buildIntentQuery(p.identity, ""));
+    }
+  });
+
+  it("질의 전수를 출력한다", () => {
+    for (const p of SP09_PRODUCTS) {
+      for (const q of SIGNAL_QUERIES) console.log(`   ${pad(p.id, 4)} ${pad(q.label, 5)} ${q.build(p.identity)}`);
+    }
+    expect(SP09_PRODUCTS).toHaveLength(6);
+  });
+});
+
+const SIGNAL_LIVE = process.env.CORE_SP09_LIVE === "1";
+
+describe.skipIf(!SIGNAL_LIVE)("SEARCH-PROVIDER-09 §Signal — 실제 검색(라이브)", () => {
+  it(
+    "상품 6(품번 있음 4 · **없음 2**) × 질의 4 — 같은 질의는 재검색하지 않는다",
+    async () => {
+      const token = process.env.APIFY_API_TOKEN?.trim();
+      expect(token, "APIFY_API_TOKEN 이 없다").toBeTruthy();
+      const fsmod = await import("node:fs");
+      const file = JSON.parse(fsmod.readFileSync(OUT, "utf8")) as {
+        origins: Record<string, unknown>;
+        runs: {
+          productId: string;
+          label: string;
+          source: string;
+          axis: string;
+          alsoFrom: string[];
+          query: string;
+          startedAt: string;
+          results: unknown[];
+        }[];
+      };
+      /** 🟢 새 상품 둘의 원상품 정보를 fixture 에 적는다(화면이 비교 대상을 보여줘야 한다). */
+      for (const p of PRODUCTS_NO_CODE) {
+        file.origins[p.id] = {
+          brand: p.identity.brand,
+          code: p.identity.productCode,
+          name: p.identity.productName,
+          color: p.identity.color,
+        };
+      }
+      const byKey = new Map(file.runs.map((r) => [`${r.productId} ${r.query}`, r]));
+      const flush = () => fsmod.writeFileSync(OUT, `${JSON.stringify(file, null, 1)}\n`);
+
+      const pending: { p: (typeof SP09_PRODUCTS)[number]; q: (typeof SIGNAL_QUERIES)[number]; text: string }[] = [];
+      for (const p of SP09_PRODUCTS) {
+        for (const q of SIGNAL_QUERIES) {
+          const text = q.build(p.identity);
+          if (file.runs.some((r) => r.productId === p.id && r.label === q.label)) continue;
+          const hit = byKey.get(`${p.id} ${text}`);
+          if (hit) {
+            const copy = { ...hit, label: q.label, source: "SIGNAL", axis: q.axis, alsoFrom: [hit.label] };
+            file.runs.push(copy);
+            /**
+             * 🔴🔴 **같은 루프 안에서 추가된 것도 dedupe 대상이다.** 1차 구현이 이 줄을
+             *    빠뜨려, 품번 없는 상품에서 `S-D`(품번이 없으니 `S-B` 와 **문자열이 같다**)를
+             *    **두 번 검색** 했다($0.009 낭비 · 계약이 잡았다).
+             * 🟢 그 사고가 뜻밖의 증거를 줬다 — 같은 질의를 몇 분 뒤 다시 돌렸더니
+             *    S6 는 **8↔9건 중 3건만 겹쳤다**(실행 간 변동이 크다).
+             */
+            byKey.set(`${p.id} ${text}`, copy);
+            console.log(`  ${pad(p.id, 4)} ${pad(q.label, 5)} 🟢 기존 ${hit.label} 와 같은 질의 — 재검색 0`);
+            continue;
+          }
+          pending.push({ p, q, text });
+        }
+      }
+      flush();
+      console.log(`  남은 검색 ${pending.length}회 · 예상 $${(pending.length * USD_PER_SEARCH_PAGE).toFixed(3)}`);
+
+      const runOne = async (x: (typeof pending)[number]) => {
+        const startedAt = new Date().toISOString();
+        try {
+          const res = await fetch(
+            `https://api.apify.com/v2/acts/${ACTOR}/run-sync-get-dataset-items?token=${encodeURIComponent(token!)}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                queries: x.text,
+                maxPagesPerQuery: 1,
+                resultsPerPage: 20,
+                saveHtml: false,
+                saveHtmlToKeyValueStore: false,
+              }),
+            },
+          );
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const items = (await res.json()) as SearchItem[];
+          const results = (items[0]?.organicResults ?? [])
+            .filter((o): o is { url: string } & typeof o => Boolean(o.url))
+            .map((o) => ({ url: o.url, title: o.title, displayedUrl: o.displayedUrl, description: o.description }));
+          return {
+            productId: x.p.id,
+            label: x.q.label,
+            source: "SIGNAL",
+            axis: x.q.axis,
+            alsoFrom: [],
+            query: x.text,
+            startedAt,
+            results,
+          };
+        } catch (err) {
+          console.log(`  🔴 ${x.p.id} ${x.q.label} 실패(기록하지 않는다) — ${String(err).slice(0, 90)}`);
+          return null;
+        }
+      };
+
+      for (let i = 0; i < pending.length; i += 4) {
+        const got = await Promise.all(pending.slice(i, i + 4).map(runOne));
+        for (const r of got) {
+          if (!r) continue;
+          file.runs.push(r);
+          console.log(`  ${pad(r.productId, 4)} ${pad(r.label, 5)} 결과 ${padL(String(r.results.length), 2)}  ${r.query}`);
+        }
+        flush();
+      }
+      flush();
+      expect(file.runs.length).toBeGreaterThan(96);
+    },
+    3 * 60 * 60_000,
+  );
+});
+
 /* ───────────── §4-b 「결과 0」이 진짜 0 인지 재확인 ───────────── */
 
 const RECHECK = process.env.CORE_SP05_RECHECK === "1";
@@ -800,7 +1029,7 @@ describe.skipIf(!CRAWL)("SEARCH-PROVIDER-05 §8 — Query 버킷별 Crawl · Evi
       };
 
       console.log(
-        `\n${pad("상품", 5)}${pad("Query", 20)}${padL("결과", 5)}${padL("상품URL", 8)}${padL("판매처", 7)}${padL("Crawl", 7)}${padL("Evid", 6)}${padL("품번", 6)}${padL("Evid판매처", 8)}`,
+        `\n${pad("상품", 5)}${pad("Query", 20)}${padL("결과", 5)}${padL("상품URL", 8)}${padL("판매처", 7)}${padL("Crawl", 7)}${padL("Evid", 6)}${padL("품번", 6)}${padL("Evid판매처", 8)}${padL("🇰🇷Evid", 9)}`,
       );
       /**
        * 🟢 **같은 URL 을 두 번 crawl 하지 않는다** — Query 가 겹치므로 캐시가 없으면
@@ -853,6 +1082,13 @@ describe.skipIf(!CRAWL)("SEARCH-PROVIDER-05 §8 — Query 버킷별 Crawl · Evi
          *    로케일 중복이 숫자를 부풀린다.
          */
         const evidenceSellers = new Set<string>();
+        /**
+         * 🔴🔴 **CPO 기준의 실제 분자** — 「국내 판매처인데 **Evidence 까지 살아남은** 수」.
+         *    전체 Evidence 판매처만 보면 「국내가 늘었다」와 「국내가 **쓸모 있게** 늘었다」를
+         *    구별할 수 없다. 🔴 KR 판별은 **`.kr` TLD 하나** 로만 한다(등록부는 시장 증거가
+         *    아니라는 WU-019R 결론 때문에 여기서 섞지 않는다 · 보수적으로 **과소** 추정).
+         */
+        const krEvidenceSellers = new Set<string>();
         for (const url of productUrls) {
           const v = await probe(url);
           if (!v.ok) continue;
@@ -860,12 +1096,13 @@ describe.skipIf(!CRAWL)("SEARCH-PROVIDER-05 §8 — Query 버킷별 Crawl · Evi
           if (v.evidence) {
             evidence += 1;
             evidenceSellers.add(hostOf(url));
+            if (hostOf(url).endsWith(".kr")) krEvidenceSellers.add(hostOf(url));
           }
           if (code && v.code.includes(code)) codeMatch += 1;
         }
         out[`${run.productId}/${run.label}`] = { crawlOk, evidence, codeMatch };
         console.log(
-          `${pad(run.productId, 5)}${pad(run.label, 20)}${padL(String(run.results.length), 5)}${padL(String(productUrls.length), 8)}${padL(String(sellers.size), 7)}${padL(String(crawlOk), 7)}${padL(String(evidence), 6)}${padL(String(codeMatch), 6)}${padL(String(evidenceSellers.size), 8)}`,
+          `${pad(run.productId, 5)}${pad(run.label, 20)}${padL(String(run.results.length), 5)}${padL(String(productUrls.length), 8)}${padL(String(sellers.size), 7)}${padL(String(crawlOk), 7)}${padL(String(evidence), 6)}${padL(String(codeMatch), 6)}${padL(String(evidenceSellers.size), 8)}${padL(String(krEvidenceSellers.size), 9)}`,
         );
       }
       expect(Object.keys(out).length).toBeGreaterThan(0);

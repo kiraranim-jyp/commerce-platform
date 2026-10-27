@@ -25,9 +25,10 @@ CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SEARCH-PROVIDER-05**(Q1~Q8 + Planner 8축 전수 64회 · 526 URL · 운영 배선 0) ·
              **SEARCH-PROVIDER-06**(목적형 I-1~I-3 · 🔴 상품명 영어 Query 는 국내 0 · 품번 축만 섞인다) ·
              **SEARCH-PROVIDER-07**(🟢 단일 Query 운영 배선 · 1 Product = 1 Search · MI 미연결) ·
-             **SEARCH-PROVIDER-08**(목적 문구 PoC · 🔴 효과는 「목적」이 아니라 「한국어」 · 구현 0)
+             **SEARCH-PROVIDER-08**(목적 문구 PoC · 🔴 효과는 「목적」이 아니라 「한국어」 · 구현 0) ·
+             **SEARCH-PROVIDER-09**(판매처 Signal PoC · 🟢 품번 없어도 Search 0 아님 · 구현 0)
 Git          clean · origin/main 0/0 · Production / 200
-회귀         **711 files / 9,516 passed / 0 failed / 153 skipped** · typecheck 0 · build 0
+회귀         **711 files / 9,523 passed / 0 failed / 153 skipped** · typecheck 0 · build 0
 ```
 
 🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **CPO 판정** 이다 — matcher 를 CTO 가 열지 않는다.

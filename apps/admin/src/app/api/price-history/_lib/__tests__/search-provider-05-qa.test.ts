@@ -31,9 +31,13 @@ const RAW = JSON.parse(readFileSync(join(FIXTURES, "search-provider-05-raw.json"
 const APP = join(__dirname, "../../../../../");
 
 describe("SEARCH-PROVIDER-05 QA §fixture — 저장된 원본이 그대로 있다", () => {
-  it("상품 4개 · 질의가 상품마다 여럿 · 같은 (상품, 질의) 가 중복되지 않는다", () => {
+  it("상품 6개(품번 4 + **품번 없음 2**) · 같은 (상품, 질의) 가 중복 검색되지 않는다", () => {
     const views = buildRunViews(RAW);
-    expect(new Set(views.map((v) => v.productId)).size).toBe(4);
+    /**
+     * 🔴 SPRINT-09 — 표본이 **6** 이 됐다(S5·S6 는 품번이 구조적으로 없는 실제 상품).
+     * 🟢 숫자 대신 **id 집합** 을 단언해 강화한다 — 엉뚱한 상품으로 바꿔치기할 수 없다.
+     */
+    expect([...new Set(views.map((v) => v.productId))].sort()).toEqual(["S1", "S2", "S3", "S4", "S5", "S6"]);
     expect(views.length).toBeGreaterThan(40);
     /**
      * 🔴🔴 **같은 질의를 두 번 «검색» 하지 않았다** 를 단언한다.
@@ -42,20 +46,42 @@ describe("SEARCH-PROVIDER-05 QA §fixture — 저장된 원본이 그대로 있�
      * 🟢 그래서 「행이 유일하다」가 아니라 **「중복 행은 반드시 복사본이다」** 로 잠근다
      *    — 이쪽이 더 강하다(진짜 재검색이 들어오면 `startedAt` 이 달라 FAIL 한다).
      */
-    const raw = RAW as unknown as { runs: { productId: string; query: string; startedAt: string; alsoFrom?: string[] }[] };
+    const raw = RAW as unknown as {
+      runs: {
+        productId: string;
+        query: string;
+        startedAt: string;
+        alsoFrom?: string[];
+        accidentalDuplicateOf?: string;
+      }[];
+    };
     const byKey = new Map<string, typeof raw.runs>();
     for (const r of raw.runs) {
       const k = `${r.productId} ${r.query}`;
       byKey.set(k, [...(byKey.get(k) ?? []), r]);
     }
+    /**
+     * 🔴🔴 **알려진 사고를 숫자로 못박는다.** SPRINT-09 에서 하니스의 dedupe 맵이 루프 중
+     *    갱신되지 않아 품번 없는 상품의 `S-D`(= `S-B` 와 같은 문자열)를 **두 번 검색** 했다.
+     * 🟢 숨기지 않고 `accidentalDuplicateOf` 로 표시했고, **정확히 2건** 으로 잠근다 —
+     *    새 중복 검색이 하나라도 생기면 이 계약이 **FAIL** 한다.
+     */
+    let accidental = 0;
     for (const [k, group] of byKey) {
       if (group.length === 1) continue;
       const stamps = new Set(group.map((g) => g.startedAt));
-      expect(stamps.size, `${k} — 같은 질의를 실제로 두 번 검색했다(과금 중복)`).toBe(1);
-      expect(group.filter((g) => (g.alsoFrom?.length ?? 0) > 0).length, `${k} — 복사본에 출처가 없다`).toBe(
-        group.length - 1,
-      );
+      if (stamps.size === 1) {
+        expect(group.filter((g) => (g.alsoFrom?.length ?? 0) > 0).length, `${k} — 복사본에 출처가 없다`).toBe(
+          group.length - 1,
+        );
+        continue;
+      }
+      /** 🔴 실제로 두 번 검색된 것은 **표시돼 있어야** 한다. */
+      const marked = group.filter((g) => Boolean(g.accidentalDuplicateOf));
+      expect(marked.length, `${k} — 같은 질의를 두 번 검색했는데 표시가 없다(과금 중복)`).toBe(group.length - 1);
+      accidental += marked.length;
     }
+    expect(accidental, "중복 검색이 늘었다 — 2건(알려진 사고)을 넘으면 안 된다").toBe(2);
   });
 
   it("🔴 세 출처가 **같은 표** 에 있다 — 운영 열거기 · 운영 Planner · 하니스 라벨", () => {
@@ -163,6 +189,41 @@ describe("SEARCH-PROVIDER-05 QA §fixture — 저장된 원본이 그대로 있�
       const code = RAW.origins[v.productId]!.code!;
       expect(v.query.toUpperCase(), v.query).not.toContain(code.toUpperCase());
     }
+  });
+
+  it("🔵🔵 SPRINT-09 — **품번 없는 실제 상품** 이 표본에 있고 질의가 만들어졌다", () => {
+    const views = buildRunViews(RAW);
+    const noCode = ["S5", "S6"];
+    for (const pid of noCode) {
+      expect(RAW.origins[pid], `${pid} 원상품 정보가 없다`).toBeTruthy();
+      /** 🔴 **진짜 품번이 없어야** 이 조건이 성립한다(추출 실패 상품을 쓰면 안 된다). */
+      expect(RAW.origins[pid]!.code, `${pid} 에 품번이 있다`).toBeFalsy();
+      const mine = views.filter((v) => v.productId === pid && v.source === "SIGNAL");
+      expect(mine.length, pid).toBeGreaterThanOrEqual(5);
+      /** 🔴🔴 **「품번이 없으면 Search 0」이 아니다** — 그것이 CPO 의 핵심 조건이다. */
+      for (const v of mine) {
+        expect(v.query.trim().length, `${pid} ${v.label}`).toBeGreaterThan(0);
+        expect(v.results.length, `${pid} ${v.label} 결과 0`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("🔴 S-D 는 **품번을 쓰지 않는다**(품번 있는 상품에서도)", () => {
+    for (const v of buildRunViews(RAW).filter((x) => x.label === "S-D")) {
+      const code = RAW.origins[v.productId]?.code;
+      if (code) expect(v.query.toUpperCase(), v.query).not.toContain(code.toUpperCase());
+    }
+  });
+
+  it("🔴 CONTROL S-A2 는 **끊긴 전치사로 끝나지 않는다** — 질의 꼬리 결함과 품번 부재를 가른다", () => {
+    for (const v of buildRunViews(RAW).filter((x) => x.label === "S-A2")) {
+      expect(/\s(in|with|by|for|and|of|the|a)$/i.test(v.query), v.query).toBe(false);
+    }
+    /** 🟢 그리고 기준선 S-A 에는 실제로 그 꼬리가 **있었다**(그래서 대조군이 필요했다). */
+    const tailed = buildRunViews(RAW).filter(
+      (x) => x.label === "S-A" && /\s(in|with|by|for|and|of)$/i.test(x.query),
+    );
+    expect(tailed.length, "꼬리 결함이 하나도 없으면 이 CONTROL 은 의미가 없다").toBeGreaterThan(0);
   });
 
   it("🟢 Query 간 겹침을 **관측** 으로 적는다(같은 URL 이 다른 Query 에도 나온다)", () => {
