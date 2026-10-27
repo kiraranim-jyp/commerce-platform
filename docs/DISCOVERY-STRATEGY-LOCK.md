@@ -1244,3 +1244,68 @@ ENTRY_TEXT                                            1
 🔴 그리고 그 4건이 **동일상품인지는 판정하지 않았다**(MI LOCK · 브랜드 일치는 관측일 뿐)
 ```
 🔴 **CTO 는 GO/NO-GO 를 고르지 않았다** — 운영 활성화는 CPO 결정이다.
+
+---
+
+## 🔵🔵🔵 `DISCOVERY E2E` — **AI Search → 기존 동일상품 판단** (2026-10-27 · 대표 상품 1개)
+
+🔴 운영 코드 변경 **0** · Query 0 · Identity 0 · threshold 0 · Evidence 로직 0 · MI 0 ·
+1-hop 0 · Registry 0 · retry/fallback 0 · **AI 가 SAME 을 판단하는 구조 0**.
+🟢 판단은 **전부 기존 엔진** 이 했고 이 문서는 그 산출을 **그대로** 옮긴다.
+
+### 1 Search — 운영 생산자 그대로
+
+```
+원상품   S2 · Bobo Choses · B226AC009 · Hug Hairy Monster T-Shirt
+query   "B226AC009"      실행 **1회**      결과 **9건**
+skipped null · failed false      ⟹ 🟢 「못 물어봤다」가 아니다
+```
+
+### 2~3 Crawl / Evidence
+
+```
+상품상세 7 / 9 · 후보 성립 **3** · fetch 9
+Evidence 3/3 — BRAND 3 · PRODUCT_NAME 3 · MODEL_CODE 3   🟢 **후보가 되면 셋 다 있다**
+```
+
+### 4 기존 동일상품 판단 — **그대로**
+
+```
+SAME 0 · PRESUMED_SAME **3** · SIMILAR 0 · DIFFERENT 0 · CONFLICT 0 · UNKNOWN 0
+```
+
+### 5 실제 URL (CEO 가 직접 열어 볼 자리)
+
+| 판매처 | 기존 엔진 | 사람(GT) | URL |
+|---|---|---|---|
+| 11st.co.kr | PRESUMED_SAME | **없음** | `https://www.11st.co.kr/products/9589851221` |
+| m.danawa.com | PRESUMED_SAME | **없음** | `https://m.danawa.com/product/product.html?code=123688298` |
+| answear.com | PRESUMED_SAME | **없음** | `https://answear.com/p/bobo-choses-longsleeve-dzieciecy-bawelniany-hug-…` |
+
+🔴🔴 **사람 라벨이 0/3 이다** — 이번 검색이 가져온 URL 은 **과거 GT 에 없던 새 URL** 이다.
+⟹ 「실제 동일상품 여부」는 **측정불가** 이고 **CEO 육안 3건** 으로만 닫힌다(0 이 아니다).
+🔴 CTO 는 **동일상품이라 판정하지 않았다**.
+
+### 6 화면이 읽는 칸 — 샵 대표 3건
+
+```
+11st.co.kr     tier COMPARISON  market **KR**        truth TEXT_CONFIRMED
+m.danawa.com   tier COMPARISON  market UNKNOWN       truth TEXT_CONFIRMED
+answear.com    tier COMPARISON  market **OVERSEAS**  truth TEXT_CONFIRMED
+🇰🇷 1 · 🌎 1 · ❔ 1
+```
+🟢 셋 다 `tier` 가 있다 ⟹ **가격 비교 축에 들어간다**(국내 1 · 해외 1).
+🔴 **실제 따져 화면은 CTO 가 볼 수 없다**(로그인 뒤) — 위는 **화면이 읽는 칸** 이다.
+🟢 화면까지의 배선은 SP-07 이 깔았고 계약이 잠근다(`webSearchEvidence` → `transientEvidence` →
+   `computeMarketIntelligence`). ⟹ **셀러는 버튼을 누르지 않는다**(「지금 확인/다시 분석」 경로에서 자동).
+
+### 🔴 STOP — 범위를 벗어나는 것을 발견했고 **고치지 않았다**
+
+```
+**확정 SAME 이 0** 이고 셋 다 `PRESUMED_SAME` 이다. 이 트랙이 이미 원인을 적어 뒀다 —
+`crossSellerReserved`(match-truth.ts:233·237)가 `PRESUMED_SAME` 에서 식별자 경로를 막는다(WU-059/133).
+🔴 그 축은 **CPO 가 닫아 둔 자리** 이고 이번 범위 밖이다 ⟹ **STOP · 보고만 한다**.
+🟢 단 **가격 비교에는 들어간다**(tier COMPARISON) — 「아무것도 안 나온다」가 아니다.
+```
+
+**🔵 판정 — `PASS`(흐름은 끝까지 작동한다). 🟡 남은 것은 CEO 육안 3건 하나다.**
