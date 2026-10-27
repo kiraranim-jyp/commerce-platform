@@ -121,6 +121,17 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
    */
   scanned.push("core-desc-review-ceo-gt.json");
 
+  /**
+   * 🔵 DISCOVERY-SEARCH-PROVIDER-04(2026-10-27) — **Apify 검색 raw 결과 8 run**.
+   *
+   * 🔴 이 fixture 는 **human GT 가 아니다** — Apify 가 돌려준 **검색 결과 URL 원본** 이고
+   *    SAME/DIFFERENT 라벨이 **한 건도 없다** ⟹ 🔴 **라벨 분포 분모에 들어갈 수 없다**.
+   * 🟢 그래도 `scanned` 에 등록한다 — 빼면 「전수」가 **거짓** 이 된다(바로 위 선례와 같다).
+   *    🟢 실제로 이 계약이 **FAIL 로 잡아냈고** 그것이 가드가 살아 있다는 증거다.
+   * 🟢 이 파일의 소유자는 `search-provider-04-qa.test.ts`(QA 육안 비교 화면)다.
+   */
+  scanned.push("search-provider-04-raw.json");
+
   /* 행 단위 originCode + verdict 계열 */
   for (const [file, src, codeKey, verdictKey] of [
     ["wu-112-human-gt.json", "wu-112", "originCode", "verdict"],
