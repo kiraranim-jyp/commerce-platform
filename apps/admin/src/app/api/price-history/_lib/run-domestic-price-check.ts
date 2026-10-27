@@ -47,6 +47,8 @@ import { collectUrlCandidatePool, type UrlCandidatePoolMetrics } from "./url-can
  *    그래서 그 후보들이 MI 와 해외 금액 집계에 **한 번도 들어가지 못했다.**
  */
 import { collectOverseasAutoPool, type OverseasAutoPoolMetrics } from "./overseas-auto-pool";
+/** 🟢 SEARCH-PROVIDER-07 — **검색만** 한다(URL 만 돌려준다). 후보 생성은 기존 pool 이 한다. */
+import { collectWebSearchUrls, type WebSearchPoolMetrics } from "./web-search-pool";
 /**
  * 🔴🔴 CORE-2R-4 STEP 2 — **다섯 번째 일시 후보 생산자.** 등록부 검색이 `unsupported`
  *    로 끝난 국내 판매처의 **목록/브랜드 페이지** 를 1-hop/2-hop 으로 뒤져 **상세 URL**
@@ -62,6 +64,8 @@ import {
   /** 🔴 CORE-2R-4 — 다섯 번째 일시 샵. 「국내 목록에서 찾아낸 상세 URL」의 출처다. */
   DOMESTIC_LISTING_SHOP_ID,
   DOMESTIC_LISTING_SHOP_NAME,
+  WEB_SEARCH_SHOP_ID,
+  WEB_SEARCH_SHOP_NAME,
   isTransientShopId,
   OVERSEAS_AUTO_SHOP_ID,
   /** 🔴 WU-132 — 네 번째 일시 샵. 「이전에 동일상품으로 판단한 URL」의 출처다. */
@@ -187,6 +191,17 @@ export interface DomesticPriceCheckInput {
    */
   domesticListingHop?: boolean;
   /**
+   * 🟢🟢🟢 SEARCH-PROVIDER-07 — **외부 Search Provider 를 상품당 «1회» 부를 것인가.**
+   *
+   * CPO 확정(2026-10-27) — 최종 Discovery Query 는 `"{MODEL_CODE}"` 하나이고
+   * **1 Product = 1 Search** 다. 🔴 안 넘기면 **오늘 동작 그대로** 이고 그 경로가
+   * **한 줄도 돌지 않는다**(`candidateUrls`/`domesticListingHop` 과 같은 규약).
+   *
+   * 🔴🔴 **일괄 cron 에서는 켜지 않는다** — 이 경로는 **외부에 과금** 된다(검색 1회당).
+   *    전 상품을 매일 도는 경로에서 켜면 비용이 상품 수만큼 곱해진다.
+   */
+  webSearch?: boolean;
+  /**
    * ══════════════════════════════════════════════════════════════════════════
    * 🔴🔴🔴 CORE-2AA — **가격 자격(`VERIFIED_SAME`) 입력.** 위 `reviewedSameUrls` 와 «다르다»
    * ══════════════════════════════════════════════════════════════════════════
@@ -268,7 +283,17 @@ export interface GeminiTransientEvidence {
    *    (`overseasAutoEvidence`) — 「붙여넣어서 나온 것」과 「자동으로 나온 것」을 한
    *    칸에 담으면 **셀러가 아무것도 안 해도 된다는 사실 자체가 보고에서 사라진다.**
    */
-  source: "GEMINI_DISCOVERY" | "SELLER_URL" | "OVERSEAS_AUTO" | "REVIEWED_SAME" | "DOMESTIC_LISTING";
+  source:
+    | "GEMINI_DISCOVERY"
+    | "SELLER_URL"
+    | "OVERSEAS_AUTO"
+    | "REVIEWED_SAME"
+    | "DOMESTIC_LISTING"
+    /**
+     * 🔴 SEARCH-PROVIDER-07 — **여섯 번째 출처.** 「그 외는 Gemini」로 두지 않는다.
+     *    🔴 이 출처만 **외부에 과금** 된다 ⟹ 섞으면 비용 보고가 출처를 잃는다.
+     */
+    | "WEB_SEARCH";
   /** 🔴 가상 shopId 가 아니라 **실제 판매처 도메인** 이다. */
   domain: string;
   /**
@@ -389,6 +414,23 @@ export interface DomesticPriceCheckResult {
   domesticListingUrlMetrics?: UrlCandidatePoolMetrics | null;
   /** 🔴 CORE-2R-4 — 그 경로의 가격 보강 호출 수. 다른 칸과 **합산하지 않는다**. */
   domesticListingPriceEnrichCalls?: number;
+  /**
+   * 🟢🟢 SEARCH-PROVIDER-07 — **웹 검색 경로의 transient evidence.**
+   *
+   * 🔴 위 다섯과 **다른 칸** 이다 — 「외부 검색이 준 URL」은 다른 사실이고, 이 경로만
+   *    **외부에 과금** 된다. 합치면 **비용이 어디서 났는지** 가 보고에서 사라진다.
+   * 🔴 `null` = 그 경로가 돌지 않았다(호출부가 안 켰다) · `[]` = 돌았는데 후보가 0.
+   */
+  webSearchEvidence?: GeminiTransientEvidence[] | null;
+  /**
+   * 🔴 SEARCH-PROVIDER-07 — 검색 자체의 계측(질의 · 호출 수 · organic · 건너뛴 이유 · 실패).
+   * 🔴🔴 `skipped`/`failed` 를 **「결과 0」으로 읽지 않는다** — 「못 물어봤다」와 다르다.
+   */
+  webSearchMetrics?: WebSearchPoolMetrics | null;
+  /** 🔴 SEARCH-PROVIDER-07 — 그 URL 들의 fetch/판정 계측(`collectUrlCandidatePool` 모양). */
+  webSearchUrlMetrics?: UrlCandidatePoolMetrics | null;
+  /** 🔴 SEARCH-PROVIDER-07 — 그 경로의 가격 보강 호출 수. 다른 칸과 **합산하지 않는다**. */
+  webSearchPriceEnrichCalls?: number;
   /** 🔴 010R §6 — Gemini 가격 보강 호출 수. 국내 상세 fetch 와 **다른 칸** 이다. */
   geminiPriceEnrichCalls?: number;
   /** 🔴 WU-024 — URL 경로의 가격 보강 호출 수. Gemini 칸과 **합산하지 않는다**. */
@@ -1396,6 +1438,79 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     }
   }
 
+  /* ══════════════════════════════════════════════════════════════════════════
+   * 🟢🟢🟢 SEARCH-PROVIDER-07 — **외부 Search Provider 를 «상품당 1회» 부른다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * CPO 확정(2026-10-27) — Query 는 `"{MODEL_CODE}"` 하나이고 **1 Product = 1 Search** 다.
+   * 근거는 SPRINT-05/06 실측 — 상품명이 들어간 영어 질의는 국내가 **구조적으로 0** 이었고
+   * **품번 정확 일치만** 상품 4개 전부에서 국내와 해외를 **같이** 냈다.
+   *
+   * 🟢 **새 생산자 코드가 거의 없다** — 검색은 `collectWebSearchUrls`(URL 만 돌려준다)가,
+   *    후보 생성은 **기존 `collectUrlCandidatePool`** 이 한다(CORE-2R-4 와 같은 패턴).
+   * 🔴 **2차 Search 를 만들지 않는다** — 결과가 적어도, 국내만/해외만 나와도 **다시 부르지
+   *    않는다**(CPO §7 특히 금지). 그래서 이 블록에 재시도·fallback 분기가 **없다**.
+   * 🔴 **MI 를 연결하지 않는다** — 산출은 기존 후보 파이프라인에 합류할 뿐이다.
+   */
+  let webSearchMetrics: WebSearchPoolMetrics | null = null;
+  let webSearchUrlMetrics: UrlCandidatePoolMetrics | null = null;
+  let webSearchPriceEnrichCalls = 0;
+  const webSearchEvidence: GeminiTransientEvidence[] = [];
+  if (input.webSearch) {
+    const pool = await collectWebSearchUrls({
+      /**
+       * 🔴 질의 재료는 **운영 identity 그대로** 다. 🔴 여기서 문자열을 조립하지 않는다 —
+       *    Query owner 는 `buildDiscoverySearchQuery` 하나다.
+       */
+      identity: {
+        brand: input.dna.brand.value || null,
+        productName: null,
+        productType: null,
+        genderAge: null,
+        color: null,
+        size: null,
+        season: null,
+        productCode: input.dna.brandModelCode,
+        sourceUrl: query.sourceUrl,
+        sourceSite: null,
+        sourceCountry: null,
+        market: null,
+      },
+    });
+    webSearchMetrics = pool.metrics;
+    /** 🔴 계측을 로그로 내보낸다 — Production 응답은 CTO 가 읽을 수 없다
+     *  (메모 `production-payload-is-unreachable`). 기존 네 로그와 같은 규약이다.
+     *  🔴 **토큰은 찍지 않는다** — 아래 칸에 토큰이 들어갈 자리가 없다. */
+    console.log(
+      `[SP07-websearch] ${JSON.stringify({
+        snapshot: input.snapshotId,
+        query: webSearchMetrics.query,
+        searches: webSearchMetrics.searches,
+        organic: webSearchMetrics.organicResults,
+        skipped: webSearchMetrics.skipped,
+        failed: webSearchMetrics.failed,
+      })}`,
+    );
+    if (pool.urls.length > 0) {
+      /** 🔴 중복은 HTTP 를 쓰지 않는다 — 이미 후보인 URL 은 `ALREADY_CANDIDATE` 로 빠진다. */
+      const alreadyCanonical = new Set<string>();
+      for (const r of [...searchResults, ...transientPools]) {
+        for (const c of r.candidates) alreadyCanonical.add(canonicalizeProductUrl(c.url).toLowerCase());
+      }
+      const webCandidates = await collectUrlCandidatePool({
+        urls: pool.urls,
+        originUrl: query.sourceUrl,
+        maxUrls: MAX_SUPPLIED_CANDIDATE_URLS,
+        existingCanonicalUrls: alreadyCanonical,
+        /** 🔴 **여기가 이 블록의 전부다** — 산출물의 출처를 가른다. */
+        shopId: WEB_SEARCH_SHOP_ID,
+        shopNamePrefix: WEB_SEARCH_SHOP_NAME,
+      });
+      webSearchUrlMetrics = webCandidates.metrics;
+      transientPools.push(...webCandidates.searchResults);
+    }
+  }
+
   if (isGeminiDiscoveryEnabled()) {
     /* ① 🟢 **결정적 후보가 이미 있으면 부르지 않는다.**
      *    바로 위 `foundVeryHighInP0` 와 **같은 조건** 이다 — 새 threshold 가 아니다.
@@ -1513,12 +1628,15 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     const isReviewedPool = r.shopId === REVIEWED_SAME_SHOP_ID;
     /** 🔴 CORE-2R-4 — 국내 목록 탐색 경로도 **자기 칸** 으로 센다. */
     const isListingPool = r.shopId === DOMESTIC_LISTING_SHOP_ID;
+    /** 🔴 SEARCH-PROVIDER-07 — 웹 검색 경로도 **자기 칸** 으로 센다(유일한 유료 경로). */
+    const isWebSearchPool = r.shopId === WEB_SEARCH_SHOP_ID;
     try {
       priced = await enrichCandidatePrices(scored, r.domain, query);
-      /** 🔴 **네 경로의 HTTP 를 합산하지 않는다** — 비용 보고가 출처를 잃는다. */
+      /** 🔴 **다섯 경로의 HTTP 를 합산하지 않는다** — 비용 보고가 출처를 잃는다. */
       if (isUrlPool) urlCandidatePriceEnrichCalls += 1;
       else if (isReviewedPool) reviewedSamePriceEnrichCalls += 1;
       else if (isListingPool) domesticListingPriceEnrichCalls += 1;
+      else if (isWebSearchPool) webSearchPriceEnrichCalls += 1;
       else geminiPriceEnrichCalls += 1;
     } catch {
       /* 🔴 가격 보강 실패가 가격확인 전체를 깨뜨리지 않는다 — 점수만 있는
@@ -1705,7 +1823,10 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
               : /** 🔴 CORE-2R-4 — 다섯 번째 출처(국내 목록 탐색). */
                 result.shopId === DOMESTIC_LISTING_SHOP_ID
                 ? "DOMESTIC_LISTING"
-                : "GEMINI_DISCOVERY";
+                : /** 🔴 SEARCH-PROVIDER-07 — 여섯 번째 출처(웹 검색 · 유일한 유료 경로). */
+                  result.shopId === WEB_SEARCH_SHOP_ID
+                  ? "WEB_SEARCH"
+                  : "GEMINI_DISCOVERY";
       /** 🟢 담을 배열을 **이름 있는 변수** 로 고른다 — 가드 소스 검사가 push 자리를
        *  안정적으로 지목할 수 있어야 한다(테스트가 그 앵커를 쓴다). */
       const transientEvidenceSink =
@@ -1717,7 +1838,9 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
               ? reviewedSameEvidence
               : evidenceSource === "DOMESTIC_LISTING"
                 ? domesticListingEvidence
-                : geminiEvidence;
+                : evidenceSource === "WEB_SEARCH"
+                  ? webSearchEvidence
+                  : geminiEvidence;
       transientEvidenceSink.push({
         source: evidenceSource,
         domain: result.domain,
@@ -2019,6 +2142,11 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     domesticListingMetrics,
     domesticListingUrlMetrics,
     domesticListingPriceEnrichCalls,
+    /** 🔴 SP-07 — 같은 원칙. 호출부가 안 켰으면 `null`(「후보 0」이 아니다). */
+    webSearchEvidence: webSearchMetrics === null ? null : webSearchEvidence,
+    webSearchMetrics,
+    webSearchUrlMetrics,
+    webSearchPriceEnrichCalls,
     /** 🔴 010R §6 — Gemini 가격 보강 HTTP 호출 수(국내 검색과 분리). */
     geminiPriceEnrichCalls,
     urlCandidatePriceEnrichCalls,

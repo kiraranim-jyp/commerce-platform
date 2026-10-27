@@ -636,8 +636,14 @@ describe("E. 🔴🔴 feedback 재활용 (CPO ⑥)", () => {
      *    🟢 계약의 뜻은 그대로다 — 생산자가 늘어도 **후보 생성기는 이 함수 하나** 이고
      *       새 fetch/판정 사본이 없다(셋 다 `shopId` 만 갈아 끼운다).
      */
-    expect(RUNNER.match(/collectUrlCandidatePool\(\{/g) ?? []).toHaveLength(3);
+    /** 🔴 SEARCH-PROVIDER-07 — 호출부가 **넷** 이 됐다(+ **웹 검색**). */
+    expect(RUNNER.match(/collectUrlCandidatePool\(\{/g) ?? []).toHaveLength(4);
     expect(RUNNER).toContain("shopId: DOMESTIC_LISTING_SHOP_ID");
+    /**
+     * 🟢 **강화** — 숫자만 맞추는 길을 막는다. 출처를 가르는 `shopId` 를 **이름으로**
+     *    단언하므로, 호출부를 하나 더 만들면서 출처를 빼먹으면 여기서 FAIL 한다.
+     */
+    expect(RUNNER).toContain("shopId: WEB_SEARCH_SHOP_ID");
   });
 
   it("E-6 🔴 중복은 **HTTP 를 쓰지 않는다** — 이미 찾은 후보면 건너뛴다", () => {

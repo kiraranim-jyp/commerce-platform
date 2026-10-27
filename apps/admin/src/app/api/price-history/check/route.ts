@@ -174,6 +174,13 @@ export async function POST(request: Request) {
        *    그쪽은 전 상품을 매일 돌아 사이트당 HTTP 가 상품 수만큼 곱해진다.
        */
       domesticListingHop: true,
+      /**
+       * 🟢🟢🟢 SEARCH-PROVIDER-07 — **여기서만 켠다.** 「지금 확인 / 🔄 다시 분석」 경로다.
+       *    🔴 일괄 cron(`trigger-domestic-price-check`)은 **켜지 않는다** — 이 경로는
+       *       **외부에 과금** 되고(검색 1회당) 전 상품을 매일 돌면 상품 수만큼 곱해진다.
+       *    🔴 상품당 **정확히 1회** 다 — 재시도도 2차 질의도 없다(CPO 계약).
+       */
+      webSearch: true,
     });
   } catch (error) {
     domesticShop = {
@@ -256,13 +263,20 @@ export async function POST(request: Request) {
       domesticShop.urlCandidateEvidence ||
       domesticShop.overseasAutoEvidence ||
       domesticShop.reviewedSameEvidence ||
-      domesticShop.domesticListingEvidence
+      domesticShop.domesticListingEvidence ||
+      /**
+       * 🟢🟢 SEARCH-PROVIDER-07 — **웹 검색 후보도 같은 자리로 넘긴다.** 그러지 않으면
+       *    유료 검색으로 찾아낸 판매처의 가격이 집계에 **영원히 못 들어간다** —
+       *    그것이 이 생산자의 목적이다. 🟢 저장 0 · 환산 0 · 새 계산 0(위 다섯과 동일).
+       */
+      domesticShop.webSearchEvidence
         ? [
             ...(domesticShop.geminiEvidence ?? []),
             ...(domesticShop.urlCandidateEvidence ?? []),
             ...(domesticShop.overseasAutoEvidence ?? []),
             ...(domesticShop.reviewedSameEvidence ?? []),
             ...(domesticShop.domesticListingEvidence ?? []),
+            ...(domesticShop.webSearchEvidence ?? []),
           ]
         : null;
     intelligence = await computeMarketIntelligence(

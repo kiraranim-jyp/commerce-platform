@@ -70,6 +70,37 @@ export const DEFAULT_MAX_QUERIES = 8;
 const quote = (s: string) => `"${s.trim()}"`;
 
 /**
+ * ════════════════════════════════════════════════════════════════════════════════
+ * 🟢🟢🟢 **운영 Discovery Query — 하나다.** `"{MODEL_CODE}"` (CPO 확정 2026-10-27)
+ * ════════════════════════════════════════════════════════════════════════════════
+ *
+ * ── 왜 품번 «단독» 인가 (SPRINT-05/06 실측) ────────────────────────────────
+ * ```
+ * 🔴 상품명이 들어간 **영어** 질의는 국내 결과가 «구조적으로» 0 이었다
+ *    (G-Q1·Q2·Q3·Q4·Q7·Q8 · P-BRAND_DESIGN · I-3 → 🇰🇷 도메인 **0**).
+ * 🔴 목적어(`exact product` · `buy`)도 그것을 바꾸지 못했다(I-1/I-2 → 🇰🇷 **1**).
+ * 🟢 **품번 정확 일치만** 상품 4개 **전부** 에서 국내와 해외를 **같이** 냈다
+ *    (`"{code}"` → 🇰🇷 8 도메인 + 🌎 다수 · 따옴표 없는 판은 S1·S4 에서 국내 0).
+ * ```
+ *
+ * ── 🔴🔴 이것은 «Identity» 가 아니다 ───────────────────────────────────────
+ * ```
+ * Search Query `"{MODEL_CODE}"`   ≠   MODEL_CODE → SAME
+ * 🔴 이 함수는 **후보를 어디서 찾을지** 만 정한다. 동일상품 판단은 Evidence/Identity
+ *    층이 한다(`cross-seller` · `match-truth`). 🔴 그 둘을 연결하지 않는다.
+ * ```
+ *
+ * 🔴 **품번이 없으면 질의를 만들지 않는다**(`null`) — 「브랜드로 대신한다」 같은
+ *    **fallback 을 만들지 않는다**(CPO §7 ⑨ · 숨은 2차 Search 금지).
+ * 🔴 `buildDiscoveryQuerySet`(8축)은 **그대로 둔다** — 그 함수의 소비자와 계약이 따로 있다.
+ */
+export function buildDiscoverySearchQuery(identity: ProductIdentity): string | null {
+  const code = identity.productCode?.trim();
+  if (!code) return null;
+  return quote(code);
+}
+
+/**
  * 🟢 상품이 가진 증거만으로 Discovery 질의 집합을 만든다.
  *
  * 🔴 **순서가 의미를 가진다** — 앞쪽이 식별력이 높다. 호출부가 상한으로 자를 때

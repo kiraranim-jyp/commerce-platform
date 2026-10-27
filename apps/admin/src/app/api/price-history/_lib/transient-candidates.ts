@@ -93,6 +93,23 @@ export const DOMESTIC_LISTING_SHOP_ID = "__domestic_listing__";
 export const DOMESTIC_LISTING_SHOP_NAME = "국내 목록 탐색(일시)";
 
 /**
+ * 🔴🔴 SEARCH-PROVIDER-07 — **여섯 번째 일시 샵.** 외부 Search Provider 에
+ *    **품번 정확 일치** 질의를 **상품당 1회** 보내 받은 URL 이다.
+ *
+ * ── 왜 또 가르는가 ─────────────────────────────────────────────────────────
+ * ```
+ * 앞의 다섯과 **다른 사실** 이다 — 셀러가 넣은 것도, 등록부를 뒤진 것도, 사람이
+ * 이전에 동일상품이라 한 것도, 목록에서 1-hop 한 것도 아니다. **웹 검색이 준 URL** 이다.
+ * 🔴 그 사실이 화면/보고에서 사라지면 「우리 등록부가 찾았다」로 잘못 읽힌다.
+ * ```
+ * 🔴🔴 그리고 이 생산자만 **외부에 돈을 쓴다**(검색 1회당 과금) — 출처를 가르지 않으면
+ *    「어느 후보가 유료 검색에서 왔는가」를 **영원히 셀 수 없다**.
+ * 🔴 `domain` 은 **실제 판매처 그대로** 다(품번 추출기·샵 대표 선택이 그 값으로 분기).
+ */
+export const WEB_SEARCH_SHOP_ID = "__web_search__";
+export const WEB_SEARCH_SHOP_NAME = "웹 검색 후보(일시)";
+
+/**
  * 🔴🔴 **저장 차단의 유일한 기준.** 두 호출부(`recordDomesticSourceCheckAttempt`
  *    래퍼 · `upsertDomesticProductLink` 앞 가드)가 **같은 술어** 를 본다.
  *
@@ -116,6 +133,10 @@ export const TRANSIENT_SHOP_IDS: ReadonlySet<string> = new Set([
   OVERSEAS_AUTO_SHOP_ID,
   REVIEWED_SAME_SHOP_ID,
   DOMESTIC_LISTING_SHOP_ID,
+  /** 🔴🔴 SEARCH-PROVIDER-07 — **여섯** 이 됐다. 웹 검색이 준 URL 의 호스트는
+   *  `.kr` 전문몰처럼 **등록부에 실재하는 국내 샵** 일 수 있다 ⟹ 여기에 빼먹으면
+   *  upsert 가 **오류 없이 성공** 해 일시 후보가 영구 링크가 된다(조용히 틀린다). */
+  WEB_SEARCH_SHOP_ID,
 ]);
 
 export function isTransientShopId(shopId: string): boolean {

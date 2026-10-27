@@ -11,10 +11,10 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **DISCOVERY-SEARCH-PROVIDER-06** — 🟡 **목적형 I-1/I-2/I-3 측정 완료 · 단일 Query 선택 대기**
-NEXT         🔴🔴 **Search Provider 단독 의사결정**(CPO/CEO) — 🔴 그 전까지 Registry 확대 금지
+CURRENT WU   **DISCOVERY-SEARCH-PROVIDER-07** — 🟢 **단일 Query `"{MODEL_CODE}"` 운영 배선 완료 · 배포됨**
+NEXT         🔵 **실제 상품에서 Candidate URL → Crawl → Evidence → Identity 확인**(MI 는 그 다음)
              🔵 전략은 **docs/DISCOVERY-STRATEGY-LOCK.md** 에 고정됐다(세션 바뀌어도 남는다)
-CEO ACTION   🔵🔵 **있다** — **/qa/search**(또는 `docs/search-provider-05-urls.html`)에서 상품 4 × Query 전수 **526 URL** 을 클릭·육안 확인 → **단일 Query 1개 선택**
+CEO ACTION   🔵🔵 **있다** — 실제 상품에서 「🔄 다시 분석」 1회 → 🌐 웹 검색 후보가 국내+해외로 뜨는지 확인
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SAME-03**(화면 + CEO GT 10/10) · **SAME-04**(FN 3건 원인 확정) ·
              **DESC-EVIDENCE-01**(provenance + 6축 + probe 4축 · 운영 2경로 배선) ·
@@ -23,9 +23,10 @@ CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **FINAL-VISUAL-01**(QA X-Ray · 운영 UI 격리 · 운영 파일 변경 0) ·
              **SEARCH-PROVIDER-02/03/04**(URL 분류기 2줄 · Query 폭 · Q2/Q3) ·
              **SEARCH-PROVIDER-05**(Q1~Q8 + Planner 8축 전수 64회 · 526 URL · 운영 배선 0) ·
-             **SEARCH-PROVIDER-06**(목적형 I-1~I-3 · 🔴 상품명 영어 Query 는 국내 0 · 품번 축만 섞인다)
+             **SEARCH-PROVIDER-06**(목적형 I-1~I-3 · 🔴 상품명 영어 Query 는 국내 0 · 품번 축만 섞인다) ·
+             **SEARCH-PROVIDER-07**(🟢 단일 Query 운영 배선 · 1 Product = 1 Search · MI 미연결)
 Git          clean · origin/main 0/0 · Production / 200
-회귀         **710 files / 9,492 passed / 0 failed / 152 skipped** · typecheck 0 · build 0
+회귀         **711 files / 9,508 passed / 0 failed / 153 skipped** · typecheck 0 · build 0
 ```
 
 🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **CPO 판정** 이다 — matcher 를 CTO 가 열지 않는다.

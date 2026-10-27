@@ -313,8 +313,20 @@ describe("C. 🔴🔴 공급된 URL 은 저장되지 않는다 (등록부·링�
      *    짝이기 때문이다 — 숫자만 고쳐 통과시키려 해도 **그 id 가 전수 검사에 같이
      *    걸리므로** 술어 등록을 빠뜨린 채로는 통과하지 못한다.
      * 🔴 CORE-2R-4 — **다섯** 이 됐다(국내 목록 탐색).
+     * 🔴 SEARCH-PROVIDER-07 — **여섯** 이 됐다(웹 검색 · 유일한 유료 경로).
+     *    🟢 **숫자 대신 «집합 전체» 를 단언하도록 강화했다** — 숫자만 맞추고 엉뚱한 id 를
+     *       넣는 길이 사라진다(생산자를 더하면 여기 이름을 적어야 통과한다).
      */
-    expect(TRANSIENT_SHOP_IDS.size).toBe(5);
+    expect([...TRANSIENT_SHOP_IDS].sort()).toEqual(
+      [
+        "__gemini_discovery__",
+        "__url_candidates__",
+        "__overseas_auto__",
+        "__reviewed_same__",
+        "__domestic_listing__",
+        "__web_search__",
+      ].sort(),
+    );
     /** 🔴 등록부 id(uuid)를 막으면 **진짜 샵의 저장이 멈춘다**. */
     expect(isTransientShopId("3f2a7c18-9b11-4a55-8c21-0d7b6e5f4a33")).toBe(false);
     expect(isTransientShopId("")).toBe(false);
@@ -452,8 +464,13 @@ describe("E. 🟢 URL 미공급 · Gemini OFF → 기존 경로와 완전히 같
      *    그대로다: 생산자가 늘어도 **소비 루프는 하나** 이고 점수/가격보강 사본이 없다.
      * 🔴 그래서 숫자보다 **그 사실** 을 직접 단언한다 — 루프와 보강 호출이 각각 하나다.
      * 🔴 CORE-2R-4 — **넷** 이 됐다(국내 목록 탐색이 네 번째 push 다).
+     * 🔴 SEARCH-PROVIDER-07 — **다섯** 이 됐다(웹 검색이 다섯 번째 push 다).
      */
-    expect((RUNNER.match(/transientPools\.push/g) ?? []).length).toBe(4);
+    expect((RUNNER.match(/transientPools\.push/g) ?? []).length).toBe(5);
+    /**
+     * 🟢🟢 **소비 루프가 «하나» 라는 사실이 이 계약의 본체다** — 생산자가 늘어도
+     *    점수/가격보강 사본이 생기지 않는다. 🔴 push 개수는 그 사실의 보조 지표다.
+     */
     expect((RUNNER.match(/for \(const r of transientPools\) \{/g) ?? []).length).toBe(1);
   });
 });

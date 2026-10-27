@@ -650,3 +650,85 @@ S4 🇰🇷 donokids · deuxbebe · littleluna · 🌎 5
 Google/Apify 결과는 **실행마다 다르다**. 🔴 「품번 축이 항상 국내를 낸다」로 일반화하지 않는다.
 
 **🔵 상태 — `DISCOVERY SEARCH QUERY SELECTION = HOLD`. CPO 가 단일 Query 를 고른다.**
+
+---
+
+## 🟢🟢🟢 `SEARCH-PROVIDER-07` — **Single Query 운영 배선 완료** (2026-10-27)
+
+### ① 확정된 계약 — 이 네 줄이 전부다
+
+```
+Discovery Query   "{MODEL_CODE}"            owner = buildDiscoverySearchQuery (query-planner.ts)
+Search 횟수        상품 1개 = **정확히 1회**   MAX_SEARCHES_PER_PRODUCT = 1
+국내/해외          **같은 Search 결과** 에서 혼합 확보
+Identity          🔴 Search 와 **분리** — 품번은 「어디서 찾을지」이지 「같은 상품인지」가 아니다
+```
+
+### ② 경로 — 새 후보 생성 코드가 **없다**
+
+```
+ProductIdentity
+  → buildDiscoverySearchQuery   `"{MODEL_CODE}"` (품번 없으면 **null · 검색 안 함**)
+  → collectWebSearchUrls        외부 provider **1회** → **URL 만** 돌려준다
+  → collectUrlCandidatePool     🟢 **기존 함수 그대로**(shopId 만 `__web_search__`)
+  → 기존 Crawl / Evidence / Identity / 가격 / MI   🔴 **한 줄도 바꾸지 않았다**
+```
+🟢 `web-search-pool.ts` 에 `factsFromProductUrl`·`withConfidence`·`enrichCandidatePrices`·
+`classifyUrlShape` 가 **하나도 없다**(계약으로 잠금) — 검색만 하는 얇은 층이다.
+
+### ③ 🔴 「숨은 2차 Search」를 구조적으로 막았다
+
+```
+❌ 재시도           실패해도 **1회** 다(계약: 성공/실패 모두 호출 1회)
+❌ fallback        품번이 없으면 **검색하지 않는다**(브랜드/상품명으로 대신하지 않는다)
+❌ 2차 질의         결과가 0 이어도, 국내만/해외만 나와도 **다시 부르지 않는다**
+❌ 소스 어휘        `retry`/`fallback`/`secondQuery`/`widen` 이 그 파일에 **없다**(계약)
+🔴 켜는 곳은 **하나** — 「지금 확인 / 🔄 다시 분석」. 일괄 cron 3곳은 **켜지 않는다**
+   (계약이 호출부 4곳을 전수로 본다 · 유일한 **유료** 경로라 비용이 상품 수만큼 곱해진다)
+```
+
+### ④ 🔴 「못 물어봤다」와 「결과 없다」를 가른다
+
+```
+NO_MODEL_CODE    품번이 없어 질의를 만들지 않았다      · searches 0
+NOT_CONFIGURED   토큰이 없어 **못 물어봤다**          · searches 0 · 🔴 「웹에 없다」가 아니다
+failed: true     불렀는데 실패했다                   · 🔴 **빈 결과와 구별된다**(계약)
+```
+🔴 토큰은 **로그·응답·오류 메시지 어디에도 싣지 않는다**(쿼리스트링에 들어가는 호출이라
+`console.log` 와 `res.url` 을 그 파일에서 **금지** 했다 · 계약).
+
+### ⑤ 🟢🟢 운영 함수 실측 — **국내+해외가 한 번에 왔다**
+
+`collectWebSearchUrls`(운영 함수)를 실제 provider 에 **1회** 호출(B226AC009):
+```
+query "B226AC009" · searches 1 · organic 9 · skipped null · failed false
+🇰🇷 gmarket · 11st · coupang · bibandi · danawa · lfmall
+🌎 babyshop(en-sk) · rakuten(jp) · answear(ro)
+```
+🔴 그중 일부는 검색/마켓 페이지다 — **그 선별은 기존 입력 경계와 `classifyUrlShape` 가 한다**
+(이 WU 가 새 규칙을 만들지 않았다).
+
+### ⑥ 변이 8종 — 전부 FAIL → 복구
+
+```
+M1 품번 fallback 2F · M2 상품명 추가 2F · M3 상한 2 로 2F · M4 실패를 0 으로 2F ·
+M5 「못 물어봄」을 0 으로 1F · M6 저장차단 집합에서 제외 1F · M7 켜는 곳 제거 1F ·
+M8 재시도 추가 1F   → 원상복구 16 passed
+🔴 M6 은 1차에 **적용되지 않았다**(CRLF) — 「미적용」을 「통과」로 읽지 않도록 적용 확인 후 재측정했다
+```
+
+### ⑦ 기존 계약 3건이 FAIL 했고 **갱신·강화** 했다
+
+```
+TRANSIENT_SHOP_IDS.size 5 → 🟢 **집합 전체를 이름으로** 단언(숫자만 맞추는 길 제거)
+transientPools.push 4 → 5  (🟢 「소비 루프는 하나」가 본체라는 것을 주석으로 명시)
+collectUrlCandidatePool 호출 3 → 4 (🟢 `shopId: WEB_SEARCH_SHOP_ID` 를 **이름으로** 추가 단언)
+```
+
+### ⑧ 🔴 이번에 **하지 않은 것**
+
+MI 연결 ❌ · Identity 변경 ❌ · 가격 로직 ❌ · Registry 확장 ❌ · Gemini ❌ ·
+국내/해외 2회 Search ❌ · 언어 기반 질의 ❌ · schema/DB ❌ · UI ❌.
+
+**🔵 상태 — `DISCOVERY SEARCH QUERY SELECTION = GO (배선 완료)`.
+다음은 실제 상품에서 Candidate URL → Crawl → Evidence → Identity 확인이다.**
