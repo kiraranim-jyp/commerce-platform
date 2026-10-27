@@ -11,18 +11,18 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **CORE-IMAGE-EVIDENCE-02** — 🟢🟢 **구현·배포 완료**(§9-AB) · `NORMALIZED EVIDENCE = READY`
-NEXT         🔵 **CPO 지정** — 이제 처음으로 「어느 정도의 이미지 차이를 SAME/DIFFERENT
-             Evidence 로 볼 것인가」를 검토할 수 있다. 🔴 **CTO 가 threshold · image matcher ·
-             AI · Comparability 승격 · BRAND alias 를 임의로 열지 않는다**
-CEO ACTION   🟡 **없다** — 화면 변경 0
+CURRENT WU   **CORE-FINAL-VISUAL-01** — 🟢🟢 **TEST/QA X-Ray 화면 구축·배포**(§9-AC)
+NEXT         🔵 **CEO 가 실제 상품을 TEST 화면에서 확인** → 문제 사례만 하나씩 개선
+             🔴 **CTO 가 threshold · matcher · AI · Comparability · BRAND alias 를 열지 않는다**
+CEO ACTION   🔵🔵 **있다** — 배포된 **/qa/evidence** 에서 실제 상품을 넣어 확인(§9-AC)
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SAME-03**(화면 + CEO GT 10/10) · **SAME-04**(FN 3건 원인 확정) ·
              **DESC-EVIDENCE-01**(provenance + 6축 + probe 4축 · 운영 2경로 배선) ·
              **IMAGE-EVIDENCE-01**(공급 32/32 · 판별 실증 · GO) ·
-             **IMAGE-EVIDENCE-02**(C22 공급 0→1 · 정규화 Evidence · READY)
+             **IMAGE-EVIDENCE-02**(C22 공급 0→1 · 정규화 Evidence · READY) ·
+             **FINAL-VISUAL-01**(QA X-Ray · 운영 UI 격리 · 운영 파일 변경 0)
 Git          clean · origin/main 0/0 · Production / 200
-회귀         **702 files / 9,406 passed / 0 failed / 148 skipped** · typecheck 0 · build 0
+회귀         **703 files / 9,434 passed / 0 failed / 148 skipped** · typecheck 0 · build 0
 ```
 
 🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **CPO 판정** 이다 — matcher 를 CTO 가 열지 않는다.
@@ -3072,3 +3072,89 @@ typecheck admin **0** · image **0** · build exit **0** · 운영 파일 **4** 
 ```
 
 **STOP — `CORE-IMAGE-EVIDENCE-02` 완료 / `IMAGE NORMALIZED EVIDENCE = READY` / 다음은 CPO**
+
+---
+
+## 9-AC. 🟢🟢 **`CORE-FINAL-VISUAL-01` — TEST/QA X-Ray 화면 + 운영 UI 격리**(2026-10-27)
+
+🔴🔴🔴 **운영 파일 변경 «0» 이다.** 이번 WU 의 `git status` 는 **전부 신규 파일** 이었다 —
+matcher · MATCHING-3.1 · Identity · Comparability · 국내 참고가격 · 해외 최저 소싱가 ·
+MI · 권장 판매가격 · 등록 payload **한 줄도 건드리지 않았다**.
+
+### 🟢 핵심 — **기존 판단을 다시 만들지 않는다**(CPO §2 · §7 · §8)
+
+```
+URL        → 기존 `factsFromProductUrl`(운영 경로 그대로)  → 기존 evidence → **설명만**
+snapshotId → 기존 `computeMarketIntelligence`(운영 GET 과 **같은 함수**) → **상태만 분류**
+⟹ 이 WU 가 «계산» 하는 Identity · 가격 · MI · 권장가가 **하나도 없다**.
+```
+
+### 🟢 화면 둘
+
+```
+🔵 TEST/QA  `/qa/evidence`  + `POST /api/qa/evidence`(requireUser 그대로)
+   ① 기존 판단 결과 — READY / LIMITED / HOLD + **막힌 이유**
+   ② 원본(URL · TITLE · DESCRIPTION)   ③ 상품명 구조(BRAND·SEASON·FORM·NAME·CODE·SLEEVE)
+   ④ 한/영 의미 분석 · 동의어 묶음      ⑤ 축 10개 Evidence(+ **source** · **recovered**)
+   ⑥ IMAGE(개수 · 대표 · 정규화 · digest)  ⑦ **이 화면의 한계**
+🔴 운영 화면  내부 Evidence **0** — 격리 계약이 `app/**.tsx` 전수(qa 제외)를 훑어 잠근다
+```
+
+### 🔴🔴 가장 중요한 설계 — **동의어가 «차이» 를 지우지 않는다**
+
+```
+🟢 같게 읽는다   T-shirt · T shirt · Tee · Tee Shirt · 티셔츠   (기존 어휘 owner 그대로)
+🔴 갈라서 읽는다 Long Sleeve ≠ Short Sleeve · T-shirt ≠ Sweatshirt · Top ≠ SHIRT
+🔴🔴 **소매 길이를 보는 판정 축은 이 저장소에 «없다»**(WU-124 확정) ⟹ 화면은 그것을
+   **관측값** 으로 적고 **「판정 축 아님」을 같이 적는다**. S1-5·S1-6(긴팔↔반팔 DIFFERENT)이
+   왜 텍스트로 안 갈리는지를 CEO 가 화면에서 바로 본다.
+🔴 그리고 **셔츠↔티셔츠를 같게 읽는 기존 정책** 도 화면이 숨기지 않고 적는다.
+```
+
+### 🔴 HOLD 는 «이유» 없이 만들지 않는다 (CPO §9 · §12)
+
+```
+READY    전 단계가 기존 값을 냈다
+LIMITED  PRESUMED_SAME 등 **기존 정책상 제한된 상태**
+HOLD     기존 파이프라인이 값을 내지 못했다 — 🔴 **그 사유를 반드시 적는다**
+⟹ CASE A(사람도 못 함 · 수정 안 함) ↔ CASE B(사람은 함 · 개선 대상)를 **가를 수 있다**
+```
+
+### 증거 — 계약 **28**(L1~L10 + 격리 3 + READY/HOLD 5 + 마운트 DOM 2)
+
+```
+L1 synonym 표시 🟢   L2 한/영 분석 🟢   L3 T-shirt/Sweatshirt/Top 과동일화 금지 🟢
+L4 긴팔/반팔 구분 🟢(원문이 안 말하면 **null** — 지어내지 않는다)
+L5 TITLE/DESCRIPTION 출처 유지 🟢 + **recovered 품번 구분** 🟢
+L6 기존 DESCRIPTION 추출 불변 🟢   L7 IMAGE 표시 🟢
+L8 설명기 ↔ matcher **양방향 import 0** · GT 33 verdict/tier **불변** 🟢
+L9 C19·C20·C22·C50 SAME 아님 🟢    L10 C06·C27·C42 + 기준선 불변 🟢
+격리 운영 `.tsx` 전수에서 QA 모듈·내부 어휘 **0**  ·  QA 화면에서는 **보인다**(삭제 아님)
+🟢 마운트 DOM 2건 — 소스 문자열이 아니라 **실제 렌더** 로 확인(헌장 §5)
+회귀 **703 files / 9,434 passed / 0 failed / 148 skipped**(직전 702/9,406/148 대비
+**+1 file · +28 tests**) · typecheck **0** · build **0**(`/qa/evidence` · `/api/qa/evidence` 생성 확인)
+```
+
+🔴 **내 단언이 또 한 번 틀렸고 적는다** — 격리 금지어에 `provenance` 를 넣었더니
+`AIContentPanel.tsx` 가 FAIL 했다. 그 파일의 `ProvenanceBadge` 는 **이 Sprint 이전부터
+있던 「AI 콘텐츠 출처」 배지** 이고 Evidence provenance 와 **다른 개념** 이다 ⟹ 🟢 코드가
+맞고 단언이 틀렸다. 금지어를 **이 Sprint 의 식별자** 로 좁혔다(느슨하게가 아니라 정확하게).
+
+### 🔵🔵 CEO Action — 배포된 TEST 화면에서 실제 상품 확인
+
+```
+https://ttaejyo.vercel.app/qa/evidence   (로그인 필요)
+① 상품 URL 을 넣는다 → 시스템이 **무엇을 읽었는지** 를 본다
+② 스냅샷 ID 를 넣으면 **기존 판단**(Identity · 국내가 · 해외가 · MI · 권장가)과
+   READY/LIMITED/HOLD + **막힌 이유** 가 같이 나온다
+🔴 확인할 것 — 상품명/상세정보/브랜드/품번을 제대로 읽었는가 · 한글↔영문이 맞는가 ·
+   긴팔↔반팔이 유지되는가 · 색상/소재/형태 · 이미지 · **최종 판단이 실제 상품과 맞는가**
+🔴 문제를 찾으면 **그 사례 하나만** 알려 주시면 됩니다 — 전체 재설계를 하지 않습니다
+```
+
+🔴 **Risk / 아직 검증 못 한 것** — ⒜ 🔴 **실제 따져 화면은 CTO 가 볼 수 없다**(로그인 뒤) ⟹
+화면 축은 **마운트 DOM** 이고 「Production UI PASS」로 적지 않는다 ⒝ snapshotId 경로는
+**service-role/DB 가 필요** 해 CTO 로컬에서 실행하지 못했다(코드 경로는 운영 GET 과 같은
+함수다) ⒞ 한글 형태 어휘는 **관측된 것만** 담았다 — 없는 말은 대응되지 않고 그것이 정상이다.
+
+**STOP — `CORE-FINAL-VISUAL-01` 완료 / `EXISTING JUDGMENT = REUSED` · `MI VISUAL VALIDATION = READY`**
