@@ -11,10 +11,10 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **DISCOVERY E2E** — 🟡 **E2E 기술 PASS / 동일상품 검증 HOLD**(CEO 3건 대기)
+CURRENT WU   **DISCOVERY E2E-02** — 🟡 **따져 실제 화면 확인 대기**(CTO 는 볼 수 없다 · CEO 전용)
 NEXT         🔵 **실제 상품에서 Candidate URL → Crawl → Evidence → Identity 확인**(MI 는 그 다음)
              🔵 전략은 **docs/DISCOVERY-STRATEGY-LOCK.md** 에 고정됐다(세션 바뀌어도 남는다)
-CEO ACTION   🔵🔵 **있다 · 3건뿐** — 11st · danawa · answear 가 B226AC009 와 **동일/비동일** 인지만
+CEO ACTION   🔵🔵 **있다** — docs/DISCOVERY-E2E-02-SCREEN-CHECK.md 절차대로 **「새 상품 분석」** 1회
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SAME-03**(화면 + CEO GT 10/10) · **SAME-04**(FN 3건 원인 확정) ·
              **DESC-EVIDENCE-01**(provenance + 6축 + probe 4축 · 운영 2경로 배선) ·
