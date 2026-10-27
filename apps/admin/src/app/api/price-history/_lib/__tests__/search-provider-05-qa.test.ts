@@ -129,6 +129,42 @@ describe("SEARCH-PROVIDER-05 QA §fixture — 저장된 원본이 그대로 있�
     expect(new Set(rows.map((r) => r.market)).size).toBeGreaterThan(2);
   });
 
+  it("🔵 SPRINT-08 — 목적 문구 **A~E** 가 상품 4개 전부에 있다", () => {
+    for (const pid of ["S1", "S2", "S3", "S4"]) {
+      const labels = new Set(
+        buildRunViews(RAW)
+          .filter((v) => v.productId === pid && v.source === "PURPOSE")
+          .map((v) => v.label),
+      );
+      for (const l of ["A", "B", "C", "D", "E"]) expect(labels, `${pid} ${l}`).toContain(l);
+    }
+  });
+
+  it("🔴 A 는 **재검색 0** — SPRINT-06 의 기준선을 그대로 쓴다", () => {
+    for (const v of buildRunViews(RAW).filter((x) => x.label === "A")) {
+      expect(v.alsoFrom, `${v.productId} A 에 출처가 없다`).toContain("I-1");
+    }
+  });
+
+  it("🔴🔴 CONTROL E 는 **한글이 없다** — 「목적 효과」와 「한국어 효과」를 가르는 축이다", () => {
+    const e = buildRunViews(RAW).filter((x) => x.label === "E");
+    expect(e).toHaveLength(4);
+    for (const v of e) expect(/[가-힣]/.test(v.query), v.query).toBe(false);
+    /** 🔴 B·C·D 는 반대로 **한국어 목적 문구를 반드시 포함** 한다(없으면 비교가 성립하지 않는다). */
+    for (const l of ["B", "C", "D"]) {
+      for (const v of buildRunViews(RAW).filter((x) => x.label === l)) {
+        expect(/[가-힣]/.test(v.query), `${v.productId} ${l}`).toBe(true);
+      }
+    }
+  });
+
+  it("🔴 D 는 **품번을 쓰지 않는다** — 「품번 없는 상품」 조건이다", () => {
+    for (const v of buildRunViews(RAW).filter((x) => x.label === "D")) {
+      const code = RAW.origins[v.productId]!.code!;
+      expect(v.query.toUpperCase(), v.query).not.toContain(code.toUpperCase());
+    }
+  });
+
   it("🟢 Query 간 겹침을 **관측** 으로 적는다(같은 URL 이 다른 Query 에도 나온다)", () => {
     const views = buildRunViews(RAW);
     /** 🔴 「겹침이 있다」가 아니라 **칸이 정확히 계산된다** 를 단언한다. */
