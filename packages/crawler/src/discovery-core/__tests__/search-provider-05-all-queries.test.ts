@@ -388,6 +388,172 @@ describe.skipIf(!LIVE)("SEARCH-PROVIDER-05 §4 — 정의된 Query 전수 실제
   );
 });
 
+/* ───────────── §6 SPRINT-06 — **목적형(Intent) Query** ───────────── */
+
+/**
+ * 🔵🔵🔵 CPO 재정의(2026-10-27) — 「검색어를 잘 만드는 것보다 **무엇을 찾으라고 검색하는지**
+ *    를 명시하는 것이 먼저다」. Query 는 검색어가 아니라 **Discovery Intent** 다.
+ *
+ * ── 🔴 이 실험이 «하지 않는» 것 ────────────────────────────────────────────
+ * ```
+ * 🔴 **한글/영어를 Query 축으로 삼지 않는다** — 셋 다 **영어로 통일** 하고,
+ *    국내/해외가 결과에서 «실제로» 어떻게 분포하는지만 본다
+ *    (검색엔진의 지역/언어 편향을 Query 로 간접 유도하지 않는다 · CPO 명시)
+ * 🔴 Q1~Q8 을 더 늘리지 않는다 · 운영 Query Planner 를 바꾸지 않는다
+ * ```
+ * 🔴 셋 다 **BRAND + MODEL_CODE + PRODUCT_NAME** 을 공통 뼈대로 쓴다(CPO 지정).
+ */
+const INTENT_QUERIES: { label: string; axis: string; suffix: string }[] = [
+  { label: "I-1", axis: "IDENTITY — 동일상품 URL 탐색", suffix: "" },
+  { label: "I-2", axis: "EXACT — 동일상품 상세페이지 집중", suffix: "exact product" },
+  { label: "I-3", axis: "BUY — 실제 판매처 집중", suffix: "buy" },
+];
+
+/**
+ * 🟢 상품명은 **GT 제목 그대로** 쓰지 않는다 — 그 제목에 `by {브랜드}` 와 재고/사이즈
+ *    꼬리표가 붙어 있어(`… - Last One In Stock - 2-6 Years`) 브랜드가 두 번 들어가고
+ *    질의가 길어진다(SPRINT-05 에서 G-Q2/Q4/Q8 이 실제로 그랬다).
+ * 🔴 **새 규칙을 만들지 않는다** — 운영 Planner 가 이미 쓰는 **코어 토큰**(`BRAND_DESIGN` 축)
+ *    을 그대로 가져온다.
+ */
+export function buildIntentQuery(identity: ProductIdentity, suffix: string): string {
+  const brand = identity.brand?.trim() ?? "";
+  const code = identity.productCode?.trim() ?? "";
+  const design = designTokens(identity);
+  return [brand, code, design, suffix].filter(Boolean).join(" ").trim();
+}
+
+describe("SEARCH-PROVIDER-06 §Intent — 목적형 질의(순수 · 네트워크 0)", () => {
+  it("셋 다 BRAND + MODEL_CODE + 디자인명을 공통 뼈대로 쓴다", () => {
+    for (const p of PRODUCTS) {
+      for (const q of INTENT_QUERIES) {
+        const text = buildIntentQuery(p.identity, q.suffix);
+        expect(text, `${p.id} ${q.label}`).toContain(p.identity.brand!);
+        expect(text, `${p.id} ${q.label}`).toContain(p.identity.productCode!);
+        if (q.suffix) expect(text.endsWith(q.suffix), `${p.id} ${q.label}`).toBe(true);
+      }
+    }
+  });
+
+  it("🔴 셋 다 **영어** 다 — 한글 축을 만들지 않는다(지역 유도 금지)", () => {
+    for (const p of PRODUCTS) {
+      for (const q of INTENT_QUERIES) {
+        expect(/[가-힣]/.test(buildIntentQuery(p.identity, q.suffix)), `${p.id} ${q.label}`).toBe(false);
+      }
+    }
+  });
+
+  it("질의 전수를 출력한다", () => {
+    for (const p of PRODUCTS) {
+      for (const q of INTENT_QUERIES) {
+        console.log(`   ${pad(p.id, 4)} ${pad(q.label, 5)} ${buildIntentQuery(p.identity, q.suffix)}`);
+      }
+    }
+    expect(INTENT_QUERIES).toHaveLength(3);
+  });
+});
+
+const INTENT_LIVE = process.env.CORE_SP06_LIVE === "1";
+
+describe.skipIf(!INTENT_LIVE)("SEARCH-PROVIDER-06 §Intent — 실제 검색(라이브 · 12회)", () => {
+  it(
+    "상품 4 × Intent 3 — 같은 설정으로 돌리고 같은 fixture 에 이어 붙인다",
+    async () => {
+      const token = process.env.APIFY_API_TOKEN?.trim();
+      expect(token, "APIFY_API_TOKEN 이 없다").toBeTruthy();
+      const fsmod = await import("node:fs");
+      const file = JSON.parse(fsmod.readFileSync(OUT, "utf8")) as {
+        runs: {
+          productId: string;
+          label: string;
+          source: string;
+          axis: string;
+          alsoFrom: string[];
+          query: string;
+          startedAt: string;
+          results: unknown[];
+        }[];
+      };
+      const byKey = new Map(file.runs.map((r) => [`${r.productId} ${r.query}`, r]));
+      const flush = () => fsmod.writeFileSync(OUT, `${JSON.stringify(file, null, 1)}\n`);
+
+      const pending: { p: (typeof PRODUCTS)[number]; q: (typeof INTENT_QUERIES)[number]; text: string }[] = [];
+      for (const p of PRODUCTS) {
+        for (const q of INTENT_QUERIES) {
+          const text = buildIntentQuery(p.identity, q.suffix);
+          const hit = byKey.get(`${p.id} ${text}`);
+          if (!hit) {
+            pending.push({ p, q, text });
+            continue;
+          }
+          /**
+           * 🟢🟢 **I-1 은 SPRINT-05 의 `H-Q3` 와 문자열이 같다** — 다시 검색하면 **같은 질의에
+           *    두 번 과금** 한다. 그래서 저장된 결과를 **그대로 복사** 해 라벨만 붙인다(검색 0).
+           * 🔴 「새로 검색했다」로 적지 않는다 — `alsoFrom` 에 출처를 남긴다.
+           */
+          if (file.runs.some((r) => r.productId === p.id && r.label === q.label)) continue;
+          file.runs.push({ ...hit, label: q.label, source: "INTENT", axis: q.axis, alsoFrom: [hit.label] });
+          console.log(`  ${pad(p.id, 4)} ${pad(q.label, 5)} 🟢 기존 ${hit.label} 와 **같은 질의** — 재검색 0`);
+        }
+      }
+      console.log(`  남은 검색 ${pending.length}회 · 예상 $${(pending.length * USD_PER_SEARCH_PAGE).toFixed(3)}`);
+
+      const runOne = async (x: (typeof pending)[number]) => {
+        const startedAt = new Date().toISOString();
+        try {
+          const res = await fetch(
+            `https://api.apify.com/v2/acts/${ACTOR}/run-sync-get-dataset-items?token=${encodeURIComponent(token!)}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              /** 🔴 **SPRINT-05 와 같은 설정** 이다 — 비교 가능성을 지킨다. */
+              body: JSON.stringify({
+                queries: x.text,
+                maxPagesPerQuery: 1,
+                resultsPerPage: 20,
+                saveHtml: false,
+                saveHtmlToKeyValueStore: false,
+              }),
+            },
+          );
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const items = (await res.json()) as SearchItem[];
+          const results = (items[0]?.organicResults ?? [])
+            .filter((o): o is { url: string } & typeof o => Boolean(o.url))
+            .map((o) => ({ url: o.url, title: o.title, displayedUrl: o.displayedUrl, description: o.description }));
+          return {
+            productId: x.p.id,
+            label: x.q.label,
+            source: "INTENT",
+            axis: x.q.axis,
+            alsoFrom: [],
+            query: x.text,
+            startedAt,
+            results,
+          };
+        } catch (err) {
+          /** 🔴 실패는 **기록하지 않는다** — `results: []` 가 「결과 0」이라는 거짓 데이터가 된다. */
+          console.log(`  🔴 ${x.p.id} ${x.q.label} 실패(기록하지 않는다) — ${String(err).slice(0, 90)}`);
+          return null;
+        }
+      };
+
+      for (let i = 0; i < pending.length; i += 4) {
+        const got = await Promise.all(pending.slice(i, i + 4).map(runOne));
+        for (const r of got) {
+          if (!r) continue;
+          file.runs.push(r);
+          console.log(`  ${pad(r.productId, 4)} ${pad(r.label, 5)} 결과 ${padL(String(r.results.length), 2)}  ${r.query}`);
+        }
+        flush();
+      }
+      flush();
+      expect(file.runs.length).toBeGreaterThan(64);
+    },
+    3 * 60 * 60_000,
+  );
+});
+
 /* ───────────── §4-b 「결과 0」이 진짜 0 인지 재확인 ───────────── */
 
 const RECHECK = process.env.CORE_SP05_RECHECK === "1";

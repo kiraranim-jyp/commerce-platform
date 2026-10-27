@@ -16,6 +16,8 @@
  * 🔴 운영 화면이 아니다(`/qa/*` 는 격리 계약이 전수로 잠근다).
  */
 
+import { MARKET_LABEL, type MarketObservation } from "./market-observation";
+
 export interface SearchResultRow {
   url: string;
   title?: string;
@@ -26,6 +28,8 @@ export interface SearchResultRow {
   host: string;
   /** 🔴 **관측** 이다 — URL/제목에 원상품 품번 문자열이 보이는가. 동일상품 판정이 **아니다**. */
   codeSeen: boolean;
+  /** 🔴 시장 **관측**(URL 단계) — 판정이 아니다. `market-observation.ts` 가 소유한다. */
+  market: MarketObservation;
   /** 🔴 같은 판매처가 이 Query 에서 낸 상품 URL 이 2개 이상인가(로케일 중복 의심). */
   sellerRepeat: boolean;
   /** 🟢 이 상품의 **다른 Query** 에서도 같은 URL 이 나왔는가 — Query 간 겹침. */
@@ -63,6 +67,14 @@ const SHAPE_COLOR: Record<string, string> = {
   UNUSABLE: "#b91c1c",
 };
 
+const MARKET_COLOR: Record<MarketObservation, string> = {
+  KR_TLD: "#be123c",
+  REGISTRY: "#9f1239",
+  ORIGIN_BRAND: "#7c3aed",
+  NOISE: "#b91c1c",
+  OTHER: "#0369a1",
+};
+
 const SOURCE_COLOR: Record<string, string> = {
   GENERATOR: "#1d4ed8",
   PLANNER: "#7c3aed",
@@ -83,6 +95,7 @@ function Row({ r }: { r: SearchResultRow }) {
           {r.shape === "PRODUCT_PAGE" ? "상품상세" : r.shape}
         </span>
         <strong style={{ fontSize: 12 }}>{r.host}</strong>
+        <span style={{ fontSize: 11, color: MARKET_COLOR[r.market] }}>{MARKET_LABEL[r.market]}</span>
         {r.codeSeen && <span style={{ fontSize: 11, color: "#15803d" }}>품번 보임</span>}
         {r.sellerRepeat && <span style={{ fontSize: 11, color: "#b45309" }}>같은 판매처 반복</span>}
         {r.alsoInQueries && r.alsoInQueries.length > 0 && (
@@ -160,7 +173,7 @@ function SummaryTable({ runs }: { runs: SearchRunView[] }) {
       <table style={{ borderCollapse: "collapse", fontSize: 12, minWidth: 560 }}>
         <thead>
           <tr style={{ background: "#f1f5f9" }}>
-            {["Query", "질의", "결과", "상품상세", "판매처", "품번 보임"].map((h) => (
+            {["Query", "질의", "결과", "상품상세", "판매처", "🇰🇷", "🏷공식몰", "⚠", "품번 보임"].map((h) => (
               <th key={h} style={{ textAlign: "left", padding: "4px 8px", border: "1px solid #e5e7eb" }}>
                 {h}
               </th>
@@ -171,6 +184,13 @@ function SummaryTable({ runs }: { runs: SearchRunView[] }) {
           {runs.map((run) => {
             const products = run.results.filter((r) => r.shape === "PRODUCT_PAGE");
             const sellers = new Set(products.map((r) => r.host));
+            /** 🔴 시장은 **관측** 이다 — 🇰🇷 는 `.kr` «와» 국내 등록부를 **갈라** 센다. */
+            const kr = new Set(
+              run.results.filter((r) => r.market === "KR_TLD" || r.market === "REGISTRY").map((r) => r.host),
+            );
+            const krTld = new Set(run.results.filter((r) => r.market === "KR_TLD").map((r) => r.host));
+            const origin = new Set(run.results.filter((r) => r.market === "ORIGIN_BRAND").map((r) => r.host));
+            const noise = run.results.filter((r) => r.market === "NOISE").length;
             return (
               <tr key={run.label} data-testid={`qa-row-${run.productId}-${run.label}`}>
                 <td style={{ padding: "3px 8px", border: "1px solid #e5e7eb", fontWeight: 700 }}>{run.label}</td>
@@ -184,6 +204,16 @@ function SummaryTable({ runs }: { runs: SearchRunView[] }) {
                   {products.length}
                 </td>
                 <td style={{ padding: "3px 8px", border: "1px solid #e5e7eb", textAlign: "right" }}>{sellers.size}</td>
+                <td
+                  style={{ padding: "3px 8px", border: "1px solid #e5e7eb", textAlign: "right" }}
+                  data-testid={`qa-kr-${run.productId}-${run.label}`}
+                  title=".kr TLD + 국내 등록부 도메인 (괄호는 .kr 만)"
+                >
+                  {kr.size}
+                  {kr.size > 0 ? ` (${krTld.size})` : ""}
+                </td>
+                <td style={{ padding: "3px 8px", border: "1px solid #e5e7eb", textAlign: "right" }}>{origin.size}</td>
+                <td style={{ padding: "3px 8px", border: "1px solid #e5e7eb", textAlign: "right" }}>{noise}</td>
                 <td style={{ padding: "3px 8px", border: "1px solid #e5e7eb", textAlign: "right" }}>
                   {run.results.filter((r) => r.codeSeen).length}
                 </td>
@@ -217,6 +247,13 @@ export function SearchCompareView({
         검색/카테고리 페이지·Pinterest·블로그·기사·이미지·브랜드 홈) · <strong>D</strong> 불확실.
         <br />
         🔴 <strong>이 분류는 화면이 찍지 않습니다</strong> — 재료만 보여 드리고 판단은 사람이 합니다.
+      </p>
+      <p style={{ fontSize: 12, color: "#374151", margin: "0 0 18px", lineHeight: 1.7 }}>
+        <strong>시장 표시는 관측입니다</strong> — 🇰🇷 열은 <code>.kr</code> 도메인 <strong>과</strong> 국내
+        등록부 도메인을 <strong>갈라서</strong> 셉니다(괄호 안이 <code>.kr</code>만). 🔴 「등록부에 있다」는
+        「국내 시장이다」를 뜻하지 않습니다 — 실제로 등록부에 있는 브랜드 공식몰이 EUR 가격을 낸 적이
+        있습니다. 운영 시장 판정기는 <strong>가격과 통화</strong>를 요구하므로 검색 결과 단계에서는 쓸 수
+        없습니다.
       </p>
       {productIds.map((pid) => {
         const o = origins[pid];

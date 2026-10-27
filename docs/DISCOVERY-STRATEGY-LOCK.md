@@ -574,3 +574,79 @@ S3 P-SHOP_EN         0 → 재확인 **0**
 🔴 화면은 **판정하지 않는다** — MI 0 · SAME/DIFFERENT 0 · **A/B/C/D 자동 분류 0**(기준만 적고 판단은 사람이 한다).
 
 **🔵 상태 — `DISCOVERY SEARCH QUERY SELECTION = HOLD`. CPO 가 육안 확인 후 단일 Query 를 고른다.**
+
+---
+
+## 부록 — `SEARCH-PROVIDER-06` **목적형(Intent) Query** 실험 (2026-10-27)
+
+### ① CPO 재정의 — Query 는 검색어가 아니라 **Discovery Intent** 다
+
+> 「검색어를 잘 만드는 것보다 **무엇을 찾으라고 검색하는지** 를 명시하는 것이 먼저다.」
+
+🔴 **한글/영어를 Query 축으로 삼지 않는다**(검색엔진의 지역/언어 편향을 Query 로 간접
+유도하지 않는다). 셋 다 **영어로 통일** 하고, 국내/해외가 결과에서 «실제로» 어떻게 분포하는지만 본다.
+
+```
+I-1  BRAND + MODEL_CODE + PRODUCT_NAME                   동일상품 URL 탐색
+I-2  BRAND + MODEL_CODE + PRODUCT_NAME + exact product   동일상품 상세페이지 집중
+I-3  BRAND + MODEL_CODE + PRODUCT_NAME + buy             실제 판매처 집중
+```
+🟢 상품명은 GT 제목이 아니라 **운영 Planner 의 코어 토큰**(`BRAND_DESIGN` 축)을 그대로 쓴다
+(GT 제목에는 `by {브랜드}` 와 재고/사이즈 꼬리표가 붙어 브랜드가 두 번 들어간다).
+🟢 **I-1 은 SPRINT-05 의 `H-Q3` 와 문자열이 같아 재검색 0** 으로 결과를 복사했다(실검색 **8회**).
+
+### ② 🔴🔴 CPO 의 질문에 대한 답 — **한 Query 가 국내+해외를 섞어 주는가**
+
+```
+Query                 결과 상품URL 판매처 Crawl Evid Evid판매처  🇰🇷(.kr) 공식몰 해외도메인
+I-1                    36    23    14    20   20       11      1(1)     2      16
+I-2 exact product      36    24    14    15   15        8      1(1)     2      14
+I-3 buy                36    23    13    19   19       10      0(0)     2      14
+──────────────────────────────────────────────────────────────────────────────
+참고 G-Q3 상품명+색상   35    26    19    21   21       14      0(0)     1      25
+참고 G-Q5 품번 단독     36    21    21    14   14       14      7(7)     0      24
+참고 P-CODE_ONLY "품번" 35    23    20    14   14       13      8(8)     0      —
+```
+
+🔴🔴🔴 **목적어("exact product" / "buy")가 국내를 불러오지 못한다.** Query 축별 🇰🇷 도메인 전수:
+
+```
+P-CODE_ONLY   "B226AC010"              **8**  mustit · gmarket · 11st · lfmall · kurate ·
+                                              donokids · deuxbebe · littleluna
+P-PURCHASE_KO "보보쇼즈" "품번" 구매      **8**  wconcept · gmarket · lfmall · jente · posty ·
+                                              gsshop · miniboutique · mustit
+G-Q5          B226AC010                **7**  11st · gmarket · biskuit · kurate · mustit ·
+                                              reebonz · lfmall
+P-BRAND_CODE  "브랜드" "품번"             4
+G-Q6          브랜드 + 품번                2
+I-1 / I-2                                1    (littleluna · S4 에서만)
+I-3 · G-Q1 · G-Q2 · G-Q3 · G-Q4 · G-Q7 · G-Q8 · P-BRAND_DESIGN   **0**
+```
+
+🔴🔴 **상품명이 들어간 영어 Query 는 국내가 «구조적으로» 0 이다** — I-1/I-2/I-3 셋 다 그 모양이다.
+🟢🟢 **섞어 주는 축은 「품번」 하나다** — `P-CODE_ONLY` 는 **상품 4개 전부** 에서 국내와 해외를 같이 낸다:
+
+```
+S1 🇰🇷 mustit                          · 🌎 6
+S2 🇰🇷 gmarket · 11st · lfmall          · 🌎 5
+S3 🇰🇷 kurate · lfmall                  · 🌎 6
+S4 🇰🇷 donokids · deuxbebe · littleluna · 🌎 5
+```
+🔴 `G-Q5`(따옴표 없는 품번)는 **S1·S4 에서 국내 0** 이다 ⟹ 따옴표 유무가 갈린다(관측 · 원인 미규명).
+
+⟹ 🔵 **「상품 1개 = Search 1회」로 국내+해외를 동시에 얻는 것은 «가능해 보인다» — 단 축이
+   「품번」일 때만이고, I-1/I-2/I-3 은 그 역할을 못 한다.** 🔴 CTO 가 확정하지 않았다.
+
+### ③ 🔴 시장 표시는 **관측** 이다 — 운영 판정기를 쓸 수 없다
+
+`classifyCandidateMarket` 은 **가격과 통화** 를 요구하는데 검색 결과에는 URL/제목뿐이다.
+그래서 `market-observation.ts` 가 **URL 단계에서 보이는 것만** 적고, 🇰🇷 는 **`.kr` TLD 와
+국내 등록부 소속을 갈라서** 센다 — 🔴 「등록부에 있다」≠「국내 시장이다」(WU-019R 에서
+등록부 소속 공식몰이 **EUR** 를 냈다). 🟢 브랜드 공식몰은 **별도 칸** 으로 뺐다.
+
+### ④ 표본 한계 — 넘겨 읽지 않는다
+
+🔴 원상품 **4개** · 브랜드 **2개**(Bobo Choses 3 · Main Story 1) · 1회 관측 ·
+Google/Apify 결과는 **실행마다 다르다**. 🔴 「품번 축이 항상 국내를 낸다」로 일반화하지 않는다.
+
+**🔵 상태 — `DISCOVERY SEARCH QUERY SELECTION = HOLD`. CPO 가 단일 Query 를 고른다.**

@@ -11,7 +11,7 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **DISCOVERY-SEARCH-PROVIDER-05** — 🟡 **정의된 Query 전수 64회 실검색 완료 · 육안 검증 대기**
+CURRENT WU   **DISCOVERY-SEARCH-PROVIDER-06** — 🟡 **목적형 I-1/I-2/I-3 측정 완료 · 단일 Query 선택 대기**
 NEXT         🔴🔴 **Search Provider 단독 의사결정**(CPO/CEO) — 🔴 그 전까지 Registry 확대 금지
              🔵 전략은 **docs/DISCOVERY-STRATEGY-LOCK.md** 에 고정됐다(세션 바뀌어도 남는다)
 CEO ACTION   🔵🔵 **있다** — **/qa/search**(또는 `docs/search-provider-05-urls.html`)에서 상품 4 × Query 전수 **526 URL** 을 클릭·육안 확인 → **단일 Query 1개 선택**
@@ -22,9 +22,10 @@ CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **IMAGE-EVIDENCE-02**(C22 공급 0→1 · 정규화 Evidence · READY) ·
              **FINAL-VISUAL-01**(QA X-Ray · 운영 UI 격리 · 운영 파일 변경 0) ·
              **SEARCH-PROVIDER-02/03/04**(URL 분류기 2줄 · Query 폭 · Q2/Q3) ·
-             **SEARCH-PROVIDER-05**(Q1~Q8 + Planner 8축 전수 64회 · 526 URL · 운영 배선 0)
+             **SEARCH-PROVIDER-05**(Q1~Q8 + Planner 8축 전수 64회 · 526 URL · 운영 배선 0) ·
+             **SEARCH-PROVIDER-06**(목적형 I-1~I-3 · 🔴 상품명 영어 Query 는 국내 0 · 품번 축만 섞인다)
 Git          clean · origin/main 0/0 · Production / 200
-회귀         **710 files / 9,485 passed / 0 failed / 152 skipped** · typecheck 0 · build 0
+회귀         **710 files / 9,492 passed / 0 failed / 152 skipped** · typecheck 0 · build 0
 ```
 
 🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **CPO 판정** 이다 — matcher 를 CTO 가 열지 않는다.
