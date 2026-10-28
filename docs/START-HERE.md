@@ -21,7 +21,22 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **DOMESTIC-SAME-PROVIDER-01** — 🟡 **PARTIAL**
+CURRENT WU   **DISCOVERY-TO-MI-CANONICAL-01** — 🟡 **PARTIAL** · 운영 코드 변경 **0**
+             🟢🟢 **① AI Search 목록 → ② MI SAME 목록 → ③ 가격/판매처** 가 닫혔다
+                B226AC009: 후보 **4** → crawl 3 → evidence 3 → **SAME 3**
+                (PRESUMED 0 · SIMILAR 0 · DIFFERENT 0 · UNKNOWN 0 · 보류/충돌 **0**)
+             🟢 **후보가 준 단계는 하나뿐** — ④ crawl 에서 `UNREACHABLE` 1건.
+                ②③⑤⑥⑦ 손실 **0** ⟹ **비교→MI SAME 은 손실이 없다**
+             🟢 §11 근거 확보 — 「품번 완전 일치 → EXACT_IDENTIFIER」까지 운영 문장 그대로
+             🟢 해외 축은 **끝까지** 간다 — SAME 3 → URL 3 → 가격 3 → GBP 37 · USD 58
+             🔴 **PASS 5 만 못 넘는다** — AI Search 가 **국내 URL 0건** 이라 분모가 0
+                (owner = Search 축 · §10 이 Query 동결 ⟹ **CPO 가 별도 WU 로 지정**)
+             🔴 PASS 7 — 따져 화면 **CEO 확인 미완**(CTO 는 그 칸을 볼 수 없다)
+             🟢🟢 §4~§6 확인 — 국내/해외가 **이미 한 집합** 이다(같은 evidence 타입 ·
+                같은 가격 함수 · `market === "KR"` 한 줄로만 갈린다) ⟹ 별도 모델 **불필요**
+             🟢 전문 `docs/HANDOFF-DISCOVERY-TO-MI-CANONICAL-01.md`
+[직전]       **DOMESTIC-SAME-PROVIDER-01**
+[낡음]       **DOMESTIC-SAME-PROVIDER-01** — 🟡 **PARTIAL**
              🔴🔴 **CPO 한 질문의 답 = 아직 NO** — AI Search 가 B226AC009 에서
                 **국내 URL 을 0건** 냈다(organic 4 전부 해외) ⟹ 표시할 것이 없었다
              🟢🟢 **그런데 파이프라인은 준비돼 있다** — 재투입 축에서 그 모양이 실제로 난다
