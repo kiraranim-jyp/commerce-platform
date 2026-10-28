@@ -11,7 +11,15 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **BROWSER-FALLBACK-01** — 🔴 **FAIL(현재 구조) · 구현 0**
+CURRENT WU   **BROWSER-FALLBACK-02** — 🟡 **PARTIAL · 구현 0 · 방향은 성립**
+             🟢 실제 HTML(junioredition 826KB)을 **기존 추출기**에 넣으니
+                `title` 🟢 · `sku` 🟢 · `price 68,600 KRW` 🟢 (schema 변경 **0**)
+             🟢 `ProductGroup + hasVariant` 는 **이미 지원**(N-3.54) — 새 추출기 불필요
+             🟡 `brand`·`description` 은 빈다(variant 노드를 돌려주는 탓으로 **추정** · 미확정)
+             🔴 **farfetch 전체 HTML 로는 한 번도 못 돌렸다** — 서버 403 · CTO 브라우저 0
+             🔴🔴 **내 1차 보고 두 문장을 철회했다** — 없는 칸(`name`)을 읽고
+                「추출 실패」·「다른 상품을 집었다」로 적었다(typecheck 가 잡았다)
+[직전]       **BROWSER-FALLBACK-01** — 🔴 현재 북마클릿은 **Case A**(URL 만 전달 · 서버 재fetch)
              🔴🔴 현재 북마클릿은 **Case A** 다 — `a[href]` 만 긁어 **URL 목록을 내비게이션**
              으로 넘기고 **서버가 그 URL 을 다시 fetch** 한다 ⟹ 403 을 전혀 건드리지 않는다
              🔴 서버에 **데이터를 받는 입구가 없다**(`candidateUrls` 뿐 · route 전수 0)

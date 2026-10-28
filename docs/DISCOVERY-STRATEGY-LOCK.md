@@ -1976,3 +1976,66 @@ Evidence 생산자는 `factsFromProductUrl(url)` 하나이고 그 함수는 **fe
 ```
 
 **🔵 상태 — `BROWSER FALLBACK FAIL(현재) / Case B 미검증`. 🔴 북마클릿을 제품 구조에 넣지 않았다.**
+
+---
+
+## 부록 AG. BROWSER-FALLBACK-02 — **실제 HTML 은 기존 추출기로 읽힌다** (2026-10-28 · PoC)
+
+🔴 새 endpoint 0 · 북마클릿 변경 0 · Identity/MI 0 · 추가 Search 0 · 우회 0 · UI 0 · 운영 코드 0.
+
+### AG-0. 🔴🔴 먼저 — **내가 1차에 두 가지를 틀렸고 typecheck 가 잡았다**
+
+```
+1차에 `name` · `currency` · `images` 로 읽었는데 **`ExtractedProductData` 에 없는 칸** 이다
+(실제: `title` · `price{amount,currency}` · `sku` · `brand` · `siteBrandName` · `material` …).
+⟹ 전부 `undefined` 가 나왔고 그걸 **「추출 실패」** 로 적을 뻔했다.
+🔴🔴 그 위에서 「Junior Edition 이 **다른 상품을 집었다**」고까지 썼다 — **그것도 틀렸다.**
+   올바른 칸으로 다시 재니 title 이 **정확히 그 상품** 이고 `AC23-2` 는
+   **다른 상품이 아니라 «2-3 Years» 사이즈 variant** 다.
+🟢 두 문장 다 **철회** 한다. 이 트랙에서 반복된 「칸 이름 추측」 실수다.
+```
+
+### AG-1. 🟢 `ProductGroup` 은 **이미 지원된다**
+
+`findProductNode`(product-data-extractor.ts:463)가 `@type: ProductGroup` + `hasVariant` 를
+이미 안다(N-3.54 · Smallable). ⟹ 🔴 「새 추출기가 필요하다」가 **아니다**.
+
+### AG-2. 실측 (올바른 칸 기준)
+
+| 입력 | title | brand | sku | price | description |
+|---|---|---|---|---|---|
+| Junior Edition — **우리 서버가 받은 실제 HTML 826KB** | 🟢 `Hug Hairy Monster T-Shirt by Bobo Choses - 2-3 Years` | null | `AC23-2` | **68,600 KRW** | null |
+| Farfetch — 🔴 **CPO 가 브라우저에서 읽은 JSON-LD 블록만** | null | null | `37620037-6` | **46 USD** | null |
+
+```
+🟢 Junior Edition JSON-LD @type 전수 — Organization · BreadcrumbList · ListItem ·
+   **ProductGroup · Brand · Product · Offer** ⟹ CPO 가 본 「Organization 만」은 **부분 관측** 이었다.
+🟢 `B226AC009` 가 그 HTML 원문에 **2회** 있다(추출기 반환 칸은 아니다 —
+   품번은 `resolveBrandModelCode` 가 title/description/URL 에서 따로 만든다).
+🔴 Farfetch 의 null 들은 **내 fixture 가 최소라서** 생긴 것일 수 있다 —
+   전체 HTML 이 아니므로 **그 사이트의 한계로 적지 않는다**.
+🔴 brand 가 둘 다 null 인 이유는 `hasVariant` 의 **variant 노드** 를 돌려주기 때문으로 보인다
+   (brand 는 부모 ProductGroup 에 있다). 🔴 **추정이고 고치지 않았다.**
+```
+
+### AG-3. 🟡 판정 — **BROWSER FALLBACK PARTIAL (방향은 성립)**
+
+```
+🟢 성립   브라우저가 받을 수 있는 **실제 HTML** 을 기존 추출기에 넣으면
+         **title · sku · price 가 나온다**(crash 0 · ProductGroup 인식 · schema 변경 0).
+🟡 미흡   brand · description · material 이 비어 나온다(원인 추정은 AG-2, **미확정**).
+🔴 미검증 **차단 사이트(farfetch)의 «전체» HTML 로는 한 번도 돌려보지 못했다** —
+         서버는 403 이고 CTO 에게 브라우저가 없다. 그 칸은 **사람만 닫을 수 있다.**
+```
+
+### AG-4. 🔴 CTO 가 하지 않은 것
+
+```
+추출기 수정 ❌ (brand 누락은 기존 동작이고 원인이 미확정 — 별건 · CPO 판정)
+브라우저 쪽 파싱 ❌ (추출기 owner 가 둘이 된다)
+endpoint 신설 ❌ · Identity 실행 ❌ (입력이 아직 한 쪽만 실측됐다)
+```
+
+**🔵 상태 — `BROWSER FALLBACK PARTIAL`. 다음은 둘 중 하나이고 **CPO 판정** 이다 —
+⒜ 사람이 farfetch **전체 HTML** 을 한 번 떠서 같은 추출기에 넣어 본다(측정)
+⒝ `hasVariant` 에서 **부모 ProductGroup 의 칸을 보존** 할 것인가(구현 · 운영 원상품 경로에도 영향).**
