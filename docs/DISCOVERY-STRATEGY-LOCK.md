@@ -1661,3 +1661,71 @@ m.danawa.com  market = **UNKNOWN** (KR 아님)
 
 **🔵 상태 — `Search→Pool 🟢 / Pool→Judge 🟢 / Judge→Evidence 🟢 / Evidence→Response 🟢(직접) /
 Response→UI 🟢(계약+DOM)`. 🔴 CEO 화면에서 못 본 이유는 **그 실행의 공급** 이고 재실행으로 확인하지 않는다.**
+
+---
+
+## 부록 AC. DISCOVERY E2E-07 — **입구 손실 분해** (2026-10-28 · 측정 전용)
+
+🔴 **추가 Search 0 · Apify 0 · 운영 로직 변경 0.** 이미 저장된 같은 질의(`"B226AC009"`)
+9 URL 로만 쟀다. 🔴 UA/Cookie/Proxy/브라우저/retry **전부 0**(SP-13 금지 유지).
+
+### AC-1. URL별 전 구간 (운영 산출 + HTTP 코드 분리)
+
+| host | 추정 | `classifyUrlShape` | HTTP | pool 결과 |
+|---|---|---|---:|---|
+| m.gmarket.co.kr | 🇰🇷 | PRODUCT_PAGE | **403** | UNREACHABLE |
+| www.11st.co.kr | 🇰🇷 | PRODUCT_PAGE | 200 | 🟢 **SURVIVED** |
+| www.farfetch.com | 🌎 | PRODUCT_PAGE | **403** | UNREACHABLE |
+| m.coupang.com | 🇰🇷 | PRODUCT_PAGE | **403** | UNREACHABLE |
+| www.babyshop.com | 🌎 | PRODUCT_PAGE | **403** | UNREACHABLE |
+| m.danawa.com | 🇰🇷 | PRODUCT_PAGE | 200 | 🟢 **SURVIVED** |
+| item.rakuten.co.jp | 🌎 | UNKNOWN_PAGE | 200 | NOT_PRODUCT_PAGE |
+| m.gmarket.co.kr | 🇰🇷 | PRODUCT_PAGE | **403** | UNREACHABLE |
+| www.lfmall.co.kr | 🇰🇷 | LISTING_PAGE | 200 | NOT_PRODUCT_PAGE |
+
+🔴 「추정」은 **도메인 추정** 이다 — `market` 은 facts 가 있어야 나므로 입구에서 죽은
+URL 의 시장은 **측정불가** 다. 운영 판정으로 읽지 않는다.
+
+### AC-2. KPI
+
+```
+raw 9 → PRODUCT_PAGE **7** → accepted **7** → usable **2** → miEligible **2** · fetchCalls 9
+전환율  raw→shape 77.8% · shape→accepted 100% · accepted→usable **28.6%** · usable→MI 100%
+```
+🔴🔴 **단일 최대 손실은 `accepted → usable` 이고 그 전부가 403 이다**(5/7 = **71.4%**).
+
+### AC-3. 403 분석 — 🔴 **뚫지 않는다. 세기만 한다**
+
+```
+403 **5건 / 4 호스트** — m.gmarket.co.kr ×2 · www.farfetch.com · m.coupang.com · www.babyshop.com
+최종 후보 손실 기여   7건 중 **5건(71.4%)**
+🔴 그중 🇰🇷추정이 **3건**(gmarket ×2 · coupang) — 국내 손실의 **대부분** 이다
+🟡 **egress 에 따라 갈린다**(E2E-04 실측) — coupang 은 로컬 403 ↔ **OCI 데이터센터 200**.
+   gmarket · farfetch · babyshop 은 **양쪽 다 403**.
+   🔴 운영은 Vercel egress 이고 그 축은 **미측정** 이다.
+🔴 UA 변경 · Cookie · Proxy · 브라우저 · retry · 사이트별 adapter — **하나도 하지 않았다**.
+```
+
+### AC-4. 🔴🔴 국내/해외를 가른 결론 — **「검색이 국내를 못 찾는다」가 아니다**
+
+```
+🇰🇷추정 6/9  → 생존 **2**(11st · danawa) · 손실 4 = 403 **3** + 목록페이지 **1**(lfmall)
+🌎추정 3/9  → 생존 **0**          · 손실 3 = 403 **2** + 비상품 **1**(rakuten)
+⟹ 🟢 **검색 결과에 국내 후보는 충분히 있었다**(9건 중 6건).
+⟹ 🔴 죽은 이유는 **⒜ 403 ⒝ 비상품 모양** 이고 **Query 문제가 아니다.**
+🔴 그러므로 Query Selection **HOLD 를 유지한다** — 이 결과를 근거로 질의를 바꾸지 않는다.
+```
+
+### AC-5. 🟢 올바른 차단 2건 — 손실로 세되 **결함으로 적지 않는다**
+
+```
+item.rakuten.co.jp  UNKNOWN_PAGE · HTTP 200 ⟹ 모양 게이트가 **정확히** 걸렀다
+www.lfmall.co.kr    LISTING_PAGE(검색 결과 페이지) · HTTP 200 ⟹ 같다
+```
+
+### AC-6. 최종 병목 — 한 문장
+
+> **입구 손실의 71%가 403 이고, 그 403 의 3/5 가 국내 대형 마켓(gmarket ×2 · coupang)이다.**
+> Query 도 UI 도 response 도 아니다.
+
+**🔵 상태 — 측정 완료. 🔴 403 대응은 «제품/기술 의사결정» 이라 CTO 가 열지 않는다(CPO 판정 사안).**

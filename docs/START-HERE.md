@@ -11,7 +11,14 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **DISCOVERY E2E-06** — 🟢🟢 **전 구간이 증명됐다**(추가 Search 0 · Apify 0)
+CURRENT WU   **DISCOVERY E2E-07** — 🟢 **입구 손실을 숫자로 냈다**(추가 Search 0 · Apify 0)
+             `raw 9 → PRODUCT_PAGE 7 → accepted 7 → usable **2** → miEligible 2`
+             🔴🔴 **단일 최대 손실 = 403 · 5건(최종 손실의 71%)** —
+             gmarket ×2 · coupang · farfetch · babyshop (🇰🇷추정 3건 포함)
+             🟢 **검색 결과에 국내 후보는 6/9 로 충분했다** ⟹ **Query 문제가 아니다**
+             🔴 403 은 **세기만 했다** — UA·Cookie·Proxy·브라우저·retry **전부 0**(SP-13 유지)
+             🟡 403 대응은 **제품/기술 의사결정** — CTO 가 열지 않는다(CPO 판정)
+[직전]       **E2E-06** — 🟢🟢 재주입으로 response 까지 직접 증명(CASE A)
              저장된 Search 결과를 **운영 runner 에 재주입**(mock 은 검색 호출 하나뿐) ⟹
              `supplied 9 → accepted 7 → usable 2 → miEligible 2` ·
              **`webSearchEvidence = array(2)`**(11st `KR` · danawa `UNKNOWN`) = **CASE A**
