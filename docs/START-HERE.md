@@ -11,14 +11,15 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **DISCOVERY E2E-05** — 🔴 **E2E-03 · E2E-04 둘 다 FAIL 이었다**(CEO 화면 실측)
-             🟢 UI 배선은 **이제 닿아 있다**(계약 10 + 마운트 DOM 6 + 변이 N1~N7·D1~D4)
-             🔴🔴 **탈락 지점은 UI 가 아니라 «공급» 이다(CASE 3)** — 그 실행에서 AI Search
-             후보가 **후보가 되기 «전»** 에 사라졌고 **정확히 그 구간만 로그가 없었다**
-             🟢 계측 **1지점** `[SP07-pool]` 추가·배포(동작 변화 0 · 추가 Search 0)
-NEXT         🔵 **다음 실행 1회의 `[SP07-pool]` 로그가 원인을 확정한다** —
-             `supplied → accepted → usable → miEligible` + `dropped:["host:사유"]`
-             🔴 그 전에 prop/field 를 더 만들지 않는다 · 재실행으로 때우지 않는다
+CURRENT WU   **DISCOVERY E2E-06** — 🟢🟢 **전 구간이 증명됐다**(추가 Search 0 · Apify 0)
+             저장된 Search 결과를 **운영 runner 에 재주입**(mock 은 검색 호출 하나뿐) ⟹
+             `supplied 9 → accepted 7 → usable 2 → miEligible 2` ·
+             **`webSearchEvidence = array(2)`**(11st `KR` · danawa `UNKNOWN`) = **CASE A**
+             ⟹ 🔴 UI 도 response 도 아니다. CEO 화면의 0 은 **그 실행의 공급** 이다
+             🔴 CPO 전제 정정 — 그 `JUDGED` 는 **CEO 09:44 실행의 값이 아니다**(분모 다름)
+             🔴 **danawa 는 market UNKNOWN** 이라 🇰🇷 구역이 아니라 「🛰 AI 검색 후보」에 선다
+NEXT         🔵 **CTO 가 할 일이 없다** — 다음 실행 1회의 `[SP07-pool]` 이 공급을 그대로 말한다
+             🔴 그 1회를 **만들지 않는다**(`1 Product = 1 Search`) · 재실행으로 때우지 않는다
              🔵 전략은 **docs/DISCOVERY-STRATEGY-LOCK.md** 에 고정됐다(세션 바뀌어도 남는다)
 CEO ACTION   🔵🔵 **있다** — docs/DISCOVERY-E2E-02-SCREEN-CHECK.md **부록** 대로
              현재 배포본에서 **「새 상품 분석」 «1회»** · 볼 것은 셋뿐

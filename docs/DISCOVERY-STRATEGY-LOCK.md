@@ -1592,3 +1592,72 @@ drop: NOT_PRODUCT_PAGE 2(rakuten · lfmall) · UNREACHABLE 5
 ```
 
 **🔵 상태 — `E2E-05 계측 배포 완료 / 원인 CASE 3 잠정 · 다음 1회 실행에서 확정`.**
+
+---
+
+## 부록 AB. DISCOVERY E2E-06 — **response 까지 직접 증명됐다(CASE A)** (2026-10-28)
+
+🔴 **추가 Search 0 · Apify 호출 0.** 이미 저장된 Search 결과(같은 질의 `"B226AC009"` 9건)를
+**운영 `runDomesticPriceCheck` 에 재주입** 했다. 🟢 mock 은 **검색 호출 하나뿐** 이고
+pool · withConfidence · enrich · `judgeDomesticCandidate` · evidence push · 반환 조립은
+**전부 운영 코드** 다.
+
+### AB-1. 실측 — funnel 전 구간
+
+```
+[SP07-websearch] searches=1 organic=9 skipped=null failed=false
+[SP07-pool] supplied 9 → accepted 7 → usable 2 → **miEligible 2** · fetchCalls 9 · overLimit 0
+            dropped  rakuten:NOT_PRODUCT_PAGE · lfmall:NOT_PRODUCT_PAGE ·
+                     gmarket:UNREACHABLE ×2 · farfetch:UNREACHABLE ·
+                     coupang:UNREACHABLE · babyshop:UNREACHABLE
+            hosts    11st.co.kr:1 · m.danawa.com:1
+[E2E06-evidence] **array(2)**
+[E2E06-row] 11st.co.kr    source=WEB_SEARCH market=**KR**      tier=COMPARISON PRESUMED_SAME
+[E2E06-row] m.danawa.com  source=WEB_SEARCH market=**UNKNOWN** tier=COMPARISON PRESUMED_SAME
+```
+
+### AB-2. 🟢 판정 — **CASE A**. response 까지 정상이다
+
+| 구간 | 결과 |
+|---|---|
+| Search → Pool | 🟢 측정됨(9 → 2) |
+| Pool → Judge | 🟢 JUDGED ×2 |
+| Judge → Evidence | 🟢 push ×2 |
+| **Evidence → Response** | 🟢🟢 **`webSearchEvidence = array(2)`** ← 이번에 **직접** 캡처 |
+| Response → UI | 🟢 E2E-04 수정 + 마운트 DOM + 변이 D1~D4 |
+
+🔴 **그러므로 「UI 가 국내 후보를 숨긴다」도 「response 에 없다」도 아니다.**
+남는 설명은 하나다 — **CEO 09:44 실행에서는 그 URL 들이 pool 을 통과하지 못했다**
+(또는 애초에 검색 결과에 없었다). 그 구간이 이제 `[SP07-pool]` 로 보인다.
+
+### AB-3. 🔴🔴 CPO 전제 하나를 정정한다 — **분모가 다르다**
+
+```
+CPO 문장  「11st / Danawa 가 JUDGED + evidence push 까지 갔는데 왜 화면에 안 보였는가」
+🔴 그 JUDGED 는 **CEO 09:44 실행의 값이 아니다** — 같은 질의의 **다른 실행**
+   URL 9건으로 CTO 가 오프라인에서 잰 값이다.
+🔴 CEO 실행(organic 10)에서 판정 로그에 보인 web-search 후보는 **world.taobao.com 하나** 이고
+   그것은 `matchLevel: low` → `EVIDENCE_NOT_WORTHWHILE` 로 **올바르게** 드롭됐다.
+🔴 그 실행의 URL 목록은 로그에 없어 **영구 측정불가** 다(SP-10: 실행 간 겹침 3~30%).
+```
+
+### AB-4. 🔴 새로 드러난 사실 — **danawa 는 🇰🇷 구역에 서지 않는다**
+
+```
+m.danawa.com  market = **UNKNOWN** (KR 아님)
+⟹ `isKr` 가 false 라 「🇰🇷 국내 후보 검토」가 아니라 **「🛰 AI 검색 후보」 구역** 에 선다.
+🔴 운영 `classifyCandidateMarket` 산출이고 **여기서 추측하지 않는다**(WU-020 계약).
+⟹ 🔴 CEO 확인 문구에서 「🇰🇷 에 11st·다나와가 보인다」로 적으면 **틀린다** —
+   그 구역에 서는 것은 **11st 하나** 다.
+```
+
+### AB-5. 🔴 남은 미계측
+
+```
+⒜ CEO 09:44 실행의 **입력 URL 9~10건**  — 영구 측정불가(로그에 없다)
+⒝ **운영 egress 에서의 입구 손실**       — 이 하니스는 한국 가정용 IP 다.
+   🟢 `[SP07-pool]` 이 배포돼 있으므로 **다음 실행 1회** 에서 그대로 보인다.
+```
+
+**🔵 상태 — `Search→Pool 🟢 / Pool→Judge 🟢 / Judge→Evidence 🟢 / Evidence→Response 🟢(직접) /
+Response→UI 🟢(계약+DOM)`. 🔴 CEO 화면에서 못 본 이유는 **그 실행의 공급** 이고 재실행으로 확인하지 않는다.**
