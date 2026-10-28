@@ -1512,3 +1512,83 @@ CTO 가 보고 말미에 「국내 후보 0 이면 한 번 더 「새 상품 분
 🟢 반대로 **「AI 검색」 출처 배지는 있다**(그것이 이번 수정의 핵심 중 하나다).
 
 **🔵 현재 좌표 — `E2E-04 코드 🟢 / 실제 Production 화면 🟡 CEO 확인 대기`. CTO 추가 작업 없음.**
+
+---
+
+## 부록 AA. DISCOVERY E2E-05 — **런타임 trace · 탈락 지점은 UI 가 아니다** (2026-10-28)
+
+🔴 **E2E-04 = FAIL.** CEO 가 배포 뒤 실제 「새 상품 분석」을 1회 했고(09:44:24 KST ·
+스냅샷 `c88d2ca4-bfe1-4851-9c1d-92f69222a3f2` · origin `bobochoses.com/en-kr/...`),
+화면에 **국내 동일상품 후보가 없었다.** 추가 Search **0** 으로 그 실행을 추적했다.
+
+### AA-1. 그 실행의 런타임 로그 (추가 Search 0 · Apify 호출 0)
+
+```
+[SP07-websearch] {"query":"\"B226AC009\"","searches":1,"organic":10,
+                  "skipped":null,"failed":false}
+🟢 Search 는 돌았다(10건).
+🔴🔴 그런데 판정 로그에 **AI Search 경로 후보가 «하나» 뿐** 이다 —
+     world.taobao.com · matchLevel "low" · EVIDENCE_NOT_WORTHWHILE → **DROPPED**
+🔴 11st · danawa 는 **드롭 로그에도 없다** ⟹ 후보가 되기 «전» 에 사라졌다.
+🔴 그런데 **그 구간에 로그가 없다** — 그래서 원인을 가를 수 없었다.
+```
+
+### AA-2. 🔴 내가 두 번 틀린 이유 — **운영 호출 순서를 끝까지 베끼지 않았다**
+
+```
+E2E-03/04 에서 잰 것   collectUrlCandidatePool → withConfidence   ← 여기서 멈췄다
+운영이 실제로 하는 것   … → **judgeDomesticCandidate**(⑧ 게이트) → evidence push
+```
+🟢 이번에 끝까지 베껴 다시 쟀다(같은 9 URL · 추가 Search 0):
+```
+[E2E05-origin] brand={"value":"Bobo Choses","confident":true} code=B226AC009
+[E2E05-judge] 11st.co.kr    n=1 matchLevel=low verdict=PRESUMED_SAME → kind=**JUDGED**
+[E2E05-judge] m.danawa.com  n=1 matchLevel=low verdict=PRESUMED_SAME → kind=**JUDGED**
+```
+⟹ 🟢 **⑧ 게이트는 이 둘을 죽이지 않는다.** 그리고 `JUDGED` 면 evidence push 에 **조건이 없다**.
+🔴 **1차에 `query` 를 `{title, sourceUrl}` 로 손으로 만들었다가 `crossSellerVerdict` 가
+   전건 `undefined` 로 나왔다** — 그대로 읽었으면 「판정이 안 붙는다」는 거짓이었다.
+   🟢 `wu-138-same-funnel` 과 **같은 조립**(dna → facts)으로 고쳤다.
+
+### AA-3. 단계별 추적표 (실행값만 · 「코드에 있다」를 O 로 쓰지 않았다)
+
+| 단계 | 11st | Danawa | 근거 |
+|---|---|---|---|
+| Search raw(그 실행) | **측정불가** | **측정불가** | 🔴 운영이 **URL 을 로그에 안 남긴다** |
+| pool | **측정불가** | **측정불가** | 🔴 SP-07 만 pool 지표를 **안 찍었다** |
+| `judgeDomesticCandidate` | **JUDGED** | **JUDGED** | 운영 함수 직접 호출(AA-2) |
+| evidence push | **O** | **O** | JUDGED 분기에 **추가 조건 없음**(소스) |
+| state / rows / props / `krRows` | **O** | **O** | 계약 10 + 변이 N1~N7 |
+| mounted DOM | **O** | **O** | 마운트 DOM 6 + 변이 D1~D4 |
+| **CEO 실제 화면** | 🔴 **X** | 🔴 **X** | 캡처 |
+
+### AA-4. 🔴 탈락 지점 — 한 문장
+
+> **UI 가 아니다.** 그 실행에서 **AI Search 후보가 «후보가 되기 전에» 전부 사라졌고**
+> (유일하게 후보가 된 `world.taobao.com` 은 ⑧ 게이트에서 올바르게 드롭됐다),
+> **정확히 그 구간만 로그가 없어** 원인을 가를 수 없었다.
+
+🔴 CPO 분기로는 **CASE 3**(response 에 애초에 없다)이고 CASE 1·4·5·6 이 **아니다**.
+
+### AA-5. 🟢 수정 — **계측 1지점**(동작 변화 0)
+
+```
+[SP07-pool] {snapshot, supplied, accepted, usable, miEligible, fetchCalls,
+             overLimit, dropped:["host:사유",…], hosts:["host:후보수",…]}
+🟢 **새로 계산하는 값이 0** — 운영이 이미 만든 `webCandidates.metrics` 를 찍을 뿐이다.
+🟢 형제 생산자 셋(WU-132 · CORE-2R4 · WU-130)은 처음부터 찍고 있었다(비대칭 해소).
+🔴 토큰이 들어갈 칸이 없다 · 외부 호출 0 · Search 0 · 판정/가격/UI **변경 0**.
+```
+🔴 **원인이 확정되기 전에 prop/field 를 더 만들지 않았다**(CPO §13).
+
+### AA-6. 참고 — 로컬에서 그 9 URL 의 입구 손실(IP 축 분리됨)
+
+```
+supplied 9 → accepted 7 → usable 2 → miEligible 2   (11st · danawa)
+drop: NOT_PRODUCT_PAGE 2(rakuten · lfmall) · UNREACHABLE 5
+🟢 데이터센터 IP 차단 가설은 **반증** 됐다(11st 200↔200 · danawa 200↔200)
+🔴 그러나 **운영 egress 는 Vercel** 이고 OCI 가 아니다 ⟹ 운영에서의 입구 손실은
+   **여전히 측정되지 않았다.** `[SP07-pool]` 이 그 자리를 연다.
+```
+
+**🔵 상태 — `E2E-05 계측 배포 완료 / 원인 CASE 3 잠정 · 다음 1회 실행에서 확정`.**

@@ -1507,6 +1507,43 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
         shopNamePrefix: WEB_SEARCH_SHOP_NAME,
       });
       webSearchUrlMetrics = webCandidates.metrics;
+      /**
+       * 🔴🔴🔴 E2E-05 — **여기가 운영에서 «침묵하던» 구간이다.**
+       *
+       * `judgeDomesticCandidate` 가 `NO_CANDIDATES` 를 내면 **로그 없이 `continue`** 하고
+       * (아래 `if (judgement.kind === "NO_CANDIDATES") continue;`) 후보 0인 샵도 조용하다.
+       * 그래서 「Search 는 10건을 가져왔는데 화면은 0」일 때 **그 사이를 볼 수가 없었고**,
+       * 실제로 E2E-03·E2E-04 가 그 공백 위에서 **두 번 잘못된 원인을 짚었다.**
+       *
+       * 🟢 **새로 계산하는 값이 0 이다** — 윗줄이 이미 만든 `metrics` 를 찍을 뿐이다.
+       *    형제 생산자 셋(`WU-132` · `CORE-2R4` · `WU-130`)은 처음부터 찍고 있었다.
+       * 🔴 토큰이 들어갈 칸이 없다 · 외부 호출 0 · 동작 변화 0.
+       */
+      console.log(
+        `[SP07-pool] ${JSON.stringify({
+          snapshot: input.snapshotId,
+          supplied: webCandidates.metrics.suppliedUrls,
+          accepted: webCandidates.metrics.acceptedUrls,
+          usable: webCandidates.metrics.usableProductUrls,
+          miEligible: webCandidates.metrics.miEligibleCandidates,
+          fetchCalls: webCandidates.metrics.fetchCalls,
+          overLimit: webCandidates.metrics.notFetchedOverLimit.length,
+          /** 🔴 「왜 빠졌는가」를 **도메인과 함께** 남긴다 — 수만으로는 원인이 안 보인다. */
+          dropped: webCandidates.metrics.dropped.map((d) => {
+            let host = d.url;
+            try {
+              host = new URL(d.url).hostname;
+            } catch {
+              /* 🔴 못 파싱하면 **원문 그대로** 남긴다 — 조용히 버리지 않는다. */
+            }
+            return `${host}:${d.reason}`;
+          }),
+          /** 🟢 실제로 후보가 된 host(= 판정 루프에 들어가는 집합). */
+          hosts: webCandidates.searchResults.map(
+            (r) => `${r.domain}:${r.status === "ok" ? r.candidates.length : r.status}`,
+          ),
+        })}`,
+      );
       transientPools.push(...webCandidates.searchResults);
     }
   }

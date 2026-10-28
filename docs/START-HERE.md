@@ -11,14 +11,14 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **DISCOVERY E2E-04** — 🔴 **E2E-03 은 HOLD 였다**(CEO 실제 화면이 반증했다) ·
-             🟢 원인 확정 — 패널의 evidence 소비처가 **넷** 인데 E2E-03 은 **하나만** 고쳤다 ·
-             🟢 수정 + **마운트 DOM** 으로 재검증(소스 계약만으로 끝내지 않았다)
-             🟡 **CPO 판정 = HOLD** — 실제 Production 화면만 남았다 · **CTO 작업 없음**
-NEXT         🔵 CEO 1회 확인 결과에 달렸다 —
-             🟢 국내 후보가 보이면 **GO** ⟹ 그 다음은 CPO 가 지정
-             🔴 안 보이면 **배선을 더 추측하지 않고** 「런타임 계측 WU」로 간다
-                (response → state → DOM 을 **한 번에** 캡처 · 재실행으로 때우지 않는다)
+CURRENT WU   **DISCOVERY E2E-05** — 🔴 **E2E-03 · E2E-04 둘 다 FAIL 이었다**(CEO 화면 실측)
+             🟢 UI 배선은 **이제 닿아 있다**(계약 10 + 마운트 DOM 6 + 변이 N1~N7·D1~D4)
+             🔴🔴 **탈락 지점은 UI 가 아니라 «공급» 이다(CASE 3)** — 그 실행에서 AI Search
+             후보가 **후보가 되기 «전»** 에 사라졌고 **정확히 그 구간만 로그가 없었다**
+             🟢 계측 **1지점** `[SP07-pool]` 추가·배포(동작 변화 0 · 추가 Search 0)
+NEXT         🔵 **다음 실행 1회의 `[SP07-pool]` 로그가 원인을 확정한다** —
+             `supplied → accepted → usable → miEligible` + `dropped:["host:사유"]`
+             🔴 그 전에 prop/field 를 더 만들지 않는다 · 재실행으로 때우지 않는다
              🔵 전략은 **docs/DISCOVERY-STRATEGY-LOCK.md** 에 고정됐다(세션 바뀌어도 남는다)
 CEO ACTION   🔵🔵 **있다** — docs/DISCOVERY-E2E-02-SCREEN-CHECK.md **부록** 대로
              현재 배포본에서 **「새 상품 분석」 «1회»** · 볼 것은 셋뿐

@@ -233,4 +233,33 @@ describe("SP-07 §호출부 — 켜는 곳이 «하나» 다", () => {
       else expect(code, `${c.file} 가 유료 검색을 켰다`).not.toContain("webSearch");
     }
   });
+
+  /**
+   * 🔴🔴🔴 E2E-05 — **공급 구간이 운영에서 침묵하면 안 된다.**
+   *
+   * `judgeDomesticCandidate` 의 `NO_CANDIDATES` 는 **로그 없이 `continue`** 한다.
+   * SP-07 이 pool 지표를 안 찍던 동안 「Search 10건 → 화면 0」의 **사이가 보이지 않았고**,
+   * E2E-03·E2E-04 가 그 공백 위에서 **두 번 잘못된 원인을 짚었다.**
+   * 🟢 형제 생산자 셋(WU-132 · CORE-2R4 · WU-130)은 처음부터 찍고 있었다 —
+   *    이 계약이 그 **비대칭** 을 막는다.
+   */
+  it("🔴🔴 웹 검색 경로는 **Search 지표와 pool 지표를 둘 다** 로그로 남긴다", () => {
+    const runner = stripComments(
+      readFileSync(join(LIB, "./run-domestic-price-check.ts"), "utf8").replace(/\r\n/g, "\n"),
+    );
+    expect(runner, "검색 지표 로그가 없다").toContain("[SP07-websearch]");
+    expect(runner, "pool 지표 로그가 없다 — 공급 구간이 다시 침묵한다").toContain("[SP07-pool]");
+    const at = runner.indexOf("[SP07-pool]");
+    const block = runner.slice(at, at + 1200);
+    /**
+     * 🔴 **왜 빠졌는지** 가 없으면 숫자만 남아 원인을 못 가른다.
+     * 🔴 **칸 이름(`k:`)으로** 본다 — 1차에 `k` 만 봤더니 `metrics.dropped.map` 이
+     *    매칭돼서 **칸을 지워도 통과** 했다(변이 P2 가 잡았다).
+     */
+    for (const k of ["supplied", "accepted", "usable", "miEligible", "dropped", "hosts"]) {
+      expect(block, `[SP07-pool] 에 ${k} 칸이 없다`).toContain(`${k}:`);
+    }
+    /** 🔴 토큰이 로그로 새지 않는다(이 경로의 유일한 비밀값). */
+    expect(block).not.toContain("token");
+  });
 });

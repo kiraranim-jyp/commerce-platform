@@ -152,4 +152,86 @@ describe("E2E-04 — AI Search 9건이 입구에서 어떻게 되는가", () => 
     },
     300_000,
   );
+
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 E2E-05 — **운영 호출 «순서» 를 끝까지 베낀다**
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 E2E-03/04 가 틀린 이유가 여기다 — 나는 `collectUrlCandidatePool` →
+   *    `withConfidence` 까지만 재고 **그 뒤 `judgeDomesticCandidate` 를 부르지 않았다.**
+   *    운영은 샵마다 그 함수를 부르고, 거기 **⑧ 게이트**가 있다:
+   *    `isEvidenceEvaluationWorthwhile` = `candidates[0].matchLevel !== "low"`.
+   *    false 면 **그 샵 전체가 DROPPED** 되어 evidence 에 실리지 않는다(= 화면 0).
+   *
+   * 🔴 CEO 의 E2E-04 실행 로그가 그 모양을 **직접** 보여줬다 —
+   *    AI Search 경로 후보 `world.taobao.com` 이 `matchLevel:"low"` 로
+   *    `EVIDENCE_NOT_WORTHWHILE` DROPPED.
+   *
+   * 🔴 추가 Search **0** — 이미 확보한 URL 만 쓴다.
+   * 🔴 이 블록은 **측정** 이다. 수치를 미리 단언하지 않는다.
+   */
+  it.runIf(LIVE)(
+    "🔴🔴 운영 순서 그대로 — pool → withConfidence → **judgeDomesticCandidate**",
+    async () => {
+      const { withConfidence } = await import("@commerce/crawler");
+      /** 🔴 owner 는 runner 파일이다 — 사본을 만들지 않는다(§5-B). */
+      const { judgeDomesticCandidate } = await import("../run-domestic-price-check");
+      const { shopifySiteStrategy } = await import(
+        "@commerce/crawler/src/site-strategies/shopify.site-strategy"
+      );
+      const { buildCrossSellerSearchQueries, buildProductIdentityDna, productFactsFromIdentityDna } =
+        await import("@commerce/shared");
+      const { buildCanonicalProduct } = await import("../../../pipeline/canonical-product");
+      /**
+       * 🔴🔴 **운영 입력을 손으로 만들지 않는다.** 1차에 `{title, sourceUrl}` 만 넘겼다가
+       *    `crossSellerVerdict` 가 **전건 undefined** 로 나왔다 — 그대로 읽었으면
+       *    「판정이 안 붙는다」는 거짓 결론이었다. 🟢 `wu-138-same-funnel` 과 **같은 조립** 이다.
+       */
+      const extracted = await shopifySiteStrategy.extract(CEO_ORIGIN);
+      const product = buildCanonicalProduct(CEO_ORIGIN, extracted!.productData as never, {} as never, []);
+      const dna = buildProductIdentityDna(product);
+      const terms = buildCrossSellerSearchQueries(dna).filter(Boolean);
+      console.log(`[E2E05-origin] brand=${JSON.stringify(dna.brand)} code=${dna.brandModelCode}`);
+      const pool = await collectUrlCandidatePool({
+        urls: operatingQueryUrls(),
+        originUrl: CEO_ORIGIN,
+        maxUrls: 10,
+        existingCanonicalUrls: new Set<string>(),
+        shopId: "__web_search__",
+        shopNamePrefix: "웹 검색 후보(일시)",
+      });
+      const query = {
+        title: dna.title,
+        brand: dna.brand.value || undefined,
+        sourceUrl: dna.sourceUrl,
+        sku: dna.identifier?.tier === "SKU" ? dna.identifier.value : undefined,
+        searchTerm: terms[0] ?? dna.title,
+        searchTerms: terms,
+        facts: productFactsFromIdentityDna(dna),
+      };
+      for (const r of pool.searchResults) {
+        if (r.status !== "ok") continue;
+        const scored = withConfidence(query as never, r.candidates);
+        const judgement = await judgeDomesticCandidate({
+          domain: r.domain,
+          candidates: scored,
+          sourceUrl: dna.sourceUrl,
+          foreignModelCode: dna.brandModelCode,
+          foreignColor: dna.color,
+          fetchModelCode: async () => null,
+        } as never);
+        const top = scored[0];
+        console.log(
+          `[E2E05-judge] ${r.domain.padEnd(22)} n=${scored.length} matchLevel=${String(
+            top?.matchLevel,
+          ).padEnd(10)} verdict=${String(top?.crossSellerVerdict).padEnd(14)} → kind=${
+            judgement.kind
+          }${"gate" in judgement ? ` gate=${judgement.gate}` : ""}`,
+        );
+      }
+      expect(pool.metrics.suppliedUrls).toBe(9);
+    },
+    300_000,
+  );
 });
