@@ -43,6 +43,18 @@ export interface ProductIdentity {
   sourceSite: string | null;
   sourceCountry: string | null;
   market: string | null;
+  /**
+   * 🔴🔴 QUERY-ARCH-01 — **상세설명에서 «실제로 관측된» 상품 사실 조각들.**
+   *
+   * CPO 확정(2026-10-28) — 「상품명이 틀리거나 불완전할 수 있으므로 **상세설명까지
+   * 함께** 쓴다」. 🔴 소재·핏처럼 위 고정 축(색상/사이즈/시즌)에 **칸이 없는** 값들이다.
+   *
+   * 🔴 **선택 인자다** — 안 넘기면 **오늘 동작 그대로** 다(`categoryScopes` 와 같은 규약).
+   * 🔴 **지어내지 않는다** — 원본에서 실제로 읽힌 값만 들어온다(없으면 생략).
+   * 🔴 **Identity 입력이 아니다** — Discovery Query 조립에만 쓴다.
+   *    SAME/threshold/8축에 **한 글자도** 닿지 않는다(QUERY-ARCH-01 §9).
+   */
+  facts?: readonly string[];
 }
 
 /* ───────────────────────── 쿼리 ───────────────────────── */

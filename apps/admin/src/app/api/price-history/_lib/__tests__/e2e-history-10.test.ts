@@ -130,7 +130,12 @@ describe("E2E-HISTORY-10 — 분모", () => {
  * 🔴 그 8 은 **Search 를 «실패» 한 것이 아니라 «하지 않은» 것** 이다.
  */
 describe("E2E-HISTORY-10 — 병목 owner", () => {
-  it("🔴 Discovery Query 는 **품번 전용** 이다 — 없으면 질의가 서지 않는다", async () => {
+  /**
+   * 🟢🟢 **이 계약이 QUERY-ARCH-01 에서 «뒤집혔다» — 그것이 수정의 증거다.**
+   *    원래 문구: 「Discovery Query 는 품번 전용이다 — 없으면 질의가 서지 않는다」.
+   *    E2E-HISTORY-10 이 그 대가(10건 중 8건 Search 0)를 실측했고 CPO 가 폐기했다.
+   */
+  it("🔵 Discovery Query 는 **복합** 이다 — 품번이 없어도 질의가 선다", async () => {
     const { buildDiscoverySearchQuery } = await import(
       "@commerce/crawler/src/discovery-core/query-planner"
     );
@@ -147,9 +152,14 @@ describe("E2E-HISTORY-10 — 병목 owner", () => {
       sourceCountry: null,
       market: null,
     };
-    /** 🔴 브랜드·상품명·색상이 **전부 있어도** 품번이 없으면 null 이다. */
-    expect(buildDiscoverySearchQuery({ ...base, productCode: null } as never)).toBeNull();
-    expect(buildDiscoverySearchQuery({ ...base, productCode: "B226AC009" } as never)).toBe('"B226AC009"');
+    /** 🟢 브랜드·상품명·색상이 있으면 **품번이 없어도** 질의가 선다. */
+    const noCode = buildDiscoverySearchQuery({ ...base, productCode: null } as never);
+    expect(noCode, "품번 없는 상품에서 Search 가 다시 0 이 된다").not.toBeNull();
+    expect(noCode!).toContain("Sergio Tacchini");
+    /** 🔴 품번이 있으면 **쓰되 단독으로 쓰지 않는다**. */
+    const withCode = buildDiscoverySearchQuery({ ...base, productCode: "B226AC009" } as never)!;
+    expect(withCode).toContain('"B226AC009"');
+    expect(withCode).not.toBe('"B226AC009"');
   });
 
   it("🔴🔴 품번 생산자는 **둘뿐** 이다 — 확장 지점이 여기다", () => {
@@ -176,23 +186,93 @@ describe("E2E-HISTORY-10 — 병목 owner", () => {
   });
 
   /**
-   * 🔴 **결함 고정 계약.** 지금 운영은 이 10건에서 Query 를 2건만 세운다.
-   *    품번 생산자가 넓어지면 이 단언이 **FAIL 로 뒤집히고** 그것이 수정의 증거다.
+   * 🟢🟢 **결함이 닫혔다.** 이 계약은 원래 「10건 중 Query 가 서는 것은 **2건**」을
+   *    고정하고 있었고, QUERY-ARCH-01 이 그것을 **10/10** 으로 뒤집었다.
+   *    🔴 이제는 **되돌아가지 못하게** 반대 방향으로 잠근다.
    */
-  it("🔴 [결함 고정] 히스토리 10건 중 Query 가 서는 것은 **2건** 이다", () => {
-    let report: { label: string; origin: { ok: boolean }; search?: { skipped: string | null } }[];
+  it("🔵 히스토리 10건 **전부** Query 가 선다(전 2건 → 10건)", () => {
+    let preview: { label: string; query: { text: string | null; tokenCount: number } }[];
     try {
-      report = (JSON.parse(readFileSync(REPORT_PATH, "utf8")) as { report: typeof report }).report;
+      preview = JSON.parse(readFileSync(join(FIX, "query-arch-01-preview.json"), "utf8")) as typeof preview;
     } catch {
       return; // 🔴 라이브 산출물이 없으면 건너뛴다(없는 것을 0 으로 적지 않는다).
     }
-    expect(report).toHaveLength(10);
-    expect(report.filter((r) => r.origin.ok), "원본 확정이 10/10 이 아니다").toHaveLength(10);
-    const noCode = report.filter((r) => r.search?.skipped === "NO_MODEL_CODE");
-    const queried = report.filter((r) => r.search?.skipped !== "NO_MODEL_CODE");
-    expect(noCode).toHaveLength(8);
-    expect(queried.map((r) => r.label).sort()).toEqual(["Bobo Choses", "Main Story"]);
+    expect(preview).toHaveLength(10);
+    const empty = preview.filter((p) => !p.query.text).map((p) => p.label);
+    expect(empty, `질의가 서지 않는 상품: ${empty.join(", ")}`).toEqual([]);
+    /** 🔴 질의가 **품번 하나로 쪼그라들지** 않았는지도 같이 본다. */
+    for (const p of preview) {
+      expect(p.query.tokenCount, `${p.label}: 질의가 너무 짧다`).toBeGreaterThanOrEqual(4);
+    }
   });
+
+  /**
+   * 🔴 **원본 확정은 그대로 10/10 이어야 한다** — Query 를 바꾼 것이 추출을 깨뜨리면
+   *    여기가 FAIL 한다(E2E-HISTORY-10 의 유일한 🟢 축이었다).
+   */
+  it("🟢 원본 상품정보 확정은 **10/10** 을 유지한다", () => {
+    let report: { origin: { ok: boolean } }[];
+    try {
+      report = (JSON.parse(readFileSync(REPORT_PATH, "utf8")) as { report: typeof report }).report;
+    } catch {
+      return;
+    }
+    expect(report.filter((r) => r.origin.ok)).toHaveLength(10);
+  });
+});
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 QUERY-ARCH-01 §15 — **Search 를 쏘기 «전» 에 Query Preview 를 먼저 낸다**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * CPO: 「10개 Query Preview 를 먼저 보고, Query 가 전략에 맞는지 확인한 다음
+ *       10회 Search 로 넘어가는 것이 안전합니다.」
+ *
+ * 🔴 이 블록은 **검색을 하지 않는다**(HTTP 는 원본 추출뿐 · Search API 0회).
+ */
+describe("QUERY-ARCH-01 — Query Preview(Search 0회)", () => {
+  it.runIf(LIVE)(
+    "🔵 10건의 최종 Query 를 운영 조립기로 뽑는다",
+    async () => {
+      const { universalExtract } = await import("@commerce/crawler");
+      const { buildProductIdentityDna } = await import("@commerce/shared");
+      const { buildCanonicalProduct } = await import("../../../pipeline/canonical-product");
+      const { buildCompositeDiscoveryQuery } = await import(
+        "@commerce/crawler/src/discovery-core/query-planner"
+      );
+      const out: Record<string, unknown>[] = [];
+      for (const t of load().targets) {
+        const ex = await universalExtract(t.sourceUrl, { debug: false });
+        const product = buildCanonicalProduct(t.sourceUrl, ex.productData, ex.productDataSources, []);
+        const dna = buildProductIdentityDna(product);
+        /** 🔴 운영 호출부와 **같은 칸** 을 채운다(사본이 아니라 같은 모양). */
+        const q = buildCompositeDiscoveryQuery({
+          brand: dna.brand.value || null,
+          productName: dna.title || null,
+          productType: dna.category?.value ?? null,
+          genderAge: null,
+          color: dna.color,
+          size: null,
+          season: null,
+          productCode: dna.brandModelCode,
+          facts: [dna.material, dna.fit].filter((v): v is string => Boolean(v)),
+          sourceUrl: t.sourceUrl,
+          sourceSite: null,
+          sourceCountry: null,
+          market: null,
+        });
+        out.push({ cat: t.cat, label: t.label, dna: { brand: dna.brand.value, code: dna.brandModelCode, title: dna.title, color: dna.color, material: dna.material, fit: dna.fit, category: dna.category?.value ?? null }, query: q });
+        /* eslint-disable no-console */
+        console.log(
+          `[QA01] ${t.cat.padEnd(6)} ${t.label.slice(0, 22).padEnd(22)} tok=${String(q.tokenCount).padStart(2)} | ${q.text}`,
+        );
+      }
+      writeFileSync(join(FIX, "query-arch-01-preview.json"), JSON.stringify(out, null, 2));
+      expect(out).toHaveLength(10);
+    },
+    1_800_000,
+  );
 });
 
 describe("E2E-HISTORY-10 — 라이브 실행", () => {

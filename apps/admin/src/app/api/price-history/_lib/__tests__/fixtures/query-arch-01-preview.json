@@ -1,0 +1,322 @@
+[
+  {
+    "cat": "KIDS",
+    "label": "Bobo Choses",
+    "dna": {
+      "brand": "Bobo Choses",
+      "code": "B226AC009",
+      "title": "Hug Hairy Monster T-shirt",
+      "color": "Light blue",
+      "material": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+      "fit": "loose fit",
+      "category": "T-shirts"
+    },
+    "query": {
+      "text": "\"Bobo Choses\" \"B226AC009\" Hug Hairy Monster T-shirt Light blue loose fit 동일상품 판매처",
+      "parts": {
+        "brand": "Bobo Choses",
+        "code": "B226AC009",
+        "design": [
+          "Hug",
+          "Hairy",
+          "Monster",
+          "T-shirt"
+        ],
+        "facts": [
+          "Light blue",
+          "loose fit"
+        ],
+        "signal": "동일상품 판매처"
+      },
+      "tokenCount": 13
+    }
+  },
+  {
+    "cat": "KIDS",
+    "label": "BOSS",
+    "dna": {
+      "brand": "BOSS",
+      "code": null,
+      "title": "Baby Boys White Logo Top",
+      "color": "White",
+      "material": "100% Cotton",
+      "fit": null,
+      "category": "Baby Boy"
+    },
+    "query": {
+      "text": "\"BOSS\" Baby Boys Logo Top White 100% Cotton 동일상품 판매처",
+      "parts": {
+        "brand": "BOSS",
+        "code": null,
+        "design": [
+          "Baby",
+          "Boys",
+          "Logo",
+          "Top"
+        ],
+        "facts": [
+          "White",
+          "100% Cotton"
+        ],
+        "signal": "동일상품 판매처"
+      },
+      "tokenCount": 10
+    }
+  },
+  {
+    "cat": "KIDS",
+    "label": "Louis Louise",
+    "dna": {
+      "brand": "Louis Louise",
+      "code": null,
+      "title": "Holly Hearts Ribbed Velvet Baby Pants | Pale Pink",
+      "color": "Pink",
+      "material": "100% Cotton",
+      "fit": null,
+      "category": "Home > Fashion  Baby > Girl > Trousers, Jeans, Leggings, Jogging Bottoms > Holly Hearts Ribbed Velvet Baby Pants | Pale Pink"
+    },
+    "query": {
+      "text": "\"Louis Louise\" Holly Hearts Ribbed Velvet Pink 100% Cotton 동일상품 판매처",
+      "parts": {
+        "brand": "Louis Louise",
+        "code": null,
+        "design": [
+          "Holly",
+          "Hearts",
+          "Ribbed",
+          "Velvet"
+        ],
+        "facts": [
+          "Pink",
+          "100% Cotton"
+        ],
+        "signal": "동일상품 판매처"
+      },
+      "tokenCount": 11
+    }
+  },
+  {
+    "cat": "KIDS",
+    "label": "Main Story",
+    "dna": {
+      "brand": "Main Story",
+      "code": "AW26MS185",
+      "title": "Bubble Sweatshirt in Grey Melange by Main Story",
+      "color": "Grey Melange",
+      "material": "100% Organic Cotton",
+      "fit": "relaxed fit",
+      "category": "Sweatshirt"
+    },
+    "query": {
+      "text": "\"Main Story\" \"AW26MS185\" Bubble Sweatshirt Melange Grey 100% Organic Cotton relaxed fit 동일상품 판매처",
+      "parts": {
+        "brand": "Main Story",
+        "code": "AW26MS185",
+        "design": [
+          "Bubble",
+          "Sweatshirt",
+          "Melange"
+        ],
+        "facts": [
+          "Grey",
+          "100% Organic Cotton",
+          "relaxed fit"
+        ],
+        "signal": "동일상품 판매처"
+      },
+      "tokenCount": 14
+    }
+  },
+  {
+    "cat": "KIDS",
+    "label": "Mini rodini",
+    "dna": {
+      "brand": "Mini rodini",
+      "code": null,
+      "title": "Violas aop Winter jacket",
+      "color": null,
+      "material": "100% recycled polyester",
+      "fit": null,
+      "category": "vinterjakker"
+    },
+    "query": {
+      "text": "\"Mini rodini\" Violas aop Winter jacket 100% recycled polyester 동일상품 판매처",
+      "parts": {
+        "brand": "Mini rodini",
+        "code": null,
+        "design": [
+          "Violas",
+          "aop",
+          "Winter",
+          "jacket"
+        ],
+        "facts": [
+          "100% recycled polyester"
+        ],
+        "signal": "동일상품 판매처"
+      },
+      "tokenCount": 11
+    }
+  },
+  {
+    "cat": "TENNIS",
+    "label": "Damarindo Pique Polo",
+    "dna": {
+      "brand": "Sergio Tacchini",
+      "code": null,
+      "title": "Sergio Tacchini Men's Damarindo Pique Polo",
+      "color": "Humus",
+      "material": "100% Cotton",
+      "fit": "true to size",
+      "category": null
+    },
+    "query": {
+      "text": "\"Sergio Tacchini\" Men's Damarindo Pique Polo Humus 100% Cotton true to size 동일상품 판매처",
+      "parts": {
+        "brand": "Sergio Tacchini",
+        "code": null,
+        "design": [
+          "Men's",
+          "Damarindo",
+          "Pique",
+          "Polo"
+        ],
+        "facts": [
+          "Humus",
+          "100% Cotton",
+          "true to size"
+        ],
+        "signal": "동일상품 판매처"
+      },
+      "tokenCount": 14
+    }
+  },
+  {
+    "cat": "TENNIS",
+    "label": "Fall Cericho T-Shirt",
+    "dna": {
+      "brand": "Sergio Tacchini",
+      "code": null,
+      "title": "Sergio Tacchini Men's Fall Cericho T-Shirt",
+      "color": "Brilliant White",
+      "material": "100% Cotton",
+      "fit": "true to size",
+      "category": null
+    },
+    "query": {
+      "text": "\"Sergio Tacchini\" Men's Fall Cericho T-Shirt Brilliant White 100% Cotton true to size 동일상품 판매처",
+      "parts": {
+        "brand": "Sergio Tacchini",
+        "code": null,
+        "design": [
+          "Men's",
+          "Fall",
+          "Cericho",
+          "T-Shirt"
+        ],
+        "facts": [
+          "Brilliant White",
+          "100% Cotton",
+          "true to size"
+        ],
+        "signal": "동일상품 판매처"
+      },
+      "tokenCount": 15
+    }
+  },
+  {
+    "cat": "TENNIS",
+    "label": "Magro Long Sleeve",
+    "dna": {
+      "brand": "Sergio Tacchini",
+      "code": null,
+      "title": "Sergio Tacchini Men's Magro Long Sleeve",
+      "color": "Brilliant White",
+      "material": "96% Polyester, 4% Elastane",
+      "fit": "true to size",
+      "category": null
+    },
+    "query": {
+      "text": "\"Sergio Tacchini\" Men's Magro Long Sleeve Brilliant White true to size 동일상품 판매처",
+      "parts": {
+        "brand": "Sergio Tacchini",
+        "code": null,
+        "design": [
+          "Men's",
+          "Magro",
+          "Long",
+          "Sleeve"
+        ],
+        "facts": [
+          "Brilliant White",
+          "true to size"
+        ],
+        "signal": "동일상품 판매처"
+      },
+      "tokenCount": 13
+    }
+  },
+  {
+    "cat": "TENNIS",
+    "label": "Racchetto Polo",
+    "dna": {
+      "brand": "Sergio Tacchini",
+      "code": null,
+      "title": "Sergio Tacchini Men's Racchetto Polo",
+      "color": "Brilliant White",
+      "material": "100% Polyester",
+      "fit": "true to size",
+      "category": null
+    },
+    "query": {
+      "text": "\"Sergio Tacchini\" Men's Racchetto Polo Brilliant White 100% Polyester true to size 동일상품 판매처",
+      "parts": {
+        "brand": "Sergio Tacchini",
+        "code": null,
+        "design": [
+          "Men's",
+          "Racchetto",
+          "Polo"
+        ],
+        "facts": [
+          "Brilliant White",
+          "100% Polyester",
+          "true to size"
+        ],
+        "signal": "동일상품 판매처"
+      },
+      "tokenCount": 14
+    }
+  },
+  {
+    "cat": "TENNIS",
+    "label": "Trattino Short",
+    "dna": {
+      "brand": "Sergio Tacchini",
+      "code": null,
+      "title": "Sergio Tacchini Men's Trattino Short",
+      "color": "Galaxy Blue",
+      "material": "86% Polyester, 14% Elastane",
+      "fit": "true to size",
+      "category": null
+    },
+    "query": {
+      "text": "\"Sergio Tacchini\" Men's Trattino Short Galaxy Blue true to size 동일상품 판매처",
+      "parts": {
+        "brand": "Sergio Tacchini",
+        "code": null,
+        "design": [
+          "Men's",
+          "Trattino",
+          "Short"
+        ],
+        "facts": [
+          "Galaxy Blue",
+          "true to size"
+        ],
+        "signal": "동일상품 판매처"
+      },
+      "tokenCount": 12
+    }
+  }
+]

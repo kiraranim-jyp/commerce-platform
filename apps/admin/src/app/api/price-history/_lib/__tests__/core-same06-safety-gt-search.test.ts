@@ -190,6 +190,7 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
   skipped.push({ file: "e2e-history-10-targets.json", why: "🟢 측정 대상 10건(스냅샷/URL) · 라벨 **없음**" });
   skipped.push({ file: "e2e-history-10-report.json", why: "🟢 운영 경로 실행 기록 · 라벨 **없음**" });
   skipped.push({ file: "e2e-history-10-code.json", why: "🟢 원문 품번 «모양» 관측 · 판정/라벨 **없음**" });
+  skipped.push({ file: "query-arch-01-preview.json", why: "🟢 Discovery Query Preview(Search 0회) · 라벨 **없음**" });
 
   /* SAME-03 최신 CEO 라벨 — 🔴 DIFFERENT 가 0 이지만 분모로 같이 적는다 */
   {

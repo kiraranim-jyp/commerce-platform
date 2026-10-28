@@ -95,9 +95,163 @@ const quote = (s: string) => `"${s.trim()}"`;
  * 🔴 `buildDiscoveryQuerySet`(8축)은 **그대로 둔다** — 그 함수의 소비자와 계약이 따로 있다.
  */
 export function buildDiscoverySearchQuery(identity: ProductIdentity): string | null {
-  const code = identity.productCode?.trim();
-  if (!code) return null;
-  return quote(code);
+  return buildCompositeDiscoveryQuery(identity).text;
+}
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 QUERY-ARCH-01 — **상품당 «하나» 의 복합 Query** (CPO 확정 2026-10-28)
+ * ════════════════════════════════════════════════════════════════════════════════
+ *
+ * ```
+ * BRAND + [MODEL CODE] + PRODUCT NAME(코어) + PRODUCT FACTS + 판매처 신호
+ * ```
+ * 🔴 **품번 단독 질의를 만들지 않는다**(CPO §4). 🔴 **상품당 1개** 다 — variation 0.
+ * 🔴 값이 없는 축은 **생략** 한다. 🔴 품번이 없다고 **질의를 포기하지 않는다**(§6).
+ *
+ * ── 🟢 왜 이 모양인가 — **이미 측정된 것 위에 세운다**(지어내지 않았다) ───────
+ * ```
+ * SP-09  기준선 `S-A` = BRAND + [CODE] + 상품명 → 품번 «없는» 상품 2개에서도
+ *        후보 확보 **18~19** · Evidence **9~10** ⟹ 🟢 「품번 없으면 Search 0」 **반증됨**
+ * SP-09  `S-D`(+「동일상품 판매처」) 전체 Evidence 판매처 **9 → 17** (가장 높았다)
+ * SP-10  2회 관측 합계에서도 `S-D` 가 전체 Evidence 판매처 **39** 로 최고
+ * 🔴 SP-08  «긴 자연어 목적 문장» 은 **NO-GO** 로 판정됐다 — 효과의 정체가 「목적」이
+ *           아니라 **「한국어 토큰」** 이었고, 영어 CONTROL(E)은 국내가 전혀 안 늘었다.
+ *    ⟹ 🟢 그래서 목적을 **문장이 아니라 SP-09 가 실제로 측정한 «짧은 신호»** 로 넣는다.
+ * ```
+ *
+ * ── 🔴🔴 이 조합 자체는 «미측정» 이다 — 넘겨 읽지 않는다 ──────────────────
+ * ```
+ * SP-09/10 이 잰 것은 S-A · S-C · S-D «각각» 이고, 여기서 만드는
+ * 「S-A + facts + 판매처 신호」는 **한 번도 실행된 적이 없다**.
+ * 🔴 그리고 SP-10 이 측정한 대로 **같은 질의의 실행 간 URL 겹침이 3~30%** 다 ⟹
+ *    1회 관측으로 질의 우열을 **가를 수 없다**. 「더 좋아졌다」로 적지 않는다.
+ * ```
+ *
+ * 🔴 **Identity 가 아니다**(§9) — 이 함수는 **어디서 찾을지** 만 정한다.
+ */
+export interface CompositeDiscoveryQuery {
+  text: string | null;
+  parts: {
+    brand: string | null;
+    code: string | null;
+    design: string[];
+    facts: string[];
+    signal: string;
+  };
+  /** 🔴 길이는 **관측해서 보고** 한다 — 질의가 길수록 엔진 recall 이 떨어진다. */
+  tokenCount: number;
+}
+
+/**
+ * 🟢 SP-09 가 실제로 측정한 **짧은 판매처 신호** 다(그 PoC 의 `S-B`/`S-D` 문구).
+ * 🔴 「국내외 판매처」(`S-C`)를 쓰지 않는다 — 국내 Evidence 는 1 → 7 로 올랐지만
+ *    Crawl 이 **절반 이하**(17 → 8)로 떨어졌고 한 상품은 **해외가 0** 이 됐다.
+ */
+const SELLER_SIGNAL = "동일상품 판매처";
+
+/** 🔴 상한을 둔다 — 질의가 길어지면 엔진이 결과를 줄인다(SPRINT-05/06 실측 방향). */
+const MAX_DESIGN_TOKENS = 4;
+const MAX_FACT_TOKENS = 3;
+
+/**
+ * 🔴 **끊긴 기능어를 질의에 남기지 않는다.** SP-09 의 CONTROL `S-A2` 가 바로 이것이다 —
+ *    `tokens.slice(0,4)` 가 `… Pupfish Kid T-Shirt **in**` 처럼 구를 끊어 놓았고,
+ *    떼어 냈더니 Evidence 판매처가 **5 → 6** 이었다(🔴 N=2 · 작은 차이).
+ *
+ * 🔴 이것은 **매칭 사전이 아니다** — SAME 판정에 쓰이지 않고 **질의 위생** 에만 쓴다.
+ *    🔴 그래서 의미 단어를 넣지 않는다(색상·소재·형태는 **한 개도 없다**).
+ */
+const QUERY_FUNCTION_WORDS = new Set(["in", "of", "with", "the", "a", "an", "and", "by", "for", "to"]);
+
+export function buildCompositeDiscoveryQuery(identity: ProductIdentity): CompositeDiscoveryQuery {
+  const brand = identity.brand?.trim() || null;
+  const code = identity.productCode?.trim() || null;
+
+  /**
+   * 🟢 디자인명은 **기존 자산** 으로 뽑는다 — `buildPrimaryQuery` 의 denylist 가
+   *    색상·사이즈·시즌·마케팅을 이미 걷어낸다. 🔴 그 규칙을 **복제하지 않는다**.
+   * 🔴 품번을 **빼고** 부른다 — 품번이 있으면 그 함수가 `L1_MODEL_CODE` 로 가서
+   *    tokens 가 [브랜드, 품번] 이 되고 **디자인명이 안 나온다**(`buildDiscoveryQuerySet`
+   *    이 같은 이유로 같은 방식을 쓴다 · 계약 D-4).
+   */
+  let design: string[] = [];
+  try {
+    const primary = buildPrimaryQuery({ ...identity, productCode: null });
+    const lowerCode = code?.toLowerCase() ?? "";
+    const brandWords = new Set((brand ?? "").toLowerCase().split(/\s+/).filter(Boolean));
+    design = primary.tokens
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .filter((t) => t.toLowerCase() !== lowerCode)
+      .filter((t) => !brandWords.has(t.toLowerCase()))
+      /** 🔴 기능어는 질의에서 아무것도 좁히지 못한다(SP-09 `S-A2`). */
+      .filter((t) => !QUERY_FUNCTION_WORDS.has(t.toLowerCase()))
+      .slice(0, MAX_DESIGN_TOKENS);
+  } catch {
+    design = [];
+  }
+
+  /**
+   * 🟢 상세 사실 — **원본에서 실제로 읽힌 값만** 쓴다(호출부가 채운다).
+   * 🔴 사이즈/연령은 넣지 않는다 — denylist 가 노이즈로 판정한 축이다.
+   * 🔴 디자인명과 **겹치는 토큰은 한 번만** 쓴다(같은 근거를 두 번 세지 않는다).
+   */
+  /**
+   * 🔴 **단어 단위** 로 거른다. 값 단위로만 비교하면 `Bubble Sweatshirt **Melange**`
+   *    (디자인) 옆에 `Grey **Melange**`(색상)가 그대로 들어가 **같은 단어가 두 번**
+   *    실린다(1차 Preview 에서 실제로 났다). 같은 근거를 두 번 세지 않는다.
+   */
+  const usedWords = new Set(
+    [...design, brand ?? "", code ?? ""]
+      .flatMap((s) => s.toLowerCase().split(/\s+/))
+      .filter(Boolean),
+  );
+  const facts: string[] = [];
+  for (const raw of [identity.color, ...(identity.facts ?? [])]) {
+    const v = raw?.trim();
+    if (!v) continue;
+    /** 🔴 긴 산문은 질의에 넣지 않는다 — 사실 «조각» 만 받는다. */
+    if (v.split(/\s+/).length > 3 || v.length > 28) continue;
+    /**
+     * 🔴 **구를 깨뜨리지 않는다.** 1차에서 기능어를 «안쪽까지» 걸러 `true to size`
+     *    가 **`true size`** 가 됐다 — SP-09 가 짚은 것은 끊긴 **꼬리** 이지 구 내부가
+     *    아니다. ⟹ 중복 단어만 빼고, 기능어는 **가장자리에서만** 떼어 낸다.
+     */
+    let words = v.split(/\s+/).filter((w) => w && !usedWords.has(w.toLowerCase()));
+    while (words.length > 0 && QUERY_FUNCTION_WORDS.has(words[0]!.toLowerCase())) words = words.slice(1);
+    while (words.length > 0 && QUERY_FUNCTION_WORDS.has(words[words.length - 1]!.toLowerCase()))
+      words = words.slice(0, -1);
+    if (words.length === 0) continue;
+    for (const w of words) usedWords.add(w.toLowerCase());
+    facts.push(words.join(" "));
+    if (facts.length >= MAX_FACT_TOKENS) break;
+  }
+
+  const parts = { brand, code, design, facts, signal: SELLER_SIGNAL };
+
+  /**
+   * 🔴 **아무 재료도 없으면 질의를 만들지 않는다**(`null`). 신호만 남은 질의는
+   *    모든 상품에서 똑같아서 Discovery 가 아니다.
+   */
+  if (!brand && !code && design.length === 0 && facts.length === 0) {
+    return { text: null, parts, tokenCount: 0 };
+  }
+
+  /**
+   * 🔴 **따옴표는 식별자에만** 건다 — 브랜드(여러 단어일 수 있다)와 품번.
+   *    디자인명/사실에까지 걸면 정확일치 요구가 되어 recall 이 죽는다.
+   */
+  const segments = [
+    brand ? quote(brand) : null,
+    code ? quote(code) : null,
+    ...design,
+    ...facts,
+    SELLER_SIGNAL,
+  ].filter((s): s is string => Boolean(s));
+
+  const text = segments.join(" ");
+  return { text, parts, tokenCount: text.split(/\s+/).filter(Boolean).length };
 }
 
 /**

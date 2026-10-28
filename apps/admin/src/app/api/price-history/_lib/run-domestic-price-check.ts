@@ -1492,15 +1492,30 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
        * 🔴 질의 재료는 **운영 identity 그대로** 다. 🔴 여기서 문자열을 조립하지 않는다 —
        *    Query owner 는 `buildDiscoverySearchQuery` 하나다.
        */
+      /**
+       * 🔴🔴 QUERY-ARCH-01 — **재료를 비워 보내지 않는다.**
+       *
+       * 여기가 `productName`/`color` 를 **null 로 보내고 있었다** ⟹ 조립기를 아무리
+       * 고쳐도 쓸 재료가 없어 질의가 **품번 하나** 로 쪼그라들었다(E2E-HISTORY-10 이
+       * 「10건 중 8건 `NO_MODEL_CODE`」로 그 결과를 실측했다).
+       *
+       * 🔴 **여기서 문자열을 조립하지 않는다** — Query owner 는 여전히
+       *    `buildDiscoverySearchQuery` 하나다. 이 블록은 **칸을 채우기만** 한다.
+       * 🔴 **지어내지 않는다** — 전부 `input.dna` 가 원본에서 실제로 읽은 값이다.
+       * 🔴 `size`/`ageRange` 는 **보내지 않는다** — denylist 가 노이즈로 판정한 축이다.
+       */
       identity: {
         brand: input.dna.brand.value || null,
-        productName: null,
-        productType: null,
+        /** 🟢 디자인명의 원천. 조립기가 denylist 로 코어 토큰만 남긴다. */
+        productName: input.dna.title || null,
+        productType: input.dna.category?.value ?? null,
         genderAge: null,
-        color: null,
+        color: input.dna.color,
         size: null,
         season: null,
         productCode: input.dna.brandModelCode,
+        /** 🔴 상세설명 유래 사실 — 관측된 것만(없으면 빈 배열이고 질의에서 생략된다). */
+        facts: [input.dna.material, input.dna.fit].filter((v): v is string => Boolean(v)),
         sourceUrl: query.sourceUrl,
         sourceSite: null,
         sourceCountry: null,

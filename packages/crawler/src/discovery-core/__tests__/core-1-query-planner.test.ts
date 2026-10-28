@@ -83,8 +83,18 @@ describe("CORE-1 B — 한글 브랜드 alias 는 «기존 자산» 만 쓴다",
    */
   it("B-2 🔴 소스에 **한글 디자인명 리터럴이 없다**(새 사전 금지)", () => {
     const koWords = SRC.match(/"[^"]*[가-힣][^"]*"/g) ?? [];
-    /** 🟢 허용되는 한글은 **의도 키워드 두 개** 뿐이다(고정 어휘 · 사전이 아니다). */
-    const allowed = new Set(['"구매"', '"가격"']);
+    /**
+     * 🟢 허용되는 한글은 **고정 의도 키워드** 뿐이다(사전이 아니다).
+     *
+     * 🔴 이 가드가 막는 것은 「허그 헤어리 몬스터」같은 **상품별 한글 음역 사전** 이다
+     *    (CPO FINAL-2 가 추가하지 «않기로» 한 그 자산). 아래 셋은 상품과 무관하게
+     *    **항상 같은 문자열** 이라 그 부류가 아니다.
+     * 🟢 `"동일상품 판매처"` 는 QUERY-ARCH-01 의 판매처 신호이고 **SP-09 에서 실제로
+     *    측정됐다**(전체 Evidence 판매처 9 → 17 · SP-10 재관측 합계에서도 최고 39).
+     * 🔴 그리고 **상한을 둔다** — 이 목록이 길어지는 순간 그것이 사전이다.
+     */
+    const allowed = new Set(['"구매"', '"가격"', '"동일상품 판매처"']);
+    expect(allowed.size, "🔴 고정 의도 키워드가 늘면 그것이 사전이다").toBeLessThanOrEqual(3);
     const unexpected = koWords.filter((w) => !allowed.has(w));
     expect(unexpected, `🔴 새 한글 어휘가 생겼다: ${JSON.stringify(unexpected)}`).toHaveLength(0);
   });

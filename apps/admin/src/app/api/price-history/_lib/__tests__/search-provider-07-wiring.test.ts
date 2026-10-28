@@ -45,18 +45,34 @@ function identity(p: Partial<ProductIdentity>): ProductIdentity {
 }
 
 describe("SP-07 §① Query — owner 는 하나이고 모양이 고정이다", () => {
-  it('품번이 있으면 **정확히** `"{MODEL_CODE}"` 다', () => {
-    expect(buildDiscoverySearchQuery(identity({ productCode: "B226AC010" }))).toBe('"B226AC010"');
-    /** 🔴 브랜드·상품명·색상이 **있어도** 질의에 들어가지 않는다(국내가 사라지는 모양이다). */
-    expect(
-      buildDiscoverySearchQuery(
-        identity({ productCode: "B226AC010", brand: "Bobo Choses", productName: "Booty Ghosts", color: "Grey" }),
-      ),
-    ).toBe('"B226AC010"');
+  /**
+   * 🔴🔴 **QUERY-ARCH-01(2026-10-28)에서 이 두 계약이 «의도적으로» 뒤집혔다.**
+   *
+   * 아래 원래 문구는 「품번이 있으면 정확히 `"{MODEL_CODE}"`」 · 「품번이 없으면
+   * 질의를 만들지 않는다」였다. 🔴 E2E-HISTORY-10 이 그 설계의 대가를 실측했다 —
+   * **히스토리 상품 10건 중 8건에서 Search 가 «실행되지 않았다»**(`NO_MODEL_CODE`).
+   *
+   * 🟢 그래서 CPO 가 품번 중심 Query 를 폐기하고 **복합 Query 하나** 로 바꿨다.
+   *    계약을 **지우지 않고 방향을 뒤집어** 남긴다 — 되돌아가면 여기가 FAIL 한다.
+   */
+  it("🔵 품번이 있으면 **품번을 쓰되 단독으로 쓰지 않는다**", () => {
+    const only = buildDiscoverySearchQuery(identity({ productCode: "B226AC010" }))!;
+    expect(only).toContain('"B226AC010"');
+    /** 🔴 브랜드·상품명·색상이 있으면 **질의에 같이 들어간다**(전에는 버려졌다). */
+    const rich = buildDiscoverySearchQuery(
+      identity({ productCode: "B226AC010", brand: "Bobo Choses", productName: "Booty Ghosts", color: "Grey" }),
+    )!;
+    expect(rich).toContain('"B226AC010"');
+    expect(rich).toContain('"Bobo Choses"');
+    expect(rich).toContain("Booty");
+    expect(rich, "품번 하나로 쪼그라들면 E2E-HISTORY-10 의 결함으로 되돌아간다").not.toBe('"B226AC010"');
   });
 
-  it("🔴 품번이 없으면 **질의를 만들지 않는다** — 브랜드/상품명 fallback 이 없다", () => {
-    expect(buildDiscoverySearchQuery(identity({ brand: "Bobo Choses", productName: "Booty Ghosts" }))).toBeNull();
+  it("🔵 품번이 **없어도** 질의가 선다 — 단, 재료가 전무하면 만들지 않는다", () => {
+    const q = buildDiscoverySearchQuery(identity({ brand: "Bobo Choses", productName: "Booty Ghosts" }));
+    expect(q, "품번 없는 상품에서 Search 가 0 이 된다").not.toBeNull();
+    expect(q!).toContain('"Bobo Choses"');
+    /** 🔴 브랜드도 상품명도 없으면 **여전히** 만들지 않는다(신호만 남기지 않는다). */
     expect(buildDiscoverySearchQuery(identity({ productCode: "   " }))).toBeNull();
   });
 
@@ -108,7 +124,13 @@ describe("SP-07 §② 1 Product = 1 Search", () => {
         return [];
       },
     });
-    expect(queries).toEqual(['"B226AC010"']);
+    /**
+     * 🔴 **검색은 여전히 «한 번» 이다**(QUERY-ARCH-01 §2-1). 바뀐 것은 질의의 «내용»
+     *    뿐이고 **개수가 아니다** — 그래서 길이 1 을 그대로 단언한다.
+     */
+    expect(queries).toHaveLength(1);
+    expect(queries[0]).toContain('"B226AC010"');
+    expect(queries[0]).toContain('"Bobo Choses"');
     /** 🔴 소스에도 2차 검색 어휘가 없어야 한다(나중에 조용히 생기는 자리다). */
     const code = src("web-search-pool.ts");
     for (const w of ["retry", "fallback", "secondQuery", "widen"]) {
@@ -118,11 +140,22 @@ describe("SP-07 §② 1 Product = 1 Search", () => {
 });
 
 describe("SP-07 §③ 「못 물어봤다」와 「결과 없다」를 가른다", () => {
-  it("품번이 없으면 `NO_MODEL_CODE` — 검색 0회", async () => {
-    const r = await collectWebSearchUrls({ identity: identity({ brand: "X" }), search: async () => ["x"] });
-    expect(r.metrics.skipped).toBe("NO_MODEL_CODE");
-    expect(r.metrics.searches).toBe(0);
-    expect(r.urls).toEqual([]);
+  /**
+   * 🔴🔴 **QUERY-ARCH-01 에서 뒤집혔다.** 전에는 **품번이 없으면** `NO_MODEL_CODE` 로
+   *    검색을 건너뛰었고, E2E-HISTORY-10 이 그 대가를 실측했다(10건 중 **8건** 이
+   *    그 사유로 Search 0). 🟢 이제는 **재료가 전혀 없을 때만** 건너뛴다.
+   */
+  it("🔵 재료가 **전혀 없으면** 건너뛴다 — 브랜드만 있어도 검색한다", async () => {
+    /** 🟢 브랜드가 있으면 질의가 서고 **검색이 1회 돈다**. */
+    const ok = await collectWebSearchUrls({ identity: identity({ brand: "X" }), search: async () => ["x"] });
+    expect(ok.metrics.skipped).toBeNull();
+    expect(ok.metrics.searches).toBe(1);
+
+    /** 🔴 아무 재료도 없으면 **여전히** 검색하지 않는다(= 「못 물어봤다」). */
+    const none = await collectWebSearchUrls({ identity: identity({}), search: async () => ["x"] });
+    expect(none.metrics.skipped).toBe("NO_MODEL_CODE");
+    expect(none.metrics.searches).toBe(0);
+    expect(none.urls).toEqual([]);
   });
 
   it("🔴 토큰이 없으면 `NOT_CONFIGURED` — **「결과 0」이 아니다**", async () => {
