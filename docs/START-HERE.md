@@ -11,7 +11,19 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **BROWSER-FALLBACK-02** — 🟡 **PARTIAL · 구현 0 · 방향은 성립**
+CURRENT WU   **BROWSER-FALLBACK-03** — 🟡 **PARTIAL · 구현 0** (CEO 가 올린 **실제 Farfetch HTML**)
+             🟢 ProductGroup 인식 · `title` · `sku 37620037-6` · `breadcrumbPath` 확보
+             🔴🔴 **`price = null`** — 실제 Farfetch 는 `offers.priceSpecification[]` 이고
+                우리 추출기는 **그 모양을 안 읽는다**(가격비교가 목적인데 그 값이 빈다)
+             🔴 `brand` · `description` · `color` 전부 null — **부모 ProductGroup 칸이 버려진다**
+                (Junior Edition 에서도 **같은 결함 재현**)
+             🔴 `B226AC009` 는 화면 문구가 **「Brand style ID」** 라 기존 라벨 정규식
+                (`product|article code`)에 **안 걸린다** — 새 parser 만들지 않았다
+             🔴🔴 **BF-02 의 「Farfetch 46 USD」를 철회했다** — 내가 손으로 만든 fixture 가
+                `offers.price` 모양이어서 생긴 **거짓 양성** 이었다
+             🟡 CPO 판정 셋 — ⒜ priceSpecification ⒝ 부모 칸 보존 ⒞ 품번 라벨 확장
+                🔴 셋 다 **운영 원상품 경로에도 영향** 이 있다
+[직전]       **BROWSER-FALLBACK-02** — 🟡 PARTIAL(junioredition 실제 HTML)
              🟢 실제 HTML(junioredition 826KB)을 **기존 추출기**에 넣으니
                 `title` 🟢 · `sku` 🟢 · `price 68,600 KRW` 🟢 (schema 변경 **0**)
              🟢 `ProductGroup + hasVariant` 는 **이미 지원**(N-3.54) — 새 추출기 불필요

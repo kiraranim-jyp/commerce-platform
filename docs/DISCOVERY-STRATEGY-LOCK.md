@@ -2039,3 +2039,79 @@ endpoint 신설 ❌ · Identity 실행 ❌ (입력이 아직 한 쪽만 실측�
 **🔵 상태 — `BROWSER FALLBACK PARTIAL`. 다음은 둘 중 하나이고 **CPO 판정** 이다 —
 ⒜ 사람이 farfetch **전체 HTML** 을 한 번 떠서 같은 추출기에 넣어 본다(측정)
 ⒝ `hasVariant` 에서 **부모 ProductGroup 의 칸을 보존** 할 것인가(구현 · 운영 원상품 경로에도 영향).**
+
+---
+
+## 부록 AH. BROWSER-FALLBACK-03 — **실제 Farfetch HTML 은 «거의» 안 읽힌다** (2026-10-28)
+
+🔴 운영 코드 **0** · 추출기 수정 **0** · Identity/MI **0** · Search **0** · 북마클릿 **0**.
+🟢 입력 = CEO 가 **자기 브라우저에서 연 실제 페이지** 의 HTML(서버는 403).
+🔴 fixture 는 그 HTML 중 **추출기가 읽는 부분만 그대로** 옮긴 것이다(전체 278KB 아님).
+
+### AH-0. 🔴🔴🔴 먼저 — **BF-02 의 Farfetch 결과를 철회한다**
+
+```
+BF-02 에서 나는 Farfetch fixture 를 **손으로** 만들며 `offers: {price, priceCurrency}` 로 적었고
+`price 46 USD` 가 나왔다고 보고했다.
+🔴 **실제 Farfetch 는 그 모양이 아니다** — `offers.priceSpecification[].price` 다.
+⟹ 그 46 USD 는 **내 fixture 가 만든 거짓 양성** 이었다. 철회한다.
+🟢 이번에는 원문 그대로 넣었고 계약이 그 모양을 잠근다(`offers.price` 형태면 FAIL).
+```
+
+### AH-1. 실측 — 기존 추출기 그대로
+
+| 의미 | 실제 `ExtractedProductData` 칸 | 값 | 출처 |
+|---|---|---|---|
+| 상품명 | `title` | 🟡 `Bobo Choses Hug Hairy Monster long-sleeve T-shirt \| 12-13` | **variant**(사이즈가 붙어 있다) |
+| 브랜드 | `brand` | 🔴 **null** | parent 에 `Bobo Choses` 가 있는데 못 온다 |
+| SKU | `sku` | 🟢 `37620037-6` | variant |
+| 가격 | `price` | 🔴 **null** | 🔴 `priceSpecification` 을 **안 읽는다** |
+| 통화 | `price.currency` | 🔴 **null**(가격이 null) | — |
+| 설명 | `description` | 🔴 **null** | parent 에만 있다 |
+| 색상 | — | 🔴 **칸 자체가 없다** | parent `color: Blue` 는 들어갈 자리가 없다 |
+| 분류 | `breadcrumbPath` | 🟢 `Kids Home > Bobo Choses > Boys Clothing > Boys T-Shirts` | BreadcrumbList JSON-LD |
+| microdata | — | 🔴 **null** | 그 페이지엔 microdata 가 없다 |
+| 품번 | `resolveBrandModelCode` | 🔴 **null** | 아래 AH-2 |
+
+### AH-2. 🔴 `B226AC009` 는 **어느 기존 경로로도 안 나온다**
+
+```
+HTML 원문에 1회 있다 — 화면 문구는 **「Brand style ID: B226AC009」** 다.
+운영 resolver = `extractLabeledProductCode(description)` → 실패 시 URL slug.
+그 정규식은 **`product code` / `article code` 만** 본다
+   /\b(?:product|article)\s+code[:\s]+([A-Za-z0-9][A-Za-z0-9-]{2,29})\b/i
+⟹ 🔴 **「Brand style ID」는 매치하지 않는다.** 그리고 JSON-LD description 에는 품번이 없다.
+🔴 새 parser 를 만들지 않았다(CPO §6 금지).
+```
+
+### AH-3. Junior Edition 과 비교 (둘 다 **실제 HTML**)
+
+| Source | HTML | ProductGroup | title | brand | sku | price | description |
+|---|---:|---|---|---|---|---|---|
+| Junior Edition | 실제 826KB | 🟢 있다 | 🟢 정확 | 🔴 null | 🟢 `AC23-2` | 🟢 **68,600 KRW** | 🔴 null |
+| Farfetch | 실제(추출 대상부) | 🟢 있다 | 🟡 variant명 | 🔴 null | 🟢 `37620037-6` | 🔴 **null** | 🔴 null |
+
+🔴 분모는 **페이지 2개** 다. 일반화하지 않는다.
+🟢 공통 결함 하나가 **두 페이지에서 재현** 됐다 — `hasVariant` 의 variant 를 돌려주면서
+   **부모 ProductGroup 의 brand/description/color 가 버려진다**(CPO 가 분리하라고 한 그 사안).
+
+### AH-4. 🟡 판정 — **BROWSER-FALLBACK-03 PARTIAL**
+
+```
+🟢 되는 것   브라우저 HTML 을 기존 추출기에 넣을 수 있다 · ProductGroup 인식 ·
+            title · sku · breadcrumbPath 확보 · schema 변경 0 · crash 0
+🔴 안 되는 것 **가격이 null 이다**(가격비교가 목적인데 그 값이 비었다) ·
+            brand · description · color · **품번** 전부 비었다
+⟹ 🔴 지금 상태로 Browser Fallback 을 열면 **Evidence 로 쓸 수 없는 값** 이 들어온다.
+```
+
+### AH-5. 🔴 CTO 가 하지 않은 것 · 다음은 CPO 판정
+
+```
+추출기 수정 ❌ · priceSpecification 지원 추가 ❌ · 품번 라벨 확장 ❌ ·
+브라우저 쪽 파싱 ❌ · endpoint 신설 ❌ · Identity/MI 실행 ❌
+🟡 CPO 가 고를 것 — ⒜ `offers.priceSpecification` 읽기 ⒝ `hasVariant` 부모 칸 보존
+   ⒞ 품번 라벨에 「Brand style ID」 추가. 🔴 셋 다 **운영 원상품 경로에도 영향** 이 있다.
+```
+
+**🔵 상태 — `BROWSER-FALLBACK-03 PARTIAL`. 🔴 북마클릿 Case B 는 ⒜~⒞ 가 정해진 «뒤» 다.**
