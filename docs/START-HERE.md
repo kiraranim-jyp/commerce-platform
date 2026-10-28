@@ -11,7 +11,14 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **POLICY-GATE-01** — 🟢 **정책 비대칭 해소·배포**
+CURRENT WU   **BROWSER-FALLBACK-01** — 🔴 **FAIL(현재 구조) · 구현 0**
+             🔴🔴 현재 북마클릿은 **Case A** 다 — `a[href]` 만 긁어 **URL 목록을 내비게이션**
+             으로 넘기고 **서버가 그 URL 을 다시 fetch** 한다 ⟹ 403 을 전혀 건드리지 않는다
+             🔴 서버에 **데이터를 받는 입구가 없다**(`candidateUrls` 뿐 · route 전수 0)
+             🟡 Case B 는 **구조적으로 가능**(순수 추출기 `extractFromJsonLd` 가 이미 있다)
+                — 🔴 단 **미검증** 이고 farfetch 는 **JSON-LD 부재**로 그마저 막힐 가능성
+             🔴 V1·V2(브라우저 접근·DOM 읽기)는 **CTO 가 측정할 수 없다**(브라우저 0)
+[직전]       **POLICY-GATE-01** — 🟢 **정책 비대칭 해소·배포**
              「수집 가능 여부는 **어디서 발견했는가** 가 아니라 **어떤 사이트인가**」(CPO)
              🟢 술어 **owner 하나**(`isCollectionBlocked`) · 생산자 **5곳 배선** · 등록부 경로 불변
              🔴 **`NOT_AVAILABLE` 만** 막는다 — `MANUAL`(=미조사)까지 막으면 danawa 가 사라진다

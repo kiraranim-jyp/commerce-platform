@@ -1890,3 +1890,89 @@ G4 web-search 배선 제거 1 · G5 **MANUAL 까지 차단** 1 · G6 Gemini 게�
 ```
 
 **🔵 상태 — 정책 비대칭 **해소**. 403 대응은 **HOLD 유지**.**
+
+---
+
+## 부록 AF. DISCOVERY-BROWSER-FALLBACK-01 — **현재 북마클릿은 Case A 다** (2026-10-28 · 조사 전용)
+
+🔴 운영 코드 **0** · 추가 Search **0** · 구현 **0**. 기존 코드/기록만 읽었다.
+
+### AF-1. 🔴🔴 현재 북마클릿이 «실제로» 하는 일 (코드 확정)
+
+`supplied-url-handoff.ts:122 buildBookmarkletForSnapshot`
+```js
+a[href] 전수 → 외부 origin 만 → 중복 제거 → 최대 50개
+→ location.href = "/pipeline?resume=…&candidateUrls=" + encodeURIComponent(urls.join("\n"))
+```
+```
+🔴 읽는 것은 **`<a href>` 뿐** 이다 — title · brand · 품번 · 가격 · JSON-LD **전부 0**.
+🔴 넘기는 방식은 **내비게이션 + 쿼리스트링** 이다(CORS/CSP/SameSite 를 피한 설계).
+🔴 그 뒤 서버가 `collectUrlCandidatePool` 로 **그 URL 들을 다시 fetch** 한다.
+⟹ 🔴🔴 **CPO 분류의 Case A(= Case C)** 다. **403 문제를 전혀 건드리지 않는다.**
+```
+
+### AF-2. 서버 쪽 — **데이터를 받는 입구가 없다**
+
+```
+`/api/price-history/check` 가 받는 것 = `{ snapshotId, candidateUrls }` **뿐** 이다.
+HTML/상품데이터를 받는 route **0건**(`api/**/route.ts` 전수).
+Evidence 생산자는 `factsFromProductUrl(url)` 하나이고 그 함수는 **fetch 한다**.
+```
+🟢 단 **순수 추출기는 이미 있다** — `extractFromJsonLd(html)` · `extractMicrodataFromHtml(html)`
+(둘 다 export · 원상품 경로가 쓰는 그 함수). ⟹ 🟢 **Evidence schema 변경 없이**
+「HTML → facts」를 만들 **재료는 있다**. 🔴 그러나 **그 입구(entry point)가 없다**.
+
+### AF-3. CPO 검증 항목 — 할 수 있는 것과 없는 것을 가른다
+
+| | 항목 | 결과 |
+|---|---|---|
+| V1 | 차단 URL 을 **사용자 브라우저**로 열 수 있는가 | 🔴 **측정불가** — CTO 는 브라우저가 없다(연결 0) |
+| V2 | 북마클릿이 그 페이지 **DOM/JSON-LD** 를 읽는가 | 🔴 **측정불가**(V1 선행) · 🔴 현재 북마클릿은 **읽지 않는다**(AF-1) |
+| V3 | 서버 403 ↔ 브라우저 성공 **대조** | 🔴 **측정불가**(브라우저 축 없음) · 서버 축만 확정(403) |
+| — | 서버가 다시 Crawl 하는가 | 🔴 **한다**(현재 구조) ⟹ Case A/C |
+
+🔴 **V1·V2 는 사람이 브라우저로만 닫을 수 있다.** 여기서 추정해 채우지 않았다.
+
+### AF-4. 🔴 Case B 로 가려면 «무엇이» 필요한가 (설계만 · 구현 0)
+
+```
+① 북마클릿이 상품 페이지의 **JSON-LD 블록 문자열** 을 들고 온다
+   🟢 추출 «규칙» 은 서버가 소유한다 — 브라우저가 필드를 해석하면 **추출기 사본** 이 된다
+      (이 저장소가 반복해서 금지한 모양 · owner 하나 원칙)
+② 서버에 **fetch 하지 않는 입구** 하나 — `factsFrom…(url, html)` 류
+   🟢 기존 순수 추출기 재사용 ⟹ Evidence schema 변경 **0**
+③ 크기 한계 — 내비게이션 쿼리스트링이다. 추출 필드만이면 수백 B 로 충분하고,
+   **JSON-LD 원문은 1~5KB**(인코딩 ×1.5) ⟹ 1건씩이면 가능 · 다건은 위험
+🔴 ①②③ 전부 **구현** 이다. 이번 WU 범위가 아니다.
+```
+
+### AF-5. 🔴🔴 그런데 **farfetch 에서는 Case B 도 안 될 가능성이 높다**(기존 기록)
+
+```
+이 저장소 기록 — 「farfetch 는 HTTP 200 인데 **JSON-LD Product 가 없다**(JS 렌더/보호)」
+⟹ 브라우저로 열어도 `extractFromJsonLd` 는 **null** 이다.
+⟹ 렌더된 DOM 을 읽으려면 **브라우저 쪽 추출기** 가 필요하고 그것이 **사본** 이다(STOP 조건).
+🟡 babyshop 은 **기록이 없다** — 측정불가.
+```
+
+### AF-6. 보안/운영 조건 (현재 구조 기준)
+
+```
+🟢 인증     `/pipeline` 은 로그인 뒤이고 handoff 는 **같은 origin 내비게이션** 이다
+🟢 SSRF     서버 fetch 는 `isPubliclyRoutableHttpUrl` + `classifyOutboundUrl` 을 지난다
+🟢 쿠키     북마클릿이 cookie/localStorage 를 **읽지 않는다**(코드 전수 — `document.cookie` 0)
+🔴 재요청   **서버가 그 URL 을 다시 요청한다** — Case B 가 되려면 이 성질이 **바뀌어야** 한다
+🟡 크기     쿼리스트링 한계가 그대로 데이터 상한이다(현재는 URL 50개 상한)
+```
+
+### AF-7. 결론 — **BROWSER FALLBACK FAIL (현재 구조)**
+
+```
+🔴 CPO §8 분류로 **현재 북마클릿 = Case A**. §14 STOP 조건 둘에 직접 걸린다 —
+   「URL 만 전달」 · 「서버가 다시 Crawl 해야 한다」 ⟹ **구현하지 않고 종료**.
+🟡 Case B 자체는 **구조적으로 가능** 하다(AF-4) — 단 **미검증** 이고,
+   farfetch 는 JSON-LD 부재로 **그마저 막힐 가능성이 높다**(AF-5).
+🔴 그리고 PASS 조건 3·4(브라우저 접근 · 실제 데이터 읽기)는 **CTO 가 측정할 수 없다**.
+```
+
+**🔵 상태 — `BROWSER FALLBACK FAIL(현재) / Case B 미검증`. 🔴 북마클릿을 제품 구조에 넣지 않았다.**
