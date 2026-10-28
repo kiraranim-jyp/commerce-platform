@@ -1396,3 +1396,98 @@ AI Search 국내 후보  ← 11st · danawa. **이번 수정 전까지 화면에
 ```
 
 **🔵 상태 — 수정·배포 완료. 🟡 남은 것은 CEO 화면 확인 1회(국내 후보가 뜨는가).**
+
+---
+
+## 부록 Z. DISCOVERY E2E-04 — **「배선했다」가 「보인다」가 아니었다** (2026-10-28)
+
+🔴🔴🔴 **E2E-03 판정을 정정한다 — CEO 실제 화면이 반증했다.**
+그때 적은 「수정 후 화면 3」은 **코드/계약** 이었고 실제 브라우저에는 국내 후보가 **0건** 이었다.
+
+### Z-1. 런타임으로 확정한 사실 (추가 Search 0)
+
+CEO 실행 `POST /api/price-history/check` **2026-10-28 07:55:41 KST**
+(배포 `4502e2c5` **05:35:29 → Ready ~05:38** · 즉 **수정이 살아 있는 상태**),
+스냅샷 `747221b4-37f9-4647-92bd-0ceffa56f195` · origin **`bobochoses.com/en-kr/...`**(공식몰).
+
+```
+[SP07-websearch] {"query":"\"B226AC009\"","searches":1,"organic":9,
+                  "skipped":null,"failed":false}
+🟢 Search 는 돌았다 · 9건 · 스킵 없음 · 실패 없음 ⟹ **CASE A(검색이 국내를 못 찾는다) 아님**
+🟢 APIFY_API_TOKEN 은 **Production 에 등록돼 있다**(`vercel env ls` · 값은 읽지 않았다)
+🟢 CEO 는 절차대로 **「새 상품 분석」** 을 했다(스냅샷 생성 07:55:40 → check 07:55:41)
+```
+
+### Z-2. 🔴 원인 — **패널의 evidence 소비처가 «넷» 인데 E2E-03 은 «하나» 만 고쳤다**
+
+| # | 소비처 | 무엇을 만드는가 | E2E-03 이후 |
+|---|---|---|---|
+| ① | `marketComparisonInput.rows` | 📊 시장 판단(집계) | **6/6** 🟢 |
+| ② | `<TransientCandidateSections>` | **후보 카드(화면 행)** | **4/6** 🔴 |
+| ③ | `buildMarketJudgement([...])` | MI 패널 가격 판단 | **4/6** 🔴 |
+| ④ | `judgementSummaryInput.transient` | 요약 문장 | **4/6** 🔴 |
+
+🔴 그래서 **집계는 움직이는데**(런타임 `comparisonSellers: 2` · 영속 링크는 **0행**)
+**후보 카드는 비어 있었다** — CEO 캡처가 정확히 그 모양이다(해외 4 · 국내 0).
+🔴 빠진 출처는 **둘** 이다 — `webSearchEvidence`(SP-07) · `domesticListingEvidence`(CORE-2R-4).
+🔴 그리고 `MiPanelView` 에는 그 **prop 자체가 없었다**(바깥 패널만 값을 들고 있었다).
+
+### Z-3. 🟢 반증한 가설 둘 (추측으로 닫지 않았다)
+
+```
+⒜ 「데이터센터 IP 가 국내 마켓을 막는다」 → **반증**. 같은 9 URL 을 로컬 IP ↔ OCI 프록시로
+   1회씩 열었다(우회 아님 · 출구만 바꿨다):
+     11st 200/211,511 ↔ 200/211,511   ·   danawa 200/196,632 ↔ 200/196,634
+     gmarket 403 ↔ 403 · farfetch 403 ↔ 403 · babyshop 403 ↔ 403 · coupang 403 ↔ **200**
+⒝ 「Crawl 에서 전부 죽는다」 → **부분만 참**. 운영 `collectUrlCandidatePool` 실측:
+     supplied 9 → accepted 7 → usable 2 → **miEligible 2**(11st · danawa)
+     drop: NOT_PRODUCT_PAGE 2(rakuten · lfmall) · UNREACHABLE 5
+   ⟹ 🔴 **입구 소실 7/9 는 사실이고 별개 문제다**(SP-11/12 가 적은 그 44%).
+```
+
+### Z-4. 🔴 측정 구멍 — **SP-07 만 pool 지표를 로그에 안 찍는다**
+
+```
+`judgeDomesticCandidate` 가 `NO_CANDIDATES` 를 내면 **로그 없이 `continue`** 한다
+(run-domestic-price-check.ts:1761) · `result.candidates.length === 0` 도 조용하다.
+🔴 형제 생산자 셋(WU-132 · CORE-2R4 · WU-130)은 pool 지표를 찍는데 SP-07 은 안 찍는다
+⟹ 운영에서 **정확히 그 구간이 침묵한다.** 🔴 이 WU 에서 로그를 늘리지 않았다(범위 밖).
+```
+
+### Z-5. 🟢 수정 — 운영 **2 파일** · 새 개념 0
+
+```
+GeminiTransientCandidates.tsx  머리 문구 2(🧭 국내 목록 탐색 후보 · 🛰 AI 검색 후보) +
+                               🔴 `source` 유니온·`SOURCE_LABEL` 에 두 출처 추가
+                               (없으면 `SOURCE_LABEL[row.source]` 가 **undefined** →
+                                출처 배지가 **빈칸** 으로 나간다 · 🟢 typecheck 가 잡았다)
+DomesticPriceIntelligencePanel MiPanelView prop 2 + 전달 · krRows 합집합 · checkRan ·
+                               *Rest 2 + 구역 2 · miJudgement · judgementSummaryInput
+🔴 Search · Query · Identity · MI 계산식 · threshold · Evidence · Crawl · Registry ·
+   1-hop · Farfetch · `PRESUMED_SAME` · `crossSellerReserved` — **전부 변경 0**
+🔴 추가 Search **0**(Apify 호출 0 · 비용 0)
+```
+
+### Z-6. 🟢 검증 — **소스 축 + 마운트 DOM 축**
+
+```
+계약 신규 10 — 소스 9(생산자 전수 · 렌더 prop · krRows · *Rest · checkRan · 출처 배지 동기) +
+               마운트 DOM 6
+변이 소스  N1~N7 **전부 FAIL** → 바이트 동일 복구
+변이 DOM   D1(= E2E-03 상태로 되돌림) **2 FAIL** · D2 1 · D3 1 · D4(중복 렌더) 1
+🟢🟢 **D1 이 이 WU 의 핵심 증거다** — 이 계약이 있었다면 CEO 화면을 배포 «전» 에 잡았다
+기존 계약 2건 갱신·**강화** — 네 생산자를 글자로 박아 둔 단언을 **성질 단언** 으로 바꿨다
+   (그 문자열 고정이 **생산자가 늘어난 사실을 숨겼다**)
+회귀 719 files / 9,561 passed / 0 failed / 153 skipped · typecheck 0 · build 0
+```
+
+### Z-7. 🔴 그대로 유지되는 분리
+
+```
+`KRW 88,000` 류 국내 참고가격 ← 기존 등록부/목록 경로. **AI Search 와 무관** 하다.
+AI Search 국내 후보          ← 11st · danawa. **이번 수정 전까지 화면 0건.**
+🔴 화면에 국내 숫자가 있다는 이유로 「AI Search 가 국내를 찾았다」고 적지 않는다.
+```
+
+**🔵 상태 — `E2E 기술 PASS / 화면 노출 HOLD`. 🟡 CEO 화면 1회로만 닫힌다.**
+🔴 CTO 는 실제 픽셀을 볼 수 없다(`/pipeline` 307 · 로그인 뒤).

@@ -30,6 +30,9 @@ import {
   OVERSEAS_AUTO_HEADING,
   /** 🔴 WU-132 — 재투입 구역의 머리 문구. 같은 owner 다. */
   REVIEWED_SAME_HEADING,
+  /** 🔴 E2E-04 — 다섯째·여섯째 출처의 머리 문구. 같은 owner 다. */
+  DOMESTIC_LISTING_HEADING,
+  AI_SEARCH_HEADING,
   DOMESTIC_REVIEW_HEADING,
   /** 🔴 WU-141-R2 — 탐색 과정 전체를 덮는 하나의 접힘 라벨. */
   JUDGEMENT_BASIS_LABEL,
@@ -2490,6 +2493,9 @@ export function DomesticPriceIntelligencePanel({
       overseasAutoEvidence={overseasAutoEvidence}
       /** 🔴 WU-132 ⑥ — 재투입 결과. 위 셋과 **다른 구역** 에 선다(출처 보존). */
       reviewedSameEvidence={reviewedSameEvidence}
+      /** 🔴🔴 E2E-04 — 이 둘이 안 내려가서 국내 후보가 화면에 서지 못했다. */
+      domesticListingEvidence={domesticListingEvidence}
+      webSearchEvidence={webSearchEvidence}
       /** 🔴 WU-132 ④ — 검토 구역의 원본 ↔ 후보 육안 비교용. 판정에 들어가지 않는다. */
       originImageUrl={originImageUrl}
       originTitle={originTitle}
@@ -2562,6 +2568,14 @@ export function TransientCandidateSections({
   supplied,
   overseasAuto,
   reviewedSame,
+  /**
+   * 🔴🔴🔴 DISCOVERY E2E-04 — **다섯째·여섯째 출처.** 이 둘이 빠져 있어서
+   *    AI Search 가 찾은 국내 후보(11st · danawa)가 **후보 카드에 한 번도 서지
+   *    못했다.** 🔴 E2E-03 은 `marketComparisonInput.rows`(= 📊 시장 판단 쪽)만
+   *    고쳤고 **이 렌더 경로를 빠뜨렸다** — 패널의 evidence 소비처는 **둘** 이다.
+   */
+  domesticListing,
+  webSearch,
   notice,
   overseasReference,
   domesticReference,
@@ -2578,6 +2592,10 @@ export function TransientCandidateSections({
   overseasAuto?: GeminiTransientRow[] | null;
   /** 🔴 WU-132 ⑥ — 이전에 「동일상품」으로 판단한 URL 을 다시 확인한 결과. */
   reviewedSame?: GeminiTransientRow[] | null;
+  /** 🔴 CORE-2R-4 — 국내 등록부 목록을 타고 상세로 들어간 후보. */
+  domesticListing?: GeminiTransientRow[] | null;
+  /** 🔴 SP-07 — 외부 검색엔진(AI Search)이 찾아온 후보. */
+  webSearch?: GeminiTransientRow[] | null;
   notice?: string | null;
   /**
    * 🔴🔴 WU-132 ③ — 이 둘은 이제 **그리지 않는다**(「📊 동일상품 가격 비교」 영역이
@@ -2610,7 +2628,19 @@ export function TransientCandidateSections({
    * 🔴 `market` 은 운영 `classifyCandidateMarket` 산출이다. 여기서 추측하지 않는다.
    */
   const isKr = (r: GeminiTransientRow) => r.market === "KR";
-  const krRows = [...(web ?? []), ...(supplied ?? []), ...(overseasAuto ?? []), ...(reviewedSame ?? [])].filter(isKr);
+  /**
+   * 🔴🔴🔴 E2E-04 — **여기가 「국내 후보가 화면에서 사라진」 그 자리다.**
+   *    이 합집합이 **넷** 이어서 `domesticListing`·`webSearch` 의 KR 행이
+   *    🇰🇷 구역에 들어가지 못했다. 🔴 생산자를 늘릴 때 **이 줄을 같이** 고친다.
+   */
+  const krRows = [
+    ...(web ?? []),
+    ...(supplied ?? []),
+    ...(overseasAuto ?? []),
+    ...(reviewedSame ?? []),
+    ...(domesticListing ?? []),
+    ...(webSearch ?? []),
+  ].filter(isKr);
   const webRest = (web ?? []).filter((r) => !isKr(r));
   const suppliedRest = (supplied ?? []).filter((r) => !isKr(r));
   /** 🔴 WU-132 — 재투입 후보도 **같은 규칙** 으로 가른다(국내는 🇰🇷 구역으로 이동). */
@@ -2619,6 +2649,9 @@ export function TransientCandidateSections({
    *  `classifyCandidateMarket` 이 KR 로 판정하면 국내 구역으로 **옮긴다**(복제 아님) —
    *  시장은 여기서 추측하지 않고 운영 판정을 그대로 따른다. */
   const overseasAutoRest = (overseasAuto ?? []).filter((r) => !isKr(r));
+  /** 🔴 E2E-04 — 같은 규칙. KR 이 아닌 행은 **자기 출처 구역** 에 선다(행이 사라지지 않는다). */
+  const domesticListingRest = (domesticListing ?? []).filter((r) => !isKr(r));
+  const webSearchRest = (webSearch ?? []).filter((r) => !isKr(r));
   /**
    * 🔴🔴 WU-130 ② — **국내 구역은 «조회가 돌았으면» 항상 선다.**
    *
@@ -2637,6 +2670,9 @@ export function TransientCandidateSections({
     supplied != null ||
     overseasAuto != null ||
     reviewedSame != null ||
+    /** 🔴 E2E-04 — 다섯째·여섯째 출처도 「조회가 돌았다」의 근거다. */
+    domesticListing != null ||
+    webSearch != null ||
     !!domesticReference ||
     !!overseasReference;
   const showDomesticReview = checkRan;
@@ -2777,6 +2813,25 @@ export function TransientCandidateSections({
         originImageUrl={originImageUrl}
         originTitle={originTitle}
       />
+      {/**
+       * 🔴🔴🔴 E2E-04 — **AI Search 후보 구역.** 이 구역이 없어서 그 경로의 후보가
+       *    화면에 **한 번도 서지 못했다**(국내 행은 바로 위 🇰🇷 구역으로 간다).
+       * 🟢 같은 컴포넌트 · 같은 표시 규칙 · 기본 접힘 — **새 개념을 만들지 않았다.**
+       * 🔴 `onReview` 를 주지 않는다 — 사람 검토 블록은 🇰🇷 구역의 계약이다(WU-081).
+       */}
+      <GeminiTransientCandidates
+        evidence={webSearchRest}
+        heading={AI_SEARCH_HEADING}
+        testId="ai-search-transient"
+        collapsed
+      />
+      {/** 🔴 E2E-04 — 국내 목록 탐색 후보(CORE-2R-4). 같은 이유로 빠져 있었다. */}
+      <GeminiTransientCandidates
+        evidence={domesticListingRest}
+        heading={DOMESTIC_LISTING_HEADING}
+        testId="domestic-listing-transient"
+        collapsed
+      />
       {/* 🔴 WU-022 — 「지금 확인」이 돌려준 **이번 확인 한정** 후보. DB 링크와
           데이터 수명이 다르므로 구역을 가른다. 판매판정·국내 최저가에 영향 0. */}
       <GeminiTransientCandidates evidence={webRest} collapsed />
@@ -2848,6 +2903,13 @@ export function MiPanelView({
   overseasAutoEvidence = null,
   /** 🔴 WU-132 ⑥ — 재투입 후보. 위 셋과 **다른 구역** 에 선다. */
   reviewedSameEvidence = null,
+  /**
+   * 🔴🔴🔴 E2E-04 — **다섯째·여섯째 출처가 이 컴포넌트까지 오지 못하고 있었다.**
+   *    바깥 패널은 값을 들고 있었는데 `MiPanelView` 의 prop 이 **없어서** 후보 카드 ·
+   *    가격 판단 · 요약 **셋 전부** 가 그 출처를 못 봤다.
+   */
+  domesticListingEvidence = null,
+  webSearchEvidence = null,
   /** 🔴 WU-132 ④ — 검토 구역의 원본 ↔ 후보 육안 비교용. 판정에 들어가지 않는다. */
   originImageUrl = null,
   originTitle = null,
@@ -2919,6 +2981,10 @@ export function MiPanelView({
    *    **다른 칸** 이다 — 셀러가 지금 넣은 URL 이 아니라는 사실이 사라지면 안 된다.
    */
   reviewedSameEvidence?: GeminiTransientRow[] | null;
+  /** 🔴 E2E-04 — CORE-2R-4 국내 목록 탐색 후보. 위 넷과 **다른 출처** 다. */
+  domesticListingEvidence?: GeminiTransientRow[] | null;
+  /** 🔴 E2E-04 — SP-07 외부 검색(AI Search) 후보. 위 넷과 **다른 출처** 다. */
+  webSearchEvidence?: GeminiTransientRow[] | null;
   /**
    * 🔴 WU-132 ④ — 원상품 대표 이미지/제목(육안 비교용).
    *    🔴 판정·가격·집계·등록 payload 에 **들어가지 않는다** — 그리는 데만 쓴다.
@@ -3397,6 +3463,9 @@ export function MiPanelView({
     ...(urlCandidateEvidence ?? []),
     ...(overseasAutoEvidence ?? []),
     ...(reviewedSameEvidence ?? []),
+    /** 🔴 E2E-04 — 다섯째·여섯째 출처. 빠지면 **가격 판단이 그 후보를 못 본다**. */
+    ...(domesticListingEvidence ?? []),
+    ...(webSearchEvidence ?? []),
   ]);
   const miOverseasGuide = buildPriceGuide(miJudgement, "OVERSEAS");
 
@@ -3523,6 +3592,10 @@ export function MiPanelView({
       { sourceLabel: "해외 자동검색", rows: overseasAutoEvidence ?? [] },
       /** 🔴 WU-132 — 재투입 후보도 **센다**(같은 이유 — 요약과 아래 행이 어긋나면 안 된다). */
       { sourceLabel: "이전 확인 후보", rows: reviewedSameEvidence ?? [] },
+      /** 🔴🔴 E2E-04 — 같은 이유로 **센다**. 이 둘이 빠져 있어서 요약이 국내 후보를
+       *  「없음」으로 말하면서 가격 집계에는 들어가는 모순이 실제로 났다. */
+      { sourceLabel: "국내 목록 탐색", rows: domesticListingEvidence ?? [] },
+      { sourceLabel: "AI 검색", rows: webSearchEvidence ?? [] },
     ],
   };
 
@@ -4051,7 +4124,7 @@ export function MiPanelView({
           🟢 그리고 후보가 없으면 두 구역 모두 **아무것도 렌더하지 않는다** —
              기본 화면은 한 픽셀도 바뀌지 않는다(그 성질은 컴포넌트가 보장한다).
         */}
-        <TransientCandidateSections web={geminiEvidence} supplied={urlCandidateEvidence} overseasAuto={overseasAutoEvidence} reviewedSame={reviewedSameEvidence} notice={urlCandidateNotice} overseasReference={overseasReference} domesticReference={domesticReference} domesticReview={domesticReview} onDomesticReview={handleDomesticReview} reviewSaveState={reviewSaveState} reviewHistory={reviewHistory} originImageUrl={originImageUrl} originTitle={originTitle} />
+        <TransientCandidateSections web={geminiEvidence} supplied={urlCandidateEvidence} overseasAuto={overseasAutoEvidence} reviewedSame={reviewedSameEvidence} domesticListing={domesticListingEvidence} webSearch={webSearchEvidence} notice={urlCandidateNotice} overseasReference={overseasReference} domesticReference={domesticReference} domesticReview={domesticReview} onDomesticReview={handleDomesticReview} reviewSaveState={reviewSaveState} reviewHistory={reviewHistory} originImageUrl={originImageUrl} originTitle={originTitle} />
       </div>
     </CollapsibleSection>
   );

@@ -375,10 +375,18 @@ describe("D. 🔴 화면(마운트 DOM)", () => {
 
   it("D-4 🔴 KR 로 판정된 행은 🇰🇷 구역으로 **옮긴다** — 총 행 수가 바뀌지 않는다", () => {
     /** 🟢 패널 소스로 그 파생을 잠근다(렌더는 패널 전체 마운트가 필요하므로 앵커로 본다). */
-    /** 🔴 WU-132 — 입력이 **넷** 이 됐다(이전 판단 재투입). 성질·강화는 그대로다. */
-    expect(PANEL).toContain(
-      "const krRows = [...(web ?? []), ...(supplied ?? []), ...(overseasAuto ?? []), ...(reviewedSame ?? [])].filter(isKr)",
-    );
+    /**
+     * 🔴🔴🔴 E2E-04 — **문자열 고정을 «성질» 로 바꾼다.** 네 생산자를 글자로 박아 둔
+     *    이 단언은 **다섯째·여섯째 생산자가 빠져도 통과** 했고, 그래서 AI Search 의
+     *    국내 후보가 화면에서 사라진 것을 **배포 전에 잡지 못했다**(CEO 화면 실측).
+     * 🟢 이제 「`*Rest` 를 만든 출처는 전부 krRows 에도 있다」를 전수로 본다.
+     */
+    const krBlock = PANEL.slice(PANEL.indexOf("const krRows"), PANEL.indexOf(".filter(isKr)"));
+    const restProps = [...PANEL.matchAll(/const \w+Rest = \((\w+) \?\? \[\]\)\.filter\(/g)].map((m) => m[1]!);
+    expect(restProps.length).toBeGreaterThanOrEqual(4);
+    for (const p of restProps) {
+      expect(krBlock, `${p}: krRows 합집합에 없다 — 그 출처의 국내 후보가 사라진다`).toContain(`...(${p} ?? [])`);
+    }
     expect(PANEL).toContain("const overseasAutoRest = (overseasAuto ?? []).filter((r) => !isKr(r));");
     /** 🔴 복제가 아니다 — 자동검색 구역은 `overseasAutoRest`(KR 제거 후)만 받는다. */
     expect(PANEL).toContain("evidence={overseasAutoRest}");

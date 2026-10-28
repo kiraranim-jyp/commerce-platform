@@ -270,9 +270,19 @@ describe("⑥ 🔴 판정·가격 계산에 손대지 않았다 — 소스 계�
      *    그대로이고 **강화** 도 그대로다 — 네 배열이 **전부** 그 파생에 들어가야 한다.
      *    🔴 하나를 빠뜨리면 그 출처의 KR 후보가 **조용히 사라진다**.
      */
-    expect(panel).toContain(
-      "const krRows = [...(web ?? []), ...(supplied ?? []), ...(overseasAuto ?? []), ...(reviewedSame ?? [])].filter(isKr)",
-    );
+    /**
+     * 🔴🔴🔴 E2E-04 — **문자열 고정을 «성질» 로 바꾼다.** 전까지 이 줄은 네 생산자를
+     *    글자 그대로 박아 두었고, 그 모양이 **생산자가 늘어난 사실을 숨겼다** —
+     *    `domesticListing`·`webSearch` 가 빠진 채로도 이 단언은 **통과** 했고
+     *    AI Search 의 국내 후보가 화면에서 조용히 사라졌다(CEO 화면 실측).
+     * 🟢 그래서 **개수를 박지 않고** 「krRows 가 `*Rest` 를 만든 출처를 전부 포함한다」로 잠근다.
+     */
+    const krBlock = panel.slice(panel.indexOf("const krRows"), panel.indexOf(".filter(isKr)"));
+    const restProps = [...panel.matchAll(/const \w+Rest = \((\w+) \?\? \[\]\)\.filter\(/g)].map((m) => m[1]!);
+    expect(restProps.length).toBeGreaterThanOrEqual(4);
+    for (const p of restProps) {
+      expect(krBlock, `${p}: krRows 합집합에 없다 — 그 출처의 국내 후보가 사라진다`).toContain(`...(${p} ?? [])`);
+    }
     expect(panel).toContain("const overseasAutoRest = (overseasAuto ?? []).filter(");
     expect(panel).toContain("const reviewedSameRest = (reviewedSame ?? []).filter(");
     expect(panel).toContain("<TransientCandidateSections web={geminiEvidence} supplied={urlCandidateEvidence} overseasAuto={overseasAutoEvidence} reviewedSame={reviewedSameEvidence}");

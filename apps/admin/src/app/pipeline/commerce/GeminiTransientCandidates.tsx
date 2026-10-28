@@ -40,7 +40,8 @@ export interface GeminiTransientRow {
   /** 🔴 WU-028 — 판매처만으로는 「무엇이 그 가격인가」를 말할 수 없다. */
   title?: string | null;
   /** 🔴 WU-028 — 이 후보가 **어디서 왔는가**. 행에서도 출처가 보여야 한다. */
-  source?: "GEMINI_DISCOVERY" | "SELLER_URL" | "OVERSEAS_AUTO" | "REVIEWED_SAME" | null;
+  /** 🔴 E2E-04 — runner 의 `GeminiTransientEvidence.source` 와 **같은 집합** 이어야 한다. */
+  source?: "GEMINI_DISCOVERY" | "SELLER_URL" | "OVERSEAS_AUTO" | "REVIEWED_SAME" | "DOMESTIC_LISTING" | "WEB_SEARCH" | null;
   /**
    * 🔴🔴 WU-132 ④ — **후보 대표 이미지.** 셀러가 「동일상품인가」를 가르는 수단이
    *    글자뿐이면 판단이 안 된다 — WU-099 에서 CEO 평가 26건 중 **12건이 「이미지가
@@ -97,7 +98,7 @@ export function priceText(row: GeminiTransientRow): string {
 
 /** 🔴 WU-028 — 행에 붙는 **출처** 배지. 입력부와 결과부를 잇는 유일한 표시다. */
 export const SOURCE_LABEL: Record<
-  "GEMINI_DISCOVERY" | "SELLER_URL" | "OVERSEAS_AUTO" | "REVIEWED_SAME",
+  "GEMINI_DISCOVERY" | "SELLER_URL" | "OVERSEAS_AUTO" | "REVIEWED_SAME" | "DOMESTIC_LISTING" | "WEB_SEARCH",
   string
 > = {
   SELLER_URL: "직접 입력",
@@ -109,6 +110,14 @@ export const SOURCE_LABEL: Record<
    *    확인했다」는 뜻이다. 🔴 「직접 입력」으로 적으면 셀러가 **지금 넣은 줄** 안다.
    */
   REVIEWED_SAME: "이전 확인 후보",
+  /**
+   * 🔴🔴🔴 E2E-04 — **이 둘이 유니온에 없어서 배지가 빈칸으로 나갈 상태였다**
+   *    (`SOURCE_LABEL[row.source]` 가 `undefined`). 🟢 typecheck 가 잡았다.
+   * 🔴 `GEMINI_DISCOVERY`(「웹 검색」)와 **다른 말** 을 쓴다 — 같은 말을 쓰면
+   *    셀러가 두 출처를 구별할 수 없고, 그것이 출처 배지의 존재 이유를 지운다.
+   */
+  DOMESTIC_LISTING: "국내 목록 탐색",
+  WEB_SEARCH: "AI 검색",
 };
 
 /**
@@ -172,6 +181,20 @@ export const OVERSEAS_AUTO_HEADING = "🌎 해외 자동검색 후보";
  *    그 결과가 바뀌었을 수 있다(그래서 행마다 판정이 따로 적힌다).
  */
 export const REVIEWED_SAME_HEADING = "🔁 이전 확인 후보 재검증";
+/**
+ * 🔴🔴 CORE-2R-4 — **국내 등록부 «목록» 을 타고 상세로 들어간 후보.** 위 넷과 출처가
+ *    다르다 — 셀러가 넣은 것도 아니고 해외 자동검색도 아니다.
+ */
+export const DOMESTIC_LISTING_HEADING = "🧭 국내 목록 탐색 후보";
+/**
+ * 🔴🔴🔴 SEARCH-PROVIDER-07 — **외부 검색엔진(AI Search)이 찾아온 후보.**
+ *
+ * 🔴 `WEB_SEARCH_HEADING`(「🔎 웹 검색 후보」)과 **다른 출처** 다 — 그 상수는 Gemini
+ *    Discovery 경로의 것이다(WU-022). 같은 구역에 담으면 **출처 축이 사라진다**
+ *    (WU-130 이 구역을 가른 이유와 같다).
+ * 🔴 「동일상품」이라고 **단정하지 않는다** — 판정은 행마다 따로 적힌다.
+ */
+export const AI_SEARCH_HEADING = "🛰 AI 검색 후보";
 /**
  * 🔴🔴 WU-081 — **국내 후보 검토 구역.** 해외 축 제목과 **의미가 겹치지 않게** 짓는다.
  * ```

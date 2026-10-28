@@ -11,7 +11,9 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **DISCOVERY E2E-03** — 🟢 국내 후보 **화면 배선 수정·배포** · 🟡 CEO 확인 1회
+CURRENT WU   **DISCOVERY E2E-04** — 🔴 **E2E-03 은 HOLD 였다**(CEO 실제 화면이 반증했다) ·
+             🟢 원인 확정 — 패널의 evidence 소비처가 **넷** 인데 E2E-03 은 **하나만** 고쳤다 ·
+             🟢 수정 + **마운트 DOM** 으로 재검증(소스 계약만으로 끝내지 않았다) · 🟡 CEO 확인 1회
 NEXT         🔵 **실제 상품에서 Candidate URL → Crawl → Evidence → Identity 확인**(MI 는 그 다음)
              🔵 전략은 **docs/DISCOVERY-STRATEGY-LOCK.md** 에 고정됐다(세션 바뀌어도 남는다)
 CEO ACTION   🔵🔵 **있다** — docs/DISCOVERY-E2E-02-SCREEN-CHECK.md 절차대로 **「새 상품 분석」** 1회
@@ -32,9 +34,22 @@ CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SEARCH-PROVIDER-12**(🔴🔴 입구 손실의 절반이 **우리 분류기** · 1-hop 은 이미 작동) ·
              **SEARCH-PROVIDER-13**(`-item-{id}.aspx` 상품 분류 · UNKNOWN→PRODUCT 50 · 오분류 0 · 🔴 회수 0) ·
              **SEARCH-PROVIDER-14**(직접 vs 1-hop 분리 · 1-hop 증분 Evidence **4**(+6%) · 오염 0) ·
-             **DISCOVERY E2E**(Search 1회 → 후보 3 → 전부 PRESUMED_SAME · 🔴 사람 확인 0/3 ⟹ **HOLD**)
+             **DISCOVERY E2E**(Search 1회 → 후보 3 → 전부 PRESUMED_SAME · 🔴 사람 확인 0/3 ⟹ **HOLD**) ·
+             **DISCOVERY E2E-03**(🔴 **단독으로는 닫히지 않았다** — E2E-04 가 이어서 닫는다)
 Git          clean · origin/main 0/0 · Production / 200
-회귀         **717 files / 9,549 passed / 0 failed / 153 skipped** · typecheck 0 · build 0
+회귀         **719 files / 9,561 passed / 0 failed / 153 skipped** · typecheck 0 · build 0
+```
+
+🔴🔴🔴 **E2E-04 가 남기는 영구 교훈 — 「배선했다」를 「보인다」로 쓰지 않는다**
+```
+패널의 evidence 소비처는 **넷** 이다(둘이 아니다):
+  ① marketComparisonInput.rows      → 📊 시장 판단(집계)
+  ② <TransientCandidateSections>    → **후보 카드(화면 행)**
+  ③ buildMarketJudgement([...])     → MI 패널 가격 판단
+  ④ judgementSummaryInput.transient → 요약 문장
+🔴 E2E-03 은 ①만 고쳤다 ⟹ 집계는 움직이는데(`comparisonSellers 2`) **화면 행은 0** 이었다.
+🟢 이제 계약이 **runner 결과 타입에서 생산자를 전수로 뽑아** ①~④ 와 🇰🇷 합집합 · 출처 배지까지 본다.
+🔴 그리고 **소스 계약으로 완료를 선언하지 않는다** — 마운트 DOM 축을 같이 둔다(헌장 §5).
 ```
 
 🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **CPO 판정** 이다 — matcher 를 CTO 가 열지 않는다.
