@@ -21,7 +21,30 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **QUERY-ARCH-01 §17~§20** — 🟡 **PARTIAL** · 운영 로직 변경 **0**
+CURRENT WU   **CANDIDATE-SYNC-01** — 🟡 **PARTIAL** · 운영 변경 = **UI 문구 한 자리**
+             🔴🔴 **국내 후보 1건의 원인 = Search coverage + «내 하니스 누락»**
+                Bobo Choses: raw 4 → pool 4 → policy 4 → crawl 4 → evidence 3 → DOM 5
+                WEB_SEARCH 3행은 **전부 해외** · 🇰🇷 1건은 DOMESTIC_LISTING 산출
+                ⟹ pool/policy/crawl/market/price/UI 에서 **잃은 국내 후보 0**
+             🔴🔴🔴 **§17 1회용 라우트가 `reviewedSameUrls` 재투입을 빠뜨렸다** —
+                DB 실측 `candidate_reviews` origin_code=B226AC009 · SAME **13행** 존재
+                ⟹ 「후보 1건」은 **내 하니스 수치** 다. CEO 가 「🔄 다시 분석」을 누르면
+                   `/check` 가 그 13을 재투입한다(**코드 변경 불필요**)
+             🔴🔴 **`117` 의 정체 = Production 가격 쓰기 결함** (원인 한 줄까지 특정)
+                `price_observations` DEUXBEBE 같은 URL — 10-08 **117,000** · 10-28 **117**
+                `deuxbebe.ts:47` `([0-9]+)` 가 **콤마를 못 받아** `117,000` → `117`
+                🟢 국내 목록 탐색 경로는 같은 상품을 117,000 으로 **정확히** 읽었다
+                🔴 **고치지 않았다**(Site adapter 금지) ⟹ **CPO GO 필요** ·
+                   저장된 `117` 행도 같이 정리해야 한다(최저가를 그 행이 이긴다)
+             🟢 owner 분리 확정 — 화면 「국내 참고가격」 = `candidateDomesticPrice`(일시),
+                `domesticLowestPriceKrw` = `price_observations`(영속) · **다른 칸**
+             🟢 의미 충돌 제거 — 「…국내 판매처는 **없습니다**」 → **「국내 가격 참고값」**
+                🔴 1차에 문장 셋을 다 뺐는데 **내 owner 판단이 틀렸다** → note/scope 복귀
+                🟢 기존 계약 4파일이 그 과잉 제거를 잡았다(약화 0 · 문자열만 교체)
+             🟡 CEO Action 1회 — B226AC009 화면: 부정문 없는지 · 후보 몇 건 서는지
+             🟢 전문 `docs/HANDOFF-CANDIDATE-SYNC-01.md`
+[직전]       **QUERY-ARCH-01 §17~§20**(Production Search 10/10)
+[낡음]       **QUERY-ARCH-01 §17~§20** — 🟡 **PARTIAL** · 운영 로직 변경 **0**
              🟢🟢 **Production Search 10/10** · 전건 `searches:1` · failed **0** · skipped **0**
                 ⟹ `1 Product = 1 Search` 가 Production 에서 지켜졌다
              🟢 funnel — organic **74** → accepted 31 → usable 19 → MI자격 18 →

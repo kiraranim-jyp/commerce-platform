@@ -7,7 +7,7 @@ import { summarizeCandidateOverseasPrices } from "../../../api/price-history/_li
 import { MarketPriceComparison } from "../MarketPriceComparison";
 import {
   DOMESTIC_REFERENCE_TITLE,
-  DOMESTIC_SAME_NOT_CONFIRMED,
+  DOMESTIC_REFERENCE_BASIS,
   formatReferenceAmount,
   referenceAmountSummary,
 } from "../overseas-reference";
@@ -105,7 +105,7 @@ describe("§8-1·2 가격 있음 + SAME 없음을 «동시에» 말한다", () =
     expect(first).toContain(DOMESTIC_REFERENCE_TITLE);
     expect(first).toContain("KRW 88,000");
     /** 🔴 CORE-2AO-R2 — CPO 가 1차를 «가격 세 덩어리»로 좁혔다 ⟹ 이 축은 ＋ 상세정보 보기 안이다(삭제 0 · 이동). */
-    expect((el.textContent ?? "").replace(/\s+/g, " ")).toContain(DOMESTIC_SAME_NOT_CONFIRMED);
+    expect((el.textContent ?? "").replace(/\s+/g, " ")).toContain(DOMESTIC_REFERENCE_BASIS);
   });
 
   /** 🔴 §6 — 참고가격이 있는데 「가격 없음」류가 **같이 뜨면 안 된다**. */

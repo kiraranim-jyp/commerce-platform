@@ -124,6 +124,22 @@ export const DOMESTIC_REFERENCE_NOTE =
  *    확인해 주세요」류를 쓰지 않는다.
  */
 export const DOMESTIC_SAME_NOT_CONFIRMED = "동일상품으로 확정된 국내 판매처는 없습니다.";
+/**
+ * 🔴🔴🔴 CANDIDATE-SYNC-01 §6 — **위 문장을 대체한다**(CPO 가 쓴 문구 그대로)
+ *
+ * 🔴 CEO 캡처가 「국내 참고가격 **₩88,000**」 옆에 위 문장(「국내 판매처는 **없습니다**」)
+ *    을 같이 뒀다 ⟹ 「가격은 있는데 판매처는 없다」로 읽힌다(CPO §9 금지 문구).
+ *
+ * 🟢 **owner 를 확인하고 정했다**(§6 「최종 문구는 owner 확인 뒤」):
+ * ```
+ * 이 블록 숫자 = `candidateDomesticPrice` — 일시 후보 집계(tier `EXACT|COMPARISON`)
+ * 🔴 `domesticCompetition.lowestPriceKrw`(영속 관측)와 **다른 칸** 이다
+ * ⟹ 「SAME 확정이 아니다」는 **등급** 이야기이고 「판매처가 없다」가 아니다
+ * ```
+ * 🔴 그래서 **부정문을 쓰지 않는다** — 가격의 **성격** 만 한 마디로 적는다.
+ * 🔴 새 집계·새 숫자 **0** 이다(라벨 하나다).
+ */
+export const DOMESTIC_REFERENCE_BASIS = "국내 가격 참고값";
 /** 🔴 CORE-2T §4 — 국내는 **「확인 N곳」** 이다(「판매처 N곳」은 해외 축의 기존 말). */
 export const DOMESTIC_SELLER_COUNT_LABEL = "확인";
 /** 🟢 해외 축의 기존 말 — **한 글자도 바꾸지 않는다**(§9). */

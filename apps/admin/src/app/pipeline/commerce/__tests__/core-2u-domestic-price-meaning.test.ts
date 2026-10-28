@@ -9,7 +9,7 @@ import { summarizeCandidateOverseasPrices } from "../../../api/price-history/_li
 import { MarketPriceComparison } from "../MarketPriceComparison";
 import {
   DOMESTIC_REFERENCE_TITLE,
-  DOMESTIC_SAME_NOT_CONFIRMED,
+  DOMESTIC_REFERENCE_BASIS,
   OVERSEAS_REFERENCE_TITLE,
 } from "../overseas-reference";
 import {
@@ -41,7 +41,7 @@ import type { OverseasPriceSummary } from "../overseas-reference";
  * 🟢 **CPO 결정 A** — 가격을 **없애지 않고** 이름을 정직하게 가른다:
  * ```
  * SAME 가격 있음  → 「💰 … 동일상품 확인 가격」(+ 금액이 다르면 **가격대**)
- * SAME 가격 없음  → **「국내 참고가격」** + 「동일상품으로 확정된 국내 판매처는 없습니다」
+ * SAME 가격 없음  → **「국내 참고가격」** + **「국내 가격 참고값」**(🔴 CANDIDATE-SYNC-01 이 부정문을 교체했다 · CPO §6·§9)
  * ```
  * 🔴 **새 MI 알고리즘이 아니다**(§8) — 기존 판정 결과를 **seller-facing 으로 해석하는
  *    계층** 에서만 처리한다. SAME/threshold/8축/crossSellerReserved **변경 0**.
@@ -128,7 +128,7 @@ describe("§8 Case A~F — 기존 판정 결과를 하나의 seller-facing 의�
   /** 🔴🔴 §1·§4 — **가격과 「확정 여부」가 나란히 서고 서로 모순되지 않는다.** */
   it("C-SIM-b 🔴🔴 가격 바로 아래에서 **「동일상품 확정 없음」** 을 말한다", () => {
     const el = mount({ rows: SIMILAR_ROWS, domesticReference: ref([{ amount: 88000, seller: "donokids.com" }]) });
-    expect(text(el, "reference-status")).toBe(DOMESTIC_SAME_NOT_CONFIRMED);
+    expect(text(el, "reference-status")).toBe(DOMESTIC_REFERENCE_BASIS);
     /**
      * 🔴🔴 **CORE-2AO-R2 — 「확정 여부」가 상세로 내려가 층이 갈렸다**(CPO 2026-10-26).
      *    🟢 **순서 성질은 그대로** 다 — 금액이 **먼저** 다. 🔴 단 한 구역 안이 아니라
@@ -259,7 +259,7 @@ describe("§3·§6·§7 — seller-facing 은 하나의 가격 판단", () => {
      */
     expect(kr).toContain("KRW 88,000");
     expect(kr).toContain("확인 1곳");
-    expect(text(host, "market-detail-domestic")).toContain(DOMESTIC_SAME_NOT_CONFIRMED);
+    expect(text(host, "market-detail-domestic")).toContain(DOMESTIC_REFERENCE_BASIS);
     /** 🔴 1차 전체에서는 **MI 내부 상태** 만 금지한다(§5). */
     expect(firstScreen(host)).not.toContain("보류·충돌");
   });

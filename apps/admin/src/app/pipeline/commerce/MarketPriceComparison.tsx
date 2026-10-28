@@ -9,7 +9,7 @@ import {
   /** 🔴 CORE-2T §4 — 국내 「확인 N곳」 라벨 owner(해외는 기본값을 쓴다). */
   DOMESTIC_SELLER_COUNT_LABEL,
   /** 🔴 CORE-2U-A §1·§4 — 가격 바로 아래의 「동일상품 확정 없음」 한 줄. */
-  DOMESTIC_SAME_NOT_CONFIRMED,
+  DOMESTIC_REFERENCE_BASIS,
   type OverseasPriceSummary,
 } from "./overseas-reference";
 import {
@@ -1049,6 +1049,32 @@ function MarketBlock({
             {...(market === "KR"
               ? {
                   title: DOMESTIC_REFERENCE_TITLE,
+                  /**
+                   * ══════════════════════════════════════════════════════════
+                   * 🔴🔴🔴 CANDIDATE-SYNC-01 §6·§7 — **의미 충돌 문장 셋을 걷어낸다**
+                   * ══════════════════════════════════════════════════════════
+                   *
+                   * CEO 캡처 — 「국내 참고가격 ₩88,000」 **그리고** 「동일상품으로 확정된
+                   * 국내 판매처는 없습니다」 **그리고** 「국내 판매처의 상세 페이지에서
+                   * 확인한 가격입니다…」가 한 블록에 같이 있었다.
+                   *
+                   * 🔴🔴 **owner 를 먼저 확정했다**(§6 「최종 문구는 owner 확인 뒤」):
+                   * ```
+                   * 이 블록 숫자 = `candidateDomesticPrice` — **일시 후보 집계**
+                   *                (tier `EXACT|COMPARISON` · WU-056 정책 그대로)
+                   * 🔴 `domesticCompetition.lowestPriceKrw`(← price_observations · **영속**)는
+                   *    **다른 칸** 이다. 그 칸이 Main Story 에서 **117** 을 내고 있다(§5 보고).
+                   * ⟹ 🟢 그래서 `scope`(「이번 확인에만 … 저장되지 않습니다」)는 이 블록에서
+                   *    **참** 이다 — 1차 수정에서 내가 거짓이라고 적었고 **그 판단이 틀렸다**.
+                   *    `note`·`scope` 는 **되돌려 놓았다**(둘 다 `!compact` = 상세 전용).
+                   * ```
+                   * 🔴 남은 진짜 모순은 **하나** 다 — `DOMESTIC_SAME_NOT_CONFIRMED` 가
+                   *    「국내 판매처는 **없습니다**」라고 말해 **가격이 있는데 없다** 로 읽혔다.
+                   *    그 문장은 **등급**(SAME 확정) 축인데 숫자 축과 한 블록에 있었다.
+                   * 🟢 그래서 **부정문을 쓰지 않는 짧은 근거 라벨** 로 바꾼다 —
+                   *    `DOMESTIC_REFERENCE_BASIS`(「국내 가격 참고값」 · CPO §6 문구).
+                   * 🔴 **숫자·집계·판정은 한 글자도 바뀌지 않는다** · 상수 삭제 **0**.
+                   */
                   note: DOMESTIC_REFERENCE_NOTE,
                   scope: DOMESTIC_REFERENCE_SCOPE,
                   icon: "🇰🇷",
@@ -1056,16 +1082,17 @@ function MarketBlock({
                   amountTestId: "domestic-lowest",
                   /** 🔴 CORE-2T §4 — 국내는 「확인 N곳」이다(해외는 기본값 「판매처」 그대로). */
                   sellerCountLabel: DOMESTIC_SELLER_COUNT_LABEL,
-                  /**
-                   * 🔴🔴 CORE-2U-A §5 — 「유사상품 1」(내부 등급 분포)을 **끈다.**
-                   *    🟢 같은 사실을 아래 `statusLine` 이 **셀러의 말** 로 적는다.
-                   */
+                  /** 🔴🔴 CORE-2U-A §5 — 「유사상품 1」(내부 등급 분포)을 **끈다.** */
                   showTierNote: false,
                   /**
-                   * 🔴🔴🔴 CORE-2U-A §1·§4 — **이 블록은 `sameCount === 0` 분기 안에만 있다**
-                   *    ⟹ 「동일상품 확정 없음」이 **구조적으로 항상 참** 이다(상태를 지어내지 않는다).
+                   * 🔴🔴🔴 **CORE-2U-A 의 부정문을 CANDIDATE-SYNC-01 이 교체했다.**
+                   *    그때의 근거(「`sameCount === 0` 분기라 구조적으로 참」)는 **여전히
+                   *    참** 이다 — 바뀐 것은 **그 «문장» 을 가격 숫자 옆에 두면 안 된다** 는
+                   *    CPO 판정이다(두 축이 한 축으로 읽힌다 · §6·§9).
+                   * 🟢 **삭제가 아니라 교체** 다 — 근거 줄은 상세에 그대로 서고,
+                   *    같은 사실을 「동일상품 확인 0곳」 **숫자 줄** 이 1차에서 말한다.
                    */
-                  statusLine: DOMESTIC_SAME_NOT_CONFIRMED,
+                  statusLine: DOMESTIC_REFERENCE_BASIS,
                 }
               : {
                   /**

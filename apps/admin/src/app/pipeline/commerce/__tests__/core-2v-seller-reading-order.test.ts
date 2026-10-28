@@ -5,7 +5,7 @@ import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
 import { summarizeCandidateOverseasPrices } from "../../../api/price-history/_lib/candidate-market";
 import { MarketPriceComparison } from "../MarketPriceComparison";
-import { DOMESTIC_REFERENCE_TITLE, DOMESTIC_SAME_NOT_CONFIRMED } from "../overseas-reference";
+import { DOMESTIC_REFERENCE_TITLE, DOMESTIC_REFERENCE_BASIS } from "../overseas-reference";
 import { MARKET_EVIDENCE_FOLD_LABEL, MARKET_RESULT_HEADING, PRICE_BASIS_HEADING } from "../mi-same-candidates";
 import type { GeminiTransientRow } from "../GeminiTransientCandidates";
 import type { OverseasPriceSummary } from "../overseas-reference";
@@ -288,13 +288,13 @@ describe("D. 🔴 CPO §9 FAIL 조건", () => {
      *    확인한 곳이 0** 임을 못 보는 것이 CEO 가 지목한 모순이었다 ⟹ **숫자 한 줄** 을 올린다.
      * 🟢 이 단언의 **원래 목적(「0곳」이 가격보다 먼저 보이지 않는다)은 그대로** 다 —
      *    「없다」로 먼저 읽히는 것을 막는 것이고, 그래서 **순서로** 다시 문다(아래 index 비교).
-     * 🔴 그리고 **문장은 여전히 1차 금지** 다(`DOMESTIC_SAME_NOT_CONFIRMED`) — 게이트를
+     * 🔴 그리고 **문장은 여전히 1차 금지** 다(`DOMESTIC_REFERENCE_BASIS`) — 게이트를
      *    풀었는지 그 줄이 잡는다. ⟹ 약화가 아니라 **층 분리** 다.
      * ```
      */
     const first = firstScreen(ceoScreen());
     expect(first).toContain("KRW 88,000");
-    expect(first, "🔴 「확정 없음」이 1차로 되돌아왔다").not.toContain(DOMESTIC_SAME_NOT_CONFIRMED);
+    expect(first, "🔴 「확정 없음」이 1차로 되돌아왔다").not.toContain(DOMESTIC_REFERENCE_BASIS);
     /** 🟢 숫자는 **1차에 있다** · 🔴 단 **가격보다 뒤** 여야 한다(원래 목적 그대로). */
     expect(first, "🔴 동일상품 확인 수가 1차에서 사라졌다").toContain("동일상품 확인 0곳");
     expect(
@@ -303,7 +303,7 @@ describe("D. 🔴 CPO §9 FAIL 조건", () => {
     ).toBeLessThan(first.indexOf("동일상품 확인 0곳"));
     /** 🟢 단 **사라지지는 않았다** — 상세에 그대로 있다. */
     const whole = (ceoScreen().textContent ?? "").replace(/\s+/g, " ");
-    expect(whole).toContain(DOMESTIC_SAME_NOT_CONFIRMED);
+    expect(whole).toContain(DOMESTIC_REFERENCE_BASIS);
     expect(whole).toContain("동일상품 확인 0곳");
   });
 
