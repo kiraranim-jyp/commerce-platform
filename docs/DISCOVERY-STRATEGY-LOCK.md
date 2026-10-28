@@ -2115,3 +2115,68 @@ HTML 원문에 1회 있다 — 화면 문구는 **「Brand style ID: B226AC009�
 ```
 
 **🔵 상태 — `BROWSER-FALLBACK-03 PARTIAL`. 🔴 북마클릿 Case B 는 ⒜~⒞ 가 정해진 «뒤» 다.**
+
+---
+
+## 부록 AI. DISCOVERY-E2E-CLOSE-01 — **사슬은 닫혔다. 그런데 «정책» 이 국내 후보를 지웠다** (2026-10-28)
+
+🔴 추가 Search **0** · Apify **0** · Identity/MI/Query **0** · 운영 코드 **0**(계약 1파일).
+
+### AI-1. 🔴🔴🔴 가장 중요한 숫자 — POLICY-GATE-01 «이후» funnel
+
+같은 9 URL · 같은 origin · **정책 집합을 넣고** 운영 pool 을 돌렸다:
+```
+supplied 9 → accepted **3** (정책 차단 **4**) → usable **1** → miEligible **1**
+hosts: ["m.danawa.com"]
+🔴 `11st.co.kr` 이 **NOT_AVAILABLE** 이라 우리 정책이 막았다 — 그것이 **의도** 다.
+🔴 그런데 11st 는 **그 실행의 유일한 `market = KR` 후보** 였다(E2E-06 실측).
+🔴 남은 danawa 는 `market = UNKNOWN` 이다 ⟹ 🇰🇷 구역이 아니라 **「🛰 AI 검색 후보」** 에 선다.
+⟹ 🔴🔴 **「🇰🇷 국내 후보 검토」에 설 후보 = 0.** 버그가 아니라 **약관 경계의 귀결** 이다.
+```
+
+### AI-2. 사슬 — 어디까지 증명됐나
+
+| 구간 | 증거 | 결과 |
+|---|---|---|
+| Search → pool | `[SP07-pool]` 계측(E2E-05) + 재주입(E2E-06) | 🟢 |
+| pool → judge | 운영 `judgeDomesticCandidate` 직접 호출 | 🟢 JUDGED |
+| judge → evidence → **response** | 운영 `runDomesticPriceCheck` 재주입(E2E-06) | 🟢 `array(2)` |
+| response → state → rows | 계약 10 + 변이 N1~N7 | 🟢 |
+| 바깥 패널 → `MiPanelView` | **이번에 추가**(계약 3 · 변이 H1 1 FAIL) | 🟢 |
+| `MiPanelView` → 렌더러 | 조건부 렌더 금지 계약 | 🟢 |
+| 렌더러 → **DOM 행** | 마운트 DOM 6 + 변이 D1~D4(E2E-04) | 🟢 |
+| **실제 배포 화면** | — | 🔴 **CTO 측정 불가**(브라우저 0) |
+
+### AI-3. 🔴 이번에 «하지 못한» 것 — 숨기지 않는다
+
+```
+`MiPanelView` **전체 마운트** 는 운영 `PriceHistoryResponse` 전체를 요구한다.
+🔴 그 fixture 를 **칸을 추측해 지어내려다 두 번 터뜨렸다**(`signals` · `lowestPriceKrw`) —
+   이 트랙이 반복한 함정이라 **멈췄다.** ⟹ 그 홉의 **DOM 축은 미측정** 이고
+   **소스 축(전수 계약 + 변이)** 으로만 잠갔다. 아래 홉은 마운트 DOM 으로 잡혀 있다.
+```
+
+### AI-4. 🟡 판정 — **PARTIAL**
+
+```
+🟢 [1][2][3][4][7][12][13] 충족 — Search 1회 · 후보 일부 실패가 BLOCK 하지 않음 ·
+   response 에 후보 존재 · Identity/MI/Query 변경 0
+🟡 [8][9] — state/rows/렌더러 사슬은 계약+DOM 으로 잠겼으나,
+   **이 실행의 후보가 1건이고 그 1건은 🇰🇷 가 아니다**
+🔴 [10] CEO 실제 배포 화면 — **미확인**(CTO 가 볼 수 없다)
+🔴 [5] 국내 참고가격은 **기존 등록부 경로** 다(AI Search 와 무관 · 혼동 금지)
+```
+
+### AI-5. 🔴 CPO 판정이 필요한 것 — **하나로 모인다**
+
+```
+우리 등록부가 국내 대형 마켓 대부분을 **NOT_AVAILABLE**(약관)로 두고 있다
+  — 11st · coupang · gmarket …
+⟹ AI Search 가 국내 URL 을 찾아와도 **열 수 있는 곳이 거의 없다.**
+🔴 이것은 코드로 풀 문제가 아니다. 선택지는 둘뿐이다 —
+   ⒜ 그 분류를 **다시 검토** 한다(약관 재확인 · CPO/CEO 영역)
+   ⒝ 국내는 **등록부 경로(참고가격)** 로만 가고 AI Search 는 **해외 축** 으로 쓴다
+🔴 CTO 는 둘 중 아무것도 고르지 않았다.
+```
+
+**🔵 상태 — `E2E-CLOSE-01 PARTIAL`. 사슬은 닫혔고, 남은 것은 **정책 결정** 이다.**

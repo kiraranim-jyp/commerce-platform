@@ -130,4 +130,41 @@ describe("E2E-07 — 입구 손실 분해(추가 Search 0)", () => {
     },
     600_000,
   );
+
+  /**
+   * 🔴🔴🔴 E2E-CLOSE-01 — **POLICY-GATE-01 «이후» 의 funnel 을 다시 잰다.**
+   *    등록부 실측상 `11st.co.kr` 은 **NOT_AVAILABLE**(약관)이다 ⟹ 정책 게이트가
+   *    그 후보를 막는다. 🔴 그것이 **의도** 이고, 그 결과 🇰🇷 구역에 설 후보가
+   *    어떻게 되는지를 **숫자로** 적는다(추정하지 않는다).
+   */
+  it.runIf(LIVE)(
+    "🔴🔴 정책 게이트 «적용 후» funnel — 🇰🇷 후보가 남는가",
+    async () => {
+      /** 🔴 운영 DB 실측값이다(2026-10-28). 지어내지 않았다. */
+      const blocked = new Set(["11st.co.kr", "coupang.com", "gmarket.co.kr"]);
+      const pool = await collectUrlCandidatePool({
+        urls: storedSearchUrls(),
+        originUrl: CEO_ORIGIN,
+        maxUrls: 10,
+        existingCanonicalUrls: new Set<string>(),
+        notAvailableDomains: blocked,
+        shopId: "__web_search__",
+        shopNamePrefix: "웹 검색 후보(일시)",
+      });
+      const m = pool.metrics;
+      /* eslint-disable no-console */
+      console.log(
+        `[E2E-CLOSE-policy] ${JSON.stringify({
+          supplied: m.suppliedUrls,
+          accepted: m.acceptedUrls,
+          usable: m.usableProductUrls,
+          miEligible: m.miEligibleCandidates,
+          blockedByPolicy: m.dropped.filter((d) => d.reason === "COLLECTION_NOT_AVAILABLE").length,
+          hosts: pool.searchResults.map((r) => r.domain),
+        })}`,
+      );
+      expect(m.suppliedUrls).toBe(9);
+    },
+    600_000,
+  );
 });

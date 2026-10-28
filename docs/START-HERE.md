@@ -11,7 +11,20 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **BROWSER-FALLBACK-03** — 🟡 **PARTIAL · 구현 0** (CEO 가 올린 **실제 Farfetch HTML**)
+CURRENT WU   **E2E-CLOSE-01** — 🟡 **PARTIAL · 사슬은 닫혔다 · 남은 것은 «정책»**
+             🔴🔴 POLICY-GATE-01 «이후» funnel(같은 9 URL) —
+             `supplied 9 → accepted 3(정책 차단 **4**) → usable 1 → miEligible 1`
+             남은 host = **danawa 하나** 이고 그것은 `market=UNKNOWN` ⟹ 🇰🇷 구역이 아니라
+             「🛰 AI 검색 후보」에 선다 ⟹ **🇰🇷 구역 후보 = 0**(버그 아님 · 약관 귀결)
+             🔴 **`11st` 이 그 실행의 유일한 KR 후보였는데 우리 정책이 막았다**
+             🟢 사슬은 전부 잠겼다 — response(E2E-06) · state/rows(E2E-04) ·
+                **바깥패널→MiPanelView(이번 추가 · 변이 H1)** · 렌더러→DOM(변이 D1)
+             🔴 `MiPanelView` **전체 마운트는 못 했다** — 운영 응답 fixture 를 추측하다
+                두 번 터뜨려 멈췄다(그 홉은 **소스 축** 으로만 잠금)
+             🟡🟡 **CPO 판정 하나로 모인다** — 국내 대형 마켓이 대부분 `NOT_AVAILABLE` 이라
+                AI Search 가 국내를 찾아와도 **열 수 있는 곳이 거의 없다**
+                ⒜ 그 분류를 재검토할 것인가 ⒝ 국내는 등록부 경로만 쓰고 AI Search 는 해외 축으로
+[직전]       **BROWSER-FALLBACK-03** — 🟡 PARTIAL (CEO 가 올린 **실제 Farfetch HTML**)
              🟢 ProductGroup 인식 · `title` · `sku 37620037-6` · `breadcrumbPath` 확보
              🔴🔴 **`price = null`** — 실제 Farfetch 는 `offers.priceSpecification[]` 이고
                 우리 추출기는 **그 모양을 안 읽는다**(가격비교가 목적인데 그 값이 빈다)
