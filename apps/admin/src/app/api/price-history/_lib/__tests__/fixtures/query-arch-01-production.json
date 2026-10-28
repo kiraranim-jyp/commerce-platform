@@ -1,0 +1,1311 @@
+{
+  "capturedAt": "2026-10-28 Production",
+  "runs": [
+    {
+      "cat": "KIDS",
+      "label": "Bobo Choses",
+      "http": 200,
+      "ms": 80605,
+      "origin": {
+        "brand": "Bobo Choses",
+        "code": "B226AC009",
+        "title": "Hug Hairy Monster T-shirt",
+        "color": "Light blue",
+        "material": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+        "fit": "loose fit"
+      },
+      "search": {
+        "searches": 1,
+        "query": "\"Bobo Choses\" \"B226AC009\" Hug Hairy Monster T-shirt Light blue loose fit 동일상품 판매처",
+        "organicResults": 4,
+        "skipped": null,
+        "failed": false
+      },
+      "pool": {
+        "suppliedUrls": 4,
+        "acceptedUrls": 4,
+        "usableProductUrls": 3,
+        "miEligibleCandidates": 3,
+        "fetchCalls": 4,
+        "notFetchedOverLimit": [],
+        "dropped": [
+          {
+            "url": "https://bridge.babyshop.com/en-it/p/hug-hairy-monster-t-shirt-light-blue/BC-B226AC009-451",
+            "reason": "UNREACHABLE"
+          }
+        ],
+        "providerCalls": 0
+      },
+      "evidenceByProducer": {
+        "webSearch": 3,
+        "domesticListing": 1,
+        "urlCandidate": 0,
+        "overseasAuto": 1,
+        "reviewedSame": 0,
+        "gemini": 0
+      },
+      "rows": [
+        {
+          "source": "OVERSEAS_AUTO",
+          "domain": "junioredition.com",
+          "market": "OVERSEAS",
+          "tier": "EXACT",
+          "verdict": "SAME",
+          "price": 37,
+          "currency": "GBP",
+          "priceKrw": null,
+          "priceStatus": "VERIFIED_CURRENT",
+          "url": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses?_pos=1&_psq=Hug+Hairy+Monster+T-shirt&_psid=7c1b66630&_ss=e"
+        },
+        {
+          "source": "DOMESTIC_LISTING",
+          "domain": "donokids.com",
+          "market": "KR",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": 88000,
+          "currency": "KRW",
+          "priceKrw": 88000,
+          "priceStatus": "VERIFIED_CURRENT",
+          "url": "https://www.donokids.com/shop/shopdetail.html?branduid=3362785&type=X&current_category=058"
+        },
+        {
+          "source": "WEB_SEARCH",
+          "domain": "bobochoses.com",
+          "market": "UNKNOWN",
+          "tier": "EXACT",
+          "verdict": "SAME",
+          "price": 40,
+          "currency": "EUR",
+          "priceKrw": null,
+          "priceStatus": "VERIFIED_CURRENT",
+          "url": "https://bobochoses.com/products/b226ac009-hug-hairy-monster-t-shirt"
+        },
+        {
+          "source": "WEB_SEARCH",
+          "domain": "tinyapple.net",
+          "market": "OVERSEAS",
+          "tier": "EXACT",
+          "verdict": "SAME",
+          "price": 58,
+          "currency": "USD",
+          "priceKrw": null,
+          "priceStatus": "VERIFIED_CURRENT",
+          "url": "https://www.tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue"
+        },
+        {
+          "source": "WEB_SEARCH",
+          "domain": "junioredition.com",
+          "market": "OVERSEAS",
+          "tier": "EXACT",
+          "verdict": "SAME",
+          "price": 37,
+          "currency": "GBP",
+          "priceKrw": null,
+          "priceStatus": "VERIFIED_CURRENT",
+          "url": "https://www.junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses"
+        }
+      ],
+      "mi": {
+        "domesticLowestKrw": 88000,
+        "candidateDomesticPrice": {
+          "count": 1,
+          "byCurrency": {
+            "KRW": {
+              "count": 1,
+              "lowestAmount": 88000,
+              "highestAmount": 88000
+            }
+          },
+          "byMarket": {
+            "KR": 1
+          },
+          "byPriceTier": {
+            "COMPARISON": 1
+          }
+        },
+        "candidateOverseasPrice": {
+          "count": 4,
+          "byCurrency": {
+            "GBP": {
+              "count": 2,
+              "lowestAmount": 37,
+              "highestAmount": 37
+            },
+            "EUR": {
+              "count": 1,
+              "lowestAmount": 40,
+              "highestAmount": 40
+            },
+            "USD": {
+              "count": 1,
+              "lowestAmount": 58,
+              "highestAmount": 58
+            }
+          },
+          "byMarket": {
+            "OVERSEAS": 3,
+            "UNKNOWN": 1
+          },
+          "byPriceTier": {
+            "EXACT": 4
+          }
+        }
+      },
+      "sourceErrors": []
+    },
+    {
+      "cat": "KIDS",
+      "label": "BOSS",
+      "http": 200,
+      "ms": 49225,
+      "origin": {
+        "brand": "BOSS",
+        "code": null,
+        "title": "Baby Boys White Logo Top",
+        "color": "White",
+        "material": "100% Cotton",
+        "fit": null
+      },
+      "search": {
+        "searches": 1,
+        "query": "\"BOSS\" Baby Boys Logo Top White 100% Cotton 동일상품 판매처",
+        "organicResults": 9,
+        "skipped": null,
+        "failed": false
+      },
+      "pool": {
+        "suppliedUrls": 9,
+        "acceptedUrls": 4,
+        "usableProductUrls": 3,
+        "miEligibleCandidates": 3,
+        "fetchCalls": 4,
+        "notFetchedOverLimit": [],
+        "dropped": [
+          {
+            "url": "https://uk.pinterest.com/pin/boss-logoprint-cotton-tshirt-636-months--684336105882554421/",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.wal-mart.com/ip/Boss-Baby-B-Is-For-Boss-Toddler-Youth-Short-Sleeve-Graphic-T-Shirt/5046293694",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.wal-mart.com/ip/Boss-Baby-B-Is-For-Boss-Toddler-Youth-Short-Sleeve-Graphic-T-Shirt/5068906291",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://fr.pinterest.com/pin/328199891615052721/",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.walmart.com/ip/Boss-Baby-B-Is-For-Boss-Toddler-Youth-Short-Sleeve-Graphic-T-Shirt/5045839529",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.childrensalon.com/ru/boss-baby-boys-white-cotton-jersey-top-with-beige-logo-608938.html",
+            "reason": "REDIRECTED_AWAY"
+          }
+        ],
+        "providerCalls": 0
+      },
+      "evidenceByProducer": {
+        "webSearch": 2,
+        "domesticListing": 0,
+        "urlCandidate": 0,
+        "overseasAuto": 7,
+        "reviewedSame": 0,
+        "gemini": 0
+      },
+      "rows": [
+        {
+          "source": "OVERSEAS_AUTO",
+          "domain": "childrensalon.com",
+          "market": "OVERSEAS",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": 42,
+          "currency": "GBP",
+          "priceKrw": null,
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "url": "https://www.childrensalon.com/ralph-lauren-baby-boys-white-pony-logo-cotton-top-519988.html"
+        },
+        {
+          "source": "OVERSEAS_AUTO",
+          "domain": "junioredition.com",
+          "market": "OVERSEAS",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": 12700,
+          "currency": "GBP",
+          "priceKrw": null,
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "url": "https://junioredition.com/products/the-little-boy-tee-in-vintage-white-by-le-bon-shoppe?_pos=1&_psq=Baby+Boys+White+Logo+Top&_psid=eabc8fa97&_ss=e"
+        },
+        {
+          "source": "OVERSEAS_AUTO",
+          "domain": "designerkidswear.com",
+          "market": "OVERSEAS",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": 140,
+          "currency": "CAD",
+          "priceKrw": null,
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "url": "https://designerkidswear.com/products/emporio-armani-baby-boys-top-white-eb000795-af17536-u0003?_pos=2&_psq=Baby+Boys+White+Logo+Top&_psid=316ea7779&_ss=e"
+        },
+        {
+          "source": "OVERSEAS_AUTO",
+          "domain": "folkberlin.com",
+          "market": "OVERSEAS",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": 22,
+          "currency": "EUR",
+          "priceKrw": null,
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "url": "https://folkberlin.com/products/baby-body-sky-cream-organic-cotton?_pos=2&_psq=Baby+Boys+White+Logo+Top&_psid=8eddadc2c&_ss=e"
+        },
+        {
+          "source": "OVERSEAS_AUTO",
+          "domain": "kidbizkid.com",
+          "market": "OVERSEAS",
+          "tier": "EXACT",
+          "verdict": "SAME",
+          "price": 95,
+          "currency": "CAD",
+          "priceKrw": null,
+          "priceStatus": "VERIFIED_CURRENT",
+          "url": "https://kidbizkid.com/products/hugo-boss-baby-boys-white-top?_pos=2&_psq=Baby+Boys+White+Logo+Top&_psid=ac38ad768&_ss=e"
+        },
+        {
+          "source": "OVERSEAS_AUTO",
+          "domain": "petitemaisonkids.com",
+          "market": "OVERSEAS",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": 10300,
+          "currency": "USD",
+          "priceKrw": null,
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "url": "https://petitemaisonkids.com/products/white-linen-boys-mandarin-collar-top?_pos=2&_psq=Baby+Boys+White+Logo+Top&_psid=e4baf19f0&_ss=e"
+        },
+        {
+          "source": "OVERSEAS_AUTO",
+          "domain": "villagekids.co.uk",
+          "market": "OVERSEAS",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": 21.2,
+          "currency": "GBP",
+          "priceKrw": null,
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "url": "https://villagekids.co.uk/products/white-3d-logo-t-shirt?_pos=5&_psq=Baby+Boys+White+Logo+Top&_psid=0b11d339e&_ss=e"
+        },
+        {
+          "source": "WEB_SEARCH",
+          "domain": "childrensalon.com",
+          "market": "OVERSEAS",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": 55,
+          "currency": "GBP",
+          "priceKrw": null,
+          "priceStatus": "VERIFIED_CURRENT",
+          "url": "https://www.childrensalon.com/ru/boss-boys-white-cotton-top-with-graphic-logo-634457.html"
+        },
+        {
+          "source": "WEB_SEARCH",
+          "domain": "cemarose.com",
+          "market": "OVERSEAS",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": 45,
+          "currency": "EUR",
+          "priceKrw": null,
+          "priceStatus": "VERIFIED_CURRENT",
+          "url": "https://www.cemarose.com/products/baby-boys-white-logo-cotton-t-shirt-36"
+        }
+      ],
+      "mi": {
+        "domesticLowestKrw": null,
+        "candidateDomesticPrice": {
+          "count": 0,
+          "byCurrency": {},
+          "byMarket": {},
+          "byPriceTier": {}
+        },
+        "candidateOverseasPrice": {
+          "count": 9,
+          "byCurrency": {
+            "GBP": {
+              "count": 4,
+              "lowestAmount": 21.2,
+              "highestAmount": 12700
+            },
+            "CAD": {
+              "count": 2,
+              "lowestAmount": 95,
+              "highestAmount": 140
+            },
+            "EUR": {
+              "count": 2,
+              "lowestAmount": 22,
+              "highestAmount": 45
+            },
+            "USD": {
+              "count": 1,
+              "lowestAmount": 10300,
+              "highestAmount": 10300
+            }
+          },
+          "byMarket": {
+            "OVERSEAS": 9
+          },
+          "byPriceTier": {
+            "COMPARISON": 8,
+            "EXACT": 1
+          }
+        }
+      },
+      "sourceErrors": []
+    },
+    {
+      "cat": "KIDS",
+      "label": "Louis Louise",
+      "http": 200,
+      "ms": 45615,
+      "origin": {
+        "brand": "Louis Louise",
+        "code": null,
+        "title": "Holly Hearts Ribbed Velvet Baby Pants | Pale Pink",
+        "color": "Pink",
+        "material": "100% Cotton",
+        "fit": null
+      },
+      "search": {
+        "searches": 1,
+        "query": "\"Louis Louise\" Holly Hearts Ribbed Velvet Pink 100% Cotton 동일상품 판매처",
+        "organicResults": 9,
+        "skipped": null,
+        "failed": false
+      },
+      "pool": {
+        "suppliedUrls": 9,
+        "acceptedUrls": 3,
+        "usableProductUrls": 1,
+        "miEligibleCandidates": 1,
+        "fetchCalls": 3,
+        "notFetchedOverLimit": [],
+        "dropped": [
+          {
+            "url": "https://www.ebay.com/b/Womens-Regular-Size-Velvet-Heart/53159/bn_80093604",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.mercari.com/us/item/m34865967700/?ref=item_detail_similar_items",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.mercari.com/us/item/m99728653333/",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://poshmark.com/listing/Pink-Blouse-with-Red-Hearts-653091db61497354bf29620a?srsltid=AYCX9vIfJMv2LcS15R2InukHbqaoIr2tqbNnzKC8_PLTGjx-nK-GBfx_",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.ebay.com/b/Oilily-Pink-Clothing-Sizes-4-Up-for-Girls/11462/bn_109125594",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.ebay.com/b/Oilily-Velvet-Dresses-for-Girls/51581/bn_11785574",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.ebay.com/itm/305934322587",
+            "reason": "UNREACHABLE"
+          },
+          {
+            "url": "https://www.ebay.com/itm/326569314758",
+            "reason": "UNREACHABLE"
+          }
+        ],
+        "providerCalls": 0
+      },
+      "evidenceByProducer": {
+        "webSearch": 0,
+        "domesticListing": 0,
+        "urlCandidate": 0,
+        "overseasAuto": 7,
+        "reviewedSame": 0,
+        "gemini": 0
+      },
+      "rows": [
+        {
+          "source": "OVERSEAS_AUTO",
+          "domain": "junioredition.com",
+          "market": "OVERSEAS",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": 14300,
+          "currency": "GBP",
+          "priceKrw": null,
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "url": "https://junioredition.com/products/mignon-baby-pants-in-kitty-rose-by-hello-simone?_pos=4&_psq=Holly+Hearts+Ribbed+Velvet+Baby+Pants+%7C+Pale+Pink&_psid=8429998fc&_ss=e"
+        },
+        {
+          "source": "OVERSEAS_AUTO",
+          "domain": "designerkidswear.com",
+          "market": "OVERSEAS",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": 121,
+          "currency": "CAD",
+          "priceKrw": null,
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "url": "https://designerkidswear.com/products/baby-girls-pink-velvet-tracksuit?_pos=1&_psq=Holly+Hearts+Ribbed+Velvet+Baby+Pants+%7C+Pale+Pink&_psid=bd31c30ee&_ss=e"
+        },
+        {
+          "source": "OVERSEAS_AUTO",
+          "domain": "folkberlin.com",
+          "market": "OVERSEAS",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": 22,
+          "currency": "EUR",
+          "priceKrw": null,
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "url": "https://folkberlin.com/products/baby-body-faded-pink-organic-cotton?_pos=2&_psq=Holly+Hearts+Ribbed+Velvet+Baby+Pants+%7C+Pale+Pink&_psid=9d8d7e925&_ss=e"
+        },
+        {
+          "source": "OVERSEAS_AUTO",
+          "domain": "kidbizkid.com",
+          "market": "OVERSEAS",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": 52700,
+          "currency": "CAD",
+          "priceKrw": null,
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "url": "https://kidbizkid.com/products/fendi-baby-girls-pink-pants?_pos=2&_psq=Holly+Hearts+Ribbed+Velvet+Baby+Pants+%7C+Pale+Pink&_psid=236a049c0&_ss=e"
+        },
+        {
+          "source": "OVERSEAS_AUTO",
+          "domain": "nickis.com",
+          "market": "OVERSEAS",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": 60,
+          "currency": "EUR",
+          "priceKrw": null,
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "url": "https://nickis.com/products/the-woolly-baby-pants-rose?_pos=2&_psq=Holly+Hearts+Ribbed+Velvet+Baby+Pants+%7C+Pale+Pink&_psid=a8b71920b&_ss=e"
+        },
+        {
+          "source": "OVERSEAS_AUTO",
+          "domain": "shoppiccoliandco.com",
+          "market": "OVERSEAS",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": 4100,
+          "currency": "USD",
+          "priceKrw": null,
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "url": "https://shoppiccoliandco.com/products/aida-knitted-just-pink-knitted-pants?_pos=1&_psq=Holly+Hearts+Ribbed+Velvet+Baby+Pants+%7C+Pale+Pink&_psid=cc04c8210&_ss=e"
+        },
+        {
+          "source": "OVERSEAS_AUTO",
+          "domain": "villagekids.co.uk",
+          "market": "OVERSEAS",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": 44,
+          "currency": "GBP",
+          "priceKrw": null,
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "url": "https://villagekids.co.uk/products/pink-hearts-all-in-one-headband?_pos=3&_psq=Holly+Hearts+Ribbed+Velvet+Baby+Pants+%7C+Pale+Pink&_psid=311318b7a&_ss=e"
+        }
+      ],
+      "mi": {
+        "domesticLowestKrw": null,
+        "candidateDomesticPrice": {
+          "count": 0,
+          "byCurrency": {},
+          "byMarket": {},
+          "byPriceTier": {}
+        },
+        "candidateOverseasPrice": {
+          "count": 7,
+          "byCurrency": {
+            "GBP": {
+              "count": 2,
+              "lowestAmount": 44,
+              "highestAmount": 14300
+            },
+            "CAD": {
+              "count": 2,
+              "lowestAmount": 121,
+              "highestAmount": 52700
+            },
+            "EUR": {
+              "count": 2,
+              "lowestAmount": 22,
+              "highestAmount": 60
+            },
+            "USD": {
+              "count": 1,
+              "lowestAmount": 4100,
+              "highestAmount": 4100
+            }
+          },
+          "byMarket": {
+            "OVERSEAS": 7
+          },
+          "byPriceTier": {
+            "COMPARISON": 7
+          }
+        }
+      },
+      "sourceErrors": []
+    },
+    {
+      "cat": "KIDS",
+      "label": "Main Story",
+      "http": 200,
+      "ms": 77075,
+      "origin": {
+        "brand": "Main Story",
+        "code": "AW26MS185",
+        "title": "Bubble Sweatshirt in Grey Melange by Main Story",
+        "color": "Grey Melange",
+        "material": "100% Organic Cotton",
+        "fit": "relaxed fit"
+      },
+      "search": {
+        "searches": 1,
+        "query": "\"Main Story\" \"AW26MS185\" Bubble Sweatshirt Melange Grey 100% Organic Cotton relaxed fit 동일상품 판매처",
+        "organicResults": 9,
+        "skipped": null,
+        "failed": false
+      },
+      "pool": {
+        "suppliedUrls": 9,
+        "acceptedUrls": 8,
+        "usableProductUrls": 7,
+        "miEligibleCandidates": 7,
+        "fetchCalls": 8,
+        "notFetchedOverLimit": [],
+        "dropped": [
+          {
+            "url": "https://calmecloset.stores.jp/items/6a8d0463c56f480695673bd7",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "http://www.coupleshot.com/m/product.html?branduid=574587&type=Y&pre_idx=12&current_category=008&next=ok",
+            "reason": "NO_FACTS"
+          }
+        ],
+        "providerCalls": 0
+      },
+      "evidenceByProducer": {
+        "webSearch": 1,
+        "domesticListing": 2,
+        "urlCandidate": 0,
+        "overseasAuto": 2,
+        "reviewedSame": 0,
+        "gemini": 0
+      },
+      "rows": [
+        {
+          "source": "OVERSEAS_AUTO",
+          "domain": "junioredition.com",
+          "market": "OVERSEAS",
+          "tier": "EXACT",
+          "verdict": "SAME",
+          "price": 57,
+          "currency": "GBP",
+          "priceKrw": null,
+          "priceStatus": "VERIFIED_CURRENT",
+          "url": "https://junioredition.com/products/bubble-sweatshirt-in-grey-melange-by-main-story?_pos=1&_psq=Bubble+Sweatshirt+in+Grey+Melange+by+Main+Story&_psid=d1afeb51b&_ss=e"
+        },
+        {
+          "source": "OVERSEAS_AUTO",
+          "domain": "nickis.com",
+          "market": "OVERSEAS",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": 33,
+          "currency": "EUR",
+          "priceKrw": null,
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "url": "https://nickis.com/products/molo-sweatshirt-magni-grau-7300995412?_pos=1&_psq=Bubble+Sweatshirt+in+Grey+Melange+by+Main+Story&_psid=3325cca26&_ss=e"
+        },
+        {
+          "source": "DOMESTIC_LISTING",
+          "domain": "deuxbebe.com",
+          "market": "KR",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": 117000,
+          "currency": "KRW",
+          "priceKrw": 117000,
+          "priceStatus": "VERIFIED_CURRENT",
+          "url": "https://deuxbebe.com/product/aw26ms185-bubble-sweatshirt-rose-shadow/18285/"
+        },
+        {
+          "source": "DOMESTIC_LISTING",
+          "domain": "donokids.com",
+          "market": "KR",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": 134000,
+          "currency": "KRW",
+          "priceKrw": 134000,
+          "priceStatus": "VERIFIED_CURRENT",
+          "url": "https://www.donokids.com/shop/shopdetail.html?branduid=3362912&special=6"
+        },
+        {
+          "source": "WEB_SEARCH",
+          "domain": "miniboutique.co.kr",
+          "market": "KR",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": 117000,
+          "currency": "KRW",
+          "priceKrw": 117000,
+          "priceStatus": "VERIFIED_CURRENT",
+          "url": "https://miniboutique.co.kr/product/main-storybubble-sweatshirt-aw26ms185-graystone/28449/"
+        }
+      ],
+      "mi": {
+        "domesticLowestKrw": 117,
+        "candidateDomesticPrice": {
+          "count": 3,
+          "byCurrency": {
+            "KRW": {
+              "count": 3,
+              "lowestAmount": 117000,
+              "highestAmount": 134000
+            }
+          },
+          "byMarket": {
+            "KR": 3
+          },
+          "byPriceTier": {
+            "COMPARISON": 3
+          }
+        },
+        "candidateOverseasPrice": {
+          "count": 2,
+          "byCurrency": {
+            "GBP": {
+              "count": 1,
+              "lowestAmount": 57,
+              "highestAmount": 57
+            },
+            "EUR": {
+              "count": 1,
+              "lowestAmount": 33,
+              "highestAmount": 33
+            }
+          },
+          "byMarket": {
+            "OVERSEAS": 2
+          },
+          "byPriceTier": {
+            "EXACT": 1,
+            "COMPARISON": 1
+          }
+        }
+      },
+      "sourceErrors": []
+    },
+    {
+      "cat": "KIDS",
+      "label": "Mini rodini",
+      "http": 200,
+      "ms": 26240,
+      "origin": {
+        "brand": "Mini rodini",
+        "code": null,
+        "title": "Violas aop Winter jacket",
+        "color": null,
+        "material": "The Violas winter jacket from Mini Rodini is made from 100% recycled polyester and features a stylish all-over print. A simple winter jacket for cold days and outdoor play. 100% recycled polyester Blue with all-over print Winter jacket for cold days A functional choice for everyday winter wear when your child needs to stay warm outdoors.",
+        "fit": null
+      },
+      "search": {
+        "searches": 1,
+        "query": "\"Mini rodini\" Violas aop Winter jacket 동일상품 판매처",
+        "organicResults": 0,
+        "skipped": null,
+        "failed": false
+      },
+      "pool": null,
+      "evidenceByProducer": {
+        "webSearch": 0,
+        "domesticListing": 0,
+        "urlCandidate": 0,
+        "overseasAuto": 2,
+        "reviewedSame": 0,
+        "gemini": 0
+      },
+      "rows": [
+        {
+          "source": "OVERSEAS_AUTO",
+          "domain": "junioredition.com",
+          "market": "OVERSEAS",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": 31700,
+          "currency": "GBP",
+          "priceKrw": null,
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "url": "https://junioredition.com/products/violas-puffer-jacket-in-blue-by-mini-rodini?_pos=1&_psq=Violas+aop+Winter+jacket&_psid=356afaaed&_ss=e"
+        },
+        {
+          "source": "OVERSEAS_AUTO",
+          "domain": "kidbizkid.com",
+          "market": "OVERSEAS",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": 24100,
+          "currency": "CAD",
+          "priceKrw": null,
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "url": "https://kidbizkid.com/products/diesel-orange-winter-jacket?_pos=2&_psq=Violas+aop+Winter+jacket&_psid=ea3e31d67&_ss=e"
+        }
+      ],
+      "mi": {
+        "domesticLowestKrw": null,
+        "candidateDomesticPrice": {
+          "count": 0,
+          "byCurrency": {},
+          "byMarket": {},
+          "byPriceTier": {}
+        },
+        "candidateOverseasPrice": {
+          "count": 2,
+          "byCurrency": {
+            "GBP": {
+              "count": 1,
+              "lowestAmount": 31700,
+              "highestAmount": 31700
+            },
+            "CAD": {
+              "count": 1,
+              "lowestAmount": 24100,
+              "highestAmount": 24100
+            }
+          },
+          "byMarket": {
+            "OVERSEAS": 2
+          },
+          "byPriceTier": {
+            "COMPARISON": 2
+          }
+        }
+      },
+      "sourceErrors": []
+    },
+    {
+      "cat": "TENNIS",
+      "label": "Damarindo Pique Polo",
+      "http": 200,
+      "ms": 35464,
+      "origin": {
+        "brand": "Sergio Tacchini",
+        "code": null,
+        "title": "Sergio Tacchini Men's Damarindo Pique Polo",
+        "color": "Humus",
+        "material": "100% Cotton",
+        "fit": "true to size"
+      },
+      "search": {
+        "searches": 1,
+        "query": "\"Sergio Tacchini\" Men's Damarindo Pique Polo Humus 100% Cotton true to size 동일상품 판매처",
+        "organicResults": 7,
+        "skipped": null,
+        "failed": false
+      },
+      "pool": {
+        "suppliedUrls": 7,
+        "acceptedUrls": 5,
+        "usableProductUrls": 1,
+        "miEligibleCandidates": 1,
+        "fetchCalls": 7,
+        "notFetchedOverLimit": [],
+        "dropped": [
+          {
+            "url": "http://www.cougarpartners.ch/?c=deals-249616758",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.tacchinius.com/product-category/men/clothing-men/view-all-clothing-men/page/7/",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://spinwavepickleball.com/products/damarindo-polo-humus",
+            "reason": "REDIRECTED_AWAY"
+          },
+          {
+            "url": "https://www.macys.com/shop/product/sergio-tacchini-mens-damarindo-check-polo-shirts?ID=26645360&isDlp=true&swatchColor=Maritime%20blue",
+            "reason": "UNREACHABLE"
+          },
+          {
+            "url": "https://modesens.com/product/sergio-tacchini-damarindo-check-polo-neutral-122520724/",
+            "reason": "UNREACHABLE"
+          },
+          {
+            "url": "https://ccsuits.com/products/damarindo-check-polo-humus",
+            "reason": "UNREACHABLE"
+          }
+        ],
+        "providerCalls": 0
+      },
+      "evidenceByProducer": {
+        "webSearch": 1,
+        "domesticListing": 0,
+        "urlCandidate": 0,
+        "overseasAuto": 0,
+        "reviewedSame": 0,
+        "gemini": 0
+      },
+      "rows": [
+        {
+          "source": "WEB_SEARCH",
+          "domain": "shop.simon.com",
+          "market": "OVERSEAS",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": 51,
+          "currency": "USD",
+          "priceKrw": null,
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "url": "https://shop.simon.com/products/damarindo-polo-1"
+        }
+      ],
+      "mi": {
+        "domesticLowestKrw": null,
+        "candidateDomesticPrice": {
+          "count": 0,
+          "byCurrency": {},
+          "byMarket": {},
+          "byPriceTier": {}
+        },
+        "candidateOverseasPrice": {
+          "count": 1,
+          "byCurrency": {
+            "USD": {
+              "count": 1,
+              "lowestAmount": 51,
+              "highestAmount": 51
+            }
+          },
+          "byMarket": {
+            "OVERSEAS": 1
+          },
+          "byPriceTier": {
+            "COMPARISON": 1
+          }
+        }
+      },
+      "sourceErrors": []
+    },
+    {
+      "cat": "TENNIS",
+      "label": "Fall Cericho T-Shirt",
+      "http": 200,
+      "ms": 37068,
+      "origin": {
+        "brand": "Sergio Tacchini",
+        "code": null,
+        "title": "Sergio Tacchini Men's Fall Cericho T-Shirt",
+        "color": "Brilliant White",
+        "material": "100% Cotton",
+        "fit": "true to size"
+      },
+      "search": {
+        "searches": 1,
+        "query": "\"Sergio Tacchini\" Men's Fall Cericho T-Shirt Brilliant White 100% Cotton true to size 동일상품 판매처",
+        "organicResults": 9,
+        "skipped": null,
+        "failed": false
+      },
+      "pool": {
+        "suppliedUrls": 9,
+        "acceptedUrls": 1,
+        "usableProductUrls": 0,
+        "miEligibleCandidates": 0,
+        "fetchCalls": 2,
+        "notFetchedOverLimit": [],
+        "dropped": [
+          {
+            "url": "https://www.sergiotacchini.com/collections/mens-t-shirts?page=8&srsltid=AYCX9vIRe3zzzg8qfh2u0K48_gP2ho_R_YCxISWb3nvn8uUOdRse2SDW",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.ebay.com/b/Sergio-Tacchini-Solid-T-Shirts-for-Men/15687/bn_6594446",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.mercari.com/us/brand/sergio-tacchini-5737/t-shirts-303/",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.amazon.com/sergio-tacchini/s?k=sergio+tacchini&page=2",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.ebay.com/b/Sergio-Tacchini-Short-Sleeve-Shirts-for-Men/185100/bn_7113524719",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.ebay.com/b/Sergio-Tacchini-Regular-Size-T-Shirts-for-Men/15687/bn_3998073",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.ebay.com/b/Sergio-Tacchini-White-Shirts-for-Men/185100/bn_115042356",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.ebay.com/b/Sergio-Tacchini-Regular-Size-Casual-Button-Down-Shirts-for-Men/57990/bn_4762468",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://racketcentral.com/collections/microsite-pcep-products/products/italia-t-shirt-brilliant-white",
+            "reason": "UNREACHABLE"
+          }
+        ],
+        "providerCalls": 0
+      },
+      "evidenceByProducer": {
+        "webSearch": 0,
+        "domesticListing": 0,
+        "urlCandidate": 0,
+        "overseasAuto": 0,
+        "reviewedSame": 0,
+        "gemini": 0
+      },
+      "rows": [],
+      "mi": {
+        "domesticLowestKrw": null,
+        "candidateDomesticPrice": {
+          "count": 0,
+          "byCurrency": {},
+          "byMarket": {},
+          "byPriceTier": {}
+        },
+        "candidateOverseasPrice": {
+          "count": 0,
+          "byCurrency": {},
+          "byMarket": {},
+          "byPriceTier": {}
+        }
+      },
+      "sourceErrors": []
+    },
+    {
+      "cat": "TENNIS",
+      "label": "Magro Long Sleeve",
+      "http": 200,
+      "ms": 37909,
+      "origin": {
+        "brand": "Sergio Tacchini",
+        "code": null,
+        "title": "Sergio Tacchini Men's Magro Long Sleeve",
+        "color": "Brilliant White",
+        "material": "96% Polyester, 4% Elastane",
+        "fit": "true to size"
+      },
+      "search": {
+        "searches": 1,
+        "query": "\"Sergio Tacchini\" Men's Magro Long Sleeve Brilliant White true to size 동일상품 판매처",
+        "organicResults": 9,
+        "skipped": null,
+        "failed": false
+      },
+      "pool": {
+        "suppliedUrls": 9,
+        "acceptedUrls": 3,
+        "usableProductUrls": 2,
+        "miEligibleCandidates": 1,
+        "fetchCalls": 6,
+        "notFetchedOverLimit": [],
+        "dropped": [
+          {
+            "url": "https://il.ebay.com/b/Mens-Black-Sergio-Tacchini/185099/bn_115090553",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.lyst.com/shop/mens-sergio-tacchini-clothing/",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://netstore.com.my/pid/249647058/",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://m.global.jdsports.com/men/brand/sergio-tacchini/sale/?abt=%2F%2F",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://m.rexmonde.com/products/brand?brand=%EC%84%B8%EB%A5%B4%EC%A7%80%EC%98%A4%20%ED%83%80%ED%82%A4%EB%8B%88",
+            "reason": "DUPLICATE"
+          },
+          {
+            "url": "https://m.rexmonde.com/products/brand?brand=%EC%84%B8%EB%A5%B4%EC%A7%80%EC%98%A4%20%ED%83%80%ED%82%A4%EB%8B%88",
+            "reason": "DUPLICATE"
+          },
+          {
+            "url": "https://m.rexmonde.com/products/brand?brand=%EC%84%B8%EB%A5%B4%EC%A7%80%EC%98%A4%20%ED%83%80%ED%82%A4%EB%8B%88",
+            "reason": "REDIRECTED_AWAY"
+          },
+          {
+            "url": "https://www.rexmonde.com/products/list?brand=%EC%84%B8%EB%A5%B4%EC%A7%80%EC%98%A4%20%ED%83%80%ED%82%A4%EB%8B%88%28Sergio%20Tacchini%29&cate=20008684&gi_num=1335",
+            "reason": "DUPLICATE"
+          }
+        ],
+        "providerCalls": 0
+      },
+      "evidenceByProducer": {
+        "webSearch": 0,
+        "domesticListing": 0,
+        "urlCandidate": 0,
+        "overseasAuto": 0,
+        "reviewedSame": 0,
+        "gemini": 0
+      },
+      "rows": [],
+      "mi": {
+        "domesticLowestKrw": null,
+        "candidateDomesticPrice": {
+          "count": 0,
+          "byCurrency": {},
+          "byMarket": {},
+          "byPriceTier": {}
+        },
+        "candidateOverseasPrice": {
+          "count": 0,
+          "byCurrency": {},
+          "byMarket": {},
+          "byPriceTier": {}
+        }
+      },
+      "sourceErrors": []
+    },
+    {
+      "cat": "TENNIS",
+      "label": "Racchetto Polo",
+      "http": 200,
+      "ms": 30228,
+      "origin": {
+        "brand": "Sergio Tacchini",
+        "code": null,
+        "title": "Sergio Tacchini Men's Racchetto Polo",
+        "color": "Brilliant White",
+        "material": "100% Polyester",
+        "fit": "true to size"
+      },
+      "search": {
+        "searches": 1,
+        "query": "\"Sergio Tacchini\" Men's Racchetto Polo Brilliant White 100% Polyester true to size 동일상품 판매처",
+        "organicResults": 9,
+        "skipped": null,
+        "failed": false
+      },
+      "pool": {
+        "suppliedUrls": 9,
+        "acceptedUrls": 2,
+        "usableProductUrls": 2,
+        "miEligibleCandidates": 2,
+        "fetchCalls": 2,
+        "notFetchedOverLimit": [],
+        "dropped": [
+          {
+            "url": "https://www.ebay.com/b/Sergio-Tacchini-White-Regular-Activewear-for-Men/185099/bn_118558097",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.sergiotacchini.com/collections/polos-and-shirts?srsltid=AYCX9vIl8oGc1-SY5vmaS1Tw-2iP9h21tf7Yu5l-5PUGQt5J7yGAaMXb",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://goldenageoftennis.com/collections/sergio-tacchini-polos?srsltid=AYCX9vIZ1Si9XGoyczITNC0Q4Zw48HivnTB9Hkxci2mDOEOrAihbllS0",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.etsy.com/market/sergio_tacchini_tennis_polo",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.macys.com/shop/mens/clothing/Brand/Sergio%20Tacchini?id=197651",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.ebay.com/b/Sergio-Tacchini-Polos-for-Men/185101/bn_118503761",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.michaelstewartstore.com/collections/sergio-tacchini",
+            "reason": "NOT_PRODUCT_PAGE"
+          }
+        ],
+        "providerCalls": 0
+      },
+      "evidenceByProducer": {
+        "webSearch": 2,
+        "domesticListing": 0,
+        "urlCandidate": 0,
+        "overseasAuto": 0,
+        "reviewedSame": 0,
+        "gemini": 0
+      },
+      "rows": [
+        {
+          "source": "WEB_SEARCH",
+          "domain": "tennis-warehouse.com",
+          "market": "OVERSEAS",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": 53.97,
+          "currency": "USD",
+          "priceKrw": null,
+          "priceStatus": "VERIFIED_CURRENT",
+          "url": "https://www.tennis-warehouse.com/Sergio_Tacchini_Mens_Racchetto_Polo/descpageMASGT-STMRP.html?color="
+        },
+        {
+          "source": "WEB_SEARCH",
+          "domain": "amazon.com",
+          "market": "UNKNOWN",
+          "tier": "COMPARISON",
+          "verdict": "PRESUMED_SAME",
+          "price": null,
+          "currency": null,
+          "priceKrw": null,
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "url": "https://www.amazon.com/Sergio-Tacchini-Racchetto-Track-Jacket/dp/B0GV53BSPP"
+        }
+      ],
+      "mi": {
+        "domesticLowestKrw": null,
+        "candidateDomesticPrice": {
+          "count": 0,
+          "byCurrency": {},
+          "byMarket": {},
+          "byPriceTier": {}
+        },
+        "candidateOverseasPrice": {
+          "count": 1,
+          "byCurrency": {
+            "USD": {
+              "count": 1,
+              "lowestAmount": 53.97,
+              "highestAmount": 53.97
+            }
+          },
+          "byMarket": {
+            "OVERSEAS": 1
+          },
+          "byPriceTier": {
+            "COMPARISON": 1
+          }
+        }
+      },
+      "sourceErrors": []
+    },
+    {
+      "cat": "TENNIS",
+      "label": "Trattino Short",
+      "http": 200,
+      "ms": 25961,
+      "origin": {
+        "brand": "Sergio Tacchini",
+        "code": null,
+        "title": "Sergio Tacchini Men's Trattino Short",
+        "color": "Galaxy Blue",
+        "material": "86% Polyester, 14% Elastane",
+        "fit": "true to size"
+      },
+      "search": {
+        "searches": 1,
+        "query": "\"Sergio Tacchini\" Men's Trattino Short Galaxy Blue true to size 동일상품 판매처",
+        "organicResults": 9,
+        "skipped": null,
+        "failed": false
+      },
+      "pool": {
+        "suppliedUrls": 9,
+        "acceptedUrls": 1,
+        "usableProductUrls": 0,
+        "miEligibleCandidates": 0,
+        "fetchCalls": 1,
+        "notFetchedOverLimit": [],
+        "dropped": [
+          {
+            "url": "https://www.ebay.com.sg/b/Sergio-Tacchini-Shorts-for-Men/15689/bn_68905247",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.amazon.com/Clothing-Shoes-Jewelry-SERGIO-TACCHINI/s?rh=n%3A7141123011%2Cp_4%3ASERGIO%2BTACCHINI",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.lyst.com/clothing/sergio-tacchini-strisce-stripe-short/",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.lyst.com/shop/mens-sergio-tacchini-clothing/?page=23",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://shop.simon.com/collections/curated-discover-new-brands?Brand=sergio+tacchini&page=6",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.ebay.com.au/b/Sergio-Tacchini-Shorts-for-Men/15689/bn_7117476173?srsltid=AYCX9vLjE9u6fBldK8qyagNIVzTFS-XhklxPR6_R_36ehbJkOIipphes",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://www.ebay.ca/b/Blue-Mens-Sergio-Tacchini/185099/bn_115571273",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://shop.simon.com/collections/all?Brand=sergio+tacchini&page=5",
+            "reason": "NOT_PRODUCT_PAGE"
+          },
+          {
+            "url": "https://en.zalando.de/sergio-tacchini-shorts-blue-s1622f026-k11.html",
+            "reason": "UNREACHABLE"
+          }
+        ],
+        "providerCalls": 0
+      },
+      "evidenceByProducer": {
+        "webSearch": 0,
+        "domesticListing": 0,
+        "urlCandidate": 0,
+        "overseasAuto": 0,
+        "reviewedSame": 0,
+        "gemini": 0
+      },
+      "rows": [],
+      "mi": {
+        "domesticLowestKrw": null,
+        "candidateDomesticPrice": {
+          "count": 0,
+          "byCurrency": {},
+          "byMarket": {},
+          "byPriceTier": {}
+        },
+        "candidateOverseasPrice": {
+          "count": 0,
+          "byCurrency": {},
+          "byMarket": {},
+          "byPriceTier": {}
+        }
+      },
+      "sourceErrors": []
+    }
+  ]
+}

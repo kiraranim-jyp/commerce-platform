@@ -21,7 +21,24 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **QUERY-ARCH-01** — 🟢 §15/§16 **PASS** · §17(Search) 미실행
+CURRENT WU   **QUERY-ARCH-01 §17~§20** — 🟡 **PARTIAL** · 운영 로직 변경 **0**
+             🟢🟢 **Production Search 10/10** · 전건 `searches:1` · failed **0** · skipped **0**
+                ⟹ `1 Product = 1 Search` 가 Production 에서 지켜졌다
+             🟢 funnel — organic **74** → accepted 31 → usable 19 → MI자격 18 →
+                Evidence **31**(OVERSEAS_AUTO 19 · WEB_SEARCH 9 · DOMESTIC_LISTING 3)
+                SAME **6** · PRESUMED_SAME 25 · 🇰🇷 **4** · 🌎 25 · UNKNOWN 2
+             🟢🟢 **AI Search 가 국내 후보를 낸 첫 사례** — Main Story `miniboutique.co.kr`
+                KR ₩117,000 VERIFIED · 국내 참고가격 3건(deuxbebe·donokids 포함)
+             🟢 **API 31 → Client 31 → mounted DOM 31 · 소실 0**(Production 실제 행으로 검증)
+             🔴 남은 한 칸 = **§20 CEO 화면 확인(NO)** — CTO 는 로그인 뒤 화면을 볼 수 없다
+             🔴 발견한 결함 셋(전부 **고치지 않았다**) — ⒈ UNVERIFIED 금액이 해외 집계
+                상한을 오염(12,700 GBP 등 · WU-111 구조) ⒉ Main Story `domesticLowestKrw`
+                가 **117**(후보집계는 117,000 · 다른 분모 · MI 금지) ⒊ Racchetto Polo 에서
+                **원상품 호스트가 후보로** 섰다(자기참조 계약 구멍 여부 **미측정**)
+             🟢 1회용 토큰/라우트 **폐기 완료**(§10 ⑥⑦⑧⑨ · env 0건 · 소스 참조 0)
+             🟡 CEO Action 1회 — Main Story · Bobo Choses 두 상품 화면 확인
+             🟢 전문 `docs/HANDOFF-QUERY-ARCH-01-PRODUCTION.md`
+[직전]       **QUERY-ARCH-01 §15/§16**(Query Preview 10/10) · **E2E-HISTORY-10**
              🟢🟢 **Query 생성 2/10 → 10/10** — `NO_MODEL_CODE → Search 0` 닫혔다
              🔴 진짜 원인은 조립기가 아니라 **재료** 였다 — 운영 호출부가
                 `productName/color/productType: null` 을 넘기고 있었다(두 곳 다 고침)
