@@ -1,0 +1,259 @@
+{
+  "originCode": "B226AC009",
+  "capturedAt": "2026-10-29",
+  "rows": [
+    {
+      "url": "https://cemarose.ca/products/bobo-choses-kids-booty-ghosts-sweatshirt-light-blue-c7907",
+      "domain": "cemarose.ca",
+      "v": "DIFFERENT",
+      "market": null,
+      "price_amount": null,
+      "price_currency": null,
+      "system_verdict": "PRESUMED_SAME",
+      "price_tier": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "url": "https://m.luxboy.com/product/a14338197cb8698cd92c86431cce8d05",
+      "domain": "m.luxboy.com",
+      "v": "DIFFERENT",
+      "market": null,
+      "price_amount": null,
+      "price_currency": null,
+      "system_verdict": null,
+      "price_tier": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "url": "https://www.parkette.ca/products/hug-hairy-monster-sweatshirt",
+      "domain": "parkette.ca",
+      "v": "DIFFERENT",
+      "market": null,
+      "price_amount": null,
+      "price_currency": null,
+      "system_verdict": null,
+      "price_tier": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "url": "https://www.tinyapple.net/en-kr/products/bobo-choses-bobo-choses-pop-t-shirt-blue",
+      "domain": "tinyapple.net",
+      "v": "DIFFERENT",
+      "market": null,
+      "price_amount": null,
+      "price_currency": null,
+      "system_verdict": "PRESUMED_SAME",
+      "price_tier": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "url": "https://villagekids.co.uk/products/pale-blue-3d-logo-t-shirt",
+      "domain": "villagekids.co.uk",
+      "v": "DIFFERENT",
+      "market": "OVERSEAS",
+      "price_amount": "21.2",
+      "price_currency": "GBP",
+      "system_verdict": "PRESUMED_SAME",
+      "price_tier": "COMPARISON",
+      "source": "OVERSEAS_AUTO"
+    },
+    {
+      "url": "https://biskuit.kr/product/%eb%b3%b4%eb%b3%b4%ec%87%bc%ec%a6%88-%ed%97%88%ea%b7%b8-%ed%97%a4%ec%96%b4%eb%a6%ac-%eb%aa%ac%ec%8a%a4%ed%84%b0-%ed%8b%b0%ec%85%94%ec%b8%a0-b226ac009/8891/category/367/display/1/",
+      "domain": "biskuit.kr",
+      "v": "SAME",
+      "market": null,
+      "price_amount": null,
+      "price_currency": null,
+      "system_verdict": null,
+      "price_tier": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "url": "https://bobochoses.com/products/b226ab040-hug-hairy-monster-t-shirt",
+      "domain": "bobochoses.com",
+      "v": "SAME",
+      "market": null,
+      "price_amount": null,
+      "price_currency": null,
+      "system_verdict": null,
+      "price_tier": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "url": "https://bornyesterdaykids.com/products/bobo-choses-baby-hug-hairy-monster-l-s-t-shirt-booo-bo-choses-tag-denim-pants-set-light-blue-red",
+      "domain": "bornyesterdaykids.com",
+      "v": "SAME",
+      "market": null,
+      "price_amount": null,
+      "price_currency": null,
+      "system_verdict": null,
+      "price_tier": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "url": "https://cissywears.com/products/bobo-choses-babyhug-hairy-monster-t-shirt",
+      "domain": "cissywears.com",
+      "v": "SAME",
+      "market": null,
+      "price_amount": null,
+      "price_currency": null,
+      "system_verdict": null,
+      "price_tier": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "url": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+      "domain": "global.trenbe.com",
+      "v": "SAME",
+      "market": null,
+      "price_amount": "84",
+      "price_currency": "USD",
+      "system_verdict": null,
+      "price_tier": "EXACT",
+      "source": "GT_IMPORT"
+    },
+    {
+      "url": "https://www.junioredition.com/products/hug-hairy-monster-baby-t-shirt-by-bobo-choses",
+      "domain": "junioredition.com",
+      "v": "SAME",
+      "market": null,
+      "price_amount": null,
+      "price_currency": null,
+      "system_verdict": null,
+      "price_tier": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "url": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "domain": "junioredition.com",
+      "v": "SAME",
+      "market": "OVERSEAS",
+      "price_amount": "37",
+      "price_currency": "GBP",
+      "system_verdict": "PRESUMED_SAME",
+      "price_tier": "COMPARISON",
+      "source": "OVERSEAS_AUTO"
+    },
+    {
+      "url": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "domain": "junioredition.com",
+      "v": "SAME",
+      "market": "OVERSEAS",
+      "price_amount": "37",
+      "price_currency": "GBP",
+      "system_verdict": "PRESUMED_SAME",
+      "price_tier": "COMPARISON",
+      "source": "OVERSEAS_AUTO"
+    },
+    {
+      "url": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "domain": "junioredition.com",
+      "v": "SAME",
+      "market": null,
+      "price_amount": null,
+      "price_currency": null,
+      "system_verdict": "SAME",
+      "price_tier": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "url": "https://kids21.com/products/700005621lbl",
+      "domain": "kids21.com",
+      "v": "SAME",
+      "market": null,
+      "price_amount": null,
+      "price_currency": null,
+      "system_verdict": null,
+      "price_tier": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "url": "https://scoutandcokids.com/collections/bobo-choses/products/bobo-choses-hug-hairy-monster-t-shirt",
+      "domain": "scoutandcokids.com",
+      "v": "SAME",
+      "market": null,
+      "price_amount": null,
+      "price_currency": null,
+      "system_verdict": "SAME",
+      "price_tier": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "url": "https://www.stockmann.ee/et-ee/bobo-choses-trikoosark-hug-monster/18119748633-1.html",
+      "domain": "stockmann.ee",
+      "v": "SAME",
+      "market": null,
+      "price_amount": null,
+      "price_currency": null,
+      "system_verdict": null,
+      "price_tier": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "url": "https://www.thefrontshop.com/products/hug-hairy-monster-t-shirt",
+      "domain": "thefrontshop.com",
+      "v": "SAME",
+      "market": null,
+      "price_amount": null,
+      "price_currency": null,
+      "system_verdict": null,
+      "price_tier": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "url": "https://www.tinyapple.net/en-kr/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+      "domain": "tinyapple.net",
+      "v": "SAME",
+      "market": null,
+      "price_amount": null,
+      "price_currency": null,
+      "system_verdict": "SAME",
+      "price_tier": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "url": "https://www.tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+      "domain": "tinyapple.net",
+      "v": "SAME",
+      "market": null,
+      "price_amount": null,
+      "price_currency": null,
+      "system_verdict": null,
+      "price_tier": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "url": "https://villagekids.co.uk/products/pale-blue-3d-logo-t-shirt",
+      "domain": "villagekids.co.uk",
+      "v": "SAME",
+      "market": "OVERSEAS",
+      "price_amount": "21.2",
+      "price_currency": "GBP",
+      "system_verdict": "PRESUMED_SAME",
+      "price_tier": "COMPARISON",
+      "source": "OVERSEAS_AUTO"
+    },
+    {
+      "url": "https://www.junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "domain": null,
+      "v": "SAME",
+      "market": null,
+      "price_amount": null,
+      "price_currency": null,
+      "system_verdict": null,
+      "price_tier": null,
+      "source": "SELLER_URL"
+    },
+    {
+      "url": "https://scoutandcokids.com/products/bobo-choses-hug-hairy-monster-t-shirt",
+      "domain": null,
+      "v": "SAME",
+      "market": null,
+      "price_amount": null,
+      "price_currency": null,
+      "system_verdict": null,
+      "price_tier": null,
+      "source": "SELLER_URL"
+    }
+  ]
+}

@@ -44,7 +44,23 @@ function parsePrice(raw: string | null): number | null {
   return Number.isFinite(amount) && amount > 0 ? amount : null;
 }
 
-const DETAIL_PRICE_RE = /id="span_product_price_text"[^>]*>\s*([0-9]+)/;
+/**
+ * 🔴🔴🔴 CANDIDATE-SYNC-01 §13 — **콤마를 받는다**(Production 실측 결함 수정)
+ *
+ * ```
+ * 전  ([0-9]+)      → `117,000` 에서 **`117` 만** 집고 멈춘다
+ * 후  ([0-9][0-9,]*) → `117,000` 을 통째로 집고 `parsePrice` 가 콤마를 지운다
+ * ```
+ * 🔴 **실측** — `price_observations` 의 같은 상품(product_no=18285) 같은 URL 에서
+ *    2026-10-08 `117,000` · 2026-10-28 **`117`** 이 저장됐다. 그 117 이
+ *    `summarizeDomesticMarketSplit` 의 **최저가** 가 되어 `domesticLowestPriceKrw`
+ *    를 117 로 만들었다(CEO 가 본 그 숫자의 출처).
+ * 🟢 아래 `parsePrice` 가 **이미** `[^0-9]` 를 전부 지우므로 **새 정규화 0** 이다 —
+ *    고치는 것은 **캡처 범위 하나** 뿐이다.
+ * 🔴 이 파일의 주석(아래 :139)이 「이 도메인만 콤마가 없다」고 적고 있었다 —
+ *    **그 전제가 깨졌다**. 그래서 둘 다 받는다(`117000` 도 그대로 통과한다).
+ */
+const DETAIL_PRICE_RE = /id="span_product_price_text"[^>]*>\s*([0-9][0-9,]*)/;
 
 /** N-4.18-Q3 PART E-2 — 실측 확인(2026-08-27, 실제 검색결과 HTML 바이트 단위
  * 재확인): 검색 목록 각 상품 블록 안에 `<div class="soldout_area ..."` 마커가

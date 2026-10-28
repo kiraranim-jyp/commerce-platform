@@ -1,0 +1,105 @@
+{
+  "urls": [
+    "https://cemarose.ca/products/bobo-choses-kids-booty-ghosts-sweatshirt-light-blue-c7907",
+    "https://m.luxboy.com/product/a14338197cb8698cd92c86431cce8d05",
+    "https://www.parkette.ca/products/hug-hairy-monster-sweatshirt",
+    "https://www.tinyapple.net/en-kr/products/bobo-choses-bobo-choses-pop-t-shirt-blue",
+    "https://villagekids.co.uk/products/pale-blue-3d-logo-t-shirt",
+    "https://biskuit.kr/product/%eb%b3%b4%eb%b3%b4%ec%87%bc%ec%a6%88-%ed%97%88%ea%b7%b8-%ed%97%a4%ec%96%b4%eb%a6%ac-%eb%aa%ac%ec%8a%a4%ed%84%b0-%ed%8b%b0%ec%85%94%ec%b8%a0-b226ac009/8891/category/367/display/1/",
+    "https://bobochoses.com/products/b226ab040-hug-hairy-monster-t-shirt",
+    "https://bornyesterdaykids.com/products/bobo-choses-baby-hug-hairy-monster-l-s-t-shirt-booo-bo-choses-tag-denim-pants-set-light-blue-red",
+    "https://cissywears.com/products/bobo-choses-babyhug-hairy-monster-t-shirt",
+    "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+    "https://www.junioredition.com/products/hug-hairy-monster-baby-t-shirt-by-bobo-choses",
+    "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+    "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+    "https://kids21.com/products/700005621lbl",
+    "https://scoutandcokids.com/collections/bobo-choses/products/bobo-choses-hug-hairy-monster-t-shirt",
+    "https://www.stockmann.ee/et-ee/bobo-choses-trikoosark-hug-monster/18119748633-1.html",
+    "https://www.thefrontshop.com/products/hug-hairy-monster-t-shirt",
+    "https://www.tinyapple.net/en-kr/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+    "https://www.tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+    "https://www.junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+    "https://scoutandcokids.com/products/bobo-choses-hug-hairy-monster-t-shirt"
+  ],
+  "ev": [
+    {
+      "domain": "m.luxboy.com",
+      "url": "https://m.luxboy.com/product/a14338197cb8698cd92c86431cce8d05",
+      "market": "KR",
+      "tier": "COMPARISON",
+      "verdict": "PRESUMED_SAME",
+      "price": 59000,
+      "currency": "KRW",
+      "priceStatus": "VERIFIED_CURRENT"
+    },
+    {
+      "domain": "parkette.ca",
+      "url": "https://www.parkette.ca/products/hug-hairy-monster-sweatshirt",
+      "market": "OVERSEAS",
+      "tier": "EXCLUDED",
+      "verdict": "CONFLICT",
+      "price": 99,
+      "currency": "CAD",
+      "priceStatus": "VERIFIED_CURRENT"
+    },
+    {
+      "domain": "biskuit.kr",
+      "url": "https://biskuit.kr/product/%eb%b3%b4%eb%b3%b4%ec%87%bc%ec%a6%88-%ed%97%88%ea%b7%b8-%ed%97%a4%ec%96%b4%eb%a6%ac-%eb%aa%ac%ec%8a%a4%ed%84%b0-%ed%8b%b0%ec%85%94%ec%b8%a0-b226ac009/8891/category/367/display/1/",
+      "market": "KR",
+      "tier": "COMPARISON",
+      "verdict": "PRESUMED_SAME",
+      "price": 88000,
+      "currency": "KRW",
+      "priceStatus": "VERIFIED_CURRENT"
+    },
+    {
+      "domain": "bobochoses.com",
+      "url": "https://bobochoses.com/products/b226ab040-hug-hairy-monster-t-shirt",
+      "market": "OVERSEAS",
+      "tier": "EXCLUDED",
+      "verdict": "CONFLICT",
+      "price": 35,
+      "currency": "EUR",
+      "priceStatus": "VERIFIED_CURRENT"
+    },
+    {
+      "domain": "cissywears.com",
+      "url": "https://cissywears.com/products/bobo-choses-babyhug-hairy-monster-t-shirt",
+      "market": "OVERSEAS",
+      "tier": "COMPARISON",
+      "verdict": "PRESUMED_SAME",
+      "price": 33,
+      "currency": "GBP",
+      "priceStatus": "VERIFIED_CURRENT"
+    },
+    {
+      "domain": "global.trenbe.com",
+      "url": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+      "market": "OVERSEAS",
+      "tier": "EXACT",
+      "verdict": "SAME",
+      "price": 80,
+      "currency": "USD",
+      "priceStatus": "UNVERIFIED_SEARCH"
+    }
+  ],
+  "lost": [
+    "https://cemarose.ca/products/bobo-choses-kids-booty-ghosts-sweatshirt-light-blue-c7907",
+    "https://www.tinyapple.net/en-kr/products/bobo-choses-bobo-choses-pop-t-shirt-blue",
+    "https://villagekids.co.uk/products/pale-blue-3d-logo-t-shirt",
+    "https://bornyesterdaykids.com/products/bobo-choses-baby-hug-hairy-monster-l-s-t-shirt-booo-bo-choses-tag-denim-pants-set-light-blue-red",
+    "https://www.junioredition.com/products/hug-hairy-monster-baby-t-shirt-by-bobo-choses",
+    "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+    "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+    "https://kids21.com/products/700005621lbl",
+    "https://scoutandcokids.com/collections/bobo-choses/products/bobo-choses-hug-hairy-monster-t-shirt",
+    "https://www.stockmann.ee/et-ee/bobo-choses-trikoosark-hug-monster/18119748633-1.html",
+    "https://www.thefrontshop.com/products/hug-hairy-monster-t-shirt",
+    "https://www.tinyapple.net/en-kr/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+    "https://www.tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+    "https://www.junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+    "https://scoutandcokids.com/products/bobo-choses-hug-hairy-monster-t-shirt"
+  ],
+  "pool": null
+}

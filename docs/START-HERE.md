@@ -21,7 +21,30 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **CANDIDATE-SYNC-01** — 🟡 **PARTIAL** · 운영 변경 = **UI 문구 한 자리**
+CURRENT WU   **DOMESTIC-SAME-PROVIDER-01** — 🟡 **PARTIAL**
+             🔴🔴 **CPO 한 질문의 답 = 아직 NO** — AI Search 가 B226AC009 에서
+                **국내 URL 을 0건** 냈다(organic 4 전부 해외) ⟹ 표시할 것이 없었다
+             🟢🟢 **그런데 파이프라인은 준비돼 있다** — 재투입 축에서 그 모양이 실제로 난다
+                `biskuit.kr` = URL + **₩88,000** + PRESUMED_SAME + KR + VERIFIED_CURRENT
+                (CEO 가 본 ₩88,000 의 근거가 바로 그 후보다 · 숫자만 뜬 게 아니다)
+             🔴 국내 2건 중 하나가 `m.luxboy.com ₩59,000` 이고 **human DIFFERENT** 다 ⟹
+                국내 참고가격을 **최저가** 로 잡으면 틀린 상품이 이긴다(WU-077 그 모양 · 미수정)
+             🟢 탈락 15건 중 **한국 TLD 0** ⟹ pool/policy/crawl/evidence/market/price
+                어디에서도 **국내 후보를 잃지 않는다**
+             🔴🔴 **분모 정정** — human SAME 18 중 **한국 TLD 는 `biskuit.kr` 하나** 다
+                ⟹ 「과거에 국내가 여러 개」가 아니라 **애초에 1~2** 였다
+             🟢🟢 **국내/해외는 이미 같은 데이터 모델** — 둘 다 `GeminiTransientEvidence` ·
+                가격 함수도 같은 함수 · 갈리는 건 `market === "KR"` 한 줄 ⟹ 국내 전용 모델 **불필요**
+             🟢 owner 맵 확정 — 화면 「국내 참고가격」 = `candidateDomesticPrice`(일시),
+                `domesticLowestPriceKrw` = `price_observations`(영속) · **다른 칸**(통합은 CPO 승인)
+             🟢 §13 **수정 완료** — `deuxbebe.ts` 캡처 `([0-9][0-9,]*)` ·
+                117,000→117000 · 134,000원→134000 · 품절→null · 변이 2 FAIL ·
+                오염 관측 **1행 삭제**(정상 2행 확인 후 · 잔존 0)
+             🟡 CPO 결정 — ① AI Search 국내 URL 0 을 열려면 **별도 WU**(§14 Query 동결)
+                ② 국내 참고가격의 **최저가 선별**(₩59,000 틀린 상품 ↔ ₩88,000 정답)
+             🟢 전문 `docs/HANDOFF-DOMESTIC-SAME-PROVIDER-01.md`
+[직전]       **CANDIDATE-SYNC-01**
+[낡음]       **CANDIDATE-SYNC-01** — 🟡 **PARTIAL** · 운영 변경 = **UI 문구 한 자리**
              🔴🔴 **국내 후보 1건의 원인 = Search coverage + «내 하니스 누락»**
                 Bobo Choses: raw 4 → pool 4 → policy 4 → crawl 4 → evidence 3 → DOM 5
                 WEB_SEARCH 3행은 **전부 해외** · 🇰🇷 1건은 DOMESTIC_LISTING 산출

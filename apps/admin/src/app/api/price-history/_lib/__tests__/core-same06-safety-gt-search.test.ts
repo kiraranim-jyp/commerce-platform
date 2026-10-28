@@ -192,6 +192,9 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
   skipped.push({ file: "e2e-history-10-code.json", why: "🟢 원문 품번 «모양» 관측 · 판정/라벨 **없음**" });
   skipped.push({ file: "query-arch-01-preview.json", why: "🟢 Discovery Query Preview(Search 0회) · 라벨 **없음**" });
   skipped.push({ file: "query-arch-01-production.json", why: "🟢 Production 10회 Search 실측 기록 · 사람 라벨 **없음**" });
+  /** 🔴 아래 둘은 **`candidate_reviews` 사본** 이다 — GT 풀을 두 번 세지 않게 제외한다. */
+  skipped.push({ file: "dsp-01-reviewed-same.json", why: "🔴 `candidate_reviews` 의 B226AC009 사본 — **이중 집계 방지**" });
+  skipped.push({ file: "dsp-01-funnel.json", why: "🟢 재투입 funnel 실측 기록 · 라벨 **없음**" });
 
   /* SAME-03 최신 CEO 라벨 — 🔴 DIFFERENT 가 0 이지만 분모로 같이 적는다 */
   {
