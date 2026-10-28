@@ -11,7 +11,14 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-CURRENT WU   **DISCOVERY E2E-07** — 🟢 **입구 손실을 숫자로 냈다**(추가 Search 0 · Apify 0)
+CURRENT WU   **DISCOVERY E2E-08** — 🟡 **403 복구 = HOLD** · 🔴🔴 **정책 비대칭 발견(CPO 판정)**
+             403 5건 중 **3건(gmarket ×2 · coupang)은 우리 등록부가 이미 `NOT_AVAILABLE`**
+             (= 약관으로 수집 대상 아님) ⟹ 「뚫기」는 기술이 아니라 **약관 결정**
+             farfetch 는 200 이어도 **JSON-LD 없음**(JS 렌더) ⟹ 실질 복구 상한 **1~2건**
+             🔴🔴 **`11st.co.kr` 도 NOT_AVAILABLE 인데 AI Search 경로가 크롤해 후보를 만들었다** —
+             `collection_strategy` 게이트가 **등록부 검색에만** 걸리고 URL 풀에는 안 걸린다
+             🟢 추천 = **E(미복구)** + 정책 비대칭 먼저 판정 · 🔴 **구현 0 · 운영 코드 0**
+[직전]       **E2E-07** — 🟢 입구 손실 `raw 9 → usable 2` · 최대 손실 **403 5건(71%)**
              `raw 9 → PRODUCT_PAGE 7 → accepted 7 → usable **2** → miEligible 2`
              🔴🔴 **단일 최대 손실 = 403 · 5건(최종 손실의 71%)** —
              gmarket ×2 · coupang · farfetch · babyshop (🇰🇷추정 3건 포함)

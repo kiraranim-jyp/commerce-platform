@@ -1729,3 +1729,83 @@ www.lfmall.co.kr    LISTING_PAGE(검색 결과 페이지) · HTTP 200 ⟹ 같다
 > Query 도 UI 도 response 도 아니다.
 
 **🔵 상태 — 측정 완료. 🔴 403 대응은 «제품/기술 의사결정» 이라 CTO 가 열지 않는다(CPO 판정 사안).**
+
+---
+
+## 부록 AD. DISCOVERY E2E-08 — **403 대응 타당성 조사** (2026-10-28 · 조사 전용)
+
+🔴 **운영 코드 변경 0 · 추가 Search 0 · 새 Crawl 0 · 403 재현 시도 0.**
+기존 E2E-07 probe 와 **저장소/DB 안의 기존 기록** 만 썼다.
+
+### AD-1. 🔴🔴🔴 먼저 — **403 의 3/5 는 «우리 정책상 이미 수집 대상이 아니다»**
+
+운영 `domestic_price_sources` 실측:
+```
+gmarket.co.kr   collection_strategy = **NOT_AVAILABLE**
+coupang.com     collection_strategy = **NOT_AVAILABLE**
+11st.co.kr      collection_strategy = **NOT_AVAILABLE**
+danawa.com      collection_strategy = MANUAL
+```
+🔴 `NOT_AVAILABLE` 의 뜻은 **「약관으로 자동수집 대상이 아니다」** 다
+(WU-115 · 메모 `portal-scraping-blocked-by-terms`).
+⟹ 🔴 **gmarket ×2 · coupang 의 403 을 «뚫는» 것은 기술 결정이 아니라 약관 결정이다.**
+
+### AD-2. 🔴🔴 그리고 더 큰 것 — **정책 비대칭이 실재한다**
+
+```
+11st.co.kr 도 **NOT_AVAILABLE** 인데, AI Search 경로는 그 URL 을 **성공적으로 크롤해
+후보를 만들었다**(E2E-06 실측: market KR · PRESUMED_SAME · evidence 에 실렸다).
+🔴 `collection_strategy` 게이트는 **등록부 검색(`searchDomesticShops`)에만** 걸리고
+   `collectUrlCandidatePool`(AI Search · 셀러 URL)에는 **걸리지 않는다**.
+⟹ 🔴🔴 우리는 지금 **「약관상 수집 대상이 아니다」로 분류한 사이트를 다른 경로로
+   크롤하고 있다.** 이것은 403 보다 **먼저** 판정해야 할 사안이고 **CTO 가 고치지 않았다.**
+```
+
+### AD-3. 호스트별 조사표 (근거 없는 칸은 **미측정**)
+
+| Host | 403 | 다른 환경 200 | 기존 Evidence 가능성 | 정책 상태 | 복구 난이도 |
+|---|---:|---|---|---|---|
+| gmarket.co.kr | 2 | 🔴 없음(OCI 도 403) | 미측정 | 🔴 **NOT_AVAILABLE** | — (정책) |
+| coupang.com | 1 | 🟡 **OCI 200** | 미측정 | 🔴 **NOT_AVAILABLE** | — (정책) |
+| farfetch.com | 1 | 🔴 없음(OCI 도 403) | 🔴 **낮다** — 200 일 때도 **JSON-LD Product 없음**(JS 렌더) · SP-13 에서 **403 전수 50/50** | 등록부 **밖** | 높음(브라우저) |
+| babyshop.com | 1 | 🔴 없음(OCI 도 403) | **미측정** | 🟢 해외 등록부 `is_active=true` · `access_status=null` | 미측정 |
+
+### AD-4. 🔴 복구 «가치» 산정 — 상한이 작다
+
+```
+403 5건
+ ├ 3건 gmarket ×2 · coupang   → 🔴 **정책상 복구 대상이 아니다**
+ ├ 1건 farfetch               → 🔴 뚫어도 PLAIN_HTML 로 **Evidence 0 가능성**(기존 기록)
+ └ 1건 babyshop               → 🟡 **유일하게 가치 측정이 가능한 후보**(등록부 승인)
+⟹ 🔴 **실질 복구 상한 = 1건**(조건부 2건). 「5건 복구」로 읽으면 틀린다.
+🔴 그리고 **403 URL 의 동일상품 여부를 추정하지 않았다** — 복구 ≠ SAME 이다.
+```
+
+### AD-5. 복구 후보 A~E (🔴 **구현 0** · 평가만)
+
+| | 방식 | 평가 |
+|---|---|---|
+| **A** | 다른 egress/서버 | 🟡 coupang 만 OCI 200 — 그런데 **그 호스트가 NOT_AVAILABLE** 이라 이득이 정책에 막힌다 · 상시 서버 의존·비용·장애축 **추가** |
+| **B** | Proxy | 🔴 A 와 같은 문제 + 약관 리스크 · 사이트별 차이 · SP-13 금지축 |
+| **C** | Browser rendering | 🔴 farfetch 에만 의미 있고(JS 렌더) **서버리스 부적합** · 실행시간/동시성/비용 · 유지보수 |
+| **D** | Search 결과 title/snippet 를 Evidence 로 | 🔴🔴 **NO-GO 조건 직격** — 기존 계약이 **「AI 가 만든 문자열은 Evidence 가 아니다」** 로 잠겨 있다(메모 `ai-urls-are-discovery-signal-not-evidence`) · Evidence/Identity 계약을 **깨야** 한다 |
+| **E** | 미복구(현행) | 🟢 비용 0 · 계약 0 · 🔴 손실은 **실질 1~2건** · 🟢 `comparison_shops.access_status` 에 **BLOCKED 를 기록할 칸이 이미 있다**(현재 BLOCKED 2 · OK 1 · null 32) |
+
+### AD-6. 🟢 CTO 추천 (🔴 구현하지 않았다)
+
+```
+① **E(미복구)를 기본으로 둔다** — 복구 상한이 1~2건이고 A~C 는 전부 상시 비용·
+   약관·서버리스 부적합 중 하나 이상에 걸린다.
+② 🔴🔴 **그보다 먼저 AD-2 의 정책 비대칭을 판정한다** — 「NOT_AVAILABLE 인 사이트를
+   AI Search 경로로 크롤해도 되는가」. 이것은 **지금 실제로 일어나고 있다**(11st).
+③ babyshop 1건만 **가치 측정** 대상으로 남긴다(등록부 승인 · Evidence 미측정).
+```
+
+### AD-7. 영향 — 없음
+
+```
+Search 영향 0 · Identity/MI 영향 0 · 운영 코드 0 · DB 쓰기 0 · 배포 0
+Query Selection **HOLD 유지** · 1 Product = 1 Search **유지**
+```
+
+**🔵 상태 — `403 복구 = HOLD`(가치 상한 1~2건 · 비용 미확정). 🔴🔴 `정책 비대칭 = CPO 판정 필요`.**
