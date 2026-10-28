@@ -1,0 +1,355 @@
+{
+  "ranAt": "E2E10",
+  "report": [
+    {
+      "cat": "KIDS",
+      "label": "Bobo Choses",
+      "snapshotId": "c88d2ca4-bfe1-4851-9c1d-92f69222a3f2",
+      "workspaceId": "b60b0ad7-d750-4f70-a1c3-a4d220f76756",
+      "sourceUrl": "https://bobochoses.com/en-kr/products/b226ac009-hug-hairy-monster-t-shirt",
+      "title": "Hug Hairy Monster T-shirt",
+      "brand": "Bobo Choses",
+      "code": null,
+      "price": null,
+      "origin": {
+        "ok": true,
+        "title": "Hug Hairy Monster T-shirt",
+        "brand": {
+          "value": "Bobo Choses",
+          "confident": true
+        },
+        "code": "B226AC009",
+        "color": "Light blue",
+        "images": 0,
+        "price": "40 EUR"
+      },
+      "search": {
+        "searches": 0,
+        "query": "\"B226AC009\"",
+        "organicResults": 0,
+        "skipped": "NOT_CONFIGURED",
+        "failed": false
+      },
+      "pool": null,
+      "policyWouldBlock": 0,
+      "evidence": [],
+      "sourceErrors": [],
+      "mi": "MI_NULL(하니스 DB 권한 — 측정불가)"
+    },
+    {
+      "cat": "KIDS",
+      "label": "BOSS",
+      "snapshotId": "74bbe30a-641c-4226-981d-7ab1552de8ea",
+      "workspaceId": "b60b0ad7-d750-4f70-a1c3-a4d220f76756",
+      "sourceUrl": "https://designerkidswear.com/collections/new-in/products/hugo-boss-kids-baby-boys-top-white-j53497-10p",
+      "title": "Baby Boys White Logo Top",
+      "brand": "BOSS",
+      "code": null,
+      "price": null,
+      "origin": {
+        "ok": true,
+        "title": "Baby Boys White Logo Top",
+        "brand": {
+          "value": "BOSS",
+          "confident": false
+        },
+        "code": null,
+        "color": "White",
+        "images": 0,
+        "price": "84 CAD"
+      },
+      "search": {
+        "searches": 0,
+        "query": null,
+        "organicResults": 0,
+        "skipped": "NO_MODEL_CODE",
+        "failed": false
+      },
+      "pool": null,
+      "policyWouldBlock": 0,
+      "evidence": [],
+      "sourceErrors": [],
+      "mi": "MI_NULL(하니스 DB 권한 — 측정불가)"
+    },
+    {
+      "cat": "KIDS",
+      "label": "Louis Louise",
+      "snapshotId": "621c1848-372b-4719-96e4-61d808e1de0a",
+      "workspaceId": "b60b0ad7-d750-4f70-a1c3-a4d220f76756",
+      "sourceUrl": "https://www.smallable.com/en/product/holly-hearts-ribbed-velvet-baby-pants-pale-pink-louis-louise-441173",
+      "title": "Holly Hearts Ribbed Velvet Baby Pants | Pale Pink",
+      "brand": "Louis Louise",
+      "code": null,
+      "price": null,
+      "origin": {
+        "ok": true,
+        "title": "Holly Hearts Ribbed Velvet Baby Pants | Pale Pink",
+        "brand": {
+          "value": "Louis Louise",
+          "confident": false
+        },
+        "code": null,
+        "color": "Pink",
+        "images": 0,
+        "price": "69 EUR"
+      },
+      "search": {
+        "searches": 0,
+        "query": null,
+        "organicResults": 0,
+        "skipped": "NO_MODEL_CODE",
+        "failed": false
+      },
+      "pool": null,
+      "policyWouldBlock": 0,
+      "evidence": [],
+      "sourceErrors": [],
+      "mi": "MI_NULL(하니스 DB 권한 — 측정불가)"
+    },
+    {
+      "cat": "KIDS",
+      "label": "Main Story",
+      "snapshotId": "c27d4727-2248-4fe0-9084-8c239737a889",
+      "workspaceId": "b60b0ad7-d750-4f70-a1c3-a4d220f76756",
+      "sourceUrl": "https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story?_pos=1&_sid=a0738e824&_ss=r",
+      "title": "Bubble Sweatshirt in Grey Melange by Main Story",
+      "brand": "Main Story",
+      "code": null,
+      "price": null,
+      "origin": {
+        "ok": true,
+        "title": "Bubble Sweatshirt in Grey Melange by Main Story",
+        "brand": {
+          "value": "Main Story",
+          "confident": true
+        },
+        "code": "AW26MS185",
+        "color": "Grey Melange",
+        "images": 0,
+        "price": "57 GBP"
+      },
+      "search": {
+        "searches": 0,
+        "query": "\"AW26MS185\"",
+        "organicResults": 0,
+        "skipped": "NOT_CONFIGURED",
+        "failed": false
+      },
+      "pool": null,
+      "policyWouldBlock": 0,
+      "evidence": [],
+      "sourceErrors": [],
+      "mi": "MI_NULL(하니스 DB 권한 — 측정불가)"
+    },
+    {
+      "cat": "KIDS",
+      "label": "Mini rodini",
+      "snapshotId": "96a9766a-f05d-4c35-b4c9-43de8ca495a5",
+      "workspaceId": "df50fd5e-6586-499b-a21d-57f5a3e86d70",
+      "sourceUrl": "https://houseofkids.com/products/mini-rodini-violas-aop-winter-jacket-blue",
+      "title": "Violas aop Winter jacket",
+      "brand": "Mini rodini",
+      "code": null,
+      "price": null,
+      "origin": {
+        "ok": true,
+        "title": "Violas aop Winter jacket",
+        "brand": {
+          "value": "Mini rodini",
+          "confident": false
+        },
+        "code": null,
+        "color": null,
+        "images": 0,
+        "price": "104.79 EUR"
+      },
+      "search": {
+        "searches": 0,
+        "query": null,
+        "organicResults": 0,
+        "skipped": "NO_MODEL_CODE",
+        "failed": false
+      },
+      "pool": null,
+      "policyWouldBlock": 0,
+      "evidence": [],
+      "sourceErrors": [],
+      "mi": "MI_NULL(하니스 DB 권한 — 측정불가)"
+    },
+    {
+      "cat": "TENNIS",
+      "label": "Damarindo Pique Polo",
+      "snapshotId": "5f207353-acd3-4ee4-85d1-88f408452620",
+      "workspaceId": "b60b0ad7-d750-4f70-a1c3-a4d220f76756",
+      "sourceUrl": "https://www.tennis-warehouse.com/Sergio_Tacchini_Mens_Damarindo_Pique_Polo/descpageMASGT-STMDPP.html?color=BL",
+      "title": "Sergio Tacchini Men's Damarindo Pique Polo",
+      "brand": "Sergio Tacchini",
+      "code": null,
+      "price": null,
+      "origin": {
+        "ok": true,
+        "title": "Sergio Tacchini Men's Damarindo Pique Polo",
+        "brand": {
+          "value": "Sergio Tacchini",
+          "confident": false
+        },
+        "code": null,
+        "color": "Humus",
+        "images": 0,
+        "price": "53.97 USD"
+      },
+      "search": {
+        "searches": 0,
+        "query": null,
+        "organicResults": 0,
+        "skipped": "NO_MODEL_CODE",
+        "failed": false
+      },
+      "pool": null,
+      "policyWouldBlock": 0,
+      "evidence": [],
+      "sourceErrors": [],
+      "mi": "MI_NULL(하니스 DB 권한 — 측정불가)"
+    },
+    {
+      "cat": "TENNIS",
+      "label": "Fall Cericho T-Shirt",
+      "snapshotId": "dbc1e8b5-aec5-4df3-9bd4-b67a84d4d6db",
+      "workspaceId": "b60b0ad7-d750-4f70-a1c3-a4d220f76756",
+      "sourceUrl": "https://www.tennis-warehouse.com/Sergio_Tacchini_Mens_Fall_Cericho_T-Shirt/descpageMASGT-STMCTS.html?color=WH",
+      "title": "Sergio Tacchini Men's Fall Cericho T-Shirt",
+      "brand": "Sergio Tacchini",
+      "code": null,
+      "price": null,
+      "origin": {
+        "ok": true,
+        "title": "Sergio Tacchini Men's Fall Cericho T-Shirt",
+        "brand": {
+          "value": "Sergio Tacchini",
+          "confident": false
+        },
+        "code": null,
+        "color": "Brilliant White",
+        "images": 0,
+        "price": "54 USD"
+      },
+      "search": {
+        "searches": 0,
+        "query": null,
+        "organicResults": 0,
+        "skipped": "NO_MODEL_CODE",
+        "failed": false
+      },
+      "pool": null,
+      "policyWouldBlock": 0,
+      "evidence": [],
+      "sourceErrors": [],
+      "mi": "MI_NULL(하니스 DB 권한 — 측정불가)"
+    },
+    {
+      "cat": "TENNIS",
+      "label": "Magro Long Sleeve",
+      "snapshotId": "614bfeb7-a627-442f-82bb-f6cfed52c428",
+      "workspaceId": "b60b0ad7-d750-4f70-a1c3-a4d220f76756",
+      "sourceUrl": "https://www.tennis-warehouse.com/Sergio_Tacchini_Mens_Magro_Long_Sleeve/descpageMASGT-STMMLS.html?color=WH",
+      "title": "Sergio Tacchini Men's Magro Long Sleeve",
+      "brand": "Sergio Tacchini",
+      "code": null,
+      "price": null,
+      "origin": {
+        "ok": true,
+        "title": "Sergio Tacchini Men's Magro Long Sleeve",
+        "brand": {
+          "value": "Sergio Tacchini",
+          "confident": false
+        },
+        "code": null,
+        "color": "Brilliant White",
+        "images": 0,
+        "price": "120 USD"
+      },
+      "search": {
+        "searches": 0,
+        "query": null,
+        "organicResults": 0,
+        "skipped": "NO_MODEL_CODE",
+        "failed": false
+      },
+      "pool": null,
+      "policyWouldBlock": 0,
+      "evidence": [],
+      "sourceErrors": [],
+      "mi": "MI_NULL(하니스 DB 권한 — 측정불가)"
+    },
+    {
+      "cat": "TENNIS",
+      "label": "Racchetto Polo",
+      "snapshotId": "07fde45e-4a28-478d-8ca8-83a6cea6c0e8",
+      "workspaceId": "b60b0ad7-d750-4f70-a1c3-a4d220f76756",
+      "sourceUrl": "https://www.tennis-warehouse.com/Sergio_Tacchini_Mens_Racchetto_Polo/descpageMASGT-STMRP.html?color=WH",
+      "title": "Sergio Tacchini Men's Racchetto Polo",
+      "brand": "Sergio Tacchini",
+      "code": null,
+      "price": null,
+      "origin": {
+        "ok": true,
+        "title": "Sergio Tacchini Men's Racchetto Polo",
+        "brand": {
+          "value": "Sergio Tacchini",
+          "confident": false
+        },
+        "code": null,
+        "color": "Brilliant White",
+        "images": 0,
+        "price": "53.97 USD"
+      },
+      "search": {
+        "searches": 0,
+        "query": null,
+        "organicResults": 0,
+        "skipped": "NO_MODEL_CODE",
+        "failed": false
+      },
+      "pool": null,
+      "policyWouldBlock": 0,
+      "evidence": [],
+      "sourceErrors": [],
+      "mi": "MI_NULL(하니스 DB 권한 — 측정불가)"
+    },
+    {
+      "cat": "TENNIS",
+      "label": "Trattino Short",
+      "snapshotId": "6333f04f-beba-4840-a2de-99073a700208",
+      "workspaceId": "b60b0ad7-d750-4f70-a1c3-a4d220f76756",
+      "sourceUrl": "https://www.tennis-warehouse.com/Sergio_Tacchini_Mens_Trattino_Short/descpageMASGT-STMFTS0.html?color=BL",
+      "title": "Sergio Tacchini Men's Trattino Short",
+      "brand": "Sergio Tacchini",
+      "code": null,
+      "price": null,
+      "origin": {
+        "ok": true,
+        "title": "Sergio Tacchini Men's Trattino Short",
+        "brand": {
+          "value": "Sergio Tacchini",
+          "confident": false
+        },
+        "code": null,
+        "color": "Galaxy Blue",
+        "images": 0,
+        "price": "88 USD"
+      },
+      "search": {
+        "searches": 0,
+        "query": null,
+        "organicResults": 0,
+        "skipped": "NO_MODEL_CODE",
+        "failed": false
+      },
+      "pool": null,
+      "policyWouldBlock": 0,
+      "evidence": [],
+      "sourceErrors": [],
+      "mi": "MI_NULL(하니스 DB 권한 — 측정불가)"
+    }
+  ]
+}

@@ -1,0 +1,159 @@
+[
+  {
+    "cat": "KIDS",
+    "label": "Bobo Choses",
+    "status": 200,
+    "bytes": 850338,
+    "labeledCode": null,
+    "hasLabelPhrase": false,
+    "slug": "b226ac009-hug-hairy-monster-t-shirt",
+    "shapeSamples": [
+      "GTM-TPPS4Q",
+      "6365118",
+      "15692660441471",
+      "7A7A7A",
+      "D0D0D0",
+      "F0F0F0"
+    ]
+  },
+  {
+    "cat": "KIDS",
+    "label": "BOSS",
+    "status": 200,
+    "bytes": 359961,
+    "labeledCode": null,
+    "hasLabelPhrase": false,
+    "slug": "hugo-boss-kids-baby-boys-top-white-j53497-10p",
+    "shapeSamples": [
+      "9779230048396",
+      "HB-J53497-10P-",
+      "G-XMJKN4X4M5",
+      "002E6D",
+      "38375358604",
+      "GT-5R78JXF"
+    ]
+  },
+  {
+    "label": "Louis Louise",
+    "err": "TypeError"
+  },
+  {
+    "cat": "KIDS",
+    "label": "Main Story",
+    "status": 200,
+    "bytes": 844566,
+    "labeledCode": "AW26MS185",
+    "hasLabelPhrase": true,
+    "slug": "bubble-sweatshirt-in-grey-melange-by-main-story",
+    "shapeSamples": [
+      "8748574",
+      "171717",
+      "707173",
+      "30000788",
+      "15045993759096",
+      "G-6GREWZ9N3J"
+    ]
+  },
+  {
+    "cat": "KIDS",
+    "label": "Mini rodini",
+    "status": 200,
+    "bytes": 458857,
+    "labeledCode": null,
+    "hasLabelPhrase": false,
+    "slug": "mini-rodini-violas-aop-winter-jacket-blue",
+    "shapeSamples": [
+      "2026-06-15T13",
+      "6843497Z",
+      "185184485641",
+      "15590817726729",
+      "V276025-9848",
+      "V276025-9927"
+    ]
+  },
+  {
+    "cat": "TENNIS",
+    "label": "Damarindo Pique Polo",
+    "status": 200,
+    "bytes": 191332,
+    "labeledCode": null,
+    "hasLabelPhrase": false,
+    "slug": "descpageMASGT-STMDPP.html",
+    "shapeSamples": [
+      "GTM-T4ZW6J7",
+      "ADIAPP15",
+      "3PKBAGS",
+      "6PKBAGS",
+      "SUP6BAGS",
+      "STS226M50459"
+    ]
+  },
+  {
+    "cat": "TENNIS",
+    "label": "Fall Cericho T-Shirt",
+    "status": 200,
+    "bytes": 187307,
+    "labeledCode": null,
+    "hasLabelPhrase": false,
+    "slug": "descpageMASGT-STMCTS.html",
+    "shapeSamples": [
+      "GTM-T4ZW6J7",
+      "ADIAPP15",
+      "3PKBAGS",
+      "6PKBAGS",
+      "SUP6BAGS",
+      "STF26M51696-"
+    ]
+  },
+  {
+    "cat": "TENNIS",
+    "label": "Magro Long Sleeve",
+    "status": 200,
+    "bytes": 187377,
+    "labeledCode": null,
+    "hasLabelPhrase": false,
+    "slug": "descpageMASGT-STMMLS.html",
+    "shapeSamples": [
+      "GTM-T4ZW6J7",
+      "ADIAPP15",
+      "3PKBAGS",
+      "6PKBAGS",
+      "SUP6BAGS",
+      "STF26M51683-"
+    ]
+  },
+  {
+    "cat": "TENNIS",
+    "label": "Racchetto Polo",
+    "status": 200,
+    "bytes": 185732,
+    "labeledCode": null,
+    "hasLabelPhrase": false,
+    "slug": "descpageMASGT-STMRP.html",
+    "shapeSamples": [
+      "GTM-T4ZW6J7",
+      "ADIAPP15",
+      "3PKBAGS",
+      "6PKBAGS",
+      "SUP6BAGS",
+      "STS26M51567"
+    ]
+  },
+  {
+    "cat": "TENNIS",
+    "label": "Trattino Short",
+    "status": 200,
+    "bytes": 189559,
+    "labeledCode": null,
+    "hasLabelPhrase": false,
+    "slug": "descpageMASGT-STMFTS0.html",
+    "shapeSamples": [
+      "GTM-T4ZW6J7",
+      "STMFTS0",
+      "ADIAPP15",
+      "3PKBAGS",
+      "6PKBAGS",
+      "SUP6BAGS"
+    ]
+  }
+]

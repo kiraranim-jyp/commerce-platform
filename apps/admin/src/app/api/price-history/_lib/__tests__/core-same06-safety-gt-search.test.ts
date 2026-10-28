@@ -181,6 +181,15 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
   skipped.push({ file: "wu-067-blind-review-set.json", why: "🟢 라벨 없음(블라인드 입력 세트)" });
   skipped.push({ file: "wu-074-probe.json", why: "🟢 HTTP probe 결과뿐 · 라벨 없음" });
   skipped.push({ file: "core-same03-human-gt.json", why: "🟢 수집함(아래 별도) · 🔴 CEO DIFFERENT **0**" });
+  /**
+   * 🔴 E2E-HISTORY-10(2026-10-28) 산출 — **사람 라벨이 아니다.** 셋 다 측정 기록이고
+   *    동일상품 GT 가 **0** 이라 이 계약의 분모에 들어가지 않는다.
+   *    🟢 그런데도 여기 적는 이유는 이 계약이 「전수 분류」를 요구하기 때문이다
+   *      (그 FAIL 이 실제로 이 셋을 잡았다 — 가드가 일했다).
+   */
+  skipped.push({ file: "e2e-history-10-targets.json", why: "🟢 측정 대상 10건(스냅샷/URL) · 라벨 **없음**" });
+  skipped.push({ file: "e2e-history-10-report.json", why: "🟢 운영 경로 실행 기록 · 라벨 **없음**" });
+  skipped.push({ file: "e2e-history-10-code.json", why: "🟢 원문 품번 «모양» 관측 · 판정/라벨 **없음**" });
 
   /* SAME-03 최신 CEO 라벨 — 🔴 DIFFERENT 가 0 이지만 분모로 같이 적는다 */
   {
