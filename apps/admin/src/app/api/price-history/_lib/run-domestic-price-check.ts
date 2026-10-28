@@ -1082,6 +1082,30 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
   // 읽혔다. 범위를 못 정하면(undefined) 필터는 걸리지 않는다(= 오늘 동작 그대로).
   const registrySources = await listDomesticPriceSources(input.workspaceId);
   /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 POLICY-GATE-01 — **자동수집 금지 도메인. 생산자와 무관하게 «하나» 다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * CPO 확정(2026-10-28): 「수집 가능 여부는 **어디서 URL 을 발견했는가** 가 아니라
+   * **어떤 사이트인가** 를 기준으로 동일하게 적용한다.」
+   *
+   * 🔴 그 전까지 **비대칭이 실재했다** — 등록부 검색은 `collection_strategy` 게이트를
+   *    지나는데(`comparison-search/index.ts:285`) **일시 후보 풀들은 지나지 않아서**,
+   *    `NOT_AVAILABLE` 인 `11st.co.kr` 을 AI Search 경로로 **실제로 크롤했다**(E2E-06/08).
+   *
+   * 🔴 **`NOT_AVAILABLE` 만** 넣는다. `MANUAL` 은 「약관 금지」가 아니라 **「아직 조사하지
+   *    않았다」** 다(메모 `manual-means-uninvestigated-not-uncollectable`) — 넣으면
+   *    `danawa` 같은 **정상 후보가 사라진다**(실측: 현재 생존 2건 중 하나).
+   * 🟢 **추가 DB 호출 0** — 바로 위에서 이미 읽은 목록을 쓴다.
+   * 🔴 Search 자체는 막지 않는다 — URL 발견은 그대로이고 **여는 것** 만 막는다.
+   */
+  const notAvailableDomains = new Set(
+    registrySources
+      .filter((s) => s.collectionStrategy === "NOT_AVAILABLE")
+      .map((s) => s.domain.trim().toLowerCase())
+      .filter(Boolean),
+  );
+  /**
    * 🔴 MI-020 §4 — 시장 **충돌 감지** 에 쓰는 도메인 집합이다. 🔴 `allSources`(아래)가
    *    아니라 **필터 «전»** 목록을 쓴다 — scope/활성 필터를 거치면 「등록부에 있는데
    *    외화가 왔다」는 충돌을 그 상품 scope 밖에서는 못 보게 된다.
@@ -1271,6 +1295,8 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
       originUrl: query.sourceUrl,
       maxUrls: MAX_SUPPLIED_CANDIDATE_URLS,
       existingCanonicalUrls,
+      /** 🔴 POLICY-GATE-01 — 생산자와 무관하게 **같은 집합** 을 넘긴다(정책 복제 0). */
+      notAvailableDomains,
     });
     urlCandidateMetrics = urlPool.metrics;
     /** 🔴 계측값을 로그로 내보낸다 — Production 화면은 로그인 뒤라 CTO 가 응답을
@@ -1317,6 +1343,8 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
       originUrl: query.sourceUrl,
       maxUrls: MAX_SUPPLIED_CANDIDATE_URLS,
       existingCanonicalUrls: alreadyCanonical,
+      /** 🔴 POLICY-GATE-01 — **같은 집합** 이다(생산자별 정책 복제 0). */
+      notAvailableDomains,
       /** 🔴 **여기가 이 블록의 전부다** — 산출물의 출처를 가른다. */
       shopId: REVIEWED_SAME_SHOP_ID,
       shopNamePrefix: REVIEWED_SAME_SHOP_NAME,
@@ -1428,6 +1456,8 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
           originUrl: query.sourceUrl,
           maxUrls: MAX_SUPPLIED_CANDIDATE_URLS,
           existingCanonicalUrls: alreadyCanonical,
+          /** 🔴 POLICY-GATE-01 — **같은 집합** 이다(생산자별 정책 복제 0). */
+          notAvailableDomains,
           /** 🔴 **여기가 이 블록의 전부다** — 산출물의 출처를 가른다. */
           shopId: DOMESTIC_LISTING_SHOP_ID,
           shopNamePrefix: DOMESTIC_LISTING_SHOP_NAME,
@@ -1502,6 +1532,8 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
         originUrl: query.sourceUrl,
         maxUrls: MAX_SUPPLIED_CANDIDATE_URLS,
         existingCanonicalUrls: alreadyCanonical,
+        /** 🔴 POLICY-GATE-01 — **같은 집합** 이다(생산자별 정책 복제 0). */
+        notAvailableDomains,
         /** 🔴 **여기가 이 블록의 전부다** — 산출물의 출처를 가른다. */
         shopId: WEB_SEARCH_SHOP_ID,
         shopNamePrefix: WEB_SEARCH_SHOP_NAME,
@@ -1596,6 +1628,8 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
        */
       maxQueries: 1,
       existingNormalizedUrls: existingUrls,
+      /** 🔴 POLICY-GATE-01 — Gemini 경로도 **같은 집합** 을 쓴다(flag OFF 라 오늘 효과 0). */
+      notAvailableDomains,
     });
     geminiMetrics = pool.metrics;
     /**

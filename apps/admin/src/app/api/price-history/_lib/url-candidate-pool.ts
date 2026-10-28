@@ -67,7 +67,15 @@ export type UrlCandidateDropReason =
   /** 🔴 공개 인터넷으로 라우팅되지 않는 호스트(사설/루프백/링크로컬/비표준 포트). */
   | "NOT_PUBLIC_HOST"
   /** 🔴 호출부가 이미 같은 상품을 후보로 갖고 있다 — HTTP 를 쓰지 않는다. */
-  | "ALREADY_CANDIDATE";
+  | "ALREADY_CANDIDATE"
+  /**
+   * 🔴🔴🔴 POLICY-GATE-01 — **그 사이트는 자동수집 대상이 아니다**(약관).
+   *
+   * 등록부(`domestic_price_sources.collection_strategy`)가 `NOT_AVAILABLE` 인 사이트다.
+   * 🔴 「URL 을 못 찾았다」가 **아니다** — 찾았고 **일부러 열지 않았다**.
+   * 🔴 그래서 `NOT_PRODUCT_PAGE`/`UNREACHABLE` 과 **같은 칸에 넣지 않는다**(원인이 다르다).
+   */
+  | "COLLECTION_NOT_AVAILABLE";
 
 export interface UrlCandidateDrop {
   url: string;
@@ -91,6 +99,26 @@ export interface UrlCandidatePoolInput {
    *    식별자가 쿼리에 있어서 서로 다른 상품이 한 키로 접힌다(leaf 모듈 주석).
    */
   existingCanonicalUrls: ReadonlySet<string>;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 POLICY-GATE-01 — **자동수집이 «금지» 된 사이트의 도메인 집합**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * CPO 확정(2026-10-28): 「수집 가능 여부는 **어디서 URL 을 발견했는가** 가 아니라
+   * **어떤 사이트인가** 를 기준으로 **동일하게** 적용한다.」
+   *
+   * 🔴 그 전까지 비대칭이 실재했다 — 등록부 검색은 `collection_strategy` 게이트를
+   *    지나는데(`comparison-search/index.ts:285`) **이 풀은 지나지 않아서**,
+   *    `NOT_AVAILABLE` 인 `11st.co.kr` 을 AI Search 경로로 **실제로 크롤하고 있었다**
+   *    (E2E-06/08 실측).
+   *
+   * 🔴 **`NOT_AVAILABLE` 만 넣는다.** `MANUAL` 은 「약관 금지」가 아니라 **「아직
+   *    조사하지 않았다」** 이고(메모 `manual-means-uninvestigated-not-uncollectable`),
+   *    넣으면 danawa 같은 **정상 후보가 사라진다**.
+   * 🔴 값은 **등록부 도메인 그대로** 다 — 여기서 정책을 «해석» 하지 않는다.
+   * 🟢 비우면 **오늘 동작 그대로** 다(기존 호출부 무영향).
+   */
+  notAvailableDomains?: ReadonlySet<string>;
   /**
    * 🟢 테스트/측정용 주입구. 기본값이 **운영 함수** 다 — 하니스가 운영과 다른 경로를
    *    타지 않게 기본을 운영으로 두는 것이 이 저장소의 방식이다
@@ -163,6 +191,33 @@ export function isPubliclyRoutableHttpUrl(raw: string): boolean {
  * 🔴 **throw 하지 않는다.** 후보 하나의 실패가 나머지를 죽이지 않는다
  *    (`gemini-candidate-pool` 과 같은 격리 패턴).
  */
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴🔴 POLICY-GATE-01 — **수집 정책 판정의 owner 는 «여기 하나» 다**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 생산자마다 `if (webSearch) … if (registry) …` 로 **복제하지 않는다**(CPO §4).
+ *    복제하면 다음 생산자에서 **또** 비대칭이 난다 — 그게 이 WU 가 생긴 이유다.
+ * 🟢 그래서 **export** 한다 — Gemini 경로도 같은 술어를 쓴다(사본 0).
+ * 🔴 URL 을 파싱할 수 없으면 **막지 않는다** — 그 자리는 이미 `NOT_PUBLIC_HOST` 가
+ *    본다. 여기서 「모르면 차단」을 하면 정책이 아니라 **다른 게이트** 가 된다.
+ */
+export function isCollectionBlocked(url: string, notAvailableDomains?: ReadonlySet<string>): boolean {
+  if (!notAvailableDomains || notAvailableDomains.size === 0) return false;
+  let host: string;
+  try {
+    host = new URL(url).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+  for (const raw of notAvailableDomains) {
+    const d = raw.trim().toLowerCase();
+    if (!d) continue;
+    if (host === d || host.endsWith(`.${d}`)) return true;
+  }
+  return false;
+}
+
 export async function collectUrlCandidatePool(input: UrlCandidatePoolInput): Promise<UrlCandidatePoolResult> {
   const fetchFacts = input.fetchFacts ?? factsFromProductUrl;
   const metrics: UrlCandidatePoolMetrics = {
@@ -191,6 +246,17 @@ export async function collectUrlCandidatePool(input: UrlCandidatePoolInput): Pro
     }
     if (input.existingCanonicalUrls.has(canonicalizeProductUrl(url).toLowerCase())) {
       metrics.dropped.push({ url, reason: "ALREADY_CANDIDATE" });
+      continue;
+    }
+    /**
+     * 🔴🔴🔴 POLICY-GATE-01 — **약관 경계. HTTP «앞» 이다.**
+     *    🔴 Search 가 그 URL 을 찾은 것 자체는 막지 않는다 — **여는 것** 만 막는다.
+     *    🔴 매칭은 저장소의 기존 관용구 그대로다(`host === d || host.endsWith("." + d)`,
+     *       `market-intelligence.ts:77` · `supported-sellers.ts:90` 과 같은 식) —
+     *       새 규칙을 만들지 않는다.
+     */
+    if (isCollectionBlocked(url, input.notAvailableDomains)) {
+      metrics.dropped.push({ url, reason: "COLLECTION_NOT_AVAILABLE" });
       continue;
     }
     eligible.push(url);

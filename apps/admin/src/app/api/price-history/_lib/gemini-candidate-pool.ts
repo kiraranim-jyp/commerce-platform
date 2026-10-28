@@ -10,6 +10,8 @@ import {
 } from "@commerce/crawler/src/discovery-core";
 import { factsFromProductUrl, type ComparisonCandidate, type ComparisonSearchResult } from "@commerce/crawler";
 import type { ProductIdentityDna } from "@commerce/shared";
+/** 🔴 POLICY-GATE-01 — 정책 술어의 **owner 는 하나** 다. 여기서 다시 적지 않는다. */
+import { isCollectionBlocked } from "./url-candidate-pool";
 /** 🟢 WU-024 — 공용 primitive. re-export 는 지역 binding 을 만들지 않으므로 따로 import 한다. */
 import {
   groupCandidatesByHost,
@@ -87,6 +89,12 @@ export interface GeminiPoolInput {
   maxQueries: number;
   /** 기존 domestic 결과의 정규화 URL — §5 중복 제거용. */
   existingNormalizedUrls: ReadonlySet<string>;
+  /**
+   * 🔴🔴 POLICY-GATE-01 — **자동수집 금지 도메인**(`NOT_AVAILABLE`).
+   *    🟢 술어는 `url-candidate-pool` 의 `isCollectionBlocked` **하나** 를 쓴다(사본 0).
+   *    🔴 생산자마다 정책을 다시 해석하지 않는다 — 그 비대칭이 이 WU 의 원인이다.
+   */
+  notAvailableDomains?: ReadonlySet<string>;
 }
 
 /** §10 — 🔴 Gemini API 호출과 우리 서버의 resolve/fetch 를 **같은 칸에 담지 않는다.** */
@@ -286,6 +294,11 @@ export async function collectGeminiCandidatePool(input: GeminiPoolInput): Promis
       if (seen.has(key)) continue;
       seen.add(key);
       try {
+        /**
+         * 🔴🔴🔴 POLICY-GATE-01 — **약관 경계는 resolve/fetch «앞» 이다.**
+         *    🔴 `resolveCandidate` 도 HTTP 를 쓴다 — 그 뒤에 두면 이미 연 것이다.
+         */
+        if (isCollectionBlocked(found.url, input.notAvailableDomains)) continue;
         metrics.resolveCalls += 1;
         const resolved = await resolveCandidate(found.url, [found], probe);
         if (resolved.classification !== "PRODUCT_PAGE") continue;

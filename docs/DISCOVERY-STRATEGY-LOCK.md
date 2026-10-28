@@ -1809,3 +1809,84 @@ Query Selection **HOLD 유지** · 1 Product = 1 Search **유지**
 ```
 
 **🔵 상태 — `403 복구 = HOLD`(가치 상한 1~2건 · 비용 미확정). 🔴🔴 `정책 비대칭 = CPO 판정 필요`.**
+
+---
+
+## 부록 AE. DISCOVERY POLICY-GATE-01 — **정책은 생산자가 아니라 사이트가 결정한다** (2026-10-28)
+
+🔴 CPO 확정: 「수집 가능 여부는 **어디서 URL 을 발견했는가** 가 아니라 **어떤 사이트인가** 를
+기준으로 **동일하게** 적용한다.」 추가 Search **0** · Query/Identity/MI/Registry **변경 0**.
+
+### AE-1. 기존 정책 위치 · AI Search 우회 위치
+
+```
+기존 게이트   `comparison-search/index.ts:285`
+              collectionStrategy !== AUTO_API && !== AUTO_SCRAPE → unsupported
+우회 지점     `collectUrlCandidatePool` · `collectGeminiCandidatePool`
+              ⟹ 등록부를 **보지 않고** 바로 fetch 했다
+실측 피해     `11st.co.kr` = NOT_AVAILABLE 인데 AI Search 경로가 **실제로 크롤**했다(E2E-06)
+```
+
+### AE-2. 🔴🔴 `MANUAL` 을 같이 막지 않았다 — 중요한 구분
+
+```
+기존 등록부 게이트은 **AUTO_* 가 아니면 전부** 막는다(= MANUAL 포함).
+🔴 그러나 `MANUAL` 의 뜻은 **「아직 조사하지 않았다」** 이고 약관 금지가 아니다
+   (메모 `manual-means-uninvestigated-not-uncollectable`).
+🔴 그대로 복사했다면 **`danawa`(MANUAL)가 사라졌다** — 현재 생존 후보 2건 중 하나다.
+🟢 그래서 이 게이트는 **`NOT_AVAILABLE` 만** 본다. 계약(M5)이 `MANUAL` 혼입을 막는다.
+```
+
+### AE-3. 공통 gate 위치 — **owner 하나**
+
+```
+url-candidate-pool.ts  export function isCollectionBlocked(url, notAvailableDomains)
+                       🟢 매칭은 저장소 기존 관용구 그대로(host === d || host.endsWith("."+d))
+                       🔴 파싱 실패 시 **막지 않는다**(그 자리는 NOT_PUBLIC_HOST 소관)
+적용 지점              ⒜ pool 의 **HTTP 앞** 루프(NOT_PUBLIC_HOST · ALREADY_CANDIDATE 다음)
+                       ⒝ gemini pool 의 **resolveCandidate 앞**(resolve 도 HTTP 를 쓴다)
+새 drop 사유           `COLLECTION_NOT_AVAILABLE`
+                       🔴 `NOT_PRODUCT_PAGE`/`UNREACHABLE` 과 **같은 칸에 넣지 않는다**
+```
+
+### AE-4. 변경 파일 · producer 적용
+
+| 파일 | 변경 |
+|---|---|
+| `url-candidate-pool.ts` | 사유 1 · 입력 1 · 술어 1(export) · 게이트 1 |
+| `gemini-candidate-pool.ts` | 입력 1 · 게이트 1(**import 해서 쓴다** · 사본 0) |
+| `run-domestic-price-check.ts` | 집합 파생 1(**추가 DB 0**) + 배선 **5** |
+
+```
+__url_candidates__ 🟢 · __reviewed_same__ 🟢 · __domestic_listing__ 🟢 ·
+__web_search__ 🟢 · __gemini_discovery__ 🟢(flag OFF — 오늘 효과 0) ·
+__overseas_auto__ — 🟢 **자기 등록부(comparison_shops) 안에서만** 돈다(이미 정책 범위)
+등록부 검색 — 🟢 기존 게이트 **그대로**(계약 M2)
+```
+
+### AE-5. 11st 실제 계약 결과
+
+```
+전(잘못)  Search O · Pool O · Crawl **O** · Evidence **O**
+후(올바름) Search O · Pool O · Policy **NOT_AVAILABLE** · Crawl **X** · Evidence **X**
+🔴 Search URL 발견 자체는 **실패로 기록하지 않는다**(분모 보존 · 계약 M7)
+```
+
+### AE-6. 변이 G1~G6 — **전부 FAIL**
+
+```
+G1 pool 게이트 제거 2 · G2 술어 무력화 3 · G3 서브도메인 매칭 제거 3 ·
+G4 web-search 배선 제거 1 · G5 **MANUAL 까지 차단** 1 · G6 Gemini 게이트 제거 1
+🔴 G6 는 **1차에 0 failed** 였다 — 내 단언이 호출이 아니라 **import 줄** 을 집었다.
+   🟢 호출 문자열로 고쳐 1 FAIL. (위치 프록시의 전형적 실패 · 이 트랙에서 반복된 함정)
+```
+
+### AE-7. 🔴 이 변경이 **줄이는** 것
+
+```
+현재 대표 실행 기준 — 11st 1건이 후보에서 빠진다(그것이 **의도** 다).
+🔴 그러므로 「국내 후보가 줄었다」를 회귀로 읽지 않는다. 약관 경계를 맞춘 결과다.
+🟡 남는 허용 대상의 실제 Crawl 손실(403 포함)은 **그 다음에** 다시 본다.
+```
+
+**🔵 상태 — 정책 비대칭 **해소**. 403 대응은 **HOLD 유지**.**
