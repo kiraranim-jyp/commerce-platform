@@ -1,4 +1,7 @@
-import { buildDiscoverySearchQuery } from "@commerce/crawler/src/discovery-core/query-planner";
+import {
+  buildCompositeDiscoveryQuery,
+  buildDiscoverySearchQuery,
+} from "@commerce/crawler/src/discovery-core/query-planner";
 import type { ProductIdentity } from "@commerce/crawler/src/discovery-core/types";
 
 /**
@@ -79,6 +82,15 @@ export interface WebSearchPoolInput {
   search?: (query: string) => Promise<string[]>;
   /** 🟢 테스트 주입점 — 운영은 `process.env.APIFY_API_TOKEN`. */
   token?: string | null;
+  /**
+   * 🔴🔴 **측정 전용 훅**(QUERY-SIGNAL-AB · CPO 2026-10-29) — 같은 10개 상품으로
+   *    **판매처 신호 두 개** 를 비교하기 위한 자리다.
+   *
+   * 🔴 **운영 호출부는 넘기지 않는다** ⟹ 안 넘기면 **오늘 동작 그대로** 다.
+   * 🔴 Query **구조/개수** 는 바뀌지 않는다 — 신호 문자열 하나만 갈아 끼운다.
+   *    **1 Product = 1 Search** 는 그대로다(`MAX_SEARCHES_PER_PRODUCT = 1`).
+   */
+  signal?: string | null;
 }
 
 async function apifySearch(query: string, token: string): Promise<string[]> {
@@ -124,7 +136,13 @@ export async function collectWebSearchUrls(input: WebSearchPoolInput): Promise<W
   };
 
   /** ① 🔴 질의 owner 는 **하나** 다 — 여기서 문자열을 조립하지 않는다. */
-  const query = buildDiscoverySearchQuery(input.identity);
+  /**
+   * 🔴 Query owner 는 **여전히 하나** 다 — 신호 교체도 그 owner 안에서 일어난다.
+   *    🟢 `signal` 을 안 넘기면 `buildDiscoverySearchQuery` 와 **같은 문자열** 이다.
+   */
+  const query = input.signal
+    ? buildCompositeDiscoveryQuery(input.identity, { signal: input.signal }).text
+    : buildDiscoverySearchQuery(input.identity);
   if (!query) {
     metrics.skipped = "NO_MODEL_CODE";
     return { urls: [], metrics };

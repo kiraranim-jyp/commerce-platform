@@ -164,7 +164,19 @@ const MAX_FACT_TOKENS = 3;
  */
 const QUERY_FUNCTION_WORDS = new Set(["in", "of", "with", "the", "a", "an", "and", "by", "for", "to"]);
 
-export function buildCompositeDiscoveryQuery(identity: ProductIdentity): CompositeDiscoveryQuery {
+export function buildCompositeDiscoveryQuery(
+  identity: ProductIdentity,
+  /**
+   * 🔴🔴 **측정 전용 훅** — CPO 가 요구한 「같은 10개 상품으로 두 신호를 비교」(A/B)에만 쓴다.
+   *
+   * 🔴 **운영 호출부는 이 인자를 넘기지 않는다**(계약 Q12 가 그것을 잠근다) ⟹
+   *    안 넘기면 **오늘 동작 그대로** 다(`categoryScopes` 와 같은 규약).
+   * 🔴 질의 «구조» 는 바뀌지 않는다 — **판매처 신호 문자열 하나** 만 갈아 끼운다.
+   * 🔴 A/B 를 돌린다고 Search 횟수가 늘지 않는다 — **상품당 여전히 1회** 다.
+   */
+  options?: { signal?: string },
+): CompositeDiscoveryQuery {
+  const signal = options?.signal?.trim() || SELLER_SIGNAL;
   const brand = identity.brand?.trim() || null;
   const code = identity.productCode?.trim() || null;
 
@@ -228,7 +240,7 @@ export function buildCompositeDiscoveryQuery(identity: ProductIdentity): Composi
     if (facts.length >= MAX_FACT_TOKENS) break;
   }
 
-  const parts = { brand, code, design, facts, signal: SELLER_SIGNAL };
+  const parts = { brand, code, design, facts, signal };
 
   /**
    * 🔴 **아무 재료도 없으면 질의를 만들지 않는다**(`null`). 신호만 남은 질의는
@@ -247,7 +259,7 @@ export function buildCompositeDiscoveryQuery(identity: ProductIdentity): Composi
     code ? quote(code) : null,
     ...design,
     ...facts,
-    SELLER_SIGNAL,
+    signal,
   ].filter((s): s is string => Boolean(s));
 
   const text = segments.join(" ");

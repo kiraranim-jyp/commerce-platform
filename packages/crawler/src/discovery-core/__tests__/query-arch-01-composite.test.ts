@@ -168,3 +168,47 @@ describe("QUERY-ARCH-01 — 복합 Query", () => {
     expect(call).toContain("input.dna.material");
   });
 });
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴 QUERY-SIGNAL-AB — **측정 훅이 운영을 바꾸지 않는다**(CPO 2026-10-29)
+ * ════════════════════════════════════════════════════════════════════════════
+ */
+describe("QUERY-SIGNAL-AB — 신호 교체 훅", () => {
+  const base2 = id({ brand: "Bobo Choses", productCode: "B226AC009", productName: "Hug Hairy Monster T-shirt" });
+
+  it("Q12 🔴🔴 **인자를 안 넘기면 운영 문자열과 한 글자도 다르지 않다**", () => {
+    expect(buildCompositeDiscoveryQuery(base2).text).toBe(buildDiscoverySearchQuery(base2));
+    expect(buildCompositeDiscoveryQuery(base2, {}).text).toBe(buildDiscoverySearchQuery(base2));
+    /** 🔴 빈 문자열/공백도 **기본값으로 떨어진다**(조용히 신호가 사라지지 않는다). */
+    expect(buildCompositeDiscoveryQuery(base2, { signal: "   " }).text).toBe(buildDiscoverySearchQuery(base2));
+  });
+
+  it("Q13 🟢 신호만 갈린다 — **앞부분은 동일** 하고 꼬리만 다르다", () => {
+    const a = buildCompositeDiscoveryQuery(base2).text!;
+    const b = buildCompositeDiscoveryQuery(base2, { signal: "국내해외 동일상품 판매처" }).text!;
+    expect(b).not.toBe(a);
+    const head = (s: string) => s.replace(/동일상품 판매처$/, "").trim();
+    expect(head(b).replace(/국내해외$/, "").trim(), "질의 본문이 바뀌었다 — 신호 외에는 같아야 한다").toBe(head(a));
+  });
+
+  it("Q14 🔴🔴 **운영 호출부는 그 훅을 쓰지 않는다**", () => {
+    const runner = readFileSync(
+      join(__dirname, "../".repeat(5), "apps/admin/src/app/api/price-history/_lib/run-domestic-price-check.ts"),
+      "utf8",
+    ).replace(/\r\n/g, "\n");
+    const at = runner.indexOf("collectWebSearchUrls({");
+    expect(at).toBeGreaterThan(0);
+    const call = runner.slice(at, runner.indexOf("});", at));
+    expect(call, "운영 경로가 측정 훅을 쓴다 — 신호가 조용히 바뀐다").not.toContain("signal:");
+  });
+
+  it("Q15 🔴 1 Product = 1 Search 는 **신호와 무관하게** 유지된다", () => {
+    const pool = readFileSync(
+      join(__dirname, "../".repeat(5), "apps/admin/src/app/api/price-history/_lib/web-search-pool.ts"),
+      "utf8",
+    );
+    expect(pool).toContain("MAX_SEARCHES_PER_PRODUCT = 1");
+    expect(pool, "신호 분기에서 검색을 두 번 부른다").not.toMatch(/await run\([\s\S]{0,400}await run\(/);
+  });
+});
