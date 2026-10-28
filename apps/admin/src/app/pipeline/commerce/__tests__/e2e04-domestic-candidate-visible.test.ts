@@ -138,4 +138,35 @@ describe("E2E-04 — AI Search 국내 후보가 «화면에» 선다", () => {
       expect(container.textContent ?? "").not.toContain(id);
     }
   });
+
+  /**
+   * 🔴🔴🔴 CPO E2E-04 §「반드시 확인할 것」 — **내부값이 셀러 화면에 나오면 안 된다.**
+   *    🔴 소스가 아니라 **마운트한 DOM 의 글자** 로 본다(소스에는 당연히 있다).
+   *    🟢 셀러가 보는 것은 출처 배지(「AI 검색」)와 한국어 판정 문구뿐이어야 한다.
+   */
+  it("🔴🔴 셀러 화면에 **내부 어휘** 가 글자로 나오지 않는다", async () => {
+    await mount({ ...BASE, webSearch: [krWebSearch, overseasWebSearch], domesticListing: [krListing] });
+    const shown = container.textContent ?? "";
+    const FORBIDDEN = [
+      /** 판정 원문 */
+      "PRESUMED_SAME",
+      "TEXT_CONFIRMED",
+      "COMPARISON",
+      /** 내부 배열/공급자/질의 */
+      "webSearchEvidence",
+      "domesticListingEvidence",
+      "Apify",
+      "apify",
+      "B226AC009\"",
+      /** 점수·문턱 */
+      "threshold",
+      "score",
+      "confidence",
+    ];
+    for (const token of FORBIDDEN) {
+      expect(shown, `내부 어휘 노출: ${token}`).not.toContain(token);
+    }
+    /** 🟢 반대로 **있어야 하는 것** — 출처 배지가 「AI 검색」으로 말한다. */
+    expect(shown).toContain("AI 검색");
+  });
 });

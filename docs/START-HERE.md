@@ -13,10 +13,19 @@
 ```
 CURRENT WU   **DISCOVERY E2E-04** — 🔴 **E2E-03 은 HOLD 였다**(CEO 실제 화면이 반증했다) ·
              🟢 원인 확정 — 패널의 evidence 소비처가 **넷** 인데 E2E-03 은 **하나만** 고쳤다 ·
-             🟢 수정 + **마운트 DOM** 으로 재검증(소스 계약만으로 끝내지 않았다) · 🟡 CEO 확인 1회
-NEXT         🔵 **실제 상품에서 Candidate URL → Crawl → Evidence → Identity 확인**(MI 는 그 다음)
+             🟢 수정 + **마운트 DOM** 으로 재검증(소스 계약만으로 끝내지 않았다)
+             🟡 **CPO 판정 = HOLD** — 실제 Production 화면만 남았다 · **CTO 작업 없음**
+NEXT         🔵 CEO 1회 확인 결과에 달렸다 —
+             🟢 국내 후보가 보이면 **GO** ⟹ 그 다음은 CPO 가 지정
+             🔴 안 보이면 **배선을 더 추측하지 않고** 「런타임 계측 WU」로 간다
+                (response → state → DOM 을 **한 번에** 캡처 · 재실행으로 때우지 않는다)
              🔵 전략은 **docs/DISCOVERY-STRATEGY-LOCK.md** 에 고정됐다(세션 바뀌어도 남는다)
-CEO ACTION   🔵🔵 **있다** — docs/DISCOVERY-E2E-02-SCREEN-CHECK.md 절차대로 **「새 상품 분석」** 1회
+CEO ACTION   🔵🔵 **있다** — docs/DISCOVERY-E2E-02-SCREEN-CHECK.md **부록** 대로
+             현재 배포본에서 **「새 상품 분석」 «1회»** · 볼 것은 셋뿐
+             (① 🇰🇷 국내 후보가 행으로 보이는가 + **「AI 검색」 출처 표시** ② 해외 후보 유지
+              ③ 국내 참고가격 · 해외 최저 소싱가 정상)
+             🔴🔴 **같은 상품을 다시 분석하지 않는다** — `1 Product = 1 Search` 를
+             우리가 먼저 깨는 일이다(CPO 정정 · CTO 의 「한 번 더 돌리면 된다」는 **철회됐다**)
 CLOSED       UX-01 · UX-02 · SAME-01 · SAME-02 · STEP 5 ·
              **SAME-03**(화면 + CEO GT 10/10) · **SAME-04**(FN 3건 원인 확정) ·
              **DESC-EVIDENCE-01**(provenance + 6축 + probe 4축 · 운영 2경로 배선) ·
