@@ -89,11 +89,12 @@ describe("CORE-1 B — 한글 브랜드 alias 는 «기존 자산» 만 쓴다",
      * 🔴 이 가드가 막는 것은 「허그 헤어리 몬스터」같은 **상품별 한글 음역 사전** 이다
      *    (CPO FINAL-2 가 추가하지 «않기로» 한 그 자산). 아래 셋은 상품과 무관하게
      *    **항상 같은 문자열** 이라 그 부류가 아니다.
-     * 🟢 `"동일상품 판매처"` 는 QUERY-ARCH-01 의 판매처 신호이고 **SP-09 에서 실제로
-     *    측정됐다**(전체 Evidence 판매처 9 → 17 · SP-10 재관측 합계에서도 최고 39).
+     * 🟢 `"국내해외 동일상품 판매처"` 는 QUERY-ADOPT-01 이 **Production A/B 로 채택** 한
+     *    운영 신호다 — 같은 10개 상품에서 raw 74 → **85** · 🇰🇷 URL **1 → 8**(실측).
+     *    🔴 그 앞 판(`동일상품 판매처`)은 더 이상 운영 신호가 아니다.
      * 🔴 그리고 **상한을 둔다** — 이 목록이 길어지는 순간 그것이 사전이다.
      */
-    const allowed = new Set(['"구매"', '"가격"', '"동일상품 판매처"']);
+    const allowed = new Set(['"구매"', '"가격"', '"국내해외 동일상품 판매처"']);
     expect(allowed.size, "🔴 고정 의도 키워드가 늘면 그것이 사전이다").toBeLessThanOrEqual(3);
     const unexpected = koWords.filter((w) => !allowed.has(w));
     expect(unexpected, `🔴 새 한글 어휘가 생겼다: ${JSON.stringify(unexpected)}`).toHaveLength(0);

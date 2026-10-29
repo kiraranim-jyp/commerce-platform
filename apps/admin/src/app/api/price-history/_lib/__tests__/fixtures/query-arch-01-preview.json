@@ -12,7 +12,7 @@
       "category": "T-shirts"
     },
     "query": {
-      "text": "\"Bobo Choses\" \"B226AC009\" Hug Hairy Monster T-shirt Light blue loose fit 동일상품 판매처",
+      "text": "\"Bobo Choses\" \"B226AC009\" Hug Hairy Monster T-shirt Light blue loose fit 국내해외 동일상품 판매처",
       "parts": {
         "brand": "Bobo Choses",
         "code": "B226AC009",
@@ -26,9 +26,9 @@
           "Light blue",
           "loose fit"
         ],
-        "signal": "동일상품 판매처"
+        "signal": "국내해외 동일상품 판매처"
       },
-      "tokenCount": 13
+      "tokenCount": 14
     }
   },
   {
@@ -44,7 +44,7 @@
       "category": "Baby Boy"
     },
     "query": {
-      "text": "\"BOSS\" Baby Boys Logo Top White 100% Cotton 동일상품 판매처",
+      "text": "\"BOSS\" Baby Boys Logo Top White 100% Cotton 국내해외 동일상품 판매처",
       "parts": {
         "brand": "BOSS",
         "code": null,
@@ -58,9 +58,9 @@
           "White",
           "100% Cotton"
         ],
-        "signal": "동일상품 판매처"
+        "signal": "국내해외 동일상품 판매처"
       },
-      "tokenCount": 10
+      "tokenCount": 11
     }
   },
   {
@@ -76,7 +76,7 @@
       "category": "Home > Fashion  Baby > Girl > Trousers, Jeans, Leggings, Jogging Bottoms > Holly Hearts Ribbed Velvet Baby Pants | Pale Pink"
     },
     "query": {
-      "text": "\"Louis Louise\" Holly Hearts Ribbed Velvet Pink 100% Cotton 동일상품 판매처",
+      "text": "\"Louis Louise\" Holly Hearts Ribbed Velvet Pink 100% Cotton 국내해외 동일상품 판매처",
       "parts": {
         "brand": "Louis Louise",
         "code": null,
@@ -90,9 +90,9 @@
           "Pink",
           "100% Cotton"
         ],
-        "signal": "동일상품 판매처"
+        "signal": "국내해외 동일상품 판매처"
       },
-      "tokenCount": 11
+      "tokenCount": 12
     }
   },
   {
@@ -108,7 +108,7 @@
       "category": "Sweatshirt"
     },
     "query": {
-      "text": "\"Main Story\" \"AW26MS185\" Bubble Sweatshirt Melange Grey 100% Organic Cotton relaxed fit 동일상품 판매처",
+      "text": "\"Main Story\" \"AW26MS185\" Bubble Sweatshirt Melange Grey 100% Organic Cotton relaxed fit 국내해외 동일상품 판매처",
       "parts": {
         "brand": "Main Story",
         "code": "AW26MS185",
@@ -122,9 +122,9 @@
           "100% Organic Cotton",
           "relaxed fit"
         ],
-        "signal": "동일상품 판매처"
+        "signal": "국내해외 동일상품 판매처"
       },
-      "tokenCount": 14
+      "tokenCount": 15
     }
   },
   {
@@ -140,7 +140,7 @@
       "category": "vinterjakker"
     },
     "query": {
-      "text": "\"Mini rodini\" Violas aop Winter jacket 100% recycled polyester 동일상품 판매처",
+      "text": "\"Mini rodini\" Violas aop Winter jacket 100% recycled polyester 국내해외 동일상품 판매처",
       "parts": {
         "brand": "Mini rodini",
         "code": null,
@@ -153,9 +153,9 @@
         "facts": [
           "100% recycled polyester"
         ],
-        "signal": "동일상품 판매처"
+        "signal": "국내해외 동일상품 판매처"
       },
-      "tokenCount": 11
+      "tokenCount": 12
     }
   },
   {
@@ -171,7 +171,7 @@
       "category": null
     },
     "query": {
-      "text": "\"Sergio Tacchini\" Men's Damarindo Pique Polo Humus 100% Cotton true to size 동일상품 판매처",
+      "text": "\"Sergio Tacchini\" Men's Damarindo Pique Polo Humus 100% Cotton true to size 국내해외 동일상품 판매처",
       "parts": {
         "brand": "Sergio Tacchini",
         "code": null,
@@ -186,9 +186,9 @@
           "100% Cotton",
           "true to size"
         ],
-        "signal": "동일상품 판매처"
+        "signal": "국내해외 동일상품 판매처"
       },
-      "tokenCount": 14
+      "tokenCount": 15
     }
   },
   {
@@ -204,7 +204,7 @@
       "category": null
     },
     "query": {
-      "text": "\"Sergio Tacchini\" Men's Fall Cericho T-Shirt Brilliant White 100% Cotton true to size 동일상품 판매처",
+      "text": "\"Sergio Tacchini\" Men's Fall Cericho T-Shirt Brilliant White 100% Cotton true to size 국내해외 동일상품 판매처",
       "parts": {
         "brand": "Sergio Tacchini",
         "code": null,
@@ -219,9 +219,9 @@
           "100% Cotton",
           "true to size"
         ],
-        "signal": "동일상품 판매처"
+        "signal": "국내해외 동일상품 판매처"
       },
-      "tokenCount": 15
+      "tokenCount": 16
     }
   },
   {
@@ -237,7 +237,7 @@
       "category": null
     },
     "query": {
-      "text": "\"Sergio Tacchini\" Men's Magro Long Sleeve Brilliant White true to size 동일상품 판매처",
+      "text": "\"Sergio Tacchini\" Men's Magro Long Sleeve Brilliant White true to size 국내해외 동일상품 판매처",
       "parts": {
         "brand": "Sergio Tacchini",
         "code": null,
@@ -251,9 +251,9 @@
           "Brilliant White",
           "true to size"
         ],
-        "signal": "동일상품 판매처"
+        "signal": "국내해외 동일상품 판매처"
       },
-      "tokenCount": 13
+      "tokenCount": 14
     }
   },
   {
@@ -269,7 +269,7 @@
       "category": null
     },
     "query": {
-      "text": "\"Sergio Tacchini\" Men's Racchetto Polo Brilliant White 100% Polyester true to size 동일상품 판매처",
+      "text": "\"Sergio Tacchini\" Men's Racchetto Polo Brilliant White 100% Polyester true to size 국내해외 동일상품 판매처",
       "parts": {
         "brand": "Sergio Tacchini",
         "code": null,
@@ -283,9 +283,9 @@
           "100% Polyester",
           "true to size"
         ],
-        "signal": "동일상품 판매처"
+        "signal": "국내해외 동일상품 판매처"
       },
-      "tokenCount": 14
+      "tokenCount": 15
     }
   },
   {
@@ -301,7 +301,7 @@
       "category": null
     },
     "query": {
-      "text": "\"Sergio Tacchini\" Men's Trattino Short Galaxy Blue true to size 동일상품 판매처",
+      "text": "\"Sergio Tacchini\" Men's Trattino Short Galaxy Blue true to size 국내해외 동일상품 판매처",
       "parts": {
         "brand": "Sergio Tacchini",
         "code": null,
@@ -314,9 +314,9 @@
           "Galaxy Blue",
           "true to size"
         ],
-        "signal": "동일상품 판매처"
+        "signal": "국내해외 동일상품 판매처"
       },
-      "tokenCount": 12
+      "tokenCount": 13
     }
   }
 ]

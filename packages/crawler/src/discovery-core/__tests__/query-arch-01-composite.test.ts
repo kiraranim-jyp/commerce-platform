@@ -186,10 +186,11 @@ describe("QUERY-SIGNAL-AB — 신호 교체 훅", () => {
 
   it("Q13 🟢 신호만 갈린다 — **앞부분은 동일** 하고 꼬리만 다르다", () => {
     const a = buildCompositeDiscoveryQuery(base2).text!;
-    const b = buildCompositeDiscoveryQuery(base2, { signal: "국내해외 동일상품 판매처" }).text!;
+    const b = buildCompositeDiscoveryQuery(base2, { signal: "동일상품 판매처" }).text!;
     expect(b).not.toBe(a);
-    const head = (s: string) => s.replace(/동일상품 판매처$/, "").trim();
-    expect(head(b).replace(/국내해외$/, "").trim(), "질의 본문이 바뀌었다 — 신호 외에는 같아야 한다").toBe(head(a));
+    /** 🔴 꼬리(신호)만 떼면 **본문이 같아야** 한다 — 신호 외에는 바뀌지 않는다. */
+    const head = (s: string) => s.replace(/(국내해외 )?동일상품 판매처$/, "").trim();
+    expect(head(b), "질의 본문이 바뀌었다 — 신호 외에는 같아야 한다").toBe(head(a));
   });
 
   it("Q14 🔴🔴 **운영 호출부는 그 훅을 쓰지 않는다**", () => {
