@@ -21,7 +21,25 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **QUERY-SIGNAL-AB** — 🟢 **측정 완료** · 운영 Query **변경 0**(A 유지)
+CURRENT WU   **QUERY-ADOPT-01** — 🟡 **PARTIAL** · 운영 Query **채택·배포 완료**
+             🟢 운영 신호 = **「국내해외 동일상품 판매처」**(CPO 채택 · A/B 실측 근거)
+                구조·개수 불변 · **1 Product = 1 Search** 유지 · Preview **10/10**
+             🟢 Production E2E **10/10 Search** · raw 67 → evidence **33**
+                SAME **7** · PRESUMED 26 · 🇰🇷 **4** · 🌎 29 · **UNKNOWN 0**
+             🟢🟢 **국내 축이 처음으로 끝까지 갔다** — Main Story `miniboutique.co.kr`
+                **KRW 117,000 · SAME · tier EXACT · market KR** (URL+판매처+가격+판정이
+                한 후보 객체에) · 국내 참고가격 3건(deuxbebe·donokids·miniboutique)
+             🟢 **재투입 누락을 고쳤고 즉시 발화** — Bobo Choses 재투입 10 → evidence 6 → 🇰🇷 ₩88,000
+             🟢 **`117` 결함 사라짐** — domesticLowestKrw = **117000**(deuxbebe 수정+오염행 삭제 확인)
+             🔴 한계 — Bobo/Mini rodini raw **0**(SP-10 실행 간 변동 · A/B 땐 85>74) ·
+                테니스 5 중 4 가 evidence 0(**Candidate/Crawl 축** · 이번 범위 아님) ·
+                해외 집계 상한 오염(12,700 GBP)은 그대로(WU-111 · 가격 정책)
+             🟢 1회용 토큰/라우트 **폐기 완료**(env 0 · 소스 참조 0 · HTTP 404 미사용)
+             🟡 **CEO Action 1회** — Main Story 화면: ₩117,000 · miniboutique 동일상품 ·
+                그 행에 URL/판매처/가격이 같이 있는가
+             🟢 전문 `docs/HANDOFF-QUERY-ADOPT-01.md`
+[직전]       **QUERY-SIGNAL-AB**
+[낡음]       **QUERY-SIGNAL-AB** — 🟢 **측정 완료** · 운영 Query **변경 0**(A 유지)
              🔴 **「테스트 2」는 이번 이전에 실행된 적이 없다**(내가 만든 적 없음)
                 🟡 가까운 변종은 SP-09/10 의 `S-C`「국내외 판매처」 —
                    국내 Evid 1→7 이지만 **Crawl 17→8 · 한 상품 해외 0** 이었다
