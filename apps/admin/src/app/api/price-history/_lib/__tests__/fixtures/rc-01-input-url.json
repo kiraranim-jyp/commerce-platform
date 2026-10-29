@@ -7,7 +7,7 @@
     "pathname": "/product/%EB%A9%94%EC%9D%B8%EC%8A%A4%ED%86%A0%EB%A6%AC-aw26ms185-bubble-sweatshirt-grey-melange/4120/category/1/display/3/",
     "decodedPath": "/product/메인스토리-aw26ms185-bubble-sweatshirt-grey-melange/4120/category/1/display/3/",
     "query": {
-      "text": "\"MAIN STORY\" 메인스토리 AW26MS185 - Bubble Grey FW26 국내해외 동일상품 판매처",
+      "text": "\"MAIN STORY\" \"AW26MS185\" 메인스토리 - Bubble Grey FW26 국내해외 동일상품 판매처",
       "tokens": 11
     },
     "shape": "PRODUCT_PAGE",
@@ -23,7 +23,7 @@
     },
     "dna": {
       "brand": "MAIN STORY",
-      "code": null,
+      "code": "AW26MS185",
       "title": "[메인스토리]  AW26MS185 - Bubble Sweatshirt - Grey Melange 8Y",
       "color": "Grey",
       "material": "FW26",

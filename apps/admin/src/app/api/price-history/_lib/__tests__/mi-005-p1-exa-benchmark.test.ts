@@ -161,8 +161,15 @@ describe("① 🟢 측정 파이프라인 사전 검증 (호출 0 · 비용 ₩0
     expect(rows.every((r) => r.selfRef === false)).toBe(true);
 
     const targets = await loadTargets();
-    /** 🟢 분모가 **6건** 임을 잠근다 — 20건이 섞이면 여기서 깨진다. */
-    expect(targets.length).toBe(6);
+    /**
+     * 🟢 분모를 잠근다 — 20건이 섞이면 여기서 깨진다.
+     * 🔴🔴 **ROOTCAUSE-FIX-01 에서 6 → 7 로 바뀌었다.** `loadTargets` 가
+     *    `if (!code) continue` 로 거르는데, 품번 생산자에 **제목 축** 이 추가돼
+     *    스냅샷 하나가 품번을 새로 얻었다 ⟹ **의도된 증가** 다(완화가 아니다).
+     * 🔴 **그 7번째가 어느 스냅샷이고 값이 옳은지는 «미검증» 이다** — 확인 전에
+     *    「품번 추출이 좋아졌다」로 읽지 않는다. 다음 작업의 첫 항목이다.
+     */
+    expect(targets.length).toBe(7);
     expect(targets.every((t) => t.query.length > 0)).toBe(true);
 
     writeFileSync(

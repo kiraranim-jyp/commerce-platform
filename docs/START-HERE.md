@@ -21,7 +21,22 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **E2E-ROOTCAUSE-01 Track A** — 🟡 PARTIAL · 운영 코드 변경 **0**
+CURRENT WU   **E2E-ROOTCAUSE-FIX-01** — 🟡 PARTIAL · **1순위만 구현**(CPO 우선순위)
+             🟢🟢 **제목에서 품번을 읽는다** — Little Luna `code: null → AW26MS185`
+                Query 에 **"AW26MS185"** 가 식별자(따옴표)로 들어간다(실측)
+             🟢 새 모양 규칙 **0** — slug 축과 같은 규칙(6~20자 · 영숫자 · 글자+숫자 ·
+                숫자시작 금지) ⟹ `8Y`·`FW26`·`2026` 이 **구조적으로** 빠진다
+             🟢 우선순위 계약 = **라벨 → 제목 → slug**(기존 값 덮어쓰기 금지 · 소스로 잠금)
+             🔴🔴 **2·3순위는 못 했다**(세션 용량) — Cafe24 `price = null` ·
+                `material = FW26`(시즌) · `color = "Our Grey"` 는 **그대로 남아 있다**
+             🔴🔴 **기존 벤치마크 셋에서 「품번 보유 6 → 7」** 이 됐다(의도된 증가) —
+                🔴 **그 7번째가 어느 스냅샷이고 값이 옳은지는 «미검증»** 이다.
+                   계약에 그대로 적어 뒀다. **다음 작업의 첫 항목.**
+             🔴 Track B/C(후보 funnel)도 **미실행** — 재료는 `query-adopt-01-production.json`
+             🔴 내 실수 1 — `toBe(6)` 일괄 치환이 **무관한 비용 상한까지** 바꿨다(되돌림)
+             🟢 전문 `docs/HANDOFF-E2E-ROOTCAUSE-01.md`(Track A 원인) + 아래 커밋
+[직전]       **E2E-ROOTCAUSE-01 Track A**
+[낡음]       **E2E-ROOTCAUSE-01 Track A** — 🟡 PARTIAL · 운영 코드 변경 **0**
              🔴🔴 **「한글 URL 이라 못 읽는다」는 반증됐다** — Little Luna 는
                 shape PRODUCT_PAGE · 디코딩 정상 · HTML OK · 이미지 **18** ·
                 제목/브랜드/색상 확보 · Query **생성됨**

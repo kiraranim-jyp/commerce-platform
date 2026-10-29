@@ -1,6 +1,7 @@
 import {
   buildCoreTitleTokens,
   extractCodeLikeSlugSegment,
+  extractCodeLikeTitleToken,
   extractFitPhrase,
   extractLabeledProductCode,
   extractUrlSlug,
@@ -142,8 +143,22 @@ function resolveIdentifier(product: CanonicalProduct): ProductIdentifier | null 
  * 이것이 "SKU가 다르니 다른 상품"이라는 규칙으로 되돌아가지 않는 유일한 길이다.
  */
 function resolveBrandModelCode(product: CanonicalProduct): string | null {
+  /**
+   * 🔵 ROOTCAUSE-FIX-01 §4 — **우선순위는 셋이고 그 순서가 계약이다**(CPO 명시):
+   * ```
+   * ⒜ 기존 명시 라벨(설명문)  →  ⒝ **제목**(신규)  →  ⒞ URL slug
+   * ```
+   * 🔴 **기존에 정상 추출되던 값을 덮어쓰지 않는다** — ⒜ 가 값을 내면 거기서 끝이다.
+   * 🔴 ⒝ 의 근거(실측 · E2E-ROOTCAUSE-01): `littleluna.co.kr` 제목에
+   *    `AW26MS185` 가 그대로 있는데 ⒜⒞ 가 둘 다 못 읽어 **null** 이었다
+   *    (그 slug 는 `메인스토리-aw26ms185-…` 라 한글이 섞여 ⒞ 가 실패한다).
+   * 🟢 ⒝ 는 ⒞ 와 **같은 모양 규칙** 을 쓴다 ⟹ `8Y`·`FW26` 이 구조적으로 빠진다.
+   * 🔴 ⒞ 를 **⒝ 뒤에** 둔다 — slug 는 판매처가 만든 문자열이고 제목보다 약하다.
+   */
   const labeled = extractLabeledProductCode(product.description?.value);
   if (labeled) return labeled;
+  const fromTitle = extractCodeLikeTitleToken(product.title?.value);
+  if (fromTitle) return fromTitle;
   return extractCodeLikeSlugSegment(extractUrlSlug(product.sourceUrl));
 }
 

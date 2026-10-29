@@ -162,7 +162,7 @@ describe("E2E-HISTORY-10 — 병목 owner", () => {
     expect(withCode).not.toBe('"B226AC009"');
   });
 
-  it("🔴🔴 품번 생산자는 **둘뿐** 이다 — 확장 지점이 여기다", () => {
+  it("🔵 품번 생산자는 **셋** 이다 — 라벨 → 제목 → slug(ROOTCAUSE-FIX-01)", () => {
     /** 🔴 깊이를 손으로 세지 않는다 — 존재하는 경로를 **확인해서** 쓴다. */
     const DNA_SRC = join(__dirname, "../".repeat(8), "packages/shared/src/product-identity-dna.ts");
     expect(existsSync(DNA_SRC), "품번 생산자 파일 경로가 틀렸다").toBe(true);
@@ -182,7 +182,13 @@ describe("E2E-HISTORY-10 — 병목 owner", () => {
     expect(
       calls,
       "품번 생산자가 바뀌었다 — E2E-HISTORY-10 의 8/10 NO_MODEL_CODE 가 달라졌을 수 있다",
-    ).toEqual(["extractLabeledProductCode", "extractCodeLikeSlugSegment", "extractUrlSlug"]);
+    ).toEqual([
+      "extractLabeledProductCode",
+      /** 🔵 ROOTCAUSE-FIX-01 — **제목 축을 추가했다**(CPO 1순위). 순서가 계약이다. */
+      "extractCodeLikeTitleToken",
+      "extractCodeLikeSlugSegment",
+      "extractUrlSlug",
+    ]);
   });
 
   /**

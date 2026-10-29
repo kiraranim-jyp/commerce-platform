@@ -930,6 +930,41 @@ export function extractLabeledProductCode(text: string | null | undefined): stri
 const MIN_SLUG_CODE_LENGTH = 6;
 const MAX_SLUG_CODE_LENGTH = 20;
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 ROOTCAUSE-FIX-01 §4 — **제목에 버젓이 있는 품번을 읽는다**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 실측(E2E-ROOTCAUSE-01) — `littleluna.co.kr` 제목이
+ *    `[메인스토리]  AW26MS185 - Bubble Sweatshirt - Grey Melange 8Y` 인데
+ *    `brandModelCode` 가 **null** 이었다. 생산자가 ⒜ 설명문 라벨 ⒝ URL slug
+ *    둘뿐이고 **제목을 보지 않았기** 때문이다(그 slug 는 한글이 섞여 ⒝ 도 실패).
+ *
+ * ── 🟢 **새 규칙을 만들지 않는다 — 아래 slug 축의 모양 규칙을 그대로 쓴다** ──
+ * ```
+ * 길이 6~20 · 영숫자만 · 글자와 숫자를 **둘 다** 포함 · **숫자로 시작하지 않는다**
+ * ⟹ `8Y`(2자) · `FW26`(4자) · `26`(숫자 시작) 이 **구조적으로** 빠진다
+ * ```
+ * 🔴 **가장 긴 후보 하나** 만 쓰고 **동률이면 만들지 않는다**(모르면 UNKNOWN).
+ * 🔴 한글·괄호 토큰은 영숫자 규칙에서 애초에 빠진다.
+ * 🔴 **이 함수는 우선순위를 정하지 않는다** — 그 순서는 `resolveBrandModelCode` 가 갖는다.
+ */
+export function extractCodeLikeTitleToken(title: string | null | undefined): string | null {
+  if (!title) return null;
+  const hits = title
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean)
+    .filter((t) => t.length >= MIN_SLUG_CODE_LENGTH && t.length <= MAX_SLUG_CODE_LENGTH)
+    .filter((t) => /[A-Za-z]/.test(t) && /[0-9]/.test(t))
+    .filter((t) => !/^[0-9]/.test(t));
+  if (hits.length === 0) return null;
+  const max = Math.max(...hits.map((t) => t.length));
+  const longest = hits.filter((t) => t.length === max);
+  /** 🔴 **동률이면 고르지 않는다** — 둘 중 하나를 찍는 순간 그것이 추측이다. */
+  if (longest.length !== 1) return null;
+  return longest[0]!.toUpperCase();
+}
+
 export function extractCodeLikeSlugSegment(slug: string | null | undefined): string | null {
   if (!slug) return null;
   const first = slug.split("-").filter(Boolean)[0];

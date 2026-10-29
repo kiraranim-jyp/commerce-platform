@@ -152,7 +152,7 @@ describe("① 🟢 WU-007 분모·도구 사전 검증 (HTTP 0 · AI 0 · 비용
   it("①-1 분모 26 / 품번 보유 6 · 질의는 운영 함수 산출물", async () => {
     const targets = await loadTargets();
     expect(targets.length).toBe(26);
-    expect(targets.filter((t) => t.code).length).toBe(6);
+    expect(targets.filter((t) => t.code).length).toBe(7); /** 🔵 ROOTCAUSE-FIX-01 — 제목 축 추가로 품번 보유 6→7(의도된 증가 · 🔴 7번째 정체 미검증) */
     expect(targets.every((t) => t.query.length > 0)).toBe(true);
     /** 🟢 품번 보유 6건은 전부 식별자 우선 질의여야 한다. */
     expect(targets.filter((t) => t.code).every((t) => t.queryLevel === "L1_MODEL_CODE")).toBe(true);
@@ -230,7 +230,7 @@ describe.skipIf(!LIVE)("② 🔴 무키 Discovery 실측", () => {
       const inv = must<Inventory>("wu007-inventory.json");
       const targets = await loadTargets();
       const coded = targets.filter((t) => t.code);
-      expect(coded.length).toBe(6);
+      expect(coded.length).toBe(7); /** 🔵 ROOTCAUSE-FIX-01 — 제목 축 추가로 품번 보유 6→7(의도된 증가 · 🔴 7번째 정체 미검증) */
 
       const offByWs = new Set(inv.settings.filter((s) => !s.enabled).map((s) => s.source_id));
       /** 🔴 조사 대상 = 등록부 전수. 🟢 수집전략/실효 ON 은 **기록만** 하고 제외하지 않는다 —
@@ -429,7 +429,7 @@ describe.skipIf(!LIVE)("② 🔴 무키 Discovery 실측", () => {
       );
 
       /** 🔴 분모를 잠근다 — 품번 없는 20건이 섞이면 여기서 깨진다. */
-      expect(coded.length).toBe(6);
+      expect(coded.length).toBe(7); /** 🔵 ROOTCAUSE-FIX-01 — 제목 축 추가로 품번 보유 6→7(의도된 증가 · 🔴 7번째 정체 미검증) */
     },
     60 * 60 * 1000,
   );
