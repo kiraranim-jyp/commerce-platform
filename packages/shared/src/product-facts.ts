@@ -956,7 +956,20 @@ export function extractCodeLikeTitleToken(title: string | null | undefined): str
     .filter(Boolean)
     .filter((t) => t.length >= MIN_SLUG_CODE_LENGTH && t.length <= MAX_SLUG_CODE_LENGTH)
     .filter((t) => /[A-Za-z]/.test(t) && /[0-9]/.test(t))
-    .filter((t) => !/^[0-9]/.test(t));
+    .filter((t) => !/^[0-9]/.test(t))
+    /**
+     * 🔴🔴 **숫자가 하나뿐이면 품번이 아니다**(ROOTCAUSE-FIX-02 STEP 1 실측).
+     *
+     * 1차 구현이 `Sergio Tacchini Men's Magro Long **Sleeve1**` 에서 **`SLEEVE1`** 을
+     * 품번으로 뽑았다 — 제목 오타/변형이 만든 「단어 + 숫자 하나」 모양이다.
+     * 🔴 CPO Case D 가 막으려던 바로 그 부류인데 내 1차 규칙이 놓쳤다.
+     *
+     * 🟢 **사전을 만들지 않는다** — 실제 품번은 숫자를 **여럿** 쓴다
+     *    (`AW26MS185` 5개 · `B226AC009` 6개). `SLEEVE1` 은 **1개** 다.
+     * 🔴 대가 — 숫자가 **정확히 하나** 인 진짜 품번은 놓친다. 🟢 그 방향이
+     *    「모르면 UNKNOWN」이고, 거짓 품번은 **충돌로 오판** 을 만든다.
+     */
+    .filter((t) => (t.match(/[0-9]/g) ?? []).length >= 2);
   if (hits.length === 0) return null;
   const max = Math.max(...hits.map((t) => t.length));
   const longest = hits.filter((t) => t.length === max);

@@ -323,7 +323,7 @@ describe("① 🟢 측정 파이프라인 사전 검증 (호출 0 · 비용 $0)"
 
     const targets = await loadTargets();
     /** 🟢 분모가 **6건** 임을 잠근다 — 품번 없는 20건이 섞이면 여기서 깨진다. */
-    expect(targets.length).toBe(7) /* 🔵 ROOTCAUSE-FIX-01 — 품번 생산자에 **제목 축** 이 추가돼 6→7(의도된 증가). 🔴 7번째의 정체는 «미검증» */;
+    expect(targets.length).toBe(6) /** 🔴 ROOTCAUSE-FIX-02 STEP 1 — 한때 7 이었고 그 7번째는 **오추출**(Sleeve1 → SLEEVE1) 이었다. 「숫자 ≥ 2」로 막아 **6 으로 복귀** 했다. */;
     expect(targets.every((t) => t.query.length > 0)).toBe(true);
     /** 🟢 6/6 이 식별자 우선 질의(L1)여야 한다 — WU-014 가 의도한 모양. */
     expect(targets.every((t) => t.queryLevel === "L1_MODEL_CODE")).toBe(true);
@@ -396,7 +396,7 @@ describe("① 🟢 측정 파이프라인 사전 검증 (호출 0 · 비용 $0)"
     expect(body.messages[0].content).toMatch(/환산하지 마/);
     /** 🔴 상한 환산 — 6상품 × 3검색 = 최대 18 searches. 그 사실을 숫자로 잠근다. */
     /** 🔵 ROOTCAUSE-FIX-01 — 대상이 6→7 이라 요청 수도 같이 7 이다(상한 공식은 불변). */
-    expect(7 * REQUESTS_PER_PRODUCT).toBe(7);
+    expect(6 * REQUESTS_PER_PRODUCT).toBe(6);
     expect(6 * MAX_SEARCHES_PER_PRODUCT).toBe(18);
   });
 });
@@ -411,7 +411,7 @@ describe.skipIf(!LIVE)("② 🔴 Anthropic 실측 — 품번 보유 6건 · 상�
     async () => {
       const registry = new Set((readJson<SourceRow[]>("e2e-sources.json") ?? []).map((s) => s.domain.toLowerCase()));
       const targets = await loadTargets();
-      expect(targets.length).toBe(7) /* 🔵 ROOTCAUSE-FIX-01 — 품번 생산자에 **제목 축** 이 추가돼 6→7(의도된 증가). 🔴 7번째의 정체는 «미검증» */;
+      expect(targets.length).toBe(6) /** 🔴 ROOTCAUSE-FIX-02 STEP 1 — 한때 7 이었고 그 7번째는 **오추출**(Sleeve1 → SLEEVE1) 이었다. 「숫자 ≥ 2」로 막아 **6 으로 복귀** 했다. */;
 
       /** 🟢 교차 provider 중복용 — 선행 WU 가 저장한 Gemini 후보 URL. 🔴 Gemini 호출 0. */
       const geminiUrls = new Set<string>();

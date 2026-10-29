@@ -79,3 +79,34 @@ describe("ROOTCAUSE-FIX-01 — 제목 품번(Case A~E)", () => {
     }
   });
 });
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴 ROOTCAUSE-FIX-02 STEP 1 — **실측된 오추출을 계약으로 못박는다**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * STEP 1 검증에서 품번 보유가 6 → 7 로 늘었고, 그 **7번째가 틀렸다**:
+ * ```
+ * snapshot 0306c272-dab6-4c3b-9d22-e299118269ab
+ * title    "Sergio Tacchini Men's Magro Long Sleeve1"
+ * code     **SLEEVE1**   ← 🔴 품번이 아니다(제목 오타가 만든 「단어+숫자1」)
+ * source   title(= 내가 추가한 축) · 설명문 라벨 아님
+ * ```
+ * 🟢 **그 사례만** 고쳤다 — 「숫자 ≥ 2」. 전체 규칙을 흔들지 않았다(CPO §3).
+ */
+describe("ROOTCAUSE-FIX-02 STEP 1 — 7번째 오추출 고정", () => {
+  it("🔴🔴 실제 오추출 제목에서 **품번을 만들지 않는다**", () => {
+    expect(extractCodeLikeTitleToken("Sergio Tacchini Men's Magro Long Sleeve1")).toBeNull();
+  });
+
+  it("🟢 진짜 품번은 **그대로** 산다(숫자 여럿)", () => {
+    expect(extractCodeLikeTitleToken("[메인스토리]  AW26MS185 - Bubble Sweatshirt")).toBe("AW26MS185");
+    expect(extractCodeLikeTitleToken("Hug Hairy Monster B226AC009 T-shirt")).toBe("B226AC009");
+  });
+
+  it("🔴 「단어 + 숫자 하나」 모양은 전부 막힌다", () => {
+    for (const t of ["Oversize Sweatshirt2", "Cardigan1", "Jacket9", "Polo3"]) {
+      expect(extractCodeLikeTitleToken(t), t).toBeNull();
+    }
+  });
+});

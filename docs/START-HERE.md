@@ -21,7 +21,25 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **E2E-ROOTCAUSE-FIX-01** — 🟡 PARTIAL · **1순위만 구현**(CPO 우선순위)
+CURRENT WU   **E2E-ROOTCAUSE-FIX-02 STEP 1** — 🔴 **7번째는 오추출이었다 · 수정 완료**
+             🔴🔴 STEP 1 판정 = **7번째 INVALID** (CPO 가 요구한 그 검증)
+                snapshot `0306c272-…` · title `Sergio Tacchini Men's Magro Long **Sleeve1**`
+                → code **`SLEEVE1`** · source **title**(내가 추가한 축) · labeled=false
+                ⟹ 제목 오타가 만든 **「단어+숫자1」** 이고 품번이 아니다
+             🟢 **그 사례만** 고쳤다(CPO §3 「전체 규칙을 흔들지 않는다」) —
+                제목 축에 **「숫자 ≥ 2」** 조건 추가(사전 0 · 사이트 분기 0)
+                `SLEEVE1`(숫자 1) 차단 · `AW26MS185`(5) · `B226AC009`(6) **유지**
+             🟢 분모 **7 → 6 복귀** · 그 6 은 전부 **설명문 라벨** 출처(실측)
+             🟢 1순위 성과는 그대로 — Little Luna `code = AW26MS185` ·
+                Query 에 **"AW26MS185"** 식별자로 포함
+             🔴 대가(적어 둔다) — 숫자가 **정확히 하나** 인 진짜 품번은 놓친다
+                (「모르면 UNKNOWN」 방향 · 거짓 품번은 충돌 오판을 만든다)
+             🔴 **STEP 2~6 미실행** — Cafe24 price=null · material=FW26 ·
+                color="Our Grey" · Track B/C 후보 funnel · 따져 화면
+             🔴 내 실수 — `toBe(6)` 일괄 치환이 무관한 **비용 상한**까지 바꿨다(되돌림) ·
+                커밋/스크립트에서 백틱을 쉘이 **두 번** 치환했다(파일로 써서 해결)
+[낡음]       **E2E-ROOTCAUSE-FIX-01**
+[낡음]       **E2E-ROOTCAUSE-FIX-01** — 🟡 PARTIAL · **1순위만 구현**(CPO 우선순위)
              🟢🟢 **제목에서 품번을 읽는다** — Little Luna `code: null → AW26MS185`
                 Query 에 **"AW26MS185"** 가 식별자(따옴표)로 들어간다(실측)
              🟢 새 모양 규칙 **0** — slug 축과 같은 규칙(6~20자 · 영숫자 · 글자+숫자 ·

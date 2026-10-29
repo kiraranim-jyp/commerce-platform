@@ -169,7 +169,7 @@ describe("① 🟢 측정 파이프라인 사전 검증 (호출 0 · 비용 ₩0
      * 🔴 **그 7번째가 어느 스냅샷이고 값이 옳은지는 «미검증» 이다** — 확인 전에
      *    「품번 추출이 좋아졌다」로 읽지 않는다. 다음 작업의 첫 항목이다.
      */
-    expect(targets.length).toBe(7);
+    expect(targets.length).toBe(6);
     expect(targets.every((t) => t.query.length > 0)).toBe(true);
 
     writeFileSync(
