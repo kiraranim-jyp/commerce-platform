@@ -1,0 +1,321 @@
+[
+  {
+    "http": 200,
+    "i": 0,
+    "cat": "KIDS",
+    "label": "Bobo Choses",
+    "signal": "국내해외 동일상품 판매처",
+    "metrics": {
+      "searches": 1,
+      "query": "\"Bobo Choses\" \"B226AC009\" Hug Hairy Monster T-shirt Light blue loose fit 국내해외 동일상품 판매처",
+      "organicResults": 8,
+      "skipped": null,
+      "failed": false
+    },
+    "counts": {
+      "raw": 8,
+      "kr": 0,
+      "rest": 8
+    },
+    "urls": [
+      "https://www.babyshop.com/en-sk/p/hug-hairy-monster-t-shirt-light-blue/BC-B226AC009-451",
+      "https://bridge.babyshop.com/en-it/p/hug-hairy-monster-t-shirt-light-blue/BC-B226AC009-451",
+      "https://www.tinyapple.net/ja-jp/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue?srsltid=AYCX9vJt3shfECuIwPJAwqsZRJH5o0J60yxagaU7hYTpedhik1R-cupJ",
+      "https://bobochoses.com/ca/products/b226ac009-hug-hairy-monster-t-shirt",
+      "https://www.farfetch.com/cn/shopping/kids/bobo-choses-hug-hairy-monster-long-sleeve-t-shirt-item-37620037.aspx",
+      "https://www.peipeicollection.com/products/6a896c4a0f310efa2834faa4",
+      "https://answear.com/p/bobo-choses-longsleeve-dzieciecy-bawelniany-hug-hairy-monster-niebieski-b226ac009-1720719?srsltid=AYCX9vLvF1YQJnGTW8KioAfZMewxOLPDVHABlV9-AeA3VbiGjZY1c5nB",
+      "https://answear.ua/ru/p/bobo-choses-longsliv-dytyachyj-bavovnyanyj-hug-hairy-monster-blakytnyj-b226ac009-1837188"
+    ],
+    "krUrls": []
+  },
+  {
+    "http": 200,
+    "i": 1,
+    "cat": "KIDS",
+    "label": "BOSS",
+    "signal": "국내해외 동일상품 판매처",
+    "metrics": {
+      "searches": 1,
+      "query": "\"BOSS\" Baby Boys Logo Top White 100% Cotton 국내해외 동일상품 판매처",
+      "organicResults": 7,
+      "skipped": null,
+      "failed": false
+    },
+    "counts": {
+      "raw": 7,
+      "kr": 3,
+      "rest": 4
+    },
+    "urls": [
+      "https://www.giglio.com/ja-sk/toddler-clothes-kids_shirt-boss-j52092.html?cSel=001&sSel=1129&srsltid=AYCX9vJrAFpfMeoy6CuxB1QHu0CNOM_NQNBB4FgVh8MhI0YCfJZrnqe7",
+      "https://www.cemarose.com/ko/products/baby-boys-white-logo-t-shirt-12?srsltid=AYCX9vJVN_UshN-76eaPFzhtX2HKrTs1FzWCbQkSPc0Tsh0H8Futrqdu",
+      "https://search.11st.co.kr/pc/price-compare?kwd=boss%EC%9E%90%EC%BC%93&tabId=PRICE_COMPARE",
+      "https://www.kids-world.com/ko-kr/boss-shirts-c-6658.html",
+      "https://www.croket.co.kr/brand/68be4211645fa95a685d08a6",
+      "https://search.11st.co.kr/MW/search?searchKeyword=boss%20%EB%82%A8%EC%84%B1%EC%9A%A9&tabId=TOTAL_SEARCH",
+      "https://www.kids-world.com/ko-kr/boss-c-6439.html"
+    ],
+    "krUrls": [
+      "https://search.11st.co.kr/pc/price-compare?kwd=boss%EC%9E%90%EC%BC%93&tabId=PRICE_COMPARE",
+      "https://www.croket.co.kr/brand/68be4211645fa95a685d08a6",
+      "https://search.11st.co.kr/MW/search?searchKeyword=boss%20%EB%82%A8%EC%84%B1%EC%9A%A9&tabId=TOTAL_SEARCH"
+    ]
+  },
+  {
+    "http": 200,
+    "i": 2,
+    "cat": "KIDS",
+    "label": "Louis Louise",
+    "signal": "국내해외 동일상품 판매처",
+    "metrics": {
+      "searches": 1,
+      "query": "\"Louis Louise\" Holly Hearts Ribbed Velvet Pink 100% Cotton 국내해외 동일상품 판매처",
+      "organicResults": 9,
+      "skipped": null,
+      "failed": false
+    },
+    "counts": {
+      "raw": 9,
+      "kr": 0,
+      "rest": 9
+    },
+    "urls": [
+      "https://www.smallable.com/",
+      "https://www.louislouise.com/",
+      "https://www.kodomoboston.com/",
+      "https://shoplesmini.com/",
+      "https://whoopikids.com/collections/louis-louise-1?srsltid=AYCX9vLtWuizkFKh-lKDqvaOzJQGCoO22nGxOLryPBwb925TKNrvgvSp",
+      "https://miniruby.com/",
+      "https://pandaandcub.com/",
+      "https://yoyanyc.com/",
+      "https://www.flyingcolorsbaby.com/"
+    ],
+    "krUrls": []
+  },
+  {
+    "http": 200,
+    "i": 3,
+    "cat": "KIDS",
+    "label": "Main Story",
+    "signal": "국내해외 동일상품 판매처",
+    "metrics": {
+      "searches": 1,
+      "query": "\"Main Story\" \"AW26MS185\" Bubble Sweatshirt Melange Grey 100% Organic Cotton relaxed fit 국내해외 동일상품 판매처",
+      "organicResults": 9,
+      "skipped": null,
+      "failed": false
+    },
+    "counts": {
+      "raw": 9,
+      "kr": 1,
+      "rest": 8
+    },
+    "urls": [
+      "http://www.coupleshot.com/shop/shopdetail.html?branduid=574868&special=1&GfDT=bWh3UA%3D%3D",
+      "https://miniboutique.co.kr/product/main-storybubble-sweatshirt-aw26ms185-grey/28326/",
+      "http://www.coupleshot.com/shop/shopdetail.html?branduid=574599&special=1&GfDT=bm99W1g%3D",
+      "http://www.coupleshot.com/m/product.html?branduid=574678&special=1&GfDT=bmx1W15H",
+      "http://www.coupleshot.com/m/product.html?branduid=574655",
+      "http://www.coupleshot.com/m/product.html?branduid=574688&special=1&GfDT=bml4W15A",
+      "http://coupleshot.com/m/product.html?branduid=574613",
+      "http://www.coupleshot.com/m/product.html?branduid=574587&xcode=008&mcode=001&scode=&type=Y&sort=order&pre_idx=12&current_category=008&next=ok",
+      "http://www.coupleshot.com/m/product.html?branduid=574698&xcode=015&mcode=012&scode=&type=X&sort=&pre_idx=25&current_category=&pre=ok"
+    ],
+    "krUrls": [
+      "https://miniboutique.co.kr/product/main-storybubble-sweatshirt-aw26ms185-grey/28326/"
+    ]
+  },
+  {
+    "http": 200,
+    "i": 4,
+    "cat": "KIDS",
+    "label": "Mini rodini",
+    "signal": "국내해외 동일상품 판매처",
+    "metrics": {
+      "searches": 1,
+      "query": "\"Mini rodini\" Violas aop Winter jacket 국내해외 동일상품 판매처",
+      "organicResults": 9,
+      "skipped": null,
+      "failed": false
+    },
+    "counts": {
+      "raw": 9,
+      "kr": 1,
+      "rest": 8
+    },
+    "urls": [
+      "https://kream.co.kr/products/440581?srsltid=AYCX9vLWqgChzcfftsgjwGUec7LVyI3cSN9qS6g3cPWzlTrwr2KGs9j4",
+      "https://xn--o39a91ox8ng7o.com/shop/itemuseform.php?it_id=1577421211",
+      "https://xn--o39a91ox8ng7o.com/shop/itemuseform.php?it_id=1577687320",
+      "https://www.xn--o39a91ox8ng7o.com/shop/itemuseform.php?it_id=1624507815",
+      "https://xn--o39a91ox8ng7o.com/shop/itemuseform.php?it_id=1579220104",
+      "https://xn--o39a91ox8ng7o.com/shop/itemuseform.php?it_id=1579218073",
+      "https://www.xn--o39a91ox8ng7o.com/shop/itemuseform.php?it_id=1578965175",
+      "https://www.xn--o39a91ox8ng7o.com/shop/itemuseform.php?it_id=1580778926",
+      "https://www.buyma.com/r/_MINI-RODINI-%E3%83%9F%E3%83%8B%E3%83%AD%E3%83%87%E3%82%A3%E3%83%BC%E3%83%8B/-C4516CL99/?srsltid=AYCX9vJwYKK6AWThoJ_UG8gGqLnPBJbtwz_o5wflJMiBbWh8P8RdVsGL"
+    ],
+    "krUrls": [
+      "https://kream.co.kr/products/440581?srsltid=AYCX9vLWqgChzcfftsgjwGUec7LVyI3cSN9qS6g3cPWzlTrwr2KGs9j4"
+    ]
+  },
+  {
+    "http": 200,
+    "i": 5,
+    "cat": "TENNIS",
+    "label": "Damarindo Pique Polo",
+    "signal": "국내해외 동일상품 판매처",
+    "metrics": {
+      "searches": 1,
+      "query": "\"Sergio Tacchini\" Men's Damarindo Pique Polo Humus 100% Cotton true to size 국내해외 동일상품 판매처",
+      "organicResults": 7,
+      "skipped": null,
+      "failed": false
+    },
+    "counts": {
+      "raw": 7,
+      "kr": 1,
+      "rest": 6
+    },
+    "urls": [
+      "https://racketcentral.com/collections/microsite-uspa-products/products/damarindo-check-polo-humus?srsltid=AYCX9vIV06Xu35fxC5jvyJhEcPtJKtZwOc4C2HIXajD-OUHJd70-WfW3",
+      "https://modesens.com/product/sergio-tacchini-damarindo-check-polo-neutral-122520724/?srsltid=AYCX9vIR171XeEiDNTuWBMRGx0sh5MnP8GZIbdFBXqaDdSNx1WkiNqZu",
+      "https://www.macys.com/xapi/digital/v1/product/26645360?currencyCode=USD&_deviceType=PHONE&_regionCode=US&_shoppingMode=SITE&_application=SITE&bigTicketCXHeaders=1&_customerExperiment=&selectedSizes=MEN_REGULAR_SIZE_T!!XL&swatchColor=Maritime",
+      "https://www.amazon.com/-/zh_TW/Sergio-Tacchini/dp/B0DR7BFBHT",
+      "https://www.ebay.de/itm/176417055763?_trkparms=itmf%3D1%26aid%3D1110006%26rkt%3D12%26pid%3D101429%26mech%3D2%26algv%3DSimPLMWebV1WithAuctionUnification%26pmt%3D1%26amclksrc%3DITM%26sd%3D267753425361%26sid%3DAQALAAAAED6Qa%2B%2Brsijokh1dM4M%2FjNM%3D%26itm%3D176417055763%26noa%3D0%26plcampt%3D0%3A151133907018%26algo%3DHOMESPLICE.SIM%26brand%3DSergio+Tacchini%26asc%3D20221018081743%26ao%3D1%26rk%3D9%26mehot%3Dnone%26lsid%3D3%26meid%3Dbe3be79a4f0b4a93bde74aaa66b0291c%26pg%3D2332490&_trksid=p2332490.c101429.m2460&itmprp=cksum%3A176417055763be3be79a4f0b4a93bde74aaa66b0291c%7Cenc%3AAQALAAABEHgGRw9n%252BWZ%252FIF6wkBA9slFMI%252FzMPv6aV3OidAYwF5pv55oyNNPDqKWyGPZjeQkKPo7dTk5H60PQ04EQhYCsSzqkY9ZlhuMXxAk%252FwhEUToRdtekquBTJh%252B%252FRacnYiTaOyuLyge4mg1FVB3%252F55aqjmdXf4GbjVzrcq%252FnX7n4OMv26odLCWp002Irl0oC3btE357EXdZ7eLJr7maKxxZuKL2FzmhZy12bVKPXKyeerKfv0iS5ZlQz%252FWzFtJYzbF%252FECLVfDTHp1kPnipEBjgb9yFjiFI7W7A42NlmUIYmshuBR4O3tjHtgm%252FFsq9cFi94hMihC%252BKdN4TeBqGRmSETQF0GlNwhoySxm1RB7fTEbnDl9T%7Campid%3APL_CLK%7Cclp%3A2332490&itmmeta=01M0FMB42RR97434HF20EJ5FXX&srsltid=AYCX9vJKN1o2VzGlA-u9iOZhGMocpQ2mcReDs4aqz1RQgpdVBMRlqYNm",
+      "https://www.lfmall.co.kr/app/search/result/Sergio%2BTacchini?srsltid=AYCX9vLRhI73PWb9ohNUL1zBst5zBkd0G672-kmlbsJadbq9zWukcIlF",
+      "https://www.ubuy.com.ps/ar/product/UDHCZ8P94-sergio-tacchini-damarindo-polo"
+    ],
+    "krUrls": [
+      "https://www.lfmall.co.kr/app/search/result/Sergio%2BTacchini?srsltid=AYCX9vLRhI73PWb9ohNUL1zBst5zBkd0G672-kmlbsJadbq9zWukcIlF"
+    ]
+  },
+  {
+    "http": 200,
+    "i": 6,
+    "cat": "TENNIS",
+    "label": "Fall Cericho T-Shirt",
+    "signal": "국내해외 동일상품 판매처",
+    "metrics": {
+      "searches": 1,
+      "query": "\"Sergio Tacchini\" Men's Fall Cericho T-Shirt Brilliant White 100% Cotton true to size 국내해외 동일상품 판매처",
+      "organicResults": 9,
+      "skipped": null,
+      "failed": false
+    },
+    "counts": {
+      "raw": 9,
+      "kr": 0,
+      "rest": 9
+    },
+    "urls": [
+      "https://www.sergiotacchini.com/products/cerchio-t-shirt-2?srsltid=AYCX9vKYX_qAO4lMcROQqk6u0xO7ZoqYU2BiyTCa9DE6jsHDqOmKJtXu",
+      "https://www.ebay.com/b/Sergio-Tacchini-Mens-T-Shirts/15687/bn_703689",
+      "https://www.beyondstyle.us/prod/sergio-tacchini-mens-cericho-tshirt?id=macys_28283303&color=Brilliant-white&size=XXL&srsltid=AYCX9vJju459QLKmrhBmT_dvXxlT3bRyYR9bKiAR1WJAKGqPcRLsncV5",
+      "https://www.amazon.com/clp/B09Z17XQH2",
+      "https://www.nordstrom.com/browse/men/clothing/shirts/tshirts?filterByBrand=sergio-tacchini&srsltid=AYCX9vJ8JCFhGH6n2G2oX82MDwpHCqwTHeaYlU7ClrB4V9g_npjswN9o",
+      "https://www.ebay.com/b/Sergio-Tacchini-White-Regular-Activewear-for-Men/185099/bn_118558097",
+      "https://www.amazon.com/stores/page/70A7130A-AD3E-4F99-A72E-7DA4C8BD3230",
+      "https://poshmark.com/brand/Sergio_Tacchini-Men-Shirts?srsltid=AYCX9vKBJbiCkJxagnsc6Zc0ijWThLzzpR3YiMLZ2OCRZOtR8f1UeRGp",
+      "https://eu.sergiotacchini.com/collections/mens-t-shirts?page=3"
+    ],
+    "krUrls": []
+  },
+  {
+    "http": 200,
+    "i": 7,
+    "cat": "TENNIS",
+    "label": "Magro Long Sleeve",
+    "signal": "국내해외 동일상품 판매처",
+    "metrics": {
+      "searches": 1,
+      "query": "\"Sergio Tacchini\" Men's Magro Long Sleeve Brilliant White true to size 국내해외 동일상품 판매처",
+      "organicResults": 9,
+      "skipped": null,
+      "failed": false
+    },
+    "counts": {
+      "raw": 9,
+      "kr": 0,
+      "rest": 9
+    },
+    "urls": [
+      "https://www.pickleballwarehouse.com/Sergio_Tacchini_Mens_Magro_Long_Sleeve/descpage-STMMLS.html?color=&srsltid=AYCX9vLPOmVeB42D1K12h44PceUB2BYs5JSEexEy5MYweIQ9pkqvDGsv",
+      "https://www.sergiotacchini.com/products/magro-performance-t-shirt-brilliant-white?srsltid=AYCX9vJzVqhcgW_oDpN8FFzzIEy1NlV4fmWFPNjv8XFn1kWD9XSnTcF3",
+      "https://www.tennis-warehouse.com/Sergio_Tacchini_Mens_Magro_Long_Sleeve/descpageMASGT-STMMLS.html?color=&srsltid=AYCX9vLJnmxLpJSRLPZAtwAcCqIphL9mNFh67VQITsZnUr9HWyXjTIIH",
+      "https://www.ebay.com/b/Sergio-Tacchini-White-Regular-Activewear-for-Men/185099/bn_118558097",
+      "https://www.macys.com/shop/product/sergio-tacchini-mens-magro-regular-fit-crewneck-t-shirt?ID=28430029",
+      "https://www.luisaviaroma.com/en/sergio-tacchini/men/?filters.5003.38533=38533",
+      "https://www.nordstrom.com/browse/men/big-tall/clothing/shirts?filterByBrand=sergio-tacchini&srsltid=AYCX9vJqMH02pEEXGBi5WDc9jJGC4BnGggJna95OHHvttISEp8O8SFdN",
+      "https://racketcentral.com/products/magro-performance-t-shirt-brilliant-white?srsltid=AYCX9vJE-SU-pXt7zifEzpp8aU99tNEjS6OD5AODuf3h0hPc0aT1xRz-",
+      "https://modesens.com/product/sergio-tacchini-magro-performance-tshirt-white-140358792/?srsltid=AYCX9vL-xJurVwjCLA4EWT_21d-EjIPjq2k1xiJ_tGUgGcEbYBk5aNFU"
+    ],
+    "krUrls": []
+  },
+  {
+    "http": 200,
+    "i": 8,
+    "cat": "TENNIS",
+    "label": "Racchetto Polo",
+    "signal": "국내해외 동일상품 판매처",
+    "metrics": {
+      "searches": 1,
+      "query": "\"Sergio Tacchini\" Men's Racchetto Polo Brilliant White 100% Polyester true to size 국내해외 동일상품 판매처",
+      "organicResults": 9,
+      "skipped": null,
+      "failed": false
+    },
+    "counts": {
+      "raw": 9,
+      "kr": 1,
+      "rest": 8
+    },
+    "urls": [
+      "https://www.musinsa.com/products/6036422",
+      "https://www.musinsa.com/products/4983802",
+      "https://www.musinsa.com/products/3874692",
+      "https://www.musinsa.com/products/6951009",
+      "https://www.musinsa.com/products/5914500",
+      "https://www.lfmall.co.kr/app/search/result/Sergio%2BTacchini?srsltid=AYCX9vIm8AMAgJTJLLV9v-Mhg4wRFLdQo8hyaeeIx_T5hyhKED0mjzeQ",
+      "https://www.farfetch.com/kr/shopping/men/sale/sergio-tacchini/items.aspx",
+      "https://www.musinsa.com/products/6025517",
+      "https://www.ssfshop.com/SERGIOTACCHINI/RunningshoesSneakers/list?dspCtgryNo=SFMA46A18A01&brandShopNo=BDMA29AOE&brndShopId=RTSGO"
+    ],
+    "krUrls": [
+      "https://www.lfmall.co.kr/app/search/result/Sergio%2BTacchini?srsltid=AYCX9vIm8AMAgJTJLLV9v-Mhg4wRFLdQo8hyaeeIx_T5hyhKED0mjzeQ"
+    ]
+  },
+  {
+    "http": 200,
+    "i": 9,
+    "cat": "TENNIS",
+    "label": "Trattino Short",
+    "signal": "국내해외 동일상품 판매처",
+    "metrics": {
+      "searches": 1,
+      "query": "\"Sergio Tacchini\" Men's Trattino Short Galaxy Blue true to size 국내해외 동일상품 판매처",
+      "organicResults": 9,
+      "skipped": null,
+      "failed": false
+    },
+    "counts": {
+      "raw": 9,
+      "kr": 1,
+      "rest": 8
+    },
+    "urls": [
+      "https://www.sergiotacchini.co.kr/display/STMB01B02?srsltid=AYCX9vLcCtLhedzR9LKH-9MI4dhtitcYND5HATXYKKX2_qEJXqHRDalo",
+      "https://m.shilladfs.com/estore/kr/en/share/productSns?url=https://m.shilladfs.com/estore/kr/en/p/5932465&shareTitle=MEN",
+      "https://m.shilladfs.com/estore/kr/en/share/productSns?url=https://m.shilladfs.com/estore/kr/en/p/5932472&shareTitle=MEN",
+      "https://m.shilladfs.com/estore/kr/en/share/productSns?url=https://m.shilladfs.com/estore/kr/en/p/5932469&shareTitle=MEN",
+      "https://m.shilladfs.com/estore/kr/en/share/productSns?url=https://m.shilladfs.com/estore/kr/en/p/5932474&shareTitle=MEN",
+      "https://www.farfetch.com/kr/shopping/men/sale/sergio-tacchini/items.aspx",
+      "https://fleamarket.naver.com/market-products/01KEJB17K7XGB842WJJWX6GE77?",
+      "https://www.ssfshop.com/SERGIOTACCHINI/MensShoes/list?dspCtgryNo=SFMA46A18&brandShopNo=BDMA29AOE&brndShopId=RTSGO&srsltid=AYCX9vLEMTgCkaviXJ2W9cFcfUVljiNnH3zozlRYXzRmZXj63336RGb9",
+      "https://www.musinsa.com/brand/sergiotacchini/products?categoryCode=103"
+    ],
+    "krUrls": [
+      "https://www.sergiotacchini.co.kr/display/STMB01B02?srsltid=AYCX9vLcCtLhedzR9LKH-9MI4dhtitcYND5HATXYKKX2_qEJXqHRDalo"
+    ]
+  }
+]

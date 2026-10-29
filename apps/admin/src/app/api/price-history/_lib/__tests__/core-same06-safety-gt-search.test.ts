@@ -196,6 +196,7 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
   skipped.push({ file: "dsp-01-reviewed-same.json", why: "🔴 `candidate_reviews` 의 B226AC009 사본 — **이중 집계 방지**" });
   skipped.push({ file: "dsp-01-funnel.json", why: "🟢 재투입 funnel 실측 기록 · 라벨 **없음**" });
   skipped.push({ file: "dmc-01-trace.json", why: "🟢 후보 전 이력 추적 기록 · 라벨 **없음**" });
+  skipped.push({ file: "query-signal-ab-result.json", why: "🟢 신호 A/B Production 실측 · 라벨 **없음**" });
 
   /* SAME-03 최신 CEO 라벨 — 🔴 DIFFERENT 가 0 이지만 분모로 같이 적는다 */
   {

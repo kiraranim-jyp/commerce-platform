@@ -21,7 +21,26 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **DISCOVERY-TO-MI-CANONICAL-01** — 🟡 **PARTIAL** · 운영 코드 변경 **0**
+CURRENT WU   **QUERY-SIGNAL-AB** — 🟢 **측정 완료** · 운영 Query **변경 0**(A 유지)
+             🔴 **「테스트 2」는 이번 이전에 실행된 적이 없다**(내가 만든 적 없음)
+                🟡 가까운 변종은 SP-09/10 의 `S-C`「국내외 판매처」 —
+                   국내 Evid 1→7 이지만 **Crawl 17→8 · 한 상품 해외 0** 이었다
+             🟢 두 조건 **모두 10/10 Search** · failed 0 · skipped 0 · 1P=1S 유지
+             raw 후보   테스트1 **74** ↔ 테스트2 **85** (+11)
+                       🔴 Mini rodini 는 0 → **9**(테스트1 에서 organic 0 이었다)
+             🇰🇷 URL    테스트1 **1**(관측범위 하한) ↔ 테스트2 **8**(전수 · 6개 상품)
+                       🔴 그 8 중 11st·kream 은 **NOT_AVAILABLE 정책 차단** ·
+                          11st/lfmall 일부는 **검색 결과 페이지** ⟹ 「국내 후보 8」 아님
+                       🟢 상품 상세로 보이는 것 — miniboutique · croket ·
+                          **sergiotacchini.co.kr**(브랜드 한국 공식몰)
+             🔴 분모 비대칭 — 테스트1 은 투영이라 🇰🇷 가 **하한** 이다(raw 74↔85 는 대등)
+             🔴 SP-10 변동(같은 질의 URL 겹침 3~30%)이 유효 ⟹ **1회 관측** 이다
+             🔴 **CTO 가 운영 Query 를 바꾸지 않았다** — Crawl~Identity 를 안 돌렸고
+                SP-09/10 의 반대 증거가 있다 ⟹ **채택은 CPO 결정**
+             🟢 1회용 토큰/라우트 **폐기 완료**(env 0 · 소스 참조 0 · HTTP 404 미사용)
+             🟢 전문 `docs/HANDOFF-QUERY-SIGNAL-AB.md`
+[직전]       **DISCOVERY-TO-MI-CANONICAL-01**
+[낡음]       **DISCOVERY-TO-MI-CANONICAL-01** — 🟡 **PARTIAL** · 운영 코드 변경 **0**
              🟢🟢 **① AI Search 목록 → ② MI SAME 목록 → ③ 가격/판매처** 가 닫혔다
                 B226AC009: 후보 **4** → crawl 3 → evidence 3 → **SAME 3**
                 (PRESUMED 0 · SIMILAR 0 · DIFFERENT 0 · UNKNOWN 0 · 보류/충돌 **0**)
