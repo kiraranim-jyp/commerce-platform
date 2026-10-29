@@ -21,7 +21,23 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **QUERY-ADOPT-01** — 🟡 **PARTIAL** · 운영 Query **채택·배포 완료**
+CURRENT WU   **E2E-ROOTCAUSE-01 Track A** — 🟡 PARTIAL · 운영 코드 변경 **0**
+             🔴🔴 **「한글 URL 이라 못 읽는다」는 반증됐다** — Little Luna 는
+                shape PRODUCT_PAGE · 디코딩 정상 · HTML OK · 이미지 **18** ·
+                제목/브랜드/색상 확보 · Query **생성됨**
+             🔴 진짜 결함 넷(전부 **일반 계층** · 사이트 전용 아님 · **고치지 않았다**)
+                ① Little Luna **price = null** ② **제목에 `AW26MS185` 가 있는데
+                   brandModelCode = null**(생산자가 설명문 라벨+slug 둘뿐)
+                ③ material 에 **시즌코드 `FW26`** ④ color 에 **`Our Grey`**
+             🟡 가장 큰 레버 = ② — E2E-HISTORY-10 의 「8/10 NO_MODEL_CODE」 owner 다
+                🔴 제목에서 품번을 읽는 것은 **Identity 입력 변경** ⟹ CPO 판정
+             🔴 Track B/C(후보 funnel)는 **미실행**(세션 용량) — 🟢 재료는 이미 있다:
+                `query-adopt-01-production.json`(같은 10상품 전 단계)
+                ⟹ Main Story 는 거기서 🇰🇷 3 · 🌎 3 · **miniboutique SAME/EXACT** 를 냈다
+                   「동일/유사가 거의 없다」는 그 상품에선 **사실이 아니다**
+             🟢 전문 `docs/HANDOFF-E2E-ROOTCAUSE-01.md`
+[직전]       **QUERY-ADOPT-01**
+[낡음]       **QUERY-ADOPT-01** — 🟡 **PARTIAL** · 운영 Query **채택·배포 완료**
              🟢 운영 신호 = **「국내해외 동일상품 판매처」**(CPO 채택 · A/B 실측 근거)
                 구조·개수 불변 · **1 Product = 1 Search** 유지 · Preview **10/10**
              🟢 Production E2E **10/10 Search** · raw 67 → evidence **33**
