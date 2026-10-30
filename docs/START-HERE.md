@@ -21,7 +21,26 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **DISCOVERY-IDENTITY-PRICE-01 STEP 1~3** — 🟢 구현·회귀 완료 · 배포 대기
+CURRENT WU   **DISCOVERY-IDENTITY-FUNNEL-02** — 🔴 **Identity 수정 조건 불성립 · STOP**
+             🟢 측정 완료 · **새 Search 0**(입력 = CEO 가 이미 라벨한 GT URL 44건)
+             【FUNNEL】 GT 44 → 풀 35 → ⑧ 통과 32 → 샵 대표 **23**
+                멈춘 칸 — NOT_IN_POOL 9 · GATE_DROPPED 3 · NOT_SHOP_BEST 9 · JUDGED 23
+             【Human SAME recovery】 🔴 **판매처(호스트) 단위가 정직한 분모** 다
+                URL 단위   26 → SAME 7 + PRESUMED 6 = **13/26 (50%)**
+                판매처 단위 17곳 → SAME 6 + PRESUMED 4 = **10/17 (59%)**
+                손실 7곳 — GATE_DROPPED 2 · **CONFLICT 2** · NOT_IN_POOL 2 · NOT_SHOP_BEST 1
+             🔴🔴 **지배 원인 = MODEL_CODE conflict (AC ↔ AB 라인)** · 실측 확인
+                `bobochoses.com`(**공식몰**) b226**ab**040 / b226**ab**046 · lvl very_high
+                `cemarose.ca` · `junioredition.com` 도 같은 축
+                ⟹ 여는 것 = **품번 보호 해체**(WU-069/070 측정) ⟹ §13 **STOP**
+             🟢 GATE_DROPPED 2 는 **DIP-01 이 이미 보존** 한다(화면에 선다 · 가격엔 0)
+             🟢 Negative — Human DIFFERENT 11 중 누출 **1**(m.luxboy PRESUMED ₩59,000)
+             🟢 가격 — SAME/PRESUMED **18건 중 금액 18/18(100%)** · VERIFIED 16 ·
+                🇰🇷 3 · 🌎 14  ⟹ **STEP 4(가격 부착) 구조는 이미 성립** 한다
+             🔴 Identity/threshold/8축/Query/Search/MI/Registry **변경 0**
+             🟡 **CPO 결정 1건** — 「AC ↔ AB 라인 차이를 동일상품으로 볼 것인가」
+             🟡 CEO 확인 1회 — DIP-01 「🧪 증거 부족으로 판정하지 못한 후보」 화면
+[낡음]       **DISCOVERY-IDENTITY-PRICE-01 STEP 1~3** — 🟢 구현·회귀 완료 · 배포 대기
              🔴🔴 STEP 1 Funnel 실측(10상품 · **새 Search 0** · 기존 산출물 재사용)
                 Search 10/10 · organic **67** · accepted **31** · usable/MI자격 **18**
                 🔴 **AI Search 출처 최종 후보 4/18 (-14 · 78%)**  ← 최대 손실
