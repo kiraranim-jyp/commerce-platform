@@ -193,19 +193,23 @@ const CROSS_FLAT = readFileSync(
 
 describe("CORE-2AM 계약 — Identity 순서와 조기 반환을 바이트로 고정한다(네트워크 0)", () => {
   it("AM-1 🔴🔴 **유일한 조기 반환은 conflicts 이고 `axes: []` 를 돌려준다**", () => {
-    expect(CROSS_FLAT).toContain('if (conflicts.length > 0) { return { verdict: "CONFLICT", axes: [],');
+    /**
+         * 🔵🔵 AGE-LINE-POLICY-01(CPO GO) — 품번 단독 충돌 + 연령어휘 제거 후 핵심 상품명 완전일치일 때만 조기 반환을 건너뛴다. 「깨진 계약 넷」(쌍 C · 96칸 EXCLUDED · WU-143 A-1 · CONFLICT 우선)은 **전부 통과** 한다.
+         * 🔴 조기 반환은 **그대로 있다** — 조건 하나가 붙었을 뿐이다. 그 조건까지 같이 잠근다.
+         */
+        expect(CROSS_FLAT).toContain('if (conflicts.length > 0 && !skipConflictReturn) { return { verdict: "CONFLICT", axes: [],');
   });
 
   it("AM-2 🔴🔴 `MODEL_CODE conflict` 가 **그 조기 반환 앞** 에 있다(문제 A)", () => {
     const iCode = CROSS_FLAT.indexOf('conflicts.push({ conflict: "MODEL_CODE"');
-    const iRet = CROSS_FLAT.indexOf("if (conflicts.length > 0) { return");
+    const iRet = CROSS_FLAT.indexOf("if (conflicts.length > 0 && !skipConflictReturn) { return");
     expect(iCode).toBeGreaterThan(-1);
     expect(iRet).toBeGreaterThan(-1);
     expect(iCode, "🔴 품번 충돌이 조기 반환 뒤로 가면 이 WU 의 전제가 바뀐다").toBeLessThan(iRet);
   });
 
   it("AM-3 🔴 TITLE 축은 **조기 반환 뒤** 에 계산된다 ⟹ 품번 충돌 시 미계산", () => {
-    const iRet = CROSS_FLAT.indexOf("if (conflicts.length > 0) { return");
+    const iRet = CROSS_FLAT.indexOf("if (conflicts.length > 0 && !skipConflictReturn) { return");
     const iTitle = CROSS_FLAT.indexOf('axes.push({ axis: "TITLE"');
     expect(iTitle).toBeGreaterThan(iRet);
   });

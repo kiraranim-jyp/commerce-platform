@@ -99,7 +99,7 @@ describe("② 🔴 「확인 못 했다」로는 깎지 않는다", () => {
   });
 
   it("🔴 blocker 를 새로 만들고 분류표에 넣지 않으면 «조용히» 통과한다 — 개수로 센다", () => {
-    /* 지금 blocker 는 9개이고 그중 8개가 「관측된 차이」다(BRAND_UNCONFIRMED 만
+    /* 지금 blocker 는 10개이고 그중 9개가 「관측된 차이」다(BRAND_UNCONFIRMED 만
        아니다). 이 숫자가 어긋나면 새 blocker 가 분류되지 않았다는 뜻이다. */
     const all: CrossSellerBlocker[] = [
       "MATERIAL",
@@ -110,9 +110,12 @@ describe("② 🔴 「확인 못 했다」로는 깎지 않는다", () => {
       "GARMENT_FORM",
       "BRAND_MISMATCH",
       "AUDIENCE_LINE",
+      /** 🔵 AGE-LINE-POLICY-01 — 품번은 달랐지만 핵심 상품명이 완전히 같다(관측된 차이). */
+      "MODEL_CODE_AGE_LINE",
       "SAME_SELLER_DISTINCT_LISTING",
     ];
-    expect(all).toHaveLength(9);
+    expect(all).toHaveLength(10);
+    /** 🔵 AGE-LINE-POLICY-01(CPO GO) — 품번 단독 충돌 + 연령어휘 제거 후 핵심 상품명 완전일치일 때만 조기 반환을 건너뛴다. 「깨진 계약 넷」(쌍 C · 96칸 EXCLUDED · WU-143 A-1 · CONFLICT 우선)은 **전부 통과** 한다. */
     expect(OBSERVED_DIFFERENCE_BLOCKER_LIST).toHaveLength(all.length - 1);
     const unclassified = all.filter(
       (x) => x !== "BRAND_UNCONFIRMED" && !OBSERVED_DIFFERENCE_BLOCKER_LIST.includes(x),

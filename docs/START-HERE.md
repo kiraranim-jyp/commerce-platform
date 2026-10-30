@@ -21,7 +21,27 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **AGE-LINE-01 CLOSED** — 🔴 **기술 수정 0 · 정책 결정 2건만 남았다**
+CURRENT WU   **AGE-LINE-POLICY-01 구현 완료** — 🟢 recovery 17→19 · 누출 불변 1
+             🔵 CPO GO 범위 그대로 — **품번 보호 전역 해제 0**. 조건 **셋** 이고 전부 필요:
+                ① `modelCode === "conflict"`  ② 충돌이 **MODEL_CODE 하나뿐**
+                ③ **연령 어휘를 뺀** `coreTitleTokens` **완전 일치**(부분·fuzzy ❌)
+                🟢 「연령 어휘인가」는 기존 owner `resolveAudienceLine` 이 판단(새 사전 0)
+             🔴🔴 **AB/AC 를 SAME 으로 만들지 않았다** — `MODEL_CODE_AGE_LINE` blocker 를
+                세워 **보류(PRESUMED_SAME) 이하** 로 묶는다. 충돌은 **그대로 적힌다**
+                (셀러가 「품번이 다르다」를 잃지 않는다) · `tier` 는 **EXCLUDED 유지**
+                ⟹ 🟢 **가격 축 미유입** 이 이 정책의 안전 경계다
+             【실측 · 새 Search 0】 Human SAME 25
+                SAME 11 → **11**(불변) · PRESUMED 6 → **8**(+2) · CONFLICT 3 → **1**
+                recovery **17/25 → 19/25 (68% → 76%)**
+                🟢 Human DIFFERENT 누출 **1 → 1**(불변) · 가격 **20/20(100%)** · 🇰🇷 3 불변
+                🔴 `cemarose.ca` 는 토큰에 `light` 가 하나 더 많아 **예외 미발화**(설계대로)
+             🔴🔴 **리포가 이 구조를 전에 반려했었다**(CORE-2AO · `core-2an` AN-0) —
+                그 기록이 「깨진 계약 **넷** 을 먼저 설명하라」고 요구한다. 🟢 이번 구현에서
+                그 넷은 **전부 통과** 한다(쌍 C · 96칸 EXCLUDED · WU-143 A-1 · CONFLICT 우선)
+             🟢 계약 신규 **10** · 변이 **N1~N6 전부 FAIL → 복구** · 기존 계약 **6건 갱신·강화**
+             🟢 회귀 **739 / 9,671 passed / 0 failed** · tsc 0 · build 0
+             🟡 **②(blocker PRESUMED 가격 제외)는 CPO HOLD** — 현재 표본에서 순손실
+[낡음]       **AGE-LINE-01 CLOSED** — 🔴 **기술 수정 0 · 정책 결정 2건만 남았다**
              🟢 측정 완료 · **새 Search 0** · 운영 코드 **변경 0** · 계약 10 신설
              【baby 라인 9건이 «세 부류» 로 완전히 갈린다】
              ① 🔴 품번이 읽힌 **4건** → `CONFLICT` · reason 이 **「충돌: 모델코드」 한 줄뿐**

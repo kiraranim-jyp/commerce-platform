@@ -96,7 +96,7 @@ describe("CORE-SAME-07 ① CPO 10축 ↔ 코드 실체 전수 대조(네트워�
     expect(after, "🔴 세트 불일치가 conflicts 로 들어가는 것이 A/B 혼입의 실체다").toContain('conflicts.push');
     expect(after).toContain('conflict: "COMPOSITION"');
     /** 🔴 그리고 conflicts 가 있으면 **조기 반환** 되어 축이 하나도 계산되지 않는다. */
-    expect(SRC).toContain("if (conflicts.length > 0)");
+    expect(SRC).toContain("if (conflicts.length > 0 && !skipConflictReturn)");
     expect(SRC).toContain('verdict: "CONFLICT"');
     console.log(
       `\n  🔴🔴 A/B 혼입 좌표 — cross-seller.ts\n` +

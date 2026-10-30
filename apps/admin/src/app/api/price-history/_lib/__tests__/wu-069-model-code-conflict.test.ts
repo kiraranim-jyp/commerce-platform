@@ -196,7 +196,12 @@ describe("WU-069 — CONFLICT 과잉 차단 (GT 캐시 필요)", () => {
     /** 🔴 5건 전부 `crossSeller CONFLICT` 다 — 그것이 먼저 이긴다. */
     for (const id of FIVE) {
       const r = run(items.find((x) => x.id === id && x.src !== "DERIVED")!, "NONE");
-      expect(r.verdict, id).toBe("CONFLICT");
+      /**
+             * 🔵🔵 AGE-LINE-POLICY-01(CPO GO) — 품번 단독 충돌 + 연령어휘 제거 후 핵심 상품명 완전일치면 조기 반환을 건너뛴다. 🔴 그래도 blocker(MODEL_CODE_AGE_LINE)가 SAME 을 막고, matchTruth 는 MODEL_CODE 충돌을 그대로 보아 **tier 는 EXCLUDED 유지** 다(가격 축 미유입).
+             * 🔴 C33(junioredition)만 **PRESUMED_SAME** 으로 내려온다 — 나머지 넷은 그대로다.
+             * 🟢 그리고 **tier 는 다섯 모두 EXCLUDED 유지** 다(아래 단언 불변).
+             */
+            expect(["CONFLICT", "PRESUMED_SAME"], id).toContain(r.verdict);
       expect(r.tier, id).toBe("EXCLUDED");
       expect(r.brandSame, id).toBe(true);
     }
@@ -207,10 +212,26 @@ describe("WU-069 — CONFLICT 과잉 차단 (GT 캐시 필요)", () => {
       expect([...scored, ...derived].filter((x) => run(x, "NONE").tier !== run(x, lv).tier), lv).toHaveLength(0);
     /** 🟡 L4(삼중 해제)만 움직인다 — SAME 3건 회복 · False SAME 증가 0 · 파생 유입 0. */
     const l4 = kpi(scored, "L4");
-    expect(l4.s).toBe(17);
+    /**
+     * 🔵🔵 AGE-LINE-POLICY-01(CPO GO) — **이 반사실 숫자가 17 → 15 로 줄었다.**
+     *    이유: 운영이 이제 「품번 단독 충돌 + 연령 어휘 뺀 핵심 상품명 완전일치」에
+     *    `MODEL_CODE_AGE_LINE` blocker 를 세운다. 그 blocker 는 **L4 반사실에서도**
+     *    남아 verdict 가 SAME 에 닿지 못하게 한다.
+     * 🟢 줄어든 2 는 **손실이 아니라 보호** 다 — 「삼중 잠금을 다 풀어도 AB/AC 가
+     *    SAME 으로 확정되지 않는다」는 뜻이고 CPO 금지(「AB/AC 무조건 SAME」)와 같은 방향이다.
+     * 🔴 운영 영향 **0** — 반사실 전용 숫자다(운영 축은 아래 tier 비교다).
+     */
+    expect(l4.s).toBe(15);
     expect(l4.d).toBe(2);
     expect(kpi(derived, "L4").ex).toBe(0);
-    expect([...scored, ...derived].filter((x) => run(x, "NONE").tier !== run(x, "L4").tier).map((x) => x.id)).toEqual(["C33", "S1-7", "S2-3"]);
+    /**
+     * 🔵🔵 AGE-LINE-POLICY-01 — **L4 증분이 3 → 1 로 줄었다.**
+     *    C33 과 S2-3 은 이제 baseline 에서도 L4 에서도 같은 tier(EXCLUDED)다 —
+     *    새 blocker 가 양쪽에서 동일하게 작용하기 때문이다.
+     * 🟢 즉 「삼중 잠금을 다 풀어야 움직이던」 둘을 **품번 보호를 해체하지 않고**
+     *    보류 단계까지 끌어올렸다. 남은 증분은 S1-7 하나다.
+     */
+    expect([...scored, ...derived].filter((x) => run(x, "NONE").tier !== run(x, "L4").tier).map((x) => x.id)).toEqual(["S1-7"]);
     /** 🟢 anchor — C06·S1-6 은 어떤 레버에서도 EXACT 그대로(완화가 이들을 건드리지 않는다). */
     for (const id of ["C06", "S1-6"]) {
       const it = items.find((x) => x.id === id && x.src !== "DERIVED")!;

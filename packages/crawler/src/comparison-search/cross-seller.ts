@@ -116,6 +116,16 @@ export type CrossSellerBlocker =
   /** MATCHING-3.2-B — 양쪽이 서로 다른 아동 연령 라인(아기/아동/주니어)을 **직접
    * 말했다**. 충돌이 아니라 보류다 — compareAudienceLine 주석 참고. */
   | "AUDIENCE_LINE"
+  /**
+   * 🔵🔵🔵 AGE-LINE-POLICY-01 — **품번은 달랐지만 핵심 상품명이 완전히 같다.**
+   *
+   * 🔴 MODEL_CODE **충돌은 그대로 적힌다**(셀러가 사유를 잃지 않는다). 이 blocker 가
+   *    하는 일은 하나다 — 그 충돌이 **조기 반환으로 후보를 죽이지 않게** 하면서
+   *    동시에 **SAME 으로는 못 가게** 묶는다(verdict 는 blocker 가 있으면 SAME 불가).
+   * 🔴 즉 결과는 **보류(PRESUMED_SAME) 이하** 다 — 「AB/AC 를 SAME 으로 만드는 규칙이
+   *    아니다」(CPO 명시).
+   */
+  | "MODEL_CODE_AGE_LINE"
   | "SAME_SELLER_DISTINCT_LISTING";
 
 /**
@@ -155,6 +165,8 @@ const OBSERVED_DIFFERENCE_BLOCKERS: ReadonlySet<CrossSellerBlocker> = new Set([
   /* 🔴 같은 판매처가 서로 다른 두 상품으로 진열했다. 품번 재사용의 직접 증거다 —
      판매처 «스스로» 다른 상품이라고 말하고 있다. */
   "SAME_SELLER_DISTINCT_LISTING",
+  /** 🔵 AGE-LINE-POLICY-01 — 품번을 **읽었고 서로 달랐다**. 「확인 못 했다」가 아니다. */
+  "MODEL_CODE_AGE_LINE",
 ]);
 
 /**
@@ -312,6 +324,30 @@ function brandsCompatible(a: string, b: string): boolean {
  * 같은 두 값을 같은 자리에서 본다 — 대칭이 아닌 규칙을 실수로 하나 넣더라도
  * 답은 여전히 방향에 무관하다. 열쇠는 비교에 쓰이지 않는 값(URL)만 쓴다.
  */
+/**
+ * 🔵🔵🔵 AGE-LINE-POLICY-01 — **연령 어휘를 뺀 핵심 상품명이 «완전히» 같은가.**
+ *
+ * 🔴 쓰이는 곳은 **한 곳** 이다 — 품번 충돌의 조기 반환 예외(`ageLineDesignMatch`).
+ *    그 자리의 주석이 근거와 보호를 전부 적는다.
+ *
+ * 🔴 **새 사전을 만들지 않았다** — 「연령 어휘인가」는 이미 있는 owner
+ *    `resolveAudienceLine`(product-facts.ts)이 판단한다. 토큰 하나를 넣어
+ *    `BABY`/`JUNIOR`/`CHILD` 중 하나가 나오면 그것이 연령 어휘다.
+ * 🔴 **집합 동일만 참이다** — 부분 일치 ❌ · 유사도 threshold ❌ · fuzzy ❌.
+ * 🔴 색상·소재 같은 다른 낱말은 **빼지 않는다**(그 축들은 따로 보호된다).
+ * 🔴 한쪽이 비면 **false** — 「비교할 것이 없다」를 「같다」로 만들지 않는다.
+ */
+function sameDesignIgnoringAgeWords(a: ProductFacts, b: ProductFacts): boolean {
+  const strip = (tokens: string[]): Set<string> =>
+    new Set(tokens.filter((t) => resolveAudienceLine([t]) === null));
+  const left = strip(a.coreTitleTokens);
+  const right = strip(b.coreTitleTokens);
+  if (left.size === 0 || right.size === 0) return false;
+  if (left.size !== right.size) return false;
+  for (const t of left) if (!right.has(t)) return false;
+  return true;
+}
+
 function orderPair(a: ProductFacts, b: ProductFacts): [ProductFacts, ProductFacts] {
   const keyA = `${a.sourceUrl} ${a.urlSlug ?? ""} ${a.title}`;
   const keyB = `${b.sourceUrl} ${b.urlSlug ?? ""} ${b.title}`;
@@ -876,8 +912,60 @@ export function compareCrossSellerProducts(
   /** 🟢 WU-143 — 위에서 이미 한 번 계산했다(C3). **두 번 부르지 않는다** — 같은 입력이
    *  두 값을 내는 모양을 만들지 않는 것이 이 저장소의 반복 원칙이다. 판정 규칙은 불변. */
   const modelCode = codeEvidence;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 AGE-LINE-POLICY-01 — **같은 디자인의 다른 연령 라인은 즉시 버리지 않는다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 CPO 결정(정책): 「**baby 와 kids 는 처음부터 같은 후보군에서 본다.** 연령/라인
+   *    표현의 차이는 후보를 버리는 이유가 아니라 Evidence 중 하나다.」
+   *
+   * 🔴🔴 **실측이 이 예외의 근거다**(AGE-LINE-01 · 새 Search 0):
+   * ```
+   * 원상품  B226AC009 · T-shirts · Light blue · Organic Cotton 100% · loose fit
+   * 후보    B226AB040 (bobochoses.com 공식몰 baby 라인)
+   *         form · color · material · fit 이 **글자 그대로 같고**
+   *         coreTitleTokens 「hug hairy monster shirt」가 **완전 동일** 하다
+   * 그런데 reasons 가 「충돌: 모델코드 …」 **한 줄뿐** 이었다 —
+   *   일치하는 다섯 축이 **하나도 세어지지 않았다**(아래 조기 반환 때문).
+   * ```
+   *
+   * 🔴🔴🔴 **이 예외는 「AB 와 AC 가 같은 상품이다」를 «확정하지 않는다».**
+   *    하는 일은 하나뿐이다 — **품번 충돌 하나만으로 조기 반환시키지 않는다.**
+   *    최종 등급은 그 뒤의 기존 축·blocker 가 그대로 결정한다(SAME / PRESUMED_SAME /
+   *    SIMILAR / CONFLICT / UNKNOWN). 🔴 점수를 주지도 않는다 —
+   *    `identifierConfirmed` 는 `exact` 만 보므로 **MODEL_CODE 축은 여전히 0점** 이다.
+   *
+   * 🔴 **전역 해제가 아니다.** 조건은 **둘** 이고 둘 다 필요하다:
+   * ```
+   * ① modelCode === "conflict"      (= 접두 공유 후 분기 · 기존 compareModelCode 그대로)
+   * ② 연령 어휘를 뺀 coreTitleTokens 가 **완전 일치**(집합 동일 · 부분일치 ❌ · fuzzy ❌)
+   * ```
+   * 🟢 ②의 「연령 어휘」는 **이미 있는 owner** 가 판단한다(`resolveAudienceLine`) —
+   *    새 사전 **0** · 새 threshold **0** · 브랜드/사이트 분기 **0**.
+   *    🔴 색상·소재 같은 다른 낱말은 **빼지 않는다**. 그래서 `cemarose.ca`
+   *       (`… shirt light`)는 토큰이 하나 더 많아 **예외가 발화하지 않는다**(실측).
+   *
+   * 🟢🟢 **보호가 그대로 유지되는 이유**:
+   * ```
+   * B226AC042 ↔ B226AC043   디자인명이 달라 토큰이 다르다 ⟹ 예외 미발화
+   * WU-143 false SAME 13건   「그래픽 이름이 서로 다르다」(그 주석 원문) ⟹ 미발화
+   * 같은 디자인 · 다른 색상    예외가 발화해도 **COLOR 충돌이 위에서 이미 들어가** 있어
+   *                          조기 반환이 그대로 일어난다
+   * 세트 구성 차이            COMPOSITION 충돌이 아래에서 들어간다(bornyesterdaykids)
+   * ```
+   */
+  const ageLineDesignMatch = modelCode === "conflict" && sameDesignIgnoringAgeWords(x, y);
   if (modelCode === "conflict") {
+    /** 🔴 **충돌은 언제나 적는다** — 예외가 발화해도 셀러가 「품번이 다르다」를 잃지 않는다
+     *  (기존 계약 cross-seller-matching 이 그 목록을 단언한다 — 그 단언이 맞다). */
     conflicts.push({ conflict: "MODEL_CODE", detail: `모델코드 ${x.brandModelCode} ↔ ${y.brandModelCode}` });
+  }
+  if (ageLineDesignMatch) {
+    blockers.push({
+      blocker: "MODEL_CODE_AGE_LINE",
+      detail: `모델코드 ${x.brandModelCode} ↔ ${y.brandModelCode} — 핵심 상품명이 같아 연령 라인 차이 가능성`,
+    });
   }
 
   /**
@@ -892,7 +980,25 @@ export function compareCrossSellerProducts(
     conflicts.push({ conflict: "COMPOSITION", detail: composition.detail });
   }
 
-  if (conflicts.length > 0) {
+  /**
+   * 🔵🔵🔵 AGE-LINE-POLICY-01 — **조기 반환을 «한 가지 모양» 에서만 건너뛴다.**
+   *
+   * 🔴 조건이 **셋** 이고 전부 필요하다:
+   *   ① 충돌이 **MODEL_CODE 하나뿐** 이다(COLOR·COMPOSITION 등이 같이 있으면 그대로 반환)
+   *   ② 그 충돌이 품번 충돌이다
+   *   ③ 연령 어휘를 뺀 coreTitleTokens 가 **완전 일치** 한다
+   *
+   * 🟢 그래서 보호가 그대로 산다 —
+   *   `bornyesterdaykids`(세트)는 COMPOSITION 이 같이 있어 **①에서 막힌다**
+   *   같은 디자인 다른 색상은 COLOR 가 같이 있어 **①에서 막힌다**
+   *   WU-143 반례 13건은 그래픽 이름이 달라 **③에서 막힌다**
+   *   B226AC042 ↔ AC043 도 디자인명이 달라 **③에서 막힌다**
+   * 🔴 그리고 건너뛰어도 위에서 `MODEL_CODE_AGE_LINE` blocker 를 세웠으므로
+   *    **SAME 에는 닿지 못한다**(보류 이하).
+   */
+  const skipConflictReturn =
+    ageLineDesignMatch && conflicts.length === 1 && conflicts[0]!.conflict === "MODEL_CODE";
+  if (conflicts.length > 0 && !skipConflictReturn) {
     // 점수를 계산하지도, 보지도 않는다. 여기서 끝난다.
     return {
       verdict: "CONFLICT",
@@ -1210,6 +1316,13 @@ export function compareCrossSellerProducts(
     ...blockers.map((blocker) => `보류: ${blocker.detail}`),
     /** 🔴 WU-045 — 사이즈 라인 차이는 **막지 않지만 보이게 둔다**(CPO 정책). */
     ...(sizeLineNote ? [`관측: ${sizeLineNote} — 사이즈 라인 차이이고 같은 모델로 본다`] : []),
+    /**
+     * 🔴🔴 AGE-LINE-POLICY-01 — 예외가 발화하면 **반드시 적는다.**
+     *    조용히 완화하면 다음 사람이 「품번이 같아서 통과했다」고 읽는다.
+     */
+    ...(ageLineDesignMatch
+      ? [`관측: 모델코드 ${x.brandModelCode} ↔ ${y.brandModelCode} — 핵심 상품명이 같아 연령 라인 차이 가능성으로 남긴다`]
+      : []),
   ];
 
   return { verdict, axes, conflicts, blockers, identifierConfirmed, reasons };

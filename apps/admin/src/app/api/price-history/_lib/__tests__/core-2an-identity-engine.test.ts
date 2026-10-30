@@ -226,7 +226,7 @@ describe("CORE-2AN 계약 — 네 단계의 경계를 고정한다(네트워크 
       base({ sourceUrl: "https://b.example/products/y", urlSlug: "y", brandModelCode: "B226AB040" }),
     );
     expect(codeOnly.codeOnlyConflict, "🔴 품번 충돌 단독 케이스가 아니다").toBe(true);
-    expect(codeOnly.c0, "🔴 현재 운영은 품번 충돌에서 CONFLICT 다").toBe("CONFLICT");
+    expect(codeOnly.c0, "🔵 AGE-LINE-POLICY-01(CPO GO) — 품번 단독 충돌은 보류로 내려온다(tier 는 EXCLUDED 유지)").toBe("PRESUMED_SAME");
     expect(codeOnly.c1, "🔴 C1 이 내려가지 않았다 — 조기 반환이 그대로다").not.toBe("CONFLICT");
     expect(codeOnly.axes.length, "🟢 내려가면 TITLE/DETAIL 축이 계산된다").toBeGreaterThan(0);
 
@@ -317,9 +317,20 @@ describe("CORE-2AN 계약 — 네 단계의 경계를 고정한다(네트워크 
       ),
     );
     /** 🔴 조기 반환이 **조건 없이** 그대로 있어야 한다(CORE-2AO 반려 상태). */
-    expect(CROSS, "🔴 품번 단독 충돌 예외가 되살아났다 — 깨진 계약 넷을 먼저 설명해야 한다").toContain(
-      "if (conflicts.length > 0) { return { verdict: \"CONFLICT\", axes: [],",
-    );
+    /**
+         * 🔵🔵🔵 AGE-LINE-POLICY-01(CPO GO) — 품번 단독 충돌 + 연령어휘 제거 후 핵심 상품명 완전일치면 조기 반환을 건너뛴다. 🔴 그래도 blocker(MODEL_CODE_AGE_LINE)가 SAME 을 막고, matchTruth 는 MODEL_CODE 충돌을 그대로 보아 **tier 는 EXCLUDED 유지** 다(가격 축 미유입).
+         * 🟢🟢 **이 주석이 요구한 「깨진 계약 넷」은 이번 구현에서 전부 통과한다**(실측):
+         *    쌍 C(B226AC114 ↔ AC049) · CONFLICT 는 항상 EXCLUDED(96칸) ·
+         *    AUDIENCE_LINE 보류 유지(WU-143 A-1) · CONFLICT 우선.
+         * 🔴 그래서 **조기 반환 자체는 그대로 두고** 조건 하나만 붙였다 — 그 조건까지 잠근다.
+         */
+        expect(CROSS, "🔴 조기 반환이 사라졌다").toContain(
+          'if (conflicts.length > 0 && !skipConflictReturn) { return { verdict: "CONFLICT", axes: [],',
+        );
+        /** 🔴 예외 조건이 **넓어지면** 여기서 멈춘다 — 셋 다 있어야 한다. */
+        expect(CROSS).toContain('ageLineDesignMatch && conflicts.length === 1 && conflicts[0]!.conflict === "MODEL_CODE"');
+        expect(CROSS).toContain('modelCode === "conflict" && sameDesignIgnoringAgeWords(x, y)');
+        expect(CROSS).toContain('blocker: "MODEL_CODE_AGE_LINE"');
     expect(CROSS, "🔴 SAME 게이트에 조건이 더해졌다").toContain(
       "if (!blocked && brandOk && corePoints >= SAME_MIN_AXES) return \"SAME\";",
     );

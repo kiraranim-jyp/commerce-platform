@@ -260,7 +260,18 @@ describe("CORE-2K — seller SKU 오염 제거 (운영 1줄)", () => {
       /** 🔴🔴 Negative — 사라지면 **즉시 STOP**(CPO 명시). */
       expect(j.field, "🔴🔴 다른 상품 공식 품번이 제거되면 즉시 STOP").toBe("B226AB040");
       expect(j.cmp, "🔴🔴 conflict 가 유지돼야 한다").toBe("conflict");
-      expect(j.verdict, "🔴🔴 CONFLICT 가 유지돼야 한다").toBe("CONFLICT");
+      /**
+       * 🔵🔵 AGE-LINE-POLICY-01(CPO GO) — 품번 단독 충돌 + 연령 어휘를 뺀 핵심 상품명
+       *    완전일치면 조기 반환을 건너뛴다. 🔴 이 쌍은 **CEO 가 SAME 이라 라벨한 그 쌍**
+       *    (C33 `junioredition` · B226AB040)이다.
+       */
+      expect(j.verdict, "🔵 품번 충돌이 보류로 내려온다(CPO GO)").toBe("PRESUMED_SAME");
+      /**
+       * 🔴🔴 **그래도 가격 축에는 들어가지 않는다** — 그것이 이 정책의 안전 경계다.
+       * 🟢 tier 칸은 이 객체에 없으므로 `matchTruth` 로 같은 사실을 단언한다
+       *    (tier 자체는 `wu-069` 가 다섯 쌍 **전건 EXCLUDED** 로 잠근다).
+       */
+      expect(j.truth, "🔴 matchTruth 가 CONFLICT 에서 벗어났다 — 가격 자격이 열린다").toBe("CONFLICT");
       console.log("       ⟹ 🟢 **PASS** — 다른 상품 공식 품번 **유지** · conflict **유지**");
     } else console.log("    🔴 junioredition **측정불가**");
 
