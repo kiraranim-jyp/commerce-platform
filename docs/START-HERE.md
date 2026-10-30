@@ -21,7 +21,28 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **E2E-ROOTCAUSE-FIX-02 STEP 1** — 🔴 **7번째는 오추출이었다 · 수정 완료**
+CURRENT WU   **DISCOVERY-IDENTITY-PRICE-01 STEP 1~3** — 🟢 구현·회귀 완료 · 배포 대기
+             🔴🔴 STEP 1 Funnel 실측(10상품 · **새 Search 0** · 기존 산출물 재사용)
+                Search 10/10 · organic **67** · accepted **31** · usable/MI자격 **18**
+                🔴 **AI Search 출처 최종 후보 4/18 (-14 · 78%)**  ← 최대 손실
+                최종 후보(전 producer) **33** · 가격 **33/33** ·
+                SAME 7 · PRESUMED 26 · **SIMILAR 0 · CONFLICT 0 · UNKNOWN 0**
+             🔴🔴 STEP 2 병목 = ⑧ `isEvidenceEvaluationWorthwhile` (운영 함수 실측)
+                SIMILAR·UNKNOWN·CONFLICT·판정없음 → **전부 DROPPED**(matchLevel=low 일 때)
+                AI Search 후보 matchLevel 은 **전건 low**(WU-088 64/64)
+                ⟹ 「SIMILAR 0」은 데이터가 아니라 **게이트의 성질** 이다
+             🟢 STEP 3 수정 — `WeakCandidateEvidence`(좁은 타입 · 7번째 배열)
+                🔴 비용 그대로(추가 HTTP **0**) · 게이트 완화 **0** · threshold **0**
+                🔴 `priceTier`·`priceKrw`·`matchTruth`·`verified` **칸 자체가 없다**
+                   ⟹ MI/가격 집계에 **타입 수준으로** 못 들어간다
+                🟢 화면 = 「🧪 증거 부족으로 판정하지 못한 후보」(기본 접힘 · 맨 뒤 ·
+                   행마다 판정 라벨 · 「가격 비교·판매 판단에 쓰이지 않습니다」)
+             🟢 계약 **21**(소스 10 + 마운트 DOM 11) · 변이 **M1~M8 전부 FAIL → 복구**
+             🟢 회귀 **737 files / 9,658 passed / 0 failed** · tsc 0 · build 0
+             🔴🔴 **계약이 내 결함을 배포 전에 잡았다** — `checkRan` 에 `weak` 가 없어
+                **후보가 전부 버려진 상품에서는 구역째 사라졌다**(= 고치려던 그 모양)
+             🟡 **다음 = STEP 4**(배포 → 따져 화면 E2E) · CEO 확인 1회
+[낡음]       **E2E-ROOTCAUSE-FIX-02 STEP 1** — 🔴 **7번째는 오추출이었다 · 수정 완료**
              🔴🔴 STEP 1 판정 = **7번째 INVALID** (CPO 가 요구한 그 검증)
                 snapshot `0306c272-…` · title `Sergio Tacchini Men's Magro Long **Sleeve1**`
                 → code **`SLEEVE1`** · source **title**(내가 추가한 축) · labeled=false

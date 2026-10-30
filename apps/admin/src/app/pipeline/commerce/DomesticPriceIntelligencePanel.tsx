@@ -33,6 +33,8 @@ import {
   /** 🔴 E2E-04 — 다섯째·여섯째 출처의 머리 문구. 같은 owner 다. */
   DOMESTIC_LISTING_HEADING,
   AI_SEARCH_HEADING,
+  WEAK_CANDIDATE_HEADING,
+  WEAK_CANDIDATE_SCOPE_NOTICE,
   DOMESTIC_REVIEW_HEADING,
   /** 🔴 WU-141-R2 — 탐색 과정 전체를 덮는 하나의 접힘 라벨. */
   JUDGEMENT_BASIS_LABEL,
@@ -1989,6 +1991,15 @@ export function DomesticPriceIntelligencePanel({
    */
   const [webSearchEvidence, setWebSearchEvidence] = useState<GeminiTransientRow[] | null>(null);
   /**
+   * 🔵🔵🔵 DIP-01 — **⑧ 게이트가 버린 후보.**
+   *
+   * 🔴🔴 **`marketComparisonInput.rows` 에 넣지 않는다.** 그 배열은 「📊 시장 판매 판단」
+   *    (가격/판정 영역)의 입력이고, 이 후보들은 **판정을 끝내지 않았다**. 넣으면
+   *    셀러가 판정되지 않은 것을 판정된 것으로 읽는다.
+   * 🟢 그래서 이 state 는 **후보 카드 구역에만** 쓰인다(소비처 둘 중 하나에만).
+   */
+  const [weakCandidateEvidence, setWeakCandidateEvidence] = useState<GeminiTransientRow[] | null>(null);
+  /**
    * 🔴🔴 WU-049 — **해외 참고가격.** MI 가 이미 계산한 집계를 받는다.
    *    🟢 이 값은 **이번 확인에만** 산다 — GET 경로는 transient 를 넘기지 않아
    *       항상 비어 있다(설계). 그래서 상태로 들고 다른 값을 덮어쓰지 않는다.
@@ -2024,6 +2035,8 @@ export function DomesticPriceIntelligencePanel({
         domesticListingEvidence?: GeminiTransientRow[] | null;
         /** 🔴 E2E-03 — **여섯 번째 출처(웹 검색).** 자동 1회차에서도 채워진다. */
         webSearchEvidence?: GeminiTransientRow[] | null;
+        /** 🔵 DIP-01 — ⑧ 게이트가 버린 후보. 🔴 **MI 입력이 아니다**(표시 전용). */
+        weakCandidateEvidence?: GeminiTransientRow[] | null;
       } | null;
     };
     setOverseasReference(j.overseasReference ?? null);
@@ -2036,6 +2049,8 @@ export function DomesticPriceIntelligencePanel({
     setDomesticListingEvidence(j.domesticShop?.domesticListingEvidence ?? null);
     /** 🔴 E2E-03 UI FIX — **같은 이유로 AI Search 국내 후보가 사라졌다.** */
     setWebSearchEvidence(j.domesticShop?.webSearchEvidence ?? null);
+    /** 🔵 DIP-01 — ⑧ 게이트가 버린 후보. 🔴 **여기 한 자리에만** 넣는다. */
+    setWeakCandidateEvidence(j.domesticShop?.weakCandidateEvidence ?? null);
   }, [autoCheckResult]);
   /**
    * ══════════════════════════════════════════════════════════════════════════
@@ -2351,6 +2366,8 @@ export function DomesticPriceIntelligencePanel({
             domesticListingEvidence?: GeminiTransientRow[] | null;
             /** 🔴 E2E-03 — **웹 검색 후보.** 이 경로에도 같은 칸이 필요하다. */
             webSearchEvidence?: GeminiTransientRow[] | null;
+            /** 🔵 DIP-01 — ⑧ 게이트가 버린 후보(표시 전용 · MI 입력 아님). */
+            weakCandidateEvidence?: GeminiTransientRow[] | null;
             urlCandidateMetrics?: {
               suppliedUrls: number;
               acceptedUrls: number;
@@ -2374,6 +2391,8 @@ export function DomesticPriceIntelligencePanel({
         setDomesticListingEvidence(json.domesticShop?.domesticListingEvidence ?? null);
         /** 🔴 E2E-03 UI FIX — 「🔄 다시 분석」 경로에도 같은 줄이 필요하다(둘 다 고친다). */
         setWebSearchEvidence(json.domesticShop?.webSearchEvidence ?? null);
+        /** 🔵 DIP-01 UI — 「🔄 다시 분석」 경로에도 같은 줄이 필요하다(두 소비처). */
+        setWeakCandidateEvidence(json.domesticShop?.weakCandidateEvidence ?? null);
         setUrlCandidateNotice(describeUrlCandidateMetrics(json.domesticShop?.urlCandidateMetrics ?? null));
         setOverseasReference(json.overseasReference ?? null);
         setDomesticReference(json.domesticReference ?? null);
@@ -2496,6 +2515,8 @@ export function DomesticPriceIntelligencePanel({
       /** 🔴🔴 E2E-04 — 이 둘이 안 내려가서 국내 후보가 화면에 서지 못했다. */
       domesticListingEvidence={domesticListingEvidence}
       webSearchEvidence={webSearchEvidence}
+      /** 🔵 DIP-01 — 표시 전용 배열. 🔴 `miJudgement`·요약·가격 축에는 넘기지 않는다. */
+      weakCandidateEvidence={weakCandidateEvidence}
       /** 🔴 WU-132 ④ — 검토 구역의 원본 ↔ 후보 육안 비교용. 판정에 들어가지 않는다. */
       originImageUrl={originImageUrl}
       originTitle={originTitle}
@@ -2576,6 +2597,8 @@ export function TransientCandidateSections({
    */
   domesticListing,
   webSearch,
+  /** 🔵 DIP-01 — ⑧ 게이트가 버린 후보. 🔴 표시 전용(가격/판정 영역에 안 들어간다). */
+  weak,
   notice,
   overseasReference,
   domesticReference,
@@ -2592,6 +2615,8 @@ export function TransientCandidateSections({
   overseasAuto?: GeminiTransientRow[] | null;
   /** 🔴 WU-132 ⑥ — 이전에 「동일상품」으로 판단한 URL 을 다시 확인한 결과. */
   reviewedSame?: GeminiTransientRow[] | null;
+  /** 🔵 DIP-01 — 증거 부족으로 판정 전에 버려지던 후보(표시 전용). */
+  weak?: GeminiTransientRow[] | null;
   /** 🔴 CORE-2R-4 — 국내 등록부 목록을 타고 상세로 들어간 후보. */
   domesticListing?: GeminiTransientRow[] | null;
   /** 🔴 SP-07 — 외부 검색엔진(AI Search)이 찾아온 후보. */
@@ -2673,6 +2698,17 @@ export function TransientCandidateSections({
     /** 🔴 E2E-04 — 다섯째·여섯째 출처도 「조회가 돌았다」의 근거다. */
     domesticListing != null ||
     webSearch != null ||
+    /**
+     * 🔵🔵🔵 DIP-01 — **이 줄이 없으면 이 WU 가 고치려던 그 모양이 그대로 남는다.**
+     *
+     * 🔴 후보가 **전부** ⑧ 게이트에서 버려진 상품에서는 위 여섯이 모두 `[]`/`null` 이고
+     *    `weak` 만 찬다. 그때 이 가드가 **구역 전체를 null 로 돌려** 버린 후보도 같이
+     *    사라졌다 — 즉 「살렸는데 화면엔 없다」가 된다.
+     * 🟢 계약 D-1 이 그것을 **배포 전에** 잡았다(마운트 DOM 축을 둔 이유).
+     * 🟢 「조회가 돌았다」는 사실로는 맞다 — 버려진 후보가 있다는 것 자체가 그 증거다
+     *    (WU-130 ② 「조회했다」와 「후보 없음」은 다른 문장).
+     */
+    weak != null ||
     !!domesticReference ||
     !!overseasReference;
   const showDomesticReview = checkRan;
@@ -2854,6 +2890,24 @@ export function TransientCandidateSections({
        *    이고 여기는 「예전에 봤고 지금 검색엔 안 걸릴 수도 있는 것」이다.
        * 🔴 **현재 검색에 다시 걸리지 않았다고 사라지는 구조면 안 된다**(지시서 문장 그대로).
        */}
+      {/**
+       * 🔵🔵🔵 DIP-01 — **마지막 구역.** 위 구역들은 「판정을 마친 후보」이고 여기는
+       *    **판정 전에 버려지던** 후보다.
+       * 🔴 WU-091 네 조건을 그대로 지킨다 — ① 기본 **접힘** ② 판정된 구역보다 **뒤**
+       *    ③ 행마다 판정 라벨(컴포넌트가 이미 그린다) ④ **쓰이지 않는다는 말을 적는다**.
+       * 🔴 `onReview` 를 주지 않는다 — 사람 검토는 🇰🇷 구역의 계약이다(WU-081).
+       */}
+      <GeminiTransientCandidates
+        evidence={weak}
+        heading={WEAK_CANDIDATE_HEADING}
+        testId="weak-candidate-transient"
+        collapsed
+      />
+      {weak && weak.length > 0 && (
+        <p data-testid="weak-candidate-scope" className="mt-1 text-[11px] text-text-tertiary">
+          {WEAK_CANDIDATE_SCOPE_NOTICE}
+        </p>
+      )}
       <ReviewHistorySection rows={reviewHistory} />
     </details>
   );
@@ -2910,6 +2964,8 @@ export function MiPanelView({
    */
   domesticListingEvidence = null,
   webSearchEvidence = null,
+  /** 🔵 DIP-01 — ⑧ 게이트가 버린 후보(표시 전용). */
+  weakCandidateEvidence = null,
   /** 🔴 WU-132 ④ — 검토 구역의 원본 ↔ 후보 육안 비교용. 판정에 들어가지 않는다. */
   originImageUrl = null,
   originTitle = null,
@@ -2985,6 +3041,13 @@ export function MiPanelView({
   domesticListingEvidence?: GeminiTransientRow[] | null;
   /** 🔴 E2E-04 — SP-07 외부 검색(AI Search) 후보. 위 넷과 **다른 출처** 다. */
   webSearchEvidence?: GeminiTransientRow[] | null;
+  /**
+   * 🔵🔵 DIP-01 — ⑧ 게이트가 버린 후보.
+   * 🔴🔴 **`buildMarketJudgement` 에 넘기지 않는다** — 판정을 끝내지 않은 후보이고,
+   *    넣으면 가격 판단이 판정되지 않은 것을 판정된 것으로 센다. 요약 집계에도
+   *    넣지 않는다(요약은 「판정된 후보」의 수다).
+   */
+  weakCandidateEvidence?: GeminiTransientRow[] | null;
   /**
    * 🔴 WU-132 ④ — 원상품 대표 이미지/제목(육안 비교용).
    *    🔴 판정·가격·집계·등록 payload 에 **들어가지 않는다** — 그리는 데만 쓴다.
@@ -4124,7 +4187,7 @@ export function MiPanelView({
           🟢 그리고 후보가 없으면 두 구역 모두 **아무것도 렌더하지 않는다** —
              기본 화면은 한 픽셀도 바뀌지 않는다(그 성질은 컴포넌트가 보장한다).
         */}
-        <TransientCandidateSections web={geminiEvidence} supplied={urlCandidateEvidence} overseasAuto={overseasAutoEvidence} reviewedSame={reviewedSameEvidence} domesticListing={domesticListingEvidence} webSearch={webSearchEvidence} notice={urlCandidateNotice} overseasReference={overseasReference} domesticReference={domesticReference} domesticReview={domesticReview} onDomesticReview={handleDomesticReview} reviewSaveState={reviewSaveState} reviewHistory={reviewHistory} originImageUrl={originImageUrl} originTitle={originTitle} />
+        <TransientCandidateSections web={geminiEvidence} supplied={urlCandidateEvidence} overseasAuto={overseasAutoEvidence} reviewedSame={reviewedSameEvidence} domesticListing={domesticListingEvidence} webSearch={webSearchEvidence} weak={weakCandidateEvidence} notice={urlCandidateNotice} overseasReference={overseasReference} domesticReference={domesticReference} domesticReview={domesticReview} onDomesticReview={handleDomesticReview} reviewSaveState={reviewSaveState} reviewHistory={reviewHistory} originImageUrl={originImageUrl} originTitle={originTitle} />
       </div>
     </CollapsibleSection>
   );

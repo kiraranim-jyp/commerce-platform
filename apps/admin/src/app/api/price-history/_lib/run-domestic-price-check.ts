@@ -350,6 +350,58 @@ export interface GeminiTransientEvidence {
   basis: CandidateMarketBasis;
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 DIP-01 — **⑧ 게이트가 버린 후보**(셀러에게 «보여주기» 전용)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **왜 생겼는가(실측).** `isEvidenceEvaluationWorthwhile` 은 **HTTP 비용** 게이트
+ *    인데(그 함수 주석이 그렇게 적고 있다) 뒤에 `continue` 가 있어 **노출까지 결정**
+ *    한다. 운영 함수를 직접 불러 잰 결과:
+ *    ```
+ *    SAME / PRESUMED_SAME                        🟢 통과
+ *    SIMILAR · UNKNOWN · CONFLICT · 판정없음       🔴 DROPPED   (matchLevel=low 일 때)
+ *    ```
+ *    그리고 AI Search 후보의 `matchLevel` 은 **전건 low** 다(WU-088 · 64/64).
+ *    ⟹ 10상품 실측에서 **MI 자격 18 → 최종 4**(-14 · 78%)가 여기서 사라졌다.
+ *    ⟹ CEO 육안 GT 는 그 버림 «안에» **Human SAME 3건** 이 있었다고 했다(WU-112).
+ *
+ * 🔴 **비용은 그대로 아낀다** — 이 경로는 `fetchDomesticModelCode` 를 **부르지 않는다**
+ *    (추가 HTTP **0**). 되살린 것은 「평가」가 아니라 「표시」뿐이다.
+ *
+ * 🔴🔴🔴 **`GeminiTransientEvidence` 가 «아니다» — 일부러 좁혔다.**
+ *    MI 집계 입력은 `priceTier` 를 **요구** 하는데 이 후보들은 판정을 끝내지 않아 그
+ *    값이 **없다**. 🔴 지어내면 가격 집계가 오염된다(WU-085 에서
+ *    `priceTierFromLink({matchTruth:null,verified:false})` 를 지어넣었다가 「측정불가」로
+ *    되돌린 적이 있다). 🟢 그래서 **칸 자체를 두지 않았다** — 이 배열은 **타입 수준
+ *    에서** MI 에 들어갈 수 없다. 없는 칸: `priceTier`·`priceKrw`·`matchTruth`·`verified`.
+ *
+ * 🟢 화면 재사용은 공짜다 — `GeminiTransientRow` 는 `domain`/`discoveredUrl` 만 필수라
+ *    이 모양을 그대로 받는다(매핑 코드 **0**).
+ */
+export interface WeakCandidateEvidence {
+  /** 🔴 어느 게이트가 버렸는지 — 「후보가 없었다」와 구분한다. */
+  dropGate: string;
+  /** 🔴 `GeminiTransientEvidence.source` 와 **같은 집합** 이어야 한다(배지가 빈칸이 된다). */
+  source: GeminiTransientEvidence["source"];
+  domain: string;
+  title: string | null;
+  imageUrl: string | null;
+  soldOut: boolean | null;
+  discoveredUrl: string;
+  /** 🟢 **이미 계산돼 있던 값** 이다 — 여기서 새로 판정하지 않는다. */
+  crossSellerVerdict: string | null;
+  confidence: number | null;
+  matchReasons: string[];
+  crossSellerBlockers: string[];
+  crossSellerConflicts: string[];
+  priceAmount: number | null;
+  priceCurrency: string | null;
+  priceStatus: string | null;
+  market: CandidateMarket;
+  basis: CandidateMarketBasis;
+}
+
 export interface DomesticPriceCheckResult {
   linksCreatedOrUpdated: number;
   pricesRecorded: number;
@@ -422,6 +474,15 @@ export interface DomesticPriceCheckResult {
    * 🔴 `null` = 그 경로가 돌지 않았다(호출부가 안 켰다) · `[]` = 돌았는데 후보가 0.
    */
   webSearchEvidence?: GeminiTransientEvidence[] | null;
+  /**
+   * 🔵🔵 DIP-01 — **⑧ 게이트가 버린 후보**(표시 전용 · 타입이 좁다).
+   *
+   * 🔴 위 여섯 배열과 **합치지 않는다.** 저쪽은 **MI 집계 입력** 이고 이쪽은 **아니다**
+   *    (`WeakCandidateEvidence` 주석). 🔴 `/check` 라우트의 MI 인자에 넣으면 그 경계가
+   *    깨진다 — 계약이 그 줄을 잠근다.
+   * 🔴 `null` = 그 경로가 돌지 않았다 · `[]` = 돌았는데 버려진 후보가 0.
+   */
+  weakCandidateEvidence?: WeakCandidateEvidence[] | null;
   /**
    * 🔴 SEARCH-PROVIDER-07 — 검색 자체의 계측(질의 · 호출 수 · organic · 건너뛴 이유 · 실패).
    * 🔴🔴 `skipped`/`failed` 를 **「결과 0」으로 읽지 않는다** — 「못 물어봤다」와 다르다.
@@ -1486,6 +1547,12 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
   let webSearchUrlMetrics: UrlCandidatePoolMetrics | null = null;
   let webSearchPriceEnrichCalls = 0;
   const webSearchEvidence: GeminiTransientEvidence[] = [];
+  /**
+   * 🔵 DIP-01 — ⑧ 게이트가 버린 후보. 🔴 위 여섯과 **다른 타입** 이고(좁다) MI 입력에
+   *    **합치지 않는다**. 출처는 행마다 `source` 로 들고 다닌다(배열을 가르지 않는 이유 —
+   *    이 배열은 집계에 쓰이지 않으므로 출처별 분리가 비용 보고를 왜곡하지 않는다).
+   */
+  const weakCandidateEvidence: WeakCandidateEvidence[] = [];
   if (input.webSearch) {
     const pool = await collectWebSearchUrls({
       /**
@@ -1844,6 +1911,26 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
       );
     }
     if (judgement.kind === "NO_CANDIDATES") continue;
+    /**
+     * 🔵 DIP-01 — 선언을 **DROPPED 분기 위로 옮겼다**(순수 이동 · 로직 0 변경).
+     *    버려지는 후보도 출처 배지가 필요하고, 출처를 가르는 owner 는 **하나** 여야
+     *    한다 — 여기서 복제하면 생산자가 늘 때 두 곳이 어긋난다.
+     */
+    const evidenceSource: GeminiTransientEvidence["source"] =
+      result.shopId === TRANSIENT_URL_SHOP_ID
+        ? "SELLER_URL"
+        : result.shopId === OVERSEAS_AUTO_SHOP_ID
+          ? "OVERSEAS_AUTO"
+          : /** 🔴 WU-132 — 네 번째 출처. 「그 외는 Gemini」로 두지 않는다. */
+            result.shopId === REVIEWED_SAME_SHOP_ID
+            ? "REVIEWED_SAME"
+            : /** 🔴 CORE-2R-4 — 다섯 번째 출처(국내 목록 탐색). */
+              result.shopId === DOMESTIC_LISTING_SHOP_ID
+              ? "DOMESTIC_LISTING"
+              : /** 🔴 SEARCH-PROVIDER-07 — 여섯 번째 출처(웹 검색 · 유일한 유료 경로). */
+                result.shopId === WEB_SEARCH_SHOP_ID
+                ? "WEB_SEARCH"
+                : "GEMINI_DISCOVERY";
     if (judgement.kind === "DROPPED") {
       const o = judgement.observed;
       console.log(
@@ -1861,6 +1948,45 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
           dropGate: judgement.gate,
         })}`,
       );
+      /**
+       * 🔵🔵🔵 DIP-01 — **여기서 후보가 «사라지고» 있었다.** 위 `console.log` 는
+       *    Vercel 런타임 로그로만 남고 셀러에게는 아무것도 가지 않았다.
+       *
+       * 🔴 되살리는 것은 **표시뿐** 이다 — 판정 **0** · 가격 집계 **0** · 추가 HTTP **0**
+       *    (`fetchDomesticModelCode` 를 여전히 부르지 않는다 = 비용 게이트의 원래 목적 유지).
+       * 🔴 값은 **전부 이미 계산돼 있던 것** 이다 — 지어낸 칸이 하나도 없다.
+       * 🔴 `priceTier` 를 **만들지 않았다**(타입에 칸이 없다) ⟹ MI 집계에 들어갈 경로가
+       *    **구조적으로** 없다.
+       * 🔴 `market` 은 **운영 owner** 를 그대로 부른다 — 여기서 추측하지 않는다.
+       */
+      weakCandidateEvidence.push({
+        dropGate: judgement.gate,
+        source: evidenceSource,
+        domain: result.domain,
+        title: o.candidate.title,
+        imageUrl: o.candidate.imageUrl ?? null,
+        soldOut: o.candidate.soldOut ?? null,
+        discoveredUrl: o.candidate.url,
+        crossSellerVerdict: o.candidate.crossSellerVerdict ?? null,
+        confidence: o.candidate.confidence ?? null,
+        matchReasons: o.candidate.matchReasons ?? [],
+        /** 🔴 WU-031 — `String(obj)` 는 `"[object Object]"` 다. **값** 을 꺼낸다. */
+        crossSellerBlockers: (o.candidate.crossSellerBlockers ?? []).map((b) =>
+          typeof b === "string" ? b : b.blocker,
+        ),
+        crossSellerConflicts: (o.candidate.crossSellerConflicts ?? []).map((c) =>
+          typeof c === "string" ? c : c.conflict,
+        ),
+        priceAmount: o.candidate.price?.amount ?? null,
+        priceCurrency: o.candidate.price?.currency ?? null,
+        priceStatus: o.candidate.priceStatus ?? null,
+        ...classifyCandidateMarket({
+          domain: result.domain,
+          currency: o.candidate.price?.currency ?? null,
+          isRegisteredDomesticShop: registeredDomains.has(result.domain.trim().toLowerCase()),
+          marketEvidence: o.candidate.marketEvidence ?? null,
+        }),
+      });
       continue;
     }
     const {
@@ -1898,21 +2024,6 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
        *    **세 id 를 각각 적는다** — 생산자가 늘 때 조용히 엉뚱한 배열에 담기면
        *    보고가 거짓이 된다(기본값 쪽으로 흘러들어도 타입이 잡아 주지 않는다).
        */
-      const evidenceSource: GeminiTransientEvidence["source"] =
-        result.shopId === TRANSIENT_URL_SHOP_ID
-          ? "SELLER_URL"
-          : result.shopId === OVERSEAS_AUTO_SHOP_ID
-            ? "OVERSEAS_AUTO"
-            : /** 🔴 WU-132 — 네 번째 출처. 「그 외는 Gemini」로 두지 않는다. */
-              result.shopId === REVIEWED_SAME_SHOP_ID
-              ? "REVIEWED_SAME"
-              : /** 🔴 CORE-2R-4 — 다섯 번째 출처(국내 목록 탐색). */
-                result.shopId === DOMESTIC_LISTING_SHOP_ID
-                ? "DOMESTIC_LISTING"
-                : /** 🔴 SEARCH-PROVIDER-07 — 여섯 번째 출처(웹 검색 · 유일한 유료 경로). */
-                  result.shopId === WEB_SEARCH_SHOP_ID
-                  ? "WEB_SEARCH"
-                  : "GEMINI_DISCOVERY";
       /** 🟢 담을 배열을 **이름 있는 변수** 로 고른다 — 가드 소스 검사가 push 자리를
        *  안정적으로 지목할 수 있어야 한다(테스트가 그 앵커를 쓴다). */
       const transientEvidenceSink =
@@ -2230,6 +2341,11 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     domesticListingPriceEnrichCalls,
     /** 🔴 SP-07 — 같은 원칙. 호출부가 안 켰으면 `null`(「후보 0」이 아니다). */
     webSearchEvidence: webSearchMetrics === null ? null : webSearchEvidence,
+    /**
+     * 🔵 DIP-01 — ⑧ 게이트가 버린 후보. 🔴 `[]` 는 「버려진 후보가 없다」이고
+     *    「경로가 안 돌았다」가 아니다 — 이 배열은 **항상** 돈다(모든 생산자 공통 경로).
+     */
+    weakCandidateEvidence,
     webSearchMetrics,
     webSearchUrlMetrics,
     webSearchPriceEnrichCalls,

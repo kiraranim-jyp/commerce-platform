@@ -462,10 +462,20 @@ describe("CORE-2R-4 D — composite market gate", () => {
 
   /** 🔴 운영이 후보의 증거 칸을 **실제로 넘긴다**(배선이 끊기면 전건 UNKNOWN 으로 돌아간다). */
   it("D-7 🔴 runner 가 `marketEvidence` 를 판정 함수에 넘긴다", () => {
-    const at = RUNNER_CODE.indexOf("...classifyCandidateMarket({");
-    expect(at).toBeGreaterThan(0);
-    const block = RUNNER_CODE.slice(at, at + 400);
-    expect(block).toContain("marketEvidence: best.marketEvidence");
+    /**
+     * 🔵 DIP-01 — **호출부가 «둘» 이 됐다**(판정된 후보 + ⑧ 게이트가 버린 후보).
+     * 🔴 첫 등장만 보면 이 계약이 **그때그때 다른 곳을 본다** — 전수로 강화한다.
+     *    🔴 그리고 **개수까지** 단언한다(새 호출부가 생기면 여기서 멈춘다).
+     */
+    const NEEDLE = "...classifyCandidateMarket({";
+    const calls: number[] = [];
+    for (let at = RUNNER_CODE.indexOf(NEEDLE); at >= 0; at = RUNNER_CODE.indexOf(NEEDLE, at + 1)) calls.push(at);
+    expect(calls.length, "classifyCandidateMarket 호출부 수가 바뀌었다").toBe(2);
+    const withEvidence = calls.filter((at) => RUNNER_CODE.slice(at, at + 400).includes("marketEvidence:"));
+    expect(withEvidence.length, "🔴 marketEvidence 를 안 넘기는 호출부가 있다").toBe(2);
+    /** 🟢 판정 경로는 `best`, 버린 후보 경로는 `o.candidate` — 둘 다 **그 후보의** 값이다. */
+    expect(RUNNER_CODE).toContain("marketEvidence: best.marketEvidence");
+    expect(RUNNER_CODE).toContain("marketEvidence: o.candidate.marketEvidence");
   });
 });
 
