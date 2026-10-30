@@ -36,6 +36,30 @@ const LIVE = process.env.DIF_02_PROBE === "1";
 const FIX = path.join(__dirname, "fixtures");
 const OUTDIR = process.env.MI_P0_02_OUT_DIR ?? path.join(process.env.TEMP ?? ".", "mi-p0-02");
 const loose = (u: string) => String(u).trim().toLowerCase().replace(/[?#].*$/, "").replace(/\/+$/, "");
+
+/**
+ * 🔴🔴🔴 DIF-03 — **1차 집계가 이 키 때문에 틀렸다. 그대로 보고했으면 거짓이었다.**
+ *
+ * `loose()` 는 raw URL 을 쓴다. 그런데 운영은 상품 페이지를 받아 **사이트가 스스로
+ * 적은 canonical**(Shopify `/products/<handle>`)을 후보 URL 로 싣는다. GT 는
+ * `/en-kr/collections/<c>/products/<handle>` 처럼 **로케일·목록 접두가 붙은** URL 이라
+ * 둘이 글자로 다르다 ⟹ 1차 하니스가 **같은 상품을 「NOT_IN_POOL」로 9건** 찍었고,
+ * 그중 **7건은 실제로는 JUDGED/SAME 까지 간 후보** 였다.
+ *
+ * 🟢 그래서 GT 라벨을 붙이는 키를 **「판매처 + 상품 handle」** 로 바꾼다.
+ * 🔴 운영 로직이 아니다 — **라벨 매칭 전용** 이다(CPO §3-C 「harness 만 수정」).
+ * 🔴 운영 `canonicalListingKey` 를 그대로 못 쓰는 이유: 그 함수는 **로케일을 보존**
+ *    한다(시장 구분 · CPO 확정 정책). 여기서 필요한 것은 「CEO 가 라벨한 그 상품인가」다.
+ */
+const productKey = (u: string): string => {
+  try {
+    const x = new URL(u);
+    const segs = x.pathname.toLowerCase().replace(/\/+$/, "").split("/").filter(Boolean);
+    return `${x.hostname.toLowerCase().replace(/^www\./, "")}/${segs[segs.length - 1] ?? ""}`;
+  } catch {
+    return loose(u);
+  }
+};
 const fx = <T>(f: string): T => JSON.parse(readFileSync(path.join(FIX, f), "utf8")) as T;
 
 /**
@@ -103,6 +127,9 @@ describe("DIF-02 — Human SAME recovery funnel (새 Search 0)", () => {
     "GT URL 하나하나가 어느 칸에서 멈추는지 적는다",
     async () => {
       const gt = loadGt();
+      /** 🔴 DIF-03 — 라벨을 **상품 키** 로도 색인한다(1차 하니스가 여기서 틀렸다). */
+      const gtByProduct = new Map<string, { origin: string; url: string; human: string; src: string }>();
+      for (const g of gt.values()) if (!gtByProduct.has(productKey(g.url))) gtByProduct.set(productKey(g.url), g);
       const rows: Row[] = [];
       /* eslint-disable no-console */
 
@@ -182,10 +209,10 @@ describe("DIF-02 — Human SAME recovery funnel (새 Search 0)", () => {
             fetchModelCode: (u) => fetchDomesticModelCode(res.domain, u),
           });
           for (const c of priced) {
-            const k = loose(c.url);
+            const k = productKey(c.url);
             seenUrl.add(k);
-            const g = gt.get(k);
-            const isBest = j.kind === "JUDGED" && loose(j.best.url) === k;
+            const g = gtByProduct.get(k);
+            const isBest = j.kind === "JUDGED" && productKey(j.best.url) === k;
             const m = classifyCandidateMarket({
               domain: res.domain,
               currency: c.price?.currency ?? null,
@@ -214,7 +241,7 @@ describe("DIF-02 — Human SAME recovery funnel (새 Search 0)", () => {
         }
         /** 🔴 풀에 아예 못 들어온 URL 도 **적는다**(0 으로 만들지 않는다). */
         for (const g of mine)
-          if (!seenUrl.has(loose(g.url)))
+          if (!seenUrl.has(productKey(g.url)))
             rows.push({
               origin: origin.code,
               url: g.url,

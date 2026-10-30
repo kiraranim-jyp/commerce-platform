@@ -21,7 +21,26 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **DISCOVERY-IDENTITY-FUNNEL-02** — 🔴 **Identity 수정 조건 불성립 · STOP**
+CURRENT WU   **DIF-03 CLOSED** — 🔴 **기술적 후보 손실 0 · 남은 것은 AC↔AB 정책 하나**
+             🔴🔴 **내 DIF-02 숫자가 틀렸고 내가 잡았다** — `NOT_IN_POOL 9` 중 **7건이
+                손실이 아니었다**. 운영은 사이트 canonical(`/products/<handle>`)을 후보로
+                싣는데 GT 는 `/en-kr/collections/…` 라 raw 매칭이 어긋났다.
+                ⟹ 하니스 키를 **판매처+handle** 로 교체(운영 코드 0 · CPO §3-C).
+             【FUNNEL 보정】 GT 37 → 풀 35/37 → ⑧ 통과 32 → 샵 대표 23
+                NOT_IN_POOL **2** — REDIRECTED_AWAY 1(WU-075 의도) · UNREACHABLE 1(외부)
+                ⟹ 🟢🟢 **기술적 candidate loss(CASE B) = 0**
+             【Human SAME recovery】 25건 → **18/25 (72%)**
+                🟢 같은 라인 kids/AC  16건 → **14/16 (88%)**
+                🔴 다른 라인 baby/AB   9건 → **4/9 (44%)**  ← 손실이 전부 여기 있다
+                baby 손실 5 전수 = **CONFLICT**(MODEL_CODE 4 · COMPOSITION 1)
+             🔴🔴 **CPO §12 STOP 조건 성립** — recovery 개선의 유일한 레버가 AC↔AB 다
+                ⟹ 코드 수정 0 · **CEO/CPO 정책 결정으로 올린다**
+             🟡 누출 1 — `m.luxboy.com` PRESUMED_SAME · blocker `NO_TITLE_OVERLAP` ·
+                KR ₩59,000 VERIFIED. 🔴 최소 방어안은 **「blocker 있는 PRESUMED 를
+                금액 집계에서 제외」**(WU-123/125 가 이미 설계) — 🔴 가격 집계 변경이라 §10 LOCK
+             🟢 가격 — SAME/PRESUMED **18/18 (100%)** · VERIFIED 16 · 🇰🇷 3 · 🌎 14
+             🟢 회귀 737 / 9,658 passed / 0 failed · tsc 0 · build 0
+[낡음]       **DISCOVERY-IDENTITY-FUNNEL-02** — 🔴 **Identity 수정 조건 불성립 · STOP**
              🟢 측정 완료 · **새 Search 0**(입력 = CEO 가 이미 라벨한 GT URL 44건)
              【FUNNEL】 GT 44 → 풀 35 → ⑧ 통과 32 → 샵 대표 **23**
                 멈춘 칸 — NOT_IN_POOL 9 · GATE_DROPPED 3 · NOT_SHOP_BEST 9 · JUDGED 23
