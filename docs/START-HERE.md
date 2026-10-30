@@ -21,7 +21,33 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **DIF-03 CLOSED** — 🔴 **기술적 후보 손실 0 · 남은 것은 AC↔AB 정책 하나**
+CURRENT WU   **AGE-LINE-01 CLOSED** — 🔴 **기술 수정 0 · 정책 결정 2건만 남았다**
+             🟢 측정 완료 · **새 Search 0** · 운영 코드 **변경 0** · 계약 10 신설
+             【baby 라인 9건이 «세 부류» 로 완전히 갈린다】
+             ① 🔴 품번이 읽힌 **4건** → `CONFLICT` · reason 이 **「충돌: 모델코드」 한 줄뿐**
+                `bobochoses.com`(공식몰) AB040/AB046 · `junioredition` · `cemarose.ca`
+                🔴🔴 그 후보들의 form·color·material·fit·**coreTitleTokens 가 전부 일치** 한다
+                   (공식몰은 material 이 **글자 그대로 동일**) — 다른 것은 품번 하나다
+                🔴🔴 그런데 `reasons` 에 **「근거」가 0개** 다 ⟹ 품번 충돌이 나면
+                   **다른 축을 세지 않는다**. 그것이 「과도함」의 실체다
+                🟢 junioredition 설명문이 스스로 적는다 — 「… **Product code B226AB040**」
+                ⟹ **§16 STOP A**(품번 보호 전역 제거 필요) · CTO 가 열지 않았다
+             ② 🟡 품번 null **4건** → **이미 `PRESUMED_SAME` + 가격 보유** = 살아 있다
+                blocker `AUDIENCE_LINE`(「보류: 연령 라인 CHILD ↔ BABY」)
+                🟢🟢 **같은 reasons 안에 모순이 있다** — 「관측: 사이즈 체계 AGE ↔ MONTH —
+                   **사이즈 라인 차이이고 같은 모델로 본다**」. 두 축이 같은 사실을 다르게 본다
+                🔴 WU-143 이 `AUDIENCE_LINE` 제거를 시도했고 **false SAME 13건** 이 났다
+             ③ 🟢 **1건은 CONFLICT 가 정답** — `bornyesterdaykids` 는 제목이
+                「… T-shirt **& Denim Pants Set**」 = **세트 상품** 이다(COMPOSITION)
+             ⟹ 🟢🟢 **기술적 false negative = 0**
+             🔴🔴 **§8/§9 가격 제외는 «순손실» 이라 구현하지 않았다**(실측)
+                제외 대상 7 중 **6건이 human SAME** · DIFFERENT 는 1건뿐
+                제외하면 KRW 후보가 **1건** 만 남는다(₩88,000·₩70,000 정답이 같이 사라진다)
+                blocker 종류로 갈라도 — AUDIENCE_LINE 5(전부 SAME) · NO_TITLE_OVERLAP 2(1/2)
+             🟢 baseline 불변 — recovery 18/25(72%) · kids 14/16(88%) · 가격 19/19
+             🟡 **CPO/CEO 정책 결정 2건** ① AC↔AB 품번 ② blocker PRESUMED 가격 제외
+             🟢 회귀 739 / 9,668 passed / 0 failed · tsc 0 · build 0
+[낡음]       **DIF-03 CLOSED** — 🔴 **기술적 후보 손실 0 · 남은 것은 AC↔AB 정책 하나**
              🔴🔴 **내 DIF-02 숫자가 틀렸고 내가 잡았다** — `NOT_IN_POOL 9` 중 **7건이
                 손실이 아니었다**. 운영은 사이트 canonical(`/products/<handle>`)을 후보로
                 싣는데 GT 는 `/en-kr/collections/…` 라 raw 매칭이 어긋났다.
