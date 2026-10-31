@@ -3665,6 +3665,12 @@ export function CommerceWorkspace({
         <div id={PRICE_COMPARISON_ANCHOR_ID} className="scroll-mt-4">
           <MarketPriceComparison
             rows={marketComparison?.rows ?? null}
+            /**
+             * 🔵🔵 CORE-E2E-CLOSE-04 — **식별자만** 내려보낸다.
+             * 🔴 여기에 저장 state 를 만들지 않았다(CPO §4) — owner 는 그 컴포넌트의
+             *    `useCandidateReview` 하나이고 저장은 기존 `candidate-reviews` POST 다.
+             */
+            snapshotId={snapshotId}
             domesticReference={marketComparison?.domesticReference ?? null}
             overseasReference={marketComparison?.overseasReference ?? null}
             /**

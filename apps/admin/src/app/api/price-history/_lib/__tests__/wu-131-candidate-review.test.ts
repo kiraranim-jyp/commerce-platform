@@ -41,6 +41,15 @@ const PANEL = strip(
 
 /* ══════════════════ A. 저장소 — 079 ══════════════════ */
 
+/**
+ * 🔵🔵 CORE-E2E-CLOSE-04 — 후보 선택 저장의 **유일한 owner** 다(패널에서 «옮겼다»).
+ * 🔴 그 파일을 지우거나 POST 를 되돌리면 아래 단언들이 **전부** FAIL 한다.
+ */
+const HOOK_SRC = readFileSync(
+  path.join(__dirname, "../../../../pipeline/commerce/use-candidate-review.ts"),
+  "utf8",
+);
+
 describe("A. 🔴 migration 079", () => {
   it("A-1 네 상태를 **DB 가 강제** 한다 — 애플리케이션 어휘와 같다", () => {
     expect(SQL).toContain("human_verdict in ('SAME', 'SIMILAR', 'DIFFERENT', 'UNDECIDED')");
@@ -240,9 +249,18 @@ describe("D. 🔴 화면", () => {
    *    (WU-110 이 남긴 「판정 함수를 직접 부르는 테스트는 배선을 못 본다」의 재발).
    */
   it("D-7 🔴 진입할 때 이력을 **읽고**, 저장된 판단을 버튼으로 되살린다", () => {
-    expect(PANEL).toContain("const loadReviewHistory = useCallback");
-    expect(PANEL).toContain("void loadReviewHistory();");
-    expect(PANEL).toContain("setDomesticReview((prev) => ({ ...restored, ...prev }))");
+        /**
+     * 🔴🔴 **CORE-E2E-CLOSE-04 — 이 앵커의 «위치» 가 바뀌었다. 성질은 그대로다.**
+     *    저장 로직(이력 읽기 · 낙관적 저장 · 실패 되돌림 · POST)이 패널 «안» 에서
+     *    `candidate-review.ts` 의 `useCandidateReview` 로 **옮겨졌다**(복제 0).
+     *    🔴 패널이 `HIDDEN`(→ `return null`)이라 셀러가 **고를 수 없었던** 것이
+     *       CORE-E2E 의 마지막 구멍이었고, 결론 영역이 그 핸들러에 닿게 했다.
+     * 🟢 그래서 **owner 파일을 보도록** 고쳤고, 패널은 그것을 «쓴다» 는 것까지 단언한다.
+     */
+    expect(HOOK_SRC).toContain("const loadHistory = useCallback");
+    expect(PANEL).toContain("useCandidateReview(reviewSnapshotId");
+    expect(HOOK_SRC).toContain("void loadHistory();");
+    expect(HOOK_SRC).toContain("setReview((prev) => ({ ...restored, ...prev }))");
     /** 🔴 그리고 그 구역이 **실제로 화면에 선다** — 이름이 아니라 **렌더 줄** 을 본다. */
     expect(PANEL).toContain("<ReviewHistorySection rows={reviewHistory} />");
     /** 🔴 입력이 `reviewHistory` 에서 **온다** — 엉뚱한 배열을 넣어도 이름만으론 통과한다. */
@@ -250,7 +268,15 @@ describe("D. 🔴 화면", () => {
   });
 
   it("D-8 🔴 저장 실패면 **되돌리고 말한다**(거짓 「저장됨」 금지)", () => {
-    const seg = PANEL.slice(PANEL.indexOf("const handleDomesticReview"));
+        /**
+     * 🔴🔴 **CORE-E2E-CLOSE-04 — 이 앵커의 «위치» 가 바뀌었다. 성질은 그대로다.**
+     *    저장 로직(이력 읽기 · 낙관적 저장 · 실패 되돌림 · POST)이 패널 «안» 에서
+     *    `candidate-review.ts` 의 `useCandidateReview` 로 **옮겨졌다**(복제 0).
+     *    🔴 패널이 `HIDDEN`(→ `return null`)이라 셀러가 **고를 수 없었던** 것이
+     *       CORE-E2E 의 마지막 구멍이었고, 결론 영역이 그 핸들러에 닿게 했다.
+     * 🟢 그래서 **owner 파일을 보도록** 고쳤고, 패널은 그것을 «쓴다» 는 것까지 단언한다.
+     */
+    const seg = HOOK_SRC.slice(HOOK_SRC.indexOf("const onReview = useCallback"));
     expect(seg).toContain('"SAVING"');
     expect(seg).toContain('"ERROR"');
     expect(seg).toContain("method: \"POST\"");

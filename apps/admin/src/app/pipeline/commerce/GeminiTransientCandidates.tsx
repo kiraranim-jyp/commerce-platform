@@ -361,7 +361,7 @@ export const HUMAN_REVIEW_BUTTON: Record<HumanReview, string> = HUMAN_REVIEW_LAB
 
 /** 🔴 WU-131 — 저장 상태. 「눌렀다」와 「저장됐다」는 **다른 사실** 이다(§8 「저장 성공 여부 확인」). */
 export type ReviewSaveState = "SAVING" | "SAVED" | "ERROR";
-const SAVE_STATE_TEXT: Record<ReviewSaveState, string> = {
+export const SAVE_STATE_TEXT: Record<ReviewSaveState, string> = {
   SAVING: "저장 중…",
   SAVED: "저장됨",
   ERROR: "🔴 저장 실패 — 다시 눌러 주세요",

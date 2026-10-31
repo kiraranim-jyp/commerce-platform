@@ -109,6 +109,12 @@ let panel = "";
 let summarySrc = "";
 let comparisonSearch = "";
 let checkRoute = "";
+/**
+ * 🔵🔵 CORE-E2E-CLOSE-04 — 후보 선택 저장의 **유일한 owner** 다(패널에서 «옮겼다»).
+ * 🔴 이 파일의 관용구를 따른다 — jsdom 에서는 **모듈 최상위** `import.meta.url` 이
+ *    file 스킴이 아니라 `readFileSync` 가 던진다(바로 위 주석이 적어 둔 그 함정).
+ */
+let hookSrc = "";
 
 beforeAll(() => {
   const read = (relative: string): string => stripComments(readSourceAt(new URL(relative, import.meta.url)));
@@ -118,6 +124,13 @@ beforeAll(() => {
   comparisonSearch = read("../ComparisonShopSearch.tsx");
   /** 🔴 서버 라우트도 **여기서** 읽는다 — `it` 안에서는 같은 식이 스킴 오류를 냈다(실측). */
   checkRoute = read("../../../api/price-history/check/route.ts");
+  /**
+   * 🔵 CORE-E2E-CLOSE-04 — 선택 저장 owner.
+   * 🔴 **같은 `read()` 를 쓴다** — `readSourceAt` 를 직접 부르니 이 파일에서만
+   *    「The URL must be of scheme file」이 났다(바로 위 다섯 줄은 통과하는데).
+   *    🔴 원인을 **추정하지 않고** 작동이 확인된 관용구에 맞췄다.
+   */
+  hookSrc = read("../use-candidate-review.ts");
   /** 🔴 **읽기 실패를 「통과」로 쓰지 않는다** — 빈 문자열이면 아래 negative 단언이 전부 거짓 PASS 한다. */
   for (const [name, src] of [
     ["CommerceWorkspace", workspace],
@@ -125,6 +138,7 @@ beforeAll(() => {
     ["judgement-summary", summarySrc],
     ["ComparisonShopSearch", comparisonSearch],
     ["api/price-history/check/route", checkRoute],
+    ["use-candidate-review", hookSrc],
   ] as const) {
     if (src.length < 500) throw new Error(`${name} 소스를 읽지 못했다(길이 ${src.length})`);
   }
@@ -444,7 +458,16 @@ describe("C-6 후보 구역은 기본으로 접혀 있고 데이터는 하나도
      *    (이 트랙에서 반복된 「칸 이름/owner 를 추측했다」의 또 한 번이다.)
      * 🟢 UI 축에서 확인할 수 있는 것은 **저장/조회 호출이 살아 있다** 는 것이다.
      */
-    expect(panel).toContain("/candidate-reviews");
+        /**
+     * 🔴🔴 **CORE-E2E-CLOSE-04 — 이 앵커의 «위치» 가 바뀌었다. 성질은 그대로다.**
+     *    저장 로직(이력 읽기 · 낙관적 저장 · 실패 되돌림 · POST)이 패널 «안» 에서
+     *    `candidate-review.ts` 의 `useCandidateReview` 로 **옮겨졌다**(복제 0).
+     *    🔴 패널이 `HIDDEN`(→ `return null`)이라 셀러가 **고를 수 없었던** 것이
+     *       CORE-E2E 의 마지막 구멍이었고, 결론 영역이 그 핸들러에 닿게 했다.
+     * 🟢 그래서 **owner 파일을 보도록** 고쳤고, 패널은 그것을 «쓴다» 는 것까지 단언한다.
+     */
+    expect(hookSrc).toContain("/candidate-reviews");
+    expect(panel).toContain("useCandidateReview(");
     expect(panel).toContain("reviewSnapshotId");
   });
 });

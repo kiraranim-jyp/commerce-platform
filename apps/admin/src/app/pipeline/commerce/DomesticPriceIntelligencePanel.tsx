@@ -48,6 +48,11 @@ import {
   SUPPLIED_URL_INPUT_SUMMARY,
   type GeminiTransientRow,
 } from "./GeminiTransientCandidates";
+/**
+ * 🔵🔵 CORE-E2E-CLOSE-04 — 후보 선택 저장의 **유일한 구현** 이다(여기서 «옮겼다»).
+ * 🔴 이 파일에 `candidate-reviews` POST 를 다시 쓰지 않는다(CPO §4).
+ */
+import { useCandidateReview } from "./use-candidate-review";
 // MATCHING-UNIFY-1 — 국내 가격비교 표와 같은 라벨을 쓰기 위한 공통 매핑.
 import { domesticEvidenceNote, domesticMatchDisplay } from "./match-display";
 /**
@@ -3105,72 +3110,30 @@ export function MiPanelView({
    *    (`system_*` 와 `human_verdict` 는 서로 다른 칸이고 서버가 둘 다 보존한다).
    * 🔴 이 값은 MI 입력 · 가격 집계 · 알림 · 등록 payload 에 **들어가지 않는다**.
    */
-  const [domesticReview, setDomesticReview] = useState<Record<string, HumanReview>>({});
-  /** 🔴 WU-131 §8 — 「눌렀다」가 아니라 **「저장됐다」** 를 화면이 말해야 한다. */
-  const [reviewSaveState, setReviewSaveState] = useState<Record<string, ReviewSaveState>>({});
-  /** 🔴 WU-131 §3-B — 📚 이전에 확인한 후보. `null` = 아직 안 읽었다(「0건」이 아니다). */
-  const [reviewHistory, setReviewHistory] = useState<ReviewHistoryRow[] | null>(null);
-
   /**
-   * 🟢 진입할 때 **이력을 읽는다** — 이것이 「다시 들어와도 판단이 남아 있다」의 전부다.
-   * 🔴 실패해도 화면을 깨뜨리지 않는다(이력은 보조 정보다).
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 CORE-E2E-CLOSE-04 — **이 로직은 `candidate-review.ts` 로 «옮겼다».**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 **복제가 아니라 이동** 이다(CPO §4 「`candidate-reviews` POST 중복 구현 ❌»).
+   *    여기 있던 `useState` 셋 · `loadReviewHistory` · `handleDomesticReview` 가
+   *    **그대로** 그 파일로 갔고, 이 컴포넌트는 그것을 **쓴다**.
+   * 🔴 왜 — 셀러가 보는 결론 영역(`MarketPriceComparison`)이 이 핸들러에 닿을 수
+   *    없었다. WU-152 가 이 패널을 `HIDDEN`(→ `return null`)으로 둔 뒤 **선택 UI 가
+   *    화면에서 사라졌다**(CORE-E2E-CLOSE-02 가 확정한 그 원인).
+   *
+   * 🔴🔴 `enabled: presentation !== "HIDDEN"` — 운영에서 이 패널은 **항상 HIDDEN** 이고
+   *    (`CommerceWorkspace` 전수 1곳) 아무것도 그리지 않는다. 끄지 않으면 같은 화면에서
+   *    이력 GET 이 **두 번** 돈다(결론 영역의 instance + 여기). 🟢 그래서 **활성 owner 는
+   *    하나** 다. 🔴 저장 경로·문장·낙관적 되돌림은 **한 글자도 바뀌지 않았다.**
    */
-  const loadReviewHistory = useCallback(async () => {
-    /** 🔴 식별자가 없으면 **부르지 않는다** — 없는 주소로 fetch 해서 404 를 「이력 0」으로
-     *  읽지 않기 위해서다(렌더 전용 하니스가 그 상태다). */
-    if (!reviewSnapshotId) return;
-    try {
-      const res = await fetch(`/api/price-history/${reviewSnapshotId}/candidate-reviews`);
-      if (!res.ok) return;
-      const json = (await res.json()) as { ok?: boolean; reviews?: ReviewHistoryRow[] };
-      if (!json.ok || !Array.isArray(json.reviews)) return;
-      setReviewHistory(json.reviews);
-      /** 🟢 저장된 판단을 **버튼 상태로 되살린다** — 그래야 재진입 시 선택이 보인다. */
-      const restored: Record<string, HumanReview> = {};
-      for (const r of json.reviews) if (r.humanVerdict) restored[r.candidateUrl] = r.humanVerdict;
-      setDomesticReview((prev) => ({ ...restored, ...prev }));
-    } catch {
-      /* 🔴 조용히 둔다 — 이력 조회 실패가 가격 화면을 깨뜨리지 않는다. */
-    }
-  }, [reviewSnapshotId]);
-
-  useEffect(() => {
-    void loadReviewHistory();
-  }, [loadReviewHistory]);
-
-  /**
-   * 🔴 **즉시 저장** 한다(§8). 낙관적으로 버튼을 먼저 칠하되 실패하면 **되돌리고 말한다** —
-   *    저장 안 된 판단을 저장된 것처럼 보여주면 그 자체가 거짓이다.
-   */
-  const handleDomesticReview = (url: string, verdict: HumanReview) => {
-    const before = domesticReview[url];
-    setDomesticReview((prev) => ({ ...prev, [url]: verdict }));
-    /** 🔴 식별자가 없으면 **저장했다고 말하지 않는다** — 화면 state 로만 남는다. */
-    if (!reviewSnapshotId) return;
-    setReviewSaveState((prev) => ({ ...prev, [url]: "SAVING" }));
-    void (async () => {
-      try {
-        const res = await fetch(`/api/price-history/${reviewSnapshotId}/candidate-reviews`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ candidateUrl: url, humanVerdict: verdict }),
-        });
-        const json = (await res.json().catch(() => null)) as { ok?: boolean } | null;
-        if (!res.ok || !json?.ok) throw new Error("save failed");
-        setReviewSaveState((prev) => ({ ...prev, [url]: "SAVED" }));
-        await loadReviewHistory();
-      } catch {
-        /** 🔴 되돌린다 — 화면이 「저장됨」이라고 거짓말하지 않게. */
-        setDomesticReview((prev) => {
-          const next = { ...prev };
-          if (before) next[url] = before;
-          else delete next[url];
-          return next;
-        });
-        setReviewSaveState((prev) => ({ ...prev, [url]: "ERROR" }));
-      }
-    })();
-  };
+  const panelReview = useCandidateReview(reviewSnapshotId, {
+    enabled: presentation !== "HIDDEN",
+  });
+  const domesticReview = panelReview.review;
+  const reviewSaveState = panelReview.saveState;
+  const reviewHistory = panelReview.history;
+  const handleDomesticReview = panelReview.onReview;
 
   const [showPriceDetail, setShowPriceDetail] = useState(false);
   /**

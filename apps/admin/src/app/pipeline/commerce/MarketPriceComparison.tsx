@@ -82,7 +82,21 @@ import {
   type MarketJudgement,
   type MiSameSelection,
 } from "./mi-same-candidates";
-import { priceText, stockText, type GeminiTransientRow } from "./GeminiTransientCandidates";
+import {
+  priceText,
+  stockText,
+  /**
+   * 🔵🔵 CORE-E2E-CLOSE-04 — 선택 UI 의 **어휘 owner** 는 그 파일 하나다.
+   * 🔴 여기서 새 문구를 만들지 않는다 — `HUMAN_REVIEW_VALUES` 는 DB
+   *    `candidate_reviews.human_verdict` check constraint 와 **같은 어휘** 다.
+   */
+  HUMAN_REVIEW_VALUES,
+  HUMAN_REVIEW_BUTTON,
+  SAVE_STATE_TEXT,
+  type GeminiTransientRow,
+} from "./GeminiTransientCandidates";
+/** 🔵 CORE-E2E-CLOSE-04 — 저장 배선. 🔴 새 API 0 · POST 중복 구현 0(CPO §4). */
+import { useCandidateReview, type CandidateReviewApi } from "./use-candidate-review";
 import {
   /**
    * 🔵 CORE-NEXT STEP 4 — **A(권장 판매가격)의 말 owner.** 🔴 이 영역은 A 를
@@ -139,6 +153,13 @@ export interface MarketPriceComparisonProps {
    * 🔴 `null` = 조회가 아직 돌지 않았다. `[]` = 돌았는데 후보가 0 — **다른 사실** 이다.
    */
   rows?: readonly GeminiTransientRow[] | null;
+  /**
+   * 🔵🔵🔵 CORE-E2E-CLOSE-04 — **후보 선택 저장의 식별자.**
+   * 🔴 없으면 선택은 화면 state 로만 남고 **저장했다고 말하지 않는다**(없는 주소로
+   *    POST 해서 실패를 「저장됨」으로 칠하지 않는다 — 기존 규약 그대로).
+   * 🔴 `CommerceWorkspace` 는 **저장 state 를 만들지 않는다** — 이 값만 내려보낸다(CPO §4).
+   */
+  snapshotId?: string | null;
   /** 🔴 MI 가 이미 낸 국내 참고가격 집계. 여기서 계산하지 않는다. */
   domesticReference?: OverseasPriceSummary | null;
   /** 🔴 MI 가 이미 낸 해외 참고가격 집계. 여기서 계산하지 않는다. */
@@ -204,6 +225,7 @@ export interface MarketPriceComparisonProps {
 
 export function MarketPriceComparison({
   rows,
+  snapshotId,
   domesticReference,
   overseasReference,
   costPriceKrw,
@@ -222,6 +244,13 @@ export function MarketPriceComparison({
    */
   const domesticPresumed = selectPresumedCandidates(rows, "KR");
   const overseasPresumed = selectPresumedCandidates(rows, "OVERSEAS");
+  /**
+   * 🔵🔵🔵 CORE-E2E-CLOSE-04 — **후보 선택의 활성 owner 가 여기다.**
+   * 🔴 MI 패널은 운영에서 항상 `HIDDEN` 이라 그쪽 instance 를 **껐다** ⟹ 이력 GET 이
+   *    두 번 돌지 않는다. 🔴 `CommerceWorkspace` 에 저장 state 를 만들지 않았다(CPO §4) —
+   *    넘어오는 것은 **식별자 하나** 다.
+   */
+  const reviewApi = useCandidateReview(snapshotId);
   /**
    * 🔴🔴 WU-136 — **판매여부를 가격보다 먼저 계산한다**(CPO §B). 시장별로 나누기 «전» 에
    *    센다 — 셀러의 1순위 질문(「팔리고 있는가」)은 국내/해외로 갈리지 않는다.
@@ -896,6 +925,8 @@ export function MarketPriceComparison({
            * 🔴 `selectMiSameCandidates`(가격 집계 축)는 한 글자도 안 바꿨다(CPO §3).
            */
           presumed={domesticPresumed}
+          /** 🔵 CORE-E2E-CLOSE-04 — 선택 owner 는 위 `useCandidateReview` 하나다. */
+          reviewApi={reviewApi}
           /**
            * 🔴🔴 CORE-2R-5 — **국내 집계는 여기서 «꺼진다».** 1차 🇰🇷 블록으로 **옮겼다**
            *    (복제가 아니다). 두 곳에 두면 같은 `KRW 88,000` 이 화면에 두 번 뜨고
@@ -918,6 +949,8 @@ export function MarketPriceComparison({
           selection={overseas}
           /** 🔵 CORE-E2E-CLOSE-03 — 해외도 **같은 구역** 이다(두 벌을 만들지 않는다). */
           presumed={overseasPresumed}
+          /** 🔵 CORE-E2E-CLOSE-04 — 🌎 도 **같은 owner** 를 쓴다(두 벌 금지). */
+          reviewApi={reviewApi}
           /**
            * 🔴🔴 CORE-2S §5-④ — **해외 집계도 여기서 «꺼진다».** 1차 🌎 블록으로
            *    **옮겼다**(복제가 아니다 — 국내가 CORE-2R-5 에서 그렇게 됐던 것과 같다).
@@ -1253,11 +1286,67 @@ function MarketBlock({
  * 🔴 두 시장이 **같은 컴포넌트** 를 쓴다 — 두 벌이 되면 한쪽만 고치는 날이 온다
  *    (`match-display.ts` 가 라벨을 하나로 모은 그 이유).
  */
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 CORE-E2E-CLOSE-04 — **후보 선택 한 벌.** 두 구역이 **같은 것** 을 쓴다
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 `SAME` 구역과 보류 구역에 마크업을 **두 벌 두지 않는다** — 두 벌이 되면
+ *    한쪽만 고치는 날이 오고, 그게 이 저장소가 반복해 적은 그 함정이다.
+ * 🔴 어휘 owner 는 `HUMAN_REVIEW_BUTTON` / `SAVE_STATE_TEXT`(`GeminiTransientCandidates`)
+ *    **하나** 다 — 여기서 새 문구를 만들지 않았다(DB check constraint 와 같은 어휘).
+ * 🔴 `SIMILAR` 는 이 자리에 **오지 않는다** — 두 선택기가 `SAME` / `PRESUMED_SAME`
+ *    만 고르므로 선택 UI 가 **구조적으로** 서지 않는다(CPO §7-A · 계약이 잠근다).
+ * 🔴 저장은 **기존 흐름** 이다(`useCandidateReview` → `candidate-reviews` POST) —
+ *    새 API 0 · 중복 구현 0.
+ */
+function CandidateSelect({
+  row,
+  api,
+}: {
+  row: GeminiTransientRow;
+  api?: CandidateReviewApi;
+}): JSX.Element | null {
+  /** 🔴 핸들러가 없으면 **아무것도 그리지 않는다**(WU-081 규약). */
+  if (!api) return null;
+  const chosen = api.review[row.discoveredUrl];
+  const save = api.saveState[row.discoveredUrl];
+  return (
+    <div data-testid="mi-candidate-select" className="mt-1 space-y-0.5">
+      <div className="flex flex-wrap gap-1">
+        {HUMAN_REVIEW_VALUES.map((v) => (
+          <button
+            key={v}
+            type="button"
+            data-testid={`mi-select-${v.toLowerCase()}`}
+            aria-pressed={chosen === v}
+            onClick={() => api.onReview(row.discoveredUrl, v)}
+            className={
+              chosen === v
+                ? "rounded border border-accent px-1.5 py-0.5 text-[11px] text-accent"
+                : "rounded border border-border/60 px-1.5 py-0.5 text-[11px] text-text-tertiary"
+            }
+          >
+            {HUMAN_REVIEW_BUTTON[v]}
+          </button>
+        ))}
+      </div>
+      {/** 🔴 「눌렀다」가 아니라 **「저장됐다」** 를 말한다(WU-131 §8). */}
+      {save ? (
+        <span data-testid="mi-select-save" className="text-[11px] text-text-tertiary">
+          {SAVE_STATE_TEXT[save]}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 function MarketColumn({
   testId,
   heading,
   selection,
   presumed,
+  reviewApi,
   reference,
   referenceProps,
 }: {
@@ -1278,6 +1367,12 @@ function MarketColumn({
     testId?: string;
     amountTestId?: string;
   };
+  /**
+   * 🔵🔵🔵 CORE-E2E-CLOSE-04 — **후보 선택.** owner 는 `useCandidateReview` 하나다.
+   * 🔴 `undefined` 면 선택 UI 가 **렌더되지 않는다**(WU-081 의 그 규약 — `onReview`
+   *    없는 구역엔 버튼이 서지 않는다).
+   */
+  reviewApi?: CandidateReviewApi;
 }): JSX.Element {
   return (
     <div data-testid={testId} className="space-y-2">
@@ -1313,6 +1408,8 @@ function MarketColumn({
                 </span>
               </div>
               <p className="text-[11px] text-text-tertiary">{stockText(row.soldOut)}</p>
+              {/** 🔵 CORE-E2E-CLOSE-04 — `SAME` 후보도 **선택 대상** 이다(CPO §7-A). */}
+              <CandidateSelect row={row} api={reviewApi} />
             </li>
           ))}
         </ul>
@@ -1374,6 +1471,13 @@ function MarketColumn({
                     {priceText(row)}
                   </span>
                 </div>
+                {/**
+                 * 🔵🔵🔵 CORE-E2E-CLOSE-04 — **보류 후보도 선택 대상** 이다(CPO §6).
+                 * 🔴 고를 수 있다는 것이 **`PRESUMED_SAME` → `SAME` 승격이 아니다** —
+                 *    판정은 그대로 남고 **셀러의 선택** 만 저장된다. 우리 제품은
+                 *    자동 확정 시스템이 아니라 **셀러 의사결정 지원 시스템** 이다.
+                 */}
+                <CandidateSelect row={row} api={reviewApi} />
               </li>
             ))}
           </ul>

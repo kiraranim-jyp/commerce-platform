@@ -83,6 +83,15 @@ const row = (over: Partial<GeminiTransientRow> = {}): GeminiTransientRow => ({ .
 
 /* ═════════════ A. 🔴 선별기 — 세 축을 «읽기만» 한다 (순수 · 네트워크 0) ═════════════ */
 
+/**
+ * 🔵🔵 CORE-E2E-CLOSE-04 — 후보 선택 저장의 **유일한 owner** 다(패널에서 «옮겼다»).
+ * 🔴 그 파일을 지우거나 POST 를 되돌리면 아래 단언들이 **전부** FAIL 한다.
+ */
+const HOOK_SRC = readFileSync(
+  path.join(__dirname, "../../../../pipeline/commerce/use-candidate-review.ts"),
+  "utf8",
+);
+
 describe("A. 🔴 SAME + 현재 판매중 + 가격확인 (CPO ②)", () => {
   it("A-1 🟢 세 축을 전부 통과한 후보만 가격비교에 올라간다", () => {
     const sel = selectMiSameCandidates([row()], "OVERSEAS");
@@ -571,8 +580,25 @@ describe("D. 🔴 원본 ↔ 후보 이미지 비교 (CPO ④)", () => {
     );
     for (const v of ["same", "different", "undecided"]) expect(html).toContain(`gt-review-${v}`);
     /** 🔴 저장은 WU-131 의 그 엔드포인트 하나다 — 새 저장 경로를 만들지 않았다. */
-    expect(PANEL).toContain("/candidate-reviews`");
-    expect(PANEL.match(/candidate-reviews`/g) ?? []).toHaveLength(2);
+        /**
+     * 🔴🔴 **CORE-E2E-CLOSE-04 — 이 앵커의 «위치» 가 바뀌었다. 성질은 그대로다.**
+     *    저장 로직(이력 읽기 · 낙관적 저장 · 실패 되돌림 · POST)이 패널 «안» 에서
+     *    `candidate-review.ts` 의 `useCandidateReview` 로 **옮겨졌다**(복제 0).
+     *    🔴 패널이 `HIDDEN`(→ `return null`)이라 셀러가 **고를 수 없었던** 것이
+     *       CORE-E2E 의 마지막 구멍이었고, 결론 영역이 그 핸들러에 닿게 했다.
+     * 🟢 그래서 **owner 파일을 보도록** 고쳤고, 패널은 그것을 «쓴다» 는 것까지 단언한다.
+     */
+    expect(HOOK_SRC).toContain("/candidate-reviews`");
+    /**
+     * 🔴🔴 **「둘」을 «형태» 로 센다 — 문자열 개수로 세지 않는다.**
+     *    owner 파일의 주석이 「`candidate-reviews` POST 중복 구현 금지」를 **설명** 하므로
+     *    단순 개수는 3 이 되고 「경로가 셋이다」라는 거짓 FAIL 이 난다(이 저장소가
+     *    아홉 번 걸린 그 함정 — 주석이 검사를 오염시킨다).
+     * 🟢 코드의 형태는 **둘뿐** 이다 — 이력 **GET** 하나 · 저장 **POST** 하나.
+     * 🔴 정규식을 쉘로 쓰지 않는다(메모가 금지한 그 행위 — 1차에 백슬래시가 날아갔다).
+     */
+    expect(HOOK_SRC.split("/candidate-reviews`)").length - 1).toBe(1);
+    expect(HOOK_SRC.split("/candidate-reviews`, {").length - 1).toBe(1);
   });
 
   it("D-5 🔴 후보 **이미지/재고를 서버가 공급한다**(화면이 지어내지 않는다)", () => {

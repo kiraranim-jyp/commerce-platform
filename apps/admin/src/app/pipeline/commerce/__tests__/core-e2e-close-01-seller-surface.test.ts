@@ -89,6 +89,15 @@ function mount(props: Parameters<typeof GeminiTransientCandidates>[0]): HTMLDivE
 /** 🟢 접힘을 펼친 «전체» 텍스트 — 후보 상세는 접혀 있어도 내용은 있어야 한다. */
 const allText = (el: HTMLElement) => (el.textContent ?? "").replace(/\s+/g, " ");
 
+/**
+ * 🔵🔵 CORE-E2E-CLOSE-04 — 후보 선택 저장의 **유일한 owner** 다(패널에서 «옮겼다»).
+ * 🔴 그 파일을 지우거나 POST 를 되돌리면 아래 단언들이 **전부** FAIL 한다.
+ */
+const HOOK_SRC = readFileSync(
+  join(__dirname, "..", "use-candidate-review.ts"),
+  "utf8",
+);
+
 describe("CORE-E2E-CLOSE-01 §6 — 셀러가 **봐야 할 것** 이 화면에 있다", () => {
   it("E1 🟢 판매처 · 상품명 · 가격 · 통화 · 국내/해외 가 **전부** 보인다", () => {
     const t = allText(mount({ evidence: ROWS }));
@@ -204,7 +213,16 @@ describe("CORE-E2E-CLOSE-01 §7 — 셀러가 후보를 **선택할 수 있다**
   it("E9 🟢 패널이 선택을 `candidate-reviews` 로 보낸다(배선)", () => {
     const panel = readFileSync(join(__dirname, "../DomesticPriceIntelligencePanel.tsx"), "utf8");
     const code = panel.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^[ \t]*\/\/.*$/gm, " ");
-    expect(code).toContain("/candidate-reviews`, {");
+        /**
+     * 🔴🔴 **CORE-E2E-CLOSE-04 — 이 앵커의 «위치» 가 바뀌었다. 성질은 그대로다.**
+     *    저장 로직(이력 읽기 · 낙관적 저장 · 실패 되돌림 · POST)이 패널 «안» 에서
+     *    `candidate-review.ts` 의 `useCandidateReview` 로 **옮겨졌다**(복제 0).
+     *    🔴 패널이 `HIDDEN`(→ `return null`)이라 셀러가 **고를 수 없었던** 것이
+     *       CORE-E2E 의 마지막 구멍이었고, 결론 영역이 그 핸들러에 닿게 했다.
+     * 🟢 그래서 **owner 파일을 보도록** 고쳤고, 패널은 그것을 «쓴다» 는 것까지 단언한다.
+     */
+    expect(HOOK_SRC).toContain("/candidate-reviews`, {");
+    expect(code).toContain("useCandidateReview(");
     expect(code).toContain("onDomesticReview");
   });
 });
