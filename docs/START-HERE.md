@@ -21,7 +21,32 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **PP-01 CLOSED** — 🟡 **PARTIALLY_SEPARABLE** · 정책 결정은 CPO
+CURRENT WU   **CORE-E2E-CLOSE-01** — 🟡 **코드 PASS · CEO 화면 확인 1회만 남았다**
+             🔴🔴 **Audit 트랙 종료**(CPO LOCK) — TEXT_CONFIRMED · blocker · 소매길이 ·
+                Identity threshold · Registry · adapter · Search provider **전부 재논의 금지**
+             【STEP 1 경로 확인 — 코드 읽기】 사슬이 연결돼 있다
+                `/check:183 webSearch:true` → `runner:1556` → `collectWebSearchUrls`
+                → `buildDiscoverySearchQuery`(Query Planner) → pool → Crawl → Evidence
+                → `judgeDomesticCandidate`(Identity) → `priceTierFromLink`(Price) → MI → UI
+                → UI 선택 POST `/api/price-history/[id]/candidate-reviews`
+             【STEP 3~5 숫자 — 실측(새 Search 0 · 기존 Production 산출 + 재측정)】
+                products 2 · searches **1/상품**(retry 0 · variation 0 · split 0)
+                후보(샵 대표) **23** · SAME **11** · PRESUMED_SAME **8**
+                가격 보유 **20/20** · 가격 자격 **18** · 🇰🇷 **3** · 🌎 **16**
+             【STEP 6/7 — 마운트 DOM 으로 닫았다 · 계약 9】
+                🟢 보인다 — 판매처 · 상품명 · URL(링크) · 판정 라벨 · 가격 · 통화 ·
+                   국내/해외 · **가격 없는 후보도 「가격 미확인」으로 남는다**
+                🔴 숨는다 — matchTruth · TEXT_CONFIRMED · priceTier · COMPARISON ·
+                   blocker 토큰 전수 · matchLevel · Apify · WEB_SEARCH · provenance **0건**
+                🟢 선택된다 — 버튼 렌더 + 클릭이 콜백 발화 + `candidate-reviews` 배선
+                🔴 `onReview` 없으면 선택 UI **0** (기존 구역 불변 · WU-081)
+             🟢 변이 **N1~N4 전부 FAIL → 복구**(환산 · 「0원」 · verdict 토큰 노출 · 저장 끊기)
+                🔴 N3 1차는 **내 변이 설계 오류**(렌더 안 되는 상수) — 렌더 자리로 바꿔 재확인
+             🟢 회귀 **743 / 9,702 passed / 0 failed** · tsc 0 · build 0
+             🟡🟡 **남은 것은 CEO 육안 1회** — `/pipeline → B226AC009 → 새 분석`
+                ① 후보가 좋은가 ② 가격이 붙었는가 ③ 선택할 수 있는가
+                🔴 **Production UI PASS 로 적지 않는다** — CTO 는 그 화면을 볼 수 없다
+[낡음]       **PP-01 CLOSED** — 🟡 **PARTIALLY_SEPARABLE** · 정책 결정은 CPO
              🟢 계측만 · 운영 **0** · Search **0** · Crawl **0** · 정책 **0**
              【TEXT_CONFIRMED 7건 전수】(샵 대표 분모)
                 biskuit.kr        SAME       code B226AC009  blk BRAND_MISMATCH+NO_TITLE_OVERLAP  ₩88,000
