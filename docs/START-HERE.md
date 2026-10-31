@@ -21,7 +21,35 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **CORE-E2E-CLOSE-01** — 🟡 **코드 PASS · CEO 화면 확인 1회만 남았다**
+CURRENT WU   **CORE-E2E-CLOSE-02 — 🔴🔴 원인 확정 · 구현은 다음 세션**
+             🔴🔴🔴 **CEO FAIL 의 원인은 한 줄이다** —
+                `CommerceWorkspace.tsx:3849  presentation="HIDDEN"` (WU-152)
+                → `DomesticPriceIntelligencePanel:2442  return null`
+                ⟹ 그 패널 **안** 의 `TransientCandidateSections`(후보 행 · 가격 · 선택)이
+                   **같이 죽었다**. 메모 `hiding-a-panel-kills-independent-features-inside-it`
+             🔴🔴 **전제가 깨져 있었다**(코드가 글자로 적어 둔 그 전제) —
+                `mi-same-candidates.ts  selectMiSameCandidates` 주석:
+                「SAME 이 아니면 이 영역에 오지 않는다. **사라지는 것은 아니다 —**
+                 **MI 패널의 출처별 후보 구역이 «모든 행» 을 그대로 그린다**」
+                ⟹ 🔴 그 구역이 WU-152 로 없어졌으므로 결론 영역이 그리는 것은
+                   `SAME + 판매중 + 가격확인` 뿐이고 **PRESUMED_SAME 8건과 그 가격이
+                   어디에도 없다**. 그것이 CEO 가 본 빈 화면이다
+             🔴 **내 1차 수정을 되돌렸다** — HIDDEN 에서 후보 구역을 돌려주게 했더니
+                WU-152 계약이 **3건 FAIL** 했고 그중 하나는 CEO 지시를 글자로 들고 있다:
+                「🔴 HIDDEN 인데 MI 패널이 무언가를 그렸다」(빈 문자열이어야 한다) ·
+                「커머스 탭에서 MI 표시 금지」 · DOM 크기 예산 초과
+                ⟹ 🔴 **계약을 약화하지 않고 revert** 했다(작업트리 clean)
+             🟡 **다음 세션의 좁은 설계(조사 0 · 바로 구현)**
+                🔴 패널을 되살리지 않는다(WU-152 유지) ·
+                🟢 **결론 영역(`MarketPriceComparison`)이 후보 행을 그린다** —
+                   그 컴포넌트는 이미 셀러 화면에 있고 `rows` 를 **이미 받는다**(:134·:199)
+                🔴 `selectMiSameCandidates` 의 가격 집계 선별(SAME+판매중+가격확인)은
+                   **건드리지 않는다** — 별도 하위 구역에 `PRESUMED_SAME` 행을 세운다
+                   (가격 축 유입 0 · 정책 변경 0 · DIP-01 의 그 모양)
+                🔴 선택 저장 배선은 `MiPanelView` 소유다(`handleDomesticReview`) ⟹
+                   그 핸들러를 끌어올리는 것이 유일한 배선 작업이다(typecheck 가 확인)
+                🔴 넘지 말 것 — 커머스 탭 노출 금지 · DOM 예산 · HIDDEN=빈 화면
+[낡음]       **CORE-E2E-CLOSE-01** — 🟡 **코드 PASS · CEO 화면 확인 1회만 남았다**
              🔴🔴 **Audit 트랙 종료**(CPO LOCK) — TEXT_CONFIRMED · blocker · 소매길이 ·
                 Identity threshold · Registry · adapter · Search provider **전부 재논의 금지**
              【STEP 1 경로 확인 — 코드 읽기】 사슬이 연결돼 있다
