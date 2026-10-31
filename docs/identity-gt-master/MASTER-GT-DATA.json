@@ -1,0 +1,2160 @@
+{
+  "_wu": "IDENTITY-GT-EVIDENCE-MASTER-REVIEW-01 Step 1·2",
+  "_note": "🔴 GT 충돌은 자동 선택하지 않았다(CEO_GT=null · GT_VALUES 보존). 🔴 라벨 정규화는 글자 매핑뿐이다.",
+  "_excludedFixtures": [
+    "ab046-evidence.json",
+    "cand-02-rows.json",
+    "core-desc-review-ceo-gt.json(라벨+URL 쌍 0)",
+    "discovery-e2e-ceo-check.json(라벨+URL 쌍 0)",
+    "dmc-01-trace.json",
+    "dsp-01-funnel.json",
+    "dsp-01-reviewed-same.json",
+    "e2e-history-10-code.json",
+    "e2e-history-10-report.json",
+    "e2e-history-10-targets.json",
+    "query-adopt-01-production.json",
+    "query-arch-01-preview.json",
+    "query-arch-01-production.json",
+    "query-signal-ab-result.json",
+    "rc-01-input-url.json",
+    "search-provider-04-raw.json",
+    "search-provider-05-raw.json",
+    "search-provider-11-code-rate.json",
+    "search-provider-11-origins.json",
+    "search-provider-13-aspx-evidence.json",
+    "wu-067-blind-review-set.json(라벨+URL 쌍 0)",
+    "wu-074-probe.json",
+    "wu-093-human-gt.json(라벨+URL 쌍 0)",
+    "wu-099-human-value.json",
+    "wu-100-human-value.json",
+    "wu-111-human-gt.json(라벨+URL 쌍 0)",
+    "wu-116-human-gt.json(라벨+URL 쌍 0)"
+  ],
+  "_counts": {
+    "labelRowsWithDuplicates": 99,
+    "uniqueCandidates": 80,
+    "SAME": 43,
+    "DIFFERENT": 24,
+    "REVIEW": 10,
+    "GT_CONFLICT": 3
+  },
+  "products": [
+    {
+      "productId": "PRODUCT-01",
+      "originKey": "AC157"
+    },
+    {
+      "productId": "PRODUCT-02",
+      "originKey": "B226AC009"
+    },
+    {
+      "productId": "PRODUCT-03",
+      "originKey": "B226AC010"
+    },
+    {
+      "productId": "PRODUCT-04",
+      "originKey": "S1"
+    },
+    {
+      "productId": "PRODUCT-05",
+      "originKey": "S2"
+    },
+    {
+      "productId": "PRODUCT-06",
+      "originKey": "S3"
+    },
+    {
+      "productId": "PRODUCT-07",
+      "originKey": "S4"
+    },
+    {
+      "productId": "PRODUCT-08",
+      "originKey": "S5"
+    },
+    {
+      "productId": "PRODUCT-09",
+      "originKey": "S6"
+    },
+    {
+      "productId": "PRODUCT-10",
+      "originKey": "SM430632"
+    }
+  ],
+  "candidates": [
+    {
+      "key": "B226AC009||cissywears.com/products/bobo-choses-babyhug-hairy-monster-t-shirt",
+      "originRaw": "B226AC009",
+      "url": "https://cissywears.com/products/bobo-choses-babyhug-hairy-monster-t-shirt",
+      "dedupeKey": "cissywears.com/products/bobo-choses-babyhug-hairy-monster-t-shirt",
+      "labels": [
+        {
+          "fixture": "core-2aj-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        },
+        {
+          "fixture": "core-2m-ceo-visual-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "calibrationLabel",
+          "originKey": "(상속)"
+        },
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "core-2aj-human-gt.json",
+        "core-2m-ceo-visual-gt.json",
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-02"
+    },
+    {
+      "key": "B226AC010||cissywears.com/products/bobo-choses-baby-booty-ghosts-t-shirt",
+      "originRaw": "B226AC010",
+      "url": "https://cissywears.com/products/bobo-choses-baby-booty-ghosts-t-shirt",
+      "dedupeKey": "cissywears.com/products/bobo-choses-baby-booty-ghosts-t-shirt",
+      "labels": [
+        {
+          "fixture": "core-2aj-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        },
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "core-2aj-human-gt.json",
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-03"
+    },
+    {
+      "key": "B226AC009||kolkid.ca/products/bobo-choses-baby-hug-hairy-monster-t-shirt",
+      "originRaw": "B226AC009",
+      "url": "https://kolkid.ca/products/bobo-choses-baby-hug-hairy-monster-t-shirt",
+      "dedupeKey": "kolkid.ca/products/bobo-choses-baby-hug-hairy-monster-t-shirt",
+      "labels": [
+        {
+          "fixture": "core-2aj-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "core-2aj-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-02"
+    },
+    {
+      "key": "B226AC009||cemarose.ca/products/bobo-choses-baby-hug-hairy-monster-t-shirt-light-blue-c7883",
+      "originRaw": "B226AC009",
+      "url": "https://cemarose.ca/products/bobo-choses-baby-hug-hairy-monster-t-shirt-light-blue-c7883",
+      "dedupeKey": "cemarose.ca/products/bobo-choses-baby-hug-hairy-monster-t-shirt-light-blue-c7883",
+      "labels": [
+        {
+          "fixture": "core-2aj-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "core-2aj-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-02"
+    },
+    {
+      "key": "SM430632||bobochoses.com/products/b226ab043-mush-monster-duo-all-over-t-shirt",
+      "originRaw": "SM430632",
+      "url": "https://bobochoses.com/products/b226ab043-mush-monster-duo-all-over-t-shirt",
+      "dedupeKey": "bobochoses.com/products/b226ab043-mush-monster-duo-all-over-t-shirt",
+      "labels": [
+        {
+          "fixture": "core-2al-human-gt.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "verdict",
+          "originKey": "origin"
+        }
+      ],
+      "CEO_GT": "DIFFERENT",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "core-2al-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-10"
+    },
+    {
+      "key": "SM430632||bobochoses.com/products/b226ab048-softpaw-monster-all-over-t-shirt",
+      "originRaw": "SM430632",
+      "url": "https://bobochoses.com/products/b226ab048-softpaw-monster-all-over-t-shirt",
+      "dedupeKey": "bobochoses.com/products/b226ab048-softpaw-monster-all-over-t-shirt",
+      "labels": [
+        {
+          "fixture": "core-2al-human-gt.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "verdict",
+          "originKey": "origin"
+        }
+      ],
+      "CEO_GT": "DIFFERENT",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "core-2al-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-10"
+    },
+    {
+      "key": "SM430632||junioredition.com/products/mush-monster-duo-all-over-baby-t-shirt-by-bobo-choses",
+      "originRaw": "SM430632",
+      "url": "https://junioredition.com/products/mush-monster-duo-all-over-baby-t-shirt-by-bobo-choses",
+      "dedupeKey": "junioredition.com/products/mush-monster-duo-all-over-baby-t-shirt-by-bobo-choses",
+      "labels": [
+        {
+          "fixture": "core-2al-human-gt.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "verdict",
+          "originKey": "origin"
+        }
+      ],
+      "CEO_GT": "DIFFERENT",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "core-2al-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-10"
+    },
+    {
+      "key": "SM430632||junioredition.com/products/juicy-tomatoes-all-over-baby-t-shirt-by-bobo-choses",
+      "originRaw": "SM430632",
+      "url": "https://junioredition.com/products/juicy-tomatoes-all-over-baby-t-shirt-by-bobo-choses",
+      "dedupeKey": "junioredition.com/products/juicy-tomatoes-all-over-baby-t-shirt-by-bobo-choses",
+      "labels": [
+        {
+          "fixture": "core-2al-human-gt.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "verdict",
+          "originKey": "origin"
+        }
+      ],
+      "CEO_GT": "DIFFERENT",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "core-2al-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-10"
+    },
+    {
+      "key": "SM430632||junioredition.com/products/bobo-choses-color-all-over-baby-t-shirt-by-bobo-choses",
+      "originRaw": "SM430632",
+      "url": "https://junioredition.com/products/bobo-choses-color-all-over-baby-t-shirt-by-bobo-choses",
+      "dedupeKey": "junioredition.com/products/bobo-choses-color-all-over-baby-t-shirt-by-bobo-choses",
+      "labels": [
+        {
+          "fixture": "core-2al-human-gt.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "verdict",
+          "originKey": "origin"
+        }
+      ],
+      "CEO_GT": "DIFFERENT",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "core-2al-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-10"
+    },
+    {
+      "key": "AC157||billsstore.com.au/products/bc-striped-cardigan-yellow",
+      "originRaw": "AC157",
+      "url": "https://www.billsstore.com.au/products/bc-striped-cardigan-yellow",
+      "dedupeKey": "billsstore.com.au/products/bc-striped-cardigan-yellow",
+      "labels": [
+        {
+          "fixture": "core-2al-human-gt.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "verdict",
+          "originKey": "origin"
+        }
+      ],
+      "CEO_GT": "DIFFERENT",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "core-2al-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-01"
+    },
+    {
+      "key": "B226AC009||biskuit.kr/product/%eb%b3%b4%eb%b3%b4%ec%87%bc%ec%a6%88-%ed%97%88%ea%b7%b8-%ed%97%a4%ec%96%b4%eb%a6%ac-%eb%aa%ac%ec%8a%a4%ed%84%b0-%ed%8b%b0%ec%85%94%ec%b8%a0-b226ac009/8891/category/367/display/1",
+      "originRaw": "B226AC009",
+      "url": "https://biskuit.kr/product/%EB%B3%B4%EB%B3%B4%EC%87%BC%EC%A6%88-%ED%97%88%EA%B7%B8-%ED%97%A4%EC%96%B4%EB%A6%AC-%EB%AA%AC%EC%8A%A4%ED%84%B0-%ED%8B%B0%EC%85%94%EC%B8%A0-b226ac009/8891/category/367/display/1/",
+      "dedupeKey": "biskuit.kr/product/%eb%b3%b4%eb%b3%b4%ec%87%bc%ec%a6%88-%ed%97%88%ea%b7%b8-%ed%97%a4%ec%96%b4%eb%a6%ac-%eb%aa%ac%ec%8a%a4%ed%84%b0-%ed%8b%b0%ec%85%94%ec%b8%a0-b226ac009/8891/category/367/display/1",
+      "labels": [
+        {
+          "fixture": "core-2m-ceo-visual-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "calibrationLabel",
+          "originKey": "(상속)"
+        },
+        {
+          "fixture": "core-same03-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "동일",
+          "gtKey": "ceo",
+          "originKey": "originCode"
+        },
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "core-2m-ceo-visual-gt.json",
+        "core-same03-human-gt.json",
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-02"
+    },
+    {
+      "key": "B226AC009||stockmann.ee/et-ee/bobo-choses-trikoosark-hug-monster/18119748633-1.html",
+      "originRaw": "B226AC009",
+      "url": "https://www.stockmann.ee/et-ee/bobo-choses-trikoosark-hug-monster/18119748633-1.html",
+      "dedupeKey": "stockmann.ee/et-ee/bobo-choses-trikoosark-hug-monster/18119748633-1.html",
+      "labels": [
+        {
+          "fixture": "core-2m-ceo-visual-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "calibrationLabel",
+          "originKey": "(상속)"
+        },
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "core-2m-ceo-visual-gt.json",
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-02"
+    },
+    {
+      "key": "B226AC009||bobochoses.com/products/b226ab040-hug-hairy-monster-t-shirt",
+      "originRaw": "B226AC009",
+      "url": "https://bobochoses.com/products/b226ab040-hug-hairy-monster-t-shirt",
+      "dedupeKey": "bobochoses.com/products/b226ab040-hug-hairy-monster-t-shirt",
+      "labels": [
+        {
+          "fixture": "core-2m-ceo-visual-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "calibrationLabel",
+          "originKey": "(상속)"
+        },
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "core-2m-ceo-visual-gt.json",
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-02"
+    },
+    {
+      "key": "B226AC009||junioredition.com/products/hug-hairy-monster-baby-t-shirt-by-bobo-choses",
+      "originRaw": "B226AC009",
+      "url": "https://www.junioredition.com/products/hug-hairy-monster-baby-t-shirt-by-bobo-choses",
+      "dedupeKey": "junioredition.com/products/hug-hairy-monster-baby-t-shirt-by-bobo-choses",
+      "labels": [
+        {
+          "fixture": "core-2m-ceo-visual-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "calibrationLabel",
+          "originKey": "(상속)"
+        },
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "core-2m-ceo-visual-gt.json",
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-02"
+    },
+    {
+      "key": "B226AC009||kids21.com/products/700005621lbl",
+      "originRaw": "B226AC009",
+      "url": "https://kids21.com/products/700005621lbl",
+      "dedupeKey": "kids21.com/products/700005621lbl",
+      "labels": [
+        {
+          "fixture": "core-2m-ceo-visual-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "calibrationLabel",
+          "originKey": "(상속)"
+        },
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "core-2m-ceo-visual-gt.json",
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-02"
+    },
+    {
+      "key": "B226AC009||parkette.ca/products/hug-hairy-monster-sweatshirt",
+      "originRaw": "B226AC009",
+      "url": "https://www.parkette.ca/products/hug-hairy-monster-sweatshirt",
+      "dedupeKey": "parkette.ca/products/hug-hairy-monster-sweatshirt",
+      "labels": [
+        {
+          "fixture": "core-2m-ceo-visual-gt.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "calibrationLabel",
+          "originKey": "(상속)"
+        },
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "DIFFERENT",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "core-2m-ceo-visual-gt.json",
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-02"
+    },
+    {
+      "key": "B226AC009||m.luxboy.com/product/a14338197cb8698cd92c86431cce8d05",
+      "originRaw": "B226AC009",
+      "url": "https://m.luxboy.com/product/A14338197CB8698CD92C86431CCE8D05",
+      "dedupeKey": "m.luxboy.com/product/a14338197cb8698cd92c86431cce8d05",
+      "labels": [
+        {
+          "fixture": "core-2m-ceo-visual-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "calibrationLabel",
+          "originKey": "(상속)"
+        },
+        {
+          "fixture": "core-same03-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "동일",
+          "gtKey": "ceo",
+          "originKey": "originCode"
+        },
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": null,
+      "GT_CONFLICT": true,
+      "GT_SOURCE_FIXTURES": [
+        "core-2m-ceo-visual-gt.json",
+        "core-same03-human-gt.json",
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME",
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-02"
+    },
+    {
+      "key": "B226AC009||bornyesterdaykids.com/products/bobo-choses-baby-hug-hairy-monster-l-s-t-shirt-booo-bo-choses-tag-denim-pants-set-light-blue-red",
+      "originRaw": "B226AC009",
+      "url": "https://bornyesterdaykids.com/products/bobo-choses-baby-hug-hairy-monster-l-s-t-shirt-booo-bo-choses-tag-denim-pants-set-light-blue-red",
+      "dedupeKey": "bornyesterdaykids.com/products/bobo-choses-baby-hug-hairy-monster-l-s-t-shirt-booo-bo-choses-tag-denim-pants-set-light-blue-red",
+      "labels": [
+        {
+          "fixture": "core-2m-ceo-visual-gt.json",
+          "gt": "REVIEW",
+          "gtRaw": "UNCERTAIN",
+          "gtKey": "calibrationLabel",
+          "originKey": "(상속)"
+        },
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": null,
+      "GT_CONFLICT": true,
+      "GT_SOURCE_FIXTURES": [
+        "core-2m-ceo-visual-gt.json",
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "REVIEW",
+        "SAME"
+      ],
+      "productId": "PRODUCT-02"
+    },
+    {
+      "key": "B226AC009||donokids.com/shop/shopdetail.html",
+      "originRaw": "B226AC009",
+      "url": "https://www.donokids.com/shop/shopdetail.html?branduid=3362785",
+      "dedupeKey": "donokids.com/shop/shopdetail.html",
+      "labels": [
+        {
+          "fixture": "core-2m-ceo-visual-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "calibrationLabel",
+          "originKey": "(상속)"
+        },
+        {
+          "fixture": "core-same03-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "동일",
+          "gtKey": "ceo",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "core-2m-ceo-visual-gt.json",
+        "core-same03-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-02"
+    },
+    {
+      "key": "B226AC009||global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+      "originRaw": "B226AC009",
+      "url": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+      "dedupeKey": "global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+      "labels": [
+        {
+          "fixture": "core-same03-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "동일",
+          "gtKey": "ceo",
+          "originKey": "originCode"
+        },
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "core-same03-human-gt.json",
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-02"
+    },
+    {
+      "key": "B226AC009||miniboutique.co.kr/product/detail.html",
+      "originRaw": "B226AC009",
+      "url": "https://miniboutique.co.kr/product/detail.html?product_no=4117&cate_no=1&display_group=1",
+      "dedupeKey": "miniboutique.co.kr/product/detail.html",
+      "labels": [
+        {
+          "fixture": "core-same03-human-gt.json",
+          "gt": "REVIEW",
+          "gtRaw": "판단불가",
+          "gtKey": "ceo",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "REVIEW",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "core-same03-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "REVIEW"
+      ],
+      "productId": "PRODUCT-02"
+    },
+    {
+      "key": "B226AC010||beaumonde.co.kr/goods/goods_list.php",
+      "originRaw": "B226AC010",
+      "url": "https://www.beaumonde.co.kr/goods/goods_list.php?page=3&brandCd=070002",
+      "dedupeKey": "beaumonde.co.kr/goods/goods_list.php",
+      "labels": [
+        {
+          "fixture": "core-same03-human-gt.json",
+          "gt": "REVIEW",
+          "gtRaw": "판단불가",
+          "gtKey": "ceo",
+          "originKey": "originCode"
+        },
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "REVIEW",
+          "gtRaw": "UNCERTAIN",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "REVIEW",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "core-same03-human-gt.json",
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "REVIEW"
+      ],
+      "productId": "PRODUCT-03"
+    },
+    {
+      "key": "B226AC010||beaumonde.co.kr/goods/goods_view.php",
+      "originRaw": "B226AC010",
+      "url": "https://www.beaumonde.co.kr/goods/goods_view.php?goodsNo=1000014021",
+      "dedupeKey": "beaumonde.co.kr/goods/goods_view.php",
+      "labels": [
+        {
+          "fixture": "core-same03-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "동일",
+          "gtKey": "ceo",
+          "originKey": "originCode"
+        },
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "core-same03-human-gt.json",
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-03"
+    },
+    {
+      "key": "B226AC010||kream.co.kr/products/1030865",
+      "originRaw": "B226AC010",
+      "url": "https://kream.co.kr/products/1030865",
+      "dedupeKey": "kream.co.kr/products/1030865",
+      "labels": [
+        {
+          "fixture": "core-same03-human-gt.json",
+          "gt": "REVIEW",
+          "gtRaw": "판단불가",
+          "gtKey": "ceo",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "REVIEW",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "core-same03-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "REVIEW"
+      ],
+      "productId": "PRODUCT-03"
+    },
+    {
+      "key": "B226AC010||luksusbaby.kr/products/bobo-choses-light-blue-booty-ghosts-sweatshirt-1",
+      "originRaw": "B226AC010",
+      "url": "https://luksusbaby.kr/products/bobo-choses-light-blue-booty-ghosts-sweatshirt-1",
+      "dedupeKey": "luksusbaby.kr/products/bobo-choses-light-blue-booty-ghosts-sweatshirt-1",
+      "labels": [
+        {
+          "fixture": "core-same03-human-gt.json",
+          "gt": "REVIEW",
+          "gtRaw": "판단불가",
+          "gtKey": "ceo",
+          "originKey": "originCode"
+        },
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": null,
+      "GT_CONFLICT": true,
+      "GT_SOURCE_FIXTURES": [
+        "core-same03-human-gt.json",
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "REVIEW",
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-03"
+    },
+    {
+      "key": "B226AC010||luksusbaby.kr/products/bobo-choses-light-blue-booty-ghosts-t-shirt",
+      "originRaw": "B226AC010",
+      "url": "https://luksusbaby.kr/products/bobo-choses-light-blue-booty-ghosts-t-shirt",
+      "dedupeKey": "luksusbaby.kr/products/bobo-choses-light-blue-booty-ghosts-t-shirt",
+      "labels": [
+        {
+          "fixture": "core-same03-human-gt.json",
+          "gt": "REVIEW",
+          "gtRaw": "판단불가",
+          "gtKey": "ceo",
+          "originKey": "originCode"
+        },
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "REVIEW",
+          "gtRaw": "UNCERTAIN",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "REVIEW",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "core-same03-human-gt.json",
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "REVIEW"
+      ],
+      "productId": "PRODUCT-03"
+    },
+    {
+      "key": "S1||beaumonde.co.kr/goods/goods_view.php",
+      "originRaw": "S1",
+      "url": "https://www.beaumonde.co.kr/goods/goods_view.php?goodsNo=1000014021",
+      "dedupeKey": "beaumonde.co.kr/goods/goods_view.php",
+      "labels": [
+        {
+          "fixture": "wu-059-gt-facts.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "humanGt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-059-gt-facts.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-04"
+    },
+    {
+      "key": "S6||tinyapple.net/products/bobo-choses-bobo-choses-modern-tracksuit-jacket-multicolor",
+      "originRaw": "S6",
+      "url": "https://www.tinyapple.net/products/bobo-choses-bobo-choses-modern-tracksuit-jacket-multicolor",
+      "dedupeKey": "tinyapple.net/products/bobo-choses-bobo-choses-modern-tracksuit-jacket-multicolor",
+      "labels": [
+        {
+          "fixture": "wu-059-gt-facts.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "humanGt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "DIFFERENT",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-059-gt-facts.json"
+      ],
+      "GT_VALUES": [
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-09"
+    },
+    {
+      "key": "S6||ladida.com/products/bobo-choses-multicolor-bc-color-block-tracksuit-jacket",
+      "originRaw": "S6",
+      "url": "https://www.ladida.com/products/bobo-choses-multicolor-bc-color-block-tracksuit-jacket",
+      "dedupeKey": "ladida.com/products/bobo-choses-multicolor-bc-color-block-tracksuit-jacket",
+      "labels": [
+        {
+          "fixture": "wu-059-gt-facts.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "humanGt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "DIFFERENT",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-059-gt-facts.json"
+      ],
+      "GT_VALUES": [
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-09"
+    },
+    {
+      "key": "S4||donokids.com/m/product.html",
+      "originRaw": "S4",
+      "url": "https://www.donokids.com/m/product.html?branduid=3362912",
+      "dedupeKey": "donokids.com/m/product.html",
+      "labels": [
+        {
+          "fixture": "wu-059-gt-facts.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "humanGt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "DIFFERENT",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-059-gt-facts.json"
+      ],
+      "GT_VALUES": [
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-07"
+    },
+    {
+      "key": "S3||bobochoses.co.jp/ja/products/b126ai018-curious-turnip-all-over-swim-cap",
+      "originRaw": "S3",
+      "url": "https://bobochoses.co.jp/ja/products/b126ai018-curious-turnip-all-over-swim-cap",
+      "dedupeKey": "bobochoses.co.jp/ja/products/b126ai018-curious-turnip-all-over-swim-cap",
+      "labels": [
+        {
+          "fixture": "wu-059-gt-facts.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "humanGt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-059-gt-facts.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-06"
+    },
+    {
+      "key": "S6||bobochoses.com/products/b226ac117-b-c-embossed-tracksuit-jacket",
+      "originRaw": "S6",
+      "url": "https://bobochoses.com/products/b226ac117-b-c-embossed-tracksuit-jacket",
+      "dedupeKey": "bobochoses.com/products/b226ac117-b-c-embossed-tracksuit-jacket",
+      "labels": [
+        {
+          "fixture": "wu-059-gt-facts.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "humanGt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-059-gt-facts.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-09"
+    },
+    {
+      "key": "S2||tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+      "originRaw": "S2",
+      "url": "https://www.tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+      "dedupeKey": "tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+      "labels": [
+        {
+          "fixture": "wu-059-gt-facts.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "humanGt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-059-gt-facts.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-05"
+    },
+    {
+      "key": "S2||global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+      "originRaw": "S2",
+      "url": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+      "dedupeKey": "global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+      "labels": [
+        {
+          "fixture": "wu-059-gt-facts.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "humanGt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "DIFFERENT",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-059-gt-facts.json"
+      ],
+      "GT_VALUES": [
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-05"
+    },
+    {
+      "key": "S4||junioredition.com/products/bubble-sweatshirt-in-conker-stripe-by-main-story",
+      "originRaw": "S4",
+      "url": "https://www.junioredition.com/products/bubble-sweatshirt-in-conker-stripe-by-main-story",
+      "dedupeKey": "junioredition.com/products/bubble-sweatshirt-in-conker-stripe-by-main-story",
+      "labels": [
+        {
+          "fixture": "wu-059-gt-facts.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "humanGt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "DIFFERENT",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-059-gt-facts.json"
+      ],
+      "GT_VALUES": [
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-07"
+    },
+    {
+      "key": "S4||junioredition.com/products/bubble-sweatshirt-in-graystone-by-main-story",
+      "originRaw": "S4",
+      "url": "https://www.junioredition.com/products/bubble-sweatshirt-in-graystone-by-main-story",
+      "dedupeKey": "junioredition.com/products/bubble-sweatshirt-in-graystone-by-main-story",
+      "labels": [
+        {
+          "fixture": "wu-059-gt-facts.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "humanGt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "DIFFERENT",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-059-gt-facts.json"
+      ],
+      "GT_VALUES": [
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-07"
+    },
+    {
+      "key": "S4||main-story.com/products/bubble-sweatshirt-grey-melange-1",
+      "originRaw": "S4",
+      "url": "https://main-story.com/products/bubble-sweatshirt-grey-melange-1",
+      "dedupeKey": "main-story.com/products/bubble-sweatshirt-grey-melange-1",
+      "labels": [
+        {
+          "fixture": "wu-059-gt-facts.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "humanGt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-059-gt-facts.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-07"
+    },
+    {
+      "key": "S4||main-story.com/collections/shop/products/bubble-sweatshirt-graystone",
+      "originRaw": "S4",
+      "url": "https://main-story.com/collections/shop/products/bubble-sweatshirt-graystone",
+      "dedupeKey": "main-story.com/collections/shop/products/bubble-sweatshirt-graystone",
+      "labels": [
+        {
+          "fixture": "wu-059-gt-facts.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "humanGt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "DIFFERENT",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-059-gt-facts.json"
+      ],
+      "GT_VALUES": [
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-07"
+    },
+    {
+      "key": "S6||kihanan.com/products/drop2-2026aw-bobochoses-b-c-embossed-tracksuit-jacket-b226ac117",
+      "originRaw": "S6",
+      "url": "https://kihanan.com/products/drop2-2026aw-bobochoses-b-c-embossed-tracksuit-jacket-b226ac117",
+      "dedupeKey": "kihanan.com/products/drop2-2026aw-bobochoses-b-c-embossed-tracksuit-jacket-b226ac117",
+      "labels": [
+        {
+          "fixture": "wu-059-gt-facts.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "humanGt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-059-gt-facts.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-09"
+    },
+    {
+      "key": "S3||bobochoses.co.jp/products/b126ai018-curious-turnip-all-over-swim-cap",
+      "originRaw": "S3",
+      "url": "https://bobochoses.co.jp/products/b126ai018-curious-turnip-all-over-swim-cap",
+      "dedupeKey": "bobochoses.co.jp/products/b126ai018-curious-turnip-all-over-swim-cap",
+      "labels": [
+        {
+          "fixture": "wu-059-gt-facts.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "humanGt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-059-gt-facts.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-06"
+    },
+    {
+      "key": "S1||rboutique.com/en-us/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
+      "originRaw": "S1",
+      "url": "https://www.rboutique.com/en-us/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
+      "dedupeKey": "rboutique.com/en-us/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
+      "labels": [
+        {
+          "fixture": "wu-068-new-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "gt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-068-new-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-04"
+    },
+    {
+      "key": "S1||eraldo.com/en-us/products/bobo-choses-booty-ghosts-t-shirt-340496",
+      "originRaw": "S1",
+      "url": "https://www.eraldo.com/en-us/products/bobo-choses-booty-ghosts-t-shirt-340496",
+      "dedupeKey": "eraldo.com/en-us/products/bobo-choses-booty-ghosts-t-shirt-340496",
+      "labels": [
+        {
+          "fixture": "wu-068-new-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "gt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-068-new-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-04"
+    },
+    {
+      "key": "S1||cissywears.com/en-us/products/bobo-choses-booty-ghosts-t-shirt",
+      "originRaw": "S1",
+      "url": "https://cissywears.com/en-us/products/bobo-choses-booty-ghosts-t-shirt",
+      "dedupeKey": "cissywears.com/en-us/products/bobo-choses-booty-ghosts-t-shirt",
+      "labels": [
+        {
+          "fixture": "wu-068-new-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "gt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-068-new-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-04"
+    },
+    {
+      "key": "S1||kolkid.ca/products/bobo-choses-booty-ghosts-t-shirt",
+      "originRaw": "S1",
+      "url": "https://kolkid.ca/products/bobo-choses-booty-ghosts-t-shirt",
+      "dedupeKey": "kolkid.ca/products/bobo-choses-booty-ghosts-t-shirt",
+      "labels": [
+        {
+          "fixture": "wu-068-new-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "gt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-068-new-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-04"
+    },
+    {
+      "key": "S1||junioredition.com/en-kr/products/booty-ghosts-t-shirt-by-bobo-choses",
+      "originRaw": "S1",
+      "url": "https://www.junioredition.com/en-kr/products/booty-ghosts-t-shirt-by-bobo-choses",
+      "dedupeKey": "junioredition.com/en-kr/products/booty-ghosts-t-shirt-by-bobo-choses",
+      "labels": [
+        {
+          "fixture": "wu-068-new-gt.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "gt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "DIFFERENT",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-068-new-gt.json"
+      ],
+      "GT_VALUES": [
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-04"
+    },
+    {
+      "key": "S1||tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt",
+      "originRaw": "S1",
+      "url": "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt",
+      "dedupeKey": "tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt",
+      "labels": [
+        {
+          "fixture": "wu-068-new-gt.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "gt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "DIFFERENT",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-068-new-gt.json"
+      ],
+      "GT_VALUES": [
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-04"
+    },
+    {
+      "key": "S1||bobochoses.com/products/b226ab046-booty-ghosts-t-shirt",
+      "originRaw": "S1",
+      "url": "https://bobochoses.com/products/b226ab046-booty-ghosts-t-shirt",
+      "dedupeKey": "bobochoses.com/products/b226ab046-booty-ghosts-t-shirt",
+      "labels": [
+        {
+          "fixture": "wu-068-new-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "gt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-068-new-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-04"
+    },
+    {
+      "key": "S2||stockmann.ee/et-ee/bobo-choses-trikoosark-hug-monster/18119748633-1.html",
+      "originRaw": "S2",
+      "url": "https://www.stockmann.ee/et-ee/bobo-choses-trikoosark-hug-monster/18119748633-1.html",
+      "dedupeKey": "stockmann.ee/et-ee/bobo-choses-trikoosark-hug-monster/18119748633-1.html",
+      "labels": [
+        {
+          "fixture": "wu-068-new-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "gt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-068-new-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-05"
+    },
+    {
+      "key": "S2||thefrontshop.com/products/hug-hairy-monster-t-shirt",
+      "originRaw": "S2",
+      "url": "https://www.thefrontshop.com/products/hug-hairy-monster-t-shirt",
+      "dedupeKey": "thefrontshop.com/products/hug-hairy-monster-t-shirt",
+      "labels": [
+        {
+          "fixture": "wu-068-new-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "gt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-068-new-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-05"
+    },
+    {
+      "key": "S2||bobochoses.com/products/b226ab040-hug-hairy-monster-t-shirt",
+      "originRaw": "S2",
+      "url": "https://bobochoses.com/products/b226ab040-hug-hairy-monster-t-shirt",
+      "dedupeKey": "bobochoses.com/products/b226ab040-hug-hairy-monster-t-shirt",
+      "labels": [
+        {
+          "fixture": "wu-068-new-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "gt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-068-new-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-05"
+    },
+    {
+      "key": "S2||kids21.com/products/700005621lbl",
+      "originRaw": "S2",
+      "url": "https://kids21.com/products/700005621lbl",
+      "dedupeKey": "kids21.com/products/700005621lbl",
+      "labels": [
+        {
+          "fixture": "wu-068-new-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "gt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-068-new-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-05"
+    },
+    {
+      "key": "S3||stadtlandkind.ch/en/products/uv-sun-hat-curious-turnip-green",
+      "originRaw": "S3",
+      "url": "https://www.stadtlandkind.ch/en/products/uv-sun-hat-curious-turnip-green",
+      "dedupeKey": "stadtlandkind.ch/en/products/uv-sun-hat-curious-turnip-green",
+      "labels": [
+        {
+          "fixture": "wu-068-new-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "gt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-068-new-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-06"
+    },
+    {
+      "key": "S3||kids21.com/products/700002005grn",
+      "originRaw": "S3",
+      "url": "https://kids21.com/products/700002005grn",
+      "dedupeKey": "kids21.com/products/700002005grn",
+      "labels": [
+        {
+          "fixture": "wu-068-new-gt.json",
+          "gt": "REVIEW",
+          "gtRaw": "UNCERTAIN",
+          "gtKey": "gt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "REVIEW",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-068-new-gt.json"
+      ],
+      "GT_VALUES": [
+        "REVIEW"
+      ],
+      "productId": "PRODUCT-06"
+    },
+    {
+      "key": "S4||main-story.com/products/bubble-sweatshirt-grey-melange",
+      "originRaw": "S4",
+      "url": "https://main-story.com/products/bubble-sweatshirt-grey-melange",
+      "dedupeKey": "main-story.com/products/bubble-sweatshirt-grey-melange",
+      "labels": [
+        {
+          "fixture": "wu-068-new-gt.json",
+          "gt": "REVIEW",
+          "gtRaw": "UNCERTAIN",
+          "gtKey": "gt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "REVIEW",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-068-new-gt.json"
+      ],
+      "GT_VALUES": [
+        "REVIEW"
+      ],
+      "productId": "PRODUCT-07"
+    },
+    {
+      "key": "S5||thefrontshop.com/products/pepe-style-1195-vernice-fard",
+      "originRaw": "S5",
+      "url": "https://www.thefrontshop.com/products/pepe-style-1195-vernice-fard",
+      "dedupeKey": "thefrontshop.com/products/pepe-style-1195-vernice-fard",
+      "labels": [
+        {
+          "fixture": "wu-068-new-gt.json",
+          "gt": "REVIEW",
+          "gtRaw": "UNCERTAIN",
+          "gtKey": "gt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "REVIEW",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-068-new-gt.json"
+      ],
+      "GT_VALUES": [
+        "REVIEW"
+      ],
+      "productId": "PRODUCT-08"
+    },
+    {
+      "key": "S6||kids21.com/products/700002037mlt",
+      "originRaw": "S6",
+      "url": "https://kids21.com/products/700002037mlt",
+      "dedupeKey": "kids21.com/products/700002037mlt",
+      "labels": [
+        {
+          "fixture": "wu-068-new-gt.json",
+          "gt": "REVIEW",
+          "gtRaw": "UNCERTAIN",
+          "gtKey": "gt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "REVIEW",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-068-new-gt.json"
+      ],
+      "GT_VALUES": [
+        "REVIEW"
+      ],
+      "productId": "PRODUCT-09"
+    },
+    {
+      "key": "S6||global.trenbe.com/products/bobo-choses-modern-tracksuit-jacket-for-kids-160301440-p",
+      "originRaw": "S6",
+      "url": "https://global.trenbe.com/products/bobo-choses-modern-tracksuit-jacket-for-kids-160301440-p",
+      "dedupeKey": "global.trenbe.com/products/bobo-choses-modern-tracksuit-jacket-for-kids-160301440-p",
+      "labels": [
+        {
+          "fixture": "wu-068-new-gt.json",
+          "gt": "REVIEW",
+          "gtRaw": "UNCERTAIN",
+          "gtKey": "gt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "REVIEW",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-068-new-gt.json"
+      ],
+      "GT_VALUES": [
+        "REVIEW"
+      ],
+      "productId": "PRODUCT-09"
+    },
+    {
+      "key": "S6||global.trenbe.com/products/bobo-choses-kids-jacket-modern-tracksuit-159406743-p",
+      "originRaw": "S6",
+      "url": "https://global.trenbe.com/products/bobo-choses-kids-jacket-modern-tracksuit-159406743-p",
+      "dedupeKey": "global.trenbe.com/products/bobo-choses-kids-jacket-modern-tracksuit-159406743-p",
+      "labels": [
+        {
+          "fixture": "wu-068-new-gt.json",
+          "gt": "REVIEW",
+          "gtRaw": "UNCERTAIN",
+          "gtKey": "gt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "REVIEW",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-068-new-gt.json"
+      ],
+      "GT_VALUES": [
+        "REVIEW"
+      ],
+      "productId": "PRODUCT-09"
+    },
+    {
+      "key": "S6||wconcept.co.kr/product/306219521",
+      "originRaw": "S6",
+      "url": "https://www.wconcept.co.kr/Product/306219521",
+      "dedupeKey": "wconcept.co.kr/product/306219521",
+      "labels": [
+        {
+          "fixture": "wu-068-new-gt.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "gt",
+          "originKey": "searchId"
+        }
+      ],
+      "CEO_GT": "DIFFERENT",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-068-new-gt.json"
+      ],
+      "GT_VALUES": [
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-09"
+    },
+    {
+      "key": "B226AC010||rboutique.com/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
+      "originRaw": "B226AC010",
+      "url": "https://www.rboutique.com/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
+      "dedupeKey": "rboutique.com/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
+      "labels": [
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-03"
+    },
+    {
+      "key": "B226AC010||tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt",
+      "originRaw": "B226AC010",
+      "url": "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt",
+      "dedupeKey": "tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt",
+      "labels": [
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "DIFFERENT",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-03"
+    },
+    {
+      "key": "B226AC010||tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt-heather-grey",
+      "originRaw": "B226AC010",
+      "url": "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt-heather-grey",
+      "dedupeKey": "tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt-heather-grey",
+      "labels": [
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-03"
+    },
+    {
+      "key": "B226AC010||tinyapple.net/products/bobo-choses-booty-ghosts-sweatshirt",
+      "originRaw": "B226AC010",
+      "url": "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-sweatshirt",
+      "dedupeKey": "tinyapple.net/products/bobo-choses-booty-ghosts-sweatshirt",
+      "labels": [
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "DIFFERENT",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-03"
+    },
+    {
+      "key": "B226AC010||bobochoses.com/products/b226ab046-booty-ghosts-t-shirt",
+      "originRaw": "B226AC010",
+      "url": "https://bobochoses.com/products/b226ab046-booty-ghosts-t-shirt",
+      "dedupeKey": "bobochoses.com/products/b226ab046-booty-ghosts-t-shirt",
+      "labels": [
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-03"
+    },
+    {
+      "key": "B226AC010||eraldo.com/products/bobo-choses-booty-ghosts-t-shirt-340496",
+      "originRaw": "B226AC010",
+      "url": "https://www.eraldo.com/products/bobo-choses-booty-ghosts-t-shirt-340496",
+      "dedupeKey": "eraldo.com/products/bobo-choses-booty-ghosts-t-shirt-340496",
+      "labels": [
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-03"
+    },
+    {
+      "key": "B226AC010||cissywears.com/products/bobo-choses-booty-ghosts-t-shirt",
+      "originRaw": "B226AC010",
+      "url": "https://cissywears.com/products/bobo-choses-booty-ghosts-t-shirt",
+      "dedupeKey": "cissywears.com/products/bobo-choses-booty-ghosts-t-shirt",
+      "labels": [
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-03"
+    },
+    {
+      "key": "B226AC010||kolkid.ca/products/bobo-choses-booty-ghosts-t-shirt",
+      "originRaw": "B226AC010",
+      "url": "https://kolkid.ca/products/bobo-choses-booty-ghosts-t-shirt",
+      "dedupeKey": "kolkid.ca/products/bobo-choses-booty-ghosts-t-shirt",
+      "labels": [
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-03"
+    },
+    {
+      "key": "B226AC010||junioredition.com/products/booty-ghosts-t-shirt-by-bobo-choses",
+      "originRaw": "B226AC010",
+      "url": "https://www.junioredition.com/products/booty-ghosts-t-shirt-by-bobo-choses",
+      "dedupeKey": "junioredition.com/products/booty-ghosts-t-shirt-by-bobo-choses",
+      "labels": [
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "DIFFERENT",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-03"
+    },
+    {
+      "key": "B226AC010||billsstore.com.au/products/booty-ghosts-long-sleeve-t-shirt-baby",
+      "originRaw": "B226AC010",
+      "url": "https://www.billsstore.com.au/products/booty-ghosts-long-sleeve-t-shirt-baby",
+      "dedupeKey": "billsstore.com.au/products/booty-ghosts-long-sleeve-t-shirt-baby",
+      "labels": [
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-03"
+    },
+    {
+      "key": "B226AC009||tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+      "originRaw": "B226AC009",
+      "url": "https://www.tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+      "dedupeKey": "tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+      "labels": [
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-02"
+    },
+    {
+      "key": "B226AC009||thefrontshop.com/products/hug-hairy-monster-t-shirt",
+      "originRaw": "B226AC009",
+      "url": "https://www.thefrontshop.com/products/hug-hairy-monster-t-shirt",
+      "dedupeKey": "thefrontshop.com/products/hug-hairy-monster-t-shirt",
+      "labels": [
+        {
+          "fixture": "wu-112-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "verdict",
+          "originKey": "originCode"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-112-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-02"
+    },
+    {
+      "key": "B226AC010||junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+      "originRaw": "B226AC010",
+      "url": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+      "dedupeKey": "junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+      "labels": [
+        {
+          "fixture": "wu-125-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "human",
+          "originKey": "origin"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-125-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-03"
+    },
+    {
+      "key": "B226AC010||tinyapple.net/en-kr/products/bobo-choses-booty-ghosts-t-shirt",
+      "originRaw": "B226AC010",
+      "url": "https://www.tinyapple.net/en-kr/products/bobo-choses-booty-ghosts-t-shirt",
+      "dedupeKey": "tinyapple.net/en-kr/products/bobo-choses-booty-ghosts-t-shirt",
+      "labels": [
+        {
+          "fixture": "wu-125-human-gt.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "human",
+          "originKey": "origin"
+        }
+      ],
+      "CEO_GT": "DIFFERENT",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-125-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-03"
+    },
+    {
+      "key": "B226AC009||tinyapple.net/en-kr/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+      "originRaw": "B226AC009",
+      "url": "https://www.tinyapple.net/en-kr/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+      "dedupeKey": "tinyapple.net/en-kr/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+      "labels": [
+        {
+          "fixture": "wu-125-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "human",
+          "originKey": "origin"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-125-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-02"
+    },
+    {
+      "key": "B226AC010||tinyapple.net/en-kr/products/bobo-choses-bobo-choses-embossed-t-shirt-multicolor",
+      "originRaw": "B226AC010",
+      "url": "https://www.tinyapple.net/en-kr/products/bobo-choses-bobo-choses-embossed-t-shirt-multicolor",
+      "dedupeKey": "tinyapple.net/en-kr/products/bobo-choses-bobo-choses-embossed-t-shirt-multicolor",
+      "labels": [
+        {
+          "fixture": "wu-125-human-gt.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "human",
+          "originKey": "origin"
+        }
+      ],
+      "CEO_GT": "DIFFERENT",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-125-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-03"
+    },
+    {
+      "key": "B226AC010||scoutandcokids.com/collections/bobo-choses/products/bobo-choses-booty-ghosts-t-shirt",
+      "originRaw": "B226AC010",
+      "url": "https://scoutandcokids.com/collections/bobo-choses/products/bobo-choses-booty-ghosts-t-shirt",
+      "dedupeKey": "scoutandcokids.com/collections/bobo-choses/products/bobo-choses-booty-ghosts-t-shirt",
+      "labels": [
+        {
+          "fixture": "wu-125-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "human",
+          "originKey": "origin"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-125-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-03"
+    },
+    {
+      "key": "B226AC009||scoutandcokids.com/collections/bobo-choses/products/bobo-choses-hug-hairy-monster-t-shirt",
+      "originRaw": "B226AC009",
+      "url": "https://scoutandcokids.com/collections/bobo-choses/products/bobo-choses-hug-hairy-monster-t-shirt",
+      "dedupeKey": "scoutandcokids.com/collections/bobo-choses/products/bobo-choses-hug-hairy-monster-t-shirt",
+      "labels": [
+        {
+          "fixture": "wu-125-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "human",
+          "originKey": "origin"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-125-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-02"
+    },
+    {
+      "key": "B226AC009||cemarose.ca/products/bobo-choses-kids-booty-ghosts-sweatshirt-light-blue-c7907",
+      "originRaw": "B226AC009",
+      "url": "https://cemarose.ca/products/bobo-choses-kids-booty-ghosts-sweatshirt-light-blue-c7907",
+      "dedupeKey": "cemarose.ca/products/bobo-choses-kids-booty-ghosts-sweatshirt-light-blue-c7907",
+      "labels": [
+        {
+          "fixture": "wu-125-human-gt.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "human",
+          "originKey": "origin"
+        }
+      ],
+      "CEO_GT": "DIFFERENT",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-125-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-02"
+    },
+    {
+      "key": "B226AC009||junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "originRaw": "B226AC009",
+      "url": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "dedupeKey": "junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "labels": [
+        {
+          "fixture": "wu-125-human-gt.json",
+          "gt": "SAME",
+          "gtRaw": "SAME",
+          "gtKey": "human",
+          "originKey": "origin"
+        }
+      ],
+      "CEO_GT": "SAME",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-125-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "SAME"
+      ],
+      "productId": "PRODUCT-02"
+    },
+    {
+      "key": "B226AC009||tinyapple.net/en-kr/products/bobo-choses-bobo-choses-pop-t-shirt-blue",
+      "originRaw": "B226AC009",
+      "url": "https://www.tinyapple.net/en-kr/products/bobo-choses-bobo-choses-pop-t-shirt-blue",
+      "dedupeKey": "tinyapple.net/en-kr/products/bobo-choses-bobo-choses-pop-t-shirt-blue",
+      "labels": [
+        {
+          "fixture": "wu-125-human-gt.json",
+          "gt": "DIFFERENT",
+          "gtRaw": "DIFFERENT",
+          "gtKey": "human",
+          "originKey": "origin"
+        }
+      ],
+      "CEO_GT": "DIFFERENT",
+      "GT_CONFLICT": false,
+      "GT_SOURCE_FIXTURES": [
+        "wu-125-human-gt.json"
+      ],
+      "GT_VALUES": [
+        "DIFFERENT"
+      ],
+      "productId": "PRODUCT-02"
+    }
+  ]
+}
