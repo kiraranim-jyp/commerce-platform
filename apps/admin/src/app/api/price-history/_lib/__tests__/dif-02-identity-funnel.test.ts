@@ -132,6 +132,20 @@ interface Row {
   price: number | null;
   currency: string | null;
   priceStatus: string | null;
+  /**
+   * 🔵🔵 PRICE-POLICY-CONDITIONAL-AUDIT-01 — **TEXT_CONFIRMED 7건을 가를 Evidence.**
+   *    🔴 새로 크롤링하지 않는다 — 후보가 **이미 들고 있는** 칸을 그대로 적는다
+   *       (`candidate.facts` · `crossSellerReasons`).
+   */
+  title: string | null;
+  reasons: string[];
+  f_brand: string | null;
+  f_code: string | null;
+  f_color: string | null;
+  f_material: string | null;
+  f_fit: string | null;
+  f_tokens: string[];
+  f_images: number;
 }
 
 describe("DIF-02 — Human SAME recovery funnel (새 Search 0)", () => {
@@ -248,6 +262,15 @@ describe("DIF-02 — Human SAME recovery funnel (새 Search 0)", () => {
               currency: c.price?.currency ?? null,
               priceStatus: c.priceStatus ?? null,
               dropReason: null,
+              title: c.title ?? null,
+              reasons: c.crossSellerReasons ?? [],
+              f_brand: c.facts?.brand ?? null,
+              f_code: c.facts?.brandModelCode ?? null,
+              f_color: c.facts?.colorText ?? null,
+              f_material: c.facts?.materialText ?? null,
+              f_fit: c.facts?.fitText ?? null,
+              f_tokens: c.facts?.coreTitleTokens ?? [],
+              f_images: c.facts?.imageUrls?.length ?? 0,
               /** 🔴 샵 대표만 운영이 tier 를 만든다 — 나머지는 `null`(지어내지 않는다). */
               matchTruth: j.kind === "JUDGED" && isBest ? j.matchTruth : null,
               tier: j.kind === "JUDGED" && isBest ? j.priceTier : null,
@@ -282,6 +305,15 @@ describe("DIF-02 — Human SAME recovery funnel (새 Search 0)", () => {
               currency: null,
               priceStatus: null,
               dropReason: dropReason.get(loose(g.url)) ?? "(기록없음)",
+              title: null,
+              reasons: [],
+              f_brand: null,
+              f_code: null,
+              f_color: null,
+              f_material: null,
+              f_fit: null,
+              f_tokens: [],
+              f_images: 0,
               matchTruth: null,
               tier: null,
               priceEligible: false,
@@ -428,6 +460,36 @@ describe("DIF-02 — Human SAME recovery funnel (새 Search 0)", () => {
             ` | blockers=[${r.blockers.join(",")}] | ${r.price}${r.currency} | ${r.url}`,
         );
       /** 🔴 §10 — CONFLICT(세트 포함)가 가격 축에 **들어가지 않는다** 를 숫자로 적는다. */
+      /**
+       * 🔵🔵🔵 PP-01 §3 — **TEXT_CONFIRMED 모집단 전수.** 집계로 뭉개지 않는다.
+       * 🔴 분모는 **샵 대표(matchTruth 가 있는 행)** 다 — 그것이 가격 축의 분모다.
+       */
+      const tc = rows.filter((r) => r.matchTruth === "TEXT_CONFIRMED");
+      console.log(`\n【PP-01 A】 TEXT_CONFIRMED 모집단 **${tc.length}건** 전수`);
+      for (const r of tc) {
+        console.log(
+          `\n  ── ${r.domain}  human=${r.human}  verdict=${r.verdict}  tier=${r.tier}  elig=${r.priceEligible}  ${r.price ?? "-"}${r.currency ?? ""}  ${r.market}`,
+        );
+        console.log(`     title   ${String(r.title).slice(0, 88)}`);
+        console.log(
+          `     facts   brand=${JSON.stringify(r.f_brand)} code=${JSON.stringify(r.f_code)} color=${JSON.stringify(r.f_color)}`,
+        );
+        console.log(
+          `             material=${JSON.stringify(String(r.f_material).slice(0, 40))} fit=${JSON.stringify(r.f_fit)} images=${r.f_images}`,
+        );
+        console.log(`     tokens  [${r.f_tokens.join(" ")}]`);
+        console.log(`     blk=[${r.blockers.join(",")}] cfl=[${r.conflicts.join(",")}]`);
+        console.log(`     reasons ${JSON.stringify(r.reasons)}`);
+      }
+      /** 🔴 §6 — **기존 필드만** 으로 분리 조건을 탐색한다(새 matcher 0 · 새 threshold 0). */
+      const axisCount = (r: Row) => r.reasons.filter((x) => x.startsWith("근거")).length;
+      console.log("\n【PP-01 D】 기존 필드 후보 — 값이 실제로 갈리는 것만 적는다");
+      console.log("  seller                   human      근거수  brand  code   color   material  images  blk");
+      for (const r of tc)
+        console.log(
+          `  ${r.domain.padEnd(24)} ${r.human.padEnd(10)} ${String(axisCount(r)).padStart(5)}` +
+            `  ${r.f_brand ? "O" : "X"}      ${r.f_code ? "O" : "X"}     ${r.f_color ? "O" : "X"}       ${r.f_material ? "O" : "X"}       ${String(r.f_images).padStart(2)}    [${r.blockers.join(",")}]`,
+        );
       const conflictRows = rows.filter((r) => r.verdict === "CONFLICT");
       console.log(
         `\n【F. CONFLICT ${conflictRows.length}건 — 가격 자격 ${conflictRows.filter((r) => r.priceEligible).length}` +

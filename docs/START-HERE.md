@@ -21,7 +21,35 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **MT-01 CLOSED** — 🟢 **결정축 확정: `matchTruth`** · 정책 결정은 CPO
+CURRENT WU   **PP-01 CLOSED** — 🟡 **PARTIALLY_SEPARABLE** · 정책 결정은 CPO
+             🟢 계측만 · 운영 **0** · Search **0** · Crawl **0** · 정책 **0**
+             【TEXT_CONFIRMED 7건 전수】(샵 대표 분모)
+                biskuit.kr        SAME       code B226AC009  blk BRAND_MISMATCH+NO_TITLE_OVERLAP  ₩88,000
+                cissywears.com    SAME       code null       blk AUDIENCE_LINE                    £33
+                kids21.com        SAME       code null       blk AUDIENCE_LINE                    S$70
+                🔴 m.luxboy.com   DIFFERENT  code B226AC009  blk NO_TITLE_OVERLAP                 ₩59,000
+                kolkid.ca         SAME       code null       blk AUDIENCE_LINE                    C$56
+                rboutique.com     SAME       code null       blk (없음)                           $44
+                billsstore.com.au SAME       code null       blk AUDIENCE_LINE                    ₩70,000
+             🔴🔴🔴 **누출과 가장 가까운 정답을 기존 Evidence 로 가를 수 없다**
+                biskuit(SAME) ↔ luxboy(DIFFERENT) — code **둘 다 B226AC009** ·
+                color/material/fit **둘 다 null** · images 둘 다 1 · market 둘 다 KR
+                🔴 blocker 수 2 ↔ 1 · 근거 수 2 ↔ 3 ⟹ **둘 다 역방향**(정답이 더 약하다)
+                🔴 실제로 가른 것은 제목의 **「긴팔」** 하나 = **새 축**(소매 길이) ·
+                   WU-123/125 가 「N=2 · 일반화 금지」로 닫은 자리 · GARMENT_FORM 미발화
+             🟡 **부분 분리 하나** — 조건 「`NO_TITLE_OVERLAP` 없음」
+                SAME 유지 **5/6** · SAME 손실 **1** · DIFFERENT 누출 **0**
+                🔴 그런데 잃는 1건이 `biskuit.kr` ₩88,000 = **국내 유일한 정답 가격** ·
+                   국내 TEXT_CONFIRMED 는 그 둘뿐 ⟹ **국내 가격 축이 빈다**
+             🟢 계약 **7**(PP-C1~C8) · 변이 **N1~N6 전부 FAIL → 복구**
+                🔴 내 가드가 **또 뚫렸다**(N1) — 1600자 슬라이스에 D 표가 섞여
+                   `r.human` 이 거기서 발견됐다 ⟹ 🟢 **A 블록만** 자르도록 강화
+             🟢 회귀 **742 / 9,693 passed / 0 failed** · tsc 0 · build 0
+             🟡 **CPO 결정 — 선택지 셋(trade-off 가 숫자로 나왔다)**
+                ① 현상 유지         정답 17 · 누출 1 · 🇰🇷 가격 유지
+                ② NO_TITLE_OVERLAP 제외  정답 16 · 누출 **0** · 🔴 🇰🇷 가격 ₩88,000 손실
+                ③ STRONG 만 허용    정답 11 · 누출 0 · 🔴 TEXT_CONFIRMED 정답 6 손실
+[낡음]       **MT-01 CLOSED** — 🟢 **결정축 확정: `matchTruth`** · 정책 결정은 CPO
              🟢 계측만 · 운영 코드 **0** · Search **0** · Crawl **0** · 정책 **0**
              【B. matchTruth × human × 가격】 분모 **23**(샵 대표만 · 나머지는 matchTruth 없음)
                 STRONG_IDENTIFIER  11 · hSAME 11 · hDIFF 0 · 금액 11 · **자격 11** ·
