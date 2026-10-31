@@ -21,7 +21,39 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **CORE-E2E-CLOSE-04 — 🟢🟢 배포 완료 · CEO 육안 1회로 CORE-E2E 가 닫힌다**(`41565653`)
+CURRENT WU   **CORE-E2E-CLOSE-05 — 🟢🟢 배포 · CEO 육안 1회로 CORE-E2E 최종 GO**(`11724de5`)
+             🔴🔴🔴 **CEO Production FAIL 의 원인은 UI 가 아니라 «재진입 공급» 이었다**:
+             ```
+             기존 분석 결과 재진입
+               → page.tsx:529 POST /check 는 `isFirstInsert` 블록 «안» 에만 있다 ⟹ 안 돈다
+               → GET 은 transient 를 싣지 않는다 ⟹ rows = null
+               → checkRan=false ⟹ MarketPriceComparison 이 **return null**
+               → 📊 가격비교가 통째로 사라진다
+               → 🔴 복구 버튼(`recheckNow`)은 HIDDEN 패널 안이라 **셀러가 할 일이 0**
+             ```
+             🟢 마운트 DOM 으로 재현했다 — `rows=null` → 영역 **부재** ·
+                `rows=[PRESUMED]` → MPC·MarketBlock·`mi-presumed-area`·선택·`88,000` **전부 선다**
+                ⟹ 🔴 **CLOSE-03/04 의 UI 는 맞았고 입력이 비어 있었다**(그 둘이 만든 결함 아님)
+             🟢 **CPO 결정 ⒝ — 수동 「🔄 다시 분석」**(자동 `/check` 는 비용 정책상 금지)
+                패널의 **기존 `recheckNow`** 를 `marketComparisonInput`(이미 있는 공급 채널)에
+                실어 결론 영역으로 올려보낸다 — `/check` 새 구현 0 · 새 API 0 · 새 배선 0
+             🔴🔴 **참조 고정이 필수다** — 함수 선언을 memo deps 에 넣으면
+                publish → `setState` → 렌더 … **무한 루프** 다. `recheckNowRef` +
+                `stableRecheck`(파일의 기존 ref 패턴 재사용 · 계약 D-3 · 변이 M9 가 잠근다)
+             🟢 §4 — 재조회 수단이 있으면 **영역이 사라지지 않는다**.
+                🔴 「후보가 없습니다」로 적지 않는다(미조회 ≠ 부재) · 진행 중 **잠금 둘**
+             🔴 **변경 0** — Identity · 가격 정책 · Search · 두 선별기 · 후보 표시 정책 ·
+                `presentation="HIDDEN"` · MI 패널 재노출 · Registry · 저장 로직 복제
+             🟢 계약 **12 신규** · 변이 **M1~M13 전부 FAIL → 바이트 복구** ·
+                회귀 **746 / 9,740 passed / 0 failed** · tsc 0 · build 0
+             🔴 기존 계약 **2건 갱신**(약화 아님 · M11~M13 로 확인) —
+                `wu-130 F-5`(CPO §4 가 지시한 예외 · 지키는 성질이 **둘** 로 늘었다) ·
+                `wu-132 C-2`(`slice(0,400)` 임의 창 → **JSX 요소 전체**)
+             🟡🟡 **CEO 육안 1회 → CORE-E2E 최종 GO**(CPO 선언) — **기존 상품을 다시 열어서**
+                `📊 가격 분석 → 🔄 다시 분석 → 후보 → 가격 → 선택`
+                🔴 「새 상품 분석」을 하지 않아도 된다 — 그것이 이 WU 의 목적이다
+
+[낡음]       **CORE-E2E-CLOSE-04 — 배포 완료**(`41565653` · 🟢 후보 선택)
              🟢🟢🟢 **마지막 구멍이 닫혔다 — 셀러가 후보를 «고를» 수 있다.**
                 WU-152 가 패널을 `HIDDEN`(→ `return null`)으로 둔 뒤 그 안의 선택 UI 가
                 사라졌고 결론 영역은 그 저장 핸들러에 **닿을 수 없었다**.
