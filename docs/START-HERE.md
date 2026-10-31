@@ -21,7 +21,39 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **CORE-E2E-CLOSE-02 — 🔴🔴 원인 확정 · 구현은 다음 세션**
+CURRENT WU   **CORE-E2E-CLOSE-03 — 🟢🟢 배포 완료 · CEO 육안 1회 대기**(`96a9eb16`)
+             🟢🟢 **CEO FAIL 이 닫혔다** — 후보와 가격이 **결론 영역에서 보인다.**
+                패널을 되살리지 않았다(WU-152 유지 · `presentation="HIDDEN"` 무변경).
+                `selectPresumedCandidates`(신규 · **표시 전용**) → `MarketColumn` 의
+                `mi-presumed-area`(**기본 접힘** · 상품명 · 판매처 · **실제 URL** ·
+                가격/통화 · 없으면 「가격 미확인」 · 「위 가격 집계에는 들어가지 않습니다」)
+             🔴 **변경 0** — `selectMiSameCandidates`(가격 집계 선별기) · 판정 · 가격 집계 ·
+                Search · 공급 배선 · 패널 복구 · `candidate_reviews`
+             🟢 `selectMiSameCandidates` 의 **거짓 주석을 정정했다**(아래 「깨진 전제」)
+             🟢 계약 **14 신규**(마운트 DOM) · 변이 **N1~N9 전부 FAIL → 바이트 복구** ·
+                회귀 **744 / 9,716 passed / 0 failed** · tsc 0 · build 0 · 배포 **Ready**
+                🔴 N2·N3 는 1차에 **변이 좌표가 틀려** 통과했다(`priceText(row)` 첫 등장이
+                   SAME 행) — 고유 좌표로 다시 걸어 둘 다 FAIL 확인. 미적용을 통과로 읽지 않았다
+             🔴🔴 **기존 계약 2건 «범위 정정» — CPO 판정 대기**(약화 아님 · 변이 N9 로 확인)
+                `wu-141-r3 C-1-d` 「두 금액이 **어디에도**」 → 「**가격 축에**」
+                   ⒜ `SIMILAR` 금액은 **여전히 화면 어디에도** 금지(한 글자도 안 넓어졌다)
+                   ⒝ `PRESUMED` 금액은 `mi-presumed-area` **안에만** — 걷어낸 화면엔 없어야
+                      한다(전에는 집계 누출과 후보 표시를 **구분하지 못했다**)
+                `core-2r5 A-2` 화면 전체 1회 → **집계 축** 1회(1차 층 단언 무변경)
+             🔴🔴 **③ 선택은 배선하지 않았다**(CEO 3질문 중 하나) — 코드 위치로 확정:
+                선택 state·저장(`handleDomesticReview`·`reviewSaveState`·`reviewHistory`·
+                `candidate-reviews` POST)은 **전부 `MiPanelView`:3145 소유** 이고
+                `MarketPriceComparison`·`CommerceWorkspace` 에 그 state 가 **0** 이다(전수 grep)
+                ⟹ ⒜ 핸들러를 **밖으로 들어올리기**(구조 변경) ⒝ 패널 복구(🔴 계약 3건 깨진다)
+                🟡 **CPO 결정 하나** — ⒜ 를 다음 WU 로 열 것인가(새 저장 로직 0 · 기존 POST 재사용)
+             🟡 **CEO 육안 1회** — `/pipeline → 상품 → 📊 가격 분석 → ＋ 상세정보 보기
+                → ▸ MI 상세 분석 → 「동일상품 가능성이 있는 후보 N곳」`
+                질문은 **①②** 둘이다(③ 선택은 아직 없다)
+                🔴 **「접혀 있는 것」은 FAIL 이 아니다** — 펼치면 「유력 후보」로 읽혀
+                   2026-09-19 사고가 되돌아온다(WU-091 ①)
+                🔴 **Production UI PASS 로 적지 않는다** — CTO 는 그 화면을 볼 수 없다
+
+[낡음]       **CORE-E2E-CLOSE-02 — 원인 확정**(🟢 위에서 수정·배포됐다)
              🔴🔴🔴 **CEO FAIL 의 원인은 한 줄이다** —
                 `CommerceWorkspace.tsx:3849  presentation="HIDDEN"` (WU-152)
                 → `DomesticPriceIntelligencePanel:2442  return null`
