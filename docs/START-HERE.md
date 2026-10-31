@@ -21,7 +21,35 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **AGE-LINE-POLICY-01 구현 완료** — 🟢 recovery 17→19 · 누출 불변 1
+CURRENT WU   **PE-01A CLOSED** — 🔴🔴 **blocker 는 가격 자격의 결정자가 아니다**(반증)
+             🟢 계측만 · 운영 코드 **0** · Search **0** · 가격/Identity 정책 **0**
+             【측정 기준 LOCK】 Recovery = `JUDGED(샵 대표)` AND verdict SAME/PRESUMED
+                baseline **17/25 (68%)** → 현재 **19/25 (76%)**
+                🔴 `72%`(18/25)는 내 **오프라인 스크립트**(정의 B · stopAt 무시) 값이었다 —
+                   하니스 산출이 아니다. 정의 B 21/25(84%)는 **보조 참고값**
+             【가격 — 두 축 LOCK】 `priceAmountPresent` ≠ `priceEligible`
+                SAME/PRESUMED **20** · 금액 **20** · 🔴 **가격 자격 18**
+                🔴 `19/19 → 20/20` 은 **서로 다른 두 하니스** 값을 나란히 적은 것(내 오류) —
+                   같은 하니스로는 **18 → 20** 이고, 늘어난 2 는 **tier EXCLUDED** 라
+                   **실제 가격 축은 불변** 이다
+             【blocker × human × 가격 자격】 (SAME/PRESUMED 전수 · 새 Search 0)
+                (blocker 없음)                12  hSAME 12  hDIFF 0  금액 12  **자격 12**
+                AUDIENCE_LINE                  8   hSAME  8  hDIFF 0  금액  8  **자격  4** 🟡
+                MODEL_CODE_AGE_LINE            4   hSAME  3  hDIFF 1  금액  4  **자격  0** 🔴
+                NO_TITLE_OVERLAP               2   hSAME  1  hDIFF 1  금액  2  **자격  2** 🔴
+                SAME_SELLER_DISTINCT_LISTING   2   hSAME  2  hDIFF 0  금액  2  **자격  0**
+                BRAND_MISMATCH                 1   hSAME  1  hDIFF 0  금액  1  **자격  1**
+             🔴🔴🔴 **반증** — 같은 blocker 안에서 자격이 갈린다(AUDIENCE_LINE 8 → 4) ⟹
+                결정자는 `matchTruth`(→ `priceTierFromLink`)이고 **blocker 가 아니다**.
+                「blocker 별 허용/제외」 정책은 **이 데이터에서 성립하지 않는다**
+             🟢 누출 1건의 출처 확정 — **`NO_TITLE_OVERLAP`**(m.luxboy ₩59,000) ·
+                🔴 단 같은 blocker 의 다른 1건은 **human SAME** ⟹ precision 1/2(순이득 아님)
+             🟢 `COMPOSITION`(세트)은 verdict CONFLICT 라 **분모에 없다** = 가격 유입 **0**
+             🟢 계약 **7**(P1·P2·P2-b·P3~P6) · 변이 **N1~N6 전부 FAIL → 복구**
+                🔴 내 가드가 **두 번 뚫렸다**(N5·N6) — 둘 다 보고 줄을 **slice** 해 강화
+             🟢 회귀 **740 / 9,678 passed / 0 failed** · tsc 0 · build 0
+             🟡 **다음 = CPO 가격 정책 결정** — 🔴 blocker 축이 아니라 **`matchTruth` 축** 이다
+[낡음]       **AGE-LINE-POLICY-01 구현 완료** — 🟢 recovery 17→19 · 누출 불변 1
              🔵 CPO GO 범위 그대로 — **품번 보호 전역 해제 0**. 조건 **셋** 이고 전부 필요:
                 ① `modelCode === "conflict"`  ② 충돌이 **MODEL_CODE 하나뿐**
                 ③ **연령 어휘를 뺀** `coreTitleTokens` **완전 일치**(부분·fuzzy ❌)

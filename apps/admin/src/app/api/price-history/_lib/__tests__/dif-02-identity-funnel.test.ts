@@ -111,6 +111,18 @@ interface Row {
   stopAt: StopAt;
   /** 🔴 풀에서 떨어졌다면 **왜** 떨어졌는가 — Crawl 문제와 Evidence 문제를 가른다. */
   dropReason: string | null;
+  /**
+   * 🔴🔴 PRICE-ELIGIBILITY-AUDIT-01A — **「금액이 있다」와 「가격 축에 들어간다」는 다르다.**
+   *    CPO 가 `19/19 → 20/20` 과 「가격 변화 0」의 모순을 지적했고, 그 둘을 가를 칸이
+   *    이 하니스에 **없었다**.
+   * 🔴 **재계산하지 않는다** — `judgeDomesticCandidate` 가 돌려주는 값을 그대로 적는다
+   *    (`matchTruth: evidenceDecision.truth` · `priceTier: priceTierFromLink(...)`).
+   * 🔴 샵 대표가 아닌 행에는 **둘 다 없다**(`null`) — 운영도 그 행의 tier 를 만들지 않는다.
+   */
+  matchTruth: string | null;
+  tier: string | null;
+  /** 🟢 파생이 아니라 **기록** 이다 — `tier` 가 EXACT|COMPARISON 일 때만 참. */
+  priceEligible: boolean;
   /** 🟢 **게이트 전에 이미 계산돼 있던** 값이다(여기서 판정하지 않는다). */
   verdict: string | null;
   matchLevel: string | null;
@@ -236,6 +248,11 @@ describe("DIF-02 — Human SAME recovery funnel (새 Search 0)", () => {
               currency: c.price?.currency ?? null,
               priceStatus: c.priceStatus ?? null,
               dropReason: null,
+              /** 🔴 샵 대표만 운영이 tier 를 만든다 — 나머지는 `null`(지어내지 않는다). */
+              matchTruth: j.kind === "JUDGED" && isBest ? j.matchTruth : null,
+              tier: j.kind === "JUDGED" && isBest ? j.priceTier : null,
+              priceEligible:
+                j.kind === "JUDGED" && isBest && (j.priceTier === "EXACT" || j.priceTier === "COMPARISON"),
             });
           }
         }
@@ -265,6 +282,9 @@ describe("DIF-02 — Human SAME recovery funnel (새 Search 0)", () => {
               currency: null,
               priceStatus: null,
               dropReason: dropReason.get(loose(g.url)) ?? "(기록없음)",
+              matchTruth: null,
+              tier: null,
+              priceEligible: false,
             });
       }
 
@@ -312,8 +332,39 @@ describe("DIF-02 — Human SAME recovery funnel (새 Search 0)", () => {
 
       /** 🟢 가격 — SAME/PRESUMED 후보에 실제 금액이 붙는가(CPO §8). */
       const strong = rows.filter((r) => r.stopAt === "JUDGED" && (r.verdict === "SAME" || r.verdict === "PRESUMED_SAME"));
+      /**
+       * 🔴🔴 PRICE-ELIGIBILITY-AUDIT-01A — **두 축을 가른다**(CPO §2).
+       *    `priceAmountPresent` = 그 후보 페이지에서 금액을 읽었다
+       *    `priceEligible`      = tier 가 EXACT|COMPARISON 이라 **집계에 들어간다**
+       */
+      const eligible = strong.filter((r) => r.priceEligible);
       console.log(
-        `\n【가격】 SAME/PRESUMED ${strong.length}건 중 금액 보유 ${strong.filter((r) => r.price != null).length}` +
+        `\n【가격 — 두 축】 SAME/PRESUMED ${strong.length}` +
+          `  priceAmountPresent ${strong.filter((r) => r.price != null).length}` +
+          `  🔴 priceEligible ${eligible.length}` +
+          `  그중 금액 보유 ${eligible.filter((r) => r.price != null).length}`,
+      );
+      /** 🔴 blocker × human × 가격 — 이 표가 다음 정책 결정의 입력이다. */
+      const byBlocker = new Map<string, { all: number; same: number; diff: number; priced: number; elig: number }>();
+      for (const r of rows.filter((x) => x.verdict === "SAME" || x.verdict === "PRESUMED_SAME")) {
+        for (const b of r.blockers.length ? r.blockers : ["(blocker 없음)"]) {
+          const e = byBlocker.get(b) ?? { all: 0, same: 0, diff: 0, priced: 0, elig: 0 };
+          e.all += 1;
+          if (r.human === "SAME") e.same += 1;
+          if (r.human === "DIFFERENT") e.diff += 1;
+          if (r.price != null) e.priced += 1;
+          if (r.priceEligible) e.elig += 1;
+          byBlocker.set(b, e);
+        }
+      }
+      console.log("\n【blocker × human × 가격】 SAME/PRESUMED 후보 전수");
+      console.log("  blocker                       전체 hSAME hDIFF  금액  가격자격");
+      for (const [b, e] of [...byBlocker.entries()].sort((a, z) => z[1].all - a[1].all))
+        console.log(
+          `  ${b.padEnd(29)} ${String(e.all).padStart(4)} ${String(e.same).padStart(5)} ${String(e.diff).padStart(5)} ${String(e.priced).padStart(5)} ${String(e.elig).padStart(8)}`,
+        );
+      console.log(
+        `\n【참고 · 기존 줄】 SAME/PRESUMED ${strong.length}건 중 금액 보유 ${strong.filter((r) => r.price != null).length}` +
           ` · VERIFIED ${strong.filter((r) => r.priceStatus === "VERIFIED_CURRENT").length}` +
           ` · 🇰🇷 ${strong.filter((r) => r.market === "KR").length} · 🌎 ${strong.filter((r) => r.market === "OVERSEAS").length}`,
       );
