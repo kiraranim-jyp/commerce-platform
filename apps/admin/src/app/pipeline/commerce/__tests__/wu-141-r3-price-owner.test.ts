@@ -270,7 +270,7 @@ describe("C-1 seller-facing 가격 숫자의 owner 는 「📊 시장 판매 판
      * 🟢🟢 **두 방향으로 더 강해졌다**:
      *    ⒜ `SIMILAR`(19)은 **여전히 화면 어디에도** 설 수 없다 — 보류 구역조차
      *       `PRESUMED_SAME` 만 받는다(`selectPresumedCandidates`).
-     *    ⒝ `PRESUMED_SAME`(21)은 **`mi-presumed-area` «안» 에만** 설 수 있고 그 구역을
+     *    ⒝ `PRESUMED_SAME`(21)은 **`mi-candidate-list` «안» 에만** 설 수 있고 그 구역을
      *       걷어낸 화면에는 **없어야** 한다 ⟹ 집계·기준가·범위로 새 나가면 FAIL 한다
      *       (전에는 「어디에도 없다」가 그 둘을 **구분하지 못했다**).
      */
@@ -278,7 +278,7 @@ describe("C-1 seller-facing 가격 숫자의 owner 는 「📊 시장 판매 판
       const out: string[] = [];
       let rest = h;
       for (;;) {
-        const i = rest.indexOf('<details data-testid="mi-presumed-area"');
+        const i = rest.indexOf('<details data-testid="mi-candidate-list"');
         if (i < 0) {
           out.push(rest);
           break;
@@ -297,7 +297,7 @@ describe("C-1 seller-facing 가격 숫자의 owner 는 「📊 시장 판매 판
     expect(stripPresumed(html)).not.toContain("21");
     /** 🟢 그리고 **버려지지도 않는다** — 셀러가 그 구역에서 본다(CEO FAIL 의 수정). */
     expect(html).toContain("21");
-    expect(html).toContain('data-testid="mi-presumed-area"');
+    expect(html).toContain('data-testid="mi-candidate-list"');
     /** 🟢 보류가 몇 건인지도 그대로 말한다(WU-133 의 그 문장). */
     expect(html).toContain(MARKET_JUDGEMENT_TITLE);
     /** 🟢 SAME 행을 섞으면 **가격 축에는 그 가격만** 선다 — 게이트가 «행 단위» 다. */

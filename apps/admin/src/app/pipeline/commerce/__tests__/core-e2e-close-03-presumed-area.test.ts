@@ -129,8 +129,9 @@ describe("CORE-E2E-CLOSE-03 — 동일 가능성 후보 구역", () => {
   /** 🟢🟢 B-1 — **마운트 DOM: 보류 후보가 화면에 선다**(CEO FAIL 의 직접 반증). */
   it("B-1 보류 후보가 결론 영역에 실제로 렌더된다", () => {
     const host = mount(ROWS);
-    const rows = host.querySelectorAll('[data-testid="mi-presumed-row"]');
-    expect(rows.length).toBe(3);
+    const rows = host.querySelectorAll('[data-testid="mi-candidate-row"]');
+    expect(rows.length).toBe(4);
+    /** 🔴🔴 CANDIDATE-EVIDENCE-VISIBILITY-01 — 리스트가 «하나» 가 되어 SAME 도 여기 선다(의도). */
     const text = host.textContent ?? "";
     expect(text).toContain("biskuit.kr");
     expect(text).toContain("cissywears.com");
@@ -141,7 +142,7 @@ describe("CORE-E2E-CLOSE-03 — 동일 가능성 후보 구역", () => {
   it("B-2 가격·통화가 보이고 없으면 「가격 미확인」이다", () => {
     const host = mount(ROWS);
     const prices = Array.from(
-      host.querySelectorAll('[data-testid="mi-presumed-price"]'),
+      host.querySelectorAll('[data-testid="mi-candidate-price"]'),
       (n) => n.textContent ?? "",
     );
     expect(prices.some((p) => p.includes("88,000") && p.includes("KRW"))).toBe(true);
@@ -155,18 +156,19 @@ describe("CORE-E2E-CLOSE-03 — 동일 가능성 후보 구역", () => {
   it("B-3 행마다 실제 상품 URL 링크가 있다", () => {
     const host = mount(ROWS);
     const hrefs = Array.from(
-      host.querySelectorAll('[data-testid="mi-presumed-row"] a'),
+      host.querySelectorAll('[data-testid="mi-candidate-row"] a'),
       (a) => (a as HTMLAnchorElement).getAttribute("href") ?? "",
     );
-    expect(hrefs).toHaveLength(3);
+    expect(hrefs).toHaveLength(4);
     for (const h of hrefs) expect(h.startsWith("https://")).toBe(true);
     expect(hrefs).toContain(KR_PRESUMED.discoveredUrl);
+    expect(hrefs).toContain(KR_SAME.discoveredUrl);
   });
 
   /** 🔴 B-4 — **기본 접힘.** 펼친 채로 두면 「유력 후보」로 읽힌다(WU-091 ①). */
   it("B-4 구역은 접혀 있다", () => {
     const host = mount(ROWS);
-    const d = host.querySelector('[data-testid="mi-presumed-area"]') as HTMLDetailsElement | null;
+    const d = host.querySelector('[data-testid="mi-candidate-list"]') as HTMLDetailsElement | null;
     expect(d).not.toBeNull();
     expect(d!.tagName.toLowerCase()).toBe("details");
     expect(d!.hasAttribute("open")).toBe(false);
@@ -175,15 +177,19 @@ describe("CORE-E2E-CLOSE-03 — 동일 가능성 후보 구역", () => {
   /** 🔴 B-5 — **가격 집계에 안 쓰인다는 사실** 을 화면이 말한다(WU-091 ④). */
   it("B-5 범위 문장이 선다", () => {
     const host = mount(ROWS);
-    const scope = host.querySelector('[data-testid="mi-presumed-scope"]')?.textContent ?? "";
-    expect(scope).toContain("가격 집계");
-    expect(scope.length).toBeGreaterThan(10);
+    const scope = host.querySelector('[data-testid="mi-candidate-group"]')?.textContent ?? "";
+    /** 🔴 범위 문장이 **그룹 배지** 로 바뀌었다 — 「유력/가능성」을 사람의 말로 적는다. */
+    expect(scope).toContain("동일상품 가능성");
+    expect(scope.length).toBeGreaterThan(5);
   });
 
   /** 🔴 B-6 — 보류가 없으면 **구역이 서지 않는다**(빈 구역 금지). */
   it("B-6 보류 0 이면 구역이 없다", () => {
+    /** 🔴🔴 **의도된 반전** — SAME 도 리스트에 서므로 구역이 **있다**(CEO 모순의 수정). */
     const host = mount([KR_SAME]);
-    expect(host.querySelector('[data-testid="mi-presumed-area"]')).toBeNull();
+    expect(host.querySelector('[data-testid="mi-candidate-list"]')).not.toBeNull();
+    /** 🟢 후보가 **아예 없으면** 서지 않는다 — 그 성질은 그대로다. */
+    expect(mount([]).querySelector('[data-testid="mi-candidate-list"]')).toBeNull();
   });
 
   /** 🔴🔴 C-1 — **내부 토큰 노출 금지.** 셀러 화면에 판정 어휘를 글자로 쓰지 않는다. */
@@ -221,9 +227,9 @@ describe("CORE-E2E-CLOSE-03 — 동일 가능성 후보 구역", () => {
 
   /** 🔴 D-2 — 새 구역이 **가격 집계 입력을 만들지 않는다**(표시 전용). */
   it("D-2 새 구역은 집계 어휘를 쓰지 않는다", () => {
-    const i = SRC.indexOf('data-testid="mi-presumed-area"');
+    const i = SRC.indexOf('data-testid="mi-candidate-list"');
     expect(i).toBeGreaterThan(0);
-    const block = SRC.slice(i, SRC.indexOf("selection.sameButExcluded", i));
+    const block = SRC.slice(i, SRC.indexOf("CANDIDATE_LIST_EMPTY", i));
     for (const forbidden of ["reference", "byCurrency", "priceKrw", "priceTier", "lowest"]) {
       expect(block).not.toContain(forbidden);
     }

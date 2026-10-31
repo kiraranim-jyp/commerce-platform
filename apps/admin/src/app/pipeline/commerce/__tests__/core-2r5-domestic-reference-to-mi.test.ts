@@ -171,13 +171,13 @@ describe("CORE-2R-5 A — 국내 참고가격이 1차 🇰🇷 블록에 선다"
      *    `price-detail-fold` **뒤** 라 애초에 그 슬라이스에 들어오지 않는다.
      */
     const outsidePresumed = html.replace(
-      /<details data-testid="mi-presumed-area"[\s\S]*?<\/details>/g,
+      /<details data-testid="mi-candidate-list"[\s\S]*?<\/details>/g,
       "",
     );
     expect(
       outsidePresumed,
       "🔴 보류 구역을 걷어내지 못했다(단언이 공짜가 된다)",
-    ).not.toContain('data-testid="mi-presumed-area"');
+    ).not.toContain('data-testid="mi-candidate-list"');
     expect((outsidePresumed.match(/KRW 88,000/g) ?? []).length).toBe(1);
   });
 

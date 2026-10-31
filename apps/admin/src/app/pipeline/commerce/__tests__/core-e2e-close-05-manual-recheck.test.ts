@@ -146,13 +146,21 @@ describe("CORE-E2E-CLOSE-05 — 수동 재분석", () => {
   it("R-6 rows 가 오면 후보·가격·선택이 선다", () => {
     const host = mount({ rows: [SAME, PRESUMED, SIMILAR], snapshotId: "s1", onRecheck: () => {} });
     expect(host.querySelectorAll('[data-testid="mi-same-row"]').length).toBe(1);
-    expect(host.querySelectorAll('[data-testid="mi-presumed-row"]').length).toBe(1);
+    /**
+     * 🔴🔴 **둘이다 — 그리고 그것이 올바르다.** 이 fixture 의 `SIMILAR` 은
+     *    `matchTruth` 도 `matchReasons` 도 **없다** ⟹ `hasIdentityEvidence` 가 false 라
+     *    「Evidence 가 사실상 없는 후보」로 **제외** 된다(CPO §4-C).
+     * 🟢 그래서 SAME + PRESUMED **둘** 이 선다. 🔴 「SIMILAR 은 언제나 제외」가 아니다 —
+     *    Evidence 가 있는 SIMILAR 은 `close-04 S-3` 에서 **보이는 것** 으로 단언한다.
+     */
+    expect(host.querySelectorAll('[data-testid="mi-candidate-row"]').length).toBe(2);
     const text = host.textContent ?? "";
     expect(text).toContain("117,000");
     expect(text).toContain("88,000");
     /** 🔴 SIMILAR 는 행도 선택도 없다. */
+    /** 🔴 Evidence 없는 SIMILAR 은 **제외** 된다(위 주석) — 그래서 보이지 않는다. */
     expect(text).not.toContain("other.example");
-    expect(host.querySelectorAll('[data-testid="mi-candidate-select"]').length).toBe(2);
+    expect(host.querySelectorAll('[data-testid="mi-candidate-select"]').length).toBe(3);
     /** 🟢 그리고 버튼은 **그대로 같이** 선다(§4 「이미 후보가 있으면 정상 표시」). */
     expect(host.querySelector('[data-testid="market-recheck-button"]')).not.toBeNull();
     expect(host.querySelector('[data-testid="market-recheck-note"]')).toBeNull();
@@ -162,7 +170,7 @@ describe("CORE-E2E-CLOSE-05 — 수동 재분석", () => {
   it("R-7 선택 → 기존 저장 경로", async () => {
     const host = mount({ rows: [PRESUMED], snapshotId: "s1", onRecheck: () => {} });
     const btn = host.querySelector(
-      '[data-testid="mi-presumed-row"] [data-testid="mi-select-same"]',
+      '[data-testid="mi-candidate-row"] [data-testid="mi-select-same"]',
     ) as HTMLButtonElement;
     calls = [];
     await act(async () => {

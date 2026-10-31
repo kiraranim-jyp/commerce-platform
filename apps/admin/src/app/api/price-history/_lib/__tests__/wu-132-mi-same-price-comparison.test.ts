@@ -277,8 +277,23 @@ describe("B. 🔴 영역 (마운트 DOM)", () => {
 
   it("B-4 🔴 SAME 이 아닌 후보는 이 영역에 **없다**(가격비교 제외)", async () => {
     await mountArea({ rows: [row({ matchTruth: "SIMILAR", domain: "noise.com" })] });
-    expect(sec("market-price-comparison")!.textContent).not.toContain("noise.com");
+    /**
+     * 🔴🔴 **CANDIDATE-EVIDENCE-VISIBILITY-01 — 범위를 «가격 행» 으로 정정했다. 강화다.**
+     *    전까지 「화면 전체 텍스트에 없다」였다. 🔴 그런데 CPO §4-B 가 **Evidence 가
+     *    있는 SIMILAR 을 후보 리스트에 보이게** 하라고 지시했다(CEO 모순의 수정 —
+     *    「가격은 뜨는데 후보 리스트가 없다」).
+     * 🟢 이 계약이 지키는 성질은 **「SAME 이 아닌 후보가 가격 «집계» 에 들어가지
+     *    않는다」** 이고 그것은 바로 아래 줄이 이미 단언한다.
+     * 🟢🟢 **더 강해졌다** — ⒜ 가격 행에 **없다** ⒝ 그리고 후보 리스트에는 **있다**
+     *    (전에는 「사라졌다」와 「집계에서 빠졌다」를 **구분하지 못했다**).
+     */
     expect(container.querySelectorAll('[data-testid="mi-same-row"]')).toHaveLength(0);
+    for (const r of container.querySelectorAll('[data-testid="mi-same-row"]')) {
+      expect(r.textContent).not.toContain("noise.com");
+    }
+    const list = container.querySelector('[data-testid="mi-candidate-list"]');
+    expect(list, "🔴 SAME 이 아닌 후보가 후보 리스트에서도 사라졌다").not.toBeNull();
+    expect(list!.textContent).toContain("noise.com");
   });
 
   it("B-5 🔴 SAME 인데 빠진 후보는 **이유와 함께** 적힌다", async () => {

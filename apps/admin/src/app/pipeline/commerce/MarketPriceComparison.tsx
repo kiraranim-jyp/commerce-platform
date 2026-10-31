@@ -74,6 +74,15 @@ import {
    * 🔴 `selectMiSameCandidates`(가격 집계 선별기)와 **다른 함수** 다 — 그쪽은 한 글자도 안 바꿨다.
    */
   selectPresumedCandidates,
+  /**
+   * 🔵🔵🔵 CANDIDATE-EVIDENCE-VISIBILITY-01 — **후보 리스트 선택기 하나.**
+   * 🔴 가격 축(`selectMiSameCandidates`)과 **다른 함수** 다 — 그 정책은 변경 0.
+   */
+  selectCandidateList,
+  CANDIDATE_LIST_HEADING,
+  CANDIDATE_GROUP_LABEL,
+  CANDIDATE_LIST_EMPTY,
+  type CandidateListGroup,
   MI_PRESUMED_HEADING,
   MARKET_RECHECK_BUTTON,
   MARKET_RECHECK_EMPTY,
@@ -259,6 +268,14 @@ export function MarketPriceComparison({
    */
   const domesticPresumed = selectPresumedCandidates(rows, "KR");
   const overseasPresumed = selectPresumedCandidates(rows, "OVERSEAS");
+  /**
+   * 🔵🔵🔵 CANDIDATE-EVIDENCE-VISIBILITY-01 — **셀러가 보는 후보 리스트.**
+   * 🔴🔴 CEO 모순의 수정 자리다 — 「가격은 뜨는데 후보 리스트가 없다」.
+   *    가격이 뜨는 후보가 이 리스트에서 **사라질 수 없다**(계약 CAND-07 이 양쪽 시장에서
+   *    `priced ⊆ list` 를 단언한다). 🔴 가격 집계 정책은 **변경 0** 이다.
+   */
+  const domesticList = selectCandidateList(rows, "KR");
+  const overseasList = selectCandidateList(rows, "OVERSEAS");
   /**
    * 🔵🔵🔵 CORE-E2E-CLOSE-04 — **후보 선택의 활성 owner 가 여기다.**
    * 🔴 MI 패널은 운영에서 항상 `HIDDEN` 이라 그쪽 instance 를 **껐다** ⟹ 이력 GET 이
@@ -994,6 +1011,8 @@ export function MarketPriceComparison({
            * 🔴 `selectMiSameCandidates`(가격 집계 축)는 한 글자도 안 바꿨다(CPO §3).
            */
           presumed={domesticPresumed}
+          /** 🔵 CANDIDATE-EVIDENCE-VISIBILITY-01 — 같은 `rows` · 리스트 선택기 하나. */
+          list={domesticList}
           /** 🔵 CORE-E2E-CLOSE-04 — 선택 owner 는 위 `useCandidateReview` 하나다. */
           reviewApi={reviewApi}
           /**
@@ -1018,6 +1037,8 @@ export function MarketPriceComparison({
           selection={overseas}
           /** 🔵 CORE-E2E-CLOSE-03 — 해외도 **같은 구역** 이다(두 벌을 만들지 않는다). */
           presumed={overseasPresumed}
+          /** 🔵 해외도 **같은 선택기** 를 쓴다(두 벌을 만들지 않는다). */
+          list={overseasList}
           /** 🔵 CORE-E2E-CLOSE-04 — 🌎 도 **같은 owner** 를 쓴다(두 벌 금지). */
           reviewApi={reviewApi}
           /**
@@ -1415,6 +1436,8 @@ function MarketColumn({
   heading,
   selection,
   presumed,
+  /** 🔵 CANDIDATE-EVIDENCE-VISIBILITY-01 — 후보 리스트(유력 + 확장). */
+  list,
   reviewApi,
   reference,
   referenceProps,
@@ -1427,6 +1450,11 @@ function MarketColumn({
    * 🔴 `selection` 과 **행이 겹치지 않는다** — 이쪽엔 SAME 이 오지 않는다.
    */
   presumed: readonly GeminiTransientRow[];
+  /**
+   * 🔵🔵 CANDIDATE-EVIDENCE-VISIBILITY-01 — **후보 리스트(유력 + 확장).**
+   * 🔴 가격 축과 **같은 Candidate** 다 — 두 목록을 따로 만들지 않는다(CPO §3).
+   */
+  list: ReadonlyArray<{ row: GeminiTransientRow; group: CandidateListGroup }>;
   reference?: OverseasPriceSummary | null;
   referenceProps: {
     title?: string;
@@ -1505,21 +1533,39 @@ function MarketColumn({
         * 🔴 기본 **접힘** 이다 — 펼친 채로 두면 「유력 후보」로 읽힌다(WU-091 ①).
         * 🔴 내부 토큰(`PRESUMED_SAME`·matchTruth·tier)을 **글자로 쓰지 않는다.**
         */}
-      {presumed.length > 0 && (
-        <details data-testid="mi-presumed-area" className="mt-1">
+      {/**
+        * ══════════════════════════════════════════════════════════════════════
+        * 🔵🔵🔵 CANDIDATE-EVIDENCE-VISIBILITY-01 — **후보 리스트는 «하나» 다**
+        * ══════════════════════════════════════════════════════════════════════
+        *
+        * 🔴🔴 CEO 모순: 「동일하다고 **가격은 뜨는데** 후보군 리스트가 안 보인다」.
+        *    같은 Candidate 를 **두 기준** 으로 걸러낸 것이 원인이었다 —
+        *    가격 축은 `SAME + 판매중 + 가격확인`, 표시 축은 `PRESUMED_SAME` 만.
+        *    ⟹ SIMILAR 은 어디에도 없고, SAME 이라도 품절/가격미확인이면 **둘 다에서** 빠졌다.
+        *
+        * 🟢 그래서 `selectCandidateList` **하나** 로 그린다 — 유력(🟢) + 확장(🟡).
+        * 🔴🔴 **가격이 뜨는 후보는 여기서 사라질 수 없다**(계약 CAND-07).
+        * 🔴 가격 **집계** 정책은 변경 0 — 넓힌 것은 **표시** 뿐이다(CPO §4-B).
+        * 🔴 기본 **접힘** 유지(WU-091 ① — 펼치면 「유력」으로 읽힌다).
+        * 🔴 판정은 **승격하지 않는다** — 각 행의 등급은 그대로이고 배지만 그린다.
+        */}
+      {list.length > 0 ? (
+        <details data-testid="mi-candidate-list" className="mt-1">
           <summary className="cursor-pointer text-[11px] text-text-secondary">
-            {MI_PRESUMED_HEADING} {presumed.length}곳
+            {CANDIDATE_LIST_HEADING} {list.length}곳
           </summary>
-          <p data-testid="mi-presumed-scope" className="mt-0.5 text-[11px] text-text-tertiary">
-            {MI_PRESUMED_SCOPE}
-          </p>
           <ul className="mt-1 space-y-1">
-            {presumed.map((row) => (
+            {list.map(({ row, group }) => (
               <li
                 key={row.discoveredUrl}
-                data-testid="mi-presumed-row"
+                data-testid="mi-candidate-row"
+                data-group={group}
                 className="rounded border border-border/60 p-2"
               >
+                {/** 🔴 내부 토큰이 아니라 **사람의 말** 이다(CPO §6). */}
+                <p data-testid="mi-candidate-group" className="text-[11px] text-text-tertiary">
+                  {CANDIDATE_GROUP_LABEL[group]}
+                </p>
                 {row.title ? (
                   <p className="truncate text-[11px] text-text-primary">{row.title}</p>
                 ) : null}
@@ -1532,26 +1578,37 @@ function MarketColumn({
                   >
                     {row.domain}
                   </a>
-                  {/** 🔴 가격이 없으면 「가격 미확인」 — 그 말의 owner 는 `priceText` 다(환산 0). */}
+                  {/** 🔴 가격이 없으면 「가격 미확인」 — owner 는 `priceText` 다(환산 0). */}
                   <span
-                    data-testid="mi-presumed-price"
+                    data-testid="mi-candidate-price"
                     className="shrink-0 text-[11px] text-text-primary"
                   >
                     {priceText(row)}
                   </span>
                 </div>
-                {/**
-                 * 🔵🔵🔵 CORE-E2E-CLOSE-04 — **보류 후보도 선택 대상** 이다(CPO §6).
-                 * 🔴 고를 수 있다는 것이 **`PRESUMED_SAME` → `SAME` 승격이 아니다** —
-                 *    판정은 그대로 남고 **셀러의 선택** 만 저장된다. 우리 제품은
-                 *    자동 확정 시스템이 아니라 **셀러 의사결정 지원 시스템** 이다.
-                 */}
+                {/** 🟢 선택은 **기존 저장 흐름** 이다(CLOSE-04 · 새 저장 로직 0). */}
                 <CandidateSelect row={row} api={reviewApi} />
               </li>
             ))}
           </ul>
         </details>
+      ) : (
+        <p data-testid="mi-candidate-empty" className="text-[11px] text-text-tertiary">
+          {CANDIDATE_LIST_EMPTY}
+        </p>
       )}
+      {/**
+        * 🔴 아래 보류 구역은 **CLOSE-03 의 것** 이고 이제 위 리스트의 **부분집합** 이다.
+        *    🟢 그래서 **제거** 했다 — 같은 행이 두 번 서면 WU-081 금지에 걸린다.
+        */}
+      {/**
+        * 🔴🔴 **CANDIDATE-EVIDENCE-VISIBILITY-01 — CLOSE-03 의 `mi-presumed-area` 를 «제거» 했다.**
+        *    그 구역은 `PRESUMED_SAME` 만 그렸고, 이제 그 행들은 위 **후보 리스트의**
+        *    **부분집합** 이다(🟢 유력 군). 🔴 남겨 두면 같은 행이 **두 번** 서고
+        *    그것이 WU-081 이 금지한 복제다.
+        * 🟢 잃은 것은 **없다** — 범위 문장은 리스트의 그룹 배지가, 접힘은 리스트가,
+        *    선택은 같은 `<CandidateSelect>` 가 그대로 들고 있다.
+        */}
       {selection.sameButExcluded.length > 0 && (
         <ul data-testid="mi-same-excluded" className="space-y-0.5">
           {selection.sameButExcluded.map(({ row, reason }) => (

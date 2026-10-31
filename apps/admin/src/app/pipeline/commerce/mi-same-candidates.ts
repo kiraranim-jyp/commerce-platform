@@ -114,6 +114,97 @@ export function selectPresumedCandidates(
   return out;
 }
 
+/**
+ * ══════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 CANDIDATE-EVIDENCE-VISIBILITY-01 — **후보 리스트는 «하나» 다**
+ * ══════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 CEO 가 지목한 모순: 「동일하다고 **가격은 뜨는데** 후보군 리스트가 안 보인다」.
+ *    원인은 공급도 Identity 도 아니고 **같은 Candidate 를 두 기준으로 걸러낸 것** 이다:
+ * ```
+ * 가격 축   selectMiSameCandidates   = SAME + 판매중 + VERIFIED_CURRENT
+ * 표시 축   selectPresumedCandidates = PRESUMED_SAME **만**
+ * ⟹ 🔴 SIMILAR 은 **어디에도 없고**, SAME 인데 품절/가격미확인이면 가격 축에서
+ *       빠지면서 표시 축에도 없다 ⟹ 후보가 **사라진다**
+ * ```
+ *
+ * 🟢 그래서 **표시용 단일 선택기** 를 세운다(CPO §3·§5).
+ * 🔴🔴 **불변식(CPO §7 CAND-07)** — `selectMiSameCandidates(...).priced` 의 모든 행은
+ *    이 배열에 **반드시 있다**. 코드로 보장되는 이유: 여기서는 **품절·가격상태로
+ *    걸러내지 않는다**(등급만 본다) 그리고 `priced` 는 **SAME** 이고 SAME 은 A 군이다.
+ *
+ * 🔴🔴🔴 **가격 «집계» 정책은 한 글자도 바꾸지 않는다**(CPO §4-B·§8) —
+ *    `selectMiSameCandidates` 는 그대로다. 「후보군을 넓히는 것」과 「가격 집계를
+ *    넓히는 것」은 **다른 일** 이다.
+ */
+export type CandidateListGroup = "LIKELY" | "POSSIBLE";
+
+/**
+ * 🟢 A 군 — **유력**. 반드시 리스트에 선다(가격 없으면 「가격 미확인」 · CPO §4-A).
+ * 🔴 `SAME_MODEL_OPTION_DIFF` 는 **같은 모델의 옵션 차이** 라 유력에 둔다
+ *    (`match-display.ts` 의 기존 등급이고 새 등급을 만들지 않았다).
+ */
+const LIKELY_TIERS: readonly string[] = ["SAME", "SAME_MODEL_OPTION_DIFF", "PRESUMED_SAME"];
+/**
+ * 🟡 B 군 — **확장**. Evidence 로 「동일/유사 가능성」을 판단할 수 있는 후보(CPO §4-B).
+ * 🔴 `UNKNOWN` 은 **등급만으로 넣지 않는다** — 아래 `hasIdentityEvidence` 가 같이 본다.
+ */
+const POSSIBLE_TIERS: readonly string[] = ["SIMILAR"];
+
+/**
+ * 🔴🔴 **「Evidence 가 사실상 없는 UNKNOWN」을 가른다**(CPO §4-C).
+ *    🟢 새 점수를 만들지 않는다 — **운영이 이미 낸 칸** 이 있는지만 본다.
+ *    🔴 `matchTruth` 는 Identity 가 **증거를 보고** 낸 값이다. 그것이 있으면
+ *       「판단할 근거가 있었다」가 참이고, 없으면 등급의 출처가 verdict 하나다.
+ */
+function hasIdentityEvidence(row: GeminiTransientRow): boolean {
+  if (row.matchTruth) return true;
+  /** 🟢 제목이 있고 판정 이유가 하나라도 적혔으면 셀러가 눈으로 가릴 수 있다. */
+  return Boolean(row.title) && (row.matchReasons?.length ?? 0) > 0;
+}
+
+/**
+ * 🔵 CANDIDATE-EVIDENCE-VISIBILITY-01 — **셀러가 보는 후보 리스트.**
+ *
+ * 🔴 제외(C 군): `CONFLICT` · 등급을 못 낸 행 · Evidence 없는 `UNKNOWN`.
+ * 🔴 **승격하지 않는다** — 각 행의 판정은 그대로 남고 `group` 만 더한다.
+ * 🔴 같은 URL 은 한 번만(기존 두 선택기와 같은 규칙).
+ */
+export function selectCandidateList(
+  rows: readonly GeminiTransientRow[] | null | undefined,
+  market: "KR" | "OVERSEAS",
+): Array<{ row: GeminiTransientRow; group: CandidateListGroup }> {
+  const out: Array<{ row: GeminiTransientRow; group: CandidateListGroup }> = [];
+  if (!rows || rows.length === 0) return out;
+  const seen = new Set<string>();
+  for (const row of rows) {
+    if (row.market !== market) continue;
+    if (seen.has(row.discoveredUrl)) continue;
+    seen.add(row.discoveredUrl);
+    /** 🔴 등급은 **운영 owner** 가 낸 값이다(`transientDisplayTier`) — 복제 계산 0. */
+    const tier = transientDisplayTier(row);
+    if (!tier) continue;
+    if (LIKELY_TIERS.includes(tier)) {
+      out.push({ row, group: "LIKELY" });
+      continue;
+    }
+    if (POSSIBLE_TIERS.includes(tier) && hasIdentityEvidence(row)) {
+      out.push({ row, group: "POSSIBLE" });
+    }
+    /** 🔴 `CONFLICT` · Evidence 없는 `UNKNOWN` 은 **주 리스트에 오지 않는다**. */
+  }
+  return out;
+}
+
+/** 🟢 리스트의 말 — 🔴 내부 토큰(tier·matchTruth)을 글자로 쓰지 않는다(CPO §6). */
+export const CANDIDATE_LIST_HEADING = "동일상품 가능성이 있는 후보";
+export const CANDIDATE_GROUP_LABEL: Record<CandidateListGroup, string> = {
+  LIKELY: "🟢 동일상품 가능성 높음",
+  POSSIBLE: "🟡 유사 · 동일상품 가능성 있음",
+};
+/** 🔴 「후보가 없다」와 「조회하지 않았다」는 다른 사실이다(WU-130 ② 유지). */
+export const CANDIDATE_LIST_EMPTY = "이 시장에서는 아직 후보를 찾지 못했습니다.";
+
 /** 🔴 `MatchDisplayTier` 와 글자가 같은 값만 등급으로 받는다 — 모르는 값은 지어내지 않는다. */
 export const DISPLAYABLE_TIERS = [
   "SAME",

@@ -128,7 +128,7 @@ describe("CORE-E2E-CLOSE-04 — 후보 선택 → 기존 저장 배선", () => {
   /** 🟢 S-2 — **보류 후보도 고를 수 있다**(CPO §8-2 · §6 승격 아님). */
   it("S-2 PRESUMED_SAME 후보에 선택 UI 가 선다", () => {
     const host = mount(ROWS);
-    const presumed = host.querySelector('[data-testid="mi-presumed-row"]');
+    const presumed = host.querySelector('[data-testid="mi-candidate-row"]');
     expect(presumed).not.toBeNull();
     expect(presumed!.querySelector('[data-testid="mi-candidate-select"]')).not.toBeNull();
   });
@@ -137,19 +137,43 @@ describe("CORE-E2E-CLOSE-04 — 후보 선택 → 기존 저장 배선", () => {
   it("S-3 SIMILAR 후보는 행도 선택 UI 도 없다", () => {
     const host = mount(ROWS);
     const text = host.textContent ?? "";
+    /**
+     * 🔴🔴 **내 1차 수정이 틀렸고 원래 단언이 맞았다.**
+     *    CPO §4-B 는 「Evidence 가 충분한 SIMILAR」을 보이게 하라는 것이고,
+     *    이 fixture 의 SIMILAR 은 `matchTruth` 도 `matchReasons` 도 **없다**
+     *    ⟹ `hasIdentityEvidence` 가 false 라 **정확히 제외** 된다(CPO §4-C).
+     * 🟢 Evidence 가 있는 SIMILAR 이 보이는 것은 `CAND-04` 가 단언한다.
+     */
     expect(text).not.toContain("other.example");
     expect(text).not.toContain("Similar looking tee");
     /** 🔴 그 금액도 가격 축에 없다(WU-141-R3 가 지키는 그 성질). */
     expect(text).not.toContain("19");
-    /** 🟢 선택 UI 는 **둘** 뿐이다 — SAME 1 + PRESUMED 1. */
-    expect(host.querySelectorAll('[data-testid="mi-candidate-select"]').length).toBe(2);
+    /**
+     * 🔴🔴 **총 개수로 세지 않는다 — 이 테스트의 축은 「SIMILAR 이 없다」 다.**
+     *    CANDIDATE-EVIDENCE-VISIBILITY-01 이후 `SAME` 행은 **가격 행** 과
+     *    **후보 리스트** 양쪽에 서므로 선택 UI 총 개수가 3 이다(SAME×2 + PRESUMED×1).
+     * 🟡 그 중복은 **CPO 판정 사안으로 보고** 했다(가격 행에서 선택을 뺄 것인가).
+     * 🟢 여기서 지키는 성질은 **후보 리스트에 SIMILAR 이 오지 않는다** 이므로
+     *    그 축으로 직접 단언한다 — 총 개수에 흔들리지 않는다.
+     */
+    const rows = Array.from(host.querySelectorAll('[data-testid="mi-candidate-row"]'));
+    expect(rows).toHaveLength(2);
+    for (const r of rows) expect(r.textContent ?? "").not.toContain("other.example");
   });
 
   /** 🟢🟢 S-4 + S-5 — 클릭이 **기존 `candidate-reviews` POST** 를 부른다(§8-4·5). */
   it("S-4·5 선택하면 기존 저장 경로로 POST 한다", async () => {
     const host = mount(ROWS);
-    const btn = host.querySelector(
-      '[data-testid="mi-presumed-row"] [data-testid="mi-select-same"]',
+    /**
+     * 🔴 **첫 행을 집지 않는다** — 리스트가 하나가 되어 맨 위가 SAME 행이다.
+     *    보류 후보의 저장을 재는 테스트이므로 **그 판매처 행** 을 지목한다.
+     */
+    const row = Array.from(
+      host.querySelectorAll('[data-testid="mi-candidate-row"]'),
+    ).find((n) => (n.textContent ?? "").includes("biskuit.kr"));
+    expect(row, "🔴 보류 후보 행이 리스트에 없다").toBeTruthy();
+    const btn = row!.querySelector(
+      '[data-testid="mi-select-same"]',
     ) as HTMLButtonElement | null;
     expect(btn).not.toBeNull();
     calls = [];
