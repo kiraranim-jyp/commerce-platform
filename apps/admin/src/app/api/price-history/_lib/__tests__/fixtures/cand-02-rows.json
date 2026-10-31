@@ -1,0 +1,537 @@
+{
+  "products": [
+    {
+      "sid": "S1",
+      "code": "B226AC010",
+      "title": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+      "originUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+      "suppliedUrls": [
+        "https://www.rboutique.com/en-us/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
+        "https://www.eraldo.com/en-us/products/bobo-choses-booty-ghosts-t-shirt-340496",
+        "https://cissywears.com/en-us/products/bobo-choses-booty-ghosts-t-shirt",
+        "https://kolkid.ca/products/bobo-choses-booty-ghosts-t-shirt",
+        "https://www.junioredition.com/en-kr/products/booty-ghosts-t-shirt-by-bobo-choses",
+        "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt",
+        "https://bobochoses.com/products/b226ab046-booty-ghosts-t-shirt",
+        "https://www.beaumonde.co.kr/goods/goods_view.php?goodsNo=1000014021",
+        "https://luksusbaby.kr/products/bobo-choses-light-blue-booty-ghosts-t-shirt",
+        "https://luksusbaby.kr/products/bobo-choses-light-blue-booty-ghosts-sweatshirt-1",
+        "https://www.rboutique.com/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
+        "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt-heather-grey",
+        "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-sweatshirt",
+        "https://www.eraldo.com/products/bobo-choses-booty-ghosts-t-shirt-340496",
+        "https://cissywears.com/products/bobo-choses-booty-ghosts-t-shirt",
+        "https://cissywears.com/products/bobo-choses-baby-booty-ghosts-t-shirt",
+        "https://www.junioredition.com/products/booty-ghosts-t-shirt-by-bobo-choses",
+        "https://www.beaumonde.co.kr/goods/goods_list.php?page=3&brandCd=070002",
+        "https://www.billsstore.com.au/products/booty-ghosts-long-sleeve-t-shirt-baby"
+      ],
+      "notFetched": [
+        "https://www.rboutique.com/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
+        "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt-heather-grey",
+        "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-sweatshirt",
+        "https://www.eraldo.com/products/bobo-choses-booty-ghosts-t-shirt-340496",
+        "https://cissywears.com/products/bobo-choses-booty-ghosts-t-shirt",
+        "https://cissywears.com/products/bobo-choses-baby-booty-ghosts-t-shirt",
+        "https://www.junioredition.com/products/booty-ghosts-t-shirt-by-bobo-choses",
+        "https://www.beaumonde.co.kr/goods/goods_list.php?page=3&brandCd=070002",
+        "https://www.billsstore.com.au/products/booty-ghosts-long-sleeve-t-shirt-baby"
+      ],
+      "rows": [
+        {
+          "url": "https://www.rboutique.com/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
+          "domain": "rboutique.com",
+          "title": "'Booty Ghosts' cotton T-shirt - KIDS BOBO CHOSES &ndash; RBoutique",
+          "human": "SAME",
+          "market": "OVERSEAS",
+          "tier": "TEXT_CONFIRMED",
+          "verdict": "PRESUMED_SAME",
+          "price": 44,
+          "currency": "USD",
+          "priceStatus": "VERIFIED_CURRENT",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "display": "LIKELY",
+          "priced": false
+        },
+        {
+          "url": "https://cissywears.com/products/bobo-choses-booty-ghosts-t-shirt",
+          "domain": "cissywears.com",
+          "title": "Bobo Choses Booty Ghosts T-Shirt",
+          "human": "SAME",
+          "market": "OVERSEAS",
+          "tier": "STRONG_IDENTIFIER",
+          "verdict": "SAME",
+          "price": 37,
+          "currency": "GBP",
+          "priceStatus": "VERIFIED_CURRENT",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "display": "LIKELY",
+          "priced": true
+        },
+        {
+          "url": "https://kolkid.ca/products/bobo-choses-booty-ghosts-t-shirt",
+          "domain": "kolkid.ca",
+          "title": "Bobo Choses Booty Ghosts T-Shirt",
+          "human": "SAME",
+          "market": "OVERSEAS",
+          "tier": "TEXT_CONFIRMED",
+          "verdict": "PRESUMED_SAME",
+          "price": 64,
+          "currency": "CAD",
+          "priceStatus": "VERIFIED_CURRENT",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "display": "LIKELY",
+          "priced": false
+        },
+        {
+          "url": "https://www.junioredition.com/products/booty-ghosts-t-shirt-by-bobo-choses",
+          "domain": "junioredition.com",
+          "title": "Booty Ghosts T-Shirt by Bobo Choses",
+          "human": "DIFFERENT",
+          "market": "OVERSEAS",
+          "tier": "CONFLICT",
+          "verdict": "CONFLICT",
+          "price": 35,
+          "currency": "GBP",
+          "priceStatus": "VERIFIED_CURRENT",
+          "soldOut": false,
+          "source": "REVIEWED_SAME",
+          "display": null,
+          "priced": false
+        },
+        {
+          "url": "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt",
+          "domain": "tinyapple.net",
+          "title": "Bobo Choses Booty Ghosts T-shirt",
+          "human": "DIFFERENT",
+          "market": "OVERSEAS",
+          "tier": "CONFLICT",
+          "verdict": "CONFLICT",
+          "price": 53,
+          "currency": "USD",
+          "priceStatus": "VERIFIED_CURRENT",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "display": null,
+          "priced": false
+        },
+        {
+          "url": "https://bobochoses.com/products/b226ab046-booty-ghosts-t-shirt",
+          "domain": "bobochoses.com",
+          "title": "Booty Ghosts T-shirt",
+          "human": "SAME",
+          "market": "OVERSEAS",
+          "tier": "CONFLICT",
+          "verdict": "CONFLICT",
+          "price": 35,
+          "currency": "EUR",
+          "priceStatus": "VERIFIED_CURRENT",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "display": null,
+          "priced": false
+        },
+        {
+          "url": "https://www.beaumonde.co.kr/goods/goods_view.php?goodsNo=1000014021",
+          "domain": "beaumonde.co.kr",
+          "title": "보보쇼즈 26FW 아동 긴팔 티셔츠 Booty Ghosts T-shirt B226AC010",
+          "human": "SAME",
+          "market": "KR",
+          "tier": "STRONG_IDENTIFIER",
+          "verdict": "SAME",
+          "price": 83600,
+          "currency": "KRW",
+          "priceStatus": "VERIFIED_CURRENT",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "display": "LIKELY",
+          "priced": true
+        }
+      ],
+      "lost": [
+        {
+          "url": "https://www.rboutique.com/en-us/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
+          "human": "SAME"
+        },
+        {
+          "url": "https://www.eraldo.com/en-us/products/bobo-choses-booty-ghosts-t-shirt-340496",
+          "human": "SAME"
+        },
+        {
+          "url": "https://cissywears.com/en-us/products/bobo-choses-booty-ghosts-t-shirt",
+          "human": "SAME"
+        },
+        {
+          "url": "https://www.junioredition.com/en-kr/products/booty-ghosts-t-shirt-by-bobo-choses",
+          "human": "DIFFERENT"
+        },
+        {
+          "url": "https://luksusbaby.kr/products/bobo-choses-light-blue-booty-ghosts-t-shirt",
+          "human": "UNCERTAIN"
+        },
+        {
+          "url": "https://luksusbaby.kr/products/bobo-choses-light-blue-booty-ghosts-sweatshirt-1",
+          "human": "DIFFERENT"
+        },
+        {
+          "url": "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt-heather-grey",
+          "human": "SAME"
+        },
+        {
+          "url": "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-sweatshirt",
+          "human": "DIFFERENT"
+        },
+        {
+          "url": "https://www.eraldo.com/products/bobo-choses-booty-ghosts-t-shirt-340496",
+          "human": "SAME"
+        },
+        {
+          "url": "https://cissywears.com/products/bobo-choses-baby-booty-ghosts-t-shirt",
+          "human": "SAME"
+        },
+        {
+          "url": "https://www.beaumonde.co.kr/goods/goods_list.php?page=3&brandCd=070002",
+          "human": "UNCERTAIN"
+        },
+        {
+          "url": "https://www.billsstore.com.au/products/booty-ghosts-long-sleeve-t-shirt-baby",
+          "human": "SAME"
+        }
+      ],
+      "metrics": {
+        "suppliedUrls": 19,
+        "acceptedUrls": 19,
+        "usableProductUrls": 9,
+        "miEligibleCandidates": 9,
+        "fetchCalls": 12,
+        "notFetchedOverLimit": [
+          "https://www.rboutique.com/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
+          "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt-heather-grey",
+          "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-sweatshirt",
+          "https://www.eraldo.com/products/bobo-choses-booty-ghosts-t-shirt-340496",
+          "https://cissywears.com/products/bobo-choses-booty-ghosts-t-shirt",
+          "https://cissywears.com/products/bobo-choses-baby-booty-ghosts-t-shirt",
+          "https://www.junioredition.com/products/booty-ghosts-t-shirt-by-bobo-choses",
+          "https://www.beaumonde.co.kr/goods/goods_list.php?page=3&brandCd=070002",
+          "https://www.billsstore.com.au/products/booty-ghosts-long-sleeve-t-shirt-baby"
+        ],
+        "dropped": [
+          {
+            "url": "https://www.eraldo.com/en-us/products/bobo-choses-booty-ghosts-t-shirt-340496",
+            "reason": "REDIRECTED_AWAY"
+          }
+        ],
+        "providerCalls": 0
+      }
+    },
+    {
+      "sid": "S3",
+      "code": "B126AI018",
+      "title": "Curious Turnip All Over Swim Cap by Bobo Choses - Last One In Stock - 2-6 Years",
+      "originUrl": "https://www.junioredition.com/en-kr/products/curious-turnip-all-over-swim-cap-by-bobo-choses",
+      "suppliedUrls": [
+        "https://www.stadtlandkind.ch/en/products/uv-sun-hat-curious-turnip-green",
+        "https://kids21.com/products/700002005grn",
+        "https://bobochoses.co.jp/ja/products/b126ai018-curious-turnip-all-over-swim-cap",
+        "https://bobochoses.co.jp/products/b126ai018-curious-turnip-all-over-swim-cap"
+      ],
+      "notFetched": [],
+      "rows": [
+        {
+          "url": "https://bobochoses.co.jp/products/b126ai018-curious-turnip-all-over-swim-cap",
+          "domain": "bobochoses.co.jp",
+          "title": "Curious Turnip all over swim cap",
+          "human": "SAME",
+          "market": "OVERSEAS",
+          "tier": "TEXT_CONFIRMED",
+          "verdict": "PRESUMED_SAME",
+          "price": 4840,
+          "currency": "JPY",
+          "priceStatus": "VERIFIED_CURRENT",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "display": "LIKELY",
+          "priced": false
+        }
+      ],
+      "lost": [
+        {
+          "url": "https://www.stadtlandkind.ch/en/products/uv-sun-hat-curious-turnip-green",
+          "human": "SAME"
+        },
+        {
+          "url": "https://kids21.com/products/700002005grn",
+          "human": "UNCERTAIN"
+        },
+        {
+          "url": "https://bobochoses.co.jp/ja/products/b126ai018-curious-turnip-all-over-swim-cap",
+          "human": "SAME"
+        }
+      ],
+      "metrics": {
+        "suppliedUrls": 4,
+        "acceptedUrls": 4,
+        "usableProductUrls": 3,
+        "miEligibleCandidates": 2,
+        "fetchCalls": 6,
+        "notFetchedOverLimit": [],
+        "dropped": [
+          {
+            "url": "https://kids21.com/products/700002005grn",
+            "reason": "REDIRECTED_AWAY"
+          },
+          {
+            "url": "https://bobochoses.co.jp/products/b126ai018-curious-turnip-all-over-swim-cap",
+            "reason": "DUPLICATE"
+          }
+        ],
+        "providerCalls": 0
+      }
+    },
+    {
+      "sid": "S4",
+      "code": "AW26MS185",
+      "title": "Bubble Sweatshirt in Grey Melange by Main Story",
+      "originUrl": "https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story?_pos=1&_sid=a0738e824&_ss=r",
+      "suppliedUrls": [
+        "https://main-story.com/products/bubble-sweatshirt-grey-melange",
+        "https://www.donokids.com/m/product.html?branduid=3362912",
+        "https://www.junioredition.com/products/bubble-sweatshirt-in-conker-stripe-by-main-story",
+        "https://www.junioredition.com/products/bubble-sweatshirt-in-graystone-by-main-story",
+        "https://main-story.com/products/bubble-sweatshirt-grey-melange-1",
+        "https://main-story.com/collections/shop/products/bubble-sweatshirt-graystone"
+      ],
+      "notFetched": [],
+      "rows": [
+        {
+          "url": "https://www.donokids.com/m/product.html?branduid=3362912",
+          "domain": "donokids.com",
+          "title": "[[메인스토리] Bubble Sweatshirt _Conker Stripe #AW26MS185]",
+          "human": "DIFFERENT",
+          "market": "KR",
+          "tier": "TEXT_CONFIRMED",
+          "verdict": "PRESUMED_SAME",
+          "price": 134000,
+          "currency": "KRW",
+          "priceStatus": "VERIFIED_CURRENT",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "display": "LIKELY",
+          "priced": false
+        },
+        {
+          "url": "https://www.junioredition.com/products/bubble-sweatshirt-in-conker-stripe-by-main-story",
+          "domain": "junioredition.com",
+          "title": "Bubble Sweatshirt in Conker Stripe by Main Story",
+          "human": "DIFFERENT",
+          "market": "OVERSEAS",
+          "tier": "TEXT_CONFIRMED",
+          "verdict": "PRESUMED_SAME",
+          "price": 65,
+          "currency": "GBP",
+          "priceStatus": "VERIFIED_CURRENT",
+          "soldOut": false,
+          "source": "REVIEWED_SAME",
+          "display": "LIKELY",
+          "priced": false
+        },
+        {
+          "url": "https://main-story.com/products/bubble-sweatshirt-grey-melange-1",
+          "domain": "main-story.com",
+          "title": "Bubble Sweatshirt - Grey Melange",
+          "human": "SAME",
+          "market": "OVERSEAS",
+          "tier": "STRONG_IDENTIFIER",
+          "verdict": "SAME",
+          "price": 57,
+          "currency": "GBP",
+          "priceStatus": "VERIFIED_CURRENT",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "display": "LIKELY",
+          "priced": true
+        }
+      ],
+      "lost": [
+        {
+          "url": "https://main-story.com/products/bubble-sweatshirt-grey-melange",
+          "human": "UNCERTAIN"
+        },
+        {
+          "url": "https://www.junioredition.com/products/bubble-sweatshirt-in-graystone-by-main-story",
+          "human": "DIFFERENT"
+        },
+        {
+          "url": "https://main-story.com/collections/shop/products/bubble-sweatshirt-graystone",
+          "human": "DIFFERENT"
+        }
+      ],
+      "metrics": {
+        "suppliedUrls": 6,
+        "acceptedUrls": 6,
+        "usableProductUrls": 5,
+        "miEligibleCandidates": 5,
+        "fetchCalls": 7,
+        "notFetchedOverLimit": [],
+        "dropped": [
+          {
+            "url": "https://main-story.com/products/bubble-sweatshirt-grey-melange",
+            "reason": "REDIRECTED_AWAY"
+          }
+        ],
+        "providerCalls": 0
+      }
+    },
+    {
+      "sid": "S5",
+      "code": "01195-VERNICE-NERO",
+      "title": "Lulu T Bar Shoes in Vernice Nero by PèPè - Last Ones In Stock - 28-29 EUR",
+      "originUrl": "https://www.junioredition.com/en-kr/products/lulu-t-bar-shoes-in-vernice-nero-by-pepe",
+      "suppliedUrls": [
+        "https://www.thefrontshop.com/products/pepe-style-1195-vernice-fard"
+      ],
+      "notFetched": [],
+      "rows": [],
+      "lost": [
+        {
+          "url": "https://www.thefrontshop.com/products/pepe-style-1195-vernice-fard",
+          "human": "UNCERTAIN"
+        }
+      ],
+      "metrics": {
+        "suppliedUrls": 1,
+        "acceptedUrls": 1,
+        "usableProductUrls": 0,
+        "miEligibleCandidates": 0,
+        "fetchCalls": 2,
+        "notFetchedOverLimit": [],
+        "dropped": [
+          {
+            "url": "https://www.thefrontshop.com/products/pepe-style-1195-vernice-fard",
+            "reason": "REDIRECTED_AWAY"
+          }
+        ],
+        "providerCalls": 0
+      }
+    },
+    {
+      "sid": "S6",
+      "code": "(sku 공란)",
+      "title": "B.C. Embossed tracksuit jacket",
+      "originUrl": "https://bobochoses.co.jp/products/b226ac117-b-c-embossed-tracksuit-jacket",
+      "suppliedUrls": [
+        "https://kids21.com/products/700002037mlt",
+        "https://global.trenbe.com/products/bobo-choses-modern-tracksuit-jacket-for-kids-160301440-p",
+        "https://global.trenbe.com/products/bobo-choses-kids-jacket-modern-tracksuit-159406743-p",
+        "https://www.wconcept.co.kr/Product/306219521",
+        "https://www.tinyapple.net/products/bobo-choses-bobo-choses-modern-tracksuit-jacket-multicolor",
+        "https://www.ladida.com/products/bobo-choses-multicolor-bc-color-block-tracksuit-jacket",
+        "https://bobochoses.com/products/b226ac117-b-c-embossed-tracksuit-jacket",
+        "https://kihanan.com/products/drop2-2026aw-bobochoses-b-c-embossed-tracksuit-jacket-b226ac117"
+      ],
+      "notFetched": [],
+      "rows": [
+        {
+          "url": "https://www.ladida.com/products/bobo-choses-multicolor-bc-color-block-tracksuit-jacket",
+          "domain": "ladida.com",
+          "title": "Bobo Choses Multicolor Bc Color Block Tracksuit Jacket",
+          "human": "DIFFERENT",
+          "market": "OVERSEAS",
+          "tier": "TEXT_CONFIRMED",
+          "verdict": "PRESUMED_SAME",
+          "price": 147,
+          "currency": "USD",
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "soldOut": true,
+          "source": "REVIEWED_SAME",
+          "display": "LIKELY",
+          "priced": false
+        },
+        {
+          "url": "https://bobochoses.com/products/b226ac117-b-c-embossed-tracksuit-jacket",
+          "domain": "bobochoses.com",
+          "title": "B.C. Embossed tracksuit jacket",
+          "human": "SAME",
+          "market": "OVERSEAS",
+          "tier": "EXACT_IDENTIFIER",
+          "verdict": "SAME",
+          "price": 120,
+          "currency": "EUR",
+          "priceStatus": "VERIFIED_CURRENT",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "display": "LIKELY",
+          "priced": true
+        },
+        {
+          "url": "https://kihanan.com/products/drop2-2026aw-bobochoses-b-c-embossed-tracksuit-jacket-b226ac117",
+          "domain": "kihanan.com",
+          "title": "★DROP2★2026AW★BOBOCHOSES ボボショーズ B.C. Embossed tracksuit jacket B226AC117",
+          "human": "SAME",
+          "market": "OVERSEAS",
+          "tier": "TEXT_CONFIRMED",
+          "verdict": "PRESUMED_SAME",
+          "price": 26400,
+          "currency": "JPY",
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "display": "LIKELY",
+          "priced": false
+        }
+      ],
+      "lost": [
+        {
+          "url": "https://kids21.com/products/700002037mlt",
+          "human": "UNCERTAIN"
+        },
+        {
+          "url": "https://global.trenbe.com/products/bobo-choses-modern-tracksuit-jacket-for-kids-160301440-p",
+          "human": "UNCERTAIN"
+        },
+        {
+          "url": "https://global.trenbe.com/products/bobo-choses-kids-jacket-modern-tracksuit-159406743-p",
+          "human": "UNCERTAIN"
+        },
+        {
+          "url": "https://www.wconcept.co.kr/Product/306219521",
+          "human": "DIFFERENT"
+        },
+        {
+          "url": "https://www.tinyapple.net/products/bobo-choses-bobo-choses-modern-tracksuit-jacket-multicolor",
+          "human": "DIFFERENT"
+        }
+      ],
+      "metrics": {
+        "suppliedUrls": 8,
+        "acceptedUrls": 8,
+        "usableProductUrls": 4,
+        "miEligibleCandidates": 4,
+        "fetchCalls": 12,
+        "notFetchedOverLimit": [],
+        "dropped": [
+          {
+            "url": "https://kids21.com/products/700002037mlt",
+            "reason": "REDIRECTED_AWAY"
+          },
+          {
+            "url": "https://global.trenbe.com/products/bobo-choses-modern-tracksuit-jacket-for-kids-160301440-p",
+            "reason": "UNREACHABLE"
+          },
+          {
+            "url": "https://global.trenbe.com/products/bobo-choses-kids-jacket-modern-tracksuit-159406743-p",
+            "reason": "UNREACHABLE"
+          },
+          {
+            "url": "https://www.tinyapple.net/products/bobo-choses-bobo-choses-modern-tracksuit-jacket-multicolor",
+            "reason": "UNREACHABLE"
+          }
+        ],
+        "providerCalls": 0
+      }
+    }
+  ]
+}

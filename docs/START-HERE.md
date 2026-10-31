@@ -21,43 +21,61 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **CORE-E2E-CANDIDATE-02 — 🔵 다음 세션이 «조사 없이» 바로 측정한다**(CPO ⒜ 승인)
-             🟢🟢 **직전까지 끝난 것**(배포 `ad0354c0` · alias `ttaejyo-c5pury5ch`):
-                `CANDIDATE-EVIDENCE-VISIBILITY-01` — 후보 리스트를 **하나** 로 통합했다.
-                🔴 CEO 모순(「가격은 뜨는데 후보 리스트가 없다」)의 원인은 공급도 Identity 도
-                   아니고 **같은 Candidate 를 두 기준으로 걸러낸 것** 이었다:
-                   가격 축 `selectMiSameCandidates`(SAME+판매중+VERIFIED) ↔
-                   표시 축 `selectPresumedCandidates`(PRESUMED **만**)
-                🟢 `selectCandidateList` 하나 — 🟢 유력(SAME·SAME_MODEL_OPTION_DIFF·
-                   PRESUMED_SAME) + 🟡 확장(SIMILAR **＋ Evidence**) · CONFLICT·판정없음 제외
-                🔴🔴 불변식 **`priced ⊆ list`**(CAND-07 · 양쪽 시장 · 분모>0 도 단언)
-                🟢 CAND-01~10 · 변이 **M1~M8 전부 FAIL** · 748 files / 9,758 passed · tsc 0 · build 0
-                🟡 CPO 판정 1건(미수정) — `SAME` 행이 **가격 행과 리스트 양쪽** 에 선다
+CURRENT WU   **CORE-E2E-CANDIDATE-02 — 🟢🟢 측정 완료 / CLOSED**(측정 전용 · **운영 코드 변경 0**)
+             🔴 질문은 하나였다 — 「이미 찾아낸 후보를 화면이 후보군으로 보여주고,
+                가격이 있는 후보를 그 안에서 함께 보여주는가」. **다섯 상품에서 그렇다.**
 
-             🔵🔵🔵 **다음 세션 — 입력·처리·출력이 전부 고정됐다. 조사하지 않는다.**
+             🟢 **방법 ⒜ 재투입**(새 Search 0 · Registry 0 · Identity 0 · 가격정책 0 · CEO 조작 0)
+                원상품 DNA owner 를 **저장 canonicalProduct** 로 뒀다 — `/check` 의 owner 둘
+                (`backfillCanonicalProduct` → `buildProductIdentityDna`)과 **같은 경로** 다.
+                🔴 `dsp-01`/`wu-142` 의 `shopifySiteStrategy.extract` 는 **「새 상품 분석」 경로** 라
+                   이 WU 가 보는 재진입 경로가 아니다(그리고 brand 공백에 측정이 흔들린다).
+
+             🟢 **분모 — B226AC009 를 뺀 원상품 5개**(`wu-067`/`wu-068` · `wu-059` · `wu-112` 조인)
              ```
-             입력   기존 human GT fixture 중 **B226AC009 제외** 원상품 **5개**
-                    (fixtures/ 의 wu-112 · wu-133 · core-2aj · core-2al · core-same03 …)
-             처리   `dsp-01-domestic-funnel.test.ts` 하니스 **재사용**(상품만 바꾼다) —
-                    `runDomesticPriceCheck({ reviewedSameUrls, webSearch:false })`
-                    ⟹ Crawl → Evidence → Identity → Price (운영 함수 그대로)
-             표시   운영 선택기 `selectCandidateList` + `selectMiSameCandidates`
-                    → `MarketPriceComparison` **마운트 DOM**(mi-candidate-row·-price)
-             출력   상품별 **원상품 URL → 후보 URL 전수** → verdict/Evidence →
-                    가격·통화·시장 → DISPLAY 여부 → PRICE 여부 → **`PRICE ⊆ DISPLAY`**
+             상품                      공급  도달  표시  가격  PRICE⊆DISPLAY
+             S1 B226AC010              19    7     4     2    🟢 PASS
+             S3 B126AI018               4    1     1     0    🔴 측정불가(분모0)
+             S4 AW26MS185               6    3     3     1    🟢 PASS
+             S5 01195-VERNICE-NERO      1    0     0     0    🔴 측정불가(행0)
+             S6 B226AC117(sku 공란)      8    3     3     1    🟢 PASS
              ```
-             🔴🔴 **측정 제약을 먼저 읽는다 — 모르고 착수하면 전건 0 을 받는다**(CLOSE-06 실측):
-                로컬 `APIFY_API_TOKEN` **부재** ⟹ AI Search `skipped:"NOT_CONFIGURED"` ·
-                service-role **부재** ⟹ 등록부가 **비어서** 돈다
-                ⟹ 🔴 「상품 5개를 새로 Search 한다」는 **불가능** 하다. 그래서 ⒜(재투입)다.
-                🟢 Production 에는 그 토큰이 **있다**(이름만 확인 · 값 미열람)
-             🔴 **이 측정은 «발견 능력» 을 평가하지 않는다**(CPO 명시) — 질문은 하나다:
-                「이미 찾아낸 후보를 화면이 후보군으로 제대로 보여주고, 가격이 있는 후보를
-                 그 안에서 함께 보여주는가?」
-             🔴 **코드 수정이 필요해지는 순간 즉시 STOP 보고** — 이 결과로 Search · Registry ·
-                Identity · 가격정책을 **다시 열지 않는다**(CPO 명시)
-             🟢 계측은 **이미 배포돼 있다** — Production 로그 `[C06R-producers]`/`[C06R-funnel]`/
-                `[C06R-row]`(`85137ff7`). 🔴 그쪽은 ⒝(CEO 조작 5회)이고 이번 범위가 **아니다**
+             🟢🟢 **불변식 `priced ⊆ list` 위반 0** — 유효 분모 **상품 3/5 · 가격 후보 4건**
+                (선택기 축 **그리고** 마운트 DOM 축 **둘 다** 에서 단언)
+             🔴🔴 **분모 0 을 PASS 로 적지 않는다** — S3·S5 는 **측정불가** 다(§5-B).
+                1차 출력이 그 둘을 PASS 로 찍었고 그것이 「돌았다 = 통과」다 ⟹ 고쳤다
+
+             🟢 **그 외 실측**
+                · 🇰🇷 국내 SAME 이 **가격까지** 섰다 — S1 `beaumonde.co.kr` KRW **83,600**(VERIFIED)
+                · 표시 > 가격이 **전 상품**(4>2 · 3>1 · 3>1) ⟹ 가격 미확인 후보가 **버려지지 않는다**
+                · 🟢 CONFLICT 제외 작동 — S1 3건(junioredition · tinyapple · bobochoses) 리스트 **부재**
+                · 🔴 S6 원상품 **brand 공백**(sku 공란) ⟹ 그 상품 판정 숫자는 그 전제 아래 읽는다
+
+             🟡🟡 **CPO 판정 2건 — CTO 가 고치지 않았다**
+                ① **운영 상한 `MAX_SUPPLIED_CANDIDATE_URLS = 10` 이 S1 의 19 중 9 를 자른다**
+                   🔴 그 9 에 **human SAME 4건**(rboutique · tinyapple · eraldo · cissywears ·
+                   billsstore)이 있다 ⟹ 「후보 없음」이 아니라 **비용 상한** 이다(공급/비용 정책)
+                ② **human DIFFERENT 3건이 후보 리스트에 선다** — S4 donokids · S4 junioredition ·
+                   S6 ladida(전부 `PRESUMED_SAME`). 🟢 리스트는 「동일상품 **가능성**」이라
+                   정책 위반이 아니다. 🔴 그러나 「🟢 동일상품 가능성 높음」 배지를 달고 선다
+
+             🔴 **S5 는 후보가 통째로 사라졌다** — 유일 후보 1건이 `REDIRECTED_AWAY`(WU-075 의 의도된
+                방어) ⟹ 행 0. 🔴 「표시가 실패했다」가 아니라 **그 상품으로는 표시 축을 못 쟀다**
+
+             🟢 계약 **12 신규**(선택기 축 5 · 마운트 DOM 7) · 변이 **M1~M6 전부 FAIL → 바이트 복구**
+             🔴🔴 **내 변이가 내 가드 구멍 둘을 찾았다**(M2 가 1차에 **통과** 했다) —
+                ⒜ `priced ⊆ list` 는 표시 축을 **좁히는** 회귀에 둔감하다(가격 후보는 정의상
+                   가격이 확인된 행이다) ⟹ 🟢 **CAND-02-K** 신설(「가격 미확인 후보도 선다」 · CPO §4-A)
+                ⒝ 기대값을 `selectCandidateList` 로 세워 **동어반복** 이었다(그 함수를 좁히면
+                   기대값도 같이 좁는다) ⟹ 🟢 **실측에 얼어 있는 `display` 칸** 으로 교체
+             🟢 기존 계약 **1건이 내 fixture 를 잡았다** — `core-same06` 의 「fixture 전수 분류」 ⟹
+                느슨하게 하지 않고 **이중 집계 방지** 사유로 등록했다(미분류 0)
+             🟢 회귀 **750 files / 9,769 passed / 0 failed** · tsc **0** · build **0**
+
+NEXT         🔵 **CPO 지정 대기.** 🔴 CTO 가 선제적으로 WU 를 만들지 않는다.
+             🔴 이 결과로 Search · Registry · Identity · 가격정책을 **다시 열지 않는다**(CPO 명시).
+             🟡 열려 있는 것은 위 **판정 2건**(후보 상한 · 리스트 배지)이고 둘 다 제품 정책이다.
+             🔴 「국내 후보가 왜 적은가」로 되돌아가지 않는다 — 이 WU 는 **표시 축** 을 닫았다.
 
 [낡음]       **CORE-E2E-CLOSE-05 — 배포 완료**(`11724de5` · 🟡 「🔄 다시 분석」은 **보조 기능** 이고
              CPO 가 **본선으로 인정하지 않았다** — 본선은 최초 분석에서 후보가 공급되는 것)

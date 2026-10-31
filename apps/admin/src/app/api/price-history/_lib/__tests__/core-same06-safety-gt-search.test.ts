@@ -199,6 +199,18 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
   skipped.push({ file: "query-signal-ab-result.json", why: "🟢 신호 A/B Production 실측 · 라벨 **없음**" });
   skipped.push({ file: "query-adopt-01-production.json", why: "🟢 채택 Query E2E Production 실측 · 라벨 **없음**" });
   skipped.push({ file: "rc-01-input-url.json", why: "🟢 입력 URL A/B 추출 비교 · 라벨 **없음**" });
+  /**
+   * 🔵 CORE-E2E-CANDIDATE-02(2026-10-31) — **다상품 후보 «표시» 측정 기록.**
+   * 🔴 사람 라벨이 아니다. `human` 칸은 **다른 fixture 에서 조인해 온 사본** 이고
+   *    (wu-067/068 · wu-059 · wu-112) 그 셋은 위에서 이미 분모로 세어진다 ⟹
+   *    여기를 분모에 넣으면 **같은 라벨을 두 번 센다**(dsp-01 과 같은 이유).
+   * 🟢 그래도 적는 이유는 이 계약이 「전수 분류」를 요구하기 때문이다 —
+   *    실제로 그 FAIL 이 이 파일을 잡았다(가드가 일했다 · 느슨하게 하지 않았다).
+   */
+  skipped.push({
+    file: "cand-02-rows.json",
+    why: "🔴 표시 축 측정 기록 · 라벨은 **다른 fixture 사본** — 이중 집계 방지",
+  });
 
   /* SAME-03 최신 CEO 라벨 — 🔴 DIFFERENT 가 0 이지만 분모로 같이 적는다 */
   {
