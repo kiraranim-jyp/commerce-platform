@@ -21,7 +21,38 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **CORE-E2E-CLOSE-03 — 🟢🟢 배포 완료 · CEO 육안 1회 대기**(`96a9eb16`)
+CURRENT WU   **CORE-E2E-CLOSE-04 — 🟢🟢 배포 완료 · CEO 육안 1회로 CORE-E2E 가 닫힌다**(`41565653`)
+             🟢🟢🟢 **마지막 구멍이 닫혔다 — 셀러가 후보를 «고를» 수 있다.**
+                WU-152 가 패널을 `HIDDEN`(→ `return null`)으로 둔 뒤 그 안의 선택 UI 가
+                사라졌고 결론 영역은 그 저장 핸들러에 **닿을 수 없었다**.
+             🟢 **복제하지 않고 옮겼다**(CPO §3·§4) — `MiPanelView` 의 `useState` 셋 +
+                `loadReviewHistory` + `handleDomesticReview` → **`use-candidate-review.ts`**
+                의 `useCandidateReview` 하나. 🔴 `_lib/candidate-review.ts`(서버)와 이름이
+                겹쳐 `use-` 접두를 붙였다. 🔴 패널은 그것을 **쓴다** —
+                `enabled: presentation !== "HIDDEN"` 로 꺼서 **활성 owner 가 하나** 다
+                (이력 GET 중복 0)
+             🟢 선택 UI 는 공용 `<CandidateSelect>` **한 벌** — SAME 행과 보류 행이 같은 것을
+                쓴다. 어휘 owner 는 `HUMAN_REVIEW_BUTTON`/`SAVE_STATE_TEXT` 하나
+                (DB check constraint 와 **같은 어휘**)
+             🔴 `SIMILAR` 는 두 선별기 어디에도 들지 못해 선택 UI 가 **구조적으로** 안 선다
+             🔴 `PRESUMED_SAME` 선택은 **SAME 승격이 아니다**(CPO §6) — 판정은 그대로 남는다
+             🔴 **변경 0** — 새 저장 API · POST 중복 구현 · 워크스페이스 저장 state ·
+                `presentation="HIDDEN"` · WU-152 · 가격 집계 · 두 선별기 · Identity ·
+                Search · Candidate Pool · Crawl · Evidence
+             🟢 계약 **12 신규** · 변이 **M1~M11 전부 FAIL → 바이트 복구** ·
+                회귀 **745 / 9,728 passed / 0 failed** · tsc 0 · build 0
+             🔴 기존 계약 **5건 앵커를 새 owner 로 옮겼다**(성질 무변경 · 약화 아님) —
+                `wu-131 D-7/D-8` · `wu-132 D-4` · `core-e2e-close-01 E9` · `wu-141-r3 C-6-b`
+                🟢 변이 M9~M11 이 1 FAIL 씩 내어 **공짜가 아님** 을 확인했다
+                🔴 `wu-132 D-4` 는 「개수」가 아니라 **「형태」** 로 센다 — owner 주석이
+                   금지를 설명해 단순 개수가 3 이 됐다(아홉 번째 그 함정)
+             🟡🟡 **CEO 육안 1회 → CORE-E2E 최종 GO**(CPO 선언) —
+                `/pipeline → 상품 → 📊 가격 분석 → ＋ 상세정보 보기 → ▸ MI 상세 분석`
+                ① 후보가 보이는가 ② 가격이 보이는가 ③ **고를 수 있는가**
+                🔴 보류 구역은 **접혀 있다** — 펼치면 「유력 후보」로 읽힌다(WU-091 ①)
+                🔴 **Production UI PASS 로 적지 않는다** — CTO 는 그 화면을 볼 수 없다
+
+[낡음]       **CORE-E2E-CLOSE-03 — 배포 완료**(`96a9eb16` · 🟢 후보+가격 노출)
              🟢🟢 **CEO FAIL 이 닫혔다** — 후보와 가격이 **결론 영역에서 보인다.**
                 패널을 되살리지 않았다(WU-152 유지 · `presentation="HIDDEN"` 무변경).
                 `selectPresumedCandidates`(신규 · **표시 전용**) → `MarketColumn` 의
