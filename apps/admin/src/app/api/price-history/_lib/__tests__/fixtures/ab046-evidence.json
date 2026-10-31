@@ -1,0 +1,308 @@
+{
+  "origin": {
+    "url": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+    "title": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+    "brand": {
+      "value": "Bobo Choses",
+      "confident": true
+    },
+    "code": "B226AC010",
+    "color": "Heather Grey",
+    "facts": {
+      "sourceUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+      "urlSlug": "booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+      "brand": "Bobo Choses",
+      "brandModelCode": "B226AC010",
+      "sellerSku": "B226AC010",
+      "title": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+      "coreTitleTokens": [
+        "booty",
+        "ghosts",
+        "long",
+        "sleeve",
+        "shirt"
+      ],
+      "categoryText": "T Shirt",
+      "colorText": "Heather Grey",
+      "materialText": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses. Relaxed fit tee in heather grey, featuring long sleeves, a round neck and a large Bobo Choses ghosts print across the front. Colour - Heather Grey. 100% Organic Cotton. Product code B226AC010 AW26 Made in Portugal.",
+      "fitText": "relaxed fit",
+      "ageRangeText": null,
+      "sizeLabels": [
+        "2-3 Years",
+        "4-5 Years",
+        "6-7 Years",
+        "8-9 Years",
+        "10-11 Years",
+        "12-13 Years"
+      ],
+      "audienceSignals": [
+        "1-year",
+        " 10-years",
+        " 11-years",
+        " 12-years",
+        " 13-years",
+        " 2-years",
+        " 3-years",
+        " 4-years",
+        " 5-years",
+        " 6-years",
+        " 7-years",
+        " 8-years",
+        " 9-years",
+        " bobo-choses",
+        " t-shirts",
+        " tops",
+        "T Shirt"
+      ],
+      "imageUrls": [
+        "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/297630f2-895f-49d1-be56-4973394509b1-0001.jpg"
+      ]
+    },
+    "description": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses. Relaxed fit tee in heather grey, featuring long sleeves, a round neck and a large Bobo Choses ghosts print across the front. Colour - Heather Grey. 100% Organic Cotton. Product code B226AC010 AW26 Made in Portugal."
+  },
+  "candidate": {
+    "url": "https://bobochoses.com/products/b226ab046-booty-ghosts-t-shirt",
+    "extracted": {
+      "status": "OK",
+      "crawlerUrl": "https://bobochoses.com/products/b226ab046-booty-ghosts-t-shirt",
+      "dedupeKey": "https://bobochoses.com|b226ab046-booty-ghosts-t-shirt",
+      "candidate": {
+        "title": "Booty Ghosts T-shirt",
+        "url": "https://bobochoses.com/products/b226ab046-booty-ghosts-t-shirt",
+        "price": {
+          "amount": 35,
+          "currency": "EUR"
+        },
+        "regularPrice": null,
+        "soldOut": null,
+        "imageUrl": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AB046_1_1.webp?v=1783428013",
+        "confidence": 0,
+        "brand": "Bobo Choses",
+        "facts": {
+          "sourceUrl": "https://bobochoses.com/products/b226ab046-booty-ghosts-t-shirt",
+          "urlSlug": "b226ab046-booty-ghosts-t-shirt",
+          "brand": "Bobo Choses",
+          "brandModelCode": "B226AB046",
+          "sellerSku": null,
+          "title": "Booty Ghosts T-shirt",
+          "coreTitleTokens": [
+            "booty",
+            "ghosts",
+            "shirt"
+          ],
+          "categoryText": "T-shirts",
+          "colorText": "light heather grey",
+          "materialText": "Light heather grey t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+          "fitText": "loose fit",
+          "ageRangeText": null,
+          "sizeLabels": [
+            "3M",
+            "6M",
+            "9M",
+            "12M",
+            "18M",
+            "24M"
+          ],
+          "audienceSignals": [
+            "aw26",
+            " Baby",
+            " children",
+            " clothing",
+            " Current",
+            " drop-1",
+            " t-shirts",
+            " Tops",
+            "T-shirts"
+          ],
+          "imageUrls": [
+            "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AB046_1_1.webp?v=1783428013",
+            "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AB046_2_1.webp?v=1783427888",
+            "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AB046_3_1.webp?v=1783427997"
+          ],
+          "description": "Light heather grey t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+          "evidence": {
+            "PRODUCT_NAME": [
+              {
+                "value": "Booty Ghosts T-shirt",
+                "source": "TITLE"
+              }
+            ],
+            "FORM": [
+              {
+                "value": "SHIRT",
+                "source": "TITLE"
+              },
+              {
+                "value": "SHIRT",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "COLOR": [
+              {
+                "value": "light heather grey",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "MATERIAL": [
+              {
+                "value": "organic cotton",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "FIT": [
+              {
+                "value": "loose fit",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "COMPOSITION": [
+              {
+                "value": "organic cotton:100",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "IMAGE": [
+              {
+                "value": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AB046_1_1.webp?v=1783428013",
+                "source": "IMAGE",
+                "representative": true
+              }
+            ]
+          }
+        }
+      },
+      "httpCalls": 1,
+      "fetchPath": "SHOPIFY_JSON"
+    },
+    "judged": {
+      "title": "Booty Ghosts T-shirt",
+      "url": "https://bobochoses.com/products/b226ab046-booty-ghosts-t-shirt",
+      "price": {
+        "amount": 35,
+        "currency": "EUR"
+      },
+      "regularPrice": null,
+      "soldOut": null,
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AB046_1_1.webp?v=1783428013",
+      "confidence": 0.75,
+      "brand": "Bobo Choses",
+      "facts": {
+        "sourceUrl": "https://bobochoses.com/products/b226ab046-booty-ghosts-t-shirt",
+        "urlSlug": "b226ab046-booty-ghosts-t-shirt",
+        "brand": "Bobo Choses",
+        "brandModelCode": "B226AB046",
+        "sellerSku": null,
+        "title": "Booty Ghosts T-shirt",
+        "coreTitleTokens": [
+          "booty",
+          "ghosts",
+          "shirt"
+        ],
+        "categoryText": "T-shirts",
+        "colorText": "light heather grey",
+        "materialText": "Light heather grey t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+        "fitText": "loose fit",
+        "ageRangeText": null,
+        "sizeLabels": [
+          "3M",
+          "6M",
+          "9M",
+          "12M",
+          "18M",
+          "24M"
+        ],
+        "audienceSignals": [
+          "aw26",
+          " Baby",
+          " children",
+          " clothing",
+          " Current",
+          " drop-1",
+          " t-shirts",
+          " Tops",
+          "T-shirts"
+        ],
+        "imageUrls": [
+          "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AB046_1_1.webp?v=1783428013",
+          "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AB046_2_1.webp?v=1783427888",
+          "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AB046_3_1.webp?v=1783427997"
+        ],
+        "description": "Light heather grey t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+        "evidence": {
+          "PRODUCT_NAME": [
+            {
+              "value": "Booty Ghosts T-shirt",
+              "source": "TITLE"
+            }
+          ],
+          "FORM": [
+            {
+              "value": "SHIRT",
+              "source": "TITLE"
+            },
+            {
+              "value": "SHIRT",
+              "source": "DESCRIPTION"
+            }
+          ],
+          "COLOR": [
+            {
+              "value": "light heather grey",
+              "source": "DESCRIPTION"
+            }
+          ],
+          "MATERIAL": [
+            {
+              "value": "organic cotton",
+              "source": "DESCRIPTION"
+            }
+          ],
+          "FIT": [
+            {
+              "value": "loose fit",
+              "source": "DESCRIPTION"
+            }
+          ],
+          "COMPOSITION": [
+            {
+              "value": "organic cotton:100",
+              "source": "DESCRIPTION"
+            }
+          ],
+          "IMAGE": [
+            {
+              "value": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AB046_1_1.webp?v=1783428013",
+              "source": "IMAGE",
+              "representative": true
+            }
+          ]
+        }
+      },
+      "matchLevel": "medium",
+      "matchReasons": [
+        "모델명 유사도 60%",
+        "카테고리 일치",
+        "브랜드 일치"
+      ],
+      "crossSellerVerdict": "CONFLICT",
+      "crossSellerReasons": [
+        "충돌: 모델코드 B226AB046 ↔ B226AC010"
+      ],
+      "crossSellerBlockers": [],
+      "crossSellerConflicts": [
+        {
+          "conflict": "MODEL_CODE",
+          "detail": "모델코드 B226AB046 ↔ B226AC010"
+        }
+      ],
+      "priceStatus": "VERIFIED_CURRENT",
+      "verificationAttempted": true,
+      "priceSource": "detail",
+      "priceOptionMatch": "SINGLE_PRICE",
+      "priceOptionValues": {
+        "Clothing size": "3M"
+      }
+    },
+    "selfReference": false
+  }
+}
