@@ -134,9 +134,29 @@ const master = [...byKey.values()].map((c) => {
 });
 
 /* ── Step 2 — PRODUCT-ID ── */
-const origins = [...new Set(master.map((m) => (m.originRaw ?? "(미상)").toUpperCase()))].sort();
+/**
+ * 🔵 DENOMINATOR-FIX-01 — **CPO 승인 매핑(2026-11-01)**.
+ *
+ * 🔴 원상품 키가 두 namespace 로 섞여 있었다 — sid(S1~S6) ↔ 품번(B226AC###).
+ *    같은 상품이 두 번 세어졌고 그것이 분모 오류였다.
+ * 🟢 근거(보고서에 제출 · CPO 승인) — `wu-067` 원상품 URL == `wu-059`
+ *    `origins.sourceUrl`, `CAND-02-A` 계약이 6/6 로 단언한다.
+ * 🔴 **S3~S6 은 CPO 가 승인하지 않았으므로 접지 않는다**(sid 그대로 둔다).
+ *    🟢 그 넷은 다른 키와 중복되지 않으므로 **상품 «수» 에는 영향이 없다**.
+ * 🔴 이것은 Identity 정책이 아니라 **상품 분모 정규화** 다.
+ */
+const PRODUCT_ALIAS = new Map([
+  ["S1", "B226AC010"],
+  ["S2", "B226AC009"],
+]);
+for (const m of master) {
+  const k = (m.originRaw ?? "(미상)").toUpperCase();
+  m.originKeyRaw = k;
+  m.originKeyNormalized = PRODUCT_ALIAS.get(k) ?? k;
+}
+const origins = [...new Set(master.map((m) => m.originKeyNormalized))].sort();
 const pid = new Map(origins.map((o, i) => [o, `PRODUCT-${String(i + 1).padStart(2, "0")}`]));
-for (const m of master) m.productId = pid.get((m.originRaw ?? "(미상)").toUpperCase());
+for (const m of master) m.productId = pid.get(m.originKeyNormalized);
 
 /* ── 출력 ── */
 const n = (p) => master.filter(p).length;
@@ -152,7 +172,7 @@ console.log(`분모 제외 fixture         ${skipped.length}`);
 console.log("\n=== Step 2 · PRODUCT-ID × GT ===");
 console.log("PRODUCT      원상품키              후보  SAME DIFF REV 충돌  fixtures");
 for (const o of origins) {
-  const g = master.filter((m) => (m.originRaw ?? "(미상)").toUpperCase() === o);
+  const g = master.filter((m) => m.originKeyNormalized === o);
   const c = (p) => g.filter(p).length;
   const fx = [...new Set(g.flatMap((m) => m.GT_SOURCE_FIXTURES))].length;
   console.log(

@@ -53,30 +53,22 @@
     },
     {
       "productId": "PRODUCT-04",
-      "originKey": "S1"
-    },
-    {
-      "productId": "PRODUCT-05",
-      "originKey": "S2"
-    },
-    {
-      "productId": "PRODUCT-06",
       "originKey": "S3"
     },
     {
-      "productId": "PRODUCT-07",
+      "productId": "PRODUCT-05",
       "originKey": "S4"
     },
     {
-      "productId": "PRODUCT-08",
+      "productId": "PRODUCT-06",
       "originKey": "S5"
     },
     {
-      "productId": "PRODUCT-09",
+      "productId": "PRODUCT-07",
       "originKey": "S6"
     },
     {
-      "productId": "PRODUCT-10",
+      "productId": "PRODUCT-08",
       "originKey": "SM430632"
     }
   ],
@@ -119,6 +111,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC009",
+      "originKeyNormalized": "B226AC009",
       "productId": "PRODUCT-02"
     },
     {
@@ -151,6 +145,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC010",
+      "originKeyNormalized": "B226AC010",
       "productId": "PRODUCT-03"
     },
     {
@@ -175,6 +171,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC009",
+      "originKeyNormalized": "B226AC009",
       "productId": "PRODUCT-02"
     },
     {
@@ -199,6 +197,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC009",
+      "originKeyNormalized": "B226AC009",
       "productId": "PRODUCT-02"
     },
     {
@@ -223,7 +223,9 @@
       "GT_VALUES": [
         "DIFFERENT"
       ],
-      "productId": "PRODUCT-10"
+      "originKeyRaw": "SM430632",
+      "originKeyNormalized": "SM430632",
+      "productId": "PRODUCT-08"
     },
     {
       "key": "SM430632||bobochoses.com/products/b226ab048-softpaw-monster-all-over-t-shirt",
@@ -247,7 +249,9 @@
       "GT_VALUES": [
         "DIFFERENT"
       ],
-      "productId": "PRODUCT-10"
+      "originKeyRaw": "SM430632",
+      "originKeyNormalized": "SM430632",
+      "productId": "PRODUCT-08"
     },
     {
       "key": "SM430632||junioredition.com/products/mush-monster-duo-all-over-baby-t-shirt-by-bobo-choses",
@@ -271,7 +275,9 @@
       "GT_VALUES": [
         "DIFFERENT"
       ],
-      "productId": "PRODUCT-10"
+      "originKeyRaw": "SM430632",
+      "originKeyNormalized": "SM430632",
+      "productId": "PRODUCT-08"
     },
     {
       "key": "SM430632||junioredition.com/products/juicy-tomatoes-all-over-baby-t-shirt-by-bobo-choses",
@@ -295,7 +301,9 @@
       "GT_VALUES": [
         "DIFFERENT"
       ],
-      "productId": "PRODUCT-10"
+      "originKeyRaw": "SM430632",
+      "originKeyNormalized": "SM430632",
+      "productId": "PRODUCT-08"
     },
     {
       "key": "SM430632||junioredition.com/products/bobo-choses-color-all-over-baby-t-shirt-by-bobo-choses",
@@ -319,7 +327,9 @@
       "GT_VALUES": [
         "DIFFERENT"
       ],
-      "productId": "PRODUCT-10"
+      "originKeyRaw": "SM430632",
+      "originKeyNormalized": "SM430632",
+      "productId": "PRODUCT-08"
     },
     {
       "key": "AC157||billsstore.com.au/products/bc-striped-cardigan-yellow",
@@ -343,6 +353,8 @@
       "GT_VALUES": [
         "DIFFERENT"
       ],
+      "originKeyRaw": "AC157",
+      "originKeyNormalized": "AC157",
       "productId": "PRODUCT-01"
     },
     {
@@ -383,6 +395,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC009",
+      "originKeyNormalized": "B226AC009",
       "productId": "PRODUCT-02"
     },
     {
@@ -415,6 +429,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC009",
+      "originKeyNormalized": "B226AC009",
       "productId": "PRODUCT-02"
     },
     {
@@ -447,6 +463,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC009",
+      "originKeyNormalized": "B226AC009",
       "productId": "PRODUCT-02"
     },
     {
@@ -479,6 +497,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC009",
+      "originKeyNormalized": "B226AC009",
       "productId": "PRODUCT-02"
     },
     {
@@ -511,6 +531,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC009",
+      "originKeyNormalized": "B226AC009",
       "productId": "PRODUCT-02"
     },
     {
@@ -543,6 +565,8 @@
       "GT_VALUES": [
         "DIFFERENT"
       ],
+      "originKeyRaw": "B226AC009",
+      "originKeyNormalized": "B226AC009",
       "productId": "PRODUCT-02"
     },
     {
@@ -584,6 +608,8 @@
         "SAME",
         "DIFFERENT"
       ],
+      "originKeyRaw": "B226AC009",
+      "originKeyNormalized": "B226AC009",
       "productId": "PRODUCT-02"
     },
     {
@@ -617,6 +643,8 @@
         "REVIEW",
         "SAME"
       ],
+      "originKeyRaw": "B226AC009",
+      "originKeyNormalized": "B226AC009",
       "productId": "PRODUCT-02"
     },
     {
@@ -649,6 +677,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC009",
+      "originKeyNormalized": "B226AC009",
       "productId": "PRODUCT-02"
     },
     {
@@ -681,6 +711,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC009",
+      "originKeyNormalized": "B226AC009",
       "productId": "PRODUCT-02"
     },
     {
@@ -705,6 +737,8 @@
       "GT_VALUES": [
         "REVIEW"
       ],
+      "originKeyRaw": "B226AC009",
+      "originKeyNormalized": "B226AC009",
       "productId": "PRODUCT-02"
     },
     {
@@ -737,6 +771,8 @@
       "GT_VALUES": [
         "REVIEW"
       ],
+      "originKeyRaw": "B226AC010",
+      "originKeyNormalized": "B226AC010",
       "productId": "PRODUCT-03"
     },
     {
@@ -769,6 +805,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC010",
+      "originKeyNormalized": "B226AC010",
       "productId": "PRODUCT-03"
     },
     {
@@ -793,6 +831,8 @@
       "GT_VALUES": [
         "REVIEW"
       ],
+      "originKeyRaw": "B226AC010",
+      "originKeyNormalized": "B226AC010",
       "productId": "PRODUCT-03"
     },
     {
@@ -826,6 +866,8 @@
         "REVIEW",
         "DIFFERENT"
       ],
+      "originKeyRaw": "B226AC010",
+      "originKeyNormalized": "B226AC010",
       "productId": "PRODUCT-03"
     },
     {
@@ -858,6 +900,8 @@
       "GT_VALUES": [
         "REVIEW"
       ],
+      "originKeyRaw": "B226AC010",
+      "originKeyNormalized": "B226AC010",
       "productId": "PRODUCT-03"
     },
     {
@@ -882,7 +926,9 @@
       "GT_VALUES": [
         "SAME"
       ],
-      "productId": "PRODUCT-04"
+      "originKeyRaw": "S1",
+      "originKeyNormalized": "B226AC010",
+      "productId": "PRODUCT-03"
     },
     {
       "key": "S6||tinyapple.net/products/bobo-choses-bobo-choses-modern-tracksuit-jacket-multicolor",
@@ -906,7 +952,9 @@
       "GT_VALUES": [
         "DIFFERENT"
       ],
-      "productId": "PRODUCT-09"
+      "originKeyRaw": "S6",
+      "originKeyNormalized": "S6",
+      "productId": "PRODUCT-07"
     },
     {
       "key": "S6||ladida.com/products/bobo-choses-multicolor-bc-color-block-tracksuit-jacket",
@@ -930,7 +978,9 @@
       "GT_VALUES": [
         "DIFFERENT"
       ],
-      "productId": "PRODUCT-09"
+      "originKeyRaw": "S6",
+      "originKeyNormalized": "S6",
+      "productId": "PRODUCT-07"
     },
     {
       "key": "S4||donokids.com/m/product.html",
@@ -954,7 +1004,9 @@
       "GT_VALUES": [
         "DIFFERENT"
       ],
-      "productId": "PRODUCT-07"
+      "originKeyRaw": "S4",
+      "originKeyNormalized": "S4",
+      "productId": "PRODUCT-05"
     },
     {
       "key": "S3||bobochoses.co.jp/ja/products/b126ai018-curious-turnip-all-over-swim-cap",
@@ -978,7 +1030,9 @@
       "GT_VALUES": [
         "SAME"
       ],
-      "productId": "PRODUCT-06"
+      "originKeyRaw": "S3",
+      "originKeyNormalized": "S3",
+      "productId": "PRODUCT-04"
     },
     {
       "key": "S6||bobochoses.com/products/b226ac117-b-c-embossed-tracksuit-jacket",
@@ -1002,7 +1056,9 @@
       "GT_VALUES": [
         "SAME"
       ],
-      "productId": "PRODUCT-09"
+      "originKeyRaw": "S6",
+      "originKeyNormalized": "S6",
+      "productId": "PRODUCT-07"
     },
     {
       "key": "S2||tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
@@ -1026,7 +1082,9 @@
       "GT_VALUES": [
         "SAME"
       ],
-      "productId": "PRODUCT-05"
+      "originKeyRaw": "S2",
+      "originKeyNormalized": "B226AC009",
+      "productId": "PRODUCT-02"
     },
     {
       "key": "S2||global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
@@ -1050,7 +1108,9 @@
       "GT_VALUES": [
         "DIFFERENT"
       ],
-      "productId": "PRODUCT-05"
+      "originKeyRaw": "S2",
+      "originKeyNormalized": "B226AC009",
+      "productId": "PRODUCT-02"
     },
     {
       "key": "S4||junioredition.com/products/bubble-sweatshirt-in-conker-stripe-by-main-story",
@@ -1074,7 +1134,9 @@
       "GT_VALUES": [
         "DIFFERENT"
       ],
-      "productId": "PRODUCT-07"
+      "originKeyRaw": "S4",
+      "originKeyNormalized": "S4",
+      "productId": "PRODUCT-05"
     },
     {
       "key": "S4||junioredition.com/products/bubble-sweatshirt-in-graystone-by-main-story",
@@ -1098,7 +1160,9 @@
       "GT_VALUES": [
         "DIFFERENT"
       ],
-      "productId": "PRODUCT-07"
+      "originKeyRaw": "S4",
+      "originKeyNormalized": "S4",
+      "productId": "PRODUCT-05"
     },
     {
       "key": "S4||main-story.com/products/bubble-sweatshirt-grey-melange-1",
@@ -1122,7 +1186,9 @@
       "GT_VALUES": [
         "SAME"
       ],
-      "productId": "PRODUCT-07"
+      "originKeyRaw": "S4",
+      "originKeyNormalized": "S4",
+      "productId": "PRODUCT-05"
     },
     {
       "key": "S4||main-story.com/collections/shop/products/bubble-sweatshirt-graystone",
@@ -1146,7 +1212,9 @@
       "GT_VALUES": [
         "DIFFERENT"
       ],
-      "productId": "PRODUCT-07"
+      "originKeyRaw": "S4",
+      "originKeyNormalized": "S4",
+      "productId": "PRODUCT-05"
     },
     {
       "key": "S6||kihanan.com/products/drop2-2026aw-bobochoses-b-c-embossed-tracksuit-jacket-b226ac117",
@@ -1170,7 +1238,9 @@
       "GT_VALUES": [
         "SAME"
       ],
-      "productId": "PRODUCT-09"
+      "originKeyRaw": "S6",
+      "originKeyNormalized": "S6",
+      "productId": "PRODUCT-07"
     },
     {
       "key": "S3||bobochoses.co.jp/products/b126ai018-curious-turnip-all-over-swim-cap",
@@ -1194,7 +1264,9 @@
       "GT_VALUES": [
         "SAME"
       ],
-      "productId": "PRODUCT-06"
+      "originKeyRaw": "S3",
+      "originKeyNormalized": "S3",
+      "productId": "PRODUCT-04"
     },
     {
       "key": "S1||rboutique.com/en-us/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
@@ -1218,7 +1290,9 @@
       "GT_VALUES": [
         "SAME"
       ],
-      "productId": "PRODUCT-04"
+      "originKeyRaw": "S1",
+      "originKeyNormalized": "B226AC010",
+      "productId": "PRODUCT-03"
     },
     {
       "key": "S1||eraldo.com/en-us/products/bobo-choses-booty-ghosts-t-shirt-340496",
@@ -1242,7 +1316,9 @@
       "GT_VALUES": [
         "SAME"
       ],
-      "productId": "PRODUCT-04"
+      "originKeyRaw": "S1",
+      "originKeyNormalized": "B226AC010",
+      "productId": "PRODUCT-03"
     },
     {
       "key": "S1||cissywears.com/en-us/products/bobo-choses-booty-ghosts-t-shirt",
@@ -1266,7 +1342,9 @@
       "GT_VALUES": [
         "SAME"
       ],
-      "productId": "PRODUCT-04"
+      "originKeyRaw": "S1",
+      "originKeyNormalized": "B226AC010",
+      "productId": "PRODUCT-03"
     },
     {
       "key": "S1||kolkid.ca/products/bobo-choses-booty-ghosts-t-shirt",
@@ -1290,7 +1368,9 @@
       "GT_VALUES": [
         "SAME"
       ],
-      "productId": "PRODUCT-04"
+      "originKeyRaw": "S1",
+      "originKeyNormalized": "B226AC010",
+      "productId": "PRODUCT-03"
     },
     {
       "key": "S1||junioredition.com/en-kr/products/booty-ghosts-t-shirt-by-bobo-choses",
@@ -1314,7 +1394,9 @@
       "GT_VALUES": [
         "DIFFERENT"
       ],
-      "productId": "PRODUCT-04"
+      "originKeyRaw": "S1",
+      "originKeyNormalized": "B226AC010",
+      "productId": "PRODUCT-03"
     },
     {
       "key": "S1||tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt",
@@ -1338,7 +1420,9 @@
       "GT_VALUES": [
         "DIFFERENT"
       ],
-      "productId": "PRODUCT-04"
+      "originKeyRaw": "S1",
+      "originKeyNormalized": "B226AC010",
+      "productId": "PRODUCT-03"
     },
     {
       "key": "S1||bobochoses.com/products/b226ab046-booty-ghosts-t-shirt",
@@ -1362,7 +1446,9 @@
       "GT_VALUES": [
         "SAME"
       ],
-      "productId": "PRODUCT-04"
+      "originKeyRaw": "S1",
+      "originKeyNormalized": "B226AC010",
+      "productId": "PRODUCT-03"
     },
     {
       "key": "S2||stockmann.ee/et-ee/bobo-choses-trikoosark-hug-monster/18119748633-1.html",
@@ -1386,7 +1472,9 @@
       "GT_VALUES": [
         "SAME"
       ],
-      "productId": "PRODUCT-05"
+      "originKeyRaw": "S2",
+      "originKeyNormalized": "B226AC009",
+      "productId": "PRODUCT-02"
     },
     {
       "key": "S2||thefrontshop.com/products/hug-hairy-monster-t-shirt",
@@ -1410,7 +1498,9 @@
       "GT_VALUES": [
         "SAME"
       ],
-      "productId": "PRODUCT-05"
+      "originKeyRaw": "S2",
+      "originKeyNormalized": "B226AC009",
+      "productId": "PRODUCT-02"
     },
     {
       "key": "S2||bobochoses.com/products/b226ab040-hug-hairy-monster-t-shirt",
@@ -1434,7 +1524,9 @@
       "GT_VALUES": [
         "SAME"
       ],
-      "productId": "PRODUCT-05"
+      "originKeyRaw": "S2",
+      "originKeyNormalized": "B226AC009",
+      "productId": "PRODUCT-02"
     },
     {
       "key": "S2||kids21.com/products/700005621lbl",
@@ -1458,7 +1550,9 @@
       "GT_VALUES": [
         "SAME"
       ],
-      "productId": "PRODUCT-05"
+      "originKeyRaw": "S2",
+      "originKeyNormalized": "B226AC009",
+      "productId": "PRODUCT-02"
     },
     {
       "key": "S3||stadtlandkind.ch/en/products/uv-sun-hat-curious-turnip-green",
@@ -1482,7 +1576,9 @@
       "GT_VALUES": [
         "SAME"
       ],
-      "productId": "PRODUCT-06"
+      "originKeyRaw": "S3",
+      "originKeyNormalized": "S3",
+      "productId": "PRODUCT-04"
     },
     {
       "key": "S3||kids21.com/products/700002005grn",
@@ -1506,7 +1602,9 @@
       "GT_VALUES": [
         "REVIEW"
       ],
-      "productId": "PRODUCT-06"
+      "originKeyRaw": "S3",
+      "originKeyNormalized": "S3",
+      "productId": "PRODUCT-04"
     },
     {
       "key": "S4||main-story.com/products/bubble-sweatshirt-grey-melange",
@@ -1530,7 +1628,9 @@
       "GT_VALUES": [
         "REVIEW"
       ],
-      "productId": "PRODUCT-07"
+      "originKeyRaw": "S4",
+      "originKeyNormalized": "S4",
+      "productId": "PRODUCT-05"
     },
     {
       "key": "S5||thefrontshop.com/products/pepe-style-1195-vernice-fard",
@@ -1554,7 +1654,9 @@
       "GT_VALUES": [
         "REVIEW"
       ],
-      "productId": "PRODUCT-08"
+      "originKeyRaw": "S5",
+      "originKeyNormalized": "S5",
+      "productId": "PRODUCT-06"
     },
     {
       "key": "S6||kids21.com/products/700002037mlt",
@@ -1578,7 +1680,9 @@
       "GT_VALUES": [
         "REVIEW"
       ],
-      "productId": "PRODUCT-09"
+      "originKeyRaw": "S6",
+      "originKeyNormalized": "S6",
+      "productId": "PRODUCT-07"
     },
     {
       "key": "S6||global.trenbe.com/products/bobo-choses-modern-tracksuit-jacket-for-kids-160301440-p",
@@ -1602,7 +1706,9 @@
       "GT_VALUES": [
         "REVIEW"
       ],
-      "productId": "PRODUCT-09"
+      "originKeyRaw": "S6",
+      "originKeyNormalized": "S6",
+      "productId": "PRODUCT-07"
     },
     {
       "key": "S6||global.trenbe.com/products/bobo-choses-kids-jacket-modern-tracksuit-159406743-p",
@@ -1626,7 +1732,9 @@
       "GT_VALUES": [
         "REVIEW"
       ],
-      "productId": "PRODUCT-09"
+      "originKeyRaw": "S6",
+      "originKeyNormalized": "S6",
+      "productId": "PRODUCT-07"
     },
     {
       "key": "S6||wconcept.co.kr/product/306219521",
@@ -1650,7 +1758,9 @@
       "GT_VALUES": [
         "DIFFERENT"
       ],
-      "productId": "PRODUCT-09"
+      "originKeyRaw": "S6",
+      "originKeyNormalized": "S6",
+      "productId": "PRODUCT-07"
     },
     {
       "key": "B226AC010||rboutique.com/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
@@ -1674,6 +1784,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC010",
+      "originKeyNormalized": "B226AC010",
       "productId": "PRODUCT-03"
     },
     {
@@ -1698,6 +1810,8 @@
       "GT_VALUES": [
         "DIFFERENT"
       ],
+      "originKeyRaw": "B226AC010",
+      "originKeyNormalized": "B226AC010",
       "productId": "PRODUCT-03"
     },
     {
@@ -1722,6 +1836,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC010",
+      "originKeyNormalized": "B226AC010",
       "productId": "PRODUCT-03"
     },
     {
@@ -1746,6 +1862,8 @@
       "GT_VALUES": [
         "DIFFERENT"
       ],
+      "originKeyRaw": "B226AC010",
+      "originKeyNormalized": "B226AC010",
       "productId": "PRODUCT-03"
     },
     {
@@ -1770,6 +1888,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC010",
+      "originKeyNormalized": "B226AC010",
       "productId": "PRODUCT-03"
     },
     {
@@ -1794,6 +1914,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC010",
+      "originKeyNormalized": "B226AC010",
       "productId": "PRODUCT-03"
     },
     {
@@ -1818,6 +1940,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC010",
+      "originKeyNormalized": "B226AC010",
       "productId": "PRODUCT-03"
     },
     {
@@ -1842,6 +1966,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC010",
+      "originKeyNormalized": "B226AC010",
       "productId": "PRODUCT-03"
     },
     {
@@ -1866,6 +1992,8 @@
       "GT_VALUES": [
         "DIFFERENT"
       ],
+      "originKeyRaw": "B226AC010",
+      "originKeyNormalized": "B226AC010",
       "productId": "PRODUCT-03"
     },
     {
@@ -1890,6 +2018,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC010",
+      "originKeyNormalized": "B226AC010",
       "productId": "PRODUCT-03"
     },
     {
@@ -1914,6 +2044,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC009",
+      "originKeyNormalized": "B226AC009",
       "productId": "PRODUCT-02"
     },
     {
@@ -1938,6 +2070,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC009",
+      "originKeyNormalized": "B226AC009",
       "productId": "PRODUCT-02"
     },
     {
@@ -1962,6 +2096,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC010",
+      "originKeyNormalized": "B226AC010",
       "productId": "PRODUCT-03"
     },
     {
@@ -1986,6 +2122,8 @@
       "GT_VALUES": [
         "DIFFERENT"
       ],
+      "originKeyRaw": "B226AC010",
+      "originKeyNormalized": "B226AC010",
       "productId": "PRODUCT-03"
     },
     {
@@ -2010,6 +2148,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC009",
+      "originKeyNormalized": "B226AC009",
       "productId": "PRODUCT-02"
     },
     {
@@ -2034,6 +2174,8 @@
       "GT_VALUES": [
         "DIFFERENT"
       ],
+      "originKeyRaw": "B226AC010",
+      "originKeyNormalized": "B226AC010",
       "productId": "PRODUCT-03"
     },
     {
@@ -2058,6 +2200,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC010",
+      "originKeyNormalized": "B226AC010",
       "productId": "PRODUCT-03"
     },
     {
@@ -2082,6 +2226,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC009",
+      "originKeyNormalized": "B226AC009",
       "productId": "PRODUCT-02"
     },
     {
@@ -2106,6 +2252,8 @@
       "GT_VALUES": [
         "DIFFERENT"
       ],
+      "originKeyRaw": "B226AC009",
+      "originKeyNormalized": "B226AC009",
       "productId": "PRODUCT-02"
     },
     {
@@ -2130,6 +2278,8 @@
       "GT_VALUES": [
         "SAME"
       ],
+      "originKeyRaw": "B226AC009",
+      "originKeyNormalized": "B226AC009",
       "productId": "PRODUCT-02"
     },
     {
@@ -2154,6 +2304,8 @@
       "GT_VALUES": [
         "DIFFERENT"
       ],
+      "originKeyRaw": "B226AC009",
+      "originKeyNormalized": "B226AC009",
       "productId": "PRODUCT-02"
     }
   ]
