@@ -220,6 +220,18 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
     file: "ab046-evidence.json",
     why: "🟢 AC010↔AB046 한 쌍의 운영 증거 원문 · 사람 라벨 **없음**(라벨은 wu-068 에 있다)",
   });
+  /**
+   * 🔵 IDENTITY-GT-EVIDENCE-MASTER-REVIEW-01 Step 3(2026-11-01) — **원상품 facts 덤프.**
+   * 🔴 후보 라벨이 **없다** — `origins` 한 칸뿐이고 그 내용은 운영 DB 의
+   *    `product_snapshots.workspace->canonicalProduct` 를 **가공 없이** 옮긴 것이다
+   *    (`wu-059-gt-facts.json#origins` 에 없는 상품 하나를 메우기 위한 것).
+   * 🟢 그래서 GT 분모와 **겹치지 않는다**. 🔴 그래도 적는 이유는 이 계약이
+   *    「전수 분류」를 요구하기 때문이다 — 실제로 그 FAIL 이 이 파일을 잡았다.
+   */
+  skipped.push({
+    file: "gt-master-origins.json",
+    why: "🟢 원상품 canonicalProduct 덤프(운영 DB) · 후보 라벨 **없음** — GT 분모와 겹치지 않는다",
+  });
 
   /* SAME-03 최신 CEO 라벨 — 🔴 DIFFERENT 가 0 이지만 분모로 같이 적는다 */
   {

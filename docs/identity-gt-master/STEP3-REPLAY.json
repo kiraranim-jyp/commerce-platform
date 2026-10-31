@@ -1,0 +1,1821 @@
+{
+  "_wu": "IDENTITY-GT-EVIDENCE-MASTER-REVIEW-01 Step 3",
+  "_lock": {
+    "labelRowsWithDuplicates": 99,
+    "uniqueCandidates": 80,
+    "SAME": 43,
+    "DIFFERENT": 24,
+    "REVIEW": 10,
+    "GT_CONFLICT": 3
+  },
+  "products": [
+    {
+      "productId": "PRODUCT-01",
+      "originKey": "AC157",
+      "factsOwner": "(없음)",
+      "unavailableReason": "ORIGIN_FACTS_UNAVAILABLE — 저장 canonicalProduct 가 fixture 와 운영 DB 양쪽에 없다. 🔴 후보 분모(80)는 그대로다.",
+      "originUrl": null,
+      "dna": null,
+      "preconditions": [
+        "ORIGIN_FACTS_UNAVAILABLE"
+      ],
+      "gtLedgerRows": 1,
+      "uniqueGtPairs": 1,
+      "suppliedCount": 0,
+      "chunks": 0,
+      "notFetchedOverLimit": [],
+      "rows": [],
+      "lost": [
+        {
+          "url": "https://www.billsstore.com.au/products/bc-striped-cardigan-yellow",
+          "CEO_GT": "DIFFERENT",
+          "dedupeKey": "billsstore.com.au/products/bc-striped-cardigan-yellow"
+        }
+      ],
+      "metrics": []
+    },
+    {
+      "productId": "PRODUCT-02",
+      "originKey": "B226AC009",
+      "factsOwner": "wu-059-gt-facts.json#origins.S2(sku=B226AC009)",
+      "unavailableReason": null,
+      "originUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "dna": {
+        "brand": "Bobo Choses",
+        "brandModelCode": "B226AC009",
+        "color": "Light Blue",
+        "title": "Hug Hairy Monster T-Shirt by Bobo Choses"
+      },
+      "preconditions": [],
+      "gtLedgerRows": 27,
+      "uniqueGtPairs": 21,
+      "suppliedCount": 21,
+      "chunks": 2,
+      "notFetchedOverLimit": [],
+      "rows": [
+        {
+          "dedupeKey": "cissywears.com/products/bobo-choses-babyhug-hairy-monster-t-shirt",
+          "url": "https://cissywears.com/products/bobo-choses-babyhug-hairy-monster-t-shirt",
+          "domain": "cissywears.com",
+          "title": "Bobo Choses Baby Hug Hairy Monster T-Shirt",
+          "CEO_GT": "SAME",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "B226AC009",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "core-2aj-human-gt.json",
+                "core-2m-ceo-visual-gt.json",
+                "wu-112-human-gt.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "TEXT_CONFIRMED",
+          "crossSellerVerdict": "PRESUMED_SAME",
+          "crossSellerBlockers": [],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 0.87,
+          "priceAmount": 33,
+          "priceCurrency": "GBP",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "COMPARISON",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "PRESUMED",
+          "priced": false
+        },
+        {
+          "dedupeKey": "kolkid.ca/products/bobo-choses-baby-hug-hairy-monster-t-shirt",
+          "url": "https://kolkid.ca/products/bobo-choses-baby-hug-hairy-monster-t-shirt",
+          "domain": "kolkid.ca",
+          "title": "Bobo Choses Baby Hug Hairy Monster T-Shirt",
+          "CEO_GT": "SAME",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "B226AC009",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "core-2aj-human-gt.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "TEXT_CONFIRMED",
+          "crossSellerVerdict": "PRESUMED_SAME",
+          "crossSellerBlockers": [
+            "FIT"
+          ],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 0.87,
+          "priceAmount": 56,
+          "priceCurrency": "CAD",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "COMPARISON",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "PRESUMED",
+          "priced": false
+        },
+        {
+          "dedupeKey": "cemarose.ca/products/bobo-choses-baby-hug-hairy-monster-t-shirt-light-blue-c7883",
+          "url": "https://cemarose.ca/products/bobo-choses-baby-hug-hairy-monster-t-shirt-light-blue-c7883",
+          "domain": "cemarose.ca",
+          "title": "Bobo Choses-Baby Hug Hairy Monster T-Shirt Light Blue",
+          "CEO_GT": "SAME",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "B226AC009",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "core-2aj-human-gt.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "CONFLICT",
+          "crossSellerVerdict": "CONFLICT",
+          "crossSellerBlockers": [],
+          "crossSellerConflicts": [
+            "MODEL_CODE"
+          ],
+          "matchLevel": null,
+          "confidence": 0.73,
+          "priceAmount": 56,
+          "priceCurrency": "CAD",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "EXCLUDED",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "POSSIBLE",
+          "priced": false
+        },
+        {
+          "dedupeKey": "biskuit.kr/product/%eb%b3%b4%eb%b3%b4%ec%87%bc%ec%a6%88-%ed%97%88%ea%b7%b8-%ed%97%a4%ec%96%b4%eb%a6%ac-%eb%aa%ac%ec%8a%a4%ed%84%b0-%ed%8b%b0%ec%85%94%ec%b8%a0-b226ac009/8891/category/367/display/1",
+          "url": "https://biskuit.kr/product/%EB%B3%B4%EB%B3%B4%EC%87%BC%EC%A6%88-%ED%97%88%EA%B7%B8-%ED%97%A4%EC%96%B4%EB%A6%AC-%EB%AA%AC%EC%8A%A4%ED%84%B0-%ED%8B%B0%EC%85%94%EC%B8%A0-b226ac009/8891/category/367/display/1/",
+          "domain": "biskuit.kr",
+          "title": "[보보쇼즈] 허그 헤어리 몬스터 티셔츠 B226AC009 - 비스킷",
+          "CEO_GT": "SAME",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "B226AC009",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "core-2m-ceo-visual-gt.json",
+                "core-same03-human-gt.json",
+                "wu-112-human-gt.json"
+              ]
+            }
+          ],
+          "market": "KR",
+          "matchTruth": "TEXT_CONFIRMED",
+          "crossSellerVerdict": "PRESUMED_SAME",
+          "crossSellerBlockers": [
+            "BRAND_MISMATCH",
+            "NO_TITLE_OVERLAP"
+          ],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 0.02,
+          "priceAmount": 88000,
+          "priceCurrency": "KRW",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "COMPARISON",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "PRESUMED",
+          "priced": false
+        },
+        {
+          "dedupeKey": "bobochoses.com/products/b226ab040-hug-hairy-monster-t-shirt",
+          "url": "https://bobochoses.com/products/b226ab040-hug-hairy-monster-t-shirt",
+          "domain": "bobochoses.com",
+          "title": "Hug Hairy Monster T-shirt",
+          "CEO_GT": "SAME",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "B226AC009",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "core-2m-ceo-visual-gt.json",
+                "wu-112-human-gt.json"
+              ]
+            },
+            {
+              "originRaw": "S2",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "wu-068-new-gt.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "CONFLICT",
+          "crossSellerVerdict": "PRESUMED_SAME",
+          "crossSellerBlockers": [
+            "MODEL_CODE_AGE_LINE",
+            "FIT"
+          ],
+          "crossSellerConflicts": [
+            "MODEL_CODE"
+          ],
+          "matchLevel": null,
+          "confidence": 1,
+          "priceAmount": 35,
+          "priceCurrency": "EUR",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "EXCLUDED",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": null,
+          "priced": false
+        },
+        {
+          "dedupeKey": "junioredition.com/products/hug-hairy-monster-baby-t-shirt-by-bobo-choses",
+          "url": "https://www.junioredition.com/products/hug-hairy-monster-baby-t-shirt-by-bobo-choses",
+          "domain": "junioredition.com",
+          "title": "Hug Hairy Monster Baby T-Shirt by Bobo Choses",
+          "CEO_GT": "SAME",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "B226AC009",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "core-2m-ceo-visual-gt.json",
+                "wu-112-human-gt.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "TEXT_CONFIRMED",
+          "crossSellerVerdict": "PRESUMED_SAME",
+          "crossSellerBlockers": [
+            "MODEL_CODE_AGE_LINE",
+            "FIT",
+            "SAME_SELLER_DISTINCT_LISTING"
+          ],
+          "crossSellerConflicts": [
+            "MODEL_CODE"
+          ],
+          "matchLevel": null,
+          "confidence": 0.87,
+          "priceAmount": 33,
+          "priceCurrency": "GBP",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "COMPARISON",
+          "soldOut": false,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "PRESUMED",
+          "priced": false
+        },
+        {
+          "dedupeKey": "kids21.com/products/700005621lbl",
+          "url": "https://kids21.com/products/700005621lbl",
+          "domain": "kids21.com",
+          "title": "Bobo Choses Hug Hairy Monster T-shirt",
+          "CEO_GT": "SAME",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "B226AC009",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "core-2m-ceo-visual-gt.json",
+                "wu-112-human-gt.json"
+              ]
+            },
+            {
+              "originRaw": "S2",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "wu-068-new-gt.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "STRONG_IDENTIFIER",
+          "crossSellerVerdict": "SAME",
+          "crossSellerBlockers": [],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 1,
+          "priceAmount": 70,
+          "priceCurrency": "SGD",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "EXACT",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "LIKELY",
+          "priced": true
+        },
+        {
+          "dedupeKey": "parkette.ca/products/hug-hairy-monster-sweatshirt",
+          "url": "https://www.parkette.ca/products/hug-hairy-monster-sweatshirt",
+          "domain": "parkette.ca",
+          "title": "Hug Hairy Monster Sweatshirt",
+          "CEO_GT": "DIFFERENT",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "B226AC009",
+              "CEO_GT": "DIFFERENT",
+              "fixtures": [
+                "core-2m-ceo-visual-gt.json",
+                "wu-112-human-gt.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "CONFLICT",
+          "crossSellerVerdict": "CONFLICT",
+          "crossSellerBlockers": [],
+          "crossSellerConflicts": [
+            "COLOR"
+          ],
+          "matchLevel": null,
+          "confidence": 0.75,
+          "priceAmount": 99,
+          "priceCurrency": "CAD",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "EXCLUDED",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": null,
+          "priced": false
+        },
+        {
+          "dedupeKey": "m.luxboy.com/product/a14338197cb8698cd92c86431cce8d05",
+          "url": "https://m.luxboy.com/product/A14338197CB8698CD92C86431CCE8D05",
+          "domain": "m.luxboy.com",
+          "title": "보보쇼즈(BOBO CHOSES) 키즈 긴팔티셔츠 B226AC009 | SINCE 2002 No.1 명품쇼핑, 럭스보이",
+          "CEO_GT": "GT_CONFLICT",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "B226AC009",
+              "CEO_GT": null,
+              "fixtures": [
+                "core-2m-ceo-visual-gt.json",
+                "core-same03-human-gt.json",
+                "wu-112-human-gt.json"
+              ]
+            }
+          ],
+          "market": "KR",
+          "matchTruth": "TEXT_CONFIRMED",
+          "crossSellerVerdict": "PRESUMED_SAME",
+          "crossSellerBlockers": [
+            "NO_TITLE_OVERLAP"
+          ],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 0.37,
+          "priceAmount": 59000,
+          "priceCurrency": "KRW",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "COMPARISON",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "PRESUMED",
+          "priced": false
+        },
+        {
+          "dedupeKey": "donokids.com/shop/shopdetail.html?branduid=3362785",
+          "url": "https://www.donokids.com/shop/shopdetail.html?branduid=3362785",
+          "domain": "donokids.com",
+          "title": "[[보보쇼즈] Hug Hairy Monster T-shirt #226AC009]",
+          "CEO_GT": "SAME",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "B226AC009",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "core-2m-ceo-visual-gt.json",
+                "core-same03-human-gt.json"
+              ]
+            }
+          ],
+          "market": "UNKNOWN",
+          "matchTruth": "TEXT_CONFIRMED",
+          "crossSellerVerdict": "PRESUMED_SAME",
+          "crossSellerBlockers": [
+            "BRAND_UNCONFIRMED"
+          ],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 0.82,
+          "priceAmount": 88000,
+          "priceCurrency": "KRW",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "COMPARISON",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": null,
+          "priced": false
+        },
+        {
+          "dedupeKey": "global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+          "url": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+          "domain": "global.trenbe.com",
+          "title": "Bobo Choses Kids Hug Hairy Monster Long Sleeve T-Shirt (Light Blue) B226AC009 451 160484657 [P]",
+          "CEO_GT": "GT_CONFLICT_CROSS_ORIGIN",
+          "GT_CONFLICT": true,
+          "gtRows": [
+            {
+              "originRaw": "B226AC009",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "core-same03-human-gt.json",
+                "wu-112-human-gt.json"
+              ]
+            },
+            {
+              "originRaw": "S2",
+              "CEO_GT": "DIFFERENT",
+              "fixtures": [
+                "wu-059-gt-facts.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "EXACT_IDENTIFIER",
+          "crossSellerVerdict": "SAME",
+          "crossSellerBlockers": [],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 0.97,
+          "priceAmount": 80,
+          "priceCurrency": "USD",
+          "priceStatus": "PRICE_UNAVAILABLE",
+          "priceTier": "EXACT",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "LIKELY",
+          "priced": false
+        },
+        {
+          "dedupeKey": "tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+          "url": "https://www.tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+          "domain": "tinyapple.net",
+          "title": "Bobo Choses Hug Hairy Monster T-shirt, Light Blue",
+          "CEO_GT": "SAME",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "S2",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "wu-059-gt-facts.json"
+              ]
+            },
+            {
+              "originRaw": "B226AC009",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "wu-112-human-gt.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "STRONG_IDENTIFIER",
+          "crossSellerVerdict": "SAME",
+          "crossSellerBlockers": [],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 0.79,
+          "priceAmount": 58,
+          "priceCurrency": "USD",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "EXACT",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "LIKELY",
+          "priced": true
+        },
+        {
+          "dedupeKey": "thefrontshop.com/products/hug-hairy-monster-t-shirt",
+          "url": "https://www.thefrontshop.com/products/hug-hairy-monster-t-shirt",
+          "domain": "thefrontshop.com",
+          "title": "Bobo Choses - Hug Hairy Monster T-Shirt",
+          "CEO_GT": "SAME",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "S2",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "wu-068-new-gt.json"
+              ]
+            },
+            {
+              "originRaw": "B226AC009",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "wu-112-human-gt.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "STRONG_IDENTIFIER",
+          "crossSellerVerdict": "SAME",
+          "crossSellerBlockers": [],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 1,
+          "priceAmount": 58,
+          "priceCurrency": "USD",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "EXACT",
+          "soldOut": false,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "LIKELY",
+          "priced": true
+        },
+        {
+          "dedupeKey": "scoutandcokids.com/products/bobo-choses-hug-hairy-monster-t-shirt",
+          "url": "https://scoutandcokids.com/products/bobo-choses-hug-hairy-monster-t-shirt",
+          "domain": "scoutandcokids.com",
+          "title": "Bobo Choses - Hug Hairy Monster T-shirt",
+          "CEO_GT": "SAME",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "B226AC009",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "wu-125-human-gt.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "STRONG_IDENTIFIER",
+          "crossSellerVerdict": "SAME",
+          "crossSellerBlockers": [],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 1,
+          "priceAmount": 37,
+          "priceCurrency": "GBP",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "EXACT",
+          "soldOut": false,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "LIKELY",
+          "priced": true
+        }
+      ],
+      "lost": [
+        {
+          "url": "https://www.stockmann.ee/et-ee/bobo-choses-trikoosark-hug-monster/18119748633-1.html",
+          "CEO_GT": "SAME",
+          "dedupeKey": "stockmann.ee/et-ee/bobo-choses-trikoosark-hug-monster/18119748633-1.html"
+        },
+        {
+          "url": "https://bornyesterdaykids.com/products/bobo-choses-baby-hug-hairy-monster-l-s-t-shirt-booo-bo-choses-tag-denim-pants-set-light-blue-red",
+          "CEO_GT": "GT_CONFLICT",
+          "dedupeKey": "bornyesterdaykids.com/products/bobo-choses-baby-hug-hairy-monster-l-s-t-shirt-booo-bo-choses-tag-denim-pants-set-light-blue-red"
+        },
+        {
+          "url": "https://miniboutique.co.kr/product/detail.html?product_no=4117&cate_no=1&display_group=1",
+          "CEO_GT": "REVIEW",
+          "dedupeKey": "miniboutique.co.kr/product/detail.html?cate_no=1&display_group=1&product_no=4117"
+        },
+        {
+          "url": "https://www.tinyapple.net/en-kr/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+          "CEO_GT": "SAME",
+          "dedupeKey": "tinyapple.net/en-kr/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue"
+        },
+        {
+          "url": "https://cemarose.ca/products/bobo-choses-kids-booty-ghosts-sweatshirt-light-blue-c7907",
+          "CEO_GT": "DIFFERENT",
+          "dedupeKey": "cemarose.ca/products/bobo-choses-kids-booty-ghosts-sweatshirt-light-blue-c7907"
+        },
+        {
+          "url": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+          "CEO_GT": "SAME",
+          "dedupeKey": "junioredition.com/en-kr/products/hug-hairy-monster-t-shirt-by-bobo-choses"
+        },
+        {
+          "url": "https://www.tinyapple.net/en-kr/products/bobo-choses-bobo-choses-pop-t-shirt-blue",
+          "CEO_GT": "DIFFERENT",
+          "dedupeKey": "tinyapple.net/en-kr/products/bobo-choses-bobo-choses-pop-t-shirt-blue"
+        }
+      ],
+      "metrics": [
+        {
+          "chunk": 0,
+          "suppliedUrls": 20,
+          "acceptedUrls": 19,
+          "usableProductUrls": 18,
+          "miEligibleCandidates": 17,
+          "fetchCalls": 19,
+          "notFetchedOverLimit": [],
+          "dropped": [
+            {
+              "url": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+              "reason": "SELF_REFERENCE"
+            },
+            {
+              "url": "https://miniboutique.co.kr/product/detail.html?product_no=4117&cate_no=1&display_group=1",
+              "reason": "UNREACHABLE"
+            },
+            {
+              "url": "https://www.tinyapple.net/en-kr/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+              "reason": "DUPLICATE"
+            }
+          ],
+          "providerCalls": 0
+        },
+        {
+          "chunk": 1,
+          "suppliedUrls": 1,
+          "acceptedUrls": 1,
+          "usableProductUrls": 1,
+          "miEligibleCandidates": 1,
+          "fetchCalls": 1,
+          "notFetchedOverLimit": [],
+          "dropped": [],
+          "providerCalls": 0
+        }
+      ]
+    },
+    {
+      "productId": "PRODUCT-03",
+      "originKey": "B226AC010",
+      "factsOwner": "wu-059-gt-facts.json#origins.S1(sku=B226AC010)",
+      "unavailableReason": null,
+      "originUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+      "dna": {
+        "brand": "Bobo Choses",
+        "brandModelCode": "B226AC010",
+        "color": "Heather Grey",
+        "title": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses"
+      },
+      "preconditions": [],
+      "gtLedgerRows": 28,
+      "uniqueGtPairs": 24,
+      "suppliedCount": 24,
+      "chunks": 2,
+      "notFetchedOverLimit": [],
+      "rows": [
+        {
+          "dedupeKey": "cissywears.com/products/bobo-choses-booty-ghosts-t-shirt",
+          "url": "https://cissywears.com/products/bobo-choses-booty-ghosts-t-shirt",
+          "domain": "cissywears.com",
+          "title": "Bobo Choses Booty Ghosts T-Shirt",
+          "CEO_GT": "SAME",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "B226AC010",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "wu-112-human-gt.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "STRONG_IDENTIFIER",
+          "crossSellerVerdict": "SAME",
+          "crossSellerBlockers": [],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 0.75,
+          "priceAmount": 37,
+          "priceCurrency": "GBP",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "EXACT",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "LIKELY",
+          "priced": true
+        },
+        {
+          "dedupeKey": "beaumonde.co.kr/goods/goods_view.php?goodsno=1000014021",
+          "url": "https://www.beaumonde.co.kr/goods/goods_view.php?goodsNo=1000014021",
+          "domain": "beaumonde.co.kr",
+          "title": "보보쇼즈 26FW 아동 긴팔 티셔츠 Booty Ghosts T-shirt B226AC010",
+          "CEO_GT": "SAME",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "B226AC010",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "core-same03-human-gt.json",
+                "wu-112-human-gt.json"
+              ]
+            },
+            {
+              "originRaw": "S1",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "wu-059-gt-facts.json"
+              ]
+            }
+          ],
+          "market": "KR",
+          "matchTruth": "STRONG_IDENTIFIER",
+          "crossSellerVerdict": "SAME",
+          "crossSellerBlockers": [],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 0.64,
+          "priceAmount": 88000,
+          "priceCurrency": "KRW",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "EXACT",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "LIKELY",
+          "priced": true
+        },
+        {
+          "dedupeKey": "rboutique.com/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
+          "url": "https://www.rboutique.com/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
+          "domain": "rboutique.com",
+          "title": "'Booty Ghosts' cotton T-shirt - KIDS BOBO CHOSES &ndash; RBoutique",
+          "CEO_GT": "SAME",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "B226AC010",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "wu-112-human-gt.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "TEXT_CONFIRMED",
+          "crossSellerVerdict": "PRESUMED_SAME",
+          "crossSellerBlockers": [],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 0.58,
+          "priceAmount": 44,
+          "priceCurrency": "USD",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "COMPARISON",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "PRESUMED",
+          "priced": false
+        },
+        {
+          "dedupeKey": "kolkid.ca/products/bobo-choses-booty-ghosts-t-shirt",
+          "url": "https://kolkid.ca/products/bobo-choses-booty-ghosts-t-shirt",
+          "domain": "kolkid.ca",
+          "title": "Bobo Choses Booty Ghosts T-Shirt",
+          "CEO_GT": "SAME",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "S1",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "wu-068-new-gt.json"
+              ]
+            },
+            {
+              "originRaw": "B226AC010",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "wu-112-human-gt.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "TEXT_CONFIRMED",
+          "crossSellerVerdict": "PRESUMED_SAME",
+          "crossSellerBlockers": [
+            "FIT"
+          ],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 0.75,
+          "priceAmount": 64,
+          "priceCurrency": "CAD",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "COMPARISON",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "PRESUMED",
+          "priced": false
+        },
+        {
+          "dedupeKey": "junioredition.com/products/booty-ghosts-t-shirt-by-bobo-choses",
+          "url": "https://www.junioredition.com/products/booty-ghosts-t-shirt-by-bobo-choses",
+          "domain": "junioredition.com",
+          "title": "Booty Ghosts T-Shirt by Bobo Choses",
+          "CEO_GT": "DIFFERENT",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "B226AC010",
+              "CEO_GT": "DIFFERENT",
+              "fixtures": [
+                "wu-112-human-gt.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "CONFLICT",
+          "crossSellerVerdict": "CONFLICT",
+          "crossSellerBlockers": [],
+          "crossSellerConflicts": [
+            "COLOR",
+            "MODEL_CODE"
+          ],
+          "matchLevel": null,
+          "confidence": 0.75,
+          "priceAmount": 35,
+          "priceCurrency": "GBP",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "EXCLUDED",
+          "soldOut": false,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": null,
+          "priced": false
+        },
+        {
+          "dedupeKey": "tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt-heather-grey",
+          "url": "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt-heather-grey",
+          "domain": "tinyapple.net",
+          "title": "Bobo Choses Booty Ghosts T-shirt, Heather Grey",
+          "CEO_GT": "SAME",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "B226AC010",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "wu-112-human-gt.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "STRONG_IDENTIFIER",
+          "crossSellerVerdict": "SAME",
+          "crossSellerBlockers": [],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 0.64,
+          "priceAmount": 58,
+          "priceCurrency": "USD",
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "priceTier": "EXACT",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "LIKELY",
+          "priced": false
+        },
+        {
+          "dedupeKey": "bobochoses.com/products/b226ab046-booty-ghosts-t-shirt",
+          "url": "https://bobochoses.com/products/b226ab046-booty-ghosts-t-shirt",
+          "domain": "bobochoses.com",
+          "title": "Booty Ghosts T-shirt",
+          "CEO_GT": "SAME",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "S1",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "wu-068-new-gt.json"
+              ]
+            },
+            {
+              "originRaw": "B226AC010",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "wu-112-human-gt.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "CONFLICT",
+          "crossSellerVerdict": "CONFLICT",
+          "crossSellerBlockers": [],
+          "crossSellerConflicts": [
+            "MODEL_CODE"
+          ],
+          "matchLevel": null,
+          "confidence": 0.75,
+          "priceAmount": 35,
+          "priceCurrency": "EUR",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "EXCLUDED",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "POSSIBLE",
+          "priced": false
+        },
+        {
+          "dedupeKey": "billsstore.com.au/products/booty-ghosts-long-sleeve-t-shirt-baby",
+          "url": "https://www.billsstore.com.au/products/booty-ghosts-long-sleeve-t-shirt-baby",
+          "domain": "billsstore.com.au",
+          "title": "Booty Ghosts Long Sleeve T-Shirt Baby",
+          "CEO_GT": "SAME",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "B226AC010",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "wu-112-human-gt.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "STRONG_IDENTIFIER",
+          "crossSellerVerdict": "SAME",
+          "crossSellerBlockers": [],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 0.9,
+          "priceAmount": 73,
+          "priceCurrency": "AUD",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "EXACT",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "LIKELY",
+          "priced": true
+        },
+        {
+          "dedupeKey": "tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt",
+          "url": "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt",
+          "domain": "tinyapple.net",
+          "title": "Bobo Choses Booty Ghosts T-shirt",
+          "CEO_GT": "DIFFERENT",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "S1",
+              "CEO_GT": "DIFFERENT",
+              "fixtures": [
+                "wu-068-new-gt.json"
+              ]
+            },
+            {
+              "originRaw": "B226AC010",
+              "CEO_GT": "DIFFERENT",
+              "fixtures": [
+                "wu-112-human-gt.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "CONFLICT",
+          "crossSellerVerdict": "CONFLICT",
+          "crossSellerBlockers": [],
+          "crossSellerConflicts": [
+            "MODEL_CODE"
+          ],
+          "matchLevel": null,
+          "confidence": 0.75,
+          "priceAmount": 53,
+          "priceCurrency": "USD",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "EXCLUDED",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "POSSIBLE",
+          "priced": false
+        },
+        {
+          "dedupeKey": "scoutandcokids.com/products/bobo-choses-booty-ghosts-t-shirt",
+          "url": "https://scoutandcokids.com/products/bobo-choses-booty-ghosts-t-shirt",
+          "domain": "scoutandcokids.com",
+          "title": "Bobo Choses - Booty Ghosts T-shirt",
+          "CEO_GT": "SAME",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "B226AC010",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "wu-125-human-gt.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "STRONG_IDENTIFIER",
+          "crossSellerVerdict": "SAME",
+          "crossSellerBlockers": [],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 0.75,
+          "priceAmount": 37,
+          "priceCurrency": "GBP",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "EXACT",
+          "soldOut": false,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "LIKELY",
+          "priced": true
+        }
+      ],
+      "lost": [
+        {
+          "url": "https://cissywears.com/products/bobo-choses-baby-booty-ghosts-t-shirt",
+          "CEO_GT": "SAME",
+          "dedupeKey": "cissywears.com/products/bobo-choses-baby-booty-ghosts-t-shirt"
+        },
+        {
+          "url": "https://www.beaumonde.co.kr/goods/goods_list.php?page=3&brandCd=070002",
+          "CEO_GT": "REVIEW",
+          "dedupeKey": "beaumonde.co.kr/goods/goods_list.php?brandcd=070002&page=3"
+        },
+        {
+          "url": "https://kream.co.kr/products/1030865",
+          "CEO_GT": "REVIEW",
+          "dedupeKey": "kream.co.kr/products/1030865"
+        },
+        {
+          "url": "https://luksusbaby.kr/products/bobo-choses-light-blue-booty-ghosts-sweatshirt-1",
+          "CEO_GT": "GT_CONFLICT",
+          "dedupeKey": "luksusbaby.kr/products/bobo-choses-light-blue-booty-ghosts-sweatshirt-1"
+        },
+        {
+          "url": "https://luksusbaby.kr/products/bobo-choses-light-blue-booty-ghosts-t-shirt",
+          "CEO_GT": "REVIEW",
+          "dedupeKey": "luksusbaby.kr/products/bobo-choses-light-blue-booty-ghosts-t-shirt"
+        },
+        {
+          "url": "https://www.rboutique.com/en-us/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
+          "CEO_GT": "SAME",
+          "dedupeKey": "rboutique.com/en-us/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533"
+        },
+        {
+          "url": "https://www.eraldo.com/en-us/products/bobo-choses-booty-ghosts-t-shirt-340496",
+          "CEO_GT": "SAME",
+          "dedupeKey": "eraldo.com/en-us/products/bobo-choses-booty-ghosts-t-shirt-340496"
+        },
+        {
+          "url": "https://cissywears.com/en-us/products/bobo-choses-booty-ghosts-t-shirt",
+          "CEO_GT": "SAME",
+          "dedupeKey": "cissywears.com/en-us/products/bobo-choses-booty-ghosts-t-shirt"
+        },
+        {
+          "url": "https://www.junioredition.com/en-kr/products/booty-ghosts-t-shirt-by-bobo-choses",
+          "CEO_GT": "DIFFERENT",
+          "dedupeKey": "junioredition.com/en-kr/products/booty-ghosts-t-shirt-by-bobo-choses"
+        },
+        {
+          "url": "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-sweatshirt",
+          "CEO_GT": "DIFFERENT",
+          "dedupeKey": "tinyapple.net/products/bobo-choses-booty-ghosts-sweatshirt"
+        },
+        {
+          "url": "https://www.eraldo.com/products/bobo-choses-booty-ghosts-t-shirt-340496",
+          "CEO_GT": "SAME",
+          "dedupeKey": "eraldo.com/products/bobo-choses-booty-ghosts-t-shirt-340496"
+        },
+        {
+          "url": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+          "CEO_GT": "SAME",
+          "dedupeKey": "junioredition.com/en-kr/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses"
+        },
+        {
+          "url": "https://www.tinyapple.net/en-kr/products/bobo-choses-booty-ghosts-t-shirt",
+          "CEO_GT": "DIFFERENT",
+          "dedupeKey": "tinyapple.net/en-kr/products/bobo-choses-booty-ghosts-t-shirt"
+        },
+        {
+          "url": "https://www.tinyapple.net/en-kr/products/bobo-choses-bobo-choses-embossed-t-shirt-multicolor",
+          "CEO_GT": "DIFFERENT",
+          "dedupeKey": "tinyapple.net/en-kr/products/bobo-choses-bobo-choses-embossed-t-shirt-multicolor"
+        }
+      ],
+      "metrics": [
+        {
+          "chunk": 0,
+          "suppliedUrls": 20,
+          "acceptedUrls": 20,
+          "usableProductUrls": 18,
+          "miEligibleCandidates": 15,
+          "fetchCalls": 25,
+          "notFetchedOverLimit": [],
+          "dropped": [
+            {
+              "url": "https://www.eraldo.com/en-us/products/bobo-choses-booty-ghosts-t-shirt-340496",
+              "reason": "REDIRECTED_AWAY"
+            },
+            {
+              "url": "https://www.rboutique.com/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
+              "reason": "DUPLICATE"
+            },
+            {
+              "url": "https://www.eraldo.com/products/bobo-choses-booty-ghosts-t-shirt-340496",
+              "reason": "REDIRECTED_AWAY"
+            },
+            {
+              "url": "https://cissywears.com/products/bobo-choses-booty-ghosts-t-shirt",
+              "reason": "DUPLICATE"
+            },
+            {
+              "url": "https://www.junioredition.com/products/booty-ghosts-t-shirt-by-bobo-choses",
+              "reason": "DUPLICATE"
+            }
+          ],
+          "providerCalls": 0
+        },
+        {
+          "chunk": 1,
+          "suppliedUrls": 4,
+          "acceptedUrls": 3,
+          "usableProductUrls": 2,
+          "miEligibleCandidates": 2,
+          "fetchCalls": 4,
+          "notFetchedOverLimit": [],
+          "dropped": [
+            {
+              "url": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+              "reason": "SELF_REFERENCE"
+            },
+            {
+              "url": "https://www.tinyapple.net/en-kr/products/bobo-choses-bobo-choses-embossed-t-shirt-multicolor",
+              "reason": "UNREACHABLE"
+            }
+          ],
+          "providerCalls": 0
+        }
+      ]
+    },
+    {
+      "productId": "PRODUCT-04",
+      "originKey": "S3",
+      "factsOwner": "wu-059-gt-facts.json#origins.S3",
+      "unavailableReason": null,
+      "originUrl": "https://www.junioredition.com/en-kr/products/curious-turnip-all-over-swim-cap-by-bobo-choses",
+      "dna": {
+        "brand": "Bobo Choses",
+        "brandModelCode": "B126AI018",
+        "color": "Green",
+        "title": "Curious Turnip All Over Swim Cap by Bobo Choses - Last One In Stock - 2-6 Years"
+      },
+      "preconditions": [],
+      "gtLedgerRows": 4,
+      "uniqueGtPairs": 4,
+      "suppliedCount": 4,
+      "chunks": 1,
+      "notFetchedOverLimit": [],
+      "rows": [
+        {
+          "dedupeKey": "bobochoses.co.jp/products/b126ai018-curious-turnip-all-over-swim-cap",
+          "url": "https://bobochoses.co.jp/products/b126ai018-curious-turnip-all-over-swim-cap",
+          "domain": "bobochoses.co.jp",
+          "title": "Curious Turnip all over swim cap",
+          "CEO_GT": "SAME",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "S3",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "wu-059-gt-facts.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "TEXT_CONFIRMED",
+          "crossSellerVerdict": "PRESUMED_SAME",
+          "crossSellerBlockers": [
+            "BRAND_UNCONFIRMED"
+          ],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 1,
+          "priceAmount": 4840,
+          "priceCurrency": "JPY",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "COMPARISON",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "PRESUMED",
+          "priced": false
+        }
+      ],
+      "lost": [
+        {
+          "url": "https://bobochoses.co.jp/ja/products/b126ai018-curious-turnip-all-over-swim-cap",
+          "CEO_GT": "SAME",
+          "dedupeKey": "bobochoses.co.jp/ja/products/b126ai018-curious-turnip-all-over-swim-cap"
+        },
+        {
+          "url": "https://www.stadtlandkind.ch/en/products/uv-sun-hat-curious-turnip-green",
+          "CEO_GT": "SAME",
+          "dedupeKey": "stadtlandkind.ch/en/products/uv-sun-hat-curious-turnip-green"
+        },
+        {
+          "url": "https://kids21.com/products/700002005grn",
+          "CEO_GT": "REVIEW",
+          "dedupeKey": "kids21.com/products/700002005grn"
+        }
+      ],
+      "metrics": [
+        {
+          "chunk": 0,
+          "suppliedUrls": 4,
+          "acceptedUrls": 4,
+          "usableProductUrls": 3,
+          "miEligibleCandidates": 2,
+          "fetchCalls": 6,
+          "notFetchedOverLimit": [],
+          "dropped": [
+            {
+              "url": "https://bobochoses.co.jp/products/b126ai018-curious-turnip-all-over-swim-cap",
+              "reason": "DUPLICATE"
+            },
+            {
+              "url": "https://kids21.com/products/700002005grn",
+              "reason": "REDIRECTED_AWAY"
+            }
+          ],
+          "providerCalls": 0
+        }
+      ]
+    },
+    {
+      "productId": "PRODUCT-05",
+      "originKey": "S4",
+      "factsOwner": "wu-059-gt-facts.json#origins.S4",
+      "unavailableReason": null,
+      "originUrl": "https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story?_pos=1&_sid=a0738e824&_ss=r",
+      "dna": {
+        "brand": "Main Story",
+        "brandModelCode": "AW26MS185",
+        "color": "Grey Melange",
+        "title": "Bubble Sweatshirt in Grey Melange by Main Story"
+      },
+      "preconditions": [],
+      "gtLedgerRows": 6,
+      "uniqueGtPairs": 6,
+      "suppliedCount": 6,
+      "chunks": 1,
+      "notFetchedOverLimit": [],
+      "rows": [
+        {
+          "dedupeKey": "donokids.com/m/product.html?branduid=3362912",
+          "url": "https://www.donokids.com/m/product.html?branduid=3362912",
+          "domain": "donokids.com",
+          "title": "[[메인스토리] Bubble Sweatshirt _Conker Stripe #AW26MS185]",
+          "CEO_GT": "DIFFERENT",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "S4",
+              "CEO_GT": "DIFFERENT",
+              "fixtures": [
+                "wu-059-gt-facts.json"
+              ]
+            }
+          ],
+          "market": "KR",
+          "matchTruth": "TEXT_CONFIRMED",
+          "crossSellerVerdict": "PRESUMED_SAME",
+          "crossSellerBlockers": [
+            "BRAND_UNCONFIRMED"
+          ],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 0.46,
+          "priceAmount": 134000,
+          "priceCurrency": "KRW",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "COMPARISON",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "PRESUMED",
+          "priced": false
+        },
+        {
+          "dedupeKey": "junioredition.com/products/bubble-sweatshirt-in-conker-stripe-by-main-story",
+          "url": "https://www.junioredition.com/products/bubble-sweatshirt-in-conker-stripe-by-main-story",
+          "domain": "junioredition.com",
+          "title": "Bubble Sweatshirt in Conker Stripe by Main Story",
+          "CEO_GT": "DIFFERENT",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "S4",
+              "CEO_GT": "DIFFERENT",
+              "fixtures": [
+                "wu-059-gt-facts.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "TEXT_CONFIRMED",
+          "crossSellerVerdict": "PRESUMED_SAME",
+          "crossSellerBlockers": [
+            "SAME_SELLER_DISTINCT_LISTING"
+          ],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 0.78,
+          "priceAmount": 65,
+          "priceCurrency": "GBP",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "COMPARISON",
+          "soldOut": false,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "PRESUMED",
+          "priced": false
+        },
+        {
+          "dedupeKey": "main-story.com/products/bubble-sweatshirt-grey-melange-1",
+          "url": "https://main-story.com/products/bubble-sweatshirt-grey-melange-1",
+          "domain": "main-story.com",
+          "title": "Bubble Sweatshirt - Grey Melange",
+          "CEO_GT": "SAME",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "S4",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "wu-059-gt-facts.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "STRONG_IDENTIFIER",
+          "crossSellerVerdict": "SAME",
+          "crossSellerBlockers": [],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 0.72,
+          "priceAmount": 57,
+          "priceCurrency": "GBP",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "EXACT",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "LIKELY",
+          "priced": true
+        }
+      ],
+      "lost": [
+        {
+          "url": "https://www.junioredition.com/products/bubble-sweatshirt-in-graystone-by-main-story",
+          "CEO_GT": "DIFFERENT",
+          "dedupeKey": "junioredition.com/products/bubble-sweatshirt-in-graystone-by-main-story"
+        },
+        {
+          "url": "https://main-story.com/collections/shop/products/bubble-sweatshirt-graystone",
+          "CEO_GT": "DIFFERENT",
+          "dedupeKey": "main-story.com/products/bubble-sweatshirt-graystone"
+        },
+        {
+          "url": "https://main-story.com/products/bubble-sweatshirt-grey-melange",
+          "CEO_GT": "REVIEW",
+          "dedupeKey": "main-story.com/products/bubble-sweatshirt-grey-melange"
+        }
+      ],
+      "metrics": [
+        {
+          "chunk": 0,
+          "suppliedUrls": 6,
+          "acceptedUrls": 6,
+          "usableProductUrls": 5,
+          "miEligibleCandidates": 5,
+          "fetchCalls": 7,
+          "notFetchedOverLimit": [],
+          "dropped": [
+            {
+              "url": "https://main-story.com/products/bubble-sweatshirt-grey-melange",
+              "reason": "REDIRECTED_AWAY"
+            }
+          ],
+          "providerCalls": 0
+        }
+      ]
+    },
+    {
+      "productId": "PRODUCT-06",
+      "originKey": "S5",
+      "factsOwner": "wu-059-gt-facts.json#origins.S5",
+      "unavailableReason": null,
+      "originUrl": "https://www.junioredition.com/en-kr/products/lulu-t-bar-shoes-in-vernice-nero-by-pepe",
+      "dna": {
+        "brand": "Pèpè Shoes",
+        "brandModelCode": "01195-VERNICE-NERO",
+        "color": null,
+        "title": "Lulu T Bar Shoes in Vernice Nero by PèPè - Last Ones In Stock - 28-29 EUR"
+      },
+      "preconditions": [
+        "ORIGIN_COLOR_BLANK"
+      ],
+      "gtLedgerRows": 1,
+      "uniqueGtPairs": 1,
+      "suppliedCount": 1,
+      "chunks": 1,
+      "notFetchedOverLimit": [],
+      "rows": [],
+      "lost": [
+        {
+          "url": "https://www.thefrontshop.com/products/pepe-style-1195-vernice-fard",
+          "CEO_GT": "REVIEW",
+          "dedupeKey": "thefrontshop.com/products/pepe-style-1195-vernice-fard"
+        }
+      ],
+      "metrics": [
+        {
+          "chunk": 0,
+          "suppliedUrls": 1,
+          "acceptedUrls": 1,
+          "usableProductUrls": 0,
+          "miEligibleCandidates": 0,
+          "fetchCalls": 2,
+          "notFetchedOverLimit": [],
+          "dropped": [
+            {
+              "url": "https://www.thefrontshop.com/products/pepe-style-1195-vernice-fard",
+              "reason": "REDIRECTED_AWAY"
+            }
+          ],
+          "providerCalls": 0
+        }
+      ]
+    },
+    {
+      "productId": "PRODUCT-07",
+      "originKey": "S6",
+      "factsOwner": "wu-059-gt-facts.json#origins.S6",
+      "unavailableReason": null,
+      "originUrl": "https://bobochoses.co.jp/products/b226ac117-b-c-embossed-tracksuit-jacket",
+      "dna": {
+        "brand": null,
+        "brandModelCode": "B226AC117",
+        "color": "Blue",
+        "title": "B.C. Embossed tracksuit jacket"
+      },
+      "preconditions": [
+        "ORIGIN_BRAND_BLANK"
+      ],
+      "gtLedgerRows": 8,
+      "uniqueGtPairs": 8,
+      "suppliedCount": 8,
+      "chunks": 1,
+      "notFetchedOverLimit": [],
+      "rows": [
+        {
+          "dedupeKey": "ladida.com/products/bobo-choses-multicolor-bc-color-block-tracksuit-jacket",
+          "url": "https://www.ladida.com/products/bobo-choses-multicolor-bc-color-block-tracksuit-jacket",
+          "domain": "ladida.com",
+          "title": "Bobo Choses Multicolor Bc Color Block Tracksuit Jacket",
+          "CEO_GT": "DIFFERENT",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "S6",
+              "CEO_GT": "DIFFERENT",
+              "fixtures": [
+                "wu-059-gt-facts.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "TEXT_CONFIRMED",
+          "crossSellerVerdict": "PRESUMED_SAME",
+          "crossSellerBlockers": [
+            "BRAND_UNCONFIRMED"
+          ],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 0.36,
+          "priceAmount": 147,
+          "priceCurrency": "USD",
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "priceTier": "COMPARISON",
+          "soldOut": true,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "PRESUMED",
+          "priced": false
+        },
+        {
+          "dedupeKey": "bobochoses.com/products/b226ac117-b-c-embossed-tracksuit-jacket",
+          "url": "https://bobochoses.com/products/b226ac117-b-c-embossed-tracksuit-jacket",
+          "domain": "bobochoses.com",
+          "title": "B.C. Embossed tracksuit jacket",
+          "CEO_GT": "SAME",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "S6",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "wu-059-gt-facts.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "EXACT_IDENTIFIER",
+          "crossSellerVerdict": "SAME",
+          "crossSellerBlockers": [],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 1,
+          "priceAmount": 120,
+          "priceCurrency": "EUR",
+          "priceStatus": "VERIFIED_CURRENT",
+          "priceTier": "EXACT",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "LIKELY",
+          "priced": true
+        },
+        {
+          "dedupeKey": "kihanan.com/products/drop2-2026aw-bobochoses-b-c-embossed-tracksuit-jacket-b226ac117",
+          "url": "https://kihanan.com/products/drop2-2026aw-bobochoses-b-c-embossed-tracksuit-jacket-b226ac117",
+          "domain": "kihanan.com",
+          "title": "★DROP2★2026AW★BOBOCHOSES ボボショーズ B.C. Embossed tracksuit jacket B226AC117",
+          "CEO_GT": "SAME",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "S6",
+              "CEO_GT": "SAME",
+              "fixtures": [
+                "wu-059-gt-facts.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "TEXT_CONFIRMED",
+          "crossSellerVerdict": "PRESUMED_SAME",
+          "crossSellerBlockers": [
+            "BRAND_UNCONFIRMED"
+          ],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 0.49,
+          "priceAmount": 26400,
+          "priceCurrency": "JPY",
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "priceTier": "COMPARISON",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "PRESUMED",
+          "priced": false
+        }
+      ],
+      "lost": [
+        {
+          "url": "https://www.tinyapple.net/products/bobo-choses-bobo-choses-modern-tracksuit-jacket-multicolor",
+          "CEO_GT": "DIFFERENT",
+          "dedupeKey": "tinyapple.net/products/bobo-choses-bobo-choses-modern-tracksuit-jacket-multicolor"
+        },
+        {
+          "url": "https://kids21.com/products/700002037mlt",
+          "CEO_GT": "REVIEW",
+          "dedupeKey": "kids21.com/products/700002037mlt"
+        },
+        {
+          "url": "https://global.trenbe.com/products/bobo-choses-modern-tracksuit-jacket-for-kids-160301440-p",
+          "CEO_GT": "REVIEW",
+          "dedupeKey": "global.trenbe.com/products/bobo-choses-modern-tracksuit-jacket-for-kids-160301440-p"
+        },
+        {
+          "url": "https://global.trenbe.com/products/bobo-choses-kids-jacket-modern-tracksuit-159406743-p",
+          "CEO_GT": "REVIEW",
+          "dedupeKey": "global.trenbe.com/products/bobo-choses-kids-jacket-modern-tracksuit-159406743-p"
+        },
+        {
+          "url": "https://www.wconcept.co.kr/Product/306219521",
+          "CEO_GT": "DIFFERENT",
+          "dedupeKey": "wconcept.co.kr/product/306219521"
+        }
+      ],
+      "metrics": [
+        {
+          "chunk": 0,
+          "suppliedUrls": 8,
+          "acceptedUrls": 8,
+          "usableProductUrls": 4,
+          "miEligibleCandidates": 4,
+          "fetchCalls": 12,
+          "notFetchedOverLimit": [],
+          "dropped": [
+            {
+              "url": "https://www.tinyapple.net/products/bobo-choses-bobo-choses-modern-tracksuit-jacket-multicolor",
+              "reason": "UNREACHABLE"
+            },
+            {
+              "url": "https://kids21.com/products/700002037mlt",
+              "reason": "REDIRECTED_AWAY"
+            },
+            {
+              "url": "https://global.trenbe.com/products/bobo-choses-modern-tracksuit-jacket-for-kids-160301440-p",
+              "reason": "UNREACHABLE"
+            },
+            {
+              "url": "https://global.trenbe.com/products/bobo-choses-kids-jacket-modern-tracksuit-159406743-p",
+              "reason": "UNREACHABLE"
+            }
+          ],
+          "providerCalls": 0
+        }
+      ]
+    },
+    {
+      "productId": "PRODUCT-08",
+      "originKey": "SM430632",
+      "factsOwner": "gt-master-origins.json#origins.SM430632(snapshot 1b070e39-24fc-4156-ba12-bc089fd6d755)",
+      "unavailableReason": null,
+      "originUrl": "https://www.smallable.com/en/product/all-about-monsters-washed-t-shirt-organic-cotton-blue-bobo-choses-430632?algsearch=0bf345b776eec78c2df693b192ecdfea",
+      "dna": {
+        "brand": "Bobo Choses",
+        "brandModelCode": null,
+        "color": "Blue",
+        "title": "All About Monsters Washed T-shirt Organic cotton | Blue"
+      },
+      "preconditions": [
+        "ORIGIN_MODEL_CODE_BLANK"
+      ],
+      "gtLedgerRows": 5,
+      "uniqueGtPairs": 5,
+      "suppliedCount": 5,
+      "chunks": 1,
+      "notFetchedOverLimit": [],
+      "rows": [
+        {
+          "dedupeKey": "bobochoses.com/products/b226ab043-mush-monster-duo-all-over-t-shirt",
+          "url": "https://bobochoses.com/products/b226ab043-mush-monster-duo-all-over-t-shirt",
+          "domain": "bobochoses.com",
+          "title": "Mush Monster Duo all over T-shirt",
+          "CEO_GT": "DIFFERENT",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "SM430632",
+              "CEO_GT": "DIFFERENT",
+              "fixtures": [
+                "core-2al-human-gt.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "TEXT_CONFIRMED",
+          "crossSellerVerdict": "PRESUMED_SAME",
+          "crossSellerBlockers": [
+            "AUDIENCE_LINE"
+          ],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 0.48,
+          "priceAmount": 37,
+          "priceCurrency": "EUR",
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "priceTier": "COMPARISON",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "PRESUMED",
+          "priced": false
+        },
+        {
+          "dedupeKey": "junioredition.com/products/juicy-tomatoes-all-over-baby-t-shirt-by-bobo-choses",
+          "url": "https://junioredition.com/products/juicy-tomatoes-all-over-baby-t-shirt-by-bobo-choses",
+          "domain": "junioredition.com",
+          "title": "Juicy Tomatoes All Over Baby T-Shirt by Bobo Choses - Last One In Stock - 6 Months",
+          "CEO_GT": "DIFFERENT",
+          "GT_CONFLICT": false,
+          "gtRows": [
+            {
+              "originRaw": "SM430632",
+              "CEO_GT": "DIFFERENT",
+              "fixtures": [
+                "core-2al-human-gt.json"
+              ]
+            }
+          ],
+          "market": "OVERSEAS",
+          "matchTruth": "TEXT_CONFIRMED",
+          "crossSellerVerdict": "PRESUMED_SAME",
+          "crossSellerBlockers": [
+            "AUDIENCE_LINE"
+          ],
+          "crossSellerConflicts": [],
+          "matchLevel": null,
+          "confidence": 0.48,
+          "priceAmount": 9.9,
+          "priceCurrency": "GBP",
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "priceTier": "COMPARISON",
+          "soldOut": false,
+          "source": "REVIEWED_SAME",
+          "brand": null,
+          "modelCode": null,
+          "display": "PRESUMED",
+          "priced": false
+        }
+      ],
+      "lost": [
+        {
+          "url": "https://bobochoses.com/products/b226ab048-softpaw-monster-all-over-t-shirt",
+          "CEO_GT": "DIFFERENT",
+          "dedupeKey": "bobochoses.com/products/b226ab048-softpaw-monster-all-over-t-shirt"
+        },
+        {
+          "url": "https://junioredition.com/products/mush-monster-duo-all-over-baby-t-shirt-by-bobo-choses",
+          "CEO_GT": "DIFFERENT",
+          "dedupeKey": "junioredition.com/products/mush-monster-duo-all-over-baby-t-shirt-by-bobo-choses"
+        },
+        {
+          "url": "https://junioredition.com/products/bobo-choses-color-all-over-baby-t-shirt-by-bobo-choses",
+          "CEO_GT": "DIFFERENT",
+          "dedupeKey": "junioredition.com/products/bobo-choses-color-all-over-baby-t-shirt-by-bobo-choses"
+        }
+      ],
+      "metrics": [
+        {
+          "chunk": 0,
+          "suppliedUrls": 5,
+          "acceptedUrls": 5,
+          "usableProductUrls": 5,
+          "miEligibleCandidates": 5,
+          "fetchCalls": 5,
+          "notFetchedOverLimit": [],
+          "dropped": [],
+          "providerCalls": 0
+        }
+      ]
+    }
+  ]
+}

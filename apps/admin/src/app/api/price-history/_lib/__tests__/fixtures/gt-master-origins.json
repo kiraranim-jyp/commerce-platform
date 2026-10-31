@@ -1,0 +1,218 @@
+{
+  "_wu": "IDENTITY-GT-EVIDENCE-MASTER-REVIEW-01 Step 3",
+  "_note": "🔴 운영 DB product_snapshots.workspace->canonicalProduct 를 **그대로** 덤프했다(가공 0 · 값 생성 0). 🔴 wu-059-gt-facts 의 origins 에 없는 상품을 메우기 위한 것이고, 그 파일을 대체하지 않는다.",
+  "_unavailable": {
+    "AC157": "🔴 MEASUREMENT_UNAVAILABLE — product_snapshots 전수에 b226ac157 **0행**(url/sku 두 축 조회). core-2al-human-gt.json 의 origins.AC157 은 url+title 뿐이고 canonicalProduct 가 없다. 🔴 b226ac043(half zipped sweatshirt)은 **다른 상품** 이라 대체로 쓰지 않았다."
+  },
+  "origins": {
+    "SM430632": {
+      "snapshotId": "1b070e39-24fc-4156-ba12-bc089fd6d755",
+      "workspaceId": "df50fd5e-6586-499b-a21d-57f5a3e86d70",
+      "sourceUrl": "https://www.smallable.com/en/product/all-about-monsters-washed-t-shirt-organic-cotton-blue-bobo-choses-430632?algsearch=0bf345b776eec78c2df693b192ecdfea",
+      "canonicalProduct": {
+        "sku": {
+          "value": "AAA1804532",
+          "source": "ORIGINAL",
+          "confidence": 0.9
+        },
+        "brand": {
+          "value": "Bobo Choses",
+          "source": "ORIGINAL",
+          "confidence": 0.9
+        },
+        "color": {
+          "value": "Blue",
+          "source": "ORIGINAL",
+          "confidence": 0.7
+        },
+        "price": {
+          "value": {
+            "amount": 45,
+            "currency": "EUR"
+          },
+          "source": "ORIGINAL",
+          "confidence": 0.9
+        },
+        "title": {
+          "value": "All About Monsters Washed T-shirt Organic cotton | Blue",
+          "source": "ORIGINAL",
+          "confidence": 0.9
+        },
+        "images": [
+          {
+            "id": "0001",
+            "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/e92e7982-81c0-47bb-87fc-e1599ab1d776-0001.jpg",
+            "classification": "PRODUCT",
+            "selectedVariant": "ORIGINAL",
+            "isRepresentative": true,
+            "useInDescription": false,
+            "useInProductGallery": true
+          },
+          {
+            "id": "0002",
+            "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/ba3ca156-0cb1-41c8-b20c-2228c2a28f2f-0002.jpg",
+            "classification": "MODEL",
+            "selectedVariant": "ORIGINAL",
+            "isRepresentative": false,
+            "useInDescription": true,
+            "useInProductGallery": true
+          },
+          {
+            "id": "0003",
+            "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/1fb1153c-cd13-4d92-8aa7-f972927ba20e-0003.jpg",
+            "classification": "MODEL",
+            "selectedVariant": "ORIGINAL",
+            "isRepresentative": false,
+            "useInDescription": true,
+            "useInProductGallery": true
+          },
+          {
+            "id": "0004",
+            "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/ea318286-323d-4963-a135-dfec44222d61-0004.jpg",
+            "classification": "MODEL",
+            "selectedVariant": "ORIGINAL",
+            "isRepresentative": false,
+            "useInDescription": true,
+            "useInProductGallery": true
+          }
+        ],
+        "weight": {
+          "value": "",
+          "source": "REQUIRED",
+          "confidence": 0
+        },
+        "options": {
+          "value": [],
+          "source": "ORIGINAL",
+          "confidence": 0
+        },
+        "titleKo": {
+          "value": "",
+          "source": "ORIGINAL",
+          "confidence": 0
+        },
+        "importer": {
+          "value": "",
+          "source": "REQUIRED",
+          "confidence": 0
+        },
+        "itemName": {
+          "value": "",
+          "source": "REQUIRED",
+          "confidence": 0
+        },
+        "keywords": {
+          "value": [],
+          "source": "ORIGINAL",
+          "confidence": 0
+        },
+        "material": {
+          "value": "",
+          "source": "ORIGINAL",
+          "confidence": 0
+        },
+        "seoTitle": {
+          "value": "",
+          "source": "ORIGINAL",
+          "confidence": 0
+        },
+        "variants": [],
+        "modelName": {
+          "value": "",
+          "source": "REQUIRED",
+          "confidence": 0
+        },
+        "sourceUrl": "https://www.smallable.com/en/product/all-about-monsters-washed-t-shirt-organic-cotton-blue-bobo-choses-430632?algsearch=0bf345b776eec78c2df693b192ecdfea",
+        "description": {
+          "value": "  SIZE AND FIT    Loose fit    COMPOSITION    100% Organic Cotton    Find out more    Wash Cold-30°  Made in Spain  ",
+          "source": "ORIGINAL",
+          "confidence": 0.9
+        },
+        "shippingFee": {
+          "value": 0,
+          "source": "DEFAULT",
+          "confidence": 0.5
+        },
+        "manufacturer": {
+          "value": "",
+          "source": "REQUIRED",
+          "confidence": 0
+        },
+        "optionGroups": [],
+        "regularPrice": null,
+        "returnPolicy": {
+          "value": "",
+          "source": "REQUIRED",
+          "confidence": 0
+        },
+        "certification": {
+          "value": "",
+          "source": "DEFAULT",
+          "confidence": 1
+        },
+        "descriptionKo": {
+          "value": "",
+          "source": "ORIGINAL",
+          "confidence": 0
+        },
+        "priceValidity": "VALID",
+        "stockQuantity": {
+          "value": 999,
+          "source": "DEFAULT",
+          "confidence": 0.5
+        },
+        "breadcrumbPath": [
+          "Home",
+          "Fashion  Children",
+          "Boy",
+          "Blouses, T-shirts",
+          "All About Monsters Washed T-shirt Organic cotton | Blue"
+        ],
+        "priceBreakdown": {
+          "feePercent": 10,
+          "shippingKrw": 12000,
+          "marginPercent": 12
+        },
+        "recommendedAge": {
+          "value": "",
+          "source": "REQUIRED",
+          "confidence": 0
+        },
+        "seoDescription": {
+          "value": "",
+          "source": "ORIGINAL",
+          "confidence": 0
+        },
+        "countryOfOrigin": {
+          "value": "Spain",
+          "source": "ORIGINAL",
+          "confidence": 0.75
+        },
+        "careInstructions": {
+          "value": "",
+          "source": "DEFAULT",
+          "confidence": 0
+        },
+        "certificationType": {
+          "value": "",
+          "source": "REQUIRED",
+          "confidence": 0
+        },
+        "childCertification": {
+          "value": null,
+          "source": "REQUIRED",
+          "confidence": 0
+        },
+        "categoryRecommendationCache": {
+          "status": "READY",
+          "evidence": [],
+          "candidates": [],
+          "resolvedAt": "2026-09-12T09:24:11.021Z",
+          "sourceUrlKey": "https://www.smallable.com/en/product/all-about-monsters-washed-t-shirt-organic-cotton-blue-bobo-choses-430632",
+          "similarityScore": null,
+          "resolverDecision": "REJECT"
+        }
+      }
+    }
+  }
+}
