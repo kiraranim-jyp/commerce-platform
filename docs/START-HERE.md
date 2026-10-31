@@ -21,7 +21,46 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **CORE-E2E-CLOSE-05 — 🟢🟢 배포 · CEO 육안 1회로 CORE-E2E 최종 GO**(`11724de5`)
+CURRENT WU   **CORE-E2E-CANDIDATE-02 — 🔵 다음 세션이 «조사 없이» 바로 측정한다**(CPO ⒜ 승인)
+             🟢🟢 **직전까지 끝난 것**(배포 `ad0354c0` · alias `ttaejyo-c5pury5ch`):
+                `CANDIDATE-EVIDENCE-VISIBILITY-01` — 후보 리스트를 **하나** 로 통합했다.
+                🔴 CEO 모순(「가격은 뜨는데 후보 리스트가 없다」)의 원인은 공급도 Identity 도
+                   아니고 **같은 Candidate 를 두 기준으로 걸러낸 것** 이었다:
+                   가격 축 `selectMiSameCandidates`(SAME+판매중+VERIFIED) ↔
+                   표시 축 `selectPresumedCandidates`(PRESUMED **만**)
+                🟢 `selectCandidateList` 하나 — 🟢 유력(SAME·SAME_MODEL_OPTION_DIFF·
+                   PRESUMED_SAME) + 🟡 확장(SIMILAR **＋ Evidence**) · CONFLICT·판정없음 제외
+                🔴🔴 불변식 **`priced ⊆ list`**(CAND-07 · 양쪽 시장 · 분모>0 도 단언)
+                🟢 CAND-01~10 · 변이 **M1~M8 전부 FAIL** · 748 files / 9,758 passed · tsc 0 · build 0
+                🟡 CPO 판정 1건(미수정) — `SAME` 행이 **가격 행과 리스트 양쪽** 에 선다
+
+             🔵🔵🔵 **다음 세션 — 입력·처리·출력이 전부 고정됐다. 조사하지 않는다.**
+             ```
+             입력   기존 human GT fixture 중 **B226AC009 제외** 원상품 **5개**
+                    (fixtures/ 의 wu-112 · wu-133 · core-2aj · core-2al · core-same03 …)
+             처리   `dsp-01-domestic-funnel.test.ts` 하니스 **재사용**(상품만 바꾼다) —
+                    `runDomesticPriceCheck({ reviewedSameUrls, webSearch:false })`
+                    ⟹ Crawl → Evidence → Identity → Price (운영 함수 그대로)
+             표시   운영 선택기 `selectCandidateList` + `selectMiSameCandidates`
+                    → `MarketPriceComparison` **마운트 DOM**(mi-candidate-row·-price)
+             출력   상품별 **원상품 URL → 후보 URL 전수** → verdict/Evidence →
+                    가격·통화·시장 → DISPLAY 여부 → PRICE 여부 → **`PRICE ⊆ DISPLAY`**
+             ```
+             🔴🔴 **측정 제약을 먼저 읽는다 — 모르고 착수하면 전건 0 을 받는다**(CLOSE-06 실측):
+                로컬 `APIFY_API_TOKEN` **부재** ⟹ AI Search `skipped:"NOT_CONFIGURED"` ·
+                service-role **부재** ⟹ 등록부가 **비어서** 돈다
+                ⟹ 🔴 「상품 5개를 새로 Search 한다」는 **불가능** 하다. 그래서 ⒜(재투입)다.
+                🟢 Production 에는 그 토큰이 **있다**(이름만 확인 · 값 미열람)
+             🔴 **이 측정은 «발견 능력» 을 평가하지 않는다**(CPO 명시) — 질문은 하나다:
+                「이미 찾아낸 후보를 화면이 후보군으로 제대로 보여주고, 가격이 있는 후보를
+                 그 안에서 함께 보여주는가?」
+             🔴 **코드 수정이 필요해지는 순간 즉시 STOP 보고** — 이 결과로 Search · Registry ·
+                Identity · 가격정책을 **다시 열지 않는다**(CPO 명시)
+             🟢 계측은 **이미 배포돼 있다** — Production 로그 `[C06R-producers]`/`[C06R-funnel]`/
+                `[C06R-row]`(`85137ff7`). 🔴 그쪽은 ⒝(CEO 조작 5회)이고 이번 범위가 **아니다**
+
+[낡음]       **CORE-E2E-CLOSE-05 — 배포 완료**(`11724de5` · 🟡 「🔄 다시 분석」은 **보조 기능** 이고
+             CPO 가 **본선으로 인정하지 않았다** — 본선은 최초 분석에서 후보가 공급되는 것)
              🔴🔴🔴 **CEO Production FAIL 의 원인은 UI 가 아니라 «재진입 공급» 이었다**:
              ```
              기존 분석 결과 재진입
