@@ -150,12 +150,35 @@ describe("🔴 무회귀 — 제외는 «같은 listing» 에서만 일어난다
     ).toBe(false);
   });
 
-  it("경로가 다르면(시장 전환 포함) 제외하지 않는다", () => {
+  /**
+   * 🔵🔵 **SELF-REFERENCE-NARROW-FIX-04 에서 이 정책이 바뀌었다**(CPO 판정 2026-10-31).
+   *
+   * 🔴 전 정책 — 「로케일이 다르면 **다른 시장** 이므로 자기참조가 아니다」.
+   * 🔴 그런데 실측에서 **원본이 자기 자신을** SAME·EXACT·GBP 37 후보로 올렸고,
+   *    그 GBP 37 은 `price_observations` 가 `SELLER_ORIGIN` 으로 기록한 **원본 가격**
+   *    이었다(RAW-CANDIDATE-CROSSCHECK-02 · 스냅샷 `9c07b07a`).
+   * 🟢 새 정책 — 「**같은 판매처 · 같은 상품 handle · 같은 식별 파라미터**」면 자기참조다.
+   *    로케일 차이는 그 자체로 자기참조를 **해제하지 않는다.**
+   * 🔴 **시장 분류는 그대로다** — `canonicalListingKey` 는 한 글자도 바뀌지 않았고
+   *    아래 셋째 단언이 그것을 지킨다.
+   */
+  it("🔵 로케일만 다른 «같은 상품» 은 자기참조다(정책 변경 2026-10-31)", () => {
     expect(
       isSelfReferenceCandidate(
         "https://bobochoses.com/en-kr/products/b226ac060-x",
         "https://bobochoses.com/products/b226ac060-x",
       ),
+    ).toBe(true);
+    /** 🔴 **다른 상품은 여전히 후보다** — host 만 같다고 빼지 않는다(이 파일 머리 규칙). */
+    expect(
+      isSelfReferenceCandidate(
+        "https://bobochoses.com/en-kr/products/b226ac043-x",
+        "https://bobochoses.com/products/b226ac042-x",
+      ),
     ).toBe(false);
+    /** 🔴 그리고 **시장 분류 owner 는 불변** 이다(로케일이 여전히 다른 key). */
+    expect(canonicalListingKey("https://bobochoses.com/en-kr/products/b226ac060-x")?.key).not.toBe(
+      canonicalListingKey("https://bobochoses.com/products/b226ac060-x")?.key,
+    );
   });
 });

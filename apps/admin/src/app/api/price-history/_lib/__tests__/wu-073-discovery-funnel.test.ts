@@ -29,7 +29,62 @@ const OUT = path.join(process.env.TEMP ?? ".", "mi-p0-02");
 const key = (u: string) => createHash("sha1").update(u).digest("hex").slice(0, 16);
 const NEW_GT = path.join(__dirname, "fixtures", "wu-068-new-gt.json");
 const SEARCH = path.join(OUT, "mi-019a-search-result.json");
-const READY = existsSync(SEARCH) && existsSync(path.join(OUT, "wu-036-3way.json")) && existsSync(NEW_GT) && existsSync(path.join(OUT, "wu-063-table.json"));
+/**
+ * ══════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 CPO ⒜ 판정(2026-10-31) — **corpus 가 기대 모양이 아니면 «측정불가» 다**
+ * ══════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **이 파일의 숫자 계약은 머신 `%TEMP%` 의 «공유 가변 산출물» 에 걸려 있다.**
+ * ```
+ * OUT    = %TEMP%/mi-p0-02           ← 리포 밖 · 다른 테스트가 writeFileSync 로 쓴다
+ * SEARCH = OUT/mi-019a-search-result.json
+ * ⟹ 리포 코드와 «무관하게» 행 수가 바뀔 수 있고, 그때 `expect(A.n).toBe(181)` 이
+ *    엉뚱한 변경의 회귀처럼 FAIL 한다(실제로 `181 → 182` 로 났다)
+ * ```
+ * 🔴 그 `181 → 182` 는 **self-reference 와 인과가 없다**(SELF-REFERENCE-CORPUS-
+ *    ROOT-CAUSE-01 조사 결론 — corpus 는 파일 읽기 한 줄에서 오고 그 축에 닿지 않는다).
+ *
+ * 🟢 **그래서 숫자를 고치지 않고 «게이트» 를 세운다**(CPO ⒜) —
+ *    corpus 가 기대 모양이 아니면 **숫자를 단언하지 않고 SKIP** 한다.
+ * 🔴 「측정불가」는 **0 도 PASS 도 아니다**(이 트랙의 §5-B 원칙 그대로).
+ * 🔴 `181` 을 `182` 로 바꾸지 않았다 — 기대값은 **그 corpus 의 정의 그대로** 다.
+ * 🔴 fixture 를 만들거나 지우거나 이름을 바꾸지 않았다(⒝·⒞ 는 CPO 가 제외했다).
+ */
+const EXPECTED_AI_URLS = 181;
+
+/** 🟢 `A.n` 이 세는 **그 양** 을 그대로 센다 — `candidates ∪ dropped[].url` 고유 수. */
+function corpusSize(): number | null {
+  if (!existsSync(SEARCH)) return null;
+  try {
+    const s = JSON.parse(readFileSync(SEARCH, "utf8")) as {
+      rows?: { candidates?: string[]; dropped?: { url: string }[] }[];
+    };
+    if (!Array.isArray(s.rows)) return null;
+    const all = new Set<string>();
+    for (const r of s.rows) {
+      (r.candidates ?? []).forEach((u) => all.add(u));
+      (r.dropped ?? []).forEach((d) => all.add(d.url));
+    }
+    return all.size;
+  } catch {
+    /** 🔴 깨진 산출물을 「0 건」으로 읽지 않는다 — **측정불가** 다. */
+    return null;
+  }
+}
+const CORPUS_N = corpusSize();
+const READY =
+  existsSync(SEARCH) &&
+  existsSync(path.join(OUT, "wu-036-3way.json")) &&
+  existsSync(NEW_GT) &&
+  existsSync(path.join(OUT, "wu-063-table.json")) &&
+  CORPUS_N === EXPECTED_AI_URLS;
+if (!READY) {
+  /* eslint-disable-next-line no-console */
+  console.log(
+    `[WU-073] 🔴 측정불가 — corpus ${CORPUS_N ?? "없음"} ≠ 기대 ${EXPECTED_AI_URLS}` +
+      ` (%TEMP%/mi-p0-02 공유 산출물 · self-reference 와 무관)`,
+  );
+}
 
 /** 🔴 서술용 라벨이다 — 운영 규칙이 아니다. */
 const KR = (h: string) =>

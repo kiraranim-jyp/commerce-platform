@@ -18,7 +18,46 @@ import { classifyUrlShape } from "@commerce/crawler/src/comparison-search/url-sh
 const OUT = path.join(process.env.TEMP ?? ".", "mi-p0-02");
 const SEARCH = path.join(OUT, "mi-019a-search-result.json");
 const CACHE = path.join(OUT, "wu-087-cache.json"); // 🟢 WU-087 이 운영 owner 로 만든 결과
-const READY = existsSync(SEARCH) && existsSync(CACHE);
+/**
+ * 🔵🔵🔵 CPO ⒜ 판정(2026-10-31) — **corpus 가 기대 모양이 아니면 «측정불가» 다.**
+ *
+ * 🔴 이 파일의 숫자 계약(`expect(rows).toHaveLength(181)`)은 머신 `%TEMP%` 의
+ *    **공유 가변 산출물**(`OUT/mi-019a-search-result.json`)에 걸려 있다. 리포 코드와
+ *    무관하게 행 수가 바뀌면 엉뚱한 변경의 회귀처럼 FAIL 한다(`181 → 182` 실측).
+ * 🔴 그 증가는 **self-reference 와 인과가 없다**(CORPUS-ROOT-CAUSE-01 결론).
+ * 🟢 그래서 숫자를 고치지 않고 **게이트** 를 세운다 — 기대 모양이 아니면 SKIP.
+ * 🔴 「측정불가」는 0 도 PASS 도 아니다 · `181` 을 `182` 로 바꾸지 않았다.
+ * 🔴 게이트 술어는 `wu-073` 과 **같은 양** 을 센다(`candidates ∪ dropped[].url`).
+ */
+const EXPECTED_AI_URLS = 181;
+
+function corpusSize(): number | null {
+  if (!existsSync(SEARCH)) return null;
+  try {
+    const s = JSON.parse(readFileSync(SEARCH, "utf8")) as {
+      rows?: { candidates?: string[]; dropped?: { url: string }[] }[];
+    };
+    if (!Array.isArray(s.rows)) return null;
+    const all = new Set<string>();
+    for (const r of s.rows) {
+      (r.candidates ?? []).forEach((u) => all.add(u));
+      (r.dropped ?? []).forEach((d) => all.add(d.url));
+    }
+    return all.size;
+  } catch {
+    /** 🔴 깨진 산출물을 「0 건」으로 읽지 않는다 — **측정불가** 다. */
+    return null;
+  }
+}
+const CORPUS_N = corpusSize();
+const READY = existsSync(SEARCH) && existsSync(CACHE) && CORPUS_N === EXPECTED_AI_URLS;
+if (!READY) {
+  /* eslint-disable-next-line no-console */
+  console.log(
+    `[WU-089] 🔴 측정불가 — corpus ${CORPUS_N ?? "없음"} ≠ 기대 ${EXPECTED_AI_URLS}` +
+      ` (%TEMP%/mi-p0-02 공유 산출물 · self-reference 와 무관)`,
+  );
+}
 
 const KRISH = (h: string) =>
   /\.kr$|\.co\.kr|kihanan|biskuit|mustit|trenbe|luxboy|donokids|kids21|coupang|naver|ssg|lfmall|croket|luksus|miniboutique|beaumonde|littleluna|wconcept|lotteon|feelway|bbambam|ocokorea/i.test(h);

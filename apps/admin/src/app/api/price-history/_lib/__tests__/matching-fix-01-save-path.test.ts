@@ -213,11 +213,30 @@ function boboProduct(
   } as unknown as CanonicalProduct;
 }
 
+/**
+ * 🔵🔵 **SELF-REFERENCE-NARROW-FIX-04 — 이 helper 의 «스캐폴딩» 을 고쳤다**(CPO 2026-10-31).
+ *
+ * 🔴 이 파일의 테스트들은 「원상품과 **다른 listing** 인 후보가 저장까지 간다」를
+ *    검증한다. 전에는 그 「다름」을 **원상품에만 `/en-kr` 로케일을 붙여** 만들었다
+ *    (`BOBO_ORIGIN_MARKET_PATH`). 🔴 그런데 새 자기참조 정책에서 **로케일 차이는
+ *    더 이상 다른 listing 이 아니다** ⟹ 같은 품번 케이스가 자기참조로 빠졌다.
+ *
+ * 🟢 **assertion 을 뒤집지 않았다**(CPO 명시). 대신 후보에 **실제 listing 식별자**
+ *    (`?variant=`)를 줘서 「다른 listing」이라는 **테스트 본래 의도를 보존** 한다:
+ * ```
+ * same host · same handle · **different identifying parameter**
+ *   → NOT self-reference → 링크 생성/저장 보호 그대로
+ * ```
+ * 🔴 `variant` 는 `canonicalListingKey` 가 **식별자로 보존하는** 파라미터다
+ *    (P0-A.29-E 가 그 구분에 의존한다) — 새 규칙을 만든 것이 아니다.
+ */
+const BOBO_CANDIDATE_VARIANT = "99001";
+
 function boboCandidate(code: string): ComparisonCandidate {
   const p = boboFixture(code);
   return {
     title: p.title,
-    url: `https://${BOBO_DOMAIN}${p.url}`,
+    url: `https://${BOBO_DOMAIN}${p.url}?variant=${BOBO_CANDIDATE_VARIANT}`,
     price: { amount: BOBO_KRW, currency: "KRW" },
     imageUrl: null,
     confidence: 0,

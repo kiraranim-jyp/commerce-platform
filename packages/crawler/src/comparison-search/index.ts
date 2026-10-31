@@ -98,7 +98,7 @@ export type { ProductMatchTruth } from "./product-identity";
 /** MI-REAL-05(CEO 지시, 2026-09-20) — 원본과 «같은 listing» 인 후보를 빼기 위한
  * 순수 판정. host 동일만으로는 제외하지 않는다(같은 브랜드 도메인의 다른 상품은
  * 정상 후보다). 점수/판정 로직은 전혀 건드리지 않는다. */
-export { canonicalListingKey, canonicalizeProductUrl, isSelfReferenceCandidate } from "./self-reference";
+export { canonicalListingKey, canonicalizeProductUrl, identifyingParams, isSameListingReference, isSelfReferenceCandidate, productHandle } from "./self-reference";
 /** 🔴 WU-017 — AI 답변 텍스트에서 **URL 만** 꺼낸다. AI 의 「동일상품」 주장은 Evidence 가
  *    아니고, 판정은 기존 체인(factsFromProductUrl → … → MI)이 **페이지를 열어** 한다. */
 export {

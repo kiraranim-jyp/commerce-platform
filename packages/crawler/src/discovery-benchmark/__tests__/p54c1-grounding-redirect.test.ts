@@ -160,8 +160,16 @@ describe("C5 자기참조는 Light Fetch «전에» 제외한다", () => {
     );
     expect(resolved.classification).toBe("PRODUCT_PAGE");
     const originCrawler = toCrawlerUrl(ORIGIN, classifyUrlShape(ORIGIN)).crawlerUrl!;
-    // 🔴 정규화 «전» 으로 비교하면 로케일 때문에 놓친다 — 그 사실을 고정한다.
-    expect(isSelfReferenceCandidate(ORIGIN, resolved.crawlerUrl)).toBe(false);
+    /**
+     * 🔵🔵 **SELF-REFERENCE-NARROW-FIX-04 에서 기대값이 바뀌었다**(CPO 2026-10-31).
+     *    전에는 「정규화 **전** 으로 비교하면 로케일 때문에 **놓친다**」가 사실이었고
+     *    이 단언이 그 사실을 고정했다.
+     * 🟢 이제 술어가 **같은 판매처 · 같은 handle · 같은 식별자** 를 보므로
+     *    `toCrawlerUrl` 로 맞추지 **않아도** 걸린다 ⟹ 둘 다 `true` 다.
+     * 🔴 단언의 의미가 「정규화가 필수다」에서 **「정규화 여부와 무관하게 같은 결론」**
+     *    으로 바뀐다 — 그것이 이 WU 가 의도한 개선이다(약화가 아니다).
+     */
+    expect(isSelfReferenceCandidate(ORIGIN, resolved.crawlerUrl)).toBe(true);
     expect(isSelfReferenceCandidate(originCrawler, resolved.crawlerUrl)).toBe(true);
   });
 });

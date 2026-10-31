@@ -83,15 +83,42 @@ describe("B. 🟢 로케일 접두사 = «다른 시장» — **확정된 제품
    * 🔴 따라서 아래 두 케이스는 **결함이 아니라 확정된 동작** 이다. 「남은 누출」로
    *    다시 세지 않는다(CPO 명시). 로케일 정규화를 추가하지 않는다.
    */
-  it("🟢 로케일이 섞인 쌍은 자기참조가 아니다(다른 시장) — 확정 정책", () => {
-    expect(isSelfReferenceCandidate(ORIGIN, CANDIDATE)).toBe(false);
+  /**
+   * 🔵🔵🔵 **SELF-REFERENCE-NARROW-FIX-04 가 위 ①②의 결론을 «뒤집었다»**(CPO 2026-10-31).
+   *
+   * 🔴 위 주석은 「로케일이 섞인 쌍은 결함이 아니라 확정된 동작」이라 적었고 **그때는
+   *    맞았다**(근거가 ①②뿐이었다). 🔴 그 뒤 **실측 증거** 가 나왔다:
+   * ```
+   * 원상품  www.junioredition.com/en-kr/collections/4-years/products/booty-ghosts-long-sleeve-…
+   * 후보        junioredition.com            /products/booty-ghosts-long-sleeve-…
+   * ⟹ 원본이 **자기 자신** 을 SAME·STRONG_IDENTIFIER·tier EXACT·GBP 37 로 올렸고
+   *    그 GBP 37 은 `SELLER_ORIGIN` 으로 기록된 **원본 상품의 가격** 이었다
+   *    (RAW-CANDIDATE-CROSSCHECK-02 · 스냅샷 `9c07b07a`)
+   * ```
+   * 🟢 그래서 CPO 가 정책을 바꿨다 — 「**같은 판매처 · 같은 상품 handle · 같은 식별
+   *    파라미터**」면 자기참조다. 로케일은 그 자체로 해제 조건이 **아니다.**
+   * 🔴 그러나 **로케일 정규화를 추가하지 않았다** — 위 ②의 금지는 그대로 유효하고
+   *    `canonicalListingKey` 는 한 글자도 바뀌지 않았다. 바뀐 것은 **자기참조 전용
+   *    술어** 하나다(시장 분류 영향 0).
+   */
+  it("🔵 로케일이 섞인 «같은 상품» 은 자기참조다(정책 변경 2026-10-31)", () => {
+    expect(isSelfReferenceCandidate(ORIGIN, CANDIDATE)).toBe(true);
+    /** 🔴 단 `canonicalListingKey` 는 **여전히** 둘을 다른 key 로 본다(시장 보존). */
+    expect(canonicalListingKey(ORIGIN)?.key).not.toBe(canonicalListingKey(CANDIDATE)?.key);
   });
 
-  it("🟢 로케일만 다른 경우도 자기참조가 아니다 — 확정 정책", () => {
+  it("🔵 로케일만 다른 «같은 상품» 도 자기참조다(정책 변경 2026-10-31)", () => {
     expect(
       isSelfReferenceCandidate(
         "https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story",
         "https://www.junioredition.com/products/bubble-sweatshirt-in-grey-melange-by-main-story",
+      ),
+    ).toBe(true);
+    /** 🔴 **다른 상품은 여전히 후보다** — 로케일이 달라도 handle 이 다르면 유지한다. */
+    expect(
+      isSelfReferenceCandidate(
+        "https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story",
+        "https://www.junioredition.com/products/bubble-sweatshirt-in-conker-stripe-by-main-story",
       ),
     ).toBe(false);
   });
