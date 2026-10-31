@@ -1,0 +1,244 @@
+{
+  "_note": "과거 CEO 육안검토 원본 — fixture 그대로. 새 검색 0 · 요약/삭제 0.",
+  "candidates": [
+    {
+      "url": "https://www.rboutique.com/en-us/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
+      "domain": "www.rboutique.com",
+      "title": "'Booty Ghosts' cotton T-shirt BOBO CHOSES – RBoutique",
+      "ceo": "SAME",
+      "ceoReason": null,
+      "originFixture": "wu-067-blind-review-set.json + wu-068-new-gt.json",
+      "group": "CEO-SAME",
+      "sources": [
+        "wu-067-blind-review-set.json + wu-068-new-gt.json"
+      ]
+    },
+    {
+      "url": "https://www.eraldo.com/en-us/products/bobo-choses-booty-ghosts-t-shirt-340496",
+      "domain": "www.eraldo.com",
+      "title": "Bobo Choses Booty Ghost-print Long-sleeve T-shirt",
+      "ceo": "SAME",
+      "ceoReason": null,
+      "originFixture": "wu-067-blind-review-set.json + wu-068-new-gt.json",
+      "group": "CEO-SAME",
+      "sources": [
+        "wu-067-blind-review-set.json + wu-068-new-gt.json"
+      ]
+    },
+    {
+      "url": "https://cissywears.com/en-us/products/bobo-choses-booty-ghosts-t-shirt",
+      "domain": "cissywears.com",
+      "title": "Bobo Choses Booty Ghosts T-Shirt",
+      "ceo": "SAME",
+      "ceoReason": null,
+      "originFixture": "wu-067-blind-review-set.json + wu-068-new-gt.json",
+      "group": "CEO-SAME",
+      "sources": [
+        "wu-067-blind-review-set.json + wu-068-new-gt.json"
+      ]
+    },
+    {
+      "url": "https://kolkid.ca/products/bobo-choses-booty-ghosts-t-shirt",
+      "domain": "kolkid.ca",
+      "title": "Bobo Choses Booty Ghosts T-Shirt",
+      "ceo": "SAME",
+      "ceoReason": null,
+      "originFixture": "wu-067-blind-review-set.json + wu-068-new-gt.json",
+      "group": "CEO-SAME",
+      "sources": [
+        "wu-067-blind-review-set.json + wu-068-new-gt.json",
+        "wu-112-human-gt.json"
+      ]
+    },
+    {
+      "url": "https://www.junioredition.com/en-kr/products/booty-ghosts-t-shirt-by-bobo-choses",
+      "domain": "www.junioredition.com",
+      "title": "Booty Ghosts T-Shirt by Bobo Choses",
+      "ceo": "DIFFERENT",
+      "ceoReason": "반팔이고, 컬러 다름",
+      "originFixture": "wu-067-blind-review-set.json + wu-068-new-gt.json",
+      "group": "CEO-DIFFERENT",
+      "sources": [
+        "wu-067-blind-review-set.json + wu-068-new-gt.json"
+      ]
+    },
+    {
+      "url": "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt",
+      "domain": "www.tinyapple.net",
+      "title": "Bobo Choses Booty Ghosts T-shirt",
+      "ceo": "DIFFERENT",
+      "ceoReason": "반팔이고, 컬러 다름",
+      "originFixture": "wu-067-blind-review-set.json + wu-068-new-gt.json",
+      "group": "CEO-DIFFERENT",
+      "sources": [
+        "wu-067-blind-review-set.json + wu-068-new-gt.json",
+        "wu-112-human-gt.json"
+      ]
+    },
+    {
+      "url": "https://bobochoses.com/products/b226ab046-booty-ghosts-t-shirt",
+      "domain": "bobochoses.com",
+      "title": "Booty Ghosts T-shirt",
+      "ceo": "SAME",
+      "ceoReason": null,
+      "originFixture": "wu-067-blind-review-set.json + wu-068-new-gt.json",
+      "group": "CEO-SAME",
+      "sources": [
+        "wu-067-blind-review-set.json + wu-068-new-gt.json",
+        "wu-112-human-gt.json"
+      ]
+    },
+    {
+      "url": "https://www.beaumonde.co.kr/goods/goods_view.php?goodsNo=1000014021",
+      "domain": "beaumonde.co.kr",
+      "title": "보보쇼즈 26FW 아동 긴팔 티셔츠 Booty Ghosts T-shirt B226AC010",
+      "ceo": "SAME",
+      "ceoReason": null,
+      "priceStatus": "PRICE_UNAVAILABLE",
+      "price": null,
+      "facts": {
+        "sourceUrl": "https://www.beaumonde.co.kr/goods/goods_view.php?goodsNo=1000014021",
+        "urlSlug": "goods_view.php",
+        "brand": null,
+        "brandModelCode": null,
+        "sellerSku": null,
+        "title": "보보쇼즈 26FW 아동 긴팔 티셔츠 Booty Ghosts T-shirt B226AC010",
+        "coreTitleTokens": [
+          "보보쇼즈",
+          "26fw",
+          "아동",
+          "긴팔",
+          "티셔츠",
+          "booty",
+          "ghosts",
+          "shirt",
+          "b226ac010"
+        ],
+        "categoryText": null,
+        "colorText": null,
+        "materialText": null,
+        "fitText": null,
+        "ageRangeText": null,
+        "sizeLabels": [],
+        "audienceSignals": [],
+        "imageUrls": []
+      },
+      "originFixture": "wu-059-gt-facts.json#C27",
+      "group": "CEO-SAME",
+      "sources": [
+        "wu-059-gt-facts.json#C27",
+        "wu-112-human-gt.json"
+      ]
+    },
+    {
+      "url": "https://luksusbaby.kr/products/bobo-choses-light-blue-booty-ghosts-t-shirt",
+      "domain": "luksusbaby.kr",
+      "ceo": "UNCERTAIN",
+      "originFixture": "wu-112-human-gt.json",
+      "group": "CEO-REVIEW",
+      "sources": [
+        "wu-112-human-gt.json"
+      ]
+    },
+    {
+      "url": "https://luksusbaby.kr/products/bobo-choses-light-blue-booty-ghosts-sweatshirt-1",
+      "domain": "luksusbaby.kr",
+      "ceo": "DIFFERENT",
+      "originFixture": "wu-112-human-gt.json",
+      "group": "CEO-DIFFERENT",
+      "sources": [
+        "wu-112-human-gt.json"
+      ]
+    },
+    {
+      "url": "https://www.rboutique.com/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
+      "domain": "rboutique.com",
+      "ceo": "SAME",
+      "originFixture": "wu-112-human-gt.json",
+      "group": "CEO-SAME",
+      "sources": [
+        "wu-112-human-gt.json"
+      ]
+    },
+    {
+      "url": "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt-heather-grey",
+      "domain": "tinyapple.net",
+      "ceo": "SAME",
+      "originFixture": "wu-112-human-gt.json",
+      "group": "CEO-SAME",
+      "sources": [
+        "wu-112-human-gt.json"
+      ]
+    },
+    {
+      "url": "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-sweatshirt",
+      "domain": "tinyapple.net",
+      "ceo": "DIFFERENT",
+      "originFixture": "wu-112-human-gt.json",
+      "group": "CEO-DIFFERENT",
+      "sources": [
+        "wu-112-human-gt.json"
+      ]
+    },
+    {
+      "url": "https://www.eraldo.com/products/bobo-choses-booty-ghosts-t-shirt-340496",
+      "domain": "eraldo.com",
+      "ceo": "SAME",
+      "originFixture": "wu-112-human-gt.json",
+      "group": "CEO-SAME",
+      "sources": [
+        "wu-112-human-gt.json"
+      ]
+    },
+    {
+      "url": "https://cissywears.com/products/bobo-choses-booty-ghosts-t-shirt",
+      "domain": "cissywears.com",
+      "ceo": "SAME",
+      "originFixture": "wu-112-human-gt.json",
+      "group": "CEO-SAME",
+      "sources": [
+        "wu-112-human-gt.json"
+      ]
+    },
+    {
+      "url": "https://cissywears.com/products/bobo-choses-baby-booty-ghosts-t-shirt",
+      "domain": "cissywears.com",
+      "ceo": "SAME",
+      "originFixture": "wu-112-human-gt.json",
+      "group": "CEO-SAME",
+      "sources": [
+        "wu-112-human-gt.json"
+      ]
+    },
+    {
+      "url": "https://www.junioredition.com/products/booty-ghosts-t-shirt-by-bobo-choses",
+      "domain": "junioredition.com",
+      "ceo": "DIFFERENT",
+      "originFixture": "wu-112-human-gt.json",
+      "group": "CEO-DIFFERENT",
+      "sources": [
+        "wu-112-human-gt.json"
+      ]
+    },
+    {
+      "url": "https://www.beaumonde.co.kr/goods/goods_list.php?page=3&brandCd=070002",
+      "domain": "beaumonde.co.kr",
+      "ceo": "UNCERTAIN",
+      "originFixture": "wu-112-human-gt.json",
+      "group": "CEO-REVIEW",
+      "sources": [
+        "wu-112-human-gt.json"
+      ]
+    },
+    {
+      "url": "https://www.billsstore.com.au/products/booty-ghosts-long-sleeve-t-shirt-baby",
+      "domain": "billsstore.com.au",
+      "ceo": "SAME",
+      "originFixture": "wu-112-human-gt.json",
+      "group": "CEO-SAME",
+      "sources": [
+        "wu-112-human-gt.json"
+      ]
+    }
+  ]
+}

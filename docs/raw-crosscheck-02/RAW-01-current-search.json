@@ -1,0 +1,117 @@
+{
+  "_source": "운영 DB 직접 조회(읽기 전용) · 2026-10-31",
+  "snapshot": {
+    "id": "9c07b07a-ccc2-489a-af02-37129bf45c31",
+    "created_at": "2026-10-31T12:02:00.561Z",
+    "updated_at": "2026-10-31T12:02:39.681Z",
+    "source_url": "https://www.junioredition.com/en-kr/collections/4-years/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses?utm_source=chatgpt.com",
+    "title": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+    "brand": "Bobo Choses",
+    "sku": "B226AC010",
+    "color": "Heather Grey",
+    "price": {
+      "amount": 37,
+      "currency": "GBP",
+      "source": "ORIGINAL"
+    }
+  },
+  "rawSearch": {
+    "status": "UNAVAILABLE",
+    "why": [
+      "영속 저장 없음 — public 테이블 32개 전수에 Search 결과 테이블이 없다",
+      "런타임 로그 복구 불가 — vercel logs 는 미들웨어 요청 줄만 돌려주고(logs: []) 과거 배포는 0행",
+      "🔴 title/snippet/rank 는 «코드가 읽지도 않는다» — web-search-pool.ts 의 ApifySearchItem 은 { organicResults?: { url?: string }[] } 이고 map(o => o.url) 로 URL 만 가져간다(saveHtml:false)",
+      "로그에 남는 것은 집계뿐 — [SP07-websearch] query·searches·organic(수)·skipped·failed / [SP07-pool] supplied·accepted·usable·miEligible·dropped(host:reason)·hosts"
+    ],
+    "recoverableFields": [
+      "query(로그)",
+      "timestamp(로그)",
+      "domain/host(로그)",
+      "organic 개수(로그)"
+    ],
+    "unrecoverableFields": [
+      "raw response",
+      "raw rank",
+      "raw title",
+      "raw snippet",
+      "raw URL 전문"
+    ]
+  },
+  "persisted": {
+    "domestic_product_links": {
+      "rows": 0,
+      "note": "영속 후보 0 — 전부 일시(transient) 생산자 산출이었다"
+    },
+    "price_alerts": {
+      "rows": 0
+    },
+    "price_observations": {
+      "rows": 4,
+      "note": "🔴🔴 네 행이 «전부» SELLER_ORIGIN 이다 — 원본 상품 자신의 가격 관측이고 비교 후보가 아니다",
+      "data": [
+        {
+          "source": "SELLER_ORIGIN",
+          "label": "ORIGIN_FX",
+          "currency": "GBP",
+          "amount": 37,
+          "price_krw": 66197,
+          "market_code": null,
+          "url": "https://www.junioredition.com/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses"
+        },
+        {
+          "source": "SELLER_ORIGIN",
+          "label": "KR_MARKET",
+          "currency": "KRW",
+          "amount": 69100,
+          "price_krw": 69100,
+          "market_code": "en-kr",
+          "url": "https://www.junioredition.com/en-kr/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses"
+        },
+        {
+          "source": "SELLER_ORIGIN",
+          "label": "MARKET_PROBE",
+          "currency": "AUD",
+          "amount": 79,
+          "price_krw": 74100,
+          "market_code": "en-au",
+          "url": "https://www.junioredition.com/en-au/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses"
+        },
+        {
+          "source": "SELLER_ORIGIN",
+          "label": "MARKET_PROBE",
+          "currency": "GBP",
+          "amount": 37,
+          "price_krw": 66197,
+          "market_code": "en-int",
+          "url": "https://www.junioredition.com/en-int/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses"
+        }
+      ]
+    },
+    "candidate_reviews": {
+      "rows": 1,
+      "data": [
+        {
+          "id": "6f75269b-c18e-4465-a1e1-da351b40f059",
+          "snapshot_id": "9c07b07a-ccc2-489a-af02-37129bf45c31",
+          "origin_code": "B226AC010",
+          "candidate_url": "https://junioredition.com/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+          "candidate_domain": "junioredition.com",
+          "candidate_title": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+          "image_url": null,
+          "price_amount": "37",
+          "price_currency": "GBP",
+          "market": "OVERSEAS",
+          "system_verdict": "SAME",
+          "match_truth": "STRONG_IDENTIFIER",
+          "price_tier": "EXACT",
+          "blockers": [],
+          "human_verdict": null,
+          "source": "OVERSEAS_AUTO",
+          "first_seen_at": "2026-10-31T12:03:28.730Z",
+          "last_seen_at": "2026-10-31T12:03:28.343Z",
+          "reviewed_at": null
+        }
+      ]
+    }
+  }
+}
