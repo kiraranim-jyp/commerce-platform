@@ -11,6 +11,27 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
+🔵🔵🔵 CURRENT WU  **IDENTITY-GT-EVIDENCE-MASTER-REVIEW-01 — 🟢 Step 3 CLOSED**(2026-11-01 · `172f1298`)
+                  전문 `docs/IDENTITY-GT-MASTER-01-STEP3.md` · 산출 `docs/identity-gt-master/STEP3-REPLAY.json`
+                  🔴 **분모 LOCK** — 생성기 행 **80** · 고유 (상품,URL) **70** · 상품 **8**
+                     CEO SAME 43 · DIFFERENT 24 · REVIEW 10 · CONFLICT 3  (CPO 승인 `2b431fbf`)
+                  🟢 Step 3 실측 — 공급 69 · 도달 **33** · 표시 29 · 가격 10 · 미도달 **37**
+                  🔴 미도달은 **네 축으로 갈려 있다** — facts없음 1 · URL풀 14 · **샵당1건 15** · 판정 7
+                     ⟹ 🔴 「Identity 가 37건을 버렸다」로 **읽지 않는다**(30 은 판정 «이전»)
+                  🟢🟢 **DIFFERENT-FP 0**(분모 **8** · 22 아니다) · 🔴 **SAME-FN 12/23**
+                  🔴 **CPO 판정 5건 대기** — 그 문서 §9(trenbe 라벨 상충 · 분모 80↔70 ·
+                     AC157 측정불가 · FP 분모 8 · 샵당1건 15 의 분류)
+
+NEXT              **Step 4 — 고유 70 후보의 raw evidence 를 필드마다 A/B/C/D 로 분류**
+                  🟢 도달 33행은 **이미 운영 산출을 들고 있다**(STEP3-REPLAY.json) ⟹ 재조사 0
+                  🔴 B(사이트엔 있는데 미수집) ↔ C(사이트에 없음)은 **후보 페이지를 직접 열어야**
+                     갈린다 — 그 fetch 가 Step 4 의 주된 용량이다
+                  🔴 Search · Price · UI · Registry 로 **되돌아가지 않는다** · Identity 정책 **결정 0**
+
+🔴 **아래 블록은 [직전] WU 다**(CANDIDATE-CAP-AND-LABEL-01) — 좌표가 아니다.
+```
+
+```
 🔵🔵🔵 전략   **가격 형성의 주인은 Registry 가 아니라 «비교 가능한 후보» 다**(CPO 2026-10-28)
              판단 기준 = 「등록된 사이트인가?」 ❌ →
              「AI Search 가 발견 → **원본과 동일/유사한가** → 가격을 확보할 수 있는가」
