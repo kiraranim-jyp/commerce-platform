@@ -75,6 +75,9 @@ import {
    */
   selectPresumedCandidates,
   MI_PRESUMED_HEADING,
+  MARKET_RECHECK_BUTTON,
+  MARKET_RECHECK_EMPTY,
+  MARKET_RECHECK_BUSY,
   MI_PRESUMED_SCOPE,
   /** 🔴 WU-146 ② — **상태별 결론.** 한 문장 안내문이 아니다(가격 0 / SAME 0 / 국내 0 을 가른다). */
   marketDecisionLines,
@@ -160,6 +163,16 @@ export interface MarketPriceComparisonProps {
    * 🔴 `CommerceWorkspace` 는 **저장 state 를 만들지 않는다** — 이 값만 내려보낸다(CPO §4).
    */
   snapshotId?: string | null;
+  /**
+   * 🔵🔵🔵 CORE-E2E-CLOSE-05 — **셀러가 직접 다시 조회한다.**
+   * 🔴 재진입하면 `/check` 가 돌지 않아 `rows` 가 null 이고 이 영역이 통째로
+   *    사라졌다(CEO Production FAIL). 🟢 그 복구 수단을 **여기** 에 둔다.
+   * 🔴 자동으로 부르지 않는다 — **클릭할 때만** 이다(CPO §2 비용 정책).
+   * 🔴 `/check` 구현은 **패널의 기존 `recheckNow`** 하나다(새 API 0 · 복제 0).
+   */
+  onRecheck?: (() => void) | null;
+  /** 🔴 진행 중 — 중복 클릭을 막고 「분석 중」을 말한다(CPO §4). */
+  rechecking?: boolean;
   /** 🔴 MI 가 이미 낸 국내 참고가격 집계. 여기서 계산하지 않는다. */
   domesticReference?: OverseasPriceSummary | null;
   /** 🔴 MI 가 이미 낸 해외 참고가격 집계. 여기서 계산하지 않는다. */
@@ -226,6 +239,8 @@ export interface MarketPriceComparisonProps {
 export function MarketPriceComparison({
   rows,
   snapshotId,
+  onRecheck,
+  rechecking = false,
   domesticReference,
   overseasReference,
   costPriceKrw,
@@ -320,7 +335,21 @@ export function MarketPriceComparison({
    *    **「조회조차 안 했다」** 로 읽는다 — 그 둘은 다른 사실이다.
    */
   const checkRan = rows != null || !!domesticReference || !!overseasReference;
-  if (!checkRan) return null;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 CORE-E2E-CLOSE-05 §4 — **영역이 «무조건» 사라지지는 않는다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 전까지 `!checkRan` 이면 `return null` 이라 **재진입 화면에서 가격비교가
+   *    통째로 없어졌다**(CEO Production FAIL · 마운트 DOM 으로 재현했다).
+   *    그리고 복구 버튼은 `HIDDEN` 패널 안이라 **셀러가 할 수 있는 일이 0** 이었다.
+   * 🟢 이제 **재조회 수단이 있으면** 영역이 서고 「아직 조회하지 않았다 + 다시 분석」
+   *    을 말한다. 🔴 「후보가 없다」로 적지 않는다 — **미조회와 부재는 다른 사실** 이다
+   *    (WU-130 ② 가 세운 그 구분이고, 여기서 **세 번째 상태** 가 생겼다).
+   * 🔴 자동 조회는 **하지 않는다** — 이 줄은 «표시» 조건이고 네트워크를 부르지 않는다.
+   */
+  const canRecheck = typeof onRecheck === "function";
+  if (!checkRan && !canRecheck) return null;
 
   return (
     <section
@@ -339,6 +368,46 @@ export function MarketPriceComparison({
        * 🔴 `MARKET_JUDGEMENT_NOTE`(MI 분석 문장)도 상세로 내려갔다 — CPO 제거 목록.
        */}
       <p className="text-[11px] font-medium text-text-secondary">{MARKET_JUDGEMENT_TITLE}</p>
+      {/**
+        * ══════════════════════════════════════════════════════════════════════
+        * 🔵🔵🔵 CORE-E2E-CLOSE-05 — **셀러가 직접 다시 조회한다**
+        * ══════════════════════════════════════════════════════════════════════
+        *
+        * 🔴🔴 기존 분석 결과로 **재진입** 하면 `/check` 가 돌지 않아(`isFirstInsert`
+        *    블록 안에만 있다) `rows` 가 null 이고, 전까지 이 영역이 **통째로 사라졌다**.
+        *    복구 버튼은 `HIDDEN` 패널 안이라 **셀러가 할 수 있는 일이 0** 이었다.
+        * 🟢 이제 **그 버튼이 여기** 있고 **패널의 기존 `recheckNow`** 를 부른다 —
+        *    `/check` 새 구현 **0** · 새 API **0** · 자동 재조회 **0**(CPO §2·§3).
+        * 🔴 진행 중에는 **잠근다**(중복 클릭 방지 · `disabled` + 함수 안 가드 둘).
+        * 🔴 후보가 **이미 있으면** 이 줄은 그 위에 그냥 같이 선다 — 기존 표시를
+        *    가리거나 바꾸지 않는다(§4 「이미 후보가 있는 경우 정상 표시」).
+        */}
+      {canRecheck ? (
+        <div data-testid="market-recheck" className="mt-1 flex items-center gap-2">
+          <button
+            type="button"
+            data-testid="market-recheck-button"
+            disabled={rechecking}
+            onClick={() => onRecheck?.()}
+            className="rounded border border-border px-1.5 py-0.5 text-[11px] text-text-secondary disabled:opacity-50"
+          >
+            {MARKET_RECHECK_BUTTON}
+          </button>
+          {/**
+           * 🔴 「조회하지 않았다」와 「후보가 없다」는 **다른 사실** 이다(WU-130 ②).
+           *    후보가 아직 없을 때만 그 사실을 적고, **실패로 적지 않는다.**
+           */}
+          {!checkRan ? (
+            <span data-testid="market-recheck-note" className="text-[11px] text-text-tertiary">
+              {rechecking ? MARKET_RECHECK_BUSY : MARKET_RECHECK_EMPTY}
+            </span>
+          ) : rechecking ? (
+            <span data-testid="market-recheck-note" className="text-[11px] text-text-tertiary">
+              {MARKET_RECHECK_BUSY}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
 
       {/**
        * ══════════════════════════════════════════════════════════════════════

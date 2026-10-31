@@ -542,6 +542,34 @@ describe("F. ③④ 화면 구조 (WU-130)", () => {
      *    전자는 후보 0 일 때 영역을 지워 「조회조차 안 했다」로 읽히게 만든다.
      */
     expect(AREA).toContain("const checkRan = rows != null || !!domesticReference || !!overseasReference");
-    expect(AREA).toContain("if (!checkRan) return null;");
+    /**
+     * ══════════════════════════════════════════════════════════════════════════
+     * 🔴🔴🔴 **CORE-E2E-CLOSE-05 — 조건에 «예외 하나» 가 붙었다. CPO 가 지시했다.**
+     * ══════════════════════════════════════════════════════════════════════════
+     *
+     * 🔴🔴 CEO Production FAIL: 기존 분석 결과로 **재진입** 하면 `/check` 가 돌지 않아
+     *    `rows=null` 이고 이 `return null` 이 **가격비교를 통째로 지웠다**. 그리고
+     *    복구 버튼은 `HIDDEN` 패널 안이라 **셀러가 할 수 있는 일이 0** 이었다.
+     * 🟢 CPO §4 가 명시했다 — 「후보가 없는 상태에서도 가격비교 영역이 **무조건
+     *    사라져서는 안 된다**」. 그래서 **재조회 수단이 있을 때만** 영역이 선다.
+     *
+     * 🟢🟢 **약해지지 않았다 — 지키는 성질이 둘로 늘었다**:
+     *    ⒜ 데이터도 없고 재조회 수단도 없으면 **여전히 빈 테두리를 만들지 않는다**
+     *    ⒝ 🔴 그리고 그때 **「후보가 없다」로 적지 않는다** — 미조회와 부재는
+     *       다른 사실이고, 그 구분이 WU-130 ② 가 세운 바로 그것이다
+     */
+    expect(AREA).toContain("if (!checkRan && !canRecheck) return null;");
+    expect(AREA).toContain('const canRecheck = typeof onRecheck === "function";');
+    /** 🔴 미조회 문장이 **「없다」가 아니다** — 어휘 owner 에서 직접 확인한다. */
+    const SELECTOR = readFileSync(
+      path.join(__dirname, "../../../../pipeline/commerce/mi-same-candidates.ts"),
+      "utf8",
+    );
+    expect(SELECTOR).toContain("MARKET_RECHECK_EMPTY");
+    const at = SELECTOR.indexOf("export const MARKET_RECHECK_EMPTY");
+    expect(at).toBeGreaterThan(0);
+    const line = SELECTOR.slice(at, at + 220);
+    expect(line).toContain("아직 없습니다");
+    expect(line).not.toContain("후보가 없습니다");
   });
 });

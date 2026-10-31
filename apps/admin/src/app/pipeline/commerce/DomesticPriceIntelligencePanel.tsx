@@ -1746,6 +1746,29 @@ export type { PriceLevel };
  */
 export interface MarketComparisonInput {
   rows: GeminiTransientRow[] | null;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 CORE-E2E-CLOSE-05 — **셀러가 직접 다시 조회한다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 CEO Production FAIL 의 원인: 기존 분석 결과로 **재진입** 하면
+   * ```
+   * page.tsx:529  POST /check 는 `isFirstInsert` 블록 «안» 에만 있다
+   *   ⟹ 재진입에서 안 돈다 → GET 은 transient 를 싣지 않는다 → rows = null
+   *   ⟹ MarketPriceComparison 의 checkRan=false → **영역이 통째로 사라진다**
+   * ```
+   * 🔴 그리고 재조회 버튼(`recheckNow`)은 이 패널 소유인데 패널이 `HIDDEN` 이라
+   *    화면에 **없었다** ⟹ 셀러가 스스로 복구할 수단이 **0** 이었다.
+   *
+   * 🟢 그래서 **기존 `recheckNow` 를 그대로** 결론 영역에 올려보낸다 —
+   *    `/check` 새 구현 **0** · 새 API **0** · 자동 재조회 **0**(CPO §2·§3).
+   * 🔴 비용은 **셀러가 누를 때만** 발생한다 — 진입 시 자동 호출은 금지다.
+   * 🟢 공급 채널을 **새로 뚫지 않았다** — 이 객체가 이미 패널 → 워크스페이스로
+   *    흐르는 길이고(`onMarketComparisonChange`), 거기에 칸 둘을 더했다.
+   */
+  onRecheck: (() => void) | null;
+  /** 🔴 진행 중 — 중복 클릭을 막고 화면이 「분석 중」을 말한다(CPO §4). */
+  rechecking: boolean;
   domesticReference: OverseasPriceSummary | null;
   overseasReference: OverseasPriceSummary | null;
   /**
@@ -2070,6 +2093,19 @@ export function DomesticPriceIntelligencePanel({
    *    (`ComparisonShopSearch.onEvidenceChange` 와 **같은 규약**).
    * 🔴 `null` 과 `[]` 를 섞지 않는다 — 넷이 전부 `null` 이면 「조회가 돌지 않았다」다.
    */
+  /**
+   * 🔵🔵🔵 CORE-E2E-CLOSE-05 — **재조회 트리거를 «참조 고정» 으로 만든다.**
+   *
+   * 🔴 `recheckNow` 는 함수 선언이라 매 렌더 새 참조다. 그대로 올려보내면
+   *    아래 memo → effect → 워크스페이스 `setState` → 렌더 … **무한 루프** 다.
+   * 🟢 `onMarketComparisonChangeRef` 와 **같은 패턴** 이다(새 패턴 0).
+   * 🔴 `/check` 를 여기서 부르지 않는다 — **기존 `recheckNow` 로 위임만** 한다.
+   */
+  const recheckNowRef = useRef<(() => void) | null>(null);
+  const stableRecheck = useCallback(() => {
+    recheckNowRef.current?.();
+  }, []);
+
   const marketComparisonInput = useMemo<MarketComparisonInput>(() => {
     const anyEvidence =
       geminiEvidence != null ||
@@ -2106,8 +2142,24 @@ export function DomesticPriceIntelligencePanel({
        */
       marketPriceKrw: data?.recommendation?.recommendedPrice ?? null,
       marketPriceMarginPercent: data?.recommendation?.estimatedMarginPercent ?? null,
+      /**
+       * 🔵🔵🔵 CORE-E2E-CLOSE-05 — **기존 `recheckNow` 를 그대로 올려보낸다.**
+       *
+       * 🔴🔴 **`recheckNow` 를 직접 넣지 않는다.** 그것은 함수 «선언» 이라 매 렌더
+       *    새 참조가 되고, deps 에 넣으면 memo 가 매 렌더 깨지고 → 위 effect 가
+       *    `onMarketComparisonChange` 를 부르고 → 워크스페이스가 `setState` 하고
+       *    → 다시 렌더 … **무한 루프** 가 된다.
+       * 🟢 그래서 **이 파일이 이미 쓰는 ref 패턴**(`onMarketComparisonChangeRef`)을
+       *    그대로 써서 **참조가 고정된** 래퍼를 올려보낸다(deps 에 넣지 않는다).
+       * 🔴 `/check` 는 **그 함수 안의 기존 호출 하나** 다 — 새 구현·새 API 0.
+       */
+      onRecheck: stableRecheck,
+      /** 🔴 진행 상태는 **값** 이라 deps 에 들어간다(두 번만 바뀐다 — 시작·종료). */
+      rechecking,
     };
   }, [
+    stableRecheck,
+    rechecking,
     geminiEvidence,
     urlCandidateEvidence,
     overseasAutoEvidence,
@@ -2303,6 +2355,14 @@ export function DomesticPriceIntelligencePanel({
    * 그대로 문장으로 옮긴다. 새 판정을 만들지 않는다 — 서버가 이미 낸 결론을
    * 화면에 정직하게 보여주기만 한다(가짜 진행률 애니메이션을 만들지 않는다
    * — 실제로는 서버가 한 번에 처리하는 요청이다). */
+  /**
+   * 🔵 CORE-E2E-CLOSE-05 — 결론 영역의 「🔄 다시 분석」이 **이 함수** 를 부른다.
+   * 🔴 복제하지 않았다 — ref 에 꽂아 두고 위에서 위임한다(새 `/check` 구현 0).
+   */
+  recheckNowRef.current = () => {
+    void recheckNow();
+  };
+
   async function recheckNow() {
     if (rechecking) return; // 중복 클릭 방지 — 버튼도 disabled지만 방어적으로 한 번 더 막는다.
     setRechecking(true);

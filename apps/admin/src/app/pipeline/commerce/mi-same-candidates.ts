@@ -262,6 +262,20 @@ export const MI_SAME_EMPTY = "동일상품으로 판정되고 가격까지 확�
  * 🔴 내부 토큰(`PRESUMED_SAME`)을 글자로 쓰지 않는다.
  */
 export const MI_PRESUMED_HEADING = "동일상품 가능성이 있는 후보";
+/**
+ * 🔵🔵🔵 CORE-E2E-CLOSE-05 — **재조회의 말.** 어휘 owner 는 여기 하나다.
+ *
+ * 🔴 「🔄 다시 분석」은 **이미 쓰는 표현** 이다(MI 패널의 그 버튼) — 새 어휘를
+ *    만들지 않았다(CPO §2 「기존 「다시 분석」 표현이 있다면 그것을 재사용한다」).
+ * 🔴 「후보가 없습니다」로 적지 않는다 — **미조회와 부재는 다른 사실** 이다.
+ * 🔴 실패를 성공처럼 적지 않는다 — 실패 문장의 owner 는 패널의 `recheckResult` 다.
+ */
+export const MARKET_RECHECK_BUTTON = "🔄 다시 분석";
+/** 🔴 「없다」가 아니라 **「아직 가져오지 않았다」** 다. 셀러가 할 행동을 같이 적는다. */
+export const MARKET_RECHECK_EMPTY =
+  "이 화면에는 후보 조회 결과가 아직 없습니다 — 「🔄 다시 분석」을 누르면 가져옵니다.";
+/** 🔴 진행 중을 **가짜 진행률** 로 그리지 않는다(패널 주석이 적어 둔 그 규칙). */
+export const MARKET_RECHECK_BUSY = "다시 분석하고 있습니다…";
 /** 🔴 이 구역이 **가격 집계에 쓰이지 않는다** 는 사실을 적는다(WU-091 ④ 규약). */
 export const MI_PRESUMED_SCOPE =
   "셀러가 직접 확인할 후보입니다. 위 가격 집계에는 들어가지 않습니다.";

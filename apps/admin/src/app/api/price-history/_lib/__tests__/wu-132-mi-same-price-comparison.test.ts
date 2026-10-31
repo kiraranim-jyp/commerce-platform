@@ -355,10 +355,23 @@ describe("C. 🔴🔴 MI → 영역 공급 배선", () => {
 
   it("C-2 🔴🔴 workspace 가 그 값을 받아 **가격비교 영역에 넘긴다**", () => {
     expect(WORKSPACE).toContain("onMarketComparisonChange={setMarketComparison}");
-    const area = WORKSPACE.slice(WORKSPACE.indexOf("<MarketPriceComparison"));
-    expect(area.slice(0, 400)).toContain("rows={marketComparison?.rows ?? null}");
-    expect(area.slice(0, 400)).toContain("domesticReference={marketComparison?.domesticReference ?? null}");
-    expect(area.slice(0, 400)).toContain("overseasReference={marketComparison?.overseasReference ?? null}");
+    /**
+     * 🔴🔴 **CORE-E2E-CLOSE-05 — 임의 창(`slice(0, 400)`)을 쓰지 않는다. 강화다.**
+     *    세 prop 이 그 창 «안» 에 있다고 가정했는데, 이번에 prop 셋(`snapshotId` ·
+     *    `onRecheck` · `rechecking`)과 그 주석이 더해지자 `overseasReference` 가
+     *    **창 밖으로 밀려** FAIL 했다 — 배선은 멀쩡한데 테스트만 깨지는 모양이다
+     *    (메모 `slice-contracts-encode-order-implicitly` 의 그 취약점).
+     * 🟢 그래서 **그 JSX 요소 전체** 로 범위를 정한다 — 창이 없으니 밀려날 수 없고,
+     *    「다른 컴포넌트의 prop 을 세는」 오류도 `/>` 로 끊어 막는다.
+     */
+    const open = WORKSPACE.indexOf("<MarketPriceComparison");
+    expect(open).toBeGreaterThan(-1);
+    const close = WORKSPACE.indexOf("/>", open);
+    expect(close).toBeGreaterThan(open);
+    const area = WORKSPACE.slice(open, close);
+    expect(area).toContain("rows={marketComparison?.rows ?? null}");
+    expect(area).toContain("domesticReference={marketComparison?.domesticReference ?? null}");
+    expect(area).toContain("overseasReference={marketComparison?.overseasReference ?? null}");
   });
 
   /**

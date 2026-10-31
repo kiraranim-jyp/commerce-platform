@@ -3671,6 +3671,13 @@ export function CommerceWorkspace({
              *    `useCandidateReview` 하나이고 저장은 기존 `candidate-reviews` POST 다.
              */
             snapshotId={snapshotId}
+            /**
+             * 🔵🔵 CORE-E2E-CLOSE-05 — **패널의 기존 `recheckNow`** 를 그대로 내려보낸다.
+             * 🔴 여기서 `/check` 를 부르지 않는다 — 새 호출부·새 API **0**(CPO §3).
+             * 🔴 자동 재조회 **0** — 셀러가 버튼을 누를 때만 발생한다.
+             */
+            onRecheck={marketComparison?.onRecheck ?? null}
+            rechecking={marketComparison?.rechecking ?? false}
             domesticReference={marketComparison?.domesticReference ?? null}
             overseasReference={marketComparison?.overseasReference ?? null}
             /**
