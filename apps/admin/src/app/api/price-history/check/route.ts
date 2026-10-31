@@ -345,6 +345,93 @@ export async function POST(request: Request) {
    * 🔴 새 enum 값 추가는 **migration** 이고 이번 범위 밖이다(CPO 가 schema 를 닫았다).
    * 🟢 화면에서 잃는 것은 없다 — 그 후보는 이번 조회의 후보 구역에 **새 판정과 함께** 선다.
    */
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 CORE-E2E-CLOSE-06R — **최초 분석 1회를 Production 에서 «잴 수 있게» 한다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 CPO §6 의 표(Search → Crawl → Evidence → SAME/PRESUMED → Price · **국내/해외
+   *    분리**)를 현재 배포 코드로는 **절반만** 채울 수 있다:
+   * ```
+   * 🟢 [SP07-websearch] query·searches·organic·skipped   🟢 [SP07-pool] supplied·usable
+   * 🟢 [CORE-2R4-listing] 국내 목록 hop                   🟢 [WU-130-overseas] 해외 등록부
+   * 🔴 **국내/해외 분리 없음**(pool 로그에 `market` 칸 0)
+   * 🔴 **SAME/PRESUMED 분포 없음**(`[MI-REAL-12]` 는 **DROPPED 만** 찍는다)
+   * 🔴 **가격 확인 수 없음**
+   * ```
+   * 🔴🔴 **DB 로 보완할 수 없다** — 바로 아래 `seen` 은 **세 생산자만** 담고
+   *    (`webSearchEvidence`·`domesticListingEvidence` 가 **빠져 있다**) 079 의
+   *    `source` check constraint 가 그 값을 **금지** 한다(아래 주석의 그 이유).
+   *    ⟹ migration 없이 영속화할 수 없고 다른 값으로 적으면 **데이터가 거짓** 이 된다.
+   *
+   * 🟢 그래서 **읽기 전용 로그 한 블록** 만 더한다 — 제품 동작 **0**:
+   *    판정 0 · 가격 0 · 저장 0 · 응답 0 · UI 0 · Search 0 · Identity 0 · schema 0.
+   * 🔴 내부 토큰은 **서버 로그** 에만 쓴다 — 금지 대상은 Production **UI** 다.
+   * 🔴 계측이 실패해도 **등록/가격 경로를 깨뜨리지 않는다**(try 로 감싼다).
+   */
+  try {
+    /* eslint-disable no-console */
+    const PRODUCERS: ReadonlyArray<
+      readonly [string, readonly GeminiTransientEvidence[] | null | undefined]
+    > = [
+      ["WEB_SEARCH", domesticShop.webSearchEvidence],
+      ["DOMESTIC_LISTING", domesticShop.domesticListingEvidence],
+      ["OVERSEAS_AUTO", domesticShop.overseasAutoEvidence],
+      ["SELLER_URL", domesticShop.urlCandidateEvidence],
+      ["GEMINI", domesticShop.geminiEvidence],
+      ["REVIEWED_SAME", domesticShop.reviewedSameEvidence],
+    ];
+    const all: Array<{ p: string; e: GeminiTransientEvidence }> = [];
+    for (const [p, arr] of PRODUCERS) for (const e of arr ?? []) all.push({ p, e });
+    /** 🔴 생산자별 건수 — 뭉쳐 적으면 어느 축이 끊겼는지 알 수 없다. */
+    console.log(
+      `[C06R-producers] ${JSON.stringify({
+        snapshot: snapshotId,
+        byProducer: Object.fromEntries(PRODUCERS.map(([p, a]) => [p, (a ?? []).length])),
+        weakDropped: (domesticShop.weakCandidateEvidence ?? []).length,
+      })}`,
+    );
+    /** 🔴 시장별 단계 — `market` 은 운영 `classifyCandidateMarket` 산출을 **그대로** 쓴다. */
+    const cut = (
+      m: string,
+    ): Record<string, number> => {
+      const rows = all.filter(({ e }) => e.market === m);
+      const same = rows.filter(({ e }) => e.crossSellerVerdict === "SAME");
+      const presumed = rows.filter(({ e }) => e.crossSellerVerdict === "PRESUMED_SAME");
+      return {
+        candidates: rows.length,
+        SAME: same.length,
+        PRESUMED_SAME: presumed.length,
+        SIMILAR: rows.filter(({ e }) => e.crossSellerVerdict === "SIMILAR").length,
+        CONFLICT: rows.filter(({ e }) => e.crossSellerVerdict === "CONFLICT").length,
+        withPrice: rows.filter(({ e }) => e.priceAmount != null).length,
+        sameOrPresumedWithPrice: same
+          .concat(presumed)
+          .filter(({ e }) => e.priceAmount != null).length,
+      };
+    };
+    console.log(
+      `[C06R-funnel] ${JSON.stringify({
+        snapshot: snapshotId,
+        KR: cut("KR"),
+        OVERSEAS: cut("OVERSEAS"),
+        UNKNOWN_MARKET: cut("UNKNOWN"),
+      })}`,
+    );
+    /** 🔴 한 줄씩 — 어느 후보가 어느 칸에서 멈췄는지 **뭉치지 않는다**. */
+    for (const { p, e } of all) {
+      console.log(
+        `[C06R-row] ${String(e.market)} | ${e.domain} | ${p} | v=${String(e.crossSellerVerdict)}` +
+          ` | truth=${String(e.matchTruth)} | tier=${String(e.priceTier)}` +
+          ` | ${String(e.priceAmount ?? "-")} ${String(e.priceCurrency ?? "")}` +
+          ` | ${String(e.priceStatus)} | blk=${JSON.stringify(e.crossSellerBlockers)}`,
+      );
+    }
+    /* eslint-enable no-console */
+  } catch {
+    /* 🔴 계측 실패가 등록/가격 경로를 깨뜨리지 않는다 — 읽기 전용 블록이다. */
+  }
+
   try {
     const dna = buildProductIdentityDna(product);
     const seen = [
