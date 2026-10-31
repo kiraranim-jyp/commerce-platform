@@ -78,6 +78,42 @@ export function transientDisplayTier(row: GeminiTransientRow): MatchDisplayTier 
   return null;
 }
 
+/**
+ * ══════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 CORE-E2E-CLOSE-03 — **동일 «가능성» 후보**(SAME 이 아닌 것)
+ * ══════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 CEO 육안 FAIL: 「국내/해외 후보와 가격이 화면에 없다」. 원인은 WU-152 가
+ *    MI 패널을 `HIDDEN` 으로 두면서 그 안의 **출처별 후보 구역** 이 함께 사라진 것
+ *    이고(CORE-E2E-CLOSE-02), 결론 영역은 `selectMiSameCandidates` 로 **SAME 만**
+ *    그리므로 `PRESUMED_SAME` 후보와 그 가격이 **어디에도 없었다**.
+ *
+ * 🔴🔴🔴 **`selectMiSameCandidates` 를 한 글자도 바꾸지 않았다**(CPO §3·§6).
+ *    그 함수는 **가격 집계 축의 선별기** 다 — 거기에 PRESUMED 를 넣으면 가격
+ *    정책이 바뀐다. 🟢 그래서 **별도 선택기** 를 세워 **표시 전용** 으로 쓴다.
+ *
+ * 🔴 승격하지 않는다 — 화면에는 **기존 판정 그대로** 적힌다(PRESUMED 는 PRESUMED).
+ * 🔴 가격이 없어도 **버리지 않는다** — 화면이 「가격 미확인」이라고 적는다(CPO §4).
+ * 🔴 `SAME` 은 이 배열에 **오지 않는다** — 위 구역과 **같은 행이 두 번** 서지 않는다.
+ */
+export function selectPresumedCandidates(
+  rows: readonly GeminiTransientRow[] | null | undefined,
+  market: "KR" | "OVERSEAS",
+): GeminiTransientRow[] {
+  const out: GeminiTransientRow[] = [];
+  if (!rows || rows.length === 0) return out;
+  const seen = new Set<string>();
+  for (const row of rows) {
+    if (row.market !== market) continue;
+    if (seen.has(row.discoveredUrl)) continue;
+    seen.add(row.discoveredUrl);
+    /** 🔴 등급은 **운영 owner** 가 낸 값이다(`transientDisplayTier`) — 복제 계산 0. */
+    if (transientDisplayTier(row) !== "PRESUMED_SAME") continue;
+    out.push(row);
+  }
+  return out;
+}
+
 /** 🔴 `MatchDisplayTier` 와 글자가 같은 값만 등급으로 받는다 — 모르는 값은 지어내지 않는다. */
 export const DISPLAYABLE_TIERS = [
   "SAME",
@@ -157,10 +193,22 @@ export function selectMiSameCandidates(
     if (seen.has(row.discoveredUrl)) continue;
     seen.add(row.discoveredUrl);
     /**
-     * 🔴 SAME 이 아니면 **이 영역에 오지 않는다.** 🟢 사라지는 것은 아니다 —
-     *    MI 패널의 출처별 후보 구역이 **모든 행** 을 그대로 그리고, 거기서 사람이
-     *    원본 ↔ 후보 사진을 보고 판단한다(④). 🔴 그래서 여기서 「검토용 배열」을
-     *    따로 만들지 않는다 — 만들면 같은 행이 **두 구역에 복제** 된다(WU-081 금지).
+     * 🔴 SAME 이 아니면 **이 영역에 오지 않는다.**
+     *
+     * 🔴🔴🔴 **CORE-E2E-CLOSE-03 — 여기 적혀 있던 약속이 깨져 있었다. 정정한다.**
+     *    원문: 「사라지는 것은 아니다 — MI 패널의 출처별 후보 구역이 모든 행을
+     *    그대로 그린다」. 🔴 그런데 **WU-152 가 그 패널을 `HIDDEN` 으로 뒀고**
+     *    (`CommerceWorkspace.tsx` `presentation="HIDDEN"` → `return null`)
+     *    그 구역이 **함께 사라졌다** ⟹ `PRESUMED_SAME` 후보와 그 가격이
+     *    **화면 어디에도 없었다.** 그것이 CEO 육안 FAIL 의 원인이다.
+     *    (메모 `hiding-a-panel-kills-independent-features-inside-it` 의 그 함정.)
+     *
+     * 🟢 지금은 **같은 결론 영역 안의 별도 구역** 이 그 행을 그린다 —
+     *    `selectPresumedCandidates`(이 파일 · **표시 전용**) → `MarketColumn` 의
+     *    `mi-presumed-area`. 🔴 **이 함수는 그대로다** — 여기에 PRESUMED 를
+     *    넣으면 **가격 집계 정책이 바뀐다**(CPO §3 금지).
+     * 🔴 그리고 두 선택기는 **행이 겹치지 않는다**(한쪽 SAME · 한쪽 PRESUMED) ⟹
+     *    같은 행이 두 구역에 복제되지 않는다(WU-081 금지 유지 · 계약 A-1).
      */
     if (transientDisplayTier(row) !== "SAME") continue;
     if (!isNotSoldOut(row)) {
@@ -208,6 +256,15 @@ export const MI_SAME_DOMESTIC_HEADING = "🇰🇷 국내";
 export const MI_SAME_OVERSEAS_HEADING = "🌎 해외";
 /** 🔴 「국내에 동일상품이 없다」로 적지 않는다 — 부재와 미발견은 다르다(WU-091 어휘 계약). */
 export const MI_SAME_EMPTY = "동일상품으로 판정되고 가격까지 확인된 후보가 아직 없습니다.";
+/**
+ * 🔵 CORE-E2E-CLOSE-03 — **「동일 가능성」 구역의 말.**
+ * 🔴 「동일상품」이라고 **단정하지 않는다** — 판정은 보류이고 선택은 셀러가 한다.
+ * 🔴 내부 토큰(`PRESUMED_SAME`)을 글자로 쓰지 않는다.
+ */
+export const MI_PRESUMED_HEADING = "동일상품 가능성이 있는 후보";
+/** 🔴 이 구역이 **가격 집계에 쓰이지 않는다** 는 사실을 적는다(WU-091 ④ 규약). */
+export const MI_PRESUMED_SCOPE =
+  "셀러가 직접 확인할 후보입니다. 위 가격 집계에는 들어가지 않습니다.";
 
 /** 🔴 제외 사유를 **셀러의 말** 로. 내부 토큰(`UNVERIFIED_SEARCH`)을 노출하지 않는다. */
 export const MI_SAME_EXCLUSION_TEXT: Record<Exclude<MiSameExclusion, "NOT_SAME">, string> = {

@@ -239,15 +239,58 @@ describe("C-1 seller-facing 가격 숫자의 owner 는 「📊 시장 판매 판
       domain: "other.example",
     });
     const html = renderOwner([pending, similar]);
-    /** 🔴 두 금액이 **어디에도** 서지 않는다 — 기준가로도, 범위의 끝으로도. */
-    expect(html).not.toContain("21");
+    /**
+     * ══════════════════════════════════════════════════════════════════════════
+     * 🔴🔴🔴 **CORE-E2E-CLOSE-03 — 이 단언의 «범위» 가 바뀌었다. 약해지지 않았다.**
+     * ══════════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 전까지 「두 금액이 **어디에도** 서지 않는다」였다. 🔴🔴 그런데 **CEO 육안이
+     *    FAIL** 했다 — 「국내/해외 가격 비교 후보가 사용자 화면에 노출되지 않는다」 —
+     *    그리고 CPO 가 CORE-E2E-CLOSE-03 §3 으로 「`SAME` / `PRESUMED_SAME` 후보를
+     *    셀러가 볼 수 있도록 한다」를 **지시** 했다(그 구역은 가격·통화를 적는다).
+     *
+     * 🟢 그래서 지키는 성질을 「화면에 그 숫자가 없다」에서 **「가격 «축» 에 그 숫자가
+     *    들어가지 않는다」로 정정** 한다 — 그것이 WU-141-R3 이 원래 닫은 것이다
+     *    (「셀러가 보는 가격 숫자의 owner 가 하나」 = 기준가 · 범위 · 집계).
+     *
+     * 🟢🟢 **두 방향으로 더 강해졌다**:
+     *    ⒜ `SIMILAR`(19)은 **여전히 화면 어디에도** 설 수 없다 — 보류 구역조차
+     *       `PRESUMED_SAME` 만 받는다(`selectPresumedCandidates`).
+     *    ⒝ `PRESUMED_SAME`(21)은 **`mi-presumed-area` «안» 에만** 설 수 있고 그 구역을
+     *       걷어낸 화면에는 **없어야** 한다 ⟹ 집계·기준가·범위로 새 나가면 FAIL 한다
+     *       (전에는 「어디에도 없다」가 그 둘을 **구분하지 못했다**).
+     */
+    const stripPresumed = (h: string): string => {
+      const out: string[] = [];
+      let rest = h;
+      for (;;) {
+        const i = rest.indexOf('<details data-testid="mi-presumed-area"');
+        if (i < 0) {
+          out.push(rest);
+          break;
+        }
+        out.push(rest.slice(0, i));
+        const end = rest.indexOf("</details>", i);
+        /** 🔴 닫는 태그를 못 찾으면 **통째로 버리지 않는다** — 그러면 단언이 공짜가 된다. */
+        expect(end, "🔴 보류 구역의 끝을 찾지 못했다").toBeGreaterThan(i);
+        rest = rest.slice(end + "</details>".length);
+      }
+      return out.join("");
+    };
+    /** 🔴 SIMILAR 금액은 **어디에도** — 이 쪽은 범위가 한 글자도 넓어지지 않았다. */
     expect(html).not.toContain("19");
-    /** 🟢 그런데 **버려지지도 않는다** — 보류가 몇 건인지는 말한다(WU-133 의 그 문장). */
+    /** 🔴 보류 금액은 **가격 축에 없다**(보류 구역을 걷어낸 화면). */
+    expect(stripPresumed(html)).not.toContain("21");
+    /** 🟢 그리고 **버려지지도 않는다** — 셀러가 그 구역에서 본다(CEO FAIL 의 수정). */
+    expect(html).toContain("21");
+    expect(html).toContain('data-testid="mi-presumed-area"');
+    /** 🟢 보류가 몇 건인지도 그대로 말한다(WU-133 의 그 문장). */
     expect(html).toContain(MARKET_JUDGEMENT_TITLE);
-    /** 🟢 SAME 행을 섞으면 그 가격만 선다 — 게이트가 «행 단위» 로 돈다는 증거다. */
-    const mixed = renderOwner([pending, similar, sameRow()]);
+    /** 🟢 SAME 행을 섞으면 **가격 축에는 그 가격만** 선다 — 게이트가 «행 단위» 다. */
+    const mixed = stripPresumed(renderOwner([pending, similar, sameRow()]));
     expect(mixed).toContain("37");
     expect(mixed).not.toContain("21");
+    expect(mixed).not.toContain("19");
   });
 
   it("C-1-c 조회가 돌지 않았으면 영역 자체가 서지 않는다 — 「후보 0」과 다른 사실이다", () => {

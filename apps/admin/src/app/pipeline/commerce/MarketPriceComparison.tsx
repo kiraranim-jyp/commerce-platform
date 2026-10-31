@@ -69,6 +69,13 @@ import {
   priceRangeScope,
   priceRangeText,
   selectMiSameCandidates,
+  /**
+   * 🔵🔵 CORE-E2E-CLOSE-03 — **표시 전용** 선택기.
+   * 🔴 `selectMiSameCandidates`(가격 집계 선별기)와 **다른 함수** 다 — 그쪽은 한 글자도 안 바꿨다.
+   */
+  selectPresumedCandidates,
+  MI_PRESUMED_HEADING,
+  MI_PRESUMED_SCOPE,
   /** 🔴 WU-146 ② — **상태별 결론.** 한 문장 안내문이 아니다(가격 0 / SAME 0 / 국내 0 을 가른다). */
   marketDecisionLines,
   countPendingCandidates,
@@ -209,6 +216,12 @@ export function MarketPriceComparison({
 }: MarketPriceComparisonProps): JSX.Element | null {
   const domestic = selectMiSameCandidates(rows, "KR");
   const overseas = selectMiSameCandidates(rows, "OVERSEAS");
+  /**
+   * 🔵🔵🔵 CORE-E2E-CLOSE-03 — **동일 «가능성» 후보.**
+   * 🔴 위 두 줄(가격 집계 선별기)과 **다른 함수** 다 — 그 정책은 변경 0(CPO §3).
+   */
+  const domesticPresumed = selectPresumedCandidates(rows, "KR");
+  const overseasPresumed = selectPresumedCandidates(rows, "OVERSEAS");
   /**
    * 🔴🔴 WU-136 — **판매여부를 가격보다 먼저 계산한다**(CPO §B). 시장별로 나누기 «전» 에
    *    센다 — 셀러의 1순위 질문(「팔리고 있는가」)은 국내/해외로 갈리지 않는다.
@@ -879,6 +892,11 @@ export function MarketPriceComparison({
           heading={MI_SAME_DOMESTIC_HEADING}
           selection={domestic}
           /**
+           * 🔵 CORE-E2E-CLOSE-03 — 같은 `rows` 에서 **다른 선택기** 로 뽑는다.
+           * 🔴 `selectMiSameCandidates`(가격 집계 축)는 한 글자도 안 바꿨다(CPO §3).
+           */
+          presumed={domesticPresumed}
+          /**
            * 🔴🔴 CORE-2R-5 — **국내 집계는 여기서 «꺼진다».** 1차 🇰🇷 블록으로 **옮겼다**
            *    (복제가 아니다). 두 곳에 두면 같은 `KRW 88,000` 이 화면에 두 번 뜨고
            *    그것이 WU-145/149 가 닫은 「가격 owner 하나」 계약 위반이다.
@@ -898,6 +916,8 @@ export function MarketPriceComparison({
           testId="mi-same-overseas"
           heading={MI_SAME_OVERSEAS_HEADING}
           selection={overseas}
+          /** 🔵 CORE-E2E-CLOSE-03 — 해외도 **같은 구역** 이다(두 벌을 만들지 않는다). */
+          presumed={overseasPresumed}
           /**
            * 🔴🔴 CORE-2S §5-④ — **해외 집계도 여기서 «꺼진다».** 1차 🌎 블록으로
            *    **옮겼다**(복제가 아니다 — 국내가 CORE-2R-5 에서 그렇게 됐던 것과 같다).
@@ -1237,12 +1257,18 @@ function MarketColumn({
   testId,
   heading,
   selection,
+  presumed,
   reference,
   referenceProps,
 }: {
   testId: string;
   heading: string;
   selection: MiSameSelection;
+  /**
+   * 🔵🔵 CORE-E2E-CLOSE-03 — **동일 «가능성» 후보**(표시 전용).
+   * 🔴 `selection` 과 **행이 겹치지 않는다** — 이쪽엔 SAME 이 오지 않는다.
+   */
+  presumed: readonly GeminiTransientRow[];
   reference?: OverseasPriceSummary | null;
   referenceProps: {
     title?: string;
@@ -1296,6 +1322,63 @@ function MarketColumn({
        *    「동일상품이 없다」와 「동일상품인데 지금 가격을 확인하지 못했다」는 셀러가
        *    해야 할 행동이 **다르다**(앞은 기다리는 것, 뒤는 그 링크를 직접 보는 것).
        */}
+      {/**
+        * ══════════════════════════════════════════════════════════════════════
+        * 🔵🔵🔵 CORE-E2E-CLOSE-03 — **동일 «가능성» 후보 구역**
+        * ══════════════════════════════════════════════════════════════════════
+        *
+        * 🔴🔴 CEO 육안 FAIL 의 자리다. WU-152 가 MI 패널을 `HIDDEN` 으로 두면서
+        *    그 안의 **출처별 후보 구역** 이 함께 사라졌고(CORE-E2E-CLOSE-02),
+        *    이 결론 영역은 `selectMiSameCandidates` 로 **SAME 만** 그린다
+        *    ⟹ `PRESUMED_SAME` 후보와 그 가격이 **화면 어디에도 없었다.**
+        * 🔴 `selectMiSameCandidates` 주석이 「사라지는 것은 아니다 — MI 패널의
+        *    출처별 구역이 모든 행을 그린다」고 약속했는데 **그 전제가 깨져 있었다.**
+        *
+        * 🟢 그래서 **패널을 되살리지 않고**(CPO §2) 여기에 구역 하나를 세운다.
+        * 🔴 **표시 전용** 이다 — 가격 집계·판정·공급 배선 **변경 0.**
+        * 🔴 기본 **접힘** 이다 — 펼친 채로 두면 「유력 후보」로 읽힌다(WU-091 ①).
+        * 🔴 내부 토큰(`PRESUMED_SAME`·matchTruth·tier)을 **글자로 쓰지 않는다.**
+        */}
+      {presumed.length > 0 && (
+        <details data-testid="mi-presumed-area" className="mt-1">
+          <summary className="cursor-pointer text-[11px] text-text-secondary">
+            {MI_PRESUMED_HEADING} {presumed.length}곳
+          </summary>
+          <p data-testid="mi-presumed-scope" className="mt-0.5 text-[11px] text-text-tertiary">
+            {MI_PRESUMED_SCOPE}
+          </p>
+          <ul className="mt-1 space-y-1">
+            {presumed.map((row) => (
+              <li
+                key={row.discoveredUrl}
+                data-testid="mi-presumed-row"
+                className="rounded border border-border/60 p-2"
+              >
+                {row.title ? (
+                  <p className="truncate text-[11px] text-text-primary">{row.title}</p>
+                ) : null}
+                <div className="flex items-baseline justify-between gap-2">
+                  <a
+                    href={row.discoveredUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="truncate text-[11px] text-accent underline"
+                  >
+                    {row.domain}
+                  </a>
+                  {/** 🔴 가격이 없으면 「가격 미확인」 — 그 말의 owner 는 `priceText` 다(환산 0). */}
+                  <span
+                    data-testid="mi-presumed-price"
+                    className="shrink-0 text-[11px] text-text-primary"
+                  >
+                    {priceText(row)}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
       {selection.sameButExcluded.length > 0 && (
         <ul data-testid="mi-same-excluded" className="space-y-0.5">
           {selection.sameButExcluded.map(({ row, reason }) => (

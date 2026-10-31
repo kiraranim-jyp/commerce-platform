@@ -158,8 +158,27 @@ describe("CORE-2R-5 A — 국내 참고가격이 1차 🇰🇷 블록에 선다"
       summary.indexOf('data-testid="market-next-step"'),
       "🔴 권장 판매가격이 근거보다 뒤로 갔다",
     ).toBeLessThan(summary.indexOf('data-testid="market-blocks"'));
-    /** 🟢 그리고 이제는 **화면 전체** 로도 1회다(결론이 더는 금액을 인용하지 않는다). */
-    expect((html.match(/KRW 88,000/g) ?? []).length).toBe(1);
+    /**
+     * 🟢 그리고 **집계 축 전체** 로도 1회다(결론이 더는 금액을 인용하지 않는다).
+     *
+     * 🔴🔴 **CORE-E2E-CLOSE-03 — 범위에서 「보류 후보 구역」을 뺐다. 약해지지 않았다.**
+     *    CEO 육안 FAIL(「후보와 가격이 화면에 없다」)로 CPO 가 `PRESUMED_SAME` 후보를
+     *    **그 후보 자신의 가격과 함께** 보여주라고 지시했다(§3). 그 구역의 금액은
+     *    **집계가 아니다** — 행마다 자기 판매처의 값이고 기준가·범위가 되지 않는다.
+     * 🔴 지키는 성질은 그대로 「**집계 금액의 owner 는 하나**」이고, 그 owner 가 둘이
+     *    되는 순간(1차 중복 · 결론 인용 · 2차 재집계) **여기서 잡힌다**.
+     * 🟢 1차 층 단언(바로 위 두 줄)은 **한 글자도 바뀌지 않았다** — 보류 구역은
+     *    `price-detail-fold` **뒤** 라 애초에 그 슬라이스에 들어오지 않는다.
+     */
+    const outsidePresumed = html.replace(
+      /<details data-testid="mi-presumed-area"[\s\S]*?<\/details>/g,
+      "",
+    );
+    expect(
+      outsidePresumed,
+      "🔴 보류 구역을 걷어내지 못했다(단언이 공짜가 된다)",
+    ).not.toContain('data-testid="mi-presumed-area"');
+    expect((outsidePresumed.match(/KRW 88,000/g) ?? []).length).toBe(1);
   });
 
   /** 🔴 2차(`▸ MI 상세 분석`)의 국내 집계는 **꺼져 있다** — 옮긴 것이지 복제가 아니다. */
