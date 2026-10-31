@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   selectCandidateList,
@@ -137,6 +139,29 @@ describe("CANDIDATE-EVIDENCE-VISIBILITY-01", () => {
     expect(list([sold, unver]).sort()).toEqual(["s.com", "u.com"]);
     /** 🔴 그러나 가격 집계에는 **안 들어간다** — 그 정책은 변경 0이다. */
     expect(selectMiSameCandidates([sold, unver], "OVERSEAS").priced).toHaveLength(0);
+  });
+
+  /**
+   * 🔴🔴🔴 **CAND-10 — 「후보군 확대」가 「가격 집계 확대」가 아니다**(CPO §6·§11 마지막 변이).
+   *    🔴 내 변이 M7 이 이 구멍을 찾았다 — 가격 선별기의 `SAME` 요구를 느슨하게 해도
+   *       CAND 파일이 **통과했다**. 🟢 그래서 그 축을 **여기서 직접** 문다.
+   *    🔴 「화면 후보를 가격 후보로 승격」하는 순간 FAIL 한다.
+   */
+  it("CAND-10 화면 확대가 가격 집계를 넓히지 않는다", () => {
+    const rows = [
+      r({ domain: "p1.com", crossSellerVerdict: "PRESUMED_SAME", priceAmount: 58, priceCurrency: "USD" }),
+      r({ domain: "p2.com", matchTruth: "SIMILAR", priceAmount: 40, priceCurrency: "EUR" }),
+      r({ domain: "p3.com", crossSellerVerdict: "CONFLICT", priceAmount: 9, priceCurrency: "EUR" }),
+    ];
+    /** 🟢 셋 중 둘은 **화면에** 선다(확장). */
+    expect(list(rows).sort()).toEqual(["p1.com", "p2.com"]);
+    /** 🔴 그러나 **가격 집계에는 하나도 들어가지 않는다** — SAME 이 아니다. */
+    expect(selectMiSameCandidates(rows, "OVERSEAS").priced).toHaveLength(0);
+    /** 🔴 그리고 그 요구가 **코드에 남아 있는지** 까지 본다(행동 + 앵커 두 축). */
+    const src = readFileSync(join(__dirname, "..", "mi-same-candidates.ts"), "utf8");
+    const at = src.indexOf("export function selectMiSameCandidates");
+    expect(at).toBeGreaterThan(0);
+    expect(src.slice(at, at + 2600)).toContain('transientDisplayTier(row) !== "SAME"');
   });
 
   /** 🔴 CAND-09 — 시장이 섞이지 않고 같은 URL 은 한 번만. */
