@@ -21,7 +21,33 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **PE-01A CLOSED** — 🔴🔴 **blocker 는 가격 자격의 결정자가 아니다**(반증)
+CURRENT WU   **MT-01 CLOSED** — 🟢 **결정축 확정: `matchTruth`** · 정책 결정은 CPO
+             🟢 계측만 · 운영 코드 **0** · Search **0** · Crawl **0** · 정책 **0**
+             【B. matchTruth × human × 가격】 분모 **23**(샵 대표만 · 나머지는 matchTruth 없음)
+                STRONG_IDENTIFIER  11 · hSAME 11 · hDIFF 0 · 금액 11 · **자격 11** ·
+                                   자격률 100% · SAME정밀 **100%** · 누출 **0%**   🟢
+                TEXT_CONFIRMED      7 · hSAME  6 · hDIFF 1 · 금액  7 · **자격  7** ·
+                                   자격률 100% · SAME정밀  **86%** · 누출 **14%**  🟡
+                CONFLICT            5 · hSAME  3 · hDIFF 1 · 금액  5 · **자격  0** ·
+                                   자격률   0% · SAME정밀   75% · 누출  25%       🟢 전부 차단
+             🔴🔴🔴 **PE-01A 의 반증이 «확증» 됐다** — 같은 blocker 가 matchTruth 로 갈린다:
+                `TEXT_CONFIRMED + AUDIENCE_LINE` 4 → 자격 **4**(전부 허용)
+                `CONFLICT       + AUDIENCE_LINE` 2 → 자격 **0**(전부 차단)
+                ⟹ 「AUDIENCE_LINE 8 중 4 만 자격」의 원인은 **blocker 가 아니다**
+             🔴 누출 1건 전 칸 — `m.luxboy.com` · PRESUMED_SAME · **TEXT_CONFIRMED** ·
+                COMPARISON · elig=true · [NO_TITLE_OVERLAP] · ₩59,000 · human DIFFERENT
+                🔴 같은 조합에 `biskuit.kr`(human SAME · ₩88,000) ⟹ precision **1/2**
+                   ⟹ 그 조합을 끊어도 **순이득이 아니다**
+             🟢 CONFLICT **10건 → 가격 자격 0**(COMPOSITION 1건 포함) = 세트 보호 유지
+             🟡 **분모 주의** — blocker 표(전 행)와 matchTruth 표(샵 대표만)는 분모가 다르다
+                `MODEL_CODE_AGE_LINE` 4 → **2** · `AUDIENCE_LINE` 8 → **6**(샵 대표 기준)
+             🟢 계약 **8**(MT-P1~P8) · 변이 **N1~N6 전부 FAIL → 복구**
+             🟢 회귀 **741 / 9,686 passed / 0 failed** · tsc 0 · build 0
+             🟡 **다음 = CPO 가격 정책 결정** — 선택지는 `matchTruth` 단위다:
+                ① `STRONG_IDENTIFIER` 만 허용 → 누출 0 · 🔴 TEXT_CONFIRMED 정답 6 손실
+                ② 현상 유지(둘 다 허용) → 정답 17 · 🔴 누출 1
+                ③ 조건부 — 🔴 CTO 가 설계하지 않았다(정책)
+[낡음]       **PE-01A CLOSED** — 🔴🔴 **blocker 는 가격 자격의 결정자가 아니다**(반증)
              🟢 계측만 · 운영 코드 **0** · Search **0** · 가격/Identity 정책 **0**
              【측정 기준 LOCK】 Recovery = `JUDGED(샵 대표)` AND verdict SAME/PRESUMED
                 baseline **17/25 (68%)** → 현재 **19/25 (76%)**

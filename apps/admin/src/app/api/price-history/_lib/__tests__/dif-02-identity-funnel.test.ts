@@ -357,6 +357,83 @@ describe("DIF-02 — Human SAME recovery funnel (새 Search 0)", () => {
           byBlocker.set(b, e);
         }
       }
+      /**
+       * 🔵🔵🔵 MATCH-TRUTH-PRICE-ELIGIBILITY-AUDIT-01 — **판단축은 blocker 가 아니라
+       *    `matchTruth` 다**(PE-01A 의 반증). 그래서 그 축으로 먼저 센다.
+       * 🔴 분모는 **판정이 난 행 전수** 다(SAME/PRESUMED 로 좁히지 않는다) —
+       *    CONFLICT·SIMILAR 가 어디로 가는지도 같이 봐야 누출을 설명할 수 있다.
+       */
+      type Cell = { all: number; same: number; diff: number; priced: number; elig: number };
+      const tally = (key: (r: Row) => string | null, src: Row[]) => {
+        const m = new Map<string, Cell>();
+        for (const r of src) {
+          const k = key(r);
+          if (k === null) continue;
+          const e = m.get(k) ?? { all: 0, same: 0, diff: 0, priced: 0, elig: 0 };
+          e.all += 1;
+          if (r.human === "SAME") e.same += 1;
+          if (r.human === "DIFFERENT") e.diff += 1;
+          if (r.price != null) e.priced += 1;
+          if (r.priceEligible) e.elig += 1;
+          m.set(k, e);
+        }
+        return m;
+      };
+      const pct = (n: number, d: number) => (d === 0 ? "  -  " : `${String(Math.round((100 * n) / d)).padStart(3)}%`);
+      /** 🔴 샵 대표가 아닌 행은 `matchTruth` 가 **없다** — 분모에서 뺀다(지어내지 않는다). */
+      const judged = rows.filter((r) => r.matchTruth !== null);
+      console.log(`\n【B. matchTruth × human × 가격】 분모 ${judged.length}(샵 대표만 · 나머지는 matchTruth 없음)`);
+      console.log("  matchTruth              전체 hSAME hDIFF  금액  자격   자격률  SAME정밀  DIFF누출");
+      for (const [k, e] of [...tally((r) => r.matchTruth, judged).entries()].sort((a, z) => z[1].all - a[1].all))
+        console.log(
+          `  ${k.padEnd(22)} ${String(e.all).padStart(4)} ${String(e.same).padStart(5)} ${String(e.diff).padStart(5)}` +
+            ` ${String(e.priced).padStart(5)} ${String(e.elig).padStart(5)}   ${pct(e.elig, e.all)}    ${pct(e.same, e.same + e.diff)}    ${pct(e.diff, e.same + e.diff)}`,
+        );
+      /** 🔴 같은 matchTruth 안에서 blocker 가 자격을 왜곡하는가 — 그것이 §6 의 질문이다. */
+      console.log("\n【C. matchTruth × blocker】 (샵 대표 전수)");
+      console.log("  matchTruth              blocker                       전체 hSAME hDIFF  금액  자격");
+      const pairs = new Map<string, Cell>();
+      for (const r of judged)
+        for (const b of r.blockers.length ? r.blockers : ["(blocker 없음)"]) {
+          const k = `${r.matchTruth}|${b}`;
+          const e = pairs.get(k) ?? { all: 0, same: 0, diff: 0, priced: 0, elig: 0 };
+          e.all += 1;
+          if (r.human === "SAME") e.same += 1;
+          if (r.human === "DIFFERENT") e.diff += 1;
+          if (r.price != null) e.priced += 1;
+          if (r.priceEligible) e.elig += 1;
+          pairs.set(k, e);
+        }
+      for (const [k, e] of [...pairs.entries()].sort((a, z) => z[1].all - a[1].all)) {
+        const [mt, b] = k.split("|");
+        console.log(
+          `  ${String(mt).padEnd(22)} ${String(b).padEnd(29)} ${String(e.all).padStart(4)} ${String(e.same).padStart(5)} ${String(e.diff).padStart(5)} ${String(e.priced).padStart(5)} ${String(e.elig).padStart(5)}`,
+        );
+      }
+      /** 🔴 §7·§8·§9 — 지목된 세 그룹을 **행 단위로** 전부 찍는다(집계로 뭉개지 않는다). */
+      for (const want of ["MODEL_CODE_AGE_LINE", "AUDIENCE_LINE", "NO_TITLE_OVERLAP"]) {
+        const g = judged.filter((r) => r.blockers.includes(want));
+        console.log(`\n【D. ${want}】 ${g.length}건 — 행 전수`);
+        for (const r of g)
+          console.log(
+            `    ${r.domain.padEnd(24)} human=${r.human.padEnd(10)} verdict=${String(r.verdict).padEnd(14)}` +
+              ` truth=${String(r.matchTruth).padEnd(18)} tier=${String(r.tier).padEnd(11)} elig=${String(r.priceEligible).padEnd(5)} ${r.price ?? "-"}${r.currency ?? ""}`,
+          );
+      }
+      /** 🔴 §7 — Human DIFFERENT 누출을 **전 칸과 함께** 적는다. */
+      console.log("\n【E. Human DIFFERENT 누출 — 전 칸】");
+      for (const r of judged.filter((x) => x.human === "DIFFERENT" && x.priceEligible))
+        console.log(
+          `    🔴 ${r.domain} | verdict=${r.verdict} | truth=${r.matchTruth} | tier=${r.tier} | elig=${r.priceEligible}` +
+            ` | blockers=[${r.blockers.join(",")}] | ${r.price}${r.currency} | ${r.url}`,
+        );
+      /** 🔴 §10 — CONFLICT(세트 포함)가 가격 축에 **들어가지 않는다** 를 숫자로 적는다. */
+      const conflictRows = rows.filter((r) => r.verdict === "CONFLICT");
+      console.log(
+        `\n【F. CONFLICT ${conflictRows.length}건 — 가격 자격 ${conflictRows.filter((r) => r.priceEligible).length}` +
+          `  (COMPOSITION 포함 ${conflictRows.filter((r) => r.conflicts.includes("COMPOSITION")).length}건)】`,
+      );
+
       console.log("\n【blocker × human × 가격】 SAME/PRESUMED 후보 전수");
       console.log("  blocker                       전체 hSAME hDIFF  금액  가격자격");
       for (const [b, e] of [...byBlocker.entries()].sort((a, z) => z[1].all - a[1].all))
