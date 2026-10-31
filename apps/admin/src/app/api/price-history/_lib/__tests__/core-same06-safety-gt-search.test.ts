@@ -211,6 +211,15 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
     file: "cand-02-rows.json",
     why: "🔴 표시 축 측정 기록 · 라벨은 **다른 fixture 사본** — 이중 집계 방지",
   });
+  /**
+   * 🔵 CANDIDATE-POSSIBLE-CONFLICT-01(2026-10-31) — **후보 «한 쌍» 의 증거 원본.**
+   * 🔴 사람 라벨이 **없다**(`human_verdict` 칸 자체가 없다) — 운영 추출/판정 산출뿐이다.
+   *    그 후보의 CEO 라벨은 `wu-067`+`wu-068` 에 있고 위에서 이미 분모로 세어진다.
+   */
+  skipped.push({
+    file: "ab046-evidence.json",
+    why: "🟢 AC010↔AB046 한 쌍의 운영 증거 원문 · 사람 라벨 **없음**(라벨은 wu-068 에 있다)",
+  });
 
   /* SAME-03 최신 CEO 라벨 — 🔴 DIFFERENT 가 0 이지만 분모로 같이 적는다 */
   {

@@ -181,6 +181,52 @@ const POSSIBLE_TIERS: readonly string[] = ["SIMILAR"];
  *    🔴 `matchTruth` 는 Identity 가 **증거를 보고** 낸 값이다. 그것이 있으면
  *       「판단할 근거가 있었다」가 참이고, 없으면 등급의 출처가 verdict 하나다.
  */
+/**
+ * ══════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 CANDIDATE-POSSIBLE-CONFLICT-01 — **품번만 충돌한 «참고» 후보**(CPO 2026-10-31)
+ * ══════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 실제 후보 하나로 판정된 **좁은 예외** 다 — `B226AB046`(bobochoses.com).
+ * ```
+ * 원상품 B226AC010  Booty Ghosts **Long Sleeve** T-Shirt   KIDS  2-3Y~12-13Y
+ * 후보   B226AB046  Booty Ghosts T-shirt                   BABY  3M~24M
+ * 일치   브랜드 · 색상(heather grey) · 소재(organic cotton 100%) · 카테고리 ·
+ *        원산지(Portugal) · 시즌(AW26) · 핵심 상품명(booty ghosts shirt)
+ * 충돌   MODEL_CODE 하나뿐 (blockers 는 **빈 배열**)
+ * ```
+ * 🔴 **CEO GT 가 소매 길이 차이를 DIFFERENT 로 판단한 전례가 있다** ⟹ `SAME` 계열
+ *    승격 **금지**. 🟢 그러나 버리기엔 증거가 너무 일치한다 ⟹ **참고 후보로 살린다.**
+ *
+ * ── 🔴 Identity 를 건드리지 않는다 ─────────────────────────────────────────
+ * verdict 는 **`CONFLICT` 그대로** 다. threshold 0 · 8축 0 · `matchTruth` 0 ·
+ * `MODEL_CODE` conflict 제거 0 · AB↔AC 일반 SAME 처리 0 · baby/kids 일반 SAME 0.
+ * 🔴 **소매 길이 축(SLEEVE_LENGTH)을 만들지 않았다**(CPO §5 금지).
+ *
+ * ── 🟢 CPO §2 의 네 조건을 «운영 산출» 로 번역했다(문자열 파싱 0) ──────────
+ * ```
+ * CPO 조건            이 술어가 보장하는 방식
+ * brand match        BRAND_MISMATCH·BRAND_UNCONFIRMED 는 **blockers** 에 실린다 ⟹ 빈 blockers
+ * title overlap      NO_TITLE_OVERLAP 도 **blockers** 다              ⟹ 빈 blockers
+ * category match     CATEGORY 충돌은 **conflicts** 에 실린다          ⟹ conflicts 가 MODEL_CODE 하나
+ * 추가 Evidence 충분  운영이 이미 적은 `matchReasons` 가 비어 있지 않다 + 제목이 있다
+ * ```
+ * 🔴 그래서 §6 의 제외 목록이 **구조적으로** 지켜진다 — 복수 conflict(길이>1) ·
+ *    `COMPOSITION`/`CATEGORY` 충돌(conflicts) · `BRAND_MISMATCH`(blockers) ·
+ *    Evidence 없는 후보(`matchReasons` 빈 배열) 전부 여기서 떨어진다.
+ * 🔴 **「CONFLICT 면 다 보여준다」가 아니다.**
+ */
+const MODEL_CODE_CONFLICT = "MODEL_CODE";
+
+function isModelCodeOnlyReference(row: GeminiTransientRow): boolean {
+  const conflicts = row.crossSellerConflicts ?? [];
+  /** 🔴 **유일한** 명시적 충돌이 품번일 때만. 하나라도 더 있으면 참고 후보가 아니다. */
+  if (conflicts.length !== 1 || conflicts[0] !== MODEL_CODE_CONFLICT) return false;
+  /** 🔴 blockers 가 하나라도 있으면 브랜드/제목겹침이 확인되지 않은 것이다. */
+  if ((row.crossSellerBlockers?.length ?? 0) > 0) return false;
+  /** 🔴 「상당한 공통 Evidence」의 최소 조건 — 제목이 있고 판정 이유가 적혀 있다. */
+  return Boolean(row.title) && (row.matchReasons?.length ?? 0) > 0;
+}
+
 function hasIdentityEvidence(row: GeminiTransientRow): boolean {
   if (row.matchTruth) return true;
   /** 🟢 제목이 있고 판정 이유가 하나라도 적혔으면 셀러가 눈으로 가릴 수 있다. */
@@ -223,8 +269,19 @@ export function selectCandidateList(
     }
     if (POSSIBLE_TIERS.includes(tier) && hasIdentityEvidence(row)) {
       out.push({ row, group: "POSSIBLE" });
+      continue;
     }
-    /** 🔴 `CONFLICT` · Evidence 없는 `UNKNOWN` 은 **주 리스트에 오지 않는다**. */
+    /**
+     * 🔵 CANDIDATE-POSSIBLE-CONFLICT-01 — **품번만 충돌한 참고 후보**(CPO §2·§7).
+     * 🔴 `SIMILAR` 과 **같은 참고 영역** 에 둔다(새 군을 만들지 않았다 · CPO §7).
+     * 🔴 verdict 는 `CONFLICT` 그대로이고 **가격 축에는 들어가지 않는다**
+     *    (`selectMiSameCandidates` 는 `SAME` 만 본다 — 한 글자도 바꾸지 않았다).
+     */
+    if (tier === "CONFLICT" && isModelCodeOnlyReference(row)) {
+      out.push({ row, group: "POSSIBLE" });
+      continue;
+    }
+    /** 🔴 그 밖의 `CONFLICT` · Evidence 없는 `UNKNOWN` 은 **주 리스트에 오지 않는다**. */
   }
   return out;
 }
