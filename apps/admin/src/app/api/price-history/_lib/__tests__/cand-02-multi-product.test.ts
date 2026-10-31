@@ -1,6 +1,14 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+/**
+ * 🔵 CANDIDATE-CAP-AND-LABEL-01 — 상한을 **운영 상수에서 읽는다**(하드코딩 금지).
+ * 🔴 전에는 `10` 을 손으로 적어 뒀고, 그러면 운영이 바뀔 때 하니스가 **조용히 거짓**
+ *    을 말한다(「상한이 N 을 자른다」가 실제 상한과 달라진다).
+ * 🟢 상한의 **값 자체** 는 `ccl-01-cap-and-label` 이 리터럴로 잠근다 — 여기서
+ *    `toBe(20)` 을 또 쓰면 그쪽과 owner 가 둘이 된다.
+ */
+import { MAX_SUPPLIED_CANDIDATE_URLS } from "../run-domestic-price-check";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -56,7 +64,7 @@ const FIX = join(__dirname, "fixtures");
 const fx = <T>(f: string): T => JSON.parse(readFileSync(join(FIX, f), "utf8")) as T;
 
 /** 🔴 재투입 상한의 owner 는 운영이다 — 하니스가 다른 상한을 갖지 않는다. */
-const OPERATIONAL_URL_CAP = 10;
+const OPERATIONAL_URL_CAP = MAX_SUPPLIED_CANDIDATE_URLS;
 
 /**
  * 🔴 운영 재투입은 **AC009 의 스냅샷 id** 를 쓴다(dsp-01 과 같은 값).
@@ -220,7 +228,7 @@ describe("CAND-02 분모 — 다상품 재투입 입력", () => {
 
   /**
    * 🔴🔴 CAND-02-D — **상한이 무엇을 자르는지 측정 «전» 에 센다.**
-   *    운영 상한은 `MAX_SUPPLIED_CANDIDATE_URLS = 10` 이다. 상품 하나가 그보다
+   *    운영 상한은 `MAX_SUPPLIED_CANDIDATE_URLS` 다(CCL-01 에서 20). 상품 하나가 그보다
    *    많은 후보를 들고 있으면 **일부는 fetch 되지 않는다** ⟹ 그것을 「후보 없음」으로
    *    적으면 거짓이다(메모 「상한이 무엇을 자르는지 배포 전에 센다」).
    */
@@ -251,7 +259,7 @@ interface MeasuredRow {
   soldOut: boolean | null;
   source: string | null;
   /** 🟢 운영 선택기 산출 — 복제 계산 0. */
-  display: "LIKELY" | "POSSIBLE" | null;
+  display: "LIKELY" | "PRESUMED" | "POSSIBLE" | null;
   priced: boolean;
 }
 
@@ -334,7 +342,7 @@ describe("CAND-02 — 다상품 후보 표시 측정(재투입 · 새 Search 0)"
         ];
 
         /** ② 운영 선택기 — 표시 축과 가격 축을 **각각** 부른다(복제 0). */
-        const display = new Map<string, "LIKELY" | "POSSIBLE">();
+        const display = new Map<string, "LIKELY" | "PRESUMED" | "POSSIBLE">();
         const priced = new Set<string>();
         for (const market of ["KR", "OVERSEAS"] as const) {
           for (const x of selectCandidateList(rows, market)) display.set(loose(x.row.discoveredUrl), x.group);

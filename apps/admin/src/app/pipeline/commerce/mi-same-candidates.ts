@@ -137,16 +137,40 @@ export function selectPresumedCandidates(
  *    `selectMiSameCandidates` 는 그대로다. 「후보군을 넓히는 것」과 「가격 집계를
  *    넓히는 것」은 **다른 일** 이다.
  */
-export type CandidateListGroup = "LIKELY" | "POSSIBLE";
+/**
+ * ══════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 CANDIDATE-CAP-AND-LABEL-01 — **군이 둘에서 «셋» 이 됐다**(CPO 2026-10-31)
+ * ══════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 실측이 문제를 드러냈다(CORE-E2E-CANDIDATE-02) — `PRESUMED_SAME` 이 `SAME` 과
+ *    **같은 군** 이라 화면이 둘을 「🟢 동일상품 가능성 높음」으로 **똑같이** 말했다.
+ *    그래서 사람이 DIFFERENT 라 한 후보 3건이 그 배지를 달고 섰다
+ *    (S4 donokids · S4 junioredition · S6 ladida — 전부 `PRESUMED_SAME`).
+ *
+ * 🔴🔴🔴 **CPO 가 고른 길은 「후보를 숨기는 것」이 아니다** —
+ * > 「후보를 줄이는 게 아니라 셀러에게 **불확실성을 정확히** 보여주는 방향」
+ *    ⟹ 🟢 **Recall 유지 · 표현만 verdict 에 맞게 분리.**
+ *
+ * 🔴 그래서 바뀌지 않는 것 — Identity threshold **0** · 8축 **0** ·
+ *    가격 집계(`selectMiSameCandidates`) **0** · `SIMILAR` 표시 정책 **0** ·
+ *    제외 집합(`CONFLICT` · 판정없음 · Evidence 없는 `UNKNOWN`) **0**.
+ */
+export type CandidateListGroup = "LIKELY" | "PRESUMED" | "POSSIBLE";
 
 /**
- * 🟢 A 군 — **유력**. 반드시 리스트에 선다(가격 없으면 「가격 미확인」 · CPO §4-A).
- * 🔴 `SAME_MODEL_OPTION_DIFF` 는 **같은 모델의 옵션 차이** 라 유력에 둔다
- *    (`match-display.ts` 의 기존 등급이고 새 등급을 만들지 않았다).
+ * 🟢 A 군 — **식별자로 확인된 동일상품.** 반드시 리스트에 선다(가격 없으면 「가격 미확인」).
+ * 🔴 `SAME_MODEL_OPTION_DIFF` 는 여기 **그대로 둔다** — CPO 표가 그 등급을 **따로 말하지
+ *    않았고**, 그것은 「추정」이 아니라 **같은 모델의 옵션 차이**(식별 확인됨)다.
+ *    🔴 임의로 새 군을 만들지 않았다 — 분리가 필요하면 CPO 가 지정한다.
  */
-const LIKELY_TIERS: readonly string[] = ["SAME", "SAME_MODEL_OPTION_DIFF", "PRESUMED_SAME"];
+const LIKELY_TIERS: readonly string[] = ["SAME", "SAME_MODEL_OPTION_DIFF"];
 /**
- * 🟡 B 군 — **확장**. Evidence 로 「동일/유사 가능성」을 판단할 수 있는 후보(CPO §4-B).
+ * 🟡 **새 군 — 추정.** `PRESUMED_SAME` 은 리스트에 **그대로 서지만**(Recall 유지)
+ * 🔴 `SAME` 과 **같은 말을 쓰지 않는다.** 그것이 이 WU 가 고친 전부다.
+ */
+const PRESUMED_TIERS: readonly string[] = ["PRESUMED_SAME"];
+/**
+ * 🟡 C 군 — **유사 · 참고**. Evidence 로 가능성을 판단할 수 있는 후보.
  * 🔴 `UNKNOWN` 은 **등급만으로 넣지 않는다** — 아래 `hasIdentityEvidence` 가 같이 본다.
  */
 const POSSIBLE_TIERS: readonly string[] = ["SIMILAR"];
@@ -188,6 +212,15 @@ export function selectCandidateList(
       out.push({ row, group: "LIKELY" });
       continue;
     }
+    /**
+     * 🔵 CANDIDATE-CAP-AND-LABEL-01 — **추정은 서지만 말이 다르다.**
+     * 🔴 `hasIdentityEvidence` 를 **요구하지 않는다** — CPO 표가 Evidence 조건을
+     *    `SIMILAR` 에만 달았고, 여기에 더하면 **후보가 줄어든다**(Recall 유지가 원칙).
+     */
+    if (PRESUMED_TIERS.includes(tier)) {
+      out.push({ row, group: "PRESUMED" });
+      continue;
+    }
     if (POSSIBLE_TIERS.includes(tier) && hasIdentityEvidence(row)) {
       out.push({ row, group: "POSSIBLE" });
     }
@@ -198,9 +231,15 @@ export function selectCandidateList(
 
 /** 🟢 리스트의 말 — 🔴 내부 토큰(tier·matchTruth)을 글자로 쓰지 않는다(CPO §6). */
 export const CANDIDATE_LIST_HEADING = "동일상품 가능성이 있는 후보";
+/**
+ * 🔵 CANDIDATE-CAP-AND-LABEL-01 — **CPO 가 글자를 고정했다.**
+ * 🔴 「🟡 유사 · 동일상품 가능성 있음」이 **「🟡 유사상품 · 참고」로 바뀌었다** —
+ *    전 문구는 `SIMILAR` 에까지 「동일상품 가능성」을 말해서 세 등급이 **한 덩어리** 로 읽혔다.
+ */
 export const CANDIDATE_GROUP_LABEL: Record<CandidateListGroup, string> = {
   LIKELY: "🟢 동일상품 가능성 높음",
-  POSSIBLE: "🟡 유사 · 동일상품 가능성 있음",
+  PRESUMED: "🟡 동일상품 추정",
+  POSSIBLE: "🟡 유사상품 · 참고",
 };
 /** 🔴 「후보가 없다」와 「조회하지 않았다」는 다른 사실이다(WU-130 ② 유지). */
 export const CANDIDATE_LIST_EMPTY = "이 시장에서는 아직 후보를 찾지 못했습니다.";

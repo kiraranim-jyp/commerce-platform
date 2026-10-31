@@ -44,11 +44,20 @@ describe("CANDIDATE-EVIDENCE-VISIBILITY-01", () => {
     expect(selectMiSameCandidates(rows, "OVERSEAS").priced.map((x) => x.domain)).toEqual(["a.com"]);
   });
 
-  /** 🟢 CAND-02 — PRESUMED_SAME + 가격 ⟹ 리스트. */
-  it("CAND-02 PRESUMED_SAME + 가격 존재", () => {
+  /**
+   * 🟢 CAND-02 — PRESUMED_SAME + 가격 ⟹ 리스트.
+   *
+   * 🔵🔵 **CANDIDATE-CAP-AND-LABEL-01 에서 기대값이 바뀌었다**(CPO 판정 2026-10-31) —
+   *    전에는 `SAME` 과 **같은 `LIKELY`** 였고 화면도 같은 말을 썼다. 🔴 그래서 사람이
+   *    DIFFERENT 라 한 후보가 「🟢 동일상품 가능성 높음」을 달고 섰다(실측 3건).
+   * 🟢 **리스트에 서는 사실은 그대로** 다(Recall 유지) — 바뀐 것은 **군과 말** 뿐이다.
+   */
+  it("CAND-02 PRESUMED_SAME + 가격 존재 ⟹ 리스트에 서되 **추정 군** 이다", () => {
     const rows = [r({ domain: "b.com", crossSellerVerdict: "PRESUMED_SAME", priceAmount: 58, priceCurrency: "USD" })];
     expect(list(rows)).toEqual(["b.com"]);
-    expect(group(rows, "b.com")).toBe("LIKELY");
+    expect(group(rows, "b.com")).toBe("PRESUMED");
+    /** 🔴 `SAME` 과 **같은 군이 아니다** — 이 단언이 둘을 다시 합치는 회귀를 막는다. */
+    expect(group(rows, "b.com")).not.toBe("LIKELY");
   });
 
   /**

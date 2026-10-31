@@ -21,7 +21,76 @@
                 형성대에 쓸 수 있다」가 코드에서 **서로 다른 답** 이다(부록 AJ-3)
                 선택지 ⒜ 현행 유지 ⒝ **제3의 축**(시장 미확정 동일상품 가격) ⒞ KR 증거 확대(🔴 WU-077 순손실)
 
-CURRENT WU   **CORE-E2E-CANDIDATE-02 — 🟢🟢 측정 완료 / CLOSED**(측정 전용 · **운영 코드 변경 0**)
+CURRENT WU   **CANDIDATE-CAP-AND-LABEL-01 — 🟢🟢 구현·배포 완료**(CPO 판정 2건 집행)
+             🔴 CPO 가 고정한 **둘만** 바꿨다. 운영 **2 파일** · 그 밖은 전부 0.
+
+             🟢 **① 공급 상한 `MAX_SUPPLIED_CANDIDATE_URLS` 10 → 20**
+                🔴 10 은 비용 보호가 아니라 **좋은 후보를 버리는 제품 제약** 이었다 —
+                   S1 공급 19 중 **9건이 열리지도 않았고** 그 안에 human SAME 4건.
+                🔴 상한은 생산자 **넷이 공유** 한다(붙여넣기 · 재투입 · 국내목록 · 웹검색) —
+                   생산자별로 쪼개지 않았다(기존 설계 유지 · 「두 곳이 다른 상한을 갖지 않는다」).
+                🟡 **비용 축은 갈라 적는다** — 재투입은 실측(5상품 중 S1 하나만 상한 포화) ·
+                   나머지 세 생산자는 로컬에서 **측정불가**(APIFY·service-role 부재).
+
+             🟢 **② 후보 배지를 verdict 별로 분리**(군 둘 → **셋** · Recall 유지)
+             ```
+             SAME · SAME_MODEL_OPTION_DIFF → LIKELY    🟢 동일상품 가능성 높음
+             PRESUMED_SAME                 → PRESUMED  🟡 동일상품 추정      ← 신설
+             SIMILAR + Evidence            → POSSIBLE  🟡 유사상품 · 참고     ← 문구 교체
+             CONFLICT · 판정없음 · Evidence 없는 UNKNOWN → 표시 제외(불변)
+             ```
+                🔴 **후보를 줄이지 않았다** — 바뀐 것은 **군과 말** 뿐이다(CPO: 「불확실성을
+                   정확히 보여주는 방향」). 🔴 `PRESUMED` 에 Evidence 조건을 **달지 않았다**
+                   (CPO 표가 그 조건을 `SIMILAR` 에만 달았다 — 달면 후보가 줄어든다).
+                🔴 `SAME_MODEL_OPTION_DIFF` 는 🟢 군에 **그대로** 뒀다 — CPO 표가 그 등급을
+                   따로 말하지 않았고 「추정」이 아니라 **식별 확인된 옵션 차이** 다(새 군 0).
+
+             🟢🟢 **상한 20 실측 — 「올렸으니 늘었다」로 적지 않는다**(전후 같은 조건)
+             ```
+             상품                   도달      표시      가격     미fetch
+             S1 B226AC010           7 → 8    4 → 6    2 → 3    9 → 0
+             S3 B126AI018           1 → 1    1 → 1    0 → 0    0 → 0
+             S4 AW26MS185           3 → 3    3 → 3    1 → 1    0 → 0
+             S5 01195-VERNICE-NERO  0 → 0    0 → 0    0 → 0    0 → 0
+             S6 B226AC117           3 → 3    3 → 3    1 → 1    0 → 0
+             합계                  14 →15   11 →13    4 → 5
+             ```
+             🔴 **S1 의 잘렸던 9건 중 후보로 도달한 것은 5** 다(human SAME 4 · DIFFERENT 1).
+                미도달 4 = `REDIRECTED_AWAY` 1 · `DUPLICATE` 2 · 목록 URL 1 ⟹ **올바른 탈락**.
+                🟢 그 DIFFERENT 1건(junioredition)은 `CONFLICT` 로 **표시 제외** 됐다.
+             🔴🔴 **행 수는 +1 뿐이다**(7→8) — 리스트는 **샵당 대표 1건** 이라 새로 열린 URL
+                여럿이 같은 샵이다. 「후보 5건이 늘었다」로 적지 않는다.
+
+             🟢🟢🟢 **그런데 더 중요한 것은 «정확도» 가 바뀐 것이다 — 샵 대표가 뒤집혔다**
+             ```
+             tinyapple.net   상한 10  human DIFFERENT · CONFLICT · 표시 X · USD 53
+                             상한 20  human **SAME** · SAME · 🟢 표시 · USD 58
+             ```
+                🔴 상한 10 이 그 샵의 **진짜 동일상품**(`…-heather-grey`)을 **열어 보지도
+                   못해서**, 같은 샵의 다른 리스팅(스웨트셔츠 · human DIFFERENT)이 대표로 섰다.
+                🟢 WU-113 이 고친 그 모양과 **같은 계열** 이고, 이번 원인은 **상한** 이었다.
+             🟢 새 판매처 **1곳** — `billsstore.com.au`(human SAME · SAME · AUD 73 · 가격 O).
+
+             🔴 **가격 정책은 변경 0 이고 실측이 그것을 보여준다** —
+                `tinyapple` 은 SAME 인데 `UNVERIFIED_SEARCH` 라 집계 밖 ·
+                `rboutique`/`kolkid` 는 `PRESUMED_SAME` 이라 집계 밖(🟡 추정으로 **표시만**).
+
+             🟢 계약 **10 신규**(`ccl-01-cap-and-label`) · 변이 **N1~N6 전부 FAIL → 바이트 복구**
+             🟢 기존 계약 **2건 갱신**(약화 아님) — `wu-024`(상한 리터럴 10 → **20**) ·
+                `cand-01 CAND-02`(PRESUMED_SAME 기대값 `LIKELY` → **`PRESUMED`** + 「`LIKELY` 가
+                아니다」를 **추가** 해 둘을 다시 합치는 회귀를 막았다)
+             🟢 회귀 **751 files / 9,779 passed / 0 failed** · tsc **0** · build **0**
+             🔴 Identity threshold **0** · 8축 **0** · `matchTruth`/`priceTier` **0** ·
+                가격 집계 **0** · `SIMILAR` 표시 정책 **0** · Search/Query/Apify/Registry/adapter **0**
+
+NEXT         🟡🟡 **CEO 화면 확인 1회 → 그 뒤 다상품 실제 상품 검증으로 복귀**(CPO 지시).
+             확인할 것 셋 — ① 후보 배지가 **세 가지 말** 로 갈려 보이는가
+             ② 「🟡 동일상품 추정」이 「🟢 동일상품 가능성 높음」과 **구별되는가**
+             ③ 가격이 있는 후보가 후보 리스트에 **같이** 있는가
+             🔴 「후보가 늘었는가」는 확인 대상이 아니다 — 행 수는 +1 이고 바뀐 것은 **정확도와 말** 이다.
+             🔴 Search · Registry · Identity · 가격정책을 **다시 열지 않는다**(CPO 명시).
+
+[낡음]       **CORE-E2E-CANDIDATE-02 — 측정 완료**(아래 CAP-AND-LABEL 이 그 판정 2건을 집행했다)
              🔴 질문은 하나였다 — 「이미 찾아낸 후보를 화면이 후보군으로 보여주고,
                 가격이 있는 후보를 그 안에서 함께 보여주는가」. **다섯 상품에서 그렇다.**
 
@@ -72,7 +141,6 @@ CURRENT WU   **CORE-E2E-CANDIDATE-02 — 🟢🟢 측정 완료 / CLOSED**(측�
                 느슨하게 하지 않고 **이중 집계 방지** 사유로 등록했다(미분류 0)
              🟢 회귀 **750 files / 9,769 passed / 0 failed** · tsc **0** · build **0**
 
-NEXT         🔵 **CPO 지정 대기.** 🔴 CTO 가 선제적으로 WU 를 만들지 않는다.
              🔴 이 결과로 Search · Registry · Identity · 가격정책을 **다시 열지 않는다**(CPO 명시).
              🟡 열려 있는 것은 위 **판정 2건**(후보 상한 · 리스트 배지)이고 둘 다 제품 정책이다.
              🔴 「국내 후보가 왜 적은가」로 되돌아가지 않는다 — 이 WU 는 **표시 축** 을 닫았다.

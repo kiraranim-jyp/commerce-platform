@@ -62,7 +62,7 @@ interface MeasuredRow {
   currency: string | null;
   priceStatus: string | null;
   soldOut: boolean | null;
-  display: "LIKELY" | "POSSIBLE" | null;
+  display: "LIKELY" | "PRESUMED" | "POSSIBLE" | null;
   priced: boolean;
 }
 interface MeasuredProduct {

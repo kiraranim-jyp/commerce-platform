@@ -481,7 +481,13 @@ describe("F. 🔴 라우트가 모양만 검사하고 상한을 공유한다", (
   it("상한 상수를 **import** 한다 — 두 곳이 다른 값을 갖지 않는다", () => {
     expect(ROUTE).toContain("MAX_SUPPLIED_CANDIDATE_URLS");
     expect(ROUTE).toContain("MAX_CANDIDATE_URL_PAYLOAD = MAX_SUPPLIED_CANDIDATE_URLS");
-    expect(RUNNER).toContain("export const MAX_SUPPLIED_CANDIDATE_URLS = 10;");
+    /**
+     * 🔵 CANDIDATE-CAP-AND-LABEL-01 — **10 → 20**(CPO 판정 2026-10-31).
+     * 🔴 리터럴로 **그대로** 단언한다(「숫자가 있다」로 느슨하게 하지 않는다) —
+     *    실측이 「상한이 human SAME 4건을 잘랐다」를 보였고, 그 값이 조용히
+     *    다시 내려가면 같은 손실이 **말없이** 돌아온다.
+     */
+    expect(RUNNER).toContain("export const MAX_SUPPLIED_CANDIDATE_URLS = 20;");
   });
 
   it("배열이 아니거나 너무 크면 400 이다", () => {

@@ -256,11 +256,25 @@ export function priceTierWithVerifiedSame(input: {
 
 /**
  * 🔴 상한을 «호출부 계층» 이 소유한다(모듈에 박지 않는다 — `gemini-candidate-pool` §9
- *    와 같은 규약). 근거: WU-017 하니스가 붙여넣기 1회당 `maxUrls: 10` 으로 측정했고,
- *    URL 하나당 HTTP 1~2회이므로 10 이면 최악 20요청이다. 🔴 API 라우트도 **이 값을
- *    import 해서** 쓴다 — 두 곳이 다른 상한을 갖지 않는다.
+ *    와 같은 규약). 🔴 API 라우트도 **이 값을 import 해서** 쓴다 — 두 곳이 다른 상한을
+ *    갖지 않는다. 🔴 그리고 **공급 생산자 넷이 이 하나를 공유한다**(붙여넣기 ·
+ *    재투입 · 국내 목록 · 웹 검색) — 생산자별로 쪼개지 않는다.
+ *
+ * ── 🔵 CANDIDATE-CAP-AND-LABEL-01 — **10 → 20**(CPO 판정 2026-10-31) ──────────
+ * ```
+ * 전 근거(WU-017)  붙여넣기 1회당 10 · URL 당 HTTP 1~2회 ⟹ 최악 20요청
+ * 🔴 실측이 그 10 을 «제품 제약» 으로 만들었다(CORE-E2E-CANDIDATE-02):
+ *    S1 B226AC010 공급 **19** → 상한 10 ⟹ **9건이 열리지도 않았고**
+ *    그 9 안에 **human SAME 4건** 이 있었다(rboutique · tinyapple · eraldo ·
+ *    cissywears · billsstore)
+ * ⟹ 🔴 비용 보호가 아니라 **좋은 후보를 버리는 상한** 이었다
+ * ```
+ * 🔴 **무제한이 아니다** — 20 은 그 실측 공급량(19)을 전부 통과시키는 최소값이고
+ *    생산자당 최악 **40요청** 으로 묶인다. 🔴 Discovery/Search 전략 변경이 **아니다**
+ *    (이미 공급된 URL 을 어디까지 후속 파이프라인에 태울지의 운영 상한이다).
+ * 🔴 **값을 더 올리려면 측정이 먼저다** — 「20 으로 올렸으니 후보가 늘었다」로 적지 않는다.
  */
-export const MAX_SUPPLIED_CANDIDATE_URLS = 10;
+export const MAX_SUPPLIED_CANDIDATE_URLS = 20;
 
 /**
  * 🔴🔴 **영구 entity 가 아니다.** 등록 «순간» 의 판단 근거로만 쓰고 버린다

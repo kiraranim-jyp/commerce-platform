@@ -26,17 +26,7 @@
         "https://www.beaumonde.co.kr/goods/goods_list.php?page=3&brandCd=070002",
         "https://www.billsstore.com.au/products/booty-ghosts-long-sleeve-t-shirt-baby"
       ],
-      "notFetched": [
-        "https://www.rboutique.com/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
-        "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt-heather-grey",
-        "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-sweatshirt",
-        "https://www.eraldo.com/products/bobo-choses-booty-ghosts-t-shirt-340496",
-        "https://cissywears.com/products/bobo-choses-booty-ghosts-t-shirt",
-        "https://cissywears.com/products/bobo-choses-baby-booty-ghosts-t-shirt",
-        "https://www.junioredition.com/products/booty-ghosts-t-shirt-by-bobo-choses",
-        "https://www.beaumonde.co.kr/goods/goods_list.php?page=3&brandCd=070002",
-        "https://www.billsstore.com.au/products/booty-ghosts-long-sleeve-t-shirt-baby"
-      ],
+      "notFetched": [],
       "rows": [
         {
           "url": "https://www.rboutique.com/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
@@ -51,7 +41,7 @@
           "priceStatus": "VERIFIED_CURRENT",
           "soldOut": null,
           "source": "REVIEWED_SAME",
-          "display": "LIKELY",
+          "display": "PRESUMED",
           "priced": false
         },
         {
@@ -83,7 +73,7 @@
           "priceStatus": "VERIFIED_CURRENT",
           "soldOut": null,
           "source": "REVIEWED_SAME",
-          "display": "LIKELY",
+          "display": "PRESUMED",
           "priced": false
         },
         {
@@ -103,19 +93,19 @@
           "priced": false
         },
         {
-          "url": "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt",
+          "url": "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt-heather-grey",
           "domain": "tinyapple.net",
-          "title": "Bobo Choses Booty Ghosts T-shirt",
-          "human": "DIFFERENT",
+          "title": "Bobo Choses Booty Ghosts T-shirt, Heather Grey",
+          "human": "SAME",
           "market": "OVERSEAS",
-          "tier": "CONFLICT",
-          "verdict": "CONFLICT",
-          "price": 53,
+          "tier": "STRONG_IDENTIFIER",
+          "verdict": "SAME",
+          "price": 58,
           "currency": "USD",
-          "priceStatus": "VERIFIED_CURRENT",
+          "priceStatus": "UNVERIFIED_SEARCH",
           "soldOut": null,
           "source": "REVIEWED_SAME",
-          "display": null,
+          "display": "LIKELY",
           "priced": false
         },
         {
@@ -149,6 +139,22 @@
           "source": "REVIEWED_SAME",
           "display": "LIKELY",
           "priced": true
+        },
+        {
+          "url": "https://www.billsstore.com.au/products/booty-ghosts-long-sleeve-t-shirt-baby",
+          "domain": "billsstore.com.au",
+          "title": "Booty Ghosts Long Sleeve T-Shirt Baby",
+          "human": "SAME",
+          "market": "OVERSEAS",
+          "tier": "STRONG_IDENTIFIER",
+          "verdict": "SAME",
+          "price": 73,
+          "currency": "AUD",
+          "priceStatus": "VERIFIED_CURRENT",
+          "soldOut": null,
+          "source": "REVIEWED_SAME",
+          "display": "LIKELY",
+          "priced": true
         }
       ],
       "lost": [
@@ -169,16 +175,16 @@
           "human": "DIFFERENT"
         },
         {
+          "url": "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt",
+          "human": "DIFFERENT"
+        },
+        {
           "url": "https://luksusbaby.kr/products/bobo-choses-light-blue-booty-ghosts-t-shirt",
           "human": "UNCERTAIN"
         },
         {
           "url": "https://luksusbaby.kr/products/bobo-choses-light-blue-booty-ghosts-sweatshirt-1",
           "human": "DIFFERENT"
-        },
-        {
-          "url": "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt-heather-grey",
-          "human": "SAME"
         },
         {
           "url": "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-sweatshirt",
@@ -195,33 +201,35 @@
         {
           "url": "https://www.beaumonde.co.kr/goods/goods_list.php?page=3&brandCd=070002",
           "human": "UNCERTAIN"
-        },
-        {
-          "url": "https://www.billsstore.com.au/products/booty-ghosts-long-sleeve-t-shirt-baby",
-          "human": "SAME"
         }
       ],
       "metrics": {
         "suppliedUrls": 19,
         "acceptedUrls": 19,
-        "usableProductUrls": 9,
-        "miEligibleCandidates": 9,
-        "fetchCalls": 12,
-        "notFetchedOverLimit": [
-          "https://www.rboutique.com/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
-          "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt-heather-grey",
-          "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-sweatshirt",
-          "https://www.eraldo.com/products/bobo-choses-booty-ghosts-t-shirt-340496",
-          "https://cissywears.com/products/bobo-choses-booty-ghosts-t-shirt",
-          "https://cissywears.com/products/bobo-choses-baby-booty-ghosts-t-shirt",
-          "https://www.junioredition.com/products/booty-ghosts-t-shirt-by-bobo-choses",
-          "https://www.beaumonde.co.kr/goods/goods_list.php?page=3&brandCd=070002",
-          "https://www.billsstore.com.au/products/booty-ghosts-long-sleeve-t-shirt-baby"
-        ],
+        "usableProductUrls": 17,
+        "miEligibleCandidates": 14,
+        "fetchCalls": 23,
+        "notFetchedOverLimit": [],
         "dropped": [
           {
             "url": "https://www.eraldo.com/en-us/products/bobo-choses-booty-ghosts-t-shirt-340496",
             "reason": "REDIRECTED_AWAY"
+          },
+          {
+            "url": "https://www.rboutique.com/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
+            "reason": "DUPLICATE"
+          },
+          {
+            "url": "https://www.eraldo.com/products/bobo-choses-booty-ghosts-t-shirt-340496",
+            "reason": "REDIRECTED_AWAY"
+          },
+          {
+            "url": "https://cissywears.com/products/bobo-choses-booty-ghosts-t-shirt",
+            "reason": "DUPLICATE"
+          },
+          {
+            "url": "https://www.junioredition.com/products/booty-ghosts-t-shirt-by-bobo-choses",
+            "reason": "DUPLICATE"
           }
         ],
         "providerCalls": 0
@@ -253,7 +261,7 @@
           "priceStatus": "VERIFIED_CURRENT",
           "soldOut": null,
           "source": "REVIEWED_SAME",
-          "display": "LIKELY",
+          "display": "PRESUMED",
           "priced": false
         }
       ],
@@ -319,7 +327,7 @@
           "priceStatus": "VERIFIED_CURRENT",
           "soldOut": null,
           "source": "REVIEWED_SAME",
-          "display": "LIKELY",
+          "display": "PRESUMED",
           "priced": false
         },
         {
@@ -335,7 +343,7 @@
           "priceStatus": "VERIFIED_CURRENT",
           "soldOut": false,
           "source": "REVIEWED_SAME",
-          "display": "LIKELY",
+          "display": "PRESUMED",
           "priced": false
         },
         {
@@ -447,7 +455,7 @@
           "priceStatus": "UNVERIFIED_SEARCH",
           "soldOut": true,
           "source": "REVIEWED_SAME",
-          "display": "LIKELY",
+          "display": "PRESUMED",
           "priced": false
         },
         {
@@ -479,7 +487,7 @@
           "priceStatus": "UNVERIFIED_SEARCH",
           "soldOut": null,
           "source": "REVIEWED_SAME",
-          "display": "LIKELY",
+          "display": "PRESUMED",
           "priced": false
         }
       ],
