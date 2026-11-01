@@ -306,8 +306,29 @@ export function selectCandidateList(
   return out;
 }
 
-/** 🟢 리스트의 말 — 🔴 내부 토큰(tier·matchTruth)을 글자로 쓰지 않는다(CPO §6). */
-export const CANDIDATE_LIST_HEADING = "동일상품 가능성이 있는 후보";
+/**
+ * 🟢 리스트의 말 — 🔴 내부 토큰(tier·matchTruth)을 글자로 쓰지 않는다(CPO §6).
+ *
+ * ══════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 CANDIDATE-UX-REFINE-01 U1 — **시장별이다**(CPO 확정 2026-11-01)
+ * ══════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 `MarketColumn`(MarketPriceComparison.tsx)은 **국내·해외가 공유하는 컴포넌트** 다.
+ *    한 줄짜리 상수로 두면 🇰🇷 국내 칸에 「해외 소싱 후보」가 뜬다 — **화면이 거짓말한다.**
+ * 🟢 그래서 `Record` 로 갈랐다. 🔴 **새 패턴이 아니다** — 이 파일의 `PRICE_GUIDE_TITLE`
+ *    이 이미 같은 모양이다(같은 문제를 같은 방법으로 푼다).
+ * 🔴 「N곳」은 여기 넣지 않는다 — 개수는 화면에서 `list.length` 로 **파생** 한다.
+ *    상수에 넣으면 그 숫자가 실제 행 수와 조용히 갈라진다.
+ */
+export const CANDIDATE_LIST_HEADING: Record<"KR" | "OVERSEAS", string> = {
+  KR: "국내 소싱 후보",
+  OVERSEAS: "해외 소싱 후보",
+};
+/**
+ * 🔴 **시장명을 넣지 않는다.** 국내·해외가 **같은 문장** 을 쓴다 —
+ *    CPO: 「국내와 해외를 일부러 다르게 만들지 않는다」.
+ */
+export const CANDIDATE_LIST_NOTE = "원상품과 같거나 같을 가능성이 높은 판매처입니다.";
 /**
  * 🔵 CANDIDATE-CAP-AND-LABEL-01 — **CPO 가 글자를 고정했다.**
  * 🔴 「🟡 유사 · 동일상품 가능성 있음」이 **「🟡 유사상품 · 참고」로 바뀌었다** —
@@ -330,8 +351,50 @@ export const CANDIDATE_GROUP_LABEL: Record<CandidateListGroup, string> = {
   PRESUMED: "🟡 동일상품 추정",
   POSSIBLE: "🟡 품번 충돌 · 참고",
 };
-/** 🔴 「후보가 없다」와 「조회하지 않았다」는 다른 사실이다(WU-130 ② 유지). */
-export const CANDIDATE_LIST_EMPTY = "이 시장에서는 아직 후보를 찾지 못했습니다.";
+/**
+ * 🔵 CANDIDATE-UX-REFINE-01 U2 — **그룹의 «뜻» 을 한 줄로 적는다.**
+ *
+ * 🔴 `CANDIDATE_GROUP_LABEL` 은 **한 글자도 바꾸지 않는다**(`ccl-01` 이 세 글자와
+ *    부정 단언 둘을 잠갔다). 이 상수는 그 **옆에 서는 설명** 이다.
+ * 🟢 U6 tooltip 이 **이 값을 그대로 재사용** 한다 — 두 벌을 만들면 갈라진다.
+ * 🔴 `POSSIBLE` 문장에 「동일상품」·「유사상품」을 쓰지 않는다 —
+ *    품번이 충돌한 상태에서 「동일상품」은 과한 단정이고(`ccl-01` 금지),
+ *    「유사상품」은 그 군의 실제 내용이 아니다(실측으로 CEO SAME 2건이 거기 있었다).
+ */
+/**
+ * 🔵 U3 — **그룹 렌더 순서의 owner.**
+ *
+ * 🔴 `selectCandidateList` 의 push 순서를 화면에서 **복제하지 않는다** — 복제하면
+ *    한쪽만 바뀌었을 때 둘이 조용히 갈라진다. 🟢 순서를 **한 곳에서** 선언한다.
+ * 🔴 「🟢 유력 → 🟡 추정 → 🟡 품번충돌」은 셀러가 **먼저 볼 것이 위에** 오는 순서다.
+ */
+export const CANDIDATE_GROUP_ORDER: readonly CandidateListGroup[] = [
+  "LIKELY",
+  "PRESUMED",
+  "POSSIBLE",
+];
+
+export const CANDIDATE_GROUP_NOTE: Record<CandidateListGroup, string> = {
+  LIKELY: "상품 정보가 강하게 일치하는 후보입니다.",
+  PRESUMED:
+    "핵심 정보는 상당히 일치하지만 일부 정보가 확인되지 않아 동일상품으로 추정한 후보입니다.",
+  POSSIBLE: "상품 정보는 참고할 가치가 있지만 품번이 달라 별도로 확인해야 하는 후보입니다.",
+};
+
+/**
+ * 🔴 「후보가 없다」와 「조회하지 않았다」는 다른 사실이다(WU-130 ② 유지).
+ * 🔵 U7 — 🔴 **시장별이다**(U1 과 같은 이유 · 공유 컴포넌트).
+ * 🔴 **식별자 이름을 바꾸지 않는다** — `core-e2e-close-03-presumed-area.test.ts` 가
+ *    이 이름을 **소스 텍스트 앵커** 로 써서 구간을 자른다. 이름/위치를 옮기면
+ *    「구역이 사라졌다」가 아니라 **slice 경계가 깨져** 모호한 FAIL 이 난다.
+ */
+export const CANDIDATE_LIST_EMPTY: Record<"KR" | "OVERSEAS", string> = {
+  KR: "국내 소싱 후보가 없습니다",
+  OVERSEAS: "해외 소싱 후보가 없습니다",
+};
+/** 🔴 「조회하지 않았다」로 읽히지 않게 **왜** 없는지를 적는다. */
+export const CANDIDATE_LIST_EMPTY_NOTE =
+  "현재 확인된 정보만으로는 같은 상품으로 판단할 수 있는 판매처를 찾지 못했습니다.";
 
 /** 🔴 `MatchDisplayTier` 와 글자가 같은 값만 등급으로 받는다 — 모르는 값은 지어내지 않는다. */
 export const DISPLAYABLE_TIERS = [
@@ -378,6 +441,93 @@ export function isNotSoldOut(row: GeminiTransientRow): boolean {
 export function isPriceConfirmed(row: GeminiTransientRow): boolean {
   return row.priceStatus === "VERIFIED_CURRENT" && row.priceAmount != null && !!row.priceCurrency;
 }
+
+/**
+ * ══════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 CANDIDATE-UX-REFINE-01 U5 — **가격은 «3상태» 다**(CPO ⒜ 확정 2026-11-01)
+ * ══════════════════════════════════════════════════════════════════════════════
+ *
+ * > 「가격을 최대한 보여주되, 그 가격이 얼마나 믿을 만한지를 셀러가
+ * >  **카드 하나만 보고** 바로 알 수 있게 한다.」
+ *
+ * 🔴🔴 **2분법(있다/없다)으로 두면 한 상태가 새어 나가고 그것이 셀러에게 가장 해롭다.**
+ * ```
+ * 후보 카드가 쓰는 `priceText`(GeminiTransientCandidates.tsx)는 **priceStatus 를 보지 않는다**
+ *   ⟹ 「금액은 있는데 상세 검증 전」인 행이 **확정가와 똑같이** 보인다
+ *   ⟹ 셀러가 그 숫자로 판매가를 정한다
+ * 🔴 그리고 같은 화면의 다른 두 패널은 그 숫자를 **숨긴다**
+ *    (`CandidateComparison` · `ComparisonShopSearch` 가 `isPriceDisplayable` 을 쓴다)
+ *   ⟹ 한 화면이 **서로 다른 말** 을 하고 있었다(헌장 §12 의 WU-111 모순이 선 그 칸이다)
+ * ```
+ * 🔴 **숨기는 안은 CPO 가 제외했다** — WU-111 실측으로 반증됐다. 숨기면 Human SAME 인
+ *    `EUR 40` 이 사라져 **그 통화 축이 통째로 없어진다**(순손실).
+ * 🟢 그래서 **보여주고 · 상태를 붙인다.**
+ *
+ * ── 🔴 이 함수는 «새 가격 판정» 이 아니다 ──────────────────────────────────────
+ * **owner 는 위 `isPriceConfirmed` 하나** 이고 이것은 그 값을 UI 상태로 바꾸는 **어댑터** 다.
+ * 🔴 그래서 여기서 `priceStatus` 를 **직접 비교하지 않는다**
+ *    (`row.priceStatus === "VERIFIED_CURRENT"` 금지). 비교하면 같은 규칙이 **두 벌** 이 되고
+ *    둘이 갈라지는 순간 화면과 가격 축이 다른 말을 한다 — 이 트랙이 반복해 맞은 함정이다.
+ *
+ * ── 세 상태는 상호배타 · 전수다 ───────────────────────────────────────────────
+ * ```
+ * NONE       금액 또는 통화가 없다                          → 「가격 확인 필요」
+ * CONFIRMED  isPriceConfirmed                               → priceText 만
+ * UNVERIFIED 나머지(금액·통화는 있다)                        → priceText + 상태 한 줄
+ *            🔴 `priceStatus` 가 null/undefined 인 **구버전 행도 여기** 다
+ *               (`price-truth.ts` 의 「구버전 데이터는 안전측」 원칙과 같은 방향)
+ * ```
+ */
+export function priceState(row: GeminiTransientRow): "CONFIRMED" | "UNVERIFIED" | "NONE" {
+  if (row.priceAmount == null || !row.priceCurrency) return "NONE";
+  return isPriceConfirmed(row) ? "CONFIRMED" : "UNVERIFIED";
+}
+
+/** 🔴 금액 자체가 없을 때. 「0원」·「-」로 적지 않는다. */
+export const CANDIDATE_PRICE_UNKNOWN = "가격 확인 필요";
+/**
+ * 🟢 **글자를 지어내지 않았다** — `priceStatusText`(GeminiTransientCandidates.tsx)가
+ *    `UNVERIFIED_SEARCH` 에 이미 쓰는 어휘다. 그래서 같은 상품의 다른 패널과 **말이 일치한다.**
+ * 🔴 `PRICE_UNKNOWN_TEXT`("가격 미확인")를 고치지 않는다 — 그 글자는 **다른 화면의 것** 이고
+ *    계약 둘(`mi-022` · `wu-028`)이 잠갔다. 이 WU 의 5개 계약 **밖** 이다.
+ */
+export const CANDIDATE_PRICE_UNVERIFIED = "판매처 표시가 · 상세 검증 전";
+
+/** 🔴 사진이 없으면 **없다고 적는다** — 대체 사진을 넣지 않는다(WU-132 ④). */
+export const CANDIDATE_IMAGE_NONE = "이미지 없음";
+/** 🟢 링크의 말. 🔴 도메인을 두 번 적지 않는다(판매처 줄이 이미 그것을 말한다). */
+export const CANDIDATE_LINK_TEXT = "판매 페이지 열기";
+
+/**
+ * 🔵 U4 판단 근거 — 🔴🔴 **새 문장을 만들지 않는다**(`wu-130 F-4`).
+ *
+ * ```
+ * ① 운영이 이미 적은 `matchReasons` 를 **그대로** 쓴다
+ * ② blocker/conflict 가 **실재할 때만** 기존 `blockerText` 로 한 줄 더한다
+ * ```
+ * 🔴 ✓/△ 같은 기호로 요약하지 않는다 — 요약은 **새 판정** 이다.
+ * 🔴 점수·threshold·축 이름(영문 토큰)을 화면에 내보내지 않는다 — 말의 owner 는
+ *    `blocker-text.ts` 이고 그 파일이 모르는 토큰은 「기타 사유」로 묶는다.
+ * 🟢 blocker 와 conflict 를 **합쳐서** 한 줄로 적는다 — 셀러에게 둘은 같은 질문이다
+ *    (「왜 확정이 아닌가」). 🔴 중복 토큰은 접는다.
+ */
+export function candidateReasonLines(row: GeminiTransientRow): string[] {
+  const lines = [...(row.matchReasons ?? [])];
+  const tokens = [...(row.crossSellerBlockers ?? []), ...(row.crossSellerConflicts ?? [])];
+  const seen = new Set<string>();
+  const blocked: string[] = [];
+  for (const t of tokens) {
+    const text = blockerText(t);
+    if (seen.has(text)) continue;
+    seen.add(text);
+    blocked.push(text);
+  }
+  if (blocked.length > 0) lines.push(`${CANDIDATE_BLOCKER_PREFIX} ${blocked.join(" · ")}`);
+  return lines;
+}
+
+/** 🔴 「확인 필요」라고만 적으면 무엇을 확인할지 모른다 — 사유를 뒤에 붙인다. */
+export const CANDIDATE_BLOCKER_PREFIX = "확인 필요:";
 
 /** 🔴 왜 그 후보가 가격비교에서 빠졌는가. 🟢 **조용히 버리지 않는다**(한 줄로 적는다). */
 export type MiSameExclusion = "NOT_SAME" | "SOLD_OUT" | "PRICE_UNCONFIRMED";

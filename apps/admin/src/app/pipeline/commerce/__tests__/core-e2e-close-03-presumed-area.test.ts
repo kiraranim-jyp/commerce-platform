@@ -138,8 +138,22 @@ describe("CORE-E2E-CLOSE-03 — 동일 가능성 후보 구역", () => {
     expect(text).toContain("trenbe.com");
   });
 
-  /** 🟢🟢 B-2 — **가격과 통화가 같이 선다**(CEO 질문 ②). */
-  it("B-2 가격·통화가 보이고 없으면 「가격 미확인」이다", () => {
+  /**
+   * 🟢🟢 B-2 — **가격과 통화가 같이 선다**(CEO 질문 ②).
+   *
+   * 🔵🔵 CANDIDATE-UX-REFINE-01 — **기대 글자가 바뀌었다**(의도된 변경 · CPO ⒜).
+   * ```
+   * 전  「가격 미확인」   ← `PRICE_UNKNOWN_TEXT`(다른 화면의 어휘)
+   * 후  「가격 확인 필요」 ← `CANDIDATE_PRICE_UNKNOWN`(후보 카드 전용)
+   * ```
+   * 🔴 어휘를 **가른 이유** 는 그 반대가 더 위험해서다 — 후보 카드 전용 글자를 만들지
+   *    않고 `PRICE_UNKNOWN_TEXT` 를 고치면 **다른 화면 두 곳이 같이 바뀌고** 계약
+   *    둘(`mi-022` · `wu-028`)이 깨진다. 🟢 그래서 `priceText` 는 손대지 않았다.
+   * 🟢 **단언의 «뜻» 은 그대로다** — 「가격 없는 후보를 버리지 않는다」.
+   *    🔴 그래서 느슨하게 하지 않고 **강화** 했다: 새 글자가 **있고** 옛 글자가 **없다**
+   *    (어휘가 되돌아가면 FAIL 한다 · 후보 카드 어휘 owner 가 하나임을 양방향으로 잠근다).
+   */
+  it("B-2 가격·통화가 보이고 없으면 「가격 확인 필요」다", () => {
     const host = mount(ROWS);
     const prices = Array.from(
       host.querySelectorAll('[data-testid="mi-candidate-price"]'),
@@ -148,7 +162,9 @@ describe("CORE-E2E-CLOSE-03 — 동일 가능성 후보 구역", () => {
     expect(prices.some((p) => p.includes("88,000") && p.includes("KRW"))).toBe(true);
     expect(prices.some((p) => p.includes("33") && p.includes("GBP"))).toBe(true);
     /** 🔴 가격 없는 후보를 **버리지 않는다** — 「0원」으로도 적지 않는다. */
-    expect(prices.some((p) => p.includes("가격 미확인"))).toBe(true);
+    expect(prices.some((p) => p.includes("가격 확인 필요"))).toBe(true);
+    /** 🔴 그리고 **다른 화면의 어휘가 후보 카드에 섞이지 않는다**(§14 Contract 7). */
+    expect(prices.join(" ")).not.toContain("가격 미확인");
     expect(prices.join(" ")).not.toContain("0원");
   });
 

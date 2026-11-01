@@ -82,6 +82,23 @@ import {
   CANDIDATE_LIST_HEADING,
   CANDIDATE_GROUP_LABEL,
   CANDIDATE_LIST_EMPTY,
+  /** 🔵 CANDIDATE-UX-REFINE-01 — U1 보조 · U2/U6 그룹 설명 · U7 보조. */
+  CANDIDATE_LIST_NOTE,
+  CANDIDATE_GROUP_NOTE,
+  CANDIDATE_LIST_EMPTY_NOTE,
+  /**
+   * 🔵🔵 U5 — **가격 3상태.** 🔴 owner 는 `isPriceConfirmed` 하나이고
+   *    `priceState` 는 그것을 UI 상태로 바꾸는 **어댑터** 다(새 판정 0).
+   */
+  priceState,
+  isPriceConfirmed,
+  CANDIDATE_PRICE_UNKNOWN,
+  CANDIDATE_PRICE_UNVERIFIED,
+  /** 🔵 U3 그룹 순서 owner · U4 이미지/링크/근거. 🔴 순서·문장을 화면에서 복제하지 않는다. */
+  CANDIDATE_GROUP_ORDER,
+  CANDIDATE_IMAGE_NONE,
+  CANDIDATE_LINK_TEXT,
+  candidateReasonLines,
   type CandidateListGroup,
   MI_PRESUMED_HEADING,
   MARKET_RECHECK_BUTTON,
@@ -1005,6 +1022,12 @@ export function MarketPriceComparison({
         <MarketColumn
           testId="mi-same-domestic"
           heading={MI_SAME_DOMESTIC_HEADING}
+          /**
+           * 🔵🔵 CANDIDATE-UX-REFINE-01 U1/U7 — 🔴 이 컴포넌트는 **국내·해외가 공유** 한다.
+           *    이 prop 이 없으면 후보 제목·빈 상태가 **국내 칸에서도 「해외」라고 적는다.**
+           * 🔴 `testId` 로 시장을 추론하지 않는다 — testid 가 바뀌면 시장이 조용히 뒤집힌다.
+           */
+          market="KR"
           selection={domestic}
           /**
            * 🔵 CORE-E2E-CLOSE-03 — 같은 `rows` 에서 **다른 선택기** 로 뽑는다.
@@ -1034,6 +1057,8 @@ export function MarketPriceComparison({
         <MarketColumn
           testId="mi-same-overseas"
           heading={MI_SAME_OVERSEAS_HEADING}
+          /** 🔵 U1/U7 — 🔴 국내 칸과 **같은 구조 · 시장명만 다르다**(CPO §1). */
+          market="OVERSEAS"
           selection={overseas}
           /** 🔵 CORE-E2E-CLOSE-03 — 해외도 **같은 구역** 이다(두 벌을 만들지 않는다). */
           presumed={overseasPresumed}
@@ -1434,6 +1459,13 @@ function CandidateSelect({
 function MarketColumn({
   testId,
   heading,
+  /**
+   * 🔵🔵🔵 CANDIDATE-UX-REFINE-01 — **이 컴포넌트는 KR·OVERSEAS 가 공유한다.**
+   * 🔴 그래서 후보 제목/빈 상태의 시장명을 **글자로 하드코딩하면 국내 칸이 거짓말한다.**
+   * 🟢 값은 호출부가 이미 아는 것이고 `selectCandidateList(rows, market)` 와 **같은 union** 이다
+   *    (새 타입 0 · 새 추론 0).
+   */
+  market,
   selection,
   presumed,
   /** 🔵 CANDIDATE-EVIDENCE-VISIBILITY-01 — 후보 리스트(유력 + 확장). */
@@ -1444,6 +1476,7 @@ function MarketColumn({
 }: {
   testId: string;
   heading: string;
+  market: "KR" | "OVERSEAS";
   selection: MiSameSelection;
   /**
    * 🔵🔵 CORE-E2E-CLOSE-03 — **동일 «가능성» 후보**(표시 전용).
@@ -1552,50 +1585,175 @@ function MarketColumn({
       {list.length > 0 ? (
         <details data-testid="mi-candidate-list" className="mt-1">
           <summary className="cursor-pointer text-[11px] text-text-secondary">
-            {CANDIDATE_LIST_HEADING} {list.length}곳
+            {/** 🔴 「N곳」은 **`list.length` 파생** 이다 — 상수에 넣으면 실제 행 수와 갈라진다. */}
+            {CANDIDATE_LIST_HEADING[market]} {list.length}곳
           </summary>
-          <ul className="mt-1 space-y-1">
-            {list.map(({ row, group }) => (
-              <li
-                key={row.discoveredUrl}
-                data-testid="mi-candidate-row"
-                data-group={group}
-                className="rounded border border-border/60 p-2"
-              >
-                {/** 🔴 내부 토큰이 아니라 **사람의 말** 이다(CPO §6). */}
-                <p data-testid="mi-candidate-group" className="text-[11px] text-text-tertiary">
-                  {CANDIDATE_GROUP_LABEL[group]}
-                </p>
-                {row.title ? (
-                  <p className="truncate text-[11px] text-text-primary">{row.title}</p>
-                ) : null}
-                <div className="flex items-baseline justify-between gap-2">
-                  <a
-                    href={row.discoveredUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="truncate text-[11px] text-accent underline"
+          <p data-testid="mi-candidate-list-note" className="mt-1 text-[11px] text-text-tertiary">
+            {CANDIDATE_LIST_NOTE}
+          </p>
+          {/**
+            * 🔵🔵 U3 — **그룹을 «묶는다».** 전에는 카드마다 라벨이 반복돼 셀러가
+            *    「몇 곳이 유력인가」를 세어야 했다.
+            * 🔴 그룹 **순서** 는 `CANDIDATE_GROUP_ORDER` 가 owner 다 —
+            *    `selectCandidateList` 의 push 순서를 복제하지 않는다.
+            * 🔴 빈 그룹은 **렌더하지 않는다**(「0곳」을 적으면 없는 축이 있는 것처럼 읽힌다).
+            * 🔴 행은 **옮기기만** 한다 — 복제하면 WU-081 금지에 걸린다(총 행 수 불변).
+            */}
+          <div className="mt-2 space-y-3">
+            {CANDIDATE_GROUP_ORDER.map((group) => {
+              const rowsInGroup = list.filter((e) => e.group === group);
+              if (rowsInGroup.length === 0) return null;
+              return (
+                <section
+                  key={group}
+                  data-testid="mi-candidate-group-block"
+                  data-group={group}
+                  className="space-y-1"
+                >
+                  {/**
+                    * 🔴 내부 토큰이 아니라 **사람의 말** 이다(CPO §6).
+                    * 🔵 U6 — tooltip 은 **U2 와 같은 상수** 를 쓴다(두 벌 금지).
+                    *
+                    * 🔴🔴 **testid 가 `mi-candidate-group` 이 «아니다».** 그 이름은
+                    *    **행 안의** 판정 라벨이 쓰고 있고 그것은 WU-091 이 잠근 불변식
+                    *    (「행마다 판정 라벨」)이다. 1차 구현에서 라벨을 여기로 **옮겼다가**
+                    *    `ccl-01-H`·`pp-01 PP-09` 가 **2건 FAIL** 로 잡았다 — 가드가 맞았다.
+                    *    🟢 그래서 **가드를 고치지 않고** 헤더에 **다른 이름** 을 줬다.
+                    */}
+                  <p
+                    data-testid="mi-candidate-group-heading"
+                    title={CANDIDATE_GROUP_NOTE[group]}
+                    className="text-[11px] font-medium text-text-secondary"
                   >
-                    {row.domain}
-                  </a>
-                  {/** 🔴 가격이 없으면 「가격 미확인」 — owner 는 `priceText` 다(환산 0). */}
-                  <span
-                    data-testid="mi-candidate-price"
-                    className="shrink-0 text-[11px] text-text-primary"
+                    {CANDIDATE_GROUP_LABEL[group]} {rowsInGroup.length}곳
+                  </p>
+                  <p
+                    data-testid="mi-candidate-group-note"
+                    className="text-[11px] text-text-tertiary"
                   >
-                    {priceText(row)}
-                  </span>
-                </div>
-                {/** 🟢 선택은 **기존 저장 흐름** 이다(CLOSE-04 · 새 저장 로직 0). */}
-                <CandidateSelect row={row} api={reviewApi} />
-              </li>
-            ))}
-          </ul>
+                    {CANDIDATE_GROUP_NOTE[group]}
+                  </p>
+                  <ul className="space-y-1">
+                    {rowsInGroup.map(({ row }) => (
+                      <li
+                        key={row.discoveredUrl}
+                        data-testid="mi-candidate-row"
+                        data-group={group}
+                        data-price-state={priceState(row)}
+                        className="rounded border border-border/60 p-2"
+                      >
+                        {/**
+                          * 🔵🔵 U4 — 순서가 **이미지 → 등급 → 가격 → 상품명 → 판매처 → 근거 → 링크** 다.
+                          * 🔴 셀러가 먼저 보는 것이 사진이다 — WU-099 에서 CEO 평가 26건 중
+                          *    **12건이 「이미지가 없어서」 측정불가** 로 돌아온 그 자리다.
+                          * 🔴 없으면 **「이미지 없음」을 적는다**(대체 사진 금지 · WU-132 ④).
+                          */}
+                        {row.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            data-testid="mi-candidate-image"
+                            src={row.imageUrl}
+                            alt=""
+                            className="mb-1 h-20 w-20 rounded border border-border/40 object-contain"
+                          />
+                        ) : (
+                          <p
+                            data-testid="mi-candidate-image"
+                            className="mb-1 text-[11px] text-text-tertiary"
+                          >
+                            {CANDIDATE_IMAGE_NONE}
+                          </p>
+                        )}
+                        {/**
+                          * 🔴🔴 **U4 ② 등급 — 행에서 빼지 않는다.** WU-091 의 네 조건 중
+                          *    「행마다 판정 라벨」이고, 빠지면 후보가 **「유력 후보」로 읽힌다**
+                          *    (2026-09-19 사고의 기전). 🟢 그룹 헤더가 같은 말을 해도
+                          *    **행의 라벨을 대체하지 않는다** — 행은 혼자서도 자기 등급을 말해야 한다.
+                          * 🟢 헤더가 이미 크게 말하므로 여기서는 **작고 조용하게** 둔다(중복 소음 최소화).
+                          */}
+                        <p
+                          data-testid="mi-candidate-group"
+                          className="text-[10px] text-text-tertiary"
+                        >
+                          {CANDIDATE_GROUP_LABEL[group]}
+                        </p>
+                        {/**
+                          * 🔵🔵🔵 U5 — **가격 3상태.** 🔴 2분법으로 두면 「금액 있음 + 검증 전」이
+                          *    확정가와 **똑같이** 보이고 셀러가 그 숫자로 판매가를 정한다.
+                          * 🔴 `priceText` 는 **고치지 않는다** — 그 함수는 다른 화면도 쓰고
+                          *    계약 둘이 잠갔다. 여기서 **갈라서** 쓴다(환산 0 · 기호 추가 0).
+                          */}
+                        <p className="text-[13px] font-semibold text-text-primary">
+                          <span data-testid="mi-candidate-price">
+                            {row.priceAmount != null && row.priceCurrency
+                              ? priceText(row)
+                              : CANDIDATE_PRICE_UNKNOWN}
+                          </span>
+                        </p>
+                        {/** 🔴 P2 에서만 선다 — 상태가 없으면 P1 과 구별되지 않는다(FAIL-04). */}
+                        {!isPriceConfirmed(row) &&
+                        row.priceAmount != null &&
+                        row.priceCurrency ? (
+                          <p
+                            data-testid="mi-candidate-price-unverified"
+                            className="text-[11px] text-text-tertiary"
+                          >
+                            {CANDIDATE_PRICE_UNVERIFIED}
+                          </p>
+                        ) : null}
+                        {row.title ? (
+                          <p className="truncate text-[11px] text-text-primary">{row.title}</p>
+                        ) : null}
+                        <p
+                          data-testid="mi-candidate-seller"
+                          className="truncate text-[11px] text-text-secondary"
+                        >
+                          {row.domain}
+                        </p>
+                        {/**
+                          * 🔵 U4 근거 — 🔴 **새 판정 문장을 만들지 않는다**(`wu-130 F-4`).
+                          *    운영이 이미 적은 `matchReasons` 를 **그대로** 쓰고, blocker 가
+                          *    **실재할 때만** 기존 `blocker-text.ts` 문장을 붙인다.
+                          * 🔴 ✓/△ 같은 기호로 요약하지 않는다 — 그건 새 판정이다.
+                          */}
+                        {candidateReasonLines(row).length > 0 ? (
+                          <ul
+                            data-testid="mi-candidate-reasons"
+                            className="list-inside list-disc text-[11px] text-text-tertiary"
+                          >
+                            {candidateReasonLines(row).map((line) => (
+                              <li key={line}>{line}</li>
+                            ))}
+                          </ul>
+                        ) : null}
+                        <a
+                          href={row.discoveredUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block truncate text-[11px] text-accent underline"
+                        >
+                          {CANDIDATE_LINK_TEXT}
+                        </a>
+                        {/** 🟢 선택은 **기존 저장 흐름** 이다(CLOSE-04 · 새 저장 로직 0). */}
+                        <CandidateSelect row={row} api={reviewApi} />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              );
+            })}
+          </div>
         </details>
       ) : (
-        <p data-testid="mi-candidate-empty" className="text-[11px] text-text-tertiary">
-          {CANDIDATE_LIST_EMPTY}
-        </p>
+        <>
+          <p data-testid="mi-candidate-empty" className="text-[11px] text-text-tertiary">
+            {CANDIDATE_LIST_EMPTY[market]}
+          </p>
+          {/** 🔴 「조회하지 않았다」로 읽히지 않게 **왜** 없는지를 적는다(WU-130 ②). */}
+          <p data-testid="mi-candidate-empty-note" className="text-[11px] text-text-tertiary">
+            {CANDIDATE_LIST_EMPTY_NOTE}
+          </p>
+        </>
       )}
       {/**
         * 🔴 아래 보류 구역은 **CLOSE-03 의 것** 이고 이제 위 리스트의 **부분집합** 이다.

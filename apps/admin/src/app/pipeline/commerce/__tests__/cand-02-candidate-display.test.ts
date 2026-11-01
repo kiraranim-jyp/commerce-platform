@@ -10,7 +10,22 @@ import { MarketPriceComparison } from "../MarketPriceComparison";
  *    좁히는 변이가 기대값도 같이 좁혀 통과한다(M2 가 실제로 그렇게 통과했다).
  *    🟢 리스트 기대값은 **실측에 얼어 있는 `display` 칸** 이다.
  */
-import { CANDIDATE_LIST_HEADING, selectMiSameCandidates } from "../mi-same-candidates";
+import {
+  CANDIDATE_LIST_HEADING,
+  selectMiSameCandidates,
+  /**
+   * 🔵 CANDIDATE-UX-REFINE-01 — U1/U5/U7 의 **확정 글자**.
+   * 🔴 상수를 기대값으로 쓰는 것이 **전부 동어반복은 아니다** — 「그 자리에 그 상수가
+   *    쓰였다」를 볼 때는 상수가 맞다. 🔴 단 **확정된 글자** 는 아래에서 **직접 적어**
+   *    단언한다(상수를 바꿔도 통과하는 길을 막는다 · WU-145 ⒜ 의 그 함정).
+   */
+  CANDIDATE_LIST_EMPTY,
+  CANDIDATE_PRICE_UNKNOWN,
+  CANDIDATE_PRICE_UNVERIFIED,
+  isPriceConfirmed,
+  priceState,
+} from "../mi-same-candidates";
+import { PRICE_UNKNOWN_TEXT } from "../GeminiTransientCandidates";
 import type { GeminiTransientRow } from "../GeminiTransientCandidates";
 
 /**
@@ -343,9 +358,289 @@ describe("CAND-02 화면 축 — 다상품 마운트 DOM", () => {
     const { doc, cleanup } = mount([]);
     try {
       expect(doc.querySelector('[data-testid="mi-candidate-row"]')).toBeNull();
-      expect(doc.body.textContent ?? "").not.toContain(CANDIDATE_LIST_HEADING);
+      /**
+       * 🔴🔴 CANDIDATE-UX-REFINE-01 — **이 단언이 두 번 틀렸고 둘 다 적는다.**
+       *
+       * ⒜ 전의 `not.toContain(CANDIDATE_LIST_HEADING)` 은 상수가 시장별 `Record` 가
+       *    되면서 **객체를 넘겨 항상 통과** 했다(동어반복).
+       *    🔴 `not.toContain` 이 `any` 를 받으므로 **typecheck 도 안 막는다** —
+       *       실제로 tsc 0 · 이 테스트 PASS 였다(「타입이 잡아 준다」는 예상이 틀렸다).
+       * ⒝ 그래서 `.KR`/`.OVERSEAS` 글자로 바꿨더니 **FAIL** 했다 —
+       *    U7 의 「국내 소싱 후보**가 없습니다**」가 제목을 **부분문자열로 포함** 한다.
+       *    🟢 그 겹침은 **의도된 것** 이다(같은 어휘를 쓰는 것이 셀러에게 일관된다).
+       *
+       * 🔴🔴 ⟹ 원래 이 단언이 보려던 것은 글자가 아니라 **「빈 칸에는 후보 리스트
+       *    «구역» 이 서지 않는다」** 였다. 문자열은 그 프록시였고 이제 모호하다.
+       * 🟢 그래서 **구조로 올린다** — 프록시보다 직접적이고 문구 변경에 흔들리지 않는다.
+       */
+      expect(
+        doc.querySelector('[data-testid="mi-candidate-list"]'),
+        "후보 0 인데 후보 리스트 구역이 서 있다",
+      ).toBeNull();
+      expect(doc.querySelector('[data-testid="mi-candidate-group-block"]')).toBeNull();
+      /** 🟢 그리고 **빈 상태가 실제로 선다**(구역이 사라진 것과 구별한다 · WU-130 ②). */
+      expect(doc.querySelector('[data-testid="mi-candidate-empty"]')).not.toBeNull();
     } finally {
       cleanup();
     }
+  });
+});
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 CANDIDATE-UX-REFINE-01 — **U1 · U5 · U7 화면 계약**(CPO ⒜ · §14)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 입력은 **같은 실측 fixture** 다 — 새 fixture 를 만들지 않았다(손으로 만든 행 0).
+ * 🔴 이 블록이 지키는 한 문장 —
+ * > 「가격을 최대한 보여주되, **그 가격이 얼마나 믿을 만한지** 를 셀러가
+ * >  카드 하나만 보고 바로 알 수 있게 한다.」
+ */
+describe("UX-REFINE 화면 계약 — 시장명 · 가격 3상태", () => {
+  /** 🟢 실측 fixture 전 행(시장 무관). 가격 3상태의 분모를 여기서 만든다. */
+  const allRows = (): GeminiTransientRow[] => products().flatMap((p) => p.rows.map(toRow));
+
+  /**
+   * 🔴🔴 **U1/U7 — 국내 칸이 「해외」라고 적으면 FAIL-01 이다.**
+   *    `MarketColumn` 이 KR·OVERSEAS 를 **공유** 하므로 글자를 한 줄로 두면
+   *    국내 칸에도 「해외 소싱 후보」가 뜬다. 🔴 그래서 **글자를 직접 적어** 단언한다.
+   */
+  it("UX-01 시장별 제목이 각 칸에 «정확히» 선다 — 국내 칸에 「해외」가 없다", () => {
+    const { doc, cleanup } = mount(allRows());
+    try {
+      const kr = doc.querySelector('[data-testid="mi-same-domestic"]');
+      const os = doc.querySelector('[data-testid="mi-same-overseas"]');
+      expect(kr, "국내 칸이 없다 — 이 축을 측정할 수 없다").not.toBeNull();
+      expect(os, "해외 칸이 없다 — 이 축을 측정할 수 없다").not.toBeNull();
+      const krText = kr!.textContent ?? "";
+      const osText = os!.textContent ?? "";
+      /** 🔴 확정 글자를 **직접** 적는다 — 상수를 바꿔도 통과하는 길을 막는다. */
+      expect(krText).not.toContain("해외 소싱 후보");
+      expect(osText).not.toContain("국내 소싱 후보");
+      /** 🟢 그리고 각 칸은 자기 시장의 말을 **실제로** 한다(후보 유무와 무관하게 둘 중 하나). */
+      expect(krText.includes("국내 소싱 후보")).toBe(true);
+      expect(osText.includes("해외 소싱 후보")).toBe(true);
+    } finally {
+      cleanup();
+    }
+  });
+
+  /** 🔴 U1 — 「N곳」은 **실제 행 수** 다(상수/하드코딩이면 조용히 갈라진다 · FAIL-02). */
+  it("UX-02 후보 수가 실제 mi-candidate-row 개수와 일치한다", () => {
+    const { doc, cleanup } = mount(allRows());
+    try {
+      for (const col of ["mi-same-domestic", "mi-same-overseas"]) {
+        const host = doc.querySelector(`[data-testid="${col}"]`);
+        if (!host) continue;
+        const rows = host.querySelectorAll('[data-testid="mi-candidate-row"]').length;
+        const summary = host.querySelector('[data-testid="mi-candidate-list"] > summary');
+        if (rows === 0) {
+          expect(summary, `${col}: 행 0 인데 리스트 구역이 있다`).toBeNull();
+          continue;
+        }
+        expect(summary!.textContent ?? "").toContain(`${rows}곳`);
+        /** 🟢 그룹별 개수 합 == 전체 행 수(어느 행도 그룹 밖으로 사라지지 않는다). */
+        let sum = 0;
+        for (const b of Array.from(host.querySelectorAll('[data-testid="mi-candidate-group-block"]'))) {
+          const n = b.querySelectorAll('[data-testid="mi-candidate-row"]').length;
+          expect(n, "빈 그룹 블록이 렌더됐다").toBeGreaterThan(0);
+          expect(b.querySelector('[data-testid="mi-candidate-group-heading"]')?.textContent ?? "").toContain(`${n}곳`);
+          sum += n;
+        }
+        expect(sum).toBe(rows);
+      }
+    } finally {
+      cleanup();
+    }
+  });
+
+  /**
+   * 🔴🔴🔵 **UX-03 — §14 Contract 1·2. 가격 상태가 행을 «잃지 않는다».**
+   *    P1+P2+P3 == 전체 행. 🔴 가격 때문에 후보가 사라지면 이 단언이 깨진다.
+   */
+  it("UX-03 P1+P2+P3 == 전체 후보 행 수 · 상태 값이 전부 유효하다", () => {
+    const { doc, cleanup } = mount(allRows());
+    try {
+      const rows = Array.from(doc.querySelectorAll('[data-testid="mi-candidate-row"]'));
+      expect(rows.length, "행이 0 이면 가격 3상태를 측정할 수 없다").toBeGreaterThan(0);
+      const tally = { CONFIRMED: 0, UNVERIFIED: 0, NONE: 0 } as Record<string, number>;
+      for (const r of rows) {
+        const s = r.getAttribute("data-price-state") ?? "";
+        expect(["CONFIRMED", "UNVERIFIED", "NONE"]).toContain(s);
+        tally[s] = (tally[s] ?? 0) + 1;
+      }
+      expect(tally.CONFIRMED + tally.UNVERIFIED + tally.NONE).toBe(rows.length);
+      console.log(`[UX-REFINE] 가격 3상태 — P1 ${tally.CONFIRMED} · P2 ${tally.UNVERIFIED} · P3 ${tally.NONE} (행 ${rows.length})`);
+    } finally {
+      cleanup();
+    }
+  });
+
+  /**
+   * 🔴🔴🔵 **UX-04 — §14 Contract 3·4·5. 이것이 FAIL-04 를 막는 단언이다.**
+   *    P2 가 P1 과 **똑같이 보이면** 셀러가 미검증 금액으로 판매가를 정한다.
+   */
+  it("UX-04 P2 만 상태 줄을 달고 · P1 은 달지 않고 · P3 은 「가격 확인 필요」다", () => {
+    const { doc, cleanup } = mount(allRows());
+    try {
+      const rows = Array.from(doc.querySelectorAll('[data-testid="mi-candidate-row"]'));
+      let seenP2 = 0;
+      for (const r of rows) {
+        const state = r.getAttribute("data-price-state");
+        const unverified = r.querySelector('[data-testid="mi-candidate-price-unverified"]');
+        const price = (r.querySelector('[data-testid="mi-candidate-price"]')?.textContent ?? "").trim();
+        if (state === "CONFIRMED") {
+          expect(unverified, "P1 에 검증 전 표시가 붙었다").toBeNull();
+          expect(price).not.toBe("가격 확인 필요");
+        }
+        if (state === "UNVERIFIED") {
+          /** 🔴 글자를 **직접** 적는다 — 상수를 비워도 통과하는 길을 막는다. */
+          expect(unverified, "P2 가 P1 과 구별되지 않는다(FAIL-04)").not.toBeNull();
+          expect(unverified!.textContent ?? "").toContain("판매처 표시가 · 상세 검증 전");
+          seenP2 += 1;
+        }
+        if (state === "NONE") {
+          expect(price).toBe("가격 확인 필요");
+          expect(unverified, "P3 에 검증 전 표시가 붙었다").toBeNull();
+        }
+      }
+      console.log(`[UX-REFINE] P2 상태 줄이 붙은 행 ${seenP2}건`);
+    } finally {
+      cleanup();
+    }
+  });
+
+  /**
+   * 🔴 §14 Contract 6·7 — 환산 금지 · 다른 화면의 글자 금지.
+   * 🔴 `priceText` 를 고치지 않았다는 **행동 증거** 이기도 하다.
+   */
+  it("UX-05 후보 카드에 환산 기호와 「가격 미확인」이 없다", () => {
+    const { doc, cleanup } = mount(allRows());
+    try {
+      const rows = Array.from(doc.querySelectorAll('[data-testid="mi-candidate-row"]'));
+      expect(rows.length).toBeGreaterThan(0);
+      for (const r of rows) {
+        const t = r.textContent ?? "";
+        for (const token of ["₩", "약 ", "≈"]) {
+          expect(t, `후보 카드에 환산 표기 ${token} 가 있다`).not.toContain(token);
+        }
+        /** 🔴 그 글자는 **다른 화면의 것** 이다(`mi-022`·`wu-028` 이 잠갔다). */
+        expect(t).not.toContain(PRICE_UNKNOWN_TEXT);
+        expect(t).not.toContain("가격 미확인");
+      }
+    } finally {
+      cleanup();
+    }
+  });
+
+  /**
+   * 🔴 FAIL-03 — 선택 기능이 사라지면 셀러의 판단이 **저장되지 않는다**(CLOSE-04 저장 흐름).
+   *    U4 가 카드 순서를 재배치하면서 가장 쉽게 잃을 수 있는 칸이라 따로 잠근다.
+   */
+  it("UX-06 모든 후보 카드에 선택 UI 와 U4 칸들이 남아 있다", () => {
+    const { doc, cleanup } = mount(allRows());
+    try {
+      const rows = Array.from(doc.querySelectorAll('[data-testid="mi-candidate-row"]'));
+      expect(rows.length).toBeGreaterThan(0);
+      for (const r of rows) {
+        expect(r.querySelector('[data-testid="gt-review-buttons"], button'), "CandidateSelect 가 사라졌다").not.toBeNull();
+        /** 🔴 행마다 **판정 라벨** — WU-091 의 네 조건 중 하나(그룹 헤더가 대체하지 못한다). */
+        expect(r.querySelector('[data-testid="mi-candidate-group"]')).not.toBeNull();
+        /** 🔴 이미지 칸은 **없으면 「이미지 없음」을 적는다**(대체 사진 금지). */
+        expect(r.querySelector('[data-testid="mi-candidate-image"]')).not.toBeNull();
+        expect(r.querySelector("a[href]"), "판매 페이지 링크가 없다").not.toBeNull();
+      }
+    } finally {
+      cleanup();
+    }
+  });
+
+  /**
+   * 🔴 U7 — 「없다」와 「조회하지 않았다」를 가른다(WU-130 ②).
+   * 🟢 그리고 **시장명이 맞는지** 를 같이 본다.
+   */
+  it("UX-07 후보 0 이면 시장별 빈 상태 + 사유 한 줄이 선다", () => {
+    const { doc, cleanup } = mount([]);
+    try {
+      const empties = Array.from(doc.querySelectorAll('[data-testid="mi-candidate-empty"]'));
+      expect(empties.length).toBeGreaterThan(0);
+      const texts = empties.map((e) => (e.textContent ?? "").trim());
+      expect(texts).toContain("국내 소싱 후보가 없습니다");
+      expect(texts).toContain("해외 소싱 후보가 없습니다");
+      /** 🟢 상수도 그 글자여야 한다(화면과 상수가 갈라지지 않는다). */
+      expect(Object.values(CANDIDATE_LIST_EMPTY)).toEqual([
+        "국내 소싱 후보가 없습니다",
+        "해외 소싱 후보가 없습니다",
+      ]);
+      const note = doc.querySelector('[data-testid="mi-candidate-empty-note"]');
+      expect(note, "왜 없는지를 말하지 않으면 「조회하지 않았다」로 읽힌다").not.toBeNull();
+      /** 🔴 「동일상품이 없습니다」로 **단정하지 않는다**. */
+      expect(doc.body.textContent ?? "").not.toContain("동일상품이 없습니다");
+    } finally {
+      cleanup();
+    }
+  });
+
+  /**
+   * 🔴🔴 **UX-09 — P3 을 «구성된 행» 으로 잠근다.**
+   *
+   * 🔴 실측 fixture 의 P3 가 **0 건** 이다(P1 10 · P2 3 · P3 0). 그래서 UX-04 의
+   *    P3 분기는 **한 번도 실행되지 않았다** — 그 상태로 「Contract 3 PASS」라고
+   *    적으면 **분모 0 에서의 초록** 이다(§5-B 가 금지한 그 모양).
+   * 🟢 그래서 이 축만 **손으로 만든 행** 으로 돌린다. 🔴 그 사실을 숨기지 않는다 —
+   *    이 테스트의 입력은 실측이 아니고, 나머지 UX-01~08 은 실측이다.
+   * 🔴 그리고 **가격이 없어도 후보가 사라지지 않는다** 를 같이 단언한다(§10).
+   */
+  it("UX-09 [구성된 행] 가격 없는 후보도 서고 「가격 확인 필요」를 말한다", () => {
+    const noPrice = {
+      domain: "example.com",
+      discoveredUrl: "https://example.com/p/1",
+      title: "Booty Ghosts T-Shirt",
+      market: "OVERSEAS",
+      crossSellerVerdict: "SAME",
+      matchTruth: "EXACT_IDENTIFIER",
+      matchReasons: ["핵심 상품명 일치"],
+      priceAmount: null,
+      priceCurrency: null,
+      priceStatus: "PRICE_UNAVAILABLE",
+      soldOut: null,
+    } as unknown as GeminiTransientRow;
+    const { doc, cleanup } = mount([noPrice]);
+    try {
+      const rows = Array.from(doc.querySelectorAll('[data-testid="mi-candidate-row"]'));
+      /** 🔴 가격이 없다는 이유로 **제거되지 않는다**. */
+      expect(rows, "가격 없는 후보가 리스트에서 사라졌다").toHaveLength(1);
+      expect(rows[0]!.getAttribute("data-price-state")).toBe("NONE");
+      expect(
+        (rows[0]!.querySelector('[data-testid="mi-candidate-price"]')?.textContent ?? "").trim(),
+      ).toBe("가격 확인 필요");
+      expect(rows[0]!.querySelector('[data-testid="mi-candidate-price-unverified"]')).toBeNull();
+      /** 🔴 그 행에도 선택 UI 와 판정 라벨이 있다. */
+      expect(rows[0]!.querySelector('[data-testid="mi-candidate-group"]')).not.toBeNull();
+      expect(rows[0]!.textContent ?? "").not.toContain("가격 미확인");
+    } finally {
+      cleanup();
+    }
+  });
+
+  /**
+   * 🔴🔴 **UX-08 — `priceState` 가 «어댑터» 라는 것을 행동으로 잠근다.**
+   *    owner 는 `isPriceConfirmed` 하나다. 둘이 갈라지면 화면과 가격 축이 다른 말을 한다.
+   */
+  it("UX-08 priceState 가 isPriceConfirmed 와 어긋나지 않는다", () => {
+    const rows = allRows();
+    expect(rows.length).toBeGreaterThan(0);
+    for (const r of rows) {
+      const s = priceState(r);
+      if (r.priceAmount == null || !r.priceCurrency) {
+        expect(s).toBe("NONE");
+        continue;
+      }
+      expect(s).toBe(isPriceConfirmed(r) ? "CONFIRMED" : "UNVERIFIED");
+    }
+    /** 🔴 구버전 행(priceStatus 없음)은 **UNVERIFIED** 다 — CONFIRMED 로 승격하지 않는다. */
+    expect(priceState({ domain: "d", discoveredUrl: "u", priceAmount: 40, priceCurrency: "EUR" })).toBe("UNVERIFIED");
+    expect(CANDIDATE_PRICE_UNKNOWN).toBe("가격 확인 필요");
+    expect(CANDIDATE_PRICE_UNVERIFIED).toBe("판매처 표시가 · 상세 검증 전");
   });
 });
