@@ -11,7 +11,28 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-🔵🔵🔵 CURRENT WU  **IDENTITY-GT-EVIDENCE-MASTER-REVIEW-01 — 🟢 Step 3·4·5 CLOSED**(2026-11-01 · `49755451`)
+🔵🔵🔵 CURRENT WU  **CANDIDATE-UX-REFINE-01 — 🔴 구현 대기(코드 0)**  HEAD `28e8c5ef` · clean · 0/0
+                  🟢 **CPO GO 완료 · 범위 LOCK · owner 좌표 확정**
+                  🔵 전문 `docs/CANDIDATE-UX-REFINE-01.md` ← **이것만 읽고 바로 코딩한다**
+                  ```
+                  순수 UI 7건 — U1 섹션제목「해외 소싱 후보 N곳」 · U2 그룹 보조설명 ·
+                  U3 그룹제목+후보수+여백 · U4 카드순서(이미지→등급→가격→상품명→판매처→
+                  근거→링크) · U5 가격강조/「가격 확인 필요」 · U6 tooltip 3종 · U7 빈 상태
+                  owner — mi-same-candidates.ts(U1·U2·U6·U7) ·
+                          MarketPriceComparison.tsx `data-testid="mi-candidate-list"`(U3·U4·U5)
+                  계약 4 — ccl-01 · pp-01 · cand-01 · wu-132 (느슨하게 하지 않고 갱신)
+                  ```
+                  🔴 **조사 0 으로 시작한다** · 🔴 **범위 확장 금지** —
+                     Identity · 가격 · Market · Search · Crawl · Registry · transient ·
+                     snapshot · 자동분석 · **[다시 분석]** · **접힘(mi-022/WU-136)** ·
+                     SIMILAR · cap · P1 **전부 동결**
+                  🔴 분모 — AW26MS185 도달 **3** · B226AC009 도달 **14** ·
+                     **33 은 8상품 합계**(개별 상품 화면에 쓰지 않는다)
+                  🔴 판단 근거 — `matchReasons` **그대로** + blocker 실재 시에만
+                     `blocker-text.ts` · 🔴 새 판정 문장 생성 금지(`wu-130 F-4`)
+
+🟢 [직전 CLOSED]  **IDENTITY-GT-EVIDENCE-MASTER-REVIEW-01 — Step 3·4·5 CLOSED**(`49755451`)
+                  🔴 **그 트랙은 닫혔다 — 다시 분석하지 않는다**(§26)
                   Step 5 전문 `docs/IDENTITY-GT-MASTER-01-STEP5.md` (분석만 · 코드 0)
                   🟢🟢🟢 **처음으로 «분리 가능한» 축이 나왔다** — MODEL_CODE conflict 6건:
                      **AC↔AB**(kids↔baby 라인) → CEO **SAME 4/4**
