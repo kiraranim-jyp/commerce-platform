@@ -11,16 +11,40 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-🔵🔵🔵 CURRENT WU  **LONG SPRINT — `-04 B-3` + `UX-FINAL-01`**(CPO 확정 · 쪼개지 않는다)
-                  🔵 **`docs/CANDIDATE-UX-REFINE-04.md` 하나만 읽는다** — 최상단
-                     「LONG SPRINT」절에 결정·금지·종료조건 18 이 전부 있다
-                  🔴 **중간에 CPO 에게 1~2개씩 묻지 않는다** · STOP 은 실제 기술 BLOCK 만
-                  🟢 **정책 BLOCK 0** — ⒝ savedCandidateRows · ⒜ matchReasons 저장 ·
-                     source ⒝(정확 일치 둘만) · 가격 1순위=**시각 강조**(DOM 순서 불변 ·
-                     `R2-08` 유지) · 순서 **B-3 → UX-FINAL-01**
-                  🟢 **UX-FINAL-01 은 새로 만들 UI 가 «없다»** — 빼기와 시각 비중뿐
-                     (그룹 설명 본문 제거는 **막는 계약 0** 실측 · tooltip 은 남긴다)
-                  🔴 ⑱ 실제 `resume=` 화면만 **CEO 축** · ①~⑰ 은 CTO 축
+🟢🟢🟢 CURRENT WU  **LONG SPRINT 완료 — `-04 B-3` + `UX-FINAL-01` 구현·배포**(`ef00d766`)
+                  🔵 전문 `docs/CANDIDATE-UX-REFINE-04.md` · 작업트리 clean · 0/0
+                  🟡 **남은 것은 CEO 화면 확인 «1회» 다** — `/pipeline?resume=`(§18 · 아래 ⑱)
+                  🔴🔴 **CTO 가 할 코드 작업이 없다.** 다음 범위는 **CPO 가 지정** 한다
+                  ```
+                  🟢 B-3    저장 후보가 Search/Crawl/`/check` **0회** 로 화면에 돌아온다.
+                            `savedCandidateRows` 는 **표시 전용** 이고 `geminiEvidence`
+                            (집계 입력)와 섞이지 않는다 ⟹ 집계·판정·알림 **불변**
+                            🟢 `rows = anyEvidence ? live : saved` — **합치지 않고
+                               「없을 때만」** 쓴다 ⟹ 중복 0 이 «구조적» 보증이다
+                            🟢 복원 리더는 `snapshot_id` **만** 본다 — `origin_code` 축을
+                               쓰면 **다른 스냅샷 후보의 금액** 이 이 상품 가격비교에 선다
+                               (CORE-2AA 가 금지한 「URL 전역」과 **같은 사고**)
+                  🟢 UX-FINAL-01  ⒜ 그룹 설명 **본문** 제거(tooltip 으로 **뜻은 남긴다**) ·
+                            ⒝ 가격 13px/semibold → **17px/bold**(🔴 DOM 순서 불변 · `R2-08` 유지) ·
+                            ⒞ 국내/해외는 `MarketBlock` **하나** 를 map 하므로 구조가 같다
+                  🟢 계약 신규 **51**(순수 29 + 마운트 DOM 22) · 입력은 **운영 DB 실덤프**
+                  🟢 음성대조 **M1~M7 전부 FAIL → 7파일 md5 바이트 동일 복구**
+                  🟢 회귀 **755 files / 9,885 passed · 0 failed** · typecheck 0 · build 0
+                  🔴 B-4    실제 `resume=` 화면은 **CTO 가 볼 수 없다**(로그인 뒤) ⟹
+                            판정은 **`B-3 PASS / B-4 미확인`** 까지다
+                            🔴 「Production UX PASS」로 **적지 않는다**
+                  ```
+🔴🔴 **측정불가 둘 — 넘겨 읽지 않는다**
+                  ⒜ `sold_out` **운영 분모가 0** 이다(124행 전건 null) ⟹ 「판매여부가
+                     복원된다」를 **운영 증거로 쓰지 않는다**(pass-through 로만 잠갔다)
+                  ⒝ writer 는 **세 생산자만** 저장한다(OVERSEAS_AUTO·GEMINI·SELLER_URL) ⟹
+                     `WEB_SEARCH`/`DOMESTIC_LISTING` 후보는 **애초에 저장되지 않아** 복원
+                     대상이 아니다. 🔴 확대는 `ReviewSource` **DB check constraint 변경**
+                     이라 이 WU 범위 밖이다(**CPO 결정**)
+🟡 **CEO 확인 ④의 거짓 경보 조건** — 재진입 후보가 전부 **P2(가격 확인 필요)** 로 보이는
+                  것은 **정상** 이다. 기존 123행은 `price_status` 가 null 이고(081 이전)
+                  **P1 로 추정하지 않는 것이 설계** 다 ⟹ P1 은 **B-2 배포 뒤 분석한 상품** 에서만
+                  뜬다(현재 운영 1행 · `junioredition` VERIFIED_CURRENT 실측)
 
 🔵 [이전] CANDIDATE-UX-REFINE-04 — A·B-1·B-2 배포 완료 · 남은 것은 B-3 하나
                   `41aaf43a` · clean · 0/0 · 🔵 전문 `docs/CANDIDATE-UX-REFINE-04.md`

@@ -55,6 +55,137 @@ UI   ⑥ mi-same-row 완전 제거 ⑦ mi-candidate-row 단일 surface
 
 ---
 
+## 🟢🟢 실행 완료 기록 (2026-11-01 · `ef00d766` 배포)
+
+🔴 **다시 조사하지 않는다.** 아래가 이 LONG SPRINT 의 최종 상태다.
+
+```
+🟢 ①~⑰ CTO 축 **전부 완료**        🟡 ⑱ **CEO 화면 확인 1회만 남았다**
+운영 변경 6 파일(신규 1) · 계약 신규 **51** · 회귀 755 files / 9,885 passed · 0 failed ·
+typecheck **0** · build exit **0** · clean · 0/0
+```
+
+### 🟢 C-2 착수 전 전제 — 셋 다 **실측으로** 통과
+
+```
+① listCandidateReviews 가 신규 3칸을 돌려준다
+   🟢 `select("*")` + `toRow` 가 세 칸을 **이미 매핑** 하고 있었다 ·
+      운영 DB 실측 — 3칸 전부 존재(nullable) · **price_status 1행 · match_reasons 1행**
+      (= B-2 writer 가 실제로 발화했다 · `junioredition` VERIFIED_CURRENT)
+② GET 응답에 필드를 더해도 안 깨진다  🟢 `{ ok: true, ...response }` **추가 전용**
+③ 집계에 닿지 않는 자리가 있다      🟢 반환 객체가 추가 전용이고 집계 입구는
+   `for (const e of geminiEvidence ?? [])` **한 곳** 이다 ⟹ 별 칸이면 구조적으로 격리된다
+🟢 추가 실측 — `(snapshot_id, candidate_url)` **중복 0건** ⟹ 복원에 dedup 이 **불필요** 하다
+```
+
+### 🟢 구현 — 운영 6 파일
+
+```
+신규 `_lib/saved-candidate-rows.ts`   순수 변환기 + `SavedCandidateRow`(priceTier **nullable**)
+     🔴 `GeminiTransientEvidence` 를 **쓰지 않는다** — 그 타입의 priceTier required 를
+        느슨하게 하면 tier 없는 후보가 **집계 경로 타입** 을 통과한다(B3-03)
+`candidate-review.ts`      `listSnapshotCandidateReviews`(snapshot_id **만**) +
+                           `candidateReviewRowFromDb` export(계약이 **운영 변환기** 를 쓰게)
+`market-intelligence.ts`   4번째 인자 `options.restoreSavedCandidates` + 반환 칸 하나
+                           🔴 **플래그로 둔 이유** — `/check` 도 같은 함수를 쓴다. 거기서
+                              읽으면 불필요한 질의 + 응답 모양 변화 ⟹ **회귀 표면이 GET 하나**
+`[snapshotId]/route.ts`    복원 ON · 집계 입력(3번째)은 **null**
+`DomesticPriceIntelligencePanel.tsx`  `rows = anyEvidence ? live : saved` + deps 1
+`MarketPriceComparison.tsx`           UX-FINAL-01 ⒜⒝
+```
+
+### 🔵 B-3 계약 번호 대조 — **10/10**
+
+```
+B3-01 🟢 세 칸이 복원 행에 실재          B3-02 🟢 입력 N == 출력 N · tier null 4행 보존
+B3-03 🟢 집계 타입 required 불변          B3-04 🟢 집계 루프가 복원 배열을 **안 읽는다**
+B3-05 🟢 `mi-same-row` 0 · URL 중복 0     B3-06 🟢 VERIFIED_CURRENT → **P1** · null → **P2**
+B3-07 🟢 matchReasons 글자까지 같다       B3-08 🟢 live 가 있으면 live 가 **전부** 이긴다
+B3-09 🟢 GET 에 재분석 어휘 **0**(7종 grep) · 변환기 순수(8종 grep)
+B3-10 🟢 복원 배열 **하나만으로** `mi-candidate-row`·`mi-candidate-price` 가 선다
+LOCK  🟢 DoD ①~⑥ 전부 — 미매핑 source 는 **칸 자체가 없다**(빈 배지 DOM 0)
+```
+
+### 🔴 음성대조 7종 — 전부 FAIL → **md5 바이트 동일 복구**
+
+```
+M1 GET 복원 배선 제거                    1 FAIL
+M2 price_status 를 VERIFIED_CURRENT 로 backfill   **3 FAIL**(순수 2 + 렌더 1)
+M3 저장분을 live 에 spread(중복 허용)    1 FAIL
+M4 `mi-same-row` surface 부활            **2 FAIL** — 🟢 내 계약 «그리고» A 시절 기존 가드
+M5 가격 강조 되돌리기(13px/semibold)     **2 FAIL**(강화 후 · 아래 참조)
+M6 그룹 설명 본문 부활                   2 FAIL
+M7 복원 리더에 origin_code 축 추가       1 FAIL
+🟢 7파일 md5 **전건 OK**(복구 증명 · 흔적 0)
+```
+
+🔴🔴 **M5 가 내 단언의 구멍을 찾았다 — 이 교훈을 남긴다**:
+```
+1차 ⒝-1 은 「가격이 다른 모든 줄보다 크다」였는데, 가격을 **변경 전 값(13px)** 으로
+되돌리는 변이에서 **그대로 통과** 했다 — `13 > 11` 이 **이미 참** 이었기 때문이다.
+⟹ 🔴 그 단언은 이 WU 가 바꾼 것을 **하나도 잠그지 못했다**(동어반복에 가까웠다).
+🟢 「**한 눈에** 크다」를 **배수(≥1.4)** 로 바꿔 1 FAIL → **2 FAIL** 이 됐다.
+🔴 기준을 1.4 로 둔 근거는 하나다 — **변경 전 값이 반드시 FAIL 해야 한다**.
+```
+
+🔴 **그리고 같은 함정을 세 번 더 밟았고 셋 다 적는다**(전부 **내 하니스** 결함이었다):
+```
+⒜ `indexOf("\n}")` 로 함수 본문을 잘랐더니 **인자 타입의 닫는 괄호** 에서 끊겨
+   본문이 빈 채로 FAIL → 🟢 **0열의 `}`** 로 끝을 잡는 `declBody()` 로 고쳤다
+⒝ 금지 어휘 검사를 **주석을 벗기지 않고** 해서 **내 설명문** 때문에 FAIL(2건) —
+   헌장이 「소스 문자열 검사는 주석을 벗기고」라고 적어 둔 **그 자리** 다
+⒞ 국내/해외 카드를 통째로 비교해 FAIL → 원인은 시장 차이가 **아니라** KR 행에
+   blocker 가 1건 있어 경고 줄이 선 것(`-02` 가 확정한 **의도된 동작**)
+   ⟹ 🔴 **내 단언이 틀렸고 코드가 맞았다.** 축을 **구조 척추 ↔ 데이터 의존 줄** 로 갈랐다
+```
+
+🔴 **기존 가드가 내 새 fixture 를 잡았다 — 느슨하게 하지 않고 «분류» 했다**:
+```
+`core-same06` 이 fixture **전수 분류** 를 요구한다(미분류가 있으면 FAIL).
+🔴 그 fixture 는 **`human_verdict` SAME 10 을 들고 있다** ⟹ 「라벨 없음」으로 적으면 **거짓** 이다.
+🟢 그래서 URL 키로 기존 fixture 전수와 대조했다 — **고유 라벨 URL 7/7 이 이미 있다**
+   (trenbe · biskuit.kr · tinyapple · stockmann.ee · junioredition · scoutandcokids ·
+    thefrontshop · 각 3~8개 fixture 에 중복 등장) ⟹ **새 라벨 0**
+⟹ `cand-02-rows.json` 과 **같은 이유**(이중 집계 방지)로 분류했다.
+```
+
+### 🔴🔴 측정불가 / 한계 — 넘겨 읽지 않는다
+
+```
+⒜ 🔴 `sold_out` **운영 분모가 0** 이다(124행 전건 null · 실측) ⟹ 「판매여부 세 상태가
+   복원된다」를 **운영 증거로 쓰지 않는다**. 🟢 변환기의 pass-through 만 단언으로 잠갔다
+⒝ 🔴 writer 가 저장하는 생산자는 **셋** 이다(OVERSEAS_AUTO · GEMINI · SELLER_URL) ⟹
+   `WEB_SEARCH` · `DOMESTIC_LISTING` · `REVIEWED_SAME` 후보는 **애초에 저장되지 않아**
+   복원 대상이 아니다. ⟹ 🔴 완료조건 ⑥「최초 분석 ↔ 재진입 **표시 결과 동일**」은
+   **그 세 생산자 범위에서만** 참이다. 🔴 확대는 `ReviewSource` **DB check constraint
+   변경** 이라 이 WU 범위 밖이다(**CPO 결정**)
+⒞ 🔴 `price_status` 가 저장된 운영 행이 **1건** 이다 ⟹ **P1 복원의 운영 분모가 1** 이다.
+   나머지 123행은 081 이전이라 **P2 가 정상** 이다(D7 그대로)
+⒟ 🔴 **실제 `?resume=` 화면은 CTO 가 볼 수 없다**(로그인 뒤) ⟹ 화면 축은 **마운트 DOM** 이고
+   「Production UX PASS」로 적지 않는다 — 최종 판정은 **CEO** 다
+⒠ 🔴 B3-09 는 **코드 경로** 단언이다(GET 에 재분석 어휘 0 · 변환기 순수) — 실제
+   브라우저 네트워크 탭의 「호출 0회」는 **CEO 축** 이다(확인 ③)
+```
+
+### 🟡 CEO Action — 딱 1회
+
+`/pipeline?resume=` 으로 **이미 분석한 상품** 에 다시 들어간다. 질문은 하나다 —
+> **「[다시 분석] 을 누르지 않고도 후보와 가격비교가 «즉시» 보이는가?」**
+
+```
+① 진입    `?resume=` 으로 들어간다 — 🔴 **[다시 분석] 을 누르지 않는다**
+② 표시    후보 카드 + 📊 가격비교가 **즉시** 선다(빈 화면이 아니다)
+③ 호출    Search / Crawl / `/check` **0회**(개발자도구 네트워크)
+④ 가격    🔴 **전부 「가격 확인 필요」(P2)로 보이는 것은 정상이다** — 기존 상품은
+          `price_status` 가 저장되기 전 분석분이다. P1 은 **이번 배포 뒤 새로 분석한
+          상품** 에서만 뜬다 ⟹ ④는 **FAIL 이 아니라 경보** 다
+⑤ 중복    같은 판매처가 **두 번 서지 않는다**
+⑥ 가격 크기  후보 카드에서 **가격이 가장 큰 글자** 다
+```
+🔴 **「다시 분석」을 눌러 나온 결과는 PASS 증거가 아니다**(그것은 전부터 동작했다).
+
+---
+
 # [상세] CANDIDATE-UX-REFINE-04 — 후보 중복 UI 통합 + 재진입 복원
 
 > 🔵 CPO 최종 지시서 수령(2026-11-01). **조사 끝 · 설계 끝 · 남은 것은 구현뿐이다.**
