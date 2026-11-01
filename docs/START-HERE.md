@@ -11,7 +11,18 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-🔵🔵🔵 CURRENT WU  **IDENTITY-GT-EVIDENCE-MASTER-REVIEW-01 — 🟢 Step 3 CLOSED**(2026-11-01 · `172f1298`)
+🔵🔵🔵 CURRENT WU  **IDENTITY-GT-EVIDENCE-MASTER-REVIEW-01 — 🟢 Step 3·4 CLOSED**(2026-11-01 · `6a8782a3`)
+                  Step 4 전문 `docs/IDENTITY-GT-MASTER-01-STEP4.md` ·
+                  산출 `STEP4-EVIDENCE.json`(70×17 전수) · `STEP4-TABLE.md`(CPO §6 표)
+                  🟢🟢 **핵심 — blocker 18건 중 13건은 증거를 «갖고» 막았다**(A) ⟹
+                     🔴 **threshold 완화로 풀 문제가 아니다**(CPO 경고 실측 확인)
+                  🔴 「쓸 수 있었는데 못 쓴」 인과 일치는 **1건**(bobochoses.co.jp / brand)
+                  🔴 B 230 은 **세 종류** 다 — STRUCT 73 · DERIVED 51 · **FAIL 106**
+                     🔴 칸이 있는데 A 0/70 인 필드 둘 — `age` · `sellerSku`
+                     🔴 `composition` 은 **51/51 이 제목에 없다** ⟹ 그 축이 발화 못 한다
+                  🔴 CEO SAME 34 중 `modelCode` **21 이 사이트에 없다**(C · 입력 부재)
+                  🔴 **CPO 판정 5건 대기** — STEP4 문서 §12
+                  ─── 이하 Step 3 ───
                   전문 `docs/IDENTITY-GT-MASTER-01-STEP3.md` · 산출 `docs/identity-gt-master/STEP3-REPLAY.json`
                   🔴 **분모 LOCK** — 생성기 행 **80** · 고유 (상품,URL) **70** · 상품 **8**
                      CEO SAME 43 · DIFFERENT 24 · REVIEW 10 · CONFLICT 3  (CPO 승인 `2b431fbf`)
@@ -22,11 +33,14 @@
                   🔴 **CPO 판정 5건 대기** — 그 문서 §9(trenbe 라벨 상충 · 분모 80↔70 ·
                      AC157 측정불가 · FP 분모 8 · 샵당1건 15 의 분류)
 
-NEXT              **Step 4 — 고유 70 후보의 raw evidence 를 필드마다 A/B/C/D 로 분류**
-                  🟢 도달 33행은 **이미 운영 산출을 들고 있다**(STEP3-REPLAY.json) ⟹ 재조사 0
-                  🔴 B(사이트엔 있는데 미수집) ↔ C(사이트에 없음)은 **후보 페이지를 직접 열어야**
-                     갈린다 — 그 fetch 가 Step 4 의 주된 용량이다
-                  🔴 Search · Price · UI · Registry 로 **되돌아가지 않는다** · Identity 정책 **결정 0**
+NEXT              **Step 5 — 🔴 CPO 가 STEP4 §12 의 ①~⑤ 를 판정한 뒤에만 착수한다**
+                  ① `sellerSku`·`age` A 0/70(수집을 고칠지 측정불가로 둘지)
+                  ② `composition` 을 본문까지 볼지(🔴 새 증거 경로 ·
+                     메모 `description-evidence-turns-same-into-blockers` 가 위험을 측정해 뒀다)
+                  ③ `BRAND_UNCONFIRMED` 의 B 1건(후보측 brand 수집 · WU-080 과 다른 자리인지)
+                  ④ `SAME_SELLER_DISTINCT_LISTING → sellerSku` 축 매핑(내 가정이다)
+                  ⑤ Step 5 의 분모 표기(공식 80 ↔ 보조 70 ↔ 도달 33 ↔ FN 23 ↔ FP 8)
+                  🔴 **CTO 는 정책을 만들지 않는다** · Search · Price · UI · Registry 재진입 금지
 
 🔴 **아래 블록은 [직전] WU 다**(CANDIDATE-CAP-AND-LABEL-01) — 좌표가 아니다.
 ```
