@@ -148,6 +148,51 @@ Registry 0 · SIMILAR→SAME 승격 0 · UNKNOWN→후보 승격 0 · 새 대시
 
 ---
 
+## 6-B. 🟡 CPO ⒝ 구현 — **패치로 보존하고 clean 으로 넘겼다**(§4-C 용량 판단)
+
+```
+패치  docs/identity-gt-master/ICVR-01-similar-filter.patch   (git apply 로 복원)
+적용  git apply docs/identity-gt-master/ICVR-01-similar-filter.patch
+🔴 작업트리에는 **적용하지 않았다** — 남은 계약 4건 + 전체 회귀 + build 를 이 세션에서
+   안전하게 끝낼 수 없었다(「작업트리를 더럽힌 채 끊기는 것이 가장 나쁘다」).
+🟢🟢 **대가가 0 이다** — 이 분모에서 `SIMILAR` 가 **0건** 이라 그 필터는 **화면을 한 픽셀도
+   바꾸지 않는다** ⟹ **CEO 육안 검증은 지금 그대로 가능하다**.
+```
+
+### 패치가 담고 있는 것 (검증된 부분)
+
+```
+① mi-same-candidates.ts  POSSIBLE_TIERS: ["SIMILAR"] → **[]**
+   🟢 `isModelCodeOnlyReference` 분기는 **그대로**(CANDIDATE-POSSIBLE-CONFLICT-01 보존)
+② 같은 파일  CANDIDATE_GROUP_LABEL.POSSIBLE
+   「🟡 유사상품 · 참고」 → **「🟡 품번 충돌 · 참고」**
+   🔴 왜 라벨도 바꿨는가 — `SIMILAR` 를 빼면 그 군에 남는 것은 **품번만 충돌한 참고
+      후보** 뿐이고, 그 자리에 **CEO SAME 2건(가격 보유)** 이 있다. 「유사상품」이라
+      적으면 **이번 WU 의 목적(CEO 육안 재판단)을 망가뜨린다**. 🟢 CPO 문장을 그대로 썼다.
+   🔴 「동일상품」은 넣지 않았다 — `ccl-01` 의 그 금지를 **풀지 않았다**
+③ 계약 갱신 — `ccl-01` D·F·H·J · `pp-01` PP-01·PP-08·PP-09
+   🟢 느슨하게 하지 않고 **뒤집고 강화** 했다(「유사상품」 리터럴 금지를 **추가**)
+🟢 그 둘은 **20/20 PASS** · typecheck **0**
+```
+
+### 🔴 남은 일 — 계약 4건이 더 FAIL 한다(사유 확정됨)
+
+```
+cand-01-evidence-visibility.test.ts  CAND-04 · CAND-06-b · CAND-10
+wu-132-mi-same-price-comparison.test.ts  B-4
+🔴 전부 **`CANDIDATE-EVIDENCE-VISIBILITY-01`(SIMILAR 노출을 «넓힌» WU)의 계약** 이다 —
+   CPO ⒝ 가 그 WU 의 결론을 **뒤집었다**. 🟢 뒤집는 것이 맞지만 그것은 **정책 반전** 이라
+   주석에 그 사실을 적어야 하고, 그 작업을 반쯤 해 놓고 끊지 않았다.
+🔴 B-4 는 「SAME 이 아닌 후보가 후보 리스트에도 없으면 FAIL」을 단언한다 — 그 입력이
+   `SIMILAR` 라서 깨졌다. 🟢 입력을 **품번충돌 참고 후보** 로 바꾸면 그 계약의 «의도»
+   (리스트와 가격축을 가른다)가 그대로 지켜진다
+```
+
+🔴 **다음 세션은 조사를 다시 하지 않는다** — 패치 적용 → 위 4건 갱신 → 전체 회귀 →
+typecheck → build → 배포. 🔴 그 외 범위를 넓히지 않는다.
+
+---
+
 ## 7. 현재 좌표 / 다음 한 수
 
 ```
