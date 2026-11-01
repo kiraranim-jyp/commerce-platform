@@ -325,17 +325,36 @@ describe("E. 영역 경계", () => {
     expect(src).toMatch(/<details data-testid="mi-detail-fold"(?![^>]*\bopen\b)/);
   });
 
-  it("🟢 E-8 기존 블록이 «삭제되지 않았다» — 두 참고가격과 SAME 행이 그대로 있다", () => {
+  it("🟢 E-8 기존 블록이 «삭제되지 않았다» — 참고가격·결론·후보 행이 그대로 있다", () => {
     for (const kept of [
       "OverseasReferencePrice",
       "DOMESTIC_REFERENCE_TITLE",
-      'data-testid="mi-same-row"',
+      /**
+       * 🔵 CANDIDATE-UX-REFINE-04 A — `mi-same-row` 는 **의도적으로 제거** 됐다.
+       * 🔴 이 단언의 «뜻» 은 「후보 행이 통째로 사라지지 않았다」이고 그 뜻은
+       *    `mi-candidate-row` 가 **이어받는다**(같은 후보가 접힘 «안» 에 하나로 선다).
+       * 🟢 약화가 아니다 — 바로 아래 E-8b 가 **중복 금지** 를 새로 잠근다.
+       */
+      'data-testid="mi-candidate-row"',
       'data-testid="mi-same-excluded"',
       'data-testid="mi-same-empty"',
       'data-testid="mi-same-pending"',
     ]) {
       expect(src).toContain(kept);
     }
+  });
+
+  /**
+   * 🔵🔵🔵 CANDIDATE-UX-REFINE-04 D1 — **후보 표시 surface 는 «하나» 다.**
+   *
+   * 🔴 `-01`·`-02`·`-03` 이 세 번 UX FAIL 한 원인이 **중복 surface** 였다 —
+   *    `mi-same-row`(접힘 밖 · 판정 라벨 없음)와 `mi-candidate-row`(접힘 안)가
+   *    **같은 후보를 두 번** 그렸고, 셀러가 먼저 보는 쪽은 고쳐지지 않은 쪽이었다.
+   * 🔴 그래서 **되돌아오면 FAIL** 하도록 소스에서 잠근다.
+   */
+  it("🔴 E-8b 후보 표시 surface 가 둘로 늘어나지 않는다", () => {
+    expect(src).not.toContain('data-testid="mi-same-row"');
+    expect(src).not.toContain('data-testid="mi-same-price"');
   });
 });
 

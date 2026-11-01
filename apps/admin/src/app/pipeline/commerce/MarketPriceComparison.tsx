@@ -1519,34 +1519,29 @@ function MarketColumn({
           {MI_SAME_EMPTY}
         </p>
       ) : (
-        <ul className="space-y-1">
-          {selection.priced.map((row) => (
-            <li
-              key={row.discoveredUrl}
-              data-testid="mi-same-row"
-              className="rounded border border-border/60 p-2"
-            >
-              {row.title && <p className="truncate text-[11px] text-text-primary">{row.title}</p>}
-              <div className="flex items-baseline justify-between gap-2">
-                <a
-                  href={row.discoveredUrl}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="truncate text-[11px] text-text-tertiary underline"
-                >
-                  {row.domain}
-                </a>
-                {/* 🔴 통화 그대로 · 환산 없음(그 함수가 owner 다). */}
-                <span data-testid="mi-same-price" className="shrink-0 text-[11px] font-medium text-text-secondary">
-                  {priceText(row)}
-                </span>
-              </div>
-              <p className="text-[11px] text-text-tertiary">{stockText(row.soldOut)}</p>
-              {/** 🔵 CORE-E2E-CLOSE-04 — `SAME` 후보도 **선택 대상** 이다(CPO §7-A). */}
-              <CandidateSelect row={row} api={reviewApi} />
-            </li>
-          ))}
-        </ul>
+        /**
+         * ══════════════════════════════════════════════════════════════════
+         * 🔵🔵🔵 CANDIDATE-UX-REFINE-04 A — **중복 표시 surface 를 «제거» 했다**
+         * ══════════════════════════════════════════════════════════════════
+         *
+         * 🔴🔴 여기 있던 `<ul data-testid="mi-same-row">` 가 **같은 후보를 두 번째로**
+         *    그렸고, 그쪽이 **접힘 «밖»** 이라 셀러가 **먼저** 보는 표면이었다.
+         * ```
+         * 실측 — 국내 beaumonde.co.kr 이 mi-same-row «와» mi-candidate-row 양쪽에 ·
+         *        해외 4건이 12건 «안» 에 중복
+         * 그 표면엔 이미지 **없음** · 판정 라벨 **없음**(🔴 WU-091 「행마다 판정 라벨」
+         *        불변식 미준수) · 경고 **없음**
+         * ⟹ `-01`·`-02`·`-03` 이 접힘 «안» 을 고쳤는데 **첫 화면이 안 바뀐** 이유다
+         * ```
+         * 🟢 **가격 집계는 한 글자도 안 죽는다** — 이 영역의 가격 owner 는 위
+         *    `<OverseasReferencePrice>` 와 `buildPriceGuide` 이고 `selection.priced` 는
+         *    **여기서 표시용** 이었다. `selectMiSameCandidates` **수정 0**.
+         * 🟢 **후보도 안 사라진다** — `priced` 는 tier **SAME** + 판매중 + 가격확인이고
+         *    `selectCandidateList` 의 `LIKELY_TIERS` 에 **반드시 포함** 된다(`CAND-07`).
+         * 🔴 `mi-same-empty`(결론)와 `mi-same-excluded`(제외 사유)는 **유지** — 후보
+         *    표면이 아니라 **말** 이다.
+         */
+        null
       )}
       {/**
        * 🔴🔴 **「동일상품인데 빠진 것」을 조용히 버리지 않는다.**

@@ -182,7 +182,16 @@ describe("CAND-02 화면 축 — 다상품 마운트 DOM", () => {
       const { doc, cleanup } = mount(rows);
       try {
         const inList = shownUrls(doc, "mi-candidate-row");
-        const inPrice = shownUrls(doc, "mi-same-row");
+        /**
+         * 🔵🔵 CANDIDATE-UX-REFINE-04 A — **비교 대상이던 두 번째 surface 가 사라졌다.**
+         *
+         * 🔴 이 테스트의 원래 질문은 CEO 모순이었다 — 「가격은 뜨는데 후보 리스트가 없다」.
+         *    그래서 `mi-same-row`(가격 surface) ⊆ `mi-candidate-row`(리스트)를 봤다.
+         * 🟢 이제 surface 가 **하나** 라 그 모순이 **구조적으로 불가능** 하다 ⟹ 질문을
+         *    한 단계 **강화** 한다 — 「**운영 가격 선택기가 고른 후보**가 화면에 선다」.
+         *    (화면끼리 비교하는 것보다 **운영 산출 ↔ 화면** 비교가 더 센 단언이다.)
+         */
+        const inPrice = inList;
         /** 🟢 가격 축 분모는 **운영 선택기** 가 정한다 — 측정 파일의 플래그를 믿지 않는다. */
         const priced = [
           ...selectMiSameCandidates(rows, "KR").priced,

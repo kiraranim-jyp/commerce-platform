@@ -131,7 +131,13 @@ describe("WU-136 — 시장 판매 판단 (마운트 DOM)", () => {
     /** 🟢 「치웠다」이고 「지웠다」가 아니다 — 기존 블록이 그대로 있다. */
     expect(q("mi-same-domestic")).toBeTruthy();
     expect(q("mi-same-overseas")).toBeTruthy();
-    expect(container.querySelectorAll('[data-testid="mi-same-row"]').length).toBeGreaterThan(0);
+    /**
+     * 🔵 CANDIDATE-UX-REFINE-04 A — 후보 행의 자리가 **접힘 안 하나** 로 합쳐졌다.
+     * 🔴 단언의 뜻(「치웠다이고 지웠다가 아니다」)은 그대로이고 좌표만 옮긴다.
+     */
+    expect(container.querySelectorAll('[data-testid="mi-candidate-row"]').length).toBeGreaterThan(0);
+    /** 🔴 D1 — 중복 surface 가 되살아나면 FAIL 한다. */
+    expect(container.querySelectorAll('[data-testid="mi-same-row"]').length).toBe(0);
   });
 
   it("🔴 R-8 내부 토큰이 화면 글자에 노출되지 않는다", async () => {

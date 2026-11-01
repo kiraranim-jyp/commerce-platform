@@ -145,7 +145,13 @@ describe("CORE-E2E-CLOSE-05 — 수동 재분석", () => {
   /** 🟢🟢 R-6 — 성공 후(= rows 공급) **후보·가격·선택이 전부 선다**(CPO §5 흐름). */
   it("R-6 rows 가 오면 후보·가격·선택이 선다", () => {
     const host = mount({ rows: [SAME, PRESUMED, SIMILAR], snapshotId: "s1", onRecheck: () => {} });
-    expect(host.querySelectorAll('[data-testid="mi-same-row"]').length).toBe(1);
+    /**
+     * 🔵 CANDIDATE-UX-REFINE-04 A — SAME 행의 자리가 **접힘 안** 으로 하나가 됐다.
+     * 🔴 단언의 뜻(「후보·가격·선택이 전부 선다」)은 그대로이고 좌표만 옮긴다.
+     */
+    expect(host.querySelectorAll('[data-group="LIKELY"] [data-testid="mi-candidate-row"]').length).toBe(1);
+    /** 🔴 D1 — 중복 surface 가 되살아나면 FAIL 한다. */
+    expect(host.querySelectorAll('[data-testid="mi-same-row"]').length).toBe(0);
     /**
      * 🔴🔴 **둘이다 — 그리고 그것이 올바르다.** 이 fixture 의 `SIMILAR` 은
      *    `matchTruth` 도 `matchReasons` 도 **없다** ⟹ `hasIdentityEvidence` 가 false 라
@@ -160,7 +166,15 @@ describe("CORE-E2E-CLOSE-05 — 수동 재분석", () => {
     /** 🔴 SIMILAR 는 행도 선택도 없다. */
     /** 🔴 Evidence 없는 SIMILAR 은 **제외** 된다(위 주석) — 그래서 보이지 않는다. */
     expect(text).not.toContain("other.example");
-    expect(host.querySelectorAll('[data-testid="mi-candidate-select"]').length).toBe(3);
+    /**
+     * 🔵 CANDIDATE-UX-REFINE-04 A — **3 → 2.** 전에는 SAME 후보가 `mi-same-row` 에
+     *    **한 번 더** 서서 선택 UI 도 하나 더 있었다(= 중복). 그 surface 를 없앴으므로
+     *    선택 UI 는 **후보 행 수와 같아야 한다**.
+     * 🟢 그래서 상수 2 가 아니라 **행 수에서 파생** 시킨다 — 둘이 갈라지면 FAIL 한다.
+     */
+    expect(host.querySelectorAll('[data-testid="mi-candidate-select"]').length).toBe(
+      host.querySelectorAll('[data-testid="mi-candidate-row"]').length,
+    );
     /** 🟢 그리고 버튼은 **그대로 같이** 선다(§4 「이미 후보가 있으면 정상 표시」). */
     expect(host.querySelector('[data-testid="market-recheck-button"]')).not.toBeNull();
     expect(host.querySelector('[data-testid="market-recheck-note"]')).toBeNull();

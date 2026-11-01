@@ -132,7 +132,16 @@ describe("WU-133 — 보류 사유가 화면에 선다 (마운트 DOM)", () => {
         pendingRow(),
       ],
     });
-    expect(container.querySelectorAll('[data-testid="mi-same-row"]')).toHaveLength(1);
+    /**
+     * 🔵 CANDIDATE-UX-REFINE-04 A — SAME 행의 자리가 **접힘 안** 으로 하나가 됐다.
+     * 🔴 단언의 뜻은 그대로다 — 「SAME 후보가 **선다**」 + 「보류 줄이 그 행을
+     *    **중복해서 세지 않는다**」. 🟢 그래서 **군을 지정해** 그 하나를 센다.
+     */
+    expect(
+      container.querySelectorAll('[data-group="LIKELY"] [data-testid="mi-candidate-row"]'),
+    ).toHaveLength(1);
+    /** 🔴 D1 — 중복 surface 가 되살아나면 FAIL 한다. */
+    expect(container.querySelectorAll('[data-testid="mi-same-row"]')).toHaveLength(0);
     expect(container.querySelector('[data-testid="mi-same-pending"]')!.textContent).toContain("1건");
   });
 });

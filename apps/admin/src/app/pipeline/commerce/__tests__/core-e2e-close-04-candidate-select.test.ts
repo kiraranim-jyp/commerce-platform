@@ -119,7 +119,8 @@ describe("CORE-E2E-CLOSE-04 — 후보 선택 → 기존 저장 배선", () => {
   /** 🟢 S-1 — **SAME 후보를 고를 수 있다**(CPO §8-1). */
   it("S-1 SAME 후보에 선택 UI 가 선다", () => {
     const host = mount(ROWS);
-    const same = host.querySelector('[data-testid="mi-same-row"]');
+    /** 🔵 UX-REFINE-04 A — SAME 행의 자리가 접힘 안으로 하나가 됐다(좌표만 이동). */
+    const same = host.querySelector('[data-group="LIKELY"] [data-testid="mi-candidate-row"]');
     expect(same).not.toBeNull();
     expect(same!.querySelector('[data-testid="mi-candidate-select"]')).not.toBeNull();
     expect(same!.querySelector('[data-testid="mi-select-same"]')).not.toBeNull();
@@ -192,7 +193,7 @@ describe("CORE-E2E-CLOSE-04 — 후보 선택 → 기존 저장 배선", () => {
   it("S-6 저장 상태가 화면에 선다", async () => {
     const host = mount(ROWS);
     const btn = host.querySelector(
-      '[data-testid="mi-same-row"] [data-testid="mi-select-same"]',
+      '[data-group="LIKELY"] [data-testid="mi-candidate-row"] [data-testid="mi-select-same"]',
     ) as HTMLButtonElement;
     await act(async () => {
       btn.click();
@@ -210,7 +211,7 @@ describe("CORE-E2E-CLOSE-04 — 후보 선택 → 기존 저장 배선", () => {
   it("S-7 snapshotId 가 없으면 POST 하지 않고 「저장됨」도 말하지 않는다", async () => {
     const host = mount(ROWS, { snapshotId: null });
     const btn = host.querySelector(
-      '[data-testid="mi-same-row"] [data-testid="mi-select-same"]',
+      '[data-group="LIKELY"] [data-testid="mi-candidate-row"] [data-testid="mi-select-same"]',
     ) as HTMLButtonElement;
     calls = [];
     await act(async () => {
