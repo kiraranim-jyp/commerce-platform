@@ -11,7 +11,37 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-🟡🟡🟡 CURRENT WU  **CANDIDATE-UX-REFINE-02 — 🟡 HOLD · CEO 실제 화면 확인 대기**
+🔴🔴🔴 CURRENT WU  **CANDIDATE-UX-REFINE-03 — CPO 문서화 대기 · 🔴 CTO 코딩 금지**
+                  판정 — `-01` 구현 GO / **UX FAIL** · `-02` 구현 GO / **UX FAIL** ·
+                  Production **HOLD**. 문제는 **기능 부족이 아니라 정보 과잉** (CPO).
+                  방향 — **더 넣지 않고 70~80% 를 «뺀다».** 후보 영역은 「설명하는 UI」가
+                  아니라 **「선택하는 UI」** 다.
+                  카드에 남길 **9** — 이미지 · 판정 · 상품명 · 가격 · 가격상태 · 판매처 ·
+                  (있을 때만) 확인 필요 **1줄** · 선택 · 판매처 보기
+                  카드에서 **전부 제거** — matchReasons · evidence 산문 · 분석 설명 ·
+                  점수 · 일치율 · URL 분석 · 이미지 분석 설명 · 내부 정책 문구 ·
+                  🔴 **후보 영역 제목 아래 설명문도 없앤다**(제목만 두고 바로 카드)
+                  경고 3단 — 평상시 **없음** / 주의 **⚠ 확인 필요** / 중요 **⚠ 품번 충돌**
+
+                  🔴🔴🔴 **`-03` 지시서 «전» 에 반드시 볼 것 — 표면이 «여섯» 이다**
+                  ```
+                  -01·-02 는 **한 장의 카드만** 고쳤다. 같은 성격의 후보 카드가 여러 벌 있다:
+                  🟢 MarketPriceComparison      mi-candidate-list  ← 내가 고친 «유일한» 곳
+                  🔴 GeminiTransientCandidates  gt-reasons (matchReasons 3 + blockers 2)
+                  🔴 CandidateComparison        summarizeReasons(matchReasons)
+                  🔴 ComparisonShopSearch       matchReasons
+                  🔴 DomesticShopSearch         matchReasons
+                  🔴 DomesticPriceIntelligencePanel  matchReasons 상세 목록
+                  🔴🔴 그리고 GeminiTransientCandidates **하나가 화면 구역 9개** 를 소유한다 —
+                     🔎 웹 검색 · 🔗 직접 입력 · 🌎 해외 자동검색 · 🔁 이전 확인 재검증 ·
+                     🧭 국내 목록 탐색 · 🛰 AI 검색 · 🧪 증거 부족 · 🇰🇷 국내 후보 검토 ·
+                     📚 이전에 확인한 후보
+                  ⟹ 🔴 **`-03` 이 또 MarketPriceComparison 만 고치면 세 번째로 FAIL 한다**
+                  🔴 어느 구역이 «지금 화면에» 서는지는 stageFocus·flag 로 갈리고
+                     **CTO 는 로그인 화면을 볼 수 없다** ⟹ 확정은 CEO 화면으로만 된다
+                  ```
+
+🔵 [직전] CANDIDATE-UX-REFINE-02 — 구현 GO · UX FAIL
                   `568b7d3c` 배포 완료 · clean · 0/0 · 🔴 **CTO 추가 코딩 금지**(CPO)
                   🟢 구현 · 기존 회귀 · typecheck/build · negative guards = **GO**
                   🟢 P1 12 · P2 3 확인   🟡 **P3 0 = 측정불가**(PASS 아님)
