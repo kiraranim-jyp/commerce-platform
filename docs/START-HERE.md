@@ -11,7 +11,58 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-🔴🔴🔴 CURRENT WU  **CANDIDATE-UX-REFINE-03 — CPO 문서화 대기 · 🔴 CTO 코딩 금지**
+🔵🔵🔵 CURRENT WU  **CANDIDATE-UX-REFINE-04 — 🔴 조사 1건만 남았다(DOM 비교표)**
+                  `1c42c646` 배포 유지 · clean · 0/0 · **PRODUCT UX HOLD**
+                  🔴 **구현 금지** — DOM 비교표 제출 → CPO 가 범위 확정 → 그 뒤 구현
+
+                  🟢🟢 **CPO 확정 2건(2026-11-01) — 다시 논의하지 않는다**
+                  ① `candidate_reviews` 를 **분석 결과 저장소로 승격 · 칸 2개 추가 승인**
+                     `price_status` · `sold_out` (최초 분석 시점 값 그대로)
+                     🔴 기존 행 backfill **금지** — `VERIFIED_CURRENT` 로 추정하지 않는다 ·
+                        기존 행은 **안전측 P2** · 없는 정보를 만들지 않는다
+                  ② WU-148 **가격 «의미» 는 유지**(🇰🇷 가격대 ↔ 🌎 최저 확인가)
+                     🔴 그러나 **UI «구조» 는 통일** 한다 — 「정책은 달라도 구조는 같다」
+                     허용되는 차이 = 제목·가격 설명·집계 방식·통화 의미 **뿐**
+
+                  🟢🟢 **조사 A 완료 — 재조사 금지. 새 저장소가 «필요 없다»**
+                  ```
+                  🔴🔴 내 1차 STOP 「최초 분석 결과가 저장되지 않는다」는 **틀렸다** —
+                     `check/route.ts:443` 이 `recordSeenCandidates` 로 **전 후보를 저장한다**
+                     (`isTransientShopId` 가드가 막는 것은 `domestic_product_links` 뿐이다)
+                  🟢 079 `candidate_reviews` 가 카드의 거의 전부를 이미 들고 있다 —
+                     candidate_url · candidate_domain · candidate_title · image_url ·
+                     price_amount · price_currency · market · system_verdict ·
+                     match_truth · price_tier · blockers(jsonb) · source · 시각
+                  🔴 **빠진 칸 둘** — `price_status` · `sold_out`(⟹ CPO ① 이 승인한 그것)
+                     없으면 재진입 가격이 **전부 P2 로 떨어진다**(화면 둘이 다른 말을 한다)
+                  🟢 정책 영향 — §12-0 「외부 URL 영구 저장 ❌」은 **WU-131 이 이미 열었고
+                     운영 중** · WU-119 「담을 칸이 없다」는 **더 이상 사실이 아니다**(079) ·
+                     WU-059 는 **client** 영속화 금지라 **무관**(이건 서버 DB 복원) ·
+                     transient 저장 금지 불변식은 **그대로 유지**
+                  ⟹ 남은 구현 = **칸 2개 + GET 재진입 복원 배선** 뿐이다(좁다)
+                  ```
+                  🟢 **조사 B 코드 축 완료** — 후보 **카드** 는 이미 완전 공통
+                     (`MarketColumn` + `market` prop · Korea/Overseas 전용 컴포넌트 **0**)
+                     🔴 다른 것은 카드가 아니라 **그 위 「가격 요약 블록」** 이고
+                        그것이 WU-148 이 의도적으로 가른 자리다
+
+                  🔴🔴 **남은 단 하나 — 실제 DOM 비교표**(CPO §5 · 표 없이 보고 금지)
+                  ```
+                  🔴 기존 덤프 하니스 `core-2ao-r1-screen-dump` 는 **국내/해외 칸을
+                     마운트하지 않는다**(실측 0건) ⟹ **새 하니스가 필요하다**
+                  🟢 준비는 끝나 있다 — 그대로 쓰면 된다:
+                     마운트  `MarketPriceComparison` ({rows, snapshotId})
+                     입력    `cand-02-rows.json`(실측) + `ab046-evidence.json`(실측 POSSIBLE)
+                             🔴 ab046 을 **배열 앞** 에 두고 같은 URL 의 fixture 행을 뺀다
+                                (selectCandidateList 가 tier 검사 «전» 에 seen.add 한다)
+                     덤프    `[data-testid="mi-same-domestic"]` ↔ `"mi-same-overseas"`
+                             두 서브트리의 testid 출현 «순서» 와 textContent 를 나란히
+                     표 14행 섹션제목 · 가격요약 · 가격상태 · 후보그룹 · 후보카드 · 이미지 ·
+                             판정 · 가격 · 판매처 · 경고 · 선택 · 링크 · 접힘 · 설명텍스트
+                  🔴 끝나면 하니스를 **지운다**(임시 파일을 커밋하지 않는다)
+                  ```
+
+🔵 [직전] CANDIDATE-UX-REFINE-03 — 구현 GO · 실제 화면 미확인
                   판정 — `-01` 구현 GO / **UX FAIL** · `-02` 구현 GO / **UX FAIL** ·
                   Production **HOLD**. 문제는 **기능 부족이 아니라 정보 과잉** (CPO).
                   방향 — **더 넣지 않고 70~80% 를 «뺀다».** 후보 영역은 「설명하는 UI」가
