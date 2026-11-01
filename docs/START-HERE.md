@@ -11,7 +11,21 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-🔵🔵🔵 CURRENT WU  **IDENTITY-GT-EVIDENCE-MASTER-REVIEW-01 — 🟢 Step 3·4 CLOSED**(2026-11-01 · `6a8782a3`)
+🔵🔵🔵 CURRENT WU  **IDENTITY-GT-EVIDENCE-MASTER-REVIEW-01 — 🟢 Step 3·4·5 CLOSED**(2026-11-01 · `49755451`)
+                  Step 5 전문 `docs/IDENTITY-GT-MASTER-01-STEP5.md` (분석만 · 코드 0)
+                  🟢🟢🟢 **처음으로 «분리 가능한» 축이 나왔다** — MODEL_CODE conflict 6건:
+                     **AC↔AB**(kids↔baby 라인) → CEO **SAME 4/4**
+                     **AC↔AC**(같은 라인·다른 번호) → CEO **DIFFERENT 2/2**
+                     ⟹ 라인 비차단 완화는 DIFFERENT 2건의 **사정거리 밖** 이다
+                     🟢 WU-070 L4(26쌍 False SAME 0) · WU-112(N=3→**4**) 와 정합
+                     🔴 장치가 **둘**(conflict + MODEL_CODE_AGE_LINE) · **반사실 미실시**
+                  🟢 blocker **15/18 이 증거를 «갖고» 막았다** ⟹ threshold 완화 근거 없음
+                  🔴 정책 후보 — 근거 있는 것은 **P1(라인 비차단) · P2(후보측 brand 수집)**
+                     둘뿐. P3~P7 은 측정이 「효과 0」 또는 「순손실」을 말한다
+                  🔴 **CPO 가 F 표의 P1/P2 를 판정해야 다음이 열린다**
+                  🔴 Step 4 의 숫자 셋은 Step 5 에서 **정정됐다**(그 문서 머리 포인터)
+                  ─── 이하 Step 3·4 ───
+                  🟢 Step 3·4 CLOSED (`6a8782a3`)
                   Step 4 전문 `docs/IDENTITY-GT-MASTER-01-STEP4.md` ·
                   산출 `STEP4-EVIDENCE.json`(70×17 전수) · `STEP4-TABLE.md`(CPO §6 표)
                   🟢🟢 **핵심 — blocker 18건 중 13건은 증거를 «갖고» 막았다**(A) ⟹
@@ -33,14 +47,16 @@
                   🔴 **CPO 판정 5건 대기** — 그 문서 §9(trenbe 라벨 상충 · 분모 80↔70 ·
                      AC157 측정불가 · FP 분모 8 · 샵당1건 15 의 분류)
 
-NEXT              **Step 5 — 🔴 CPO 가 STEP4 §12 의 ①~⑤ 를 판정한 뒤에만 착수한다**
-                  ① `sellerSku`·`age` A 0/70(수집을 고칠지 측정불가로 둘지)
-                  ② `composition` 을 본문까지 볼지(🔴 새 증거 경로 ·
-                     메모 `description-evidence-turns-same-into-blockers` 가 위험을 측정해 뒀다)
-                  ③ `BRAND_UNCONFIRMED` 의 B 1건(후보측 brand 수집 · WU-080 과 다른 자리인지)
-                  ④ `SAME_SELLER_DISTINCT_LISTING → sellerSku` 축 매핑(내 가정이다)
-                  ⑤ Step 5 의 분모 표기(공식 80 ↔ 보조 70 ↔ 도달 33 ↔ FN 23 ↔ FP 8)
-                  🔴 **CTO 는 정책을 만들지 않는다** · Search · Price · UI · Registry 재진입 금지
+NEXT              🔴 **CPO 가 Step 5 §F 의 P1 / P2 를 판정한다 — 그 전에 CTO 는 코드를 만지지 않는다**
+                  P1  품번 **라인 차이(AC↔AB)** 를 conflict/blocker 에서 제외
+                      근거 6건 · SAME 회수 **최대 4** · 이 분모에서 DIFFERENT 위험 **0**
+                      🔴 conflict 와 `MODEL_CODE_AGE_LINE` **두 장치를 같이** 바꿔야 한다
+                  P2  후보측 brand 수집 보강(`shopify.vendor` 미수집 **1건**)
+                      🔴 WU-080 이 REJECT 한 것은 **원상품측** 이다 — 같은 축인지 확인 필요
+                  🟢 GO 면 CTO 의 다음 일은 **P1 반사실 측정**(70 후보 전체 영향)이고
+                     그 결과로만 구현을 판단한다
+                  🔴 CPO ①③ 판정은 유지 — `sellerSku`·`age` 현상 유지 · B 를 C 로 바꾸지 않는다
+                  🔴 Search · Price · UI · Registry 재진입 금지 · GT 수정 금지 · 분모 재계산 금지
 
 🔴 **아래 블록은 [직전] WU 다**(CANDIDATE-CAP-AND-LABEL-01) — 좌표가 아니다.
 ```
