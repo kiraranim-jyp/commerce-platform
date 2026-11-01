@@ -109,7 +109,52 @@ soldOut: e.soldOut,
 ```
 🟢 `GeminiTransientEvidence` 에 이미 있는 칸이다(지어내지 않는다).
 
-### B-3 reader — GET 복원
+### 🟢 B-1 · B-2 — **완료·배포**(`41aaf43a`)
+
+```
+migration 081  price_status · sold_out · match_reasons — 🟢 운영 DB 적용·실측 완료
+               (3칸 nullable · 기존 124행 backfill 0)
+writer         recordSeenCandidates 입력 3칸 + check/route 3줄 + toRow 매퍼 3칸
+⟹ 🟢 **지금부터의 모든 분석은 세 칸까지 저장된다.** 남은 것은 reader 하나다.
+```
+
+### 🔵🔵🔵 B-3 reader — **⒝ 확정: 집계에 닿지 않는 «네 번째 배열»**(CPO 2026-11-01)
+
+🔴 **왜 ⒝ 인가** — 이 BLOCK 은 새 정책이 필요해서 생긴 것이 아니라,
+`geminiEvidence` 가 **「가격 집계 입력」과 「화면 후보 데이터」 두 역할** 을 겸해서 생긴
+**구조 충돌** 이다. 그래서 역할을 가른다.
+
+```
+candidate_reviews
+   ├─ 가격 집계용 기존 경로 ─→ geminiEvidence        🔴 한 글자도 안 바꾼다
+   └─ 재진입 표시 복원용   ─→ **savedCandidateRows**  🔴 집계 금지
+```
+
+🔴 **반드시 지킬 9**(CPO 고정) — ① 기존 `geminiEvidence` 가격 집계 로직 변경 0
+② `priceTier` 를 **nullable 로 바꾸지 않는다** ③ 기존 124행 backfill 0
+④ **18행을 버리지 않는다**(⒞ 기각 — 「좋은 후보를 최대한 많이 보여준다」와 반대)
+⑤ 재진입 시 Search/Crawl/`/check` **0회** ⑥ 최초 분석 ↔ 재진입 **표시 결과 동일**
+⑦ P1/P2/P3 는 저장된 `price_status` 로 복원 ⑧ `matchReasons` 도 저장값 그대로
+⑨ 🔴 **`savedCandidateRows` 가 가격 aggregation 에 들어가면 FAIL 하는 계약을 «신설»**
+
+🟢 **복원할 칸은 전부 저장돼 있다** — url · domain · title · image · price · currency ·
+market · verdict · matchTruth · priceTier · blockers · matchReasons · priceStatus ·
+soldOut · source.
+
+🔴 **`blockers` 는 저장 시 `[...blockers, ...conflicts]` 로 «합쳐져» 있다.**
+🟢 복원은 그 배열을 **`crossSellerConflicts` 로 넣고 `crossSellerBlockers: []`** 로 둔다 —
+`isModelCodeOnlyReference` 의 결과가 **모든 경우에 동일** 하다(검증: 원래 blocker 가
+있었으면 합친 길이가 2 이상이거나 단일 비-MODEL_CODE 라 어느 쪽이든 false). 🟢 경고
+문구(`candidateWarningLines`)도 둘을 합쳐 쓰므로 **글자가 같다**.
+
+### 🔴 B-4 — CTO 가 할 수 없는 부분을 미리 적는다
+
+CPO §B-4 의 「실제 `resume=` 화면」 검증은 **로그인 뒤라 CTO 가 볼 수 없다.**
+🟢 CTO 가 낼 수 있는 것은 ⒜ 마운트 DOM 에서 「복원 배열만으로 후보가 선다」
+⒝ 네트워크 호출 **0회** 단언(Search/Crawl/`/check` 를 spy 로 센다) 둘이다.
+🔴 **「Production UX PASS」로 적지 않는다** — 최종 판정은 CEO 실제 화면이다.
+
+### [참고] 원래 B-3 설계(⒝ 이전)
 
 ```
 GET /api/price-history/[snapshotId]/route.ts:22

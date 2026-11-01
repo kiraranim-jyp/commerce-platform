@@ -11,7 +11,28 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-🔵🔵🔵 CURRENT WU  **CANDIDATE-UX-REFINE-04 — 🟢 조사·설계 끝 · «구현만» 남았다**
+🔵🔵🔵 CURRENT WU  **CANDIDATE-UX-REFINE-04 — A·B-1·B-2 배포 완료 · 남은 것은 B-3 하나**
+                  `41aaf43a` · clean · 0/0 · 🔵 전문 `docs/CANDIDATE-UX-REFINE-04.md`
+                  ```
+                  🟢 A      mi-same-row 중복 surface 제거 · 계약 6파일 좌표 이동 ·
+                            D1 계약 신설(surface 가 둘로 늘면 FAIL)        `c8e99862`
+                  🟢 B-1    migration 081 — price_status·sold_out·match_reasons
+                            **운영 DB 적용·실측 완료**(3칸 nullable · 124행 backfill 0)
+                  🟢 B-2    writer 3칸 — 지금부터의 모든 분석이 세 칸까지 저장된다
+                  🔴 B-3    **reader 하나만 남았다** — CPO ⒝ 확정:
+                            집계에 닿지 않는 **네 번째 배열 `savedCandidateRows`**
+                            (geminiEvidence 는 집계 입력이라 거기 넣으면 집계가 바뀐다 ·
+                             priceTier 가 필수인데 저장값 18/124 가 null 이라 거기 못 넣는다)
+                            🔴 반드시 지킬 9 + blockers 합쳐 저장된 것의 복원법은 전문 §2
+                  🔴 B-4    실제 `resume=` 화면은 **CTO 가 볼 수 없다**(로그인 뒤) —
+                            CTO 축은 마운트 DOM + 호출 0회 spy · 최종 판정은 **CEO**
+                  ```
+                  🔴🔴 **이 세션은 여기서 멈췄다 — 세 번째 용량 중단이다**(§4-C).
+                     구현 4회(-01·-02·-03·-04A) + 전체회귀 6회 + 운영 migration 1회를
+                     돌렸고, B-3 을 시작하면 **배선 절반 상태로 끊길** 위험이 컸다.
+                     🟢 작업트리 clean · 전부 커밋·배포됨 · B-3 은 **조사 0 으로 착수 가능**.
+
+🔵 [이전] CANDIDATE-UX-REFINE-04 — 조사·설계 단계
                   🔵 **전문 `docs/CANDIDATE-UX-REFINE-04.md` 하나만 읽고 착수한다**
                      (CPO 최종 지시서 + DOM 실측 + 구현 좌표 + 계약 8파일 목록 전부 그 안)
                   🔴 추가 조사 WU · 비교표 WU · 국내/해외 별도 WU 로 **쪼개지 않는다**(CPO)
