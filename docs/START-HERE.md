@@ -27,9 +27,19 @@
                   🟢 -01 에서 CEO 가 본 그 모순은 blocker 가 아니라 **matchReasons 진단
                      문자열** 이었고 -02 가 그 경로를 끊었다 ⟹ ②의 실질 확인 대상은
                      **「진단 문장이 사라졌는가」** 다
-                  🔴 미측정 — `conflicts` 는 `blockers` 와 다른 배열이고 위 게이트가 보지
-                     않는다. 경고 줄은 둘을 합치므로 「🟢 + ⚠ 품번 충돌」 가능 여부는
-                     downstream tier 매핑 미추적 ⟹ 실측 분모에서는 **0건**
+                  🟢🟢 **[닫힘 · 읽기 확인 결과 = A]** 「🟢 + ⚠ 품번 충돌」도 **불가능하다**
+                     ① cross-seller:1001 `conflicts>0` → **early return CONFLICT**(점수 계산 0)
+                     ② 유일한 예외 `skipConflictReturn`(age-line·MODEL_CODE 하나)도
+                        :966 에서 **`MODEL_CODE_AGE_LINE` blocker 를 실제로 push** 한다
+                        ⟹ :1307 `blocked=true` ⟹ SAME 진입 불가(🔴 주석이 아니라 코드로 확인)
+                     ③ match-truth:175 `crossSeller==="CONFLICT" → "CONFLICT"`(무조건 이긴다) ·
+                        :177 `modelCode==="conflict" → "CONFLICT"` · 앞의 조기반환도 **SIMILAR**
+                     ④ `transientDisplayTier` → CONFLICT/SIMILAR 는 `LIKELY_TIERS` 에 없다
+                     🟢 실측 교차확인 — ab046(conflicts MODEL_CODE)은 **POSSIBLE** (R2-06)
+                  🔴 **단 그 보장은 전부 «상류» 에 있다** — `transientDisplayTier` 는
+                     `matchTruth` 를 그대로 믿으므로, 상류가 바뀌어
+                     `conflicts>0 + matchTruth=EXACT_IDENTIFIER` 가 생기면 **UI 는 LIKELY 로
+                     그린다**(UI 자체 방어 없음). 지금은 상류가 막아 A 가 성립한다
                   ```
                   🟡 CEO 가 볼 다섯 — ① 카드 첫 1초(판정→가격→판매처) ② 진단 문장 소멸
                      ③ P2 가 P1 과 다르게 ④ POSSIBLE 이 참고로 읽힘 ⑤ **선택용 카드로 보이는가**
