@@ -48,6 +48,45 @@ export const PRICE_CALCULATION_LINK_TEXT = "ⓘ 가격 계산 기준 보기";
  */
 export const APPLY_RECOMMENDED_PRICE_LABEL = "이 가격으로 설정";
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   🔵🔵🔵 UI/UX FINAL SPRINT R2 STEP 7 — **최종 선택 가격의 «말»**
+   ═══════════════════════════════════════════════════════════════════════════
+   🔴 어휘 owner 를 새로 만들지 않았다 — A 의 말이 사는 **이 파일** 에 같이 둔다
+      (두 파일이 되면 「권장가」와 「최종가」가 서로 다른 어휘 규칙을 갖는다).
+   🔴 **값 owner 는 `priceOverrideKrw` 하나** 이고 이 파일은 **글자만** 갖는다. */
+
+/** 🟢 셀러가 **고른** 값의 이름. 🔴 「권장 판매가격」(A)과 **다른 것** — A 는 계산, 이것은 결정이다. */
+export const FINAL_PRICE_LABEL = "최종 선택 가격";
+
+/** 🔴 아직 고르지 않았을 때. 🔴 「0원」·「-」로 적지 않는다(없는 값을 숫자로 만들지 않는다). */
+export const FINAL_PRICE_NONE_TEXT = "아직 선택하지 않았습니다";
+
+/** 🟢 **셀러가 고른** 값임을 말한다 — 「시스템이 계산했다」와 구별되는 유일한 표시다. */
+export const FINAL_PRICE_SELECTED_BADGE = "✓ 선택됨";
+
+/**
+ * 🔵 후보 카드의 CTA. 🔴 `APPLY_RECOMMENDED_PRICE_LABEL`(「이 가격으로 설정」)과
+ *    **다른 글자** 를 쓴다 — 가리키는 대상이 다르다(그쪽은 권장가 A · 이쪽은 **그 후보의 가격**).
+ * 🔴 금액을 품지 않는다(금액 owner 는 그 카드의 가격 줄 하나다).
+ */
+export const CONFIRM_CANDIDATE_PRICE_LABEL = "이 가격으로 확정";
+
+/**
+ * 🔴 **이 영역은 편집하지 않는다** — 기존 `PriceEditor` 로 가는 길의 이름이다(CPO 결정 ⒝).
+ */
+export const EDIT_FINAL_PRICE_LINK_TEXT = "가격 수정 →";
+
+/**
+ * 🔴🔴 **외화 후보에는 확정 CTA 를 그리지 않는다 — 그 사실을 «말로» 적는다.**
+ *
+ * 🔴 `priceOverrideKrw` 는 **KRW** 칸이고, 외화 후보 금액을 거기 넣으려면 **환산** 이
+ *    필요하다. 환산은 이 트랙의 **금지축** 이다(`overseas-reference.ts` 「통화별로만
+ *    집계 · 합계 칸이 없다」 · 지시서 §9 「임의 환산하여 표시하지 않는다」 · §19).
+ * 🟢 그래서 **버튼을 숨기고 이유를 적는다** — 조용히 빼면 셀러가 「왜 어떤 후보만
+ *    확정이 되는가」를 알 수 없다.
+ */
+export const CONFIRM_PRICE_FOREIGN_NOTE = "원화 후보에서만 확정할 수 있습니다";
+
 /**
  * 🔵🔵🔵 CORE-UX-SELLER-01 ① — **1차 판매판단 줄의 머리말.**
  *

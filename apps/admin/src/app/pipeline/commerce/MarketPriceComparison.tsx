@@ -137,6 +137,13 @@ import {
    */
   marketPriceBasisLine,
   APPLY_RECOMMENDED_PRICE_LABEL,
+  /** 🔵 R2 STEP 7 — 최종 선택 가격의 **글자**(값 owner 는 `priceOverrideKrw` 하나다). */
+  FINAL_PRICE_LABEL,
+  FINAL_PRICE_NONE_TEXT,
+  FINAL_PRICE_SELECTED_BADGE,
+  CONFIRM_CANDIDATE_PRICE_LABEL,
+  CONFIRM_PRICE_FOREIGN_NOTE,
+  EDIT_FINAL_PRICE_LINK_TEXT,
   PRICE_CALCULATION_LINK_TEXT,
   RECOMMENDED_PRICE_LABEL,
   SELL_VERDICT_HEADING,
@@ -264,6 +271,33 @@ export interface MarketPriceComparisonProps {
    * 🔴 없으면 **버튼을 그리지 않는다**(갈 곳 없는 버튼 금지 · ⓘ 와 같은 규약).
    */
   onApplyRecommendedPrice?: () => void;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 R2 STEP 7 — **최종 선택 가격.** 🔴 owner 는 `priceOverrideKrw` «하나» 다
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 CPO 결정 ⒝ — 이 영역은 **표시 + 확정** 만 한다. **편집 owner 는 `PriceEditor`** 다.
+   *    🔴 그래서 여기에 입력칸/새 state/새 저장 경로를 **만들지 않았다**(새 가격 개념 0).
+   * 🟢 값은 `CommerceWorkspace` 가 `product.priceOverrideKrw?.value` 를 그대로 내려준다 —
+   *    `canonicalProduct` 칸이라 **저장·재진입 복원이 이미 된다**(새 migration 0 · STEP 8).
+   * 🔴 `null` = 아직 확정하지 않았다(= 「권장가로 갈 것인가」는 `PriceEditor` 의 몫).
+   */
+  finalPriceKrw?: number | null;
+  /**
+   * 🔴🔴 **후보 가격을 최종 판매가격으로 확정하는 handler.** `(krw) => void` 다.
+   *
+   * 🔴 `onApplyRecommendedPrice`(인자 없는 묶음)와 **다른 모양** 인 이유 — 그쪽은
+   *    권장가 **하나** 를 적용하고, 이쪽은 **셀러가 고른 후보의 금액** 을 적용한다.
+   * 🟢 가는 곳은 **같다** — `CommerceWorkspace.updateSalePriceKrw(:1452)` 그 함수다
+   *    (= `PriceEditor` 의 「최종 판매가격에 적용」이 쓰는 그것) ⟹ owner 가 둘이 되지 않는다.
+   * 🔴 없으면 버튼을 그리지 않는다(갈 곳 없는 버튼 금지 · 이 파일의 기존 규약).
+   */
+  onConfirmPriceKrw?: (krw: number) => void;
+  /**
+   * 🔴 「가격 수정」 — **이 영역이 편집하지 않는다.** 기존 편집기로 보내는 길만 받는다
+   *    (§10 「기존 편집 기능으로 연결한다」). 🔴 없으면 그 링크를 그리지 않는다.
+   */
+  onOpenPriceEditor?: () => void;
 }
 
 export function MarketPriceComparison({
@@ -280,6 +314,9 @@ export function MarketPriceComparison({
   onOpenPriceCalculation,
   sellVerdictCopy,
   onApplyRecommendedPrice,
+  finalPriceKrw = null,
+  onConfirmPriceKrw,
+  onOpenPriceEditor,
 }: MarketPriceComparisonProps): JSX.Element | null {
   const domestic = selectMiSameCandidates(rows, "KR");
   const overseas = selectMiSameCandidates(rows, "OVERSEAS");
@@ -420,7 +457,25 @@ export function MarketPriceComparison({
         * 🔴 후보가 **이미 있으면** 이 줄은 그 위에 그냥 같이 선다 — 기존 표시를
         *    가리거나 바꾸지 않는다(§4 「이미 후보가 있는 경우 정상 표시」).
         */}
-      {canRecheck ? (
+      {/**
+        * ══════════════════════════════════════════════════════════════════════
+        * 🔵🔵🔵 UI/UX FINAL SPRINT R2 STEP 4 — **정상 화면에서 CTA 를 없앤다**
+        * ══════════════════════════════════════════════════════════════════════
+        *
+        * 🔴 CPO 결정 ②: 「시장분석 **결과를 보기 위해** 사용자가 다시 눌러야 하는 CTA」를
+        *    제품의 정상 UX 에서 제거한다 ⟹ **결과가 이미 있으면(`checkRan`) 그리지 않는다.**
+        *    그것이 「왜 다시 분석해야 하지?」를 없애는 전부다(계약 C: 정상 화면 CTA = 0).
+        *
+        * 🔴🔴 **그러나 `!checkRan` 일 때는 남긴다 — 지우면 되돌아가는 사고가 있다.**
+        *    CORE-E2E-CLOSE-05 가 이 버튼을 **여기에 둔 이유** 가 바로 그것이다:
+        *    복구 수단이 `HIDDEN` 패널 안에 있어서 **셀러가 할 수 있는 일이 0** 이었다
+        *    (CEO Production FAIL). 결과가 없는 화면에서 이것까지 지우면 **막다른 화면** 이 된다.
+        * 🟢 그리고 지시서 §5 가 그 경우를 **명시적으로 허용** 한다 — 「다른 목적을 갖는
+        *    기능까지 임의 삭제하지 않는다」. 이 버튼의 두 목적이 여기서 갈린다:
+        *    결과 있음 = **군더더기 CTA**(제거) · 결과 없음 = **유일한 복구 수단**(유지).
+        * 🔴 자동 재조회로 대체하지 **않았다**(§4 금지) — 네트워크 호출 추가 0.
+        */}
+      {canRecheck && !checkRan ? (
         <div data-testid="market-recheck" className="mt-1 flex items-center gap-2">
           <button
             type="button"
@@ -435,15 +490,15 @@ export function MarketPriceComparison({
            * 🔴 「조회하지 않았다」와 「후보가 없다」는 **다른 사실** 이다(WU-130 ②).
            *    후보가 아직 없을 때만 그 사실을 적고, **실패로 적지 않는다.**
            */}
-          {!checkRan ? (
-            <span data-testid="market-recheck-note" className="text-[11px] text-text-tertiary">
-              {rechecking ? MARKET_RECHECK_BUSY : MARKET_RECHECK_EMPTY}
-            </span>
-          ) : rechecking ? (
-            <span data-testid="market-recheck-note" className="text-[11px] text-text-tertiary">
-              {MARKET_RECHECK_BUSY}
-            </span>
-          ) : null}
+          {/**
+           * 🔴 「조회하지 않았다」와 「후보가 없다」는 **다른 사실** 이다(WU-130 ②).
+           * 🟢 R2 STEP 4 로 이 블록이 **`!checkRan` 일 때만** 서므로, 전에 있던
+           *    「결과가 있는데 진행 중」 가지는 **도달 불가** 가 됐다 ⟹ 지웠다(죽은 분기 0).
+           *    🔴 문구 상수는 **둘 다 그대로** 쓴다(어휘 owner 변경 0).
+           */}
+          <span data-testid="market-recheck-note" className="text-[11px] text-text-tertiary">
+            {rechecking ? MARKET_RECHECK_BUSY : MARKET_RECHECK_EMPTY}
+          </span>
         </div>
       ) : null}
 
@@ -1057,6 +1112,14 @@ export function MarketPriceComparison({
             testId: "domestic-reference",
             amountTestId: "domestic-lowest",
           }}
+          /**
+           * 🔵 R2 STEP 7 — **두 시장에 «같은» 세 prop 을 넘긴다**(§6 구조 통일).
+           * 🔴 값이 `priceOverrideKrw` 하나이므로 국내·해외가 **같은 숫자** 를 본다 —
+           *    시장별 최종가를 만들지 않았다(그러면 최종가가 둘이 된다).
+           */
+          finalPriceKrw={finalPriceKrw}
+          onConfirmPriceKrw={onConfirmPriceKrw}
+          onOpenPriceEditor={onOpenPriceEditor}
         />
         <MarketColumn
           testId="mi-same-overseas"
@@ -1081,6 +1144,10 @@ export function MarketPriceComparison({
           reference={null}
           /** 🔴 해외 블록의 제목·문구·🧾 아이콘은 **기본값 그대로** 다(`wu-056r1` 계약). */
           referenceProps={{}}
+          /** 🔵 R2 STEP 7 — 🔴 **국내와 글자 그대로 같은 세 prop** 이다(§6 구조 통일). */
+          finalPriceKrw={finalPriceKrw}
+          onConfirmPriceKrw={onConfirmPriceKrw}
+          onOpenPriceEditor={onOpenPriceEditor}
         />
         </div>
       </details>
@@ -1477,11 +1544,26 @@ function MarketColumn({
   reviewApi,
   reference,
   referenceProps,
+  /**
+   * 🔵🔵🔵 R2 STEP 7 — **최종 선택 가격.** 🔴 **값 owner 가 아니다**(표시 + 확정만).
+   *
+   * 🔴 자리가 여기인 이유 — §6 템플릿이 「가격요약 → 후보 → **최종 선택 가격**」 이고
+   *    후보 리스트를 들고 있는 컴포넌트가 이것이다. 🟢 그리고 이 컴포넌트는
+   *    **국내·해외가 공유** 하므로 그 줄이 **두 시장에 자동으로 같은 구조로** 선다
+   *    (전용 컴포넌트 0 · §6 금지 준수 · 계약 D 10번 항목).
+   * 🔴 시장별 최종가를 만들지 않는다 — 값은 `priceOverrideKrw` **하나** 다.
+   */
+  finalPriceKrw,
+  onConfirmPriceKrw,
+  onOpenPriceEditor,
 }: {
   testId: string;
   heading: string;
   market: "KR" | "OVERSEAS";
   selection: MiSameSelection;
+  finalPriceKrw?: number | null;
+  onConfirmPriceKrw?: (krw: number) => void;
+  onOpenPriceEditor?: () => void;
   /**
    * 🔵🔵 CORE-E2E-CLOSE-03 — **동일 «가능성» 후보**(표시 전용).
    * 🔴 `selection` 과 **행이 겹치지 않는다** — 이쪽엔 SAME 이 오지 않는다.
@@ -1758,6 +1840,38 @@ function MarketColumn({
                           *    row binding·API 변경 0).
                           * 🔴 링크의 **target 은 그대로** 다 — 글자만 짧게 적어 URL 소음을 없앤다.
                           */}
+                        {/**
+                          * ══════════════════════════════════════════════════════
+                          * 🔵🔵🔵 R2 STEP 7/§8 — **「이 가격으로 확정」(후보 가격 → 최종가)**
+                          * ══════════════════════════════════════════════════════
+                          *
+                          * 🔴🔴 **원화 후보에서만 그린다.** `priceOverrideKrw` 는 KRW 칸이고
+                          *    외화 금액을 거기 넣으려면 **환산** 이 필요하다 — 환산은 이 트랙의
+                          *    금지축이다(§9 · §19 · `overseas-reference.ts`). 🟢 그래서 버튼을
+                          *    숨기고 **이유를 한 줄로 적는다**(조용히 빼지 않는다).
+                          * 🔴 **새 가격을 만들지 않는다** — `onConfirmPriceKrw` 는
+                          *    `updateSalePriceKrw`(:1452) 그 함수이고 `PriceEditor` 가 쓰는 것과 같다.
+                          * 🔴 **candidate 원본 가격을 건드리지 않는다**(§12) — 읽기만 한다.
+                          */}
+                        {onConfirmPriceKrw && row.priceAmount != null && row.priceCurrency ? (
+                          row.priceCurrency === "KRW" ? (
+                            <button
+                              type="button"
+                              data-testid="mi-candidate-confirm-price"
+                              onClick={() => onConfirmPriceKrw(row.priceAmount as number)}
+                              className="mt-1 rounded border border-border px-2 py-0.5 text-[11px] font-medium text-text-primary hover:bg-surface"
+                            >
+                              {CONFIRM_CANDIDATE_PRICE_LABEL}
+                            </button>
+                          ) : (
+                            <p
+                              data-testid="mi-candidate-confirm-unavailable"
+                              className="mt-1 text-[11px] text-text-tertiary"
+                            >
+                              {CONFIRM_PRICE_FOREIGN_NOTE}
+                            </p>
+                          )
+                        ) : null}
                         <div className="mt-1 flex items-center justify-between gap-2">
                           <CandidateSelect row={row} api={reviewApi} />
                           <a
@@ -1808,6 +1922,55 @@ function MarketColumn({
             </li>
           ))}
         </ul>
+      )}
+      {/**
+        * ══════════════════════════════════════════════════════════════════════
+        * 🔵🔵🔵 R2 STEP 7/§9 — **「최종 선택 가격」 — 블록의 마지막 줄**
+        * ══════════════════════════════════════════════════════════════════════
+        *
+        * 🟢 국내/해외가 **같은 컴포넌트의 같은 줄** 이라 §6 의 「구조 동일」이 자동으로 성립한다
+        *    (전용 카드·전용 블록을 만들지 않았다 · 계약 D 10번 항목).
+        * 🔴 이 컴포넌트는 시장마다 **한 번만** 마운트된다(:1089 국내 · :1124 해외) ⟹
+        *    금액이 한 화면에 두 번 서지 않는다(`MarketBlock` 의 `SUMMARY/DETAIL` 과 다르다).
+        * 🔴 **값을 계산하지 않는다** — `finalPriceKrw` 는 `priceOverrideKrw` 를 그대로 받은 것이다.
+        * 🔴 **편집하지 않는다** — 입력칸이 없고, 수정은 기존 `PriceEditor` 로 **보낸다**(§10).
+        */}
+      {(finalPriceKrw != null || onOpenPriceEditor) && (
+        <div data-testid="market-final-price" className="mt-2 border-t border-border/60 pt-2">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+            <span className="text-[11px] text-text-secondary">{FINAL_PRICE_LABEL}</span>
+            {finalPriceKrw != null ? (
+              <span className="flex items-baseline gap-1">
+                <span
+                  data-testid="market-final-price-amount"
+                  className="text-lg font-semibold tabular-nums text-text-primary"
+                >
+                  {formatKrw(finalPriceKrw)}
+                </span>
+                {/** 🟢 **셀러가 고른 값** 임을 말한다 — 권장가(계산)와 구별되는 유일한 표시다. */}
+                <span data-testid="market-final-price-badge" className="text-[11px] text-text-tertiary">
+                  {FINAL_PRICE_SELECTED_BADGE}
+                </span>
+              </span>
+            ) : (
+              /** 🔴 없는 값을 숫자로 만들지 않는다 — 「0원」·「-」 금지. */
+              <span data-testid="market-final-price-none" className="text-[11px] text-text-tertiary">
+                {FINAL_PRICE_NONE_TEXT}
+              </span>
+            )}
+          </div>
+          {/** 🔴 갈 곳이 없으면 그리지 않는다(이 파일의 기존 규약 · 죽은 링크 금지). */}
+          {onOpenPriceEditor && (
+            <button
+              type="button"
+              data-testid="market-edit-final-price"
+              onClick={onOpenPriceEditor}
+              className="mt-1 text-[11px] text-accent underline"
+            >
+              {EDIT_FINAL_PRICE_LINK_TEXT}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

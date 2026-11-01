@@ -3732,6 +3732,28 @@ export function CommerceWorkspace({
             onApplyRecommendedPrice={
               recommendedPriceKrw != null ? () => updateSalePriceKrw(recommendedPriceKrw) : undefined
             }
+            /**
+             * ══════════════════════════════════════════════════════════════════
+             * 🔵🔵🔵 R2 STEP 7 — **최종 선택 가격. owner 는 `priceOverrideKrw` 하나다**
+             * ══════════════════════════════════════════════════════════════════
+             *
+             * 🔴 **새 state·새 저장소·새 migration 0**(CPO 결정 ⒝). 아래 셋은
+             *    **이미 있는 값과 이미 있는 함수** 를 내려보내는 것뿐이다:
+             *      값     `product.priceOverrideKrw?.value`  ← canonicalProduct 칸이라
+             *             `product_snapshots.workspace` 에 저장되고 **재진입에 복원된다**
+             *      확정   `updateSalePriceKrw`(:1452)        ← `PriceEditor` 가 쓰는 그 함수
+             *      수정   `setTab("source")`                ← 기존 탭 전환(§10)
+             * 🔴 **candidate 원본 가격을 건드리는 경로가 없다**(§12) — 여기서 쓰는 것은
+             *    `priceOverrideKrw`(**SELLING** 층)뿐이고 candidate 가격은 **SOURCE** 층이다.
+             */
+            finalPriceKrw={product.priceOverrideKrw?.value ?? null}
+            onConfirmPriceKrw={updateSalePriceKrw}
+            /**
+             * 🔴 `PriceEditor` 는 **상품정보 탭** 에 있고 이 영역은 그 탭이 아니다 ⟹
+             *    그 자리로 보내는 **기존** 전환을 그대로 쓴다(새 라우팅·새 앵커 **0**).
+             *    🟢 `:2110`·`:2117` 의 준비도 점이 쓰는 것과 **같은 호출** 이다.
+             */
+            onOpenPriceEditor={() => setTab("source")}
           />
           {/**
            * ══════════════════════════════════════════════════════════════════

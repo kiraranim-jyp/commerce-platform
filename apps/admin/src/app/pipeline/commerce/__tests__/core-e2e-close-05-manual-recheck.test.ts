@@ -175,9 +175,25 @@ describe("CORE-E2E-CLOSE-05 — 수동 재분석", () => {
     expect(host.querySelectorAll('[data-testid="mi-candidate-select"]').length).toBe(
       host.querySelectorAll('[data-testid="mi-candidate-row"]').length,
     );
-    /** 🟢 그리고 버튼은 **그대로 같이** 선다(§4 「이미 후보가 있으면 정상 표시」). */
-    expect(host.querySelector('[data-testid="market-recheck-button"]')).not.toBeNull();
+    /**
+     * ════════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 UI/UX FINAL SPRINT R2 STEP 4 — **이 단언이 «뒤집혔다». 의도된 변경이다**
+     * ════════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 전에는 「후보가 있어도 버튼은 **그대로 같이** 선다」였다(CORE-E2E-CLOSE-05 §4).
+     * 🔴 CPO 결정 ②(2026-11-01)가 그것을 **제품 UX 결함** 으로 판정했다 —
+     *    「사용자가 **왜 다시 분석해야 하는지** 알 수 없다」. ⟹ **결과가 있으면 CTA 0.**
+     * 🟢 그래서 **단언을 약화하지 않고 «방향을 바꿔» 강화** 한다 — 아래 두 줄이
+     *    「결과 있음 ⟹ CTA 없음」을 **양방향으로** 문다(R2-A-1 과 같은 뜻).
+     * 🔴🔴 **그러나 보호는 남긴다** — 결과가 **없을** 때 버튼이 사라지면 CORE-E2E-CLOSE-05
+     *    가 고친 그 사고(「셀러가 할 수 있는 일이 0」)로 되돌아간다. 그 축은
+     *    `r2-final-price-and-cta` 의 **R2-A-2** 가 지킨다(이 파일에서 잃지 않았다).
+     */
+    expect(host.querySelector('[data-testid="market-recheck-button"]')).toBeNull();
+    expect(host.querySelector('[data-testid="market-recheck"]')).toBeNull();
     expect(host.querySelector('[data-testid="market-recheck-note"]')).toBeNull();
+    /** 🟢 그런데 **후보와 가격은 그대로 선다** — 버튼만 사라진 것이지 화면이 준 것이 아니다. */
+    expect(host.querySelectorAll('[data-testid="mi-candidate-row"]').length).toBe(2);
   });
 
   /** 🟢 R-7 — 선택이 **기존** `candidate-reviews` POST 를 쓴다(복제 0). */

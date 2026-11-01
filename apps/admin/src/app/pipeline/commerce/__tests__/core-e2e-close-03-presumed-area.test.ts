@@ -245,7 +245,17 @@ describe("CORE-E2E-CLOSE-03 — 동일 가능성 후보 구역", () => {
   it("D-2 새 구역은 집계 어휘를 쓰지 않는다", () => {
     const i = SRC.indexOf('data-testid="mi-candidate-list"');
     expect(i).toBeGreaterThan(0);
-    const block = SRC.slice(i, SRC.indexOf("CANDIDATE_LIST_EMPTY", i));
+    /**
+     * 🔴🔴 **주석을 벗기고 본다**(헌장: 「소스 문자열 검사는 주석을 벗기고 한다」).
+     *
+     * 🔴 R2 STEP 7 에서 이 단언이 **FAIL 했는데 위반이 아니었다** — 후보 카드에 새로
+     *    붙인 설명 주석이 금지축의 **파일 이름**(`overseas-reference.ts`)을 인용했고
+     *    그 글자가 `"reference"` 에 걸렸다. ⟹ 이 계약이 **코드가 아니라 설명문** 을 봤다.
+     * 🟢 벗기고 보면 **코드 축은 그대로 엄격하다**(약화 0) — 실제로 집계 어휘를 쓰면
+     *    여전히 FAIL 한다. 🔴 금지 목록은 **한 글자도 줄이지 않았다**.
+     */
+    const raw = SRC.slice(i, SRC.indexOf("CANDIDATE_LIST_EMPTY", i));
+    const block = raw.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
     for (const forbidden of ["reference", "byCurrency", "priceKrw", "priceTier", "lowest"]) {
       expect(block).not.toContain(forbidden);
     }
