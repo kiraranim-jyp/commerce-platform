@@ -499,35 +499,56 @@ export const CANDIDATE_IMAGE_NONE = "이미지 없음";
 export const CANDIDATE_LINK_TEXT = "판매 페이지 열기";
 
 /**
- * 🔵 U4 판단 근거 — 🔴🔴 **새 문장을 만들지 않는다**(`wu-130 F-4`).
+ * ══════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 CANDIDATE-UX-REFINE-02 — **카드는 «확인할 것» 만 말한다**(CPO ⒞ 2026-11-01)
+ * ══════════════════════════════════════════════════════════════════════════════
  *
+ * 🔴🔴 **`matchReasons` 를 쓰지 않는다. 이것이 `-02` 의 핵심이다.**
+ *
+ * ── 왜 끊었나 — `-01` 이 «실제 화면» 에서 FAIL 한 원인 ──────────────────────
+ * `matchReasons` 는 셀러용 설명이 아니라 **내부 진단 로그** 다. 운영이 넣는 것:
  * ```
- * ① 운영이 이미 적은 `matchReasons` 를 **그대로** 쓴다
- * ② blocker/conflict 가 **실재할 때만** 기존 `blockerText` 로 한 줄 더한다
+ * 모델명 유사도 0%                   ← 진단 퍼센트(그 값 자체가 버그 신호로 기록돼 있다)
+ * 색상 일치 / 색상 **불일치**         ← 🔴 긍정과 부정이 섞인다
+ * 브랜드 일치 / 브랜드 **불일치**      ← 🔴
+ * 옵션 구성 강하게 일치 — 보조 근거(단독으로 승격시키지 않음)  ← 내부 «정책» 설명
  * ```
- * 🔴 ✓/△ 같은 기호로 요약하지 않는다 — 요약은 **새 판정** 이다.
- * 🔴 점수·threshold·축 이름(영문 토큰)을 화면에 내보내지 않는다 — 말의 owner 는
- *    `blocker-text.ts` 이고 그 파일이 모르는 토큰은 「기타 사유」로 묶는다.
- * 🟢 blocker 와 conflict 를 **합쳐서** 한 줄로 적는다 — 셀러에게 둘은 같은 질문이다
- *    (「왜 확정이 아닌가」). 🔴 중복 토큰은 접는다.
+ * 🔴🔴 그래서 🟢「동일상품 가능성 높음」 카드 안에 **「브랜드 불일치」가 같이 설 수 있었다**
+ *    — 카드가 **스스로 모순** 됐다. CEO 가 본 「분석 결과처럼 보인다」가 이것이다.
+ *
+ * ── 🔴 반대(긍정만 고르기)는 **더 위험하다** — CPO 가 명시적으로 금지했다 ────
+ * 「`✓ 브랜드 일치`」로 긍정문만 추리면 **실존하는 blocker 가 카드에서 사라진다**
+ * ⟹ 「전부 ✓ 인데 실제로는 막혀 있는 카드」가 생긴다(2026-09-19 사고 방향).
+ * 🔴 축별 positive evidence 를 운영이 **독립 필드로 주지 않는다** ⟹ **별도 데이터 WU** 다.
+ *
+ * ── 🔴🔴 그러나 «데이터» 에서는 절대 빼지 않는다 ────────────────────────────
+ * `matchReasons` 는 **POSSIBLE 군의 게이트 입력** 이다 — `isModelCodeOnlyReference`
+ * 가 그 **길이** 를 본다. 필드를 지우면 **🟡 품번 충돌 군이 통째로 사라진다.**
+ * 🔴 **「카드에서 뺀다」 ≠ 「타입에서 뺀다」.**
+ *
+ * ── 그래서 이 함수가 내는 것 ────────────────────────────────────────────────
+ * 🟢 `blockers` + `conflicts` **만** — 「셀러가 무엇을 확인해야 하는가」.
+ * 🔴 문장을 발명하지 않는다 — 말의 owner 는 `blocker-text.ts` 이고 모르는 토큰은
+ *    「기타 사유」로 묶는다(영문 내부 토큰을 화면에 내보내지 않는다).
+ * 🔴 **없으면 빈 배열이다** — 「✓ 모든 정보 일치」·「검증 완료」를 **만들지 않는다**
+ *    (CPO §9). 등급 라벨이 이미 판단 결과를 말한다.
  */
-export function candidateReasonLines(row: GeminiTransientRow): string[] {
-  const lines = [...(row.matchReasons ?? [])];
+export function candidateWarningLines(row: GeminiTransientRow): string[] {
   const tokens = [...(row.crossSellerBlockers ?? []), ...(row.crossSellerConflicts ?? [])];
   const seen = new Set<string>();
-  const blocked: string[] = [];
+  const out: string[] = [];
   for (const t of tokens) {
     const text = blockerText(t);
     if (seen.has(text)) continue;
     seen.add(text);
-    blocked.push(text);
+    out.push(text);
   }
-  if (blocked.length > 0) lines.push(`${CANDIDATE_BLOCKER_PREFIX} ${blocked.join(" · ")}`);
-  return lines;
+  if (out.length === 0) return [];
+  return [`${CANDIDATE_WARNING_PREFIX} ${out.join(" · ")}`];
 }
 
 /** 🔴 「확인 필요」라고만 적으면 무엇을 확인할지 모른다 — 사유를 뒤에 붙인다. */
-export const CANDIDATE_BLOCKER_PREFIX = "확인 필요:";
+export const CANDIDATE_WARNING_PREFIX = "⚠ 확인 필요:";
 
 /** 🔴 왜 그 후보가 가격비교에서 빠졌는가. 🟢 **조용히 버리지 않는다**(한 줄로 적는다). */
 export type MiSameExclusion = "NOT_SAME" | "SOLD_OUT" | "PRICE_UNCONFIRMED";

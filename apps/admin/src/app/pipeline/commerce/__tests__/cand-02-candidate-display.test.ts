@@ -24,6 +24,9 @@ import {
   CANDIDATE_PRICE_UNVERIFIED,
   isPriceConfirmed,
   priceState,
+  /** 🔵 `-02` — 카드는 **확인할 것만** 말한다(matchReasons 비노출). */
+  candidateWarningLines,
+  CANDIDATE_WARNING_PREFIX,
 } from "../mi-same-candidates";
 import { PRICE_UNKNOWN_TEXT } from "../GeminiTransientCandidates";
 import type { GeminiTransientRow } from "../GeminiTransientCandidates";
@@ -642,5 +645,288 @@ describe("UX-REFINE 화면 계약 — 시장명 · 가격 3상태", () => {
     expect(priceState({ domain: "d", discoveredUrl: "u", priceAmount: 40, priceCurrency: "EUR" })).toBe("UNVERIFIED");
     expect(CANDIDATE_PRICE_UNKNOWN).toBe("가격 확인 필요");
     expect(CANDIDATE_PRICE_UNVERIFIED).toBe("판매처 표시가 · 상세 검증 전");
+  });
+});
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 CANDIDATE-UX-REFINE-02 — **Seller Decision Card**(CPO ⒞ 2026-11-01)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **분모를 같이 적는다.** `-01` 에서 `matchReasons` 고유값이 **0** 이라 판단근거
+ *    축이 계약 9건 **어디에도 안 걸렸는데** 「PASS」로 보고했다. 그 실수를 막으려고
+ *    이 블록은 축마다 **분모를 로그로 내고**, 분모가 0 이면 **FAIL 로 멈춘다**(CPO §17).
+ *
+ * 🔴 실측 fixture(`cand-02-rows.json`)에 blockers·conflicts 칸이 **없다** ⟹ 그 축은
+ *    **실측 POSSIBLE 행**(`ab046-evidence.json` · 운영 판정이 실제로 낸 `MODEL_CODE`
+ *    충돌)으로 잰다. 🔴 **가짜 production 의미를 만들지 않았다.**
+ */
+const AB046 = join(
+  __dirname, "..", "..", "..", "api", "price-history", "_lib", "__tests__",
+  "fixtures", "ab046-evidence.json",
+);
+
+/** 🟢 실측 산출 → 운영 행. 🔴 칸을 지어내지 않는다(`pp-01` 과 같은 변환). */
+function ab046Row(): GeminiTransientRow {
+  const j = JSON.parse(readFileSync(AB046, "utf8")) as {
+    candidate: {
+      url: string;
+      judged: {
+        title: string;
+        price: { amount: number; currency: string } | null;
+        matchReasons: string[];
+        crossSellerVerdict: string;
+        crossSellerConflicts: ({ conflict: string } | string)[];
+        priceStatus: string;
+      };
+    };
+  };
+  const c = j.candidate.judged;
+  return {
+    domain: "bobochoses.com",
+    discoveredUrl: j.candidate.url,
+    title: c.title,
+    market: "OVERSEAS",
+    soldOut: null,
+    crossSellerVerdict: c.crossSellerVerdict,
+    matchTruth: null,
+    matchReasons: c.matchReasons,
+    crossSellerBlockers: [],
+    crossSellerConflicts: (c.crossSellerConflicts ?? []).map((x) =>
+      typeof x === "string" ? x : x.conflict,
+    ),
+    priceAmount: c.price?.amount ?? null,
+    priceCurrency: c.price?.currency ?? null,
+    priceStatus: c.priceStatus,
+    source: "WEB_SEARCH",
+  } as GeminiTransientRow;
+}
+
+describe("UX-REFINE-02 — Seller Decision Card", () => {
+  /**
+   * 🔴🔴 **ab046 을 «앞» 에 둔다 — 그렇지 않으면 렌더되지 않는다.**
+   *
+   * 같은 URL 이 `cand-02-rows.json` 에도 있는데 그 행은 **`display: null`**(= 리스트에
+   * 서지 못함)이다. 그런데 `selectCandidateList` 는 **tier 검사 «전» 에 `seen.add`** 를
+   * 한다 ⟹ 렌더되지 않는 행이 **URL 자리를 선점** 하고 뒤에 온 행을 중복으로 버린다.
+   * 🔴 1차에 그걸 몰라 DOM 행이 **13** 인데 분모를 **16** 으로 적었고 R2-03/R2-08 이 FAIL 했다.
+   *
+   * 🟢 그래서 **같은 후보의 «더 완전한 실측 기록»** 을 앞에 두고 빈약한 쪽을 뺀다.
+   *    둘 다 운영 산출이고, `ab046-evidence.json` 쪽만 `conflicts`·`matchReasons` 칸을
+   *    들고 있다(`cand-02-rows.json` 은 그 칸을 애초에 저장하지 않았다).
+   * 🔴 **가짜를 만든 것이 아니다** — 같은 URL 의 두 실측 기록 중 칸이 있는 쪽을 쓴다.
+   */
+  const allRows = (): GeminiTransientRow[] => {
+    const ab = ab046Row();
+    const rest = products()
+      .flatMap((p) => p.rows.map(toRow))
+      .filter((r) => r.discoveredUrl !== ab.discoveredUrl);
+    return [ab, ...rest];
+  };
+
+  /** 🔴🔴 R2-00 — 분모부터. 이 숫자가 없으면 아래 PASS 들의 «뜻» 을 알 수 없다. */
+  it("R2-00 [분모] 각 축의 denominator 를 기록한다", () => {
+    const rows = allRows();
+    const d = {
+      전체: rows.length,
+      blocker있음: rows.filter((r) => candidateWarningLines(r).length > 0).length,
+      blocker없음: rows.filter((r) => candidateWarningLines(r).length === 0).length,
+      POSSIBLE: rows.filter((r) => (r.crossSellerConflicts ?? []).length > 0).length,
+      P1: rows.filter((r) => priceState(r) === "CONFIRMED").length,
+      P2: rows.filter((r) => priceState(r) === "UNVERIFIED").length,
+      P3: rows.filter((r) => priceState(r) === "NONE").length,
+      matchReasons보유: rows.filter((r) => (r.matchReasons?.length ?? 0) > 0).length,
+    };
+    console.log(`[R2-분모] ${JSON.stringify(d)}`);
+    expect(d.blocker있음, "blocker 분모 0 — R2-03 은 측정불가").toBeGreaterThan(0);
+    expect(d.blocker없음, "blocker 없는 행 0 — R2-04 는 측정불가").toBeGreaterThan(0);
+    expect(d.matchReasons보유, "matchReasons 분모 0 — R2-05 가 동어반복이 된다").toBeGreaterThan(0);
+  });
+
+  /** 🔴 R2-01 — 행마다 등급(WU-091 불변식 · `-01` 에서 가드가 잡은 자리). */
+  it("R2-01 모든 후보 행에 등급 라벨이 있다", () => {
+    const { doc, cleanup } = mount(allRows());
+    try {
+      const rows = Array.from(doc.querySelectorAll('[data-testid="mi-candidate-row"]'));
+      expect(rows.length).toBeGreaterThan(0);
+      for (const r of rows) {
+        const g = (r.querySelector('[data-testid="mi-candidate-group"]')?.textContent ?? "").trim();
+        expect(["🟢 동일상품 가능성 높음", "🟡 동일상품 추정", "🟡 품번 충돌 · 참고"]).toContain(g);
+      }
+    } finally {
+      cleanup();
+    }
+  });
+
+  /** 🔴🔴 R2-03 — blocker/conflict 가 있는 행은 「확인 필요」를 **말한다**. */
+  it("R2-03 blocker/conflict 가 있는 행이 확인 필요사항을 표시한다", () => {
+    const { doc, cleanup } = mount(allRows());
+    try {
+      const rows = Array.from(doc.querySelectorAll('[data-testid="mi-candidate-row"]'));
+      const withWarn = rows.filter((r) => r.querySelector('[data-testid="mi-candidate-warning"]'));
+      expect(withWarn.length, "경고가 붙은 행 0 — 측정불가").toBeGreaterThan(0);
+      for (const r of withWarn) {
+        const t = r.querySelector('[data-testid="mi-candidate-warning"]')!.textContent ?? "";
+        expect(t).toContain("⚠ 확인 필요:");
+        /** 🔴 영문 내부 토큰이 그대로 나가지 않는다(`blocker-text.ts` 가 owner). */
+        expect(t).not.toContain("MODEL_CODE");
+        expect(t).not.toContain("BRAND_");
+      }
+      console.log(`[R2-03] 경고 표시 ${withWarn.length}건 / 전체 ${rows.length}건`);
+    } finally {
+      cleanup();
+    }
+  });
+
+  /**
+   * 🔴 R2-04 — 없는 blocker 를 **만들어 적지 않는다**.
+   * 🔴 「확인 필요」 자체를 금지어로 쓰지 않는다 — P3 의 **「가격 확인 필요」가 정당하게**
+   *    그 글자를 쓴다(그걸 금지하면 내 단언이 거짓 FAIL 을 낸다).
+   */
+  it("R2-04 blocker 가 없는 행에는 경고 줄이 서지 않는다", () => {
+    const { doc, cleanup } = mount(allRows());
+    try {
+      const rows = Array.from(doc.querySelectorAll('[data-testid="mi-candidate-row"]'));
+      const clean = rows.filter((r) => !r.querySelector('[data-testid="mi-candidate-warning"]'));
+      expect(clean.length, "경고 없는 행 0 — 측정불가").toBeGreaterThan(0);
+      for (const r of clean) {
+        const t = r.textContent ?? "";
+        for (const banned of ["모든 정보 일치", "검증 완료", "완벽한 동일상품", "⚠"]) {
+          expect(t, `없는 사실을 만들어 적었다: ${banned}`).not.toContain(banned);
+        }
+      }
+      console.log(`[R2-04] 경고 없는 행 ${clean.length}건 / 전체 ${rows.length}건`);
+    } finally {
+      cleanup();
+    }
+  });
+
+  /** 🔴🔴🔵 R2-05 — **이 WU 의 핵심.** `matchReasons` 가 카드에 나오지 않는다. */
+  it("R2-05 matchReasons 진단 문장이 카드에 출력되지 않는다 (데이터에는 남는다)", () => {
+    const rows = allRows();
+    const reasonRows = rows.filter((r) => (r.matchReasons?.length ?? 0) > 0);
+    expect(reasonRows.length, "matchReasons 분모 0 — 이 단언은 동어반복이다").toBeGreaterThan(0);
+    const { doc, cleanup } = mount(rows);
+    try {
+      const body = doc.body.textContent ?? "";
+      for (const r of reasonRows)
+        for (const line of r.matchReasons ?? [])
+          expect(body, `카드에 진단 문장이 그대로 나왔다: ${line}`).not.toContain(line);
+      /** 🔴 `-01` 이 쓰던 구조 자체가 **사라졌다**. */
+      expect(doc.querySelector('[data-testid="mi-candidate-reasons"]')).toBeNull();
+      console.log(`[R2-05] matchReasons 보유 ${reasonRows.length}건 — 화면 노출 0`);
+    } finally {
+      cleanup();
+    }
+  });
+
+  /**
+   * 🔴 R2-09 — 내부 진단·정책 문구 금지.
+   * 🔴 「불일치」를 금지어로 쓰지 않는다 — `blocker-text.ts` 의 **「브랜드 불일치」가
+   *    정당한 셀러 문구** 다(금지하면 내 단언이 올바른 코드를 때린다).
+   */
+  it("R2-09 내부 진단·정책 문구가 카드에 없다", () => {
+    const { doc, cleanup } = mount(allRows());
+    try {
+      const rows = Array.from(doc.querySelectorAll('[data-testid="mi-candidate-row"]'));
+      expect(rows.length).toBeGreaterThan(0);
+      for (const r of rows) {
+        const t = r.textContent ?? "";
+        expect(t, "유사도 퍼센트가 카드에 있다").not.toMatch(/유사도/);
+        for (const banned of ["보조 근거", "단독으로 승격", "참고만"]) {
+          expect(t, `내부 정책 설명이 카드에 있다: ${banned}`).not.toContain(banned);
+        }
+      }
+    } finally {
+      cleanup();
+    }
+  });
+
+  /** 🔴 R2-06 — POSSIBLE 은 「🟡 품번 충돌 · 참고」로 **별도 의미** 를 유지한다. */
+  it("R2-06 POSSIBLE(품번 충돌) 카드가 별도 등급으로 서고 확인사항을 말한다", () => {
+    const row = ab046Row();
+    expect(row.crossSellerConflicts).toEqual(["MODEL_CODE"]);
+    const { doc, cleanup } = mount([row]);
+    try {
+      const rows = Array.from(doc.querySelectorAll('[data-testid="mi-candidate-row"]'));
+      expect(rows, "POSSIBLE 분모 0 — 측정불가").toHaveLength(1);
+      expect(rows[0]!.getAttribute("data-group")).toBe("POSSIBLE");
+      expect(
+        (rows[0]!.querySelector('[data-testid="mi-candidate-group"]')?.textContent ?? "").trim(),
+      ).toBe("🟡 품번 충돌 · 참고");
+      const warn = rows[0]!.querySelector('[data-testid="mi-candidate-warning"]');
+      expect(warn, "품번 충돌 카드가 확인 필요사항을 말하지 않는다").not.toBeNull();
+      expect(warn!.textContent ?? "").toContain("품번 충돌");
+    } finally {
+      cleanup();
+    }
+  });
+
+  /** 🔴 R2-07 — 선택 기능 보존(카드 재구성에서 가장 쉽게 잃는 칸). */
+  it("R2-07 모든 카드에서 선택 UI 와 판매처 이동이 유지된다", () => {
+    const { doc, cleanup } = mount(allRows());
+    try {
+      const rows = Array.from(doc.querySelectorAll('[data-testid="mi-candidate-row"]'));
+      expect(rows.length).toBeGreaterThan(0);
+      for (const r of rows) {
+        expect(r.querySelector("button"), "CandidateSelect 가 사라졌다").not.toBeNull();
+        expect(r.querySelector("a[href]"), "판매처 이동 링크가 사라졌다").not.toBeNull();
+      }
+    } finally {
+      cleanup();
+    }
+  });
+
+  /** 🔴🔴 R2-08 — **seller-first 순서.** 존재만 보면 뒤집혀도 통과하므로 **출현 순서** 로 본다. */
+  it("R2-08 등급 → 가격 → 판매처 → 확인필요 → 선택 순으로 선다", () => {
+    const { doc, cleanup } = mount(allRows());
+    try {
+      const rows = Array.from(doc.querySelectorAll('[data-testid="mi-candidate-row"]'));
+      expect(rows.length).toBeGreaterThan(0);
+      let withWarn = 0;
+      for (const r of rows) {
+        /**
+         * 🔴 1차에 `testid ?? "BUTTON"` 로 매핑했다가 FAIL 했다 — `CandidateSelect` 의
+         *    버튼에 **testid 가 붙어 있어** 그 자리가 "BUTTON" 으로 안 잡혔다(-1).
+         * 🟢 그래서 **태그로** 찾는다. 단언이 틀렸던 것이고 코드가 맞았다.
+         */
+        const nodes = Array.from(r.querySelectorAll("[data-testid], button"));
+        const at = (id: string) => nodes.findIndex((n) => n.getAttribute("data-testid") === id);
+        const btn = nodes.findIndex((n) => n.tagName === "BUTTON");
+        expect(btn, "선택 버튼을 찾지 못했다").toBeGreaterThanOrEqual(0);
+        expect(at("mi-candidate-group")).toBeGreaterThanOrEqual(0);
+        expect(at("mi-candidate-group")).toBeLessThan(at("mi-candidate-price"));
+        expect(at("mi-candidate-price")).toBeLessThan(at("mi-candidate-seller"));
+        expect(at("mi-candidate-seller")).toBeLessThan(btn);
+        if (at("mi-candidate-warning") >= 0) {
+          expect(at("mi-candidate-seller")).toBeLessThan(at("mi-candidate-warning"));
+          expect(at("mi-candidate-warning")).toBeLessThan(btn);
+          withWarn += 1;
+        }
+      }
+      console.log(`[R2-08] 경고 순서까지 확인한 행 ${withWarn}건`);
+      expect(withWarn, "경고 있는 행 0 — 순서 축 일부 측정불가").toBeGreaterThan(0);
+    } finally {
+      cleanup();
+    }
+  });
+
+  /** 🟢 R2-10 순수 축 — 경고 생성기가 blockers/conflicts «만» 본다. */
+  it("R2-10 candidateWarningLines 는 matchReasons 를 쓰지 않는다", () => {
+    const base = { domain: "d", discoveredUrl: "u" } as GeminiTransientRow;
+    expect(
+      candidateWarningLines({ ...base, matchReasons: ["브랜드 불일치", "모델명 유사도 0%"] }),
+    ).toEqual([]);
+    expect(candidateWarningLines({ ...base, crossSellerConflicts: ["MODEL_CODE"] })[0]).toBe(
+      `${CANDIDATE_WARNING_PREFIX} 품번 충돌`,
+    );
+    /** 🔴 중복 토큰은 접는다. */
+    expect(
+      candidateWarningLines({
+        ...base,
+        crossSellerBlockers: ["BRAND_UNCONFIRMED"],
+        crossSellerConflicts: ["BRAND_UNCONFIRMED"],
+      }),
+    ).toEqual([`${CANDIDATE_WARNING_PREFIX} 브랜드 미확인`]);
   });
 });

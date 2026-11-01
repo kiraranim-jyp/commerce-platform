@@ -98,7 +98,11 @@ import {
   CANDIDATE_GROUP_ORDER,
   CANDIDATE_IMAGE_NONE,
   CANDIDATE_LINK_TEXT,
-  candidateReasonLines,
+  /**
+   * 🔵🔵 `-02` — 🔴 `candidateReasonLines`(matchReasons 통째 렌더)를 **대체** 한다.
+   *    카드는 **확인할 것만** 말한다. `matchReasons` 는 데이터/게이트에 **그대로 남는다**.
+   */
+  candidateWarningLines,
   type CandidateListGroup,
   MI_PRESUMED_HEADING,
   MARKET_RECHECK_BUTTON,
@@ -1711,31 +1715,41 @@ function MarketColumn({
                           {row.domain}
                         </p>
                         {/**
-                          * 🔵 U4 근거 — 🔴 **새 판정 문장을 만들지 않는다**(`wu-130 F-4`).
-                          *    운영이 이미 적은 `matchReasons` 를 **그대로** 쓰고, blocker 가
-                          *    **실재할 때만** 기존 `blocker-text.ts` 문장을 붙인다.
-                          * 🔴 ✓/△ 같은 기호로 요약하지 않는다 — 그건 새 판정이다.
+                          * 🔵🔵🔵 CANDIDATE-UX-REFINE-02 ④ — **「확인 필요」만 적는다.**
+                          *
+                          * 🔴🔴 `-01` 은 여기에 `matchReasons` 를 통째로 그렸고 그것이
+                          *    CEO 가 본 FAIL 의 원인이다 — 그 배열은 **내부 진단 로그** 라
+                          *    「모델명 유사도 0%」·「브랜드 **불일치**」가 🟢 카드 안에 같이 섰다.
+                          * 🟢 이제 owner 는 `candidateWarningLines` 이고 **blockers/conflicts 만** 본다.
+                          * 🔴 확인할 것이 없으면 **아무 줄도 서지 않는다** — 「✓ 모든 정보 일치」
+                          *    같은 문장을 **만들지 않는다**(CPO §9). 등급이 이미 결과를 말한다.
                           */}
-                        {candidateReasonLines(row).length > 0 ? (
-                          <ul
-                            data-testid="mi-candidate-reasons"
-                            className="list-inside list-disc text-[11px] text-text-tertiary"
+                        {candidateWarningLines(row).map((line) => (
+                          <p
+                            key={line}
+                            data-testid="mi-candidate-warning"
+                            className="text-[11px] text-warning"
                           >
-                            {candidateReasonLines(row).map((line) => (
-                              <li key={line}>{line}</li>
-                            ))}
-                          </ul>
-                        ) : null}
-                        <a
-                          href={row.discoveredUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="block truncate text-[11px] text-accent underline"
-                        >
-                          {CANDIDATE_LINK_TEXT}
-                        </a>
-                        {/** 🟢 선택은 **기존 저장 흐름** 이다(CLOSE-04 · 새 저장 로직 0). */}
-                        <CandidateSelect row={row} api={reviewApi} />
+                            {line}
+                          </p>
+                        ))}
+                        {/**
+                          * 🔵 ⑤ — **선택과 이동을 같은 줄에** 둔다(CPO §4 목업).
+                          * 🟢 선택은 **기존 저장 흐름** 이다(CLOSE-04 · 새 저장 로직 0 ·
+                          *    row binding·API 변경 0).
+                          * 🔴 링크의 **target 은 그대로** 다 — 글자만 짧게 적어 URL 소음을 없앤다.
+                          */}
+                        <div className="mt-1 flex items-center justify-between gap-2">
+                          <CandidateSelect row={row} api={reviewApi} />
+                          <a
+                            href={row.discoveredUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="shrink-0 text-[11px] text-accent underline"
+                          >
+                            {CANDIDATE_LINK_TEXT}
+                          </a>
+                        </div>
                       </li>
                     ))}
                   </ul>
