@@ -11,10 +11,22 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-🔵🔵🔵 CURRENT WU  **CANDIDATE-UX-REFINE-01 — 🔴 구현 대기(코드 0)**  clean · 0/0
-                  🔵 **직전 «코드» 커밋 `2c16152c`**(배포 완료 · SIMILAR 후보군 제외)
+🟢🟢🟢 CURRENT WU  **CANDIDATE-UX-REFINE-01 — 구현·배포 완료**  clean · 0/0
+                  🔵 **직전 «코드» 커밋 `8a48a61f`**(배포 완료 · 소싱 후보 UI/UX 7건)
                      🔴 이 자리에 `HEAD` 해시를 적지 않는다 — §0 을 고치는 커밋이
                         자기 해시를 모르므로 **항상 한 커밋 낡는다**(실제로 두 번 났다)
+                  🟡 **남은 것은 CEO 화면 확인 1회다** — CTO 가 할 코드 작업이 없다
+                     🔴 실제 따져 화면은 **CTO 가 볼 수 없다**(로그인 뒤) ⟹ 제가 쓴 축은
+                        **마운트 DOM** 이고 「Production UI PASS」로 적지 않았다
+                  🟢 회귀 753 files / **9,818 passed · 0 failed** · tsc 0 · build 0
+                  🟢 계약 신규 **9**(UX-01~09) · 음성대조 M1 1F · M2 1F · M3 2F → 복구
+                  🔴 **계약은 5개가 아니라 6개였다** — `core-e2e-close-03` B-2 가
+                     「가격 미확인」을 기대해 FAIL(의도된 어휘 변경) ⟹ 양방향 강화
+                  🔴 **가드가 내 설계를 두 번 잡았고 둘 다 가드가 맞았다**(전문 §실행 기록)
+                     ⒜ 등급 라벨을 그룹 헤더로 «옮겼다» → `ccl-01-H`·`pp-01 PP-09` 2건 FAIL
+                        (「행마다 판정 라벨」은 WU-091 불변식) ⟹ 헤더에 **다른 testid**
+                     ⒝ `cand-02` 의 `not.toContain(Record)` 가 **동어반복으로 통과** 했다
+                        🔴 `not.toContain` 은 `any` 를 받아 **typecheck 도 안 막는다**
                   🟢 **CPO GO 완료 · 범위 LOCK · owner 좌표 확정**
                   🔵 전문 `docs/CANDIDATE-UX-REFINE-01.md` ← **이것만 읽고 바로 코딩한다**
                   ```
