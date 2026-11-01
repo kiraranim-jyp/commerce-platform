@@ -1,5 +1,20 @@
 # IDENTITY-GT-EVIDENCE-MASTER-REVIEW-01 — Step 4 (70후보 raw evidence · A/B/C/D)
 
+> 🔴🔴🔴 **이 문서의 세 숫자는 Step 5 에서 정정됐다 — 그쪽이 이긴다**
+> (`docs/IDENTITY-GT-MASTER-01-STEP5.md`):
+> ```
+> ① blocker 증거 비율 13/18 → **15/18**
+>    (`SAME_SELLER_DISTINCT_LISTING` 의 입력은 **URL(host+slug)** 이고 `sellerSku` 가
+>     아니다 — 그 함수는 sellerSku 를 **0회** 쓴다 · cross-seller.ts:762 전수 확인)
+> ② `composition` 행 — 🔴 **운영과 다른 개념을 쟀다.** 운영 `COMPOSITION_PATTERN` 은
+>    **「세트 구성(pack/set/bundle/kit)」** 이고 내 reader 는 **「소재 조성(100% cotton)」**
+>    이었다 ⟹ 「51/51 제목 미포함 ⟹ 그 축이 발화 못 한다」는 문장을 **폐기** 한다
+>    (그 축은 **드물게 발화하도록 설계** 됐고 발화 0 은 정상이다)
+> ③ SAME-FN 원인 — `kihanan.com` 은 「증거를 갖고 판단」이 아니라 **원상품측 brand 공백**
+>    이다(후보 brand 는 `A`)
+> ```
+> 🟢 나머지(필드별 A/B/C/D · B 3분할 · FP 0/8 · REVIEW 10 · GT conflict 4)는 **유효하다**.
+
 > 🔴 **측정만 했다.** 운영 코드 변경 **0** · 배포 **0** · DB 쓰기 **0** · 정책 결정 **0**.
 > 🔴 **분모 LOCK 유지** — 공식 **80**(생성기 행) · 보조 **70**(고유 (상품,URL)).
 > 🔴 CPO §7 금지 전수 준수 — threshold · `SAME_MIN_AXES` · blocker 삭제 · 새 점수축 ·
