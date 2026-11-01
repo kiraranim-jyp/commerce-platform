@@ -105,7 +105,13 @@ describe("CCL-01 ② 배지 — verdict 별로 «다른 말»", () => {
   it("CCL-01-D 문구가 CPO 가 고정한 글자다", () => {
     expect(CANDIDATE_GROUP_LABEL.LIKELY).toBe("🟢 동일상품 가능성 높음");
     expect(CANDIDATE_GROUP_LABEL.PRESUMED).toBe("🟡 동일상품 추정");
-    expect(CANDIDATE_GROUP_LABEL.POSSIBLE).toBe("🟡 유사상품 · 참고");
+    /**
+     * 🔵 IDENTITY-CANDIDATE-VISUAL-REVIEW-01 — `SIMILAR` 를 뺀 뒤 C 군에 남는 것은
+     *    **품번만 충돌한 참고 후보** 뿐이라 「유사상품」은 **거짓** 이 됐다.
+     */
+    expect(CANDIDATE_GROUP_LABEL.POSSIBLE).toBe("🟡 품번 충돌 · 참고");
+    /** 🔴 그 거짓 글자가 되돌아오면 FAIL 한다. */
+    expect(CANDIDATE_GROUP_LABEL.POSSIBLE).not.toContain("유사상품");
   });
 
   /**
@@ -122,10 +128,17 @@ describe("CCL-01 ② 배지 — verdict 별로 «다른 말»", () => {
     expect(selectCandidateList([same, presumed], "OVERSEAS")).toHaveLength(2);
   });
 
-  /** 🟡 CCL-01-F — `SIMILAR` 은 「동일상품」이라는 말을 **쓰지 않는다**. */
-  it("CCL-01-F 유사 군 문구에 「동일상품」이 없다", () => {
+  /**
+   * 🔵🔵 **[IDENTITY-CANDIDATE-VISUAL-REVIEW-01 에서 뒤집혔다] CCL-01-F**
+   *    전에는 「`SIMILAR` 이 POSSIBLE 로 선다」를 단언했다. 🔴 CPO ⒝ 가 그 등급을
+   *    **후보군에서 뺐다** ⟹ 이제 **아무 군에도 서지 않는다**.
+   * 🟢 「동일상품」 금지는 **그대로 유지** 한다(풀지 않았다).
+   */
+  it("CCL-01-F SIMILAR 은 후보군에 서지 않고 C 군 문구에 「동일상품」이 없다", () => {
     expect(CANDIDATE_GROUP_LABEL.POSSIBLE).not.toContain("동일상품");
-    expect(groupOf(r({ domain: "d.com", matchTruth: "SIMILAR" }))).toBe("POSSIBLE");
+    expect(groupOf(r({ domain: "d.com", matchTruth: "SIMILAR" }))).toBeUndefined();
+    /** 🔴 경로가 둘이라 `crossSellerVerdict` 쪽도 같이 본다. */
+    expect(groupOf(r({ domain: "d2.com", crossSellerVerdict: "SIMILAR" }))).toBeUndefined();
   });
 
   /** 🔴 CCL-01-G — 제외 집합은 **그대로** 다(이 WU 가 넓히지도 좁히지도 않았다). */
@@ -148,12 +161,24 @@ describe("CCL-01 ③ 화면 — 마운트 DOM", () => {
     const rows = [
       r({ domain: "a.com", matchTruth: "EXACT_IDENTIFIER", priceAmount: 37, priceCurrency: "GBP" }),
       r({ domain: "b.com", crossSellerVerdict: "PRESUMED_SAME", priceAmount: 58, priceCurrency: "USD" }),
-      r({ domain: "d.com", matchTruth: "SIMILAR", priceAmount: 40, priceCurrency: "EUR" }),
+      /**
+       * 🔵 IDENTITY-CANDIDATE-VISUAL-REVIEW-01 — C 군의 입구가 **바뀌었다**.
+       * 🔴 전에는 `SIMILAR` 였다. 지금 C 군에 서는 것은 **품번만 충돌한 참고 후보** 다
+       *    (`isModelCodeOnlyReference` · CANDIDATE-POSSIBLE-CONFLICT-01 보존).
+       */
+      r({
+        domain: "d.com",
+        crossSellerVerdict: "CONFLICT",
+        crossSellerConflicts: ["MODEL_CODE"],
+        matchReasons: ["브랜드 일치"],
+        priceAmount: 40,
+        priceCurrency: "EUR",
+      }),
     ];
     const { labels, groups, cleanup } = mountLabels(rows);
     try {
       expect(groups).toEqual(["LIKELY", "PRESUMED", "POSSIBLE"]);
-      expect(labels).toEqual(["🟢 동일상품 가능성 높음", "🟡 동일상품 추정", "🟡 유사상품 · 참고"]);
+      expect(labels).toEqual(["🟢 동일상품 가능성 높음", "🟡 동일상품 추정", "🟡 품번 충돌 · 참고"]);
       /** 🔴 세 줄이 **서로 다른 말** 이어야 한다(화면에서도). */
       expect(new Set(labels).size).toBe(3);
     } finally {
@@ -170,7 +195,19 @@ describe("CCL-01 ③ 화면 — 마운트 DOM", () => {
     const rows = [
       r({ domain: "a.com", matchTruth: "EXACT_IDENTIFIER", priceAmount: 37, priceCurrency: "GBP" }),
       r({ domain: "b.com", crossSellerVerdict: "PRESUMED_SAME", priceAmount: 58, priceCurrency: "USD" }),
-      r({ domain: "d.com", matchTruth: "SIMILAR", priceAmount: 40, priceCurrency: "EUR" }),
+      /**
+       * 🔵 IDENTITY-CANDIDATE-VISUAL-REVIEW-01 — C 군의 입구가 **바뀌었다**.
+       * 🔴 전에는 `SIMILAR` 였다. 지금 C 군에 서는 것은 **품번만 충돌한 참고 후보** 다
+       *    (`isModelCodeOnlyReference` · CANDIDATE-POSSIBLE-CONFLICT-01 보존).
+       */
+      r({
+        domain: "d.com",
+        crossSellerVerdict: "CONFLICT",
+        crossSellerConflicts: ["MODEL_CODE"],
+        matchReasons: ["브랜드 일치"],
+        priceAmount: 40,
+        priceCurrency: "EUR",
+      }),
       r({ domain: "g.com", market: "KR", matchTruth: "EXACT_IDENTIFIER", priceAmount: 88000, priceCurrency: "KRW" }),
     ];
     let checked = 0;
@@ -192,7 +229,13 @@ describe("CCL-01 ③ 화면 — 마운트 DOM", () => {
     const presumed = r({ domain: "b.com", crossSellerVerdict: "PRESUMED_SAME", priceAmount: 58, priceCurrency: "USD" });
     const similar = r({ domain: "d.com", matchTruth: "SIMILAR", priceAmount: 40, priceCurrency: "EUR" });
     expect(selectMiSameCandidates([presumed, similar], "OVERSEAS").priced).toHaveLength(0);
-    /** 🟢 그런데 **화면에는 둘 다 선다** — 그것이 이 설계의 요지다. */
-    expect(selectCandidateList([presumed, similar], "OVERSEAS")).toHaveLength(2);
+    /**
+     * 🔵 IDENTITY-CANDIDATE-VISUAL-REVIEW-01 — **화면 쪽이 갈렸다.**
+     * 🟢 `PRESUMED_SAME` 은 **그대로 선다**(Recall 유지).
+     * 🔴 `SIMILAR` 는 **서지 않는다**(CPO ⒝) ⟹ 둘이 아니라 **하나** 다.
+     * 🟢🟢 **가격 집계는 한 글자도 바뀌지 않았다** — 위 `priced` 0 이 그 증거다.
+     */
+    expect(selectCandidateList([presumed, similar], "OVERSEAS")).toHaveLength(1);
+    expect(selectCandidateList([presumed, similar], "OVERSEAS")[0]!.group).toBe("PRESUMED");
   });
 });

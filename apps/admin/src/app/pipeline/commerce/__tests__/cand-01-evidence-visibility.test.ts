@@ -71,11 +71,44 @@ describe("CANDIDATE-EVIDENCE-VISIBILITY-01", () => {
     expect(selectMiSameCandidates(rows, "OVERSEAS").priced).toHaveLength(0);
   });
 
-  /** 🟡 CAND-04 — SIMILAR + Evidence 충분 ⟹ 리스트(확장 군). */
-  it("CAND-04 SIMILAR + Evidence 충분", () => {
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 **[IDENTITY-CANDIDATE-VISUAL-REVIEW-01 에서 «뒤집혔다»] CAND-04**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴 이 파일의 WU(`CANDIDATE-EVIDENCE-VISIBILITY-01`)는 **`SIMILAR` 를 리스트에
+   *    올리려고** 만들어졌고 이 계약이 그것을 잠그고 있었다.
+   * 🔴🔴 **CPO 가 그 결론을 반전시켰다**(2026-11-01 · 선택지 ⒝):
+   *    「`SIMILAR` 판정만 후보군에서 제외한다 · `POSSIBLE` 을 일괄 제외하지 않는다」
+   * 🟢 **정책 반전이지 가드 완화가 아니다** — 아래 CAND-04-b 가 「그럼 무엇이 C 군에
+   *    서는가」를 같이 잠근다.
+   */
+  it("CAND-04 SIMILAR 은 후보군에 서지 않는다(정책 반전)", () => {
     const rows = [r({ domain: "d.com", matchTruth: "SIMILAR", priceAmount: 40, priceCurrency: "EUR" })];
-    expect(list(rows)).toEqual(["d.com"]);
-    expect(group(rows, "d.com")).toBe("POSSIBLE");
+    expect(list(rows)).toEqual([]);
+    expect(group(rows, "d.com")).toBeUndefined();
+    /** 🔴 경로가 둘이다 — `crossSellerVerdict` 쪽도 같이 막혔는지 본다. */
+    expect(list([r({ domain: "d2.com", crossSellerVerdict: "SIMILAR", priceAmount: 40, priceCurrency: "EUR" })])).toEqual([]);
+  });
+
+  /**
+   * 🟢 CAND-04-b — **C 군이 비어 버리지 않았다.** 품번만 충돌한 참고 후보는 **그대로 선다**
+   *    (`CANDIDATE-POSSIBLE-CONFLICT-01` 보존). 🔴 CPO 가 그 이유를 명시했다 —
+   *    실측에서 그 자리에 **CEO SAME 2건(가격 보유)** 이 있다.
+   */
+  it("CAND-04-b 품번만 충돌한 참고 후보는 C 군에 선다", () => {
+    const rows = [
+      r({
+        domain: "d3.com",
+        crossSellerVerdict: "CONFLICT",
+        crossSellerConflicts: ["MODEL_CODE"],
+        matchReasons: ["브랜드 일치"],
+        priceAmount: 35,
+        priceCurrency: "EUR",
+      }),
+    ];
+    expect(group(rows, "d3.com")).toBe("POSSIBLE");
+    /** 🔴 그래도 **가격 집계에는 들어가지 않는다** — 그 정책은 한 글자도 안 바뀌었다. */
+    expect(selectMiSameCandidates(rows, "OVERSEAS").priced).toHaveLength(0);
   });
 
   /** 🔴 CAND-05/06 — DIFFERENT·CONFLICT 는 주 리스트에서 제외. */
@@ -90,14 +123,19 @@ describe("CANDIDATE-EVIDENCE-VISIBILITY-01", () => {
   it("CAND-06-b Evidence 없는 후보는 제외", () => {
     const bare = r({ domain: "h.com", crossSellerVerdict: "SIMILAR", matchTruth: null, title: undefined });
     expect(list([bare])).toEqual([]);
-    /** 🟢 이유가 하나라도 적혔으면 셀러가 눈으로 가릴 수 있다 ⟹ 들어온다. */
+    /**
+     * 🔵 IDENTITY-CANDIDATE-VISUAL-REVIEW-01 — **이 줄도 뒤집혔다.**
+     * 🔴 전에는 「이유가 하나라도 있으면 `SIMILAR` 가 들어온다」였다. CPO ⒝ 가 그
+     *    등급을 후보군에서 뺐으므로 **이유가 있어도 들어오지 않는다**.
+     * 🟢 이 계약이 지키는 성질(「Evidence 없는 후보는 제외」)은 위 `bare` 가 그대로 잠근다.
+     */
     const withReason = r({
       domain: "i.com",
       crossSellerVerdict: "SIMILAR",
       matchTruth: null,
       matchReasons: ["핵심 상품명 일부 일치"],
     });
-    expect(list([withReason])).toEqual(["i.com"]);
+    expect(list([withReason])).toEqual([]);
   });
 
   /**
@@ -162,8 +200,12 @@ describe("CANDIDATE-EVIDENCE-VISIBILITY-01", () => {
       r({ domain: "p2.com", matchTruth: "SIMILAR", priceAmount: 40, priceCurrency: "EUR" }),
       r({ domain: "p3.com", crossSellerVerdict: "CONFLICT", priceAmount: 9, priceCurrency: "EUR" }),
     ];
-    /** 🟢 셋 중 둘은 **화면에** 선다(확장). */
-    expect(list(rows).sort()).toEqual(["p1.com", "p2.com"]);
+    /**
+     * 🔵 IDENTITY-CANDIDATE-VISUAL-REVIEW-01 — 🔴 **`p2.com`(SIMILAR)이 빠졌다**(CPO ⒝).
+     *    🟢 `PRESUMED_SAME` 은 **그대로 선다** — 이 계약의 요지(화면 ↔ 가격 축 분리)는
+     *    그 하나만으로도 성립한다(아래 `priced` 0 이 그 증거다).
+     */
+    expect(list(rows).sort()).toEqual(["p1.com"]);
     /** 🔴 그러나 **가격 집계에는 하나도 들어가지 않는다** — SAME 이 아니다. */
     expect(selectMiSameCandidates(rows, "OVERSEAS").priced).toHaveLength(0);
     /** 🔴 그리고 그 요구가 **코드에 남아 있는지** 까지 본다(행동 + 앵커 두 축). */

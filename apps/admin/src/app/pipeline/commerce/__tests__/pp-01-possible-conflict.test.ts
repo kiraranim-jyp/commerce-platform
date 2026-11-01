@@ -85,7 +85,7 @@ describe("PP — AB046 참고 후보(품번만 충돌)", () => {
     expect(row.crossSellerBlockers).toEqual([]);
     const hit = pick([row], row.discoveredUrl);
     expect(hit?.group).toBe("POSSIBLE");
-    expect(CANDIDATE_GROUP_LABEL[hit!.group]).toBe("🟡 유사상품 · 참고");
+    expect(CANDIDATE_GROUP_LABEL[hit!.group]).toBe("🟡 품번 충돌 · 참고");
   });
 
   /** 🔴 PP-02 — SAME/PRESUMED 로 **표시되지 않는다**(승격 금지 · CPO §3). */
@@ -175,7 +175,11 @@ describe("PP — AB046 참고 후보(품번만 충돌)", () => {
     const similar = base({ matchTruth: "SIMILAR", priceAmount: 40, priceCurrency: "EUR" });
     expect(pick([same], same.discoveredUrl)?.group).toBe("LIKELY");
     expect(pick([presumed], presumed.discoveredUrl)?.group).toBe("PRESUMED");
-    expect(pick([similar], similar.discoveredUrl)?.group).toBe("POSSIBLE");
+    /**
+     * 🔵 IDENTITY-CANDIDATE-VISUAL-REVIEW-01 — **`SIMILAR` 는 더 이상 서지 않는다**(CPO ⒝).
+     * 🔴 전에는 `POSSIBLE` 이었다. 🟢 품번만 충돌한 참고 후보는 **그대로 선다**(위 PP-01).
+     */
+    expect(pick([similar], similar.discoveredUrl)).toBeUndefined();
     /** 🟢 가격 축도 그대로 — SAME 만 들어간다. */
     expect(selectMiSameCandidates([same, presumed, similar], "OVERSEAS").priced.map((r) => r.discoveredUrl)).toEqual([
       same.discoveredUrl,
@@ -213,7 +217,7 @@ describe("PP — AB046 참고 후보(품번만 충돌)", () => {
   });
 
   /** 🟢 PP-09 — 화면 배선. 선택기가 갈라도 컴포넌트가 그 말을 그려야 셀러에게 보인다. */
-  it("PP-09 화면이 AB046 을 「🟡 유사상품 · 참고」로 그린다", () => {
+  it("PP-09 화면이 AB046 을 「🟡 품번 충돌 · 참고」로 그린다", () => {
     const host = document.createElement("div");
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -225,7 +229,7 @@ describe("PP — AB046 참고 후보(품번만 충돌)", () => {
       expect(rows).toHaveLength(1);
       expect(rows[0]!.getAttribute("data-group")).toBe("POSSIBLE");
       expect((rows[0]!.querySelector('[data-testid="mi-candidate-group"]')?.textContent ?? "").trim()).toBe(
-        "🟡 유사상품 · 참고",
+        "🟡 품번 충돌 · 참고",
       );
       /** 🔴 가격 영역(`mi-same-row`)에는 **서지 않는다**. */
       expect(host.querySelector('[data-testid="mi-same-row"]')).toBeNull();

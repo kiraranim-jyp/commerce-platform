@@ -276,7 +276,24 @@ describe("B. 🔴 영역 (마운트 DOM)", () => {
   });
 
   it("B-4 🔴 SAME 이 아닌 후보는 이 영역에 **없다**(가격비교 제외)", async () => {
-    await mountArea({ rows: [row({ matchTruth: "SIMILAR", domain: "noise.com" })] });
+    /**
+     * 🔵 IDENTITY-CANDIDATE-VISUAL-REVIEW-01 — **입력을 바꿨다(계약의 의도는 그대로).**
+     * 🔴 전에는 `SIMILAR` 였다. CPO ⒝ 가 그 등급을 **후보 리스트에서 뺐으므로** 그
+     *    입력으로는 「리스트에는 있다」를 더 이상 잴 수 없다.
+     * 🟢 그래서 **품번만 충돌한 참고 후보** 로 바꿨다 — 「SAME 이 아니지만 리스트에는
+     *    서는」 후보이고, 이 계약이 지키는 성질(**가격 집계 ↔ 리스트 분리**)이 **그대로** 다.
+     */
+    await mountArea({
+      rows: [
+        row({
+          matchTruth: null,
+          crossSellerVerdict: "CONFLICT",
+          crossSellerConflicts: ["MODEL_CODE"],
+          matchReasons: ["브랜드 일치"],
+          domain: "noise.com",
+        }),
+      ],
+    });
     /**
      * 🔴🔴 **CANDIDATE-EVIDENCE-VISIBILITY-01 — 범위를 «가격 행» 으로 정정했다. 강화다.**
      *    전까지 「화면 전체 텍스트에 없다」였다. 🔴 그런데 CPO §4-B 가 **Evidence 가

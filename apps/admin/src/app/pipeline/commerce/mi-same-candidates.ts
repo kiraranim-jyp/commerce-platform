@@ -170,10 +170,30 @@ const LIKELY_TIERS: readonly string[] = ["SAME", "SAME_MODEL_OPTION_DIFF"];
  */
 const PRESUMED_TIERS: readonly string[] = ["PRESUMED_SAME"];
 /**
- * 🟡 C 군 — **유사 · 참고**. Evidence 로 가능성을 판단할 수 있는 후보.
- * 🔴 `UNKNOWN` 은 **등급만으로 넣지 않는다** — 아래 `hasIdentityEvidence` 가 같이 본다.
+ * ══════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 IDENTITY-CANDIDATE-VISUAL-REVIEW-01 — **`SIMILAR` 를 후보군에서 뺀다**(CPO ⒝)
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 **빈 배열이다.** 전에는 `["SIMILAR"]` 였고 그 등급이 C 군으로 섰다.
+ *
+ * ── 🔴 왜 «SIMILAR 만» 빼고 C 군 자체는 남기는가 (CPO 확정) ────────────────
+ * 처음 지시는 「후보 리스트 = SAME + PRESUMED_SAME」이었다. 🔴 글자대로 하면 C 군이
+ * 통째로 사라지는데 **실측에서 C 군의 내용이 그것이 아니었다**:
+ * ```
+ * 도달 33 중 C 군 **3건** — `SIMILAR` **0건** ·
+ *   품번만 충돌한 참고 후보(`isModelCodeOnlyReference`) **3건**
+ *   그중 🔴 **CEO SAME 2건** — cemarose.ca CAD 56 · bobochoses.com EUR 35(가격 보유)
+ * ```
+ * 🔴🔴 C 군을 통째로 지우면 **가격 있는 CEO SAME 2건이 화면에서 사라진다** — 그것은
+ *    같은 지시서가 **FAIL 로 규정한 모양** 이다(§11). 🟢 CPO 가 그 실측을 보고
+ *    ⒝(「`SIMILAR` 판정만 제외 · `POSSIBLE` 일괄 제외 금지」)로 확정했다.
+ *
+ * 🔴 **재분류하지 않았다** — `SIMILAR` 를 올리지도, 품번충돌 후보를 `SIMILAR` 로
+ *    내리지도 않았다(CPO 명시). 바뀐 것은 **UI 필터 하나** 다.
+ * 🔴 `UNKNOWN` 은 전에도 등급만으로는 안 들어왔고 **지금도 안 들어온다**.
+ * 🟢 아래 `isModelCodeOnlyReference` 분기는 **그대로** 다(CANDIDATE-POSSIBLE-CONFLICT-01 보존).
  */
-const POSSIBLE_TIERS: readonly string[] = ["SIMILAR"];
+const POSSIBLE_TIERS: readonly string[] = [];
 
 /**
  * 🔴🔴 **「Evidence 가 사실상 없는 UNKNOWN」을 가른다**(CPO §4-C).
@@ -292,11 +312,23 @@ export const CANDIDATE_LIST_HEADING = "동일상품 가능성이 있는 후보";
  * 🔵 CANDIDATE-CAP-AND-LABEL-01 — **CPO 가 글자를 고정했다.**
  * 🔴 「🟡 유사 · 동일상품 가능성 있음」이 **「🟡 유사상품 · 참고」로 바뀌었다** —
  *    전 문구는 `SIMILAR` 에까지 「동일상품 가능성」을 말해서 세 등급이 **한 덩어리** 로 읽혔다.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * 🔵🔵 IDENTITY-CANDIDATE-VISUAL-REVIEW-01 — **C 군의 «말» 도 같이 고쳐야 한다**
+ * ══════════════════════════════════════════════════════════════════════════
+ * 🔴 `SIMILAR` 를 빼자 C 군에 남는 것은 **품번만 충돌한 참고 후보** 뿐이다.
+ *    그 상태에서 「🟡 **유사상품** · 참고」를 그대로 두면 **화면이 거짓말한다** —
+ *    🔴 실측으로 그 자리에 **CEO SAME 2건**(가격 보유)이 있고, 그것을 「유사상품」이라
+ *    적으면 **이번 WU 의 목적(CEO 육안 재판단)을 망가뜨린다**.
+ * 🟢 CPO 문장을 그대로 쓴다 — 「`POSSIBLE` 은 유사상품이라는 의미가 아니라 **품번 충돌이
+ *    있지만 후보로 살려놓은 상태**」.
+ * 🔴 「동일상품」을 넣지 않는다 — 그 금지는 `ccl-01` 이 잠근 것이고 **풀지 않았다**
+ *    (품번이 충돌한 상태에서 「동일상품」이라 적는 것은 과한 단정이다).
  */
 export const CANDIDATE_GROUP_LABEL: Record<CandidateListGroup, string> = {
   LIKELY: "🟢 동일상품 가능성 높음",
   PRESUMED: "🟡 동일상품 추정",
-  POSSIBLE: "🟡 유사상품 · 참고",
+  POSSIBLE: "🟡 품번 충돌 · 참고",
 };
 /** 🔴 「후보가 없다」와 「조회하지 않았다」는 다른 사실이다(WU-130 ② 유지). */
 export const CANDIDATE_LIST_EMPTY = "이 시장에서는 아직 후보를 찾지 못했습니다.";
