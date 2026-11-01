@@ -147,6 +147,68 @@ soldOut · source.
 있었으면 합친 길이가 2 이상이거나 단일 비-MODEL_CODE 라 어느 쪽이든 false). 🟢 경고
 문구(`candidateWarningLines`)도 둘을 합쳐 쓰므로 **글자가 같다**.
 
+### 🔵🔵🔵 **CPO 최종 지시서 LOCK**(2026-11-01) — 이 절이 B-3 의 기준이다
+
+🔴 아래 **전략 게이트** 를 먼저 읽는다. 이것이 「왜 복원인가」의 전부다.
+
+> 우리는 **100% 동일상품을 증명하는 시스템을 만드는 것이 아니다.**
+> AI Search + Evidence 로 **좋은 후보를 최대한 많이 찾고 실제 가격을 붙여
+> 셀러가 선택하게 하는 «의사결정 지원»** 시스템이다.
+> ⟹ B-3 은 그 흐름을 **다시 실행하는 것이 아니라** 이미 확보한 것을 **이어 붙이는** 일이다.
+> **저장 → 복원 → 표시만 한다.**
+
+```
+🔴 금지 — Search 재실행 · Crawl 재실행 · /check 재실행 ·
+   「다시 분석」을 눌러야 결과가 나오는 구조 · 저장 후보를 **다시 Identity 판단** ·
+   가격 정책 변경 · Identity 정책 변경 ·
+   🔴 **client localStorage/sessionStorage 저장**(WU-059 금지축과 같은 자리) ·
+   priceTier nullable 변경 · priceTier 임의 생성 · priceTier=null 18행 버리기 ·
+   savedCandidateRows 를 geminiEvidence/가격집계에 합류 ·
+   **UI 텍스트를 늘려 문제를 해결**
+```
+
+#### 🔴 계약 번호는 **이 목록이 최종** 이다(앞선 목록과 섞지 않는다)
+
+```
+B3-01 저장 3칸(price_status·sold_out·match_reasons)이 조회 결과에 실제 포함
+B3-02 저장 후보 전수 보존 — savedCandidateRows.length === 저장 후보 수
+      🔴 priceTier=null 이라고 버리지 않는다(18행)
+B3-03 `GeminiTransientEvidence.priceTier` **required 계약 불변**
+B3-04 aggregation isolation — 복원이 가격 집계 결과를 바꾸지 않는다
+B3-05 surface 단일화 — mi-same-row 0 · mi-candidate-row = 표시 후보 수 · 중복 0
+B3-06 P1/P2/P3 보존 — 특히 VERIFIED_CURRENT 는 반드시 P1
+B3-07 match_reasons 보존(복원 과정에서 사라지지 않는다)
+B3-08 최초 분석 ↔ resume 후보 집합 동일(🔴 아래 한계 참조)
+B3-09 resume 진입 시 Search=0 · Crawl=0 · /check=0   ← **핵심 DoD**
+B3-10 실제 마운트 DOM — mi-candidate-row · mi-candidate-price ·
+      mi-candidate-price-unverified
+```
+
+#### 🔴🔴 **검토에서 나온 BLOCK 후보 — 착수하면 바로 만난다**
+
+```
+🔴 ① `source` 두 enum 이 «다르다»  — §4 의 「source 그대로 복원」이 글자대로 불가능
+   저장측 ReviewSource        OVERSEAS_AUTO · DOMESTIC_REGISTRY · SELLER_URL ·
+                             GEMINI · GT_IMPORT
+   화면측 GeminiTransientRow  GEMINI_DISCOVERY · SELLER_URL · OVERSEAS_AUTO ·
+                             REVIEWED_SAME · DOMESTIC_LISTING · WEB_SEARCH
+   겹치는 것 = **SELLER_URL · OVERSEAS_AUTO 둘뿐**
+   🔴 화면은 `SOURCE_LABEL[row.source]` 를 쓴다 ⟹ 매핑 없는 값은 **빈 배지** 가 된다
+      (그 파일 주석이 「이 둘이 유니온에 없어서 배지가 빈칸으로 나갈 상태였다」고
+       같은 사고를 이미 기록해 뒀다 · E2E-04)
+   🟡 선택지(🔴 CTO 가 고르지 않는다) — ⒜ 매핑표 신설(GEMINI→GEMINI_DISCOVERY ·
+      DOMESTIC_REGISTRY→DOMESTIC_LISTING · 🔴 GT_IMPORT 는 **대응이 없다**)
+      ⒝ 복원 행은 source 를 비운다(배지 사라짐) ⒞ 「복원됨」 값을 양쪽에 추가
+   🔴 ⒜ 를 고르면 **GT_IMPORT 를 어디로 보낼지**가 남는다 — 그것은 제품 정책이다
+
+🔴 ② B3-08 은 **CTO 가 절반만 잴 수 있다**
+   「최초 분석」을 돌리려면 live HTTP + service-role 키가 필요하고 CTO 에겐 **없다**.
+   🟢 CTO 가 낼 수 있는 것 — 「**저장된 N 행이 복원에서 N 행으로 나온다**」(누락 0).
+   🔴 「최초 화면 ↔ resume 화면이 같다」는 **CEO 축** 이다. 분모를 갈라 적는다.
+```
+
+---
+
 ### 📏 B-3 Blast Radius — **착수 전 실측**(2026-11-01 · 설계 재검토 아님 · 숫자만)
 
 ```
