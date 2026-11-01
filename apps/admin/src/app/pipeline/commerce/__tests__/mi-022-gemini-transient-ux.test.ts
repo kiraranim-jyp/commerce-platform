@@ -117,9 +117,116 @@ describe("① 🟢 evidence 가 있으면 구역이 **실제 DOM 에** 나타난
     expect(text).not.toContain("PRESUMED_SAME");
     expect(text).toContain("babybubble.co.kr");
     expect(text).toContain("smallable.com");
-    /** 🟢 근거 없이 판정만 보여주지 않는다. */
-    expect(text).toContain("품번 일치");
-    expect(text).toContain("보류 근거");
+    /**
+     * 🔵🔵 CANDIDATE-UX-REFINE-03 — **「근거 없이 판정만 보여주지 않는다」의 뜻이 바뀌었다.**
+     *
+     * 🔴 전에는 `matchReasons`(「품번 일치」)와 「보류 근거」 머리말을 요구했다.
+     *    그 배열은 **내부 진단 로그** 이고(긍정·부정·퍼센트 혼재) CEO 가 실제 화면에서
+     *    「분석 보고서 같다」고 FAIL 한 원인이다 ⟹ **셀러 카드에서 제거** 했다.
+     * 🟢 대신 지켜야 할 것은 둘이고 그것을 **직접** 단언한다 —
+     *    ⒜ 판정 라벨이 선다(위 `동일상품 추정`) ⒝ 확인할 것이 있으면 **한 줄** 로 말한다.
+     * 🔴 그리고 진단 로그가 **다시 들어오면 FAIL** 하도록 부정 단언을 같이 둔다(강화).
+     */
+    expect(text).toContain("⚠ 확인 필요:");
+    expect(text).toContain("브랜드 미확인");
+    expect(text).not.toContain("품번 일치");
+    expect(text).not.toContain("보류 근거");
+    expect(text).not.toContain("BRAND_UNCONFIRMED");
+  });
+
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 CANDIDATE-UX-REFINE-03 — **셀러 카드 ↔ 진단 영역**(CPO §5 · D1~D4)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 `-01`·`-02` 가 두 번 UX FAIL 한 구조적 이유 — 후보 카드를 그리는 표면이
+   *    **여섯** 인데 `MarketPriceComparison` **한 장만** 고쳤다. 이 컴포넌트가
+   *    **구역 일곱** 을 같은 카드로 그리고, CEO 가 본 진단 로그의 출처가 여기다.
+   * 🔴 그중 🧪 **증거 부족** 구역만 **진단 모드** 로 남긴다(지우면 그 구역이 무의미해진다).
+   */
+  describe("R3 — Seller Decision Surface", () => {
+    const ROW = {
+      domain: "biskuit.kr",
+      discoveredUrl: "https://biskuit.kr/p/1",
+      title: "허그 헤어리 몬스터 티셔츠",
+      market: "KR",
+      crossSellerVerdict: "PRESUMED_SAME",
+      matchReasons: ["모델명 유사도 0%", "품번 일치", "URL slug 일치"],
+      crossSellerBlockers: ["BRAND_MISMATCH"],
+      priceAmount: 88000,
+      priceCurrency: "KRW",
+      priceStatus: "VERIFIED_CURRENT",
+      soldOut: null,
+    } as unknown as GeminiTransientRow;
+
+    const html = (extra: Record<string, unknown> = {}): string => {
+      const host = document.createElement("div");
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      act(() => {
+        root.render(createElement(GeminiTransientCandidates, { evidence: [ROW], ...extra }));
+      });
+      const out = host.textContent ?? "";
+      act(() => root.unmount());
+      host.remove();
+      return out;
+    };
+
+    /** 🔴 D2 — 셀러 카드에서 **진단 로그가 사라졌다**. */
+    it("R3-01 셀러 카드에 matchReasons 진단 문장이 없다", () => {
+      const t = html();
+      for (const line of ROW.matchReasons ?? []) expect(t).not.toContain(line);
+      expect(t).not.toMatch(/유사도/);
+      expect(t).not.toContain("URL slug");
+    });
+
+    /** 🔴 D4 — 경고는 **한 줄** 이고 사람의 말이다. */
+    it("R3-02 실제 blocker 가 있으면 한 줄 경고가 선다 (원시 토큰 0)", () => {
+      const t = html();
+      expect(t).toContain("⚠ 확인 필요:");
+      expect(t).toContain("브랜드 불일치");
+      expect(t).not.toContain("BRAND_MISMATCH");
+      expect(t).not.toContain("보류 근거");
+    });
+
+    /** 🔴 D4 — blocker 가 없으면 **빈 경고 영역을 만들지 않는다**. */
+    it("R3-03 blocker 가 없으면 경고가 서지 않는다", () => {
+      const host = document.createElement("div");
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      act(() => {
+        root.render(
+          createElement(GeminiTransientCandidates, {
+            evidence: [{ ...ROW, crossSellerBlockers: [], crossSellerConflicts: [] }],
+          }),
+        );
+      });
+      expect(host.querySelector('[data-testid="gt-blockers"]')).toBeNull();
+      expect(host.textContent ?? "").not.toContain("⚠");
+      act(() => root.unmount());
+      host.remove();
+    });
+
+    /**
+     * 🔴🔴 CPO §5 — **🧪 진단 영역은 지우지 않는다.**
+     *    `diagnostic` 을 켜면 근거가 **돌아온다**(그 구역의 존재 이유다).
+     */
+    it("R3-04 diagnostic 모드에서는 근거가 남는다", () => {
+      const t = html({ diagnostic: true });
+      expect(t).toContain("품번 일치");
+      /** 🔴 켜도 **원시 토큰은 안 나간다**. */
+      expect(t).not.toContain("BRAND_MISMATCH");
+      expect(t).toContain("브랜드 불일치");
+    });
+
+    /** 🔴 D3·D7 — 판정 라벨과 가격이 **그대로** 있다(UX 변경으로 잃지 않는다). */
+    it("R3-05 판정 라벨·가격·링크가 보존된다", () => {
+      const t = html();
+      expect(t).toContain("동일상품 추정");
+      expect(t).toContain("KRW");
+      expect(t).toContain("88,000");
+      expect(t).toContain("biskuit.kr");
+    });
   });
 
   it("후보 URL 이 실제 링크로 나간다(셀러가 열어 확인할 수 있다)", async () => {

@@ -253,9 +253,20 @@ describe("F. [object Object] 가 화면에 찍히지 않는다", () => {
     expect(runner).toContain('typeof c === "string" ? c : c.conflict');
   });
 
-  it("화면이 그 값을 그대로 적는다(객체가 오면 그것이 보인다)", () => {
+  /**
+   * 🔵🔵 CANDIDATE-UX-REFINE-03 — **기대 글자가 바뀌었다**(의도된 변경).
+   *
+   * 🔴 이 단언의 «뜻» 은 「객체가 오면 `[object Object]` 가 보인다」를 막는 것이고,
+   *    원시 토큰 `BRAND_UNCONFIRMED` 는 그 **프록시** 였다.
+   * 🔴🔴 그런데 그 프록시는 **원시 영문 토큰이 화면에 찍히는 것을 «요구»** 하고 있었다 —
+   *    그것은 WU-056 의 `EXCLUDED` 누출 사고가 금지한 바로 그 모양이다.
+   * 🟢 `-03` 이 `blockerText` 를 태우면서 그 누출이 사라졌다 ⟹ 기대를 **사람의 말** 로
+   *    옮기고, **영문 토큰이 «없다»** 를 같이 단언해 **강화** 한다(약화가 아니다).
+   */
+  it("화면이 그 값을 사람의 말로 적는다(객체가 오면 그것이 보인다)", () => {
     const html = render([{ ...DONOKIDS, crossSellerBlockers: ["BRAND_UNCONFIRMED"] }]);
-    expect(html).toContain("BRAND_UNCONFIRMED");
+    expect(html).toContain("브랜드 미확인");
+    expect(html).not.toContain("BRAND_UNCONFIRMED");
     expect(html).not.toContain("[object Object]");
   });
 });

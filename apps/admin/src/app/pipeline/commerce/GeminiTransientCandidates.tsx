@@ -27,7 +27,9 @@ import type { JSX, ReactNode } from "react";
  * 🔴 WU-132 — 등급 선택 owner. 🟢 이 파일은 **타입만** 거꾸로 내보내므로(아래
  *    `GeminiTransientRow`) 런타임 순환이 생기지 않는다(type import 는 지워진다).
  */
-import { transientDisplay } from "./mi-same-candidates";
+import { transientDisplay, CANDIDATE_WARNING_PREFIX } from "./mi-same-candidates";
+/** 🔵 `-03` — 🔴 축의 «말» owner 는 이 파일 하나다(영문 토큰을 화면에 내보내지 않는다). */
+import { blockerText } from "./blocker-text";
 
 /**
  * 🔴 `GeminiTransientEvidence`(run-domestic-price-check.ts)의 **화면이 읽는 칸만**
@@ -316,6 +318,22 @@ export interface GeminiTransientCandidatesProps {
    *    🟢 기본값 `false` 라 **지정하지 않은 구역의 DOM 은 전과 같다**.
    */
   collapsed?: boolean;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 CANDIDATE-UX-REFINE-03 — **셀러 카드 ↔ 내부 진단 영역을 가른다**(CPO §5)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 이 컴포넌트는 **구역 일곱** 을 같은 카드로 그린다(🇰🇷 국내 후보 검토 ·
+   *    🌎 해외 자동검색 · 🔁 재검증 · 🛰 AI 검색 · 🧭 국내 목록 탐색 · 🔗 직접 입력 ·
+   *    🧪 증거 부족). 🔴 그래서 「카드를 고친다」가 **일곱 구역을 한 번에** 바꾼다.
+   *
+   * 🔴🔴 그중 **🧪 증거 부족으로 판정하지 못한 후보** 는 이름 그대로 **진단 영역** 이다 —
+   *    거기서 `matchReasons` 를 지우면 **그 구역의 존재 이유가 사라진다**(CPO §5:
+   *    「내부 진단용 영역이라면 임의로 삭제하지 않는다」).
+   * 🟢 그래서 **기본값 `false`(= 셀러 카드)** 로 두고 그 구역만 켠다.
+   *    🔴 켜도 **원시 토큰은 안 나간다** — blocker 문구는 어느 모드에서나 `blockerText` 다.
+   */
+  diagnostic?: boolean;
 }
 
 /** 🔴 이미지가 없을 때 적는 말. 🔴 빈 칸으로 두지 않는다(「없다」와 「못 그렸다」를 가른다). */
@@ -377,6 +395,8 @@ export function GeminiTransientCandidates({
   originImageUrl,
   originTitle,
   collapsed = false,
+  /** 🔵 `-03` — 🔴 기본은 **셀러 카드** 다(진단 로그 없음). 🧪 구역만 켠다. */
+  diagnostic = false,
 }: GeminiTransientCandidatesProps): JSX.Element | null {
   if (!evidence || evidence.length === 0) return null;
   /** 🔴 WU-132 ④ — 원상품 이미지가 **없으면** 비교 칸을 만들지 않는다(빈 틀 금지). */
@@ -404,8 +424,26 @@ export function GeminiTransientCandidates({
           const market = marketText(row.market);
           const verdict = verdictDisplay(row);
           const confidence = priceConfidenceText(row);
-          const reasons = (row.matchReasons ?? []).slice(0, 3);
-          const blockers = [...(row.crossSellerBlockers ?? []), ...(row.crossSellerConflicts ?? [])].slice(0, 2);
+          /**
+           * 🔵🔵 `-03` — 🔴 **진단 영역에서만** 쓴다. 셀러 카드에는 나가지 않는다.
+           *    이 배열이 CEO 가 「분석 보고서 같다」고 한 그 줄이다(「모델명 유사도 0%」·
+           *    「브랜드 불일치」 — 긍정·부정·퍼센트가 섞인 **내부 진단 로그**).
+           */
+          const reasons = diagnostic ? (row.matchReasons ?? []).slice(0, 3) : [];
+          /**
+           * 🔴🔴 **원시 토큰이 그대로 나가고 있었다** — 전에는
+           *    `[...blockers, ...conflicts].slice(0,2)` 를 그대로 찍어 화면에
+           *    `MODEL_CODE`·`BRAND_UNCONFIRMED` 같은 **영문 내부 토큰** 이 노출됐다.
+           * 🟢 말의 owner 는 `blocker-text.ts` 하나다 — 모르는 토큰은 「기타 사유」로 묶는다.
+           * 🔴 중복은 접는다(blocker 와 conflict 가 같은 축을 가리킬 수 있다).
+           */
+          const blockers = Array.from(
+            new Set(
+              [...(row.crossSellerBlockers ?? []), ...(row.crossSellerConflicts ?? [])].map(
+                blockerText,
+              ),
+            ),
+          ).slice(0, 2);
           return (
             <li key={row.discoveredUrl} className="rounded border border-border/60 p-2">
               {/* 🔴🔴 WU-028 — 한 줄: **출처 · 판정 · 시장**. 출처가 행에 있어야
@@ -520,9 +558,14 @@ export function GeminiTransientCandidates({
                   {reasons.join(" · ")}
                 </p>
               )}
+              {/**
+                * 🔵 `-03` — **경고는 한 줄** 이고 어휘는 `-02` 와 **같은 상수** 를 쓴다
+                *    (화면 두 곳이 같은 뜻을 다른 말로 하지 않는다).
+                * 🔴 긴 설명문을 새로 만들지 않는다(CPO §7).
+                */}
               {blockers.length > 0 && (
                 <p data-testid="gt-blockers" className="mt-0.5 text-[11px] text-text-tertiary">
-                  보류 근거: {blockers.join(" · ")}
+                  {CANDIDATE_WARNING_PREFIX} {blockers.join(" · ")}
                 </p>
               )}
               {/**

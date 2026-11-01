@@ -126,7 +126,15 @@ describe("WU-081 — 국내 후보 검토 UI", () => {
     const sys = inSec("domestic-review-transient", "gt-verdict")?.textContent ?? "";
     expect(sys.length).toBeGreaterThan(0);
     expect(sys).not.toContain("CEO 검토");
-    expect(inSec("domestic-review-transient", "gt-blockers")?.textContent).toContain("BRAND_MISMATCH");
+    /**
+     * 🔵 CANDIDATE-UX-REFINE-03 — 🔴 전에는 **원시 토큰** `BRAND_MISMATCH` 가 화면에
+     *    찍히는 것을 «요구» 했다(= 내부 토큰 누출을 계약이 고정하고 있었다).
+     * 🟢 이제 `blockerText` 를 거쳐 사람의 말이 나간다. 단언의 뜻(「보류 사유가 그 칸에
+     *    보인다」)은 그대로이고, **영문 토큰이 없다** 를 더해 강화한다.
+     */
+    const blk = inSec("domestic-review-transient", "gt-blockers")?.textContent ?? "";
+    expect(blk).toContain("브랜드 불일치");
+    expect(blk).not.toContain("BRAND_MISMATCH");
     /** 🔴 아직 누르지 않았으므로 검토 «결과» 는 없다. */
     expect(inSec("domestic-review-transient", "gt-review-result")).toBeNull();
   });

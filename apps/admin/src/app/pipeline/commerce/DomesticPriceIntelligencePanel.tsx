@@ -2967,6 +2967,13 @@ export function TransientCandidateSections({
         heading={WEAK_CANDIDATE_HEADING}
         testId="weak-candidate-transient"
         collapsed
+        /**
+         * 🔵🔵 CANDIDATE-UX-REFINE-03 — 🔴 **이 구역만 진단 모드다**(CPO §5).
+         *    「🧪 증거 부족으로 «판정하지 못한» 후보」는 이름 그대로 **왜 판정하지
+         *    못했는지** 를 보는 자리다 — 거기서 `matchReasons` 를 지우면 **그 구역의
+         *    존재 이유가 사라진다**. 🟢 나머지 여섯 구역은 **셀러 카드** 로 남는다.
+         */
+        diagnostic
       />
       {weak && weak.length > 0 && (
         <p data-testid="weak-candidate-scope" className="mt-1 text-[11px] text-text-tertiary">
