@@ -11,7 +11,7 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-🔵🔵🔵 CURRENT WU  **CANDIDATE-UX-REFINE-01 — 🔴 구현 대기(코드 0)**  HEAD `28e8c5ef` · clean · 0/0
+🔵🔵🔵 CURRENT WU  **CANDIDATE-UX-REFINE-01 — 🔴 구현 대기(코드 0)**  HEAD `e570370a` · clean · 0/0
                   🟢 **CPO GO 완료 · 범위 LOCK · owner 좌표 확정**
                   🔵 전문 `docs/CANDIDATE-UX-REFINE-01.md` ← **이것만 읽고 바로 코딩한다**
                   ```
