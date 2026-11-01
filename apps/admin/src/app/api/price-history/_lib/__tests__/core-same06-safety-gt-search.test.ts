@@ -232,6 +232,27 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
     file: "gt-master-origins.json",
     why: "🟢 원상품 canonicalProduct 덤프(운영 DB) · 후보 라벨 **없음** — GT 분모와 겹치지 않는다",
   });
+  /**
+   * 🔵 CANDIDATE-UX-REFINE-04 B-3(2026-11-01) — **`candidate_reviews` 운영 덤프.**
+   *
+   * 🔴🔴 **「라벨 없음」으로 적으면 거짓이다 — 실제로 있다**(19행 중 `human_verdict` **SAME 10**).
+   *    🟢 그런데 **새 라벨이 0** 이다(URL 키로 기존 fixture 전수 대조):
+   * ```
+   * 고유 라벨 URL **7** → **7/7 이 이미 다른 fixture 에 있다**(각 3~8개에 중복 등장)
+   *   trenbe · biskuit.kr · tinyapple · stockmann.ee ·
+   *   junioredition · scoutandcokids · thefrontshop
+   * ```
+   *    ⟹ 그 라벨은 WU-131 이 **GT fixture 를 DB 로 시딩한 사본**(`GT_IMPORT`)이고,
+   *      분모에 넣으면 **같은 라벨을 두 번 센다**(`cand-02-rows.json` 과 **같은 이유**).
+   * 🔴 그리고 이 fixture 의 목적은 GT 가 아니다 — **재진입 복원이 저장된 칸을 되돌리는가**
+   *    를 재는 입력이다(`price_status` · `sold_out` · `match_reasons` · `source`).
+   * 🟢 그래도 적는 이유는 이 계약이 「전수 분류」를 요구하기 때문이다 — 실제로 그 FAIL 이
+   *    이 파일을 잡았다(가드가 일했다 · 느슨하게 하지 않았다).
+   */
+  skipped.push({
+    file: "ux04-b3-reviews.json",
+    why: "🔴 candidate_reviews 덤프 · 라벨 **있다(SAME 10)** 지만 **전건 기존 GT 사본**(URL 7/7) — 이중 집계 방지",
+  });
 
   /* SAME-03 최신 CEO 라벨 — 🔴 DIFFERENT 가 0 이지만 분모로 같이 적는다 */
   {

@@ -115,6 +115,17 @@ const toRow = (r: any): CandidateReviewRow => ({
 });
 
 /**
+ * 🔵 CANDIDATE-UX-REFINE-04 B-3 — **DB 행 → 도메인 행 변환기를 계약에 노출한다.**
+ *
+ * 🔴 왜 export 하는가 — 복원 계약이 **운영 `candidate_reviews` 의 실제 행**(read-only
+ *    덤프)을 입력으로 쓴다. 그 행을 테스트가 **손으로 다시 변환하면** 변환 규칙이
+ *    두 벌이 되고(특히 `price_amount` 는 numeric 이라 **문자열** 로 온다) 하니스가
+ *    조용히 운영과 다른 값을 재게 된다 — 이 트랙이 여러 번 밟은 함정이다.
+ * 🔴 **동작은 한 글자도 바뀌지 않았다**(같은 함수에 이름만 붙였다).
+ */
+export const candidateReviewRowFromDb = toRow;
+
+/**
  * 이 원상품의 검토 이력 **전부**.
  *
  * 🔴🔴 축이 **둘** 이다 — 지금 화면의 `snapshotId` «그리고» 과거 GT 의 `originCode`.
@@ -142,6 +153,50 @@ export async function listCandidateReviews(input: {
     return [];
   }
   return (data as any[])
+    .filter((r) => r.workspace_id == null || r.workspace_id === input.workspaceId)
+    .map(toRow);
+}
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 CANDIDATE-UX-REFINE-04 B-3 — **재진입 복원 전용 리더.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **`listCandidateReviews` 를 재사용하지 «않는다». 범위가 다르다**:
+ * ```
+ * listCandidateReviews  snapshot_id **OR** origin_code  — 📚 이력 화면용(넓다)
+ * 이 함수              snapshot_id **만**              — 재진입 복원용(좁다)
+ * ```
+ * 🔴 왜 좁혀야 하는가 — 복원 행은 화면의 **가격비교 블록을 그리는 입력** 이 된다
+ *    (`buildMarketJudgement` → 🇰🇷/🌎 금액). `origin_code` 축을 쓰면 **다른 스냅샷에서
+ *    본 후보의 금액** 이 이 상품의 가격 판단 화면에 선다 ⟹ CPO 가 CORE-2AA 에서
+ *    금지한 「URL 전역」과 **같은 사고** 다(바로 위 `listSnapshotVerifiedSameKeys` 가
+ *    같은 이유로 자기 질의를 따로 들고 있다 — 그 선례를 그대로 따른다).
+ * 🔴 그래서 `listCandidateReviews` 에 필터를 더하지 않는다 — 그 함수는 `snapshot_id` 를
+ *    돌려주지 않아 **사후 필터가 구조적으로 불가능** 하다(이 파일이 이미 적어 둔 사실).
+ *
+ * 🔴 **판정하지 않는다 · 가공하지 않는다.** 저장된 행을 그대로 돌려준다 —
+ *    `human_verdict` 로 거르지도 않고(사람이 아직 안 본 후보도 화면에 서야 한다),
+ *    `price_tier` 가 null 이라고 버리지도 않는다(B3-02 · 운영 실측 18/124 행).
+ */
+export async function listSnapshotCandidateReviews(input: {
+  snapshotId: string;
+  workspaceId: string;
+}): Promise<CandidateReviewRow[]> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("candidate_reviews")
+    .select("*")
+    /** 🔴 **`origin_code` 축을 쓰지 않는다** — 위 블록의 이유다. */
+    .eq("snapshot_id", input.snapshotId)
+    .order("last_seen_at", { ascending: false });
+  if (error) {
+    console.warn(`[candidate-review] 복원 조회 실패(${error.code}):`, error.message);
+    return [];
+  }
+  return (data as any[])
+    /** 🔴 다른 workspace 의 행은 쓰지 않는다 — 단 운영 공용(GT) 행은 통과(이 파일의 공통 규약). */
     .filter((r) => r.workspace_id == null || r.workspace_id === input.workspaceId)
     .map(toRow);
 }

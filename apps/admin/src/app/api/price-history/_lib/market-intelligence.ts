@@ -40,6 +40,13 @@ import { getPriceHistory, selectCostBasisOriginObservations } from "./price-obse
 import { computeBrandMarketProfileFor } from "./brand-market";
 import { listDomesticProductLinks, priceTierFromLink } from "../../domestic-price-sources/_lib/domestic-product-link";
 import { listDomesticPriceSources } from "../../domestic-price-sources/_lib/domestic-price-source";
+/**
+ * 🔵 CANDIDATE-UX-REFINE-04 B-3 — **재진입 복원.** 🔴 리더는 `snapshot_id` 범위만
+ *    보는 전용 함수이고(`listCandidateReviews` 아니다 · 그 이유는 그 파일에 있다),
+ *    변환기는 **순수 함수** 다(판정 0 · 집계 0).
+ */
+import { listSnapshotCandidateReviews } from "./candidate-review";
+import { toSavedCandidateRows } from "./saved-candidate-rows";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -102,13 +109,38 @@ export async function isDomesticSourcedProduct(sourceUrl: string, workspaceId: s
  *
  * 🔴 `undefined`/`null` = 경로가 안 돌았다 · `[]` = 켰는데 후보가 없었다. 섞지 않는다.
  */
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 CANDIDATE-UX-REFINE-04 **B-3** — 네 번째 인자 `options` 하나를 더했다
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 **왜 `geminiEvidence` 에 싣지 않는가.** 그 칸은 **가격 집계 입력** 이다
+ *    (아래 `for (const e of geminiEvidence ?? [])`). 저장분을 거기 실으면 재진입이
+ *    **과거 저장 금액까지 집계에 먹여** 「복원이 집계를 바꾼다」가 된다(B3-04 가 금지).
+ *    🟢 그래서 **표시 전용 칸**(`savedCandidateRows`)으로만 나간다 — 바로 위
+ *    `geminiEvidence` 블록이 적어 둔 격리 원칙을 **그대로** 따른다.
+ *
+ * 🔴 **왜 플래그인가(항상 읽지 않는가).** 이 함수는 POST `/check` 도 쓴다. 그 경로엔
+ *    **방금 만든 live 후보** 가 있어 복원이 필요 없고, 거기서 읽으면 ⒜ 불필요한 DB
+ *    질의가 늘고 ⒝ `/check` 응답 모양이 바뀐다. 🟢 플래그로 두면 **`/check` 경로가
+ *    한 글자도 바뀌지 않는다** — 회귀 표면이 GET 하나로 좁아진다.
+ * 🔴 **읽기만 한다** — Search/Crawl/`/check` 를 부르지 않는다(B3-09 · §B-4).
+ */
 export async function computeMarketIntelligence(
   snapshotId: string,
   workspaceId: string,
   geminiEvidence?: GeminiTransientEvidence[] | null,
+  options?: { restoreSavedCandidates?: boolean },
 ) {
   const snapshot = await getSnapshot(snapshotId, workspaceId);
   if (!snapshot) return null;
+  /**
+   * 🔴 저장된 후보를 **그대로** 되돌린다 — 판정 0 · 집계 0 · 가격 생성 0 · tier 생성 0.
+   * 🔴 `null` = 복원 경로가 안 돌았다(POST `/check`) · `[]` = 돌았는데 저장이 없다.
+   */
+  const savedCandidateRows = options?.restoreSavedCandidates
+    ? toSavedCandidateRows(await listSnapshotCandidateReviews({ snapshotId, workspaceId }))
+    : null;
   const product = backfillCanonicalProduct(snapshot.workspace.canonicalProduct);
 
   const [originRecords, domesticHistory, domesticShopHistory] = await Promise.all([
@@ -1022,6 +1054,19 @@ export async function computeMarketIntelligence(
      * 🔴 `null` = 경로가 안 돌았다 · `[]` = 켰는데 후보가 없었다.
      */
     geminiEvidence: geminiEvidence ?? null,
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 CANDIDATE-UX-REFINE-04 B-3 — **재진입 복원용 표시 전용 배열**
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 🔴🔴 **위 어떤 계산도 이 칸을 읽지 않는다.** 그것이 이 칸이 따로 있는 이유다 —
+     *    `geminiEvidence` 는 가격 집계 입력(`:226` 루프)이고 이 칸은 **화면 전용** 이다.
+     *    ⟹ 복원이 `sellerAction`·tier·원가·마진·추천가·alert·`candidateOverseasPrice` 를
+     *      **한 글자도 바꾸지 않는다**(B3-04 · 계약이 그것을 문다).
+     * 🔴 **이 칸을 `geminiEvidence` 와 합치지 않는다** — 합치는 순간 저장분이 집계에 들어간다.
+     * 🔴 `null` = GET 복원이 안 돌았다(POST `/check`) · `[]` = 돌았는데 저장이 없다.
+     */
+    savedCandidateRows,
     /** 🔴 010R 관측용 — 가격이 붙어 버킷에 들어간 수 / 가격 없어 빠진 수.
      *    🔴 위 판정 계산은 이 칸을 읽지 않는다. */
     geminiPricedCount,

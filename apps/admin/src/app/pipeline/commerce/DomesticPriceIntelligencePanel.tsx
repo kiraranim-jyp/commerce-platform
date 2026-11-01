@@ -833,6 +833,19 @@ export interface PriceHistoryResponse {
   /** P-31 — 종합 시장 상태 + 구조화된 판단 근거. finalVerdict는
    * sellerFacingVerdict를 시장 신호로 강등만 한 값이다(승격 없음). */
   sellerDecision: SellerDecisionInfo;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 CANDIDATE-UX-REFINE-04 B-3 — **재진입에 복원된 후보**(표시 전용)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 transient 후보는 POST `/check` 응답에만 살아서, `?resume=` 으로 다시 들어오면
+   *    후보와 가격비교가 **통째로 비어 있었다**. 🟢 이 칸이 그 자리를 **DB 저장분으로**
+   *    메운다 — **새 호출 0**(이미 부르던 GET 의 필드 하나다).
+   * 🔴🔴 **가격 집계와 무관하다** — 서버가 `geminiEvidence` 와 **다른 칸** 으로 보낸다
+   *    (그쪽만 집계 입력이다). 이 칸을 그 칸에 합치지 않는다.
+   * 🔴 구버전 응답에는 없다(optional) — 없으면 `null` 이고 전과 똑같이 동작한다.
+   */
+  savedCandidateRows?: GeminiTransientRow[] | null;
 }
 
 interface DecisionFactor {
@@ -2116,6 +2129,22 @@ export function DomesticPriceIntelligencePanel({
       domesticListingEvidence != null ||
       /** 🔴 E2E-03 UI FIX — **여섯 번째 출처(웹 검색).** 같은 이유로 빠뜨렸다. */
       webSearchEvidence != null;
+    /**
+     * ════════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 CANDIDATE-UX-REFINE-04 B-3 — **재진입이면 저장분으로 선다**
+     * ════════════════════════════════════════════════════════════════════════
+     *
+     * 🔴🔴 **「합치지」 않고 「없을 때만」 쓴다.** 그것이 중복 0 의 «구조적» 보증이다
+     *    (B3-05). 합쳐서 URL 로 접으면 ⒜ 같은 후보의 live/저장 두 판이 섞이고
+     *    ⒝ 어느 쪽이 이기는지 규칙이 하나 더 생긴다. 🟢 live 후보가 **하나라도**
+     *    있으면(=`/check` 가 돌았으면) live 가 **전부** 이긴다 ⟹ 기존 경로는
+     *    **한 글자도 바뀌지 않는다**(회귀 표면이 「rows 가 null 이던 자리」 하나다).
+     * 🔴 저장분은 **표시 전용** 이다 — 서버가 가격 집계(`geminiEvidence`)와 **다른
+     *    칸** 으로 보낸 값이고, 여기서도 그 둘을 섞지 않는다(B3-04).
+     * 🔴 `null` 과 `[]` 를 섞지 않는다 — 저장이 0건이면 `[]` 이고 그때 화면은
+     *    「조회는 됐는데 후보가 없다」를 말한다(「조회가 안 돌았다」가 아니다).
+     */
+    const saved = data?.savedCandidateRows ?? null;
     return {
       rows: anyEvidence
         ? [
@@ -2127,7 +2156,7 @@ export function DomesticPriceIntelligencePanel({
             /** 🔴 E2E-03 UI FIX — 웹 검색 후보. 이 줄이 없어서 국내 후보가 사라졌다. */
             ...(webSearchEvidence ?? []),
           ]
-        : null,
+        : saved,
       domesticReference,
       overseasReference,
       /**
@@ -2174,6 +2203,12 @@ export function DomesticPriceIntelligencePanel({
     /** 🔵 CORE-NEXT STEP 4 — 같은 함정. 빠지면 B 가 **영원히 null 로 보인다**. */
     data?.recommendation?.recommendedPrice,
     data?.recommendation?.estimatedMarginPercent,
+    /**
+     * 🔵 CANDIDATE-UX-REFINE-04 B-3 — 🔴 **빠뜨리면 복원이 영원히 발화하지 않는다.**
+     *    GET 응답은 첫 렌더보다 늦게 오므로 deps 에 없으면 memo 가 갱신되지 않고
+     *    재진입 화면이 **전과 똑같이 빈 채로 남는다**(이 파일이 네 번 밟은 그 함정).
+     */
+    data?.savedCandidateRows,
   ]);
   const onMarketComparisonChangeRef = useRef(onMarketComparisonChange);
   onMarketComparisonChangeRef.current = onMarketComparisonChange;

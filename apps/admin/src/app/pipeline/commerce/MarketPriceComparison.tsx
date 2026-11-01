@@ -1626,12 +1626,22 @@ function MarketColumn({
                   >
                     {CANDIDATE_GROUP_LABEL[group]} {rowsInGroup.length}곳
                   </p>
-                  <p
-                    data-testid="mi-candidate-group-note"
-                    className="text-[11px] text-text-tertiary"
-                  >
-                    {CANDIDATE_GROUP_NOTE[group]}
-                  </p>
+                  {/**
+                    * ══════════════════════════════════════════════════════════════
+                    * 🔵🔵🔵 UX-FINAL-01 ⒜ — **그룹 설명 «본문» 을 지웠다. 뜻은 남는다.**
+                    * ══════════════════════════════════════════════════════════════
+                    *
+                    * 🔴 여기 있던 `<p data-testid="mi-candidate-group-note">` 가
+                    *    그룹마다 **한 문장을 더** 깔아서, 후보 세 군이 서면 설명문이
+                    *    **세 줄** 이 됐다 — 셀러가 보려는 것은 설명이 아니라 **후보** 다.
+                    * 🟢 **지운 것은 중복뿐이다** — 같은 문장이 바로 위 헤더의
+                    *    `title={CANDIDATE_GROUP_NOTE[group]}` 으로 **그대로 살아 있다**
+                    *    (마우스를 올리면 읽힌다). ⟹ 설명은 사라지고 **뜻은 남는다**.
+                    * 🔴 **글자를 새로 쓰지 않았다** — 어휘 owner(`CANDIDATE_GROUP_NOTE`)는
+                    *    한 글자도 안 바꿨고, 이 WU 의 금지(「텍스트를 늘려 해결」)의 반대다.
+                    * 🔴 라벨(`CANDIDATE_GROUP_LABEL`)은 **헤더와 행 양쪽에 그대로** 다 —
+                    *    WU-091 의 「행마다 판정 라벨」은 건드리지 않았다.
+                    */}
                   <ul className="space-y-1">
                     {rowsInGroup.map(({ row }) => (
                       <li
@@ -1682,7 +1692,21 @@ function MarketColumn({
                           * 🔴 `priceText` 는 **고치지 않는다** — 그 함수는 다른 화면도 쓰고
                           *    계약 둘이 잠갔다. 여기서 **갈라서** 쓴다(환산 0 · 기호 추가 0).
                           */}
-                        <p className="text-[13px] font-semibold text-text-primary">
+                        {/**
+                          * ══════════════════════════════════════════════════════════
+                          * 🔵🔵🔵 UX-FINAL-01 ⒝ — **가격이 카드에서 «가장 큰 글자» 다**
+                          * ══════════════════════════════════════════════════════════
+                          *
+                          * 🔴🔴 **DOM 순서를 바꾸지 않았다**(CPO 확정 — 「1순위 = 시각 비중」).
+                          *    계약 `R2-08`(`group` 이 `price` 보다 **앞**)은 **그대로 통과** 한다 —
+                          *    등급은 여전히 가격 위에 서고, 바뀐 것은 **크기·굵기** 뿐이다.
+                          * 🔴 왜 — 카드의 모든 줄이 10~11px 였고 가격만 13px/semibold 라
+                          *    **차이가 2px** 였다. 셀러가 「얼마에 팔리나」를 보려고 글자를
+                          *    훑어야 했다. 🟢 이제 가격이 **한눈에 먼저** 읽힌다.
+                          * 🔴 **숫자·통화·상태를 한 글자도 바꾸지 않았다** — `priceText` 무변경 ·
+                          *    환산 0 · 기호 추가 0 · P1/P2/P3 판정 0(아래 P2 줄 그대로).
+                          */}
+                        <p className="text-[17px] font-bold leading-tight text-text-primary">
                           <span data-testid="mi-candidate-price">
                             {row.priceAmount != null && row.priceCurrency
                               ? priceText(row)

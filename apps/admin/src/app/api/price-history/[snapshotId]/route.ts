@@ -19,7 +19,18 @@ export async function GET(_request: Request, { params }: { params: Promise<{ sna
 
   const { snapshotId } = await params;
 
-  const data = await computeMarketIntelligence(snapshotId, auth.user.workspaceId);
+  /**
+   * 🔵🔵🔵 CANDIDATE-UX-REFINE-04 B-3 — **재진입(`?resume=`) 복원은 이 GET 뿐이다.**
+   *
+   * 🔴 왜 여기인가 — transient 후보는 POST `/check` 응답에만 살아서, 재진입하면
+   *    화면의 후보/가격비교가 **통째로 비어 있었다**(셀러가 「다시 분석」을 눌러야 했다).
+   * 🔴 **읽기만 한다** — Search/Crawl/`/check` 를 부르지 않는다(B3-09 · §B-4 금지).
+   * 🔴 세 번째 인자(`geminiEvidence`)는 **그대로 비운다** — 저장분이 가격 집계에
+   *    들어가지 않는 것이 이 설계의 전부다(B3-04).
+   */
+  const data = await computeMarketIntelligence(snapshotId, auth.user.workspaceId, null, {
+    restoreSavedCandidates: true,
+  });
   if (!data) {
     return NextResponse.json({ ok: false, error: "스냅샷을 찾을 수 없습니다." }, { status: 404 });
   }
