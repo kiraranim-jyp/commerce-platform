@@ -11,7 +11,10 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-🔵🔵🔵 CURRENT WU  **CANDIDATE-UX-REFINE-01 — 🔴 구현 대기(코드 0)**  HEAD `e570370a` · clean · 0/0
+🔵🔵🔵 CURRENT WU  **CANDIDATE-UX-REFINE-01 — 🔴 구현 대기(코드 0)**  clean · 0/0
+                  🔵 **직전 «코드» 커밋 `2c16152c`**(배포 완료 · SIMILAR 후보군 제외)
+                     🔴 이 자리에 `HEAD` 해시를 적지 않는다 — §0 을 고치는 커밋이
+                        자기 해시를 모르므로 **항상 한 커밋 낡는다**(실제로 두 번 났다)
                   🟢 **CPO GO 완료 · 범위 LOCK · owner 좌표 확정**
                   🔵 전문 `docs/CANDIDATE-UX-REFINE-01.md` ← **이것만 읽고 바로 코딩한다**
                   ```
