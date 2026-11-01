@@ -1,4 +1,61 @@
-# CANDIDATE-UX-REFINE-04 — 후보 중복 UI 통합 + 재진입 복원
+# CANDIDATE-UX-REFINE-04 + UX-FINAL-01 — **LONG SPRINT**(CPO 확정 2026-11-01)
+
+> 🔴🔴 **쪼개지 않는다.** `B-3`(복원) → `UX-FINAL-01`(UI 마감) → 통합 E2E → 실제 화면 1회
+> 를 **한 단위** 로 끝낸다. 🔴 **중간에 CPO 에게 1~2개씩 결정을 묻지 않는다**(이번 금지).
+> 🔴 STOP 은 **실제 기술 BLOCK** 일 때만.
+
+## 🟢 CPO 가 방금 닫은 결정 둘 — 재논의 금지
+
+```
+① §4 「가격 1순위」 = **시각적 강조** 다. DOM 순서가 «아니다».
+   🟢 카드 순서는 그대로 — 이미지 → 판정 → 가격 → 판매처 → 경고 → 선택 → 링크
+   🟢 계약 `R2-08`(cand-02:907 `group < price`) **유지** — 깨지 않는다
+   🔴 바꾸는 것은 **가격의 시각 비중**(크기·굵기) 뿐이다
+② 순서 = **B-3 → UX-FINAL-01**. 복원 데이터를 먼저 완성하고
+   **그 데이터를 포함한 상태에서** UI 를 한 번에 마감한다(두 번 검토하지 않는다).
+```
+
+## 🟢 UX-FINAL-01 — 이미 확인된 것(조사 불필요)
+
+```
+🟢 §6 「그룹 설명 숨김」 — **막는 계약이 0** 이다(실측: `mi-candidate-group-note` 를
+   단언하는 테스트 없음). 운영 코드 3줄뿐 —
+   `MarketPriceComparison.tsx:87`(import) · `:1624`(tooltip) · `:1633`(본문)
+   ⟹ 🟢 **본문(:1633)만 지우고 tooltip(:1624)은 남긴다** — 설명은 사라지고 뜻은 남는다
+🟢 후보 surface 는 **이미 하나** 다(`mi-candidate-row`) — A 에서 끝냈다
+🟢 카드 구조·P1/P2/P3·경고 한 줄·raw 토큰 금지 — `-02`/`-03` 에서 끝냈다
+⟹ 🔴 UX-FINAL-01 에서 **새로 만들 UI 가 없다.** 남은 것은 **빼기와 시각 비중** 뿐이다:
+   ⒜ 그룹 설명 본문 제거 ⒝ 가격 시각 강조 ⒞ 국내/해외 타이포·여백 동일화
+   ⒟ §17 의 10항 DOM 비교로 확인
+```
+
+## 🔴 이 스프린트의 금지(둘을 합친 전수)
+
+```
+Search/Crawl/check 재실행 · 「다시 분석」을 정상 진입 수단화 · Identity 정책 ·
+Search 정책 · price aggregation 정책 · WU-148 가격 의미 · priceTier 임의 생성 ·
+계약 약화로 통과 · `mi-same-row` 부활 · 후보 surface 둘 · 국내/해외 다른 카드 ·
+후보 수/가격 수/aggregation 변화 · SIMILAR 재등장 · 텍스트를 늘려 해결
+```
+
+## 📋 종료 조건 18 (CPO)
+
+```
+B-3  ① 저장 후보 복원 ② price_status/sold_out/matchReasons 복원 경로
+     ③ 재진입 Search/Crawl/check = 0 ④ 저장 후보 즉시 표시 ⑤ P1/P2/P3 보존
+UI   ⑥ mi-same-row 완전 제거 ⑦ mi-candidate-row 단일 surface
+     ⑧ 국내/해외 DOM 구조 비교 ⑨ 가격 시각 우선순위 ⑩ 불필요 텍스트 제거
+     ⑪ 선택 버튼 ⑫ 링크
+불변 ⑬ 후보 수/가격 수/aggregation 불변
+검증 ⑭ 전체 regression ⑮ typecheck ⑯ build ⑰ deploy
+     ⑱ 실제 `/pipeline?resume=` 1회 — 🔴 **CEO** (CTO 는 볼 수 없다)
+```
+
+🔴 **⑱ 만 CEO 축이고 ①~⑰ 은 CTO 축이다.** 보고 시 **PASS 옆에 분모** 를 같이 적는다.
+
+---
+
+# [상세] CANDIDATE-UX-REFINE-04 — 후보 중복 UI 통합 + 재진입 복원
 
 > 🔵 CPO 최종 지시서 수령(2026-11-01). **조사 끝 · 설계 끝 · 남은 것은 구현뿐이다.**
 > 🔴 이 문서 하나만 읽고 착수한다. 추가 조사 WU · 비교표 WU · 국내/해외 별도 WU 로 **쪼개지 않는다**.

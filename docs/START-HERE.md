@@ -11,7 +11,18 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-🔵🔵🔵 CURRENT WU  **CANDIDATE-UX-REFINE-04 — A·B-1·B-2 배포 완료 · 남은 것은 B-3 하나**
+🔵🔵🔵 CURRENT WU  **LONG SPRINT — `-04 B-3` + `UX-FINAL-01`**(CPO 확정 · 쪼개지 않는다)
+                  🔵 **`docs/CANDIDATE-UX-REFINE-04.md` 하나만 읽는다** — 최상단
+                     「LONG SPRINT」절에 결정·금지·종료조건 18 이 전부 있다
+                  🔴 **중간에 CPO 에게 1~2개씩 묻지 않는다** · STOP 은 실제 기술 BLOCK 만
+                  🟢 **정책 BLOCK 0** — ⒝ savedCandidateRows · ⒜ matchReasons 저장 ·
+                     source ⒝(정확 일치 둘만) · 가격 1순위=**시각 강조**(DOM 순서 불변 ·
+                     `R2-08` 유지) · 순서 **B-3 → UX-FINAL-01**
+                  🟢 **UX-FINAL-01 은 새로 만들 UI 가 «없다»** — 빼기와 시각 비중뿐
+                     (그룹 설명 본문 제거는 **막는 계약 0** 실측 · tooltip 은 남긴다)
+                  🔴 ⑱ 실제 `resume=` 화면만 **CEO 축** · ①~⑰ 은 CTO 축
+
+🔵 [이전] CANDIDATE-UX-REFINE-04 — A·B-1·B-2 배포 완료 · 남은 것은 B-3 하나
                   `41aaf43a` · clean · 0/0 · 🔵 전문 `docs/CANDIDATE-UX-REFINE-04.md`
                   ```
                   🟢 A      mi-same-row 중복 surface 제거 · 계약 6파일 좌표 이동 ·
