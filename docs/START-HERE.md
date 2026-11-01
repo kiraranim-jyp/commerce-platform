@@ -11,7 +11,28 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-🔵🔵🔵 CURRENT WU  **CANDIDATE-UX-REFINE-04 — 🔴 조사 1건만 남았다(DOM 비교표)**
+🔵🔵🔵 CURRENT WU  **CANDIDATE-UX-REFINE-04 — 🟢 조사·설계 끝 · «구현만» 남았다**
+                  🔵 **전문 `docs/CANDIDATE-UX-REFINE-04.md` 하나만 읽고 착수한다**
+                     (CPO 최종 지시서 + DOM 실측 + 구현 좌표 + 계약 8파일 목록 전부 그 안)
+                  🔴 추가 조사 WU · 비교표 WU · 국내/해외 별도 WU 로 **쪼개지 않는다**(CPO)
+
+                  🔴🔴🔴 **DOM 실측으로 «세 번 FAIL 한 원인» 이 확정됐다**
+                  ```
+                  mi-same-row        접힘 «밖» · 항상 보인다 · 셀러가 먼저 보는 것
+                  mi-candidate-row   접힘 «안»  ← -01·-02·-03 이 고친 곳
+                  ⟹ 같은 후보가 두 번 서고, 접힘 안쪽을 고쳐도 **첫 화면이 안 바뀐다**
+                  🔴 mi-same-row 에는 **판정 라벨이 없다**(WU-091 불변식 미준수)
+                  실측 분모 — 국내 후보행 2(🟢1·🟡1) · 해외 12(🟢5·🟡6·품번충돌1) ·
+                             mi-same-row 국내 1 · 해외 4 (전부 위 숫자에 **중복 포함**)
+                  🟢 국내/해외는 **이미 구조가 같다** — 통일할 것은 KR↔OVERSEAS 가 아니라
+                     **mi-same-row ↔ mi-candidate-row** 다
+                  ```
+                  🟡 **CPO 판정 1건 대기(구현 중 만난다)** — 복원 행은 `matchReasons` 가 없어
+                     `isModelCodeOnlyReference` 가 발화하지 못한다 ⟹ 재진입에서 **품번충돌
+                     참고 후보가 서지 못한다**. ⒜ matchReasons 도 저장 ⒝ 복원 경로만 다른 기준
+                     ⒞ 수용 — 🔴 CTO 가 고르지 않는다(전문 §2 B-3)
+
+🔵 [이전 단계] 조사 1건(DOM 비교표) — 🟢 완료
                   `1c42c646` 배포 유지 · clean · 0/0 · **PRODUCT UX HOLD**
                   🔴 **구현 금지** — DOM 비교표 제출 → CPO 가 범위 확정 → 그 뒤 구현
 
