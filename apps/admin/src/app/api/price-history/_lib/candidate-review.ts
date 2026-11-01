@@ -39,6 +39,10 @@ export interface CandidateReviewRow {
   matchTruth: string | null;
   priceTier: string | null;
   blockers: string[];
+  /** 🔵 CANDIDATE-UX-REFINE-04 B — 재진입 복원용(migration 081). null 은 **모른다** 다. */
+  priceStatus: string | null;
+  soldOut: boolean | null;
+  matchReasons: string[];
   humanVerdict: HumanVerdict | null;
   source: ReviewSource;
   firstSeenAt: string;
@@ -60,6 +64,21 @@ export interface SeenCandidateInput {
   matchTruth?: string | null;
   priceTier?: string | null;
   blockers?: string[];
+  /**
+   * 🔵🔵🔵 CANDIDATE-UX-REFINE-04 B — **재진입 복원에 필요한 세 칸**(migration 081).
+   *
+   * 🔴 없으면 재진입 화면이 최초 화면과 **다른 말** 을 한다:
+   * ```
+   * priceStatus   없으면 isPriceConfirmed=false ⟹ **모든 가격이 P2** 로 떨어진다
+   * soldOut       판매여부 세 상태를 복원하지 못한다(null 은 「판매중」이 아니다)
+   * matchReasons  🔴 isModelCodeOnlyReference 가 **길이를 게이트** 로 쓴다 ⟹ 없으면
+   *               재진입에서 **「🟡 품번 충돌 · 참고」 군이 통째로 사라진다**(CPO ⒜)
+   * ```
+   * 🔴 `matchReasons` 는 **보관 전용** 이다 — 셀러 카드엔 표시하지 않는다(`-02`/`-03`).
+   */
+  priceStatus?: string | null;
+  soldOut?: boolean | null;
+  matchReasons?: string[];
   source: ReviewSource;
 }
 
@@ -84,6 +103,10 @@ const toRow = (r: any): CandidateReviewRow => ({
   matchTruth: r.match_truth ?? null,
   priceTier: r.price_tier ?? null,
   blockers: Array.isArray(r.blockers) ? r.blockers : [],
+  /** 🔴 없으면 `null`/`[]` 다 — 「확인됨」으로 **추정하지 않는다**(backfill 금지와 같은 원칙). */
+  priceStatus: r.price_status ?? null,
+  soldOut: typeof r.sold_out === "boolean" ? r.sold_out : null,
+  matchReasons: Array.isArray(r.match_reasons) ? r.match_reasons : [],
   humanVerdict: isHumanVerdict(r.human_verdict) ? r.human_verdict : null,
   source: r.source,
   firstSeenAt: r.first_seen_at,
@@ -306,6 +329,14 @@ export async function recordSeenCandidates(input: {
     match_truth: c.matchTruth ?? null,
     price_tier: c.priceTier ?? null,
     blockers: c.blockers ?? [],
+    /**
+     * 🔵 CANDIDATE-UX-REFINE-04 B (migration 081) — 🔴 **지어내지 않는다.**
+     *    값이 없으면 `null` 로 둔다 — 재진입에서 안전측(P2 · 판매여부 확인불가)으로
+     *    표시되는 것이 「확정이라고 거짓말하는 것」보다 낫다.
+     */
+    price_status: c.priceStatus ?? null,
+    sold_out: c.soldOut ?? null,
+    match_reasons: c.matchReasons ?? null,
     source: c.source,
     last_seen_at: now,
   }));

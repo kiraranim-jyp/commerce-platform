@@ -456,6 +456,16 @@ export async function POST(request: Request) {
           matchTruth: e.matchTruth,
           priceTier: e.priceTier,
           blockers: [...e.crossSellerBlockers, ...e.crossSellerConflicts],
+          /**
+           * 🔵🔵 CANDIDATE-UX-REFINE-04 B — **재진입 복원용 세 칸**(migration 081).
+           * 🔴 지어내지 않는다 — 운영 evidence 가 든 값을 **그대로** 옮긴다.
+           * 🔴 `matchReasons` 는 **보관 전용** 이다(셀러 카드엔 안 나간다 · `-02`/`-03`) —
+           *    `isModelCodeOnlyReference` 게이트 입력이라 없으면 재진입에서
+           *    「🟡 품번 충돌 · 참고」 군이 사라진다.
+           */
+          priceStatus: e.priceStatus,
+          soldOut: e.soldOut,
+          matchReasons: e.matchReasons,
           source,
         })),
       });
