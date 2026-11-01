@@ -199,13 +199,50 @@ B3-10 실제 마운트 DOM — mi-candidate-row · mi-candidate-price ·
    🟡 선택지(🔴 CTO 가 고르지 않는다) — ⒜ 매핑표 신설(GEMINI→GEMINI_DISCOVERY ·
       DOMESTIC_REGISTRY→DOMESTIC_LISTING · 🔴 GT_IMPORT 는 **대응이 없다**)
       ⒝ 복원 행은 source 를 비운다(배지 사라짐) ⒞ 「복원됨」 값을 양쪽에 추가
-   🔴 ⒜ 를 고르면 **GT_IMPORT 를 어디로 보낼지**가 남는다 — 그것은 제품 정책이다
+   🟢🟢 **CPO 확정 = ⒝**(2026-11-01) — 아래 LOCK 참조. **BLOCK 해소됨.**
 
 🔴 ② B3-08 은 **CTO 가 절반만 잴 수 있다**
    「최초 분석」을 돌리려면 live HTTP + service-role 키가 필요하고 CTO 에겐 **없다**.
    🟢 CTO 가 낼 수 있는 것 — 「**저장된 N 행이 복원에서 N 행으로 나온다**」(누락 0).
    🔴 「최초 화면 ↔ resume 화면이 같다」는 **CEO 축** 이다. 분모를 갈라 적는다.
 ```
+
+#### 🟢🟢 **LOCK — Source 복원 정책**(CPO ⒝ 확정 2026-11-01 · BLOCK 해소)
+
+> **원칙 — 출처를 «추측해서» 바꾸지 않는다.** source 는 provenance 다.
+
+```
+저장 source          화면 표시
+SELLER_URL        →  SELLER_URL        🟢 의미가 정확히 같다
+OVERSEAS_AUTO     →  OVERSEAS_AUTO     🟢
+DOMESTIC_REGISTRY →  **매핑하지 않는다**
+GEMINI            →  **매핑하지 않는다**
+GT_IMPORT         →  **매핑하지 않는다**
+```
+
+🔴 **미매핑 처리 — 배지 «자체» 를 렌더하지 않는다.**
+```
+❌ GEMINI_DISCOVERY / DOMESTIC_LISTING / REVIEWED_SAME / WEB_SEARCH 로 임의 변환
+❌ 「복원됨」 같은 새 source 신설 — 그건 출처가 아니다(provenance 가 사라진다)
+❌ 빈 배지를 렌더
+✅ `SOURCE_LABEL[row.source]` 가 **존재할 때만** 배지를 세운다
+```
+
+🟢🟢 **UI 변경이 «0» 이다** — `GeminiTransientCandidates` 가 이미 `{row.source && (…)}`
+로 가드한다. ⟹ **매퍼가 미매핑 값에 `undefined` 를 내기만 하면** DoD 2·3 이 충족된다.
+🔴 저장된 `source` **원값은 변조하지 않는다**(DB 는 그대로).
+
+```
+DoD  ① SELLER_URL·OVERSEAS_AUTO 는 기존 label 정상 표시
+     ② 미매핑 source 는 배지 **미렌더**   ③ 빈 배지 DOM **0**
+     ④ 저장 원값 변조 0   ⑤ source 때문에 후보가 **제거되지 않는다**
+     ⑥ source 처리가 P1/P2/P3 와 복원 결과를 **바꾸지 않는다**
+적용 범위 — **source 표시/복원에만.** Identity · matchTruth · systemVerdict ·
+     priceTier · 가격 집계 · Search · Crawl · Market Classification ·
+     candidate selection/visibility 는 **전부 불변**.
+```
+
+🟢 **⟹ 착수 전 정책 BLOCK 이 남아 있지 않다.** 다음은 **구현** 이다.
 
 ---
 
