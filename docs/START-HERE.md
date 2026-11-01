@@ -11,7 +11,31 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-🟡🟡🟡 CURRENT WU  **CANDIDATE-UX-REFINE-02 — 🔴 CPO 작업지시서 대기 · CTO 코딩 금지**
+🟡🟡🟡 CURRENT WU  **CANDIDATE-UX-REFINE-02 — 🟡 HOLD · CEO 실제 화면 확인 대기**
+                  `568b7d3c` 배포 완료 · clean · 0/0 · 🔴 **CTO 추가 코딩 금지**(CPO)
+                  🟢 구현 · 기존 회귀 · typecheck/build · negative guards = **GO**
+                  🟢 P1 12 · P2 3 확인   🟡 **P3 0 = 측정불가**(PASS 아님)
+                  🟡 **blocker 분모 1** — 「다양한 blocker UX 검증」으로 **확대 금지**
+                  🔴 Production UX = **미확인** ⟹ 최종 판정 **HOLD**
+
+                  🔴🔴 **CEO 확인 ②는 지금 «공허하게» 통과한다 — 먼저 알아야 한다**
+                  ```
+                  cross-seller.ts:1307  const blocked = blockers.length > 0;
+                                        if (!blocked && … ) return "SAME";
+                  ⟹ **SAME 은 blockers 가 비어야만 나온다**
+                  ⟹ 「🟢 동일상품 가능성 높음 + ⚠ 브랜드 불일치」는 **구조적으로 불가능**
+                  🟢 -01 에서 CEO 가 본 그 모순은 blocker 가 아니라 **matchReasons 진단
+                     문자열** 이었고 -02 가 그 경로를 끊었다 ⟹ ②의 실질 확인 대상은
+                     **「진단 문장이 사라졌는가」** 다
+                  🔴 미측정 — `conflicts` 는 `blockers` 와 다른 배열이고 위 게이트가 보지
+                     않는다. 경고 줄은 둘을 합치므로 「🟢 + ⚠ 품번 충돌」 가능 여부는
+                     downstream tier 매핑 미추적 ⟹ 실측 분모에서는 **0건**
+                  ```
+                  🟡 CEO 가 볼 다섯 — ① 카드 첫 1초(판정→가격→판매처) ② 진단 문장 소멸
+                     ③ P2 가 P1 과 다르게 ④ POSSIBLE 이 참고로 읽힘 ⑤ **선택용 카드로 보이는가**
+                  🔴 직관적이면 GO · 아니면 **그 화면에서 발견된 문제만** 으로 `-03` 정의
+
+🔵 [직전] CANDIDATE-UX-REFINE-02 구현 — 🔴 CPO 작업지시서 대기 · CTO 코딩 금지
                   🟢 `-01` 은 배포 유지(`9cde06a0`) · **revert 하지 않는다**(CPO 확정)
                   🔴 `-01` 판정 — 구현/계약/회귀 **GO** · 실제 화면 UX **FAIL**
                      「기능은 들어갔지만 상품 소싱 의사결정 UI 가 아니다」(CPO)
