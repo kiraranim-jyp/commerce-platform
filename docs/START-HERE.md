@@ -18,13 +18,26 @@
                   🟢 **CPO GO 완료 · 범위 LOCK · owner 좌표 확정**
                   🔵 전문 `docs/CANDIDATE-UX-REFINE-01.md` ← **이것만 읽고 바로 코딩한다**
                   ```
-                  순수 UI 7건 — U1 섹션제목「해외 소싱 후보 N곳」 · U2 그룹 보조설명 ·
+                  순수 UI 7건 — U1 섹션제목「{시장} 소싱 후보 N곳」 · U2 그룹 보조설명 ·
                   U3 그룹제목+후보수+여백 · U4 카드순서(이미지→등급→가격→상품명→판매처→
-                  근거→링크) · U5 가격강조/「가격 확인 필요」 · U6 tooltip 3종 · U7 빈 상태
-                  owner — mi-same-candidates.ts(U1·U2·U6·U7) ·
-                          MarketPriceComparison.tsx `data-testid="mi-candidate-list"`(U3·U4·U5)
-                  계약 4 — ccl-01 · pp-01 · cand-01 · wu-132 (느슨하게 하지 않고 갱신)
+                  근거→링크) · U5 **가격 3상태** · U6 tooltip 3종 · U7 빈 상태
+                  owner — mi-same-candidates.ts(U1·U2·U6·U7 + priceState 어댑터) ·
+                          MarketPriceComparison.tsx **market prop** + `mi-candidate-list`(U3·U4·U5)
+                  계약 **5** — ccl-01 · pp-01 · cand-01 · wu-132 · **cand-02**
                   ```
+                  🔴🔴 **CPO 확정 3건(2026-11-01) — 전문 §1 · §2-A · §5 가 기준이다**
+                  ⒜ `MarketColumn` 은 국내·해외 **공유** 다 ⟹ U1/U7 은 **시장별 Record** ·
+                     `market: "KR"|"OVERSEAS"` prop 추가(선례 `PRICE_GUIDE_TITLE:738`)
+                     🔴 한 줄로 두면 **🇰🇷 국내 칸에 「해외」가 뜬다**
+                  ⒝ U5 는 **3상태** — P1 확인됨 `priceText` · P2 금액있음/미검증
+                     `priceText` **+「판매처 표시가 · 상세 검증 전」** · P3 「가격 확인 필요」
+                     🔴 **P2 를 P1 처럼 취급하지 않는다**(셀러가 확정가로 오인한다) ·
+                     🔴 숨기지도 않는다(WU-111 실측 반증 · 통화 축이 사라진다) ·
+                     🟢 owner 는 기존 `isPriceConfirmed` 하나(`priceState` 는 **어댑터**)
+                  ⒞ 계약은 **5개** 다 — `cand-02` 를 빼면 `CANDIDATE_LIST_HEADING` 을 Record 로
+                     바꾸는 순간 `not.toContain(객체)` 가 되어 **가드가 동어반복으로 죽는다**
+                     🔴 `CANDIDATE_LIST_EMPTY` **식별자 이름·위치 유지**(close-03:232 소스 앵커)
+                     🔴 `priceText` · `PRICE_UNKNOWN_TEXT` · 가격 집계/eligibility **변경 0**
                   🔴 **조사 0 으로 시작한다** · 🔴 **범위 확장 금지** —
                      Identity · 가격 · Market · Search · Crawl · Registry · transient ·
                      snapshot · 자동분석 · **[다시 분석]** · **접힘(mi-022/WU-136)** ·
