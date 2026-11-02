@@ -361,3 +361,37 @@ URL  /pipeline?resume=**79a09cfb**-5e0c-4cc4-a8b5-349d89a603f7
     등이 「긴 설명은 1차에 없다 / 상세에 있다」를 **양방향** 으로 물고 있다.
     ⟹ 배치를 바꾸면 그 계약들의 **분모(1차 ↔ 상세)** 를 같이 갱신해야 한다.
 ```
+
+### ⑥ 🔵🔵 새 계약축 — **「존재」가 아니라 «노출»을 잰다**(CPO 확정 2026-11-02)
+
+🔴 이 트랙이 **기술 PASS / 화면 FAIL** 을 **세 번** 낸 구조적 원인이다. 내 계약은
+노드가 **있는지** 는 쟀지만 **몇 겹 뒤에 있는지** 를 재지 않았다 — 그 사이에
+**배치/접힘** 이라는 층이 있고 CEO 가 보는 것은 그 층이다.
+
+```
+기존(유지)  데이터 존재 · DOM mounted · 후보 카드 존재
+🔵 신규     ⒜ **접힘 깊이**            카드의 조상 `<details>` 수 == 기대값
+            ⒝ **1차 화면 노출 여부**   `price-detail-fold` **밖** 에 무엇이 서는가
+            ⒞ **의사결정 정보 우선순위** 판단 → 가격 → 후보수 → 확정 **순서**
+            ⒟ **국내/해외 구조 대칭**   두 칸의 testid 척추가 **순서까지** 같다
+```
+
+🟢 **구현 힌트(조사 0)** — 깊이는 마운트 DOM 에서 바로 잴 수 있다:
+```ts
+const depth = (el: Element) => { let d = 0, p = el.parentElement;
+  while (p) { if (p.tagName.toLowerCase() === "details") d++; p = p.parentElement; } return d; };
+expect(depth(card)).toBeLessThanOrEqual(1);   // 🔴 지금은 2 다
+```
+🔴 그리고 **1차 노출** 은 `price-detail-fold` 를 **제거한 clone** 의 textContent 로 잰다
+(CLOSE-3 이 쓴 「분모 분리」와 **같은 기법** · 새 패턴 0).
+
+### ⑦ 🟡 고정된 운영 상태(다음 세션이 그대로 쓴다)
+
+```
+UI/UX FINAL SPRINT  **NO-GO**        B-3 복원      **PASS**(다시 파지 않는다)
+운영 코드           변경 없음         배포          `8f83ab1` 유지
+Sprint 3 Discovery  **대기**          검증 상품     **6db15ecc** 고정
+다음                **FINAL UX REBUILD 1회 LONG SPRINT**
+```
+🔴 **「계약 PASS」를 제품 PASS 로 쓰지 않는다** — 「첫 화면에 무엇이 보이는가」가
+**별도의 CPO/CEO acceptance 기준** 으로 들어왔다(CPO 확정).
