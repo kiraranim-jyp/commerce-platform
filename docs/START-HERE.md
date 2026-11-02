@@ -11,7 +11,23 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-🔵🔵🔵 CURRENT WU  **PRICE & CANDIDATE UX FINAL FIX = 구현·배포 완료 · CEO 화면 1회만 남았다**
+🔴🔴🔴 CURRENT WU  **SPRINT 3 — DISCOVERY QUALITY + SELLER DECISION UI**(CPO NO-GO 2026-11-02)
+                  🔵 **착수점은 `docs/SPRINT3-DISCOVERY-UI.md` 하나다** · 코드 **0 · clean**
+                  🔴 **CTO 가 이번 세션에 착수하지 않았다**(§4-C 용량) — 다음 세션이
+                     그 문서 §0 을 읽고 **조사 0** 으로 STEP 1 부터 들어간다
+                  ```
+                  🟢🟢 **자동 시장분석은 «작동한다» — 열린 질문이 닫혔다**
+                     CEO 캡처 URL 이 `/pipeline`(**`?resume=` 없음**)이고 「다시 분석」
+                     없이 후보·가격이 떠 있다 ⟹ `page.tsx:529` 가 **실제로 발화한다**.
+                     🔴 AUTO-LOAD 분기 **A 는 반증** · 그 스프린트를 다시 열지 않는다
+                  🔴🔴 **TEST A(B226AC043)는 후보 부족이 아니라 Precision 붕괴다**
+                     정답(EUR 77.4 · JPY 16,500 · donokids KRW 162,000)이 **같이 있는데**
+                     Stone Island 등 **다른 브랜드/다른 상품** 이 같은 배지로 선다.
+                     🔴 그 오염이 **1차 집계까지** 올라갔다(CAD 26,300 이 최저가 후보)
+                  🔴 **TEST B(B226AC010)는 Recall** — 해외가 1곳뿐이다
+                  🔴 CEO: 「알고 싶지도 않은 게 너무 많다」 ⟹ UI 는 **빼는 작업만**
+                  ```
+🔵 [이전] PRICE & CANDIDATE UX FINAL FIX — 구현·배포(`484c6dfe`)
                   🟢 전문 `docs/UIUX-FINAL-SPRINT.md` 맨 끝 **ⓞ~⑦**
                   ```
                   🔴🔴 **`6db15ecc` 를 운영 DB 로 깠다 — 기대와 정확히 일치한다**
