@@ -12,9 +12,59 @@
 
 ```
 🔴🔴🔴 CURRENT WU  **SPRINT 3 — DISCOVERY QUALITY + SELLER DECISION UI**(CPO NO-GO 2026-11-02)
-                  🔵 **착수점은 `docs/SPRINT3-DISCOVERY-UI.md` 하나다** · 코드 **0 · clean**
-                  🔴 **CTO 가 이번 세션에 착수하지 않았다**(§4-C 용량) — 다음 세션이
-                     그 문서 §0 을 읽고 **조사 0** 으로 STEP 1 부터 들어간다
+                  🔵 **착수점은 `docs/SPRINT3-DISCOVERY-UI.md` 하나다** · 운영 코드 **0**
+                  🔴🔴 **STOP — 도구 안전검사가 ① 운영 DB 읽기를 차단한다**(2026-11-02)
+                     🟢 CPO 가 ①(read-only DB) · ②(B226AC043 라이브 1회)를 **승인했다**
+                     🔴 그런데 `node` 스크립트 실행이 **auto mode 와 «별개» 인 안전검사**에
+                        막힌다(사유 「행위 자체가 아니다」) ⟹ **CTO 가 풀 수 없는 층**
+                     🔴 **우회 금지**(CEO 명시) — 재시도·권한 강제·테스트로 대체 실행 **전부 금지**
+                     🔴 **§5 구현 금지** — 측정 전에는 필터를 바꾸지 않는다(CPO ③)
+                     🟢 **측정기 2개는 준비 완료 · 미커밋 유지**(그대로 둔다)
+                        `packages/database/scripts/sprint3-discovery-dump.mjs`(①)
+                        `apps/admin/.../__tests__/sprint3-discovery-funnel.test.ts`(② · SPRINT3_FUNNEL=1)
+                     🔵 **재개 = ① → ② 연속 실행** 뒤 원인 1개 확정 → 최소 수정 → 계약 →
+                        변이 → 회귀 → build → deploy → TEST A/B 운영 검증(한 LONG SPRINT)
+                  ```
+                  ```
+                  🔴🔴🔴 **상태를 «다섯 줄» 로 적는다 — 하나로 뭉치면 거짓이다**(CPO 확정)
+                     🔴 P0 STOP        권한/안전검사 대기(① 운영 DB 읽기 차단)
+                     🟡 UI/UX FINAL    **미종료**
+                     🟢 기존 UI 구현    **보존**
+                     🔴 가격/후보 정확성 **미해결**
+                     🔴 **SPRINT 3      미완료**
+                     🔴 CEO 지적        「정보가 너무 많다」· 「노출하고 싶은 거 막 써놓은 듯」
+                                       ⟹ **아직 최종 해결 대상으로 살아 있다**
+                  🔵🔵 **실행 규격 = `docs/SPRINT3-DISCOVERY-UI.md` §7**(CPO LONG SPRINT
+                     작업지시서 전문 · 2026-11-02) — 순서 §6 · 규격 §7 · 🔴 **재조사 금지**
+                     그 안에 P0 분기 **Case A~D** · M1~M7 · UXR-D/F/P/S/C · M-UX-1~7 ·
+                     절대금지 · **보고 22절** · 종료 규칙이 **전부** 있다
+                     🔴 **§7-0 을 먼저 읽는다** — §5(verdict 확장 승인)와 §7(「임의 추가 금지」)의
+                        충돌을 해소해 뒀다: **승인은 유효 · 적용은 5단계**
+                        (① P0 측정 ② 필요성 증명 ③ 영향 범위 ④ **국내 회귀 검사** ⑤ 최소 변경)
+                     🔴 **P0 측정 전에 verdict 계약을 구현하면 지시서 위반이다**
+                     🔵 **§7-0-b** — STOP 중 허용은 **구문 검사 · load/SKIP 검사 둘뿐** ·
+                        권한이 열리면 🔴 **묻지 않고** §7-2 순서를 **중간 종료 없이** 실행
+                  🔴🔴🔴 **P0~P2 만 끝내고 「Sprint 3 완료」로 닫지 않는다**(CPO 명시) —
+                     **P3(UI/UX FINAL) 은 선택이 아니라 «종료 조건»** 이다.
+                     🔴 「가격이 맞게 나온다」를 FINAL 로 쓰지 않는다.
+                     🟢 데이터가 정확해진 것은 **P3 를 할 수 있게 된 것** 이다.
+                  🔴 **「UI/UX 완료」로 보고하지 않는다.** 🔴 그렇다고 **지금 UI 를 또 건드리지도
+                     않는다** — 순서는 `docs/SPRINT3-DISCOVERY-UI.md` **§6** 하나다:
+                     **P0 원인확정 → P1 1차 가격 오염 차단 → P2 TEST A/B(정밀도·재현율)
+                     → P3 UI 를 «빼는» 최종 정리 → FINAL(CEO 가 다섯 질문에 바로 답하면 종료)**
+                  🔴 FINAL 다섯 — ① 어떤 상품 ② 동일상품 후보 **어디** ③ 국내/해외 **얼마**
+                     ④ **어느 판매처** ⑤ **최종 판매가 확정**. 나머지는 **전부 상세정보 안으로**
+                  ```
+                  ```
+                  🔴🔴 **CAD 26,300 의 verdict 는 «아직 확정되지 않았다»**(코드로 좁힌 것만 적는다)
+                     집계는 `EXCLUDED` **만** 건너뛴다(candidate-market.ts:259) ⟹
+                     `SIMILAR → REFERENCE` · `PRESUMED_SAME → TEXT_CONFIRMED → COMPARISON`
+                     **둘 다 1차 금액 집계에 진입한다**
+                     🟢 그래서 **verdict 가 CONFLICT 는 아니다**(그러면 EXCLUDED 로 막혔다)
+                     🔴 남은 둘이 **§5 의 운명을 가른다** —
+                        `SIMILAR/UNKNOWN` ⟹ §5 가 막는다 · `PRESUMED_SAME` ⟹ **§5 가 못 막는다**
+                        (후보 brand 를 못 읽어 `BRAND_UNCONFIRMED` 면 그 모양이 된다)
+                     🔴 ⟹ **추정으로 §5 를 적용하면 배포해도 화면이 안 바뀐다**
                   ```
                   🟢🟢 **자동 시장분석은 «작동한다» — 열린 질문이 닫혔다**
                      CEO 캡처 URL 이 `/pipeline`(**`?resume=` 없음**)이고 「다시 분석」
@@ -1303,6 +1353,60 @@ Git          clean · origin/main 0/0 · Production / 200
 🔴 **CTO 가 할 코드 작업이 없다.** 다음은 **CPO 판정** 이다 — matcher 를 CTO 가 열지 않는다.
 🔴 **용어는 여섯뿐** — MEASURED / CLOSED / HOLD / REJECT / 측정불가 / STOP.
 🟢 종료된 WU 상세·정합표·과거 측정은 전부 `docs/ARCHIVE-CLOSED-WU.md` 에 있다(막혔을 때만 연다).
+
+---
+
+## 0-B. 🔵🔵🔵 **「그래서 지금 뭐 하고 있고 다음에 뭐 하지?」 — 일곱 칸으로 답한다**
+
+🔴 **CEO 가 페이지마다 다시 묻지 않게 하기 위한 절이다**(CPO 확정 2026-11-02).
+🔴 보고할 때 이 일곱 칸을 **같이** 갱신한다 — 하나만 고치면 다음 페이지가 과거를 읽는다.
+
+```
+[전략]      원상품 1개 → AI Search 로 국내/해외 **동일·유사 판매처를 최대한 많이** 찾고
+            → Evidence/Identity 로 판단 → **실제 소싱가** 를 붙여
+            → 셀러가 **판매처 선택 + 최종 판매가 확정** → 등록
+            🔴 우리가 만드는 것이 **아닌** 것 — 100% 동일상품 판정기 · 완벽한 크롤러 ·
+               완벽한 가격 DB · **후보를 줄여 정확도만 올리는 시스템**
+            🟢 철학 — 「정답을 주는 것이 아니라 **좋은 후보를 많이** 찾아 가격·근거와 함께
+               보여주고 **셀러의 판단을 돕는다**」
+[현재 단계]  **SPRINT 3 — Discovery/Price 정확성 + UI/UX FINAL** · Gate = **P0 측정**
+[완료]      후보 저장(`candidate_reviews`) · Identity 체계(SAME/PRESUMED/SIMILAR/
+            DIFFERENT/UNKNOWN/CONFLICT) · 국내·해외 가격 배선 · 추천가 ·
+            `priceOverrideKrw`(**최종가 owner · 새로 만들지 않는다**) · 통화 환산/환산불가 ·
+            **re-entry 복원**(재진입에 Search/Crawl 재실행 0 · `savedCandidateRows`)
+[미해결]    🔴 **① Precision — 엉뚱한 상품 가격이 소싱가 집계에 들어간다**(CAD 26,300)
+            🔴 **② Recall — B226AC010 에서 기대 후보가 부족하다**
+            🔴 둘은 **한 문장으로 같이** 판정한다(§7-8) — 한쪽만 올리면 전략 위반이다
+[현재 STOP] P0 ① 운영 DB 읽기가 **도구 안전검사**에 막혀 있다(CTO 가 풀 수 없는 층) ·
+            🔴 추정으로 대체 금지 · 우회 금지 · 허용은 **구문/load-SKIP 검사 둘뿐**(§7-0-b)
+[다음 CTO]  권한이 열리면 **묻지 않고** §7-2 를 중간 종료 없이 —
+            ① DB → ② 라이브 1회 → CAD 26,300 한 행 → **Case A~D** → P1 **1개** 수정 →
+            계약 → M1~M7 → 회귀/typecheck/build/deploy → P2 TEST A/B →
+            **P3 UI/UX FINAL(UXR + M-UX)** → 최종 회귀 → **CEO 5문항** → 보고 **22절 1회**
+[그 다음]   🔴 Sprint 3 CLOSED **전에는 넘어가지 않는다**. 그 뒤 순서는
+            STEP 2 **Seller Decision** → STEP 3 **Registration** → STEP 4 **운영 자동화**
+            (대량/반복 등록 · 실패 재처리 · 상태관리 · 가격변경 · 업데이트 · 모니터링)
+            🔴 즉 「찾아주는 시스템」 → **「판단해서 등록하는 시스템」** 으로 가는 것이고
+               **새 기능을 마구 더하는 단계가 아니다**
+```
+
+### 🔴🔴 CTO 가 코드로 확인한 **정정 둘** — 이 전제로 측정하면 틀린다
+
+```
+① 「후보 cap 20 확보」 → 🔴 **그런 상수는 없다.** 실제로 있는 20 은 둘이고 **뜻이 다르다**:
+     `MAX_SUPPLIED_CANDIDATE_URLS = 20`(run-domestic-price-check:277) = **셀러가 공급한 URL 상한**
+     `RESULTS_PER_PAGE = 20`(web-search-pool:46)                      = **검색 페이지 크기**
+   ⟹ 🔴 「후보 «표시» cap 20」으로 읽으면 **TEST B(Recall)의 원인을 cap 으로 오진** 한다
+② 「AB↔AC age-line 무조건 DIFFERENT 정책 폐기」 → 🟡 **절반만 사실이다**
+   🟢 `AGE-LINE-POLICY-01`(cross-seller.ts:983~) 이 **조기 반환을 건너뛴다** —
+      단 조건 **셋 전부**(충돌이 MODEL_CODE «하나뿐» · 품번 충돌 · 연령어휘 뺀 coreTitle **완전일치**)
+   🔴 **그러나 SAME 으로 승격되지 않는다** — `MODEL_CODE_AGE_LINE` blocker 를 세워
+      **보류(PRESUMED_SAME) 이하** 로 남고, `MODEL_CODE` 충돌은 **언제나 적힌다**
+   🔴🔴 **그래서 이것이 지금 P0 와 직접 만난다**:
+      age-line 후보는 **PRESUMED_SAME → TEXT_CONFIRMED → tier COMPARISON → 집계 진입** 이다
+      ⟹ P1 에서 자격을 **`SAME` 만** 으로 좁히면 **CPO 가 일부러 열어 둔 그 recall 을 닫는다**
+      ⟹ 🔴 「국내 가격 축 회귀 금지」와 **같은 성질의 함정** 이다(§7-6 와 같이 읽는다)
+```
 
 ---
 

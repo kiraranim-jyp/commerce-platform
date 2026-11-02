@@ -352,11 +352,21 @@ describe("§9 🔴 한 줄도 열지 않았다", () => {
     expect(AREA, "🔴 원가로 산수를 시작했다").not.toMatch(/costPriceKrw\s*[-*/+]/);
   });
 
-  /** 🔴 집계기는 **tier 를 해석만** 한다 — 승격·완화를 만들지 않는다. */
-  it("S-2 🔴 집계기가 tier 를 **승격하지 않는다**", () => {
+  /**
+   * 🔴 집계기는 **tier 를 해석만** 한다 — 승격·완화를 만들지 않는다.
+   *
+   * 🔴🔴 **SPRINT 3 P1 — 이 단언이 FAIL 했고 «의도된 변경» 이다**(CPO §5 ⒜ 승인).
+   *    실측: B226AC010 집계 진입 15건 중 `SIMILAR` 1건이 **TWD 최저 확인가** 였다.
+   * 🟢 **약화가 아니라 범위 축소다** — 집계기는 verdict 를 **가격 «자격»** 으로만 읽고
+   *    **tier 를 쓰지 않는다**. 아래 두 단언이 그것을 양방향으로 잠근다.
+   */
+  it("S-2 🔴 집계기가 tier 를 **승격하지 않는다**(verdict 는 자격으로만 읽는다)", () => {
     expect(CAND).toContain('r.priceTier === "EXCLUDED"');
-    for (const banned of ["PRESUMED_SAME", "EXACT_IDENTIFIER", "matchTruth"]) {
+    for (const banned of ["EXACT_IDENTIFIER", "STRONG_IDENTIFIER", "matchTruth"]) {
       expect(CAND, `🔴 집계기가 판정 어휘를 다룬다: ${banned}`).not.toContain(banned);
     }
+    /** 🔴 tier 를 **쓰지 않는다** · verdict 를 tier 로 번역하지 않는다. */
+    expect(CAND, "🔴 집계기가 tier 를 쓴다").not.toMatch(/priceTier\s*=[^=]/);
+    expect(CAND, "🔴 verdict 를 tier 로 번역했다").not.toMatch(/verdict[\s\S]{0,40}priceTier\s*=/);
   });
 });

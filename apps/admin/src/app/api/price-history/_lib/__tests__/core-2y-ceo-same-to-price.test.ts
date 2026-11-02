@@ -102,12 +102,36 @@ describe("§6 Q1~Q3 — 가격 집계가 «무엇을» 요구하는가", () => {
    *    집계기는 `{market, currency, amount, priceTier, sellerKey}` 만 본다 — **판정 어휘가 없다.**
    *    ⟹ 🟢 tier 만 올바르게 주어지면 **집계는 입력의 출처를 묻지 않는다.**
    */
-  it("Q2 🟢 집계기는 판정 어휘를 모른다 — tier 만 본다(재사용 가능)", () => {
+  /**
+   * 🔴🔴🔴 **SPRINT 3 P1 에서 이 단언이 FAIL 했고, 그것이 «의도된 변경» 이다.**
+   *
+   * CPO 가 §5 ⒜ 로 **「해외 집계 레코드에 identity verdict 를 싣는 최소 계약 확장」**
+   * 을 승인했다(2026-11-02). 근거는 실측이다 — B226AC010 집계 진입 15건 중
+   * `SIMILAR` 1건(`milanik.tw` TWD 2,980)이 **TWD 최저 확인가** 였다.
+   *
+   * 🔴 **약화하지 않았다 — 범위를 좁혀 «강화» 했다.** 집계기가 알게 된 것은
+   *    **「1차 가격에 쓸 수 있는 verdict 인가」** 하나이고, 여전히 금지되는 것은:
+   * ```
+   * ❌ matchTruth / EXACT_IDENTIFIER 를 읽는다      (tier 는 생산자가 준다)
+   * ❌ crossSellerVerdict «필드명» 을 읽는다        (그 이름의 owner 는 생산자다)
+   * ❌ tier 를 **쓰는다**(승격/강등)
+   * ❌ verdict → tier 매핑을 만든다
+   * ```
+   */
+  it("Q2 🟢 집계기는 tier 를 승격하지 않는다 — verdict 는 «가격 자격» 으로만 읽는다", () => {
     const CAND_SRC = strip(readFileSync(path.join(LIB, "candidate-market.ts"), "utf8"));
     expect(CAND_SRC).toContain('r.priceTier === "EXCLUDED"');
-    for (const banned of ["matchTruth", "crossSellerVerdict", "PRESUMED_SAME", "EXACT_IDENTIFIER"]) {
+    /** 🔴 판정을 «하는» 어휘는 여전히 금지다. */
+    for (const banned of ["matchTruth", "crossSellerVerdict", "EXACT_IDENTIFIER", "STRONG_IDENTIFIER"]) {
       expect(CAND_SRC, `🔴 집계기가 판정 어휘를 다룬다: ${banned}`).not.toContain(banned);
     }
+    /** 🟢 허용된 유일한 사용 — **자격 집합** 과 그 술어. */
+    expect(CAND_SRC).toMatch(/PRICE_ELIGIBLE_VERDICTS\s*=\s*new Set\(\["SAME",\s*"PRESUMED_SAME"\]\)/);
+    expect(CAND_SRC).toContain("PRICE_ELIGIBLE_VERDICTS.has(r.verdict)");
+    /** 🔴 **tier 를 쓰지 않는다** — 승격·강등이 생기면 이 단언이 깨진다. */
+    expect(CAND_SRC, "🔴 집계기가 tier 를 쓴다(승격/강등)").not.toMatch(/priceTier\s*=[^=]/);
+    /** 🔴 verdict → tier 매핑을 만들지 않는다. */
+    expect(CAND_SRC, "🔴 verdict 를 tier 로 번역했다").not.toMatch(/verdict[\s\S]{0,40}priceTier\s*=/);
   });
 
   /**

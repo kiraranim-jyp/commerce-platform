@@ -180,7 +180,39 @@ export interface CandidateOverseasPriceRecord {
    *    「판매처 수」가 조용히 틀려지기** 때문이다(계약이 D1·D3 로 잠근다).
    */
   sellerKey?: string | null;
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 SPRINT 3 P1 — **「유사상품」의 가격은 «동일상품 최저 확인가» 가 아니다**
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 **실측이 먼저다**(CPO 5단계 ①②③ · 2026-11-02). B226AC010 을 운영 함수로 돌려
+   *    집계 진입 **15건** 의 구성을 읽었다:
+   *    ```
+   *    verdict  PRESUMED_SAME 9 · SAME 5 · **SIMILAR 1**
+   *    tier     COMPARISON 9 · EXACT 5 · **REFERENCE 1**
+   *    🔴 그 SIMILAR 1건(`milanik.tw` TWD 2,980)이 **TWD 최저 확인가** 였다
+   *    ```
+   *    ⟹ 🔴 `EXCLUDED` 만 걸러서는 **「⚪ 유사상품」 가격이 최저가** 가 된다.
+   *       (CEO 가 B226AC043 에서 본 `CAD 26,300` 과 **같은 자리** 다)
+   *
+   * 🟢 **새 판정을 만들지 않는다** — `crossSellerVerdict` 는 **이미 계산된 값** 이고
+   *    생산자가 `GeminiTransientEvidence.crossSellerVerdict` 로 들고 있다(run-domestic:339).
+   *
+   * 🔴🔴 **옵셔널이다 — 넘기지 않으면 동작이 한 글자도 바뀌지 않는다.**
+   *    그래서 **국내 축이 회귀하지 않는다**(국내 레코드는 이 칸을 넘기지 않는다 · CPO ④).
+   *    `sellerKey`·`highestAmount` 가 추가된 것과 **같은 모양** 이다.
+   * 🔴 **`SAME` 만으로 좁히지 않는다** — `PRESUMED_SAME` 은 제품 정책이 **허용** 하고,
+   *    `AGE-LINE-POLICY-01`(AB↔AC 연령 라인)이 **의도적으로** 그 등급으로 보류시킨다
+   *    ⟹ 좁히면 CPO 가 열어 둔 recall 을 닫는다(「국내가 1 → 0」 선례와 같은 성질).
+   */
+  verdict?: string | null;
 }
+
+/**
+ * 🟢 **1차 가격 판단에 쓸 수 있는 verdict**(제품 정책 · CPO 확정 2026-11-02).
+ * 🔴 집합을 넓히거나 좁히는 것은 **제품 정책 변경** 이다 — 코드에서 임의로 고치지 않는다.
+ */
+const PRICE_ELIGIBLE_VERDICTS = new Set(["SAME", "PRESUMED_SAME"]);
 
 export interface CandidateOverseasPriceSummary {
   /** 가격 증거가 있는 해외/UNKNOWN 후보 수. */
@@ -257,6 +289,18 @@ export function summarizeCandidateOverseasPrices(
      *    `REFERENCE`(참고)는 「다른 상품이라고 관측된 것」이 아니다.
      */
     if (r.priceTier === "EXCLUDED") continue;
+    /**
+     * 🔴🔴🔴 SPRINT 3 P1 — **verdict 가 «있으면» 자격을 본다.**
+     *
+     * 🟢 `undefined` 면 **이 줄이 아무것도 하지 않는다** ⟹ 국내 축·기존 호출부는
+     *    동작이 한 글자도 바뀌지 않는다(위 `verdict` 칸 주석의 그 이유).
+     * 🔴 `null`(판정을 거친 적이 없다)도 **막지 않는다** — 「모르는 것」으로 가격을
+     *    지우면 판정 경로를 타지 않는 기존 후보가 조용히 사라진다(이 파일의 기존 원칙).
+     * 🔴 막는 것은 **「SAME 도 PRESUMED_SAME 도 아니라고 «관측된»」** 후보 하나다
+     *    (`SIMILAR` · `UNKNOWN` · `CONFLICT`).
+     * 🟢 **관측은 지우지 않는다** — `byMarket`·`byPriceTier` 는 위에서 **이미** 세어졌다.
+     */
+    if (r.verdict != null && !PRICE_ELIGIBLE_VERDICTS.has(r.verdict)) continue;
     if (r.amount == null || !Number.isFinite(r.amount)) continue;
     /**
      * 🔴🔴 CORE-2T — **키가 있으면 판매처 단위로 모은다.** 집계는 루프 뒤에서 한 번에

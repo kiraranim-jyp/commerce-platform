@@ -123,7 +123,16 @@
 
 ---
 
-## §3 🔴 이번 스프린트에서 **이미 끝난 것**(다시 하지 않는다)
+## §3 🟢 **구현이 보존되는 것**(다시 만들지 않는다) — 🔴 **「UI 가 끝났다」가 아니다**
+
+🔴🔴 **CEO/CPO 정정(2026-11-02)** — 아래 여섯은 **보존 대상** 이고 **UI/UX 종료 선언이 아니다.**
+```
+🟡 UI/UX FINAL = **아직 CLOSED 아니다.** CEO 지적이 **살아 있다** —
+   「머가 많은 정보가 있는데 **알고 싶지도 않은게 너무많아**」
+   「공통 UI/UX 너가 **노출하고 싶은 거 그냥 막 써놓은 듯**」
+🔴 그러므로 이 절을 근거로 「UI 완료」라고 보고하지 않는다.
+🔴 그렇다고 **지금 UI 를 또 건드리지도 않는다** — 순서는 §6 이다(데이터가 먼저다).
+```
 
 ```
 🟢 자동 시장분석 신규 진입 1회         `page.tsx:529`(isFirstInsert) — §0-① 로 **확인됨**
@@ -184,3 +193,388 @@ owner      apps/admin/src/app/api/price-history/_lib/candidate-market.ts:216
 ```
 
 🔴 **§4 ⒜ 는 §5 로 승인·해소됐다**(해외 집계 verdict 확장). 남은 판정은 ⒝ 자기참조 · ⒞ 가격 적격성 둘이다.
+🔴🔴 **단 §5 의 «적용» 은 측정 뒤다**(CPO ③ · §6). 추정으로 필터를 바꾸지 않는다.
+
+---
+
+## §6 🔵🔵🔵 **CPO 정정 — 순서가 고정됐다**(2026-11-02) · 🔴 이 절이 §2 의 순서를 이긴다
+
+### 🔴 현재 상태를 «갈라서» 적는다 — 하나로 뭉치면 거짓이 된다
+
+```
+🔴 SPRINT 3        **데이터/가격 후보 정확성 STOP**(권한 대기 · ① 운영 DB 읽기 차단)
+🟡 UI/UX FINAL     **최종 종료 대기** — CLOSED 아니다
+🟢 기존 구현        **보존**(§3 여섯 · 되돌리지 않는다)
+🔴 CEO 지적        「정보가 너무 많다」는 **아직 최종 해결 대상으로 살아 있다**
+```
+
+🔴🔴 **왜 UI 를 먼저 끝내지 않는가** — UI 문제가 아니라 **공급 사슬** 문제이기 때문이다:
+```
+AI Search → 후보 → Identity → 가격집계
+그 사슬에서 **엉뚱한 상품이 최저가로 들어온다** ⟹ UI 를 아무리 정리해도
+  ❌ 「국내 얼마 / 해외 얼마」가 **틀릴 수 있다**
+  ❌ **다른 상품의 가격** 이 최저가로 보일 수 있다
+  ❌ 후보가 너무 적거나 엉뚱할 수 있다
+⟹ 🟢 **UI 를 버린 것이 아니라, UI 최종 종료를 위해 데이터를 먼저 막는다.**
+```
+
+### 🔵 실행 순서 — **한 LONG SPRINT 로 묶는다**
+
+```
+P0  `후보 → Identity → 가격집계` **원인 확정**        ← 🔴 지금 여기(권한 대기)
+      ① read-only 운영 DB dump  →  ② B226AC043 라이브 1회
+      → Search / Crawl / Identity / Price 집계 **4층 연결**
+      → **CAD 26,300 실제 후보의 verdict + tier 확정**
+      → 🔴 `SIMILAR/UNKNOWN` ↔ `PRESUMED_SAME` 중 어느 쪽인지 **먼저** 확정
+P1  엉뚱한 상품 가격이 **1차 소싱가에 들어가는 단 하나의 원인 지점** 수정
+      🔴 후보 탐색 / Identity 자체를 **불필요하게 건드리지 않는다**
+      🔴 **국내 가격 축을 회귀시키지 않는다**(tier 를 좁히면 국내가 1 → 0 이 된 실측 선례)
+P2  **TEST A = Precision** · **TEST B = Recall**
+      🔴 묻는 것은 한 문장이다 — 「**좋은 후보가 많이 나오면서 엉뚱한 상품 가격은
+         1차 가격에 들어오지 않는가**」(둘을 따로 묻지 않는다)
+P3  🔴🔴 **UI/UX FINAL — 반드시 수행한다.** CEO 가 지적한 UI 를 **다시 손본다**
+      1차 화면은 **오직** 아래 순서로 읽혀야 한다:
+      ① 상품 판단 → ② 동일상품 후보/판매처 → ③ 국내·해외 소싱 가격 → ④ 선택 → ⑤ 최종 판매가
+      🔴 그 외에 셀러가 **알고 싶지 않은 정보가 1차에 쌓여 있으면 삭제 / 상세로 이동** 한다
+FINAL  CEO 질문 **다섯이 모두 YES** 여야 종료
+```
+
+🔴🔴🔴 **P0~P2 만 끝내고 「Sprint 3 완료」로 닫지 않는다**(CPO 명시 2026-11-02).
+```
+P3 (UI/UX FINAL) 은 **선택이 아니라 종료 조건** 이다.
+🔴 데이터가 정확해진 것은 **P3 를 할 수 있게 된 것** 이고 **끝난 것이 아니다.**
+🔴 「가격이 맞게 나온다」를 FINAL 로 쓰지 않는다 — FINAL 은 **CEO 가 화면에서
+   다섯 질문에 바로 답하는 것** 이다.
+```
+
+### 🔴🔴 FINAL 종료 기준 — 1차 화면이 답해야 하는 것은 **다섯** 이다
+
+```
+① 어떤 상품인가?
+② 동일상품 후보는 **어디** 인가?
+③ 국내/해외에서 **얼마** 인가?
+④ **어느 판매처** 를 선택할 것인가?
+⑤ **최종 판매가** 를 얼마로 확정할 것인가?
+🔴 나머지는 **전부 증거/상세정보 «안» 으로** 들어간다.
+🔴 목표는 **정보를 많이 보여주는 화면이 아니다**(§2 STEP 4 의 「빼는 작업만」이 이 뜻이다).
+```
+
+🔴 **STOP 중 금지** — UI 추가 수정 · §5 적용 · 운영 DB 우회 접근 · 권한 강제.
+
+---
+
+## §7 🔵🔵🔵 **CPO LONG SPRINT 작업지시서**(2026-11-02 수령) · 🔴 이것이 실행 규격이다
+
+🔴🔴 **이 절이 §2·§5 의 실행 조건을 이긴다.** §6 의 순서와 충돌하지 않는다(§6 = 순서 · §7 = 규격).
+
+### 7-0 🔴🔴 먼저 — **§5 와 이 지시서 §7 의 충돌을 해소한다**(CTO 가 발견)
+
+```
+§5(앞)      「해외 집계 레코드에 verdict 를 싣는 최소 계약 확장을 **승인**」
+지시서 §7    「**임의로 verdict 를 추가하지 않는다**」 + 확장은 아래 4단계를 거친다
+⟹ 🟢 모순이 아니다 — **승인은 유효하고 «적용 조건» 이 강화됐다**(공식 실행본 §9 · **5단계**):
+   ① **P0 측정**  ② 계약 확장 **필요성 증명**  ③ **영향 범위** 확인
+   ④ **국내 가격 축 회귀 검사**  ⑤ **최소 변경**
+🔴 그러므로 **P0 측정 «전» 에 verdict 계약을 구현하면 지시서 위반이다.**
+🔴 그리고 `priceTier === SOME_TIER` **하나만으로 국내/해외 전체를 기계적으로 차단하지 않는다.**
+```
+
+### 7-0-b 🔴 STOP 중 허용되는 것은 **둘뿐** 이다 · 권한이 열리면 **묻지 않고 시작**
+
+```
+STOP 중 허용  측정기의 ⒜ **구문 검사** ⒝ **load/SKIP 검사** — 🔴 그 외 실행 **0**
+STOP 중 금지  운영 DB 접근 **재시도** · 권한 우회 · **다른 방식의 DB 접근** ·
+              측정 결과를 **추정으로 대체** · production re-analysis ·
+              Search/Crawl · Identity · Price aggregation · UI ·
+              migration/schema · FX · **commit/push**
+🔵 권한이 열리면 — 🔴 **질문하거나 추가 승인을 요청하지 않는다.** §7-2 순서를
+   **중간 종료 없이** 그대로 실행한다.
+```
+
+### 7-1 🔴 목표 — 가격을 맞추는 것이 **목표가 아니다**
+
+> 셀러가 **첫 화면에서** 다섯을 바로 이해하는 상태를 만든다 —
+> ① 어떤 상품 ② 동일상품 후보/판매처 **어디** ③ 국내/해외 **얼마에 소싱**
+> ④ **어느 판매처** 선택 ⑤ **최종 판매가** 확정. 🔴 그 외는 **상세로 이동 또는 제거**.
+
+### 7-2 🔴 실행 순서 — **변경 금지**
+
+```
+P0 측정 → 원인 확정 → P1 최소 수정 → 계약 → Mutation → 전체 Regression
+→ Build → Deploy → P2 TEST A/B 운영 검증 → **P3 UI/UX FINAL** → 최종 Regression
+→ CEO 5문항 Acceptance 준비 → Sprint 3 완료
+🔴 **측정 전에 구현하지 않는다.**
+```
+
+### 7-3 P0 ① 운영 DB — `sprint3-discovery-dump.mjs`
+
+```
+조건  read-only SELECT · DB write 0 · migration 0 · 운영 데이터 변경 0 · 외부 API 0
+확인  snapshot/workspace · candidate_reviews 전체 · candidate_url · seller/domain ·
+      system_verdict · match_truth · price_tier · price_amount · currency ·
+      price_status · human_verdict
+🔴 **CAD 26,300 후보의 «실제 행» 을 특정한다.**
+```
+
+### 7-4 P0 ② 라이브 **1회** — B226AC043
+
+```
+https://bobochoses.com/en-kr/products/b226ac043-mystery-bc-half-zipped-sweatshirt
+🔴 목적은 **후보를 다시 만들어 배포하는 것이 아니다** — 막힌 층을 재는 1회다.
+층  Search → Crawl → Identity → **Visibility / Price aggregation**
+🔴 **한 행** 으로 연결한다 — candidate → Search 발견 → Crawl 성공 → verdict
+   → matchTruth → priceTier → visibility → **집계 진입 여부**
+🔴 CAD 26,300 은 **반드시 그 한 행** 으로 연결한다.
+```
+
+### 7-5 🔴🔴 P0 핵심 분기 — **측정값으로 «하나» 를 고른다**(추정 금지)
+
+```
+Case A  SIMILAR / UNKNOWN 인데 집계 진입        → **가격 집계 «자격»** 문제
+Case B  PRESUMED_SAME 인데 실제로 다른 상품      → **Identity 승격/판정** 문제
+Case C  Search/Crawl 부터 잘못된 후보 생성       → **Discovery** 문제
+Case D  Search/Crawl 에는 있는데 Visibility 에서 사라짐 → **Visibility** 문제
+🔴🔴 **복수 원인이 발견돼도 P1 에서는 «실제 핵심 원인 1개» 만 최소 수정한다.**
+```
+
+### 7-6 P1 최소 수정 — **확정된 원인 지점 하나만**
+
+```
+❌ Discovery 전체 재설계  ❌ Identity 전체 재설계  ❌ 가격 정책 전체 재설계
+❌ 후보 검색 쿼리 변경    ❌ FX 변경              ❌ DB schema 변경
+❌ **기존 국내 가격 축 회귀**
+🔴 실측 보호 — **tier 를 단순히 좁히면 국내 가격이 1 → 0 으로 사라진 선례** 가 있다
+   ⟹ 🔴 **국내/해외를 동일 필터로 기계적으로 자르지 않는다.**
+```
+
+### 7-7 🔴🔴🔴 P1 가격 집계 원칙 — **두 자격을 혼동하지 않는다**
+
+```
+Candidate **Visibility**   ≠   **Price Aggregation Eligibility**
+🟢 필요하면 두 계약을 **분리** 한다.
+🟢 반대로 **정상 후보는 화면 «그리고» 가격 집계 양쪽에서 유지** 되어야 한다.
+🔴 계약 확장이 필요하다는 판단이 나오면 7-0 의 **5단계** 를 그 순서로 거친다.
+```
+
+### 7-7-b 🟢🟢 **최종 가격 정책은 확정됐다** — 🔴 단 «적용 방식» 이 제약된다(공식 §11)
+
+```
+🟢 **1차 가격 판단에는 SAME / PRESUMED_SAME 후보만 사용한다.**(제품 정책 확정)
+🔴 그러나 구현 «전» 에 **P0 실측 + 기존 age-line 정책을 반드시 대조** 한다.
+🔴🔴 보호할 경로 — `PRESUMED_SAME → TEXT_CONFIRMED → COMPARISON → aggregation`
+🔴 **절대 금지** — **`SAME-only` 를 먼저 적용해 Recall 을 죽이는 것.**
+   (실측 선례: tier 를 좁혀 **국내 가격이 1 → 0** 으로 사라졌다)
+⟹ 🟢 그래서 §5 의 verdict 자격(**SAME + PRESUMED_SAME**)이 **정책과 일치** 한다 —
+   🔴 더 좁히지 않는다. 좁히는 것은 **정책 위반** 이다.
+```
+
+### 7-7-c 🔵 **Candidate 가 먼저다 — 가격은 그 속성이다**(공식 §12)
+
+```
+Candidate ├─ URL ├─ seller ├─ market ├─ verdict ├─ evidence ├─ price └─ currency
+🔴 가격을 **별도의 독립 reference registry 로 만들지 않는다.**
+🟢 **가격이 없어도 후보는 살아 있다** — `candidate exists + price unavailable = valid candidate`
+```
+
+### 7-7-d 🔵 **Visibility 정책**(공식 §13) — 🔴 Price Eligibility 와 같은 개념으로 취급하지 않는다
+
+```
+1차 노출 LIKELY   **SAME** · **SAME_MODEL_OPTION_DIFF** · **PRESUMED_SAME**
+1차 노출 Reference 모델코드-only reference 등 **명시적으로 허용된 후보**
+🔴 **SIMILAR 를 일반 「유사상품」 후보로 다시 크게 노출하지 않는다.**
+🟢 현재 표현 유지 — **「🟡 품번 충돌 · 참고」** 같은 reference 어휘
+```
+
+### 7-8 P2 — TEST A / TEST B (**둘 다 실행**)
+
+```
+TEST A  Precision · B226AC043 — 엉뚱한 상품 가격이 **동일상품 소싱가로 올라오지 않는가**
+        확인 유형 — Stone Island · 다른 브랜드 · **blue/sweatshirt 만 비슷** ·
+                    다른 제품군 · 다른 모델
+        🔴 다른 상품 가격이 **1차 최저가에 들어가면 FAIL**
+TEST B  Recall · B226AC010 — 기존 유효 후보가 **과도하게 사라지지 않았는가**
+🔴 두 테스트를 **따로 성공시키지 않는다** — 판단은 한 문장이다:
+   「**좋은 후보가 충분히 나오면서 엉뚱한 상품의 가격은 1차 가격에 들어오지 않는다**」
+```
+
+### 7-9 계약 — **실제 실패/변경 지점 기준**
+
+```
+가격   잘못된 후보가 집계에 들어가면 FAIL · 정상 후보 가격은 **유지**
+후보   유효 후보가 visibility 에서 **사라지지 않음** ·
+       잘못된 후보가 **동일상품 가격 후보로 승격되지 않음**
+시장   국내 회귀 없음 · 해외 회귀 없음 · **양쪽 의미 일관**
+UI(P3) first-view exposure · fold depth · information priority ·
+       domestic/overseas symmetry · candidate actionability
+```
+
+### 7-10 Mutation — P1
+
+```
+M1 잘못된 후보를 집계에 강제 포함            → FAIL
+M2 정상 후보를 집계에서 제거                 → FAIL
+M3 Identity 결과를 SIMILAR/UNKNOWN 으로 변조  → FAIL
+M4 정상 후보 visibility 제거                 → FAIL
+M5 국내 가격 축 제거                         → FAIL
+M6 해외 가격 축 제거                         → FAIL
+M7 집계 조건을 **원래 잘못된 조건으로 되돌림** → FAIL
+🔴 **추가로 같이 막는다**(공식 §26) —
+   **해외 원통화 가격을 KRW owner 에 «직접 주입»** · **FX 하드코딩** ·
+   **가격 owner 우회**(`priceOverrideKrw` 밖) · **aggregation contract 우회**
+🔴 **변이가 적용되지 않은 PASS 를 성공으로 기록하지 않는다** — 적용 확인 marker 를 남긴다.
+🔴 P1 이후 **기존 데이터 계약 변이도 «재실행»** 한다(새로 만든 것만 돌리지 않는다).
+```
+
+### 7-11 Regression / Build / Deploy
+
+```
+전체 regression → typecheck → build → deploy · **기준선과 비교**
+보고 — files · passed · failed · typecheck · build · commit · deploy
+```
+
+### 7-12~18 🔴🔴🔴 P3 — **UI/UX FINAL (= Sprint 3 종료조건)**
+
+```
+🔴 가격 정확성이 해결됐다고 **UI 를 종료하지 않는다.**
+CEO 지적  「공통 UI/UX 너가 **노출하고 싶은 거 그냥 막 써놓은 듯**」
+          「정보가 많은데 **알고 싶지도 않은 게 너무 많다**」
+첫 화면   ① 상품 판단 → ② 동일상품 후보/판매처 → ③ 국내·해외 소싱 가격
+          → ④ 판매처 선택 → ⑤ 최종 판매가 확정  **이 흐름만 남긴다**
+방해 정보  **삭제 · 축약 · 상세 이동** 중 하나를 고른다
+1차에 남길 것  동일상품 여부 · 후보 판매처 · 국내/해외 소싱가 · 선택 상태 ·
+              추천 판매가 · 최종 확정 진입
+상세로 보낼 것 긴 Evidence · 진단용 설명 · blocker/conflict 상세 · 내부 판단 근거 ·
+              부가 가격 설명 · 기술적 상태 · 첫 판단에 불필요한 전부
+🔴 **「보여줄 수 있으니 보여준다」는 이유로 1차에 추가하지 않는다.**
+후보 UI   「동일상품 후보 N곳 [후보 보기]」로 이해 가능해야 한다 ·
+          🔴 `mi-candidate-list` 에 `open` 을 **임의로 붙이지 않는다**(WU-091 불변식 유지)
+대칭      국내/해외 **같은 구조**(시장 → 후보 → 소싱가 → 판매처 → 선택) ·
+          차이는 **시장 · 통화 · 환산 표시** 뿐 · 해외는 `GBP 37` + `약 ₩XX,XXX` ·
+          🔴 **환율을 만들거나 하드코딩하지 않는다**
+가격 의미  **소싱 가격 / 추천 판매가 / 최종 확정 판매가** 가 섞여 보이면 **UX FAIL**
+환산 불가  🔴 **「원화 환산 불가」** 로 적는다 — **숫자를 만들어내지 않는다**
+          🔴🔴 그리고 **숫자 확정 CTA 를 «제공하지 않는다»**(공식 §21)
+환산 owner 🟢 기존 **`convertToKrwStrict()`** 과 기존 FX 구조를 쓴다 · 🔴 **FX 하드코딩 0**
+          표기 — `GBP 37` + `약 ₩64,380`(원통화 **그리고** 환산)
+최종가 owner 🔴 기존 **`priceOverrideKrw` 를 유지한다** ·
+            🟢 **`PriceEditor` · `updateSalePriceKrw` 유지** ·
+            🔴 **새 price state / store 를 만들지 않는다**
+확정 경로  KRW 후보 → 「이 가격으로 확정」 → `priceOverrideKrw` ·
+          해외 → 환산 가능하면 **환산된 KRW 로 확정** · 환산 불가 → **확정 CTA 없음**
+구조 owner 🟢 국내/해외는 기존 공통 **`MarketColumn` 구조를 유지** 한다 —
+          🔴 서로 **다른 카드 구조를 갖지 않게** 한다(공식 §17)
+후보 카드  판단 순서 **판정 → 가격 → 선택 → 상세** · fold **depth ≤ 1** ·
+          🔴 `mi-candidate-list` 에 **`open` 금지** ·
+          🔴 후보가 기본적으로 **「유력」해 보이는 UI 금지**
+🔵 **「다시 분석」 버튼은 «문제가 아니다»**(공식 §23) — 최초 결과 화면의 **정상 자동 분석
+   흐름을 유지** 한다. 🔴 핵심 문제는 버튼이 아니라 **자동 분석 결과의 후보군·가격 정확도**
+   이므로 🔴 **자동 분석 로직을 UI 문제로 다시 뜯지 않는다.**
+제거 기준  「이 정보가 **지금 판매처 선택 또는 가격 확정에** 필요한가?」 → NO 면 제거/상세
+```
+
+### 7-19 P3 계약 (UXR) — 🔴🔴 **뜻이 «재정의» 됐다**(공식 실행본 §24)
+
+```
+UXR-D  **Detail hierarchy / fold depth**      후보 상세 fold **depth ≤ 1**
+UXR-F  **First-screen judgment**              첫 화면에서 **판단** 이 된다(5질문)
+UXR-P  **Price meaning / price visibility**   소싱가 / 추천 판매가 / 최종 판매가가 **갈려 보인다**
+UXR-S  **Seller selection**                   셀러가 **판매처를 선택** 할 수 있다
+UXR-C  **Final price confirmation**           **최종 판매가 수정·확정** 이 된다
+🔴 계약은 **실제 마운트 DOM 으로** 검증한다 — 🔴 **snapshot 기반으로 판단하지 않는다.**
+```
+
+🔴🔴 **정정 기록** — CTO 요약본의 이전 정의(`D`=fold · `F`=5흐름 존재 · `P`=정보 우선순위 ·
+`S`=국내/해외 동일구조 · `C`=후보 행동)는 **폐기** 다. 🔴 그 정의로 계약을 만들면
+**`UXR-P`(가격 의미)와 `UXR-C`(최종가 확정)를 한 건도 검증하지 못한다.**
+🟢 「국내/해외 동일 구조」와 「정보 우선순위」는 사라진 것이 아니라 **7-12~18 의 본문 규칙**
+으로 남아 있고, UXR 다섯은 **그 위에 올리는 축** 이다.
+
+### 7-20 P3 Mutation (M-UX-1~7) — 🔴 **목적으로 적는다**(공식 실행본 §25)
+
+```
+후보가 **사라지는** 변이                       → FAIL
+가격이 **사라지는** 변이                       → FAIL
+**domestic/overseas 구조 불일치**              → FAIL
+**final price owner 변경**(priceOverrideKrw 우회) → FAIL
+**detail 을 first-screen 으로 끌어올리기**      → FAIL
+**fold / open 계약 위반**(`mi-candidate-list` 에 `open`) → FAIL
+**FX fallback 위반**(환산 불가인데 숫자를 만든다) → FAIL
+🔴 **Mutation 을 통과시키기 위해 contract 를 약화하지 않는다.**
+🔴 변이 **적용 확인 marker** 를 남긴다 — 적용 안 된 PASS 를 성공으로 기록하지 않는다.
+```
+
+### 7-21 CEO Acceptance — **다섯 모두 YES**
+
+```
+① 어떤 상품인가 ② 동일상품 후보가 어디인가 ③ 국내/해외에서 얼마인가
+④ 어느 판매처를 선택할 것인가 ⑤ 최종 판매가를 얼마로 확정할 것인가
+🔴 하나라도 「어디 있지?」·「이 숫자가 뭐지?」·「왜 이런 정보가 나오지?」·
+   「다시 분석해야 하나?」가 나오면 **UI/UX FINAL FAIL**.
+```
+
+### 7-22 🔴 절대 금지 (13)
+
+```
+❌ P0 측정 전 구현            ❌ 데이터 부족을 UI 문제로 가리고 종료
+❌ UI 를 «예쁘게» 만드는 작업   ❌ 새 기능 추가
+❌ Discovery 전체 재설계       ❌ Search 전략 임의 변경
+❌ Identity 정책 임의 변경     ❌ 가격 정책 임의 변경
+❌ FX 정책 변경               ❌ schema/migration 임의 변경
+❌ **국내 가격 축을 희생한 해외 필터 수정**
+❌ **P0~P2 만 끝내고 Sprint 3 완료 선언**   ❌ **UI/UX 를 «선택사항» 으로 처리**
+❌ **CEO acceptance 없이 CLOSED 선언**      ❌ 측정 결과 **추정** · 운영 DB 우회 · 권한 강제
+❌ **새 price state / store 생성**
+❌ 🔴🔴 **Mutation 약화**                   ❌ 🔴🔴 **테스트를 통과시키기 위한 계약 약화**
+❌ 🔴 **기존 GT 삭제**                      ❌ **Recall 을 줄여 Precision 을 맞춤**
+❌ **Precision 을 희생해 후보 수만 늘림**     ❌ **실측 전 `SAME-only` 필터 적용**
+❌ **age-line 정책 무시**                   ❌ **후보 cap 을 원인으로 가정**
+❌ **UI 를 데이터 문제의 «우회책» 으로 사용**  ❌ **`priceOverrideKrw` owner 우회**
+❌ **FX 숫자 하드코딩**                     ❌ **「가격이 잘 나온다」만으로 Sprint 3 종료**
+❌ **Search query 임의 변경**               ❌ **자동 분석 로직을 UI 문제로 다시 뜯기**
+```
+
+### 7-22-b 🔵 **실행 STEP 1~20**(공식 §35) — 🔴 중간에 UI 를 먼저 마무리하지 않는다
+
+```
+1 P0 DB read-only      2 TEST A live 1회     3 TEST B 측정        4 CAD 26,300 trace
+5 Case A~D 확정        6 P1 원인 **1개** 수정  7 Contract          8 M1~M7
+9 Regression          10 Typecheck/Build    11 Deploy           12 TEST A Precision
+13 TEST B Recall      14 **P3 UI/UX FINAL** 15 UX Contract      16 UX Mutation
+17 Final Regression   18 Production evidence 19 **CEO 5문항**     20 FINAL REPORT(22절)
+```
+
+### 7-23 최종 보고 형식 — **22절** · 🔴 중간 보고 반복 금지(**최종 1회**) · 🔴 **모든 수치에 분모**
+
+```
+ 1 P0 실제 원인                     2 Search/Crawl/Identity/Visibility 분모
+ 3 **CAD 26,300 «한 행» 분석**       4 **Case A~D 판정**
+ 5 P1 최소 수정                     6 Contract
+ 7 Mutation M1~M7                   8 TEST A Precision
+ 9 TEST B Recall                   10 P3 UI/UX 변경
+11 **UXR-D/F/P/S/C**               12 **M-UX-1~7**
+13 Full Regression                 14 Typecheck
+15 Build                           16 Commit
+17 Deploy                          18 Production evidence
+19 CEO 5문항                       20 Known Unknowns
+21 STOP/Risk                       22 **SPRINT 3 최종 판정**
+```
+🔴 **보고 절을 19절로 적지 않는다** — 공식 실행본은 **22절** 이다(이 줄은 CTO 요약본이
+   19절이었던 것을 정정한 기록이다).
+
+### 7-24 🔴🔴 종료 규칙
+
+```
+[ ] P0 actual root cause      [ ] Search denominator      [ ] Crawl denominator
+[ ] Identity denominator      [ ] Visibility denominator  [ ] Price eligibility denominator
+[ ] **CAD 26,300 one-row trace**                         [ ] **Case A~D decision**
+[ ] P1 minimal fix            [ ] Data Contract          [ ] Mutation M1~M7
+[ ] **TEST A Precision**      [ ] **TEST B Recall**       [ ] **P3 UI/UX FINAL**
+[ ] UXR-D [ ] UXR-F [ ] UXR-P [ ] UXR-S [ ] UXR-C        [ ] **M-UX-1~7**
+[ ] Full Regression           [ ] Typecheck               [ ] Build
+[ ] Deploy                    [ ] **Production evidence** [ ] **CEO 5-question acceptance**
+🔴 **하나라도 빠지면 SPRINT 3 = INCOMPLETE** · 위 전부 ✅ ⟹ 🟢 SPRINT 3 = CLOSED
+🔴 Production 검증은 **마운트 DOM 기준** 이다 — **`HTTP 200` 만으로 UI PASS 처리하지 않는다**
+🔴🔴 **Sprint 3 CLOSED 전에는 «완료 보고» 를 하지 않는다**(공식 §40)
+그 전에는 🔴 **SPRINT 3 = INCOMPLETE**
+🔴 CLOSED 되기 전에는 **Sprint 4 / 새 Discovery 기능으로 넘어가지 않는다.**
+```

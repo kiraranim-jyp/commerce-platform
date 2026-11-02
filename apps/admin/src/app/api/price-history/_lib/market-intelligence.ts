@@ -249,6 +249,14 @@ export async function computeMarketIntelligence(
     amount: number | null;
     priceTier: string;
     matchTruth: string | null;
+    /**
+     * 🔴🔴 SPRINT 3 P1 — **집계 자격 축.** 「⚪ 유사상품」 가격이 «동일상품 최저 확인가»
+     *    가 되는 것을 막는다(실측: B226AC010 에서 `SIMILAR` 1건이 **TWD 최저가** 였다).
+     * 🟢 **이미 계산된 값을 옮기기만** 한다 — 새 판정 0.
+     * 🔴 **국내 축(`domesticTransientRecords`)에는 넣지 않는다** — 그 축의 숫자가
+     *    바뀌면 회귀다(CPO ④ · 「tier 를 좁혀 국내가 1 → 0」 선례).
+     */
+    verdict: string | null;
   }[] = [];
   /**
    * 🔴 WU-056 — **이번 확인으로 들어온 국내 가격** 만 담는다(아래 루프에서 채운다).
@@ -291,6 +299,8 @@ export async function computeMarketIntelligence(
           amount: e.priceAmount,
           priceTier: e.priceTier,
           matchTruth: e.matchTruth,
+          /** 🔴 SPRINT 3 P1 — 지어내지 않는다. 판정이 이미 낸 값 그대로다. */
+          verdict: e.crossSellerVerdict ?? null,
         });
         if (e.market === "OVERSEAS") geminiPricedCount.overseas += 1;
         else geminiPricedCount.marketUnknown += 1;
