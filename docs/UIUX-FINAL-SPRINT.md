@@ -395,3 +395,16 @@ Sprint 3 Discovery  **대기**          검증 상품     **6db15ecc** 고정
 ```
 🔴 **「계약 PASS」를 제품 PASS 로 쓰지 않는다** — 「첫 화면에 무엇이 보이는가」가
 **별도의 CPO/CEO acceptance 기준** 으로 들어왔다(CPO 확정).
+
+### ⑧ 🟢 Blast Radius 실측 — **착수 전에 쟀다**(2026-11-02 · 코드 변경 0)
+
+```
+1차/상세 경계를 «양방향» 으로 무는 계약 — **4 파일**(14 가 아니다 · 생각보다 좁다)
+  core-2ao-r1-screen-dump · core-2r5-domestic-reference-to-mi ·
+  core-next-step4-recommended-price · core-ux-seller-01-decision-order
+  🔴 배치를 바꾸면 이 넷의 **분모(`firstScreen()` · `MUST_NOT_BE_ON_FIRST_SCREEN`)** 가
+     같이 바뀐다 — 후보 카드를 1차로 올리면 `mi-candidate-warning`(「⚠ 확인 필요」)도
+     **같이 1차로 올라간다**. 그 문구가 「긴 설명 금지」 목록과 충돌하는지 먼저 본다.
+🟢 그래서 작업 단위 = 배치 이동 + **계약 4파일 분모 갱신** + 신규 계약 10(§7-3) +
+   변이 7(§7-4) + 회귀 2회 + build + deploy.
+```
