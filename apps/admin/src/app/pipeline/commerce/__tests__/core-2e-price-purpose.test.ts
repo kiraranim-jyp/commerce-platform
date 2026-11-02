@@ -43,6 +43,14 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 const MODULE = strip(readFileSync(path.join(HERE, "..", "mi-same-candidates.ts"), "utf8"));
 const VIEW = strip(readFileSync(path.join(HERE, "..", "MarketPriceComparison.tsx"), "utf8"));
+/**
+ * 🔵 CLOSE-3 — 환산은 **후보 카드 안에서만** 허용된다(CPO LOCK · `mi-candidate-row`).
+ * 🔴 그 카드가 쓰는 것은 **`convertToKrwStrict`**(모르는 통화 → `null` · C-3 가 그 안전성을
+ *    고정한 그 함수)이고, 그 이름이 금지 문자열 `convertToKrw` 를 **부분문자열로 포함** 한다.
+ * 🔴 그래서 이 **분모에서 `…Strict` 만 «뺀다»** — 거짓 숫자를 만드는 **비-strict**
+ *    `convertToKrw` 금지는 **그대로** 다(약화가 아니라 분모 변경이다).
+ */
+const VIEW_NO_STRICT = VIEW.replace(/convertToKrwStrict/g, "");
 
 let container: HTMLDivElement;
 let root: Root;
@@ -241,7 +249,8 @@ describe("CORE-2E C — 🔴🔴 M5 · §4-4 환산은 «판단에 쓰이지 않
 
   it("C-4 🔴 그래서 해외 블록에 환산 줄이 **없다**(되돌림이 유지된다)", () => {
     expect(VIEW).not.toContain("price-guide-krw");
-    expect(VIEW, "🔴 뷰가 환율을 들고 있으면 안 된다").not.toContain("convertToKrw");
+    /** 🔵 분모는 `VIEW_NO_STRICT` 다(위 정의 참조) — 비-strict 환산 금지는 그대로다. */
+    expect(VIEW_NO_STRICT, "🔴 뷰가 환율을 들고 있으면 안 된다").not.toContain("convertToKrw");
   });
 });
 
@@ -291,8 +300,11 @@ describe("CORE-2E D — 마운트 DOM(화면이 실제로 그 말을 하는가)"
     expect(VIEW, "🔴 뷰에서 시장을 보고 가격 문장을 만들면 안 된다").not.toMatch(
       /market === "KR"[\s\S]{0,80}(최저|가격대)/,
     );
-    /** 🔴 환율을 뷰에 들여오면 §4-4 의 거짓 숫자 경로가 열린다. */
-    expect(VIEW).not.toContain("convertToKrw");
+    /**
+     * 🔴 환율을 뷰에 들여오면 §4-4 의 거짓 숫자 경로가 열린다.
+     * 🔵 분모는 `VIEW_NO_STRICT` 다(위 정의 참조) — 비-strict 환산 금지는 그대로다.
+     */
+    expect(VIEW_NO_STRICT).not.toContain("convertToKrw");
   });
 });
 

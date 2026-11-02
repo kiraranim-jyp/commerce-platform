@@ -212,8 +212,16 @@ describe("C-1 seller-facing 가격 숫자의 owner 는 「📊 시장 판매 판
      */
     expect(html).toContain("37");
     expect(html).toContain("GBP");
-    expect(html).not.toContain("₩");
-    expect(html).not.toContain("약 ");
+    /**
+     * 🔵 CLOSE-3 — 환산은 **후보 카드 안에서만** 허용된다(CPO LOCK · `mi-candidate-row`).
+     * 🔴 그래서 환산 금지 단언의 **분모에서 카드를 «뺀다»** — owner 영역(결론·집계)의
+     *    환산 금지는 **그대로** 다(약화가 아니라 분모 변경이다).
+     */
+    const cloneNoCards = container.cloneNode(true) as HTMLElement;
+    for (const c of [...cloneNoCards.querySelectorAll('[data-testid="mi-candidate-row"]')]) c.remove();
+    const htmlNoCards = cloneNoCards.innerHTML;
+    expect(htmlNoCards).not.toContain("₩");
+    expect(htmlNoCards).not.toContain("약 ");
   });
 
   /**

@@ -198,8 +198,16 @@ describe("WU-144 — 2상품 Seller Decision (CPO A/B/C/D)", () => {
     expect(t).toContain("판매중 확인 0곳");
     /** 🔴 세 통화를 **더하지 않는다**(환산 0 · `overseas-reference` 계약). */
     for (const cur of ["CAD", "GBP", "USD"]) expect(t).toContain(cur);
-    expect(t).not.toContain("₩");
-    expect(t).not.toContain("약 ");
+    /**
+     * 🔵 CLOSE-3 — 환산은 **후보 카드 안에서만** 허용된다(CPO LOCK · `mi-candidate-row`).
+     * 🔴 그래서 이 단언의 **분모에서 카드를 «뺀다»** — 「세 통화를 더하지 않는다」는
+     *    집계/요약 축의 환산 금지는 **그대로** 다(약화가 아니라 분모 변경이다).
+     */
+    const clone = container.cloneNode(true) as HTMLElement;
+    for (const c of [...clone.querySelectorAll('[data-testid="mi-candidate-row"]')]) c.remove();
+    const tNoCards = (clone.textContent ?? "").replace(/\s+/g, " ").trim();
+    expect(tNoCards).not.toContain("₩");
+    expect(tNoCards).not.toContain("약 ");
   });
 
   /* ─────────── CPO STEP 4 — 국내 0 의 «말» ─────────── */

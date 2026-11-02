@@ -422,7 +422,22 @@ describe("UX-FINAL-01 ⒞ 🔵 국내/해외 DOM 구조·타이포가 **같다**
      *    ⒜ **구조 척추**(데이터와 무관하게 항상 서는 줄)는 **순서까지 같다**
      *    ⒝ 나머지 차이는 **데이터 의존 줄의 부분집합** 이어야 한다(그 밖이면 FAIL)
      */
-    const DATA_DEPENDENT = new Set(["mi-candidate-price-unverified", "mi-candidate-warning"]);
+    /**
+     * 🔵 CLOSE-3 §2 — **분모(scope) 변경이다.** 환산 줄 둘을 데이터 의존으로 더한다.
+     *
+     * 🔴🔴 그 차이는 **시장(KR ↔ OVERSEAS)이 아니라 «통화» 에서 온다** — 코드 조건은
+     *    `row.priceCurrency !== "KRW"` 하나이고 `market` 을 **보지 않는다**. KRW 후보에
+     *    환산 줄이 없는 것은 「`₩88,000` 아래 `약 ₩88,000`」을 적지 않는 **의도된 동작**
+     *    이다(§2 「중복 환산 없음」).
+     * 🟢 표본에서 통화와 시장이 함께 움직여 구조 차이처럼 보이지만, **시장별 구조 분기
+     *    금지**(⒞-2 가 `market === "KR" ?` 모양을 소스에서 직접 막는다)는 그대로다.
+     */
+    const DATA_DEPENDENT = new Set([
+      "mi-candidate-price-unverified",
+      "mi-candidate-warning",
+      "mi-candidate-price-krw",
+      "mi-candidate-price-krw-unavailable",
+    ]);
     const a = shape(kr);
     const b = shape(os);
 

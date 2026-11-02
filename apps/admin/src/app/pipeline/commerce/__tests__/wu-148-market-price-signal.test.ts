@@ -181,8 +181,16 @@ describe("B. 🌎 해외는 «최저 확인가» 다", () => {
      */
     mount(OS_MULTI);
     expect(q("price-guide-headline-label")?.textContent).toBe(OVERSEAS_LOWEST_PER_CURRENCY_NOTE);
-    expect(flat()).not.toContain("₩");
-    expect(flat()).not.toContain("약 ");
+    /**
+     * 🔵 CLOSE-3 — 환산은 **후보 카드 안에서만** 허용된다(CPO LOCK · `mi-candidate-row`).
+     * 🔴 그래서 이 단언의 **분모에서 카드를 «뺀다»** — 「통화가 섞이면 하나의 최저가를
+     *    고르지 않는다」는 가격 신호 축의 환산 금지는 **그대로** 다(분모 변경이다).
+     */
+    const clone = container.cloneNode(true) as HTMLElement;
+    for (const c of [...clone.querySelectorAll('[data-testid="mi-candidate-row"]')]) c.remove();
+    const flatNoCards = (clone.textContent ?? "").replace(/\s+/g, " ").trim();
+    expect(flatNoCards).not.toContain("₩");
+    expect(flatNoCards).not.toContain("약 ");
   });
 
   it("🟢 B-3 국내 해석을 해외에 쓰지 않는다(그 반대도) — owner 가 시장으로 분기한다", () => {

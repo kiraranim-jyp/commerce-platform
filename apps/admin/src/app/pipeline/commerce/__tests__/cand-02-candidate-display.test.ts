@@ -533,9 +533,26 @@ describe("UX-REFINE 화면 계약 — 시장명 · 가격 3상태", () => {
       expect(rows.length).toBeGreaterThan(0);
       for (const r of rows) {
         const t = r.textContent ?? "";
-        for (const token of ["₩", "약 ", "≈"]) {
+        /**
+         * 🔵 CLOSE-3 §0 — **CPO 지시 방향 전환.** 「후보 카드 «안» 의 환산」이
+         *    허용됐으므로 `₩` 와 `약 ` 는 **더 이상 금지가 아니다**.
+         * 🔴 `≈` 는 **그대로 금지** 다 — 그 기호는 「대략 같다」는 **비교** 를 말하고
+         *    통화를 섞어 비교하는 그 금지축(`overseas-reference` 계약)의 글자다.
+         */
+        for (const token of ["≈"]) {
           expect(t, `후보 카드에 환산 표기 ${token} 가 있다`).not.toContain(token);
         }
+        /**
+         * 🔴🔴 그 대신 **SOURCE 가 그대로인지** 를 여기서 문다(§2 「원본을 덮어쓰지
+         *    않는다」). 환산은 **별도의 줄** 이어야 하고, 원본 가격 줄에 `약 ₩` 가
+         *    섞이면 셀러가 보는 「판매처 현재가격」이 원화로 **대체** 된 것이다.
+         */
+        const priceLine = r.querySelector('[data-testid="mi-candidate-price"]');
+        expect(priceLine, "원본 가격 줄이 사라졌다").not.toBeNull();
+        expect(
+          priceLine!.textContent ?? "",
+          "🔴 원본 가격 줄이 원화 환산으로 덮였다(환산은 별도 줄이어야 한다)",
+        ).not.toContain("약 ₩");
         /** 🔴 그 글자는 **다른 화면의 것** 이다(`mi-022`·`wu-028` 이 잠갔다). */
         expect(t).not.toContain(PRICE_UNKNOWN_TEXT);
         expect(t).not.toContain("가격 미확인");

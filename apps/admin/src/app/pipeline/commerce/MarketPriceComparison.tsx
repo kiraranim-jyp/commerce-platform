@@ -142,14 +142,27 @@ import {
   FINAL_PRICE_NONE_TEXT,
   FINAL_PRICE_SELECTED_BADGE,
   CONFIRM_CANDIDATE_PRICE_LABEL,
-  CONFIRM_PRICE_FOREIGN_NOTE,
+  /** 🔴 CLOSE-3 §0 — 「원화 후보에서만」 문구는 **폐기** 됐다(소비처 0 · 상수만 남는다). */
   EDIT_FINAL_PRICE_LINK_TEXT,
   PRICE_CALCULATION_LINK_TEXT,
   RECOMMENDED_PRICE_LABEL,
   SELL_VERDICT_HEADING,
+  /** 🔵 CLOSE-3 §0 — 후보 카드 «안» 의 환산 어휘(집계 영역엔 쓰지 않는다). */
+  CANDIDATE_PRICE_KRW_PREFIX,
+  CANDIDATE_PRICE_KRW_UNAVAILABLE,
+  CONFIRM_PRICE_NO_RATE_NOTE,
 } from "./recommended-price-copy";
 /** 🟢 `PriceEditor` 가 쓰는 **그 포맷터** 다 — 두 화면이 같은 숫자를 다르게 적지 않는다. */
-import { formatKrw } from "@commerce/pricing";
+/**
+ * 🔵🔵🔵 CLOSE-3 §0 — **환산은 «기존» owner 를 그대로 쓴다.**
+ *
+ * 🔴 `convertToKrwStrict` 는 환율을 모르는 통화에 **`null`** 을 돌려준다 ⟹ 「환산
+ *    불가면 숫자를 만들지 않는다」가 **그 함수의 계약으로 이미** 성립한다.
+ * 🔴 새 환율 API **0** · 새 환율 상수 **0**(폴백표는 pricing 패키지가 원래 들고 있다).
+ * 🔴🔴 **허용 범위는 후보 카드 안뿐** — 집계/요약(`buildPriceGuide` ·
+ *    `OverseasReferencePrice`)에는 이 값을 **넣지 않는다**(WU-148 의미 불변).
+ */
+import { formatKrw, convertToKrwStrict } from "@commerce/pricing";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -1817,6 +1830,43 @@ function MarketColumn({
                               : CANDIDATE_PRICE_UNKNOWN}
                           </span>
                         </p>
+                        {/**
+                          * ══════════════════════════════════════════════════════
+                          * 🔵🔵🔵 CLOSE-3 §2 — **원본 그대로 + 원화 환산 «추가»**
+                          * ══════════════════════════════════════════════════════
+                          *
+                          * 🔴🔴 **원본을 덮어쓰지 않는다** — 위 `mi-candidate-price` 줄은
+                          *    한 글자도 안 바뀌었다(SOURCE 불변). 이 줄은 **추가** 다.
+                          * 🔴 **KRW 후보에는 그리지 않는다** — `₩88,000` 아래 `약 ₩88,000` 은
+                          *    같은 숫자를 두 번 적는 것이다(§2 「중복 환산 없음」).
+                          * 🔴 **환율을 모르면 숫자를 만들지 않는다** — `null` 이면 「원화 환산
+                          *    불가」를 적고 **원본 가격은 그대로 남는다**(§2 · P3 가 아니다).
+                          * 🔴 이 값은 **집계로 가지 않는다** — `buildPriceGuide` ·
+                          *    `OverseasReferencePrice` 는 이 변수를 **읽지 않는다**(§7).
+                          */}
+                        {row.priceAmount != null &&
+                        row.priceCurrency &&
+                        row.priceCurrency !== "KRW"
+                          ? (() => {
+                              const krw = convertToKrwStrict(row.priceAmount, row.priceCurrency);
+                              return krw ? (
+                                <p
+                                  data-testid="mi-candidate-price-krw"
+                                  className="text-[12px] tabular-nums text-text-secondary"
+                                >
+                                  {CANDIDATE_PRICE_KRW_PREFIX}
+                                  {formatKrw(krw.amountKrw)}
+                                </p>
+                              ) : (
+                                <p
+                                  data-testid="mi-candidate-price-krw-unavailable"
+                                  className="text-[11px] text-text-tertiary"
+                                >
+                                  {CANDIDATE_PRICE_KRW_UNAVAILABLE}
+                                </p>
+                              );
+                            })()
+                          : null}
                         {/** 🔴 P2 에서만 선다 — 상태가 없으면 P1 과 구별되지 않는다(FAIL-04). */}
                         {!isPriceConfirmed(row) &&
                         row.priceAmount != null &&
@@ -1875,25 +1925,44 @@ function MarketColumn({
                           *    `updateSalePriceKrw`(:1452) 그 함수이고 `PriceEditor` 가 쓰는 것과 같다.
                           * 🔴 **candidate 원본 가격을 건드리지 않는다**(§12) — 읽기만 한다.
                           */}
-                        {onConfirmPriceKrw && row.priceAmount != null && row.priceCurrency ? (
-                          row.priceCurrency === "KRW" ? (
-                            <button
-                              type="button"
-                              data-testid="mi-candidate-confirm-price"
-                              onClick={() => onConfirmPriceKrw(row.priceAmount as number)}
-                              className="mt-1 rounded border border-border px-2 py-0.5 text-[11px] font-medium text-text-primary hover:bg-surface"
-                            >
-                              {CONFIRM_CANDIDATE_PRICE_LABEL}
-                            </button>
-                          ) : (
-                            <p
-                              data-testid="mi-candidate-confirm-unavailable"
-                              className="mt-1 text-[11px] text-text-tertiary"
-                            >
-                              {CONFIRM_PRICE_FOREIGN_NOTE}
-                            </p>
-                          )
-                        ) : null}
+                        {onConfirmPriceKrw && row.priceAmount != null && row.priceCurrency
+                          ? (() => {
+                              /**
+                               * 🔵🔵🔵 CLOSE-3 §4 — **외화 후보도 환산 KRW 로 확정한다.**
+                               *
+                               * 🔴 넘기는 값은 위 줄이 **화면에 이미 보여준 그 환산값** 이다
+                               *    (같은 함수 · 같은 숫자 · 추정/보정 0).
+                               * 🔴🔴 **SOURCE 는 불변** — `row.priceAmount`(GBP 37)를 고치지
+                               *    않고 `priceOverrideKrw`(SELLING)에 **KRW 만** 기록한다.
+                               * 🔴 환율을 모르면 **버튼을 그리지 않는다**(확정할 숫자가 없다).
+                               */
+                              const krw =
+                                row.priceCurrency === "KRW"
+                                  ? row.priceAmount
+                                  : (convertToKrwStrict(row.priceAmount, row.priceCurrency)
+                                      ?.amountKrw ?? null);
+                              if (krw == null) {
+                                return (
+                                  <p
+                                    data-testid="mi-candidate-confirm-unavailable"
+                                    className="mt-1 text-[11px] text-text-tertiary"
+                                  >
+                                    {CONFIRM_PRICE_NO_RATE_NOTE}
+                                  </p>
+                                );
+                              }
+                              return (
+                                <button
+                                  type="button"
+                                  data-testid="mi-candidate-confirm-price"
+                                  onClick={() => onConfirmPriceKrw(krw)}
+                                  className="mt-1 rounded border border-border px-2 py-0.5 text-[11px] font-medium text-text-primary hover:bg-surface"
+                                >
+                                  {CONFIRM_CANDIDATE_PRICE_LABEL}
+                                </button>
+                              );
+                            })()
+                          : null}
                         <div className="mt-1 flex items-center justify-between gap-2">
                           <CandidateSelect row={row} api={reviewApi} />
                           <a

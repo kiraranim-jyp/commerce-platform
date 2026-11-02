@@ -125,6 +125,16 @@ function firstScreen(): string {
   return (clone.textContent ?? "").replace(/\s+/g, " ").trim();
 }
 const whole = (): string => (container.textContent ?? "").replace(/\s+/g, " ").trim();
+/**
+ * 🔵 CLOSE-3 — 환산은 **후보 카드 안에서만** 허용된다(CPO LOCK · `mi-candidate-row`).
+ * 🔴 그래서 환산/금액 기호를 세는 단언은 **분모에서 카드를 «뺀다»** — 집계/요약 영역의
+ *    환산 금지는 **그대로** 다(약화가 아니라 분모 변경이다). `whole()` 은 손대지 않았다.
+ */
+const wholeNoCards = (): string => {
+  const clone = container.cloneNode(true) as HTMLElement;
+  for (const c of [...clone.querySelectorAll('[data-testid="mi-candidate-row"]')]) c.remove();
+  return (clone.textContent ?? "").replace(/\s+/g, " ").trim();
+};
 const q = (id: string): HTMLElement | null => container.querySelector(`[data-testid="${id}"]`);
 
 /* ══════════════════ A. 순수 함수 — B 근거 한 줄 ══════════════════ */
@@ -218,7 +228,12 @@ describe("B. 1차(SUMMARY) — 「그래서 얼마에 팔면 되는가」", () =
     expect(q("market-recommended-price")).toBeNull();
     expect(q("market-price-calculation-link")).toBeNull();
     expect(whole(), "🔴 A 가 없는데 권장 판매가격이라는 말이 떴다").not.toContain(RECOMMENDED_PRICE_LABEL);
-    expect(whole(), "🔴 환산/금액 기호가 생겼다").not.toMatch(/[₩€$£¥]/);
+    /**
+     * 🔵 CLOSE-3 — 환산은 **후보 카드 안에서만** 허용된다(CPO LOCK).
+     * 🔴 그래서 이 단언의 **분모에서 카드를 «뺀다»** — 「A 가 없으면 요약에 금액 기호가
+     *    0」이라는 성질은 **그대로** 다(약화가 아니라 분모 변경이다).
+     */
+    expect(wholeNoCards(), "🔴 환산/금액 기호가 생겼다").not.toMatch(/[₩€$£¥]/);
   });
 
   /**
@@ -242,7 +257,12 @@ describe("B. 1차(SUMMARY) — 「그래서 얼마에 팔면 되는가」", () =
    */
   it("B-6 🔴🔴 `₩` 는 **A 줄 하나뿐** 이고 시장 금액에는 **없다**", () => {
     mount({ recommendedPriceKrw: A_KRW, marketPriceKrw: B_KRW, marketPriceMarginPercent: B_MARGIN, onOpenPriceCalculation: () => {} });
-    const all = whole();
+    /**
+     * 🔵 CLOSE-3 — 환산은 **후보 카드 안에서만** 허용된다(CPO LOCK).
+     * 🔴 그래서 **세는 분모에서 카드를 «뺀다»** — 기대 개수(**1** = A 줄 하나)는
+     *    그대로이고, 「A 줄 밖에서 `₩` 를 쓰면 FAIL」이라는 성질도 그대로다.
+     */
+    const all = wholeNoCards();
     expect((all.match(/₩/g) ?? []).length, "🔴 `₩` 가 A 줄 밖에서도 쓰였다").toBe(1);
     expect(all, "🔴 다른 통화 기호가 들어왔다").not.toMatch(/[€$£¥]/);
     expect(all, "🔴 환산 흔적이 생겼다").not.toContain("약 ₩");
@@ -351,7 +371,16 @@ describe("D. 배선 다섯 자리 + 앵커 복구", () => {
       "exchangeRate",
       "priceBreakdown",
     ]) {
-      expect(AREA, `🔴 ${banned} 가 표시 영역에 들어왔다`).not.toContain(banned);
+      /**
+       * 🔵 CLOSE-3 — 환산은 **후보 카드 안에서만** 허용된다(CPO LOCK · `mi-candidate-row`).
+       * 🔴 그 카드가 쓰는 **`convertToKrwStrict`**(모르는 통화 → `null`)가 금지 문자열
+       *    `convertToKrw` 를 **부분문자열로 포함** 한다 ⟹ **분모에서 `…Strict` 만 «뺀다»**.
+       * 🔴 금지 목록은 **한 줄도 지우지 않았고** 비-strict `convertToKrw` 금지도 그대로다
+       *    (약화가 아니라 분모 변경이다).
+       */
+      expect(AREA.replace(/convertToKrwStrict/g, ""), `🔴 ${banned} 가 표시 영역에 들어왔다`).not.toContain(
+        banned,
+      );
     }
     /** 🔴 받은 값으로 **산수를 시작하지도 않는다**(마진·수수료를 다시 세지 않는다). */
     expect(AREA, "🔴 A 로 산수를 시작했다").not.toMatch(/recommendedPriceKrw\s*[-*/+]/);

@@ -290,7 +290,18 @@ describe("E. 영역 경계", () => {
   });
 
   it("🔴 E-4 환산하지 않는다 — 원화 환산 기호/함수가 없다", () => {
-    expect(src).not.toMatch(/krwEquivalent|convertToKrw|환산/);
+    /**
+     * 🔵 CLOSE-3 §0 — **분모(scope) 변경이다. 금지를 약화한 것이 아니다.**
+     *
+     * 🔴 맨 `convertToKrw`(모르는 통화를 「금액 그대로 KRW」로 돌려주는 그 함수)는
+     *    **여전히 금지** 다 — `CAD 64 → 약 ₩64` 라는 거짓 숫자를 만든 그 자리다.
+     * 🟢 분모에서 빼는 것은 **식별자 하나**(`convertToKrwStrict`)뿐이다. 그 함수는
+     *    환율을 모르면 **`null`** 을 돌려주므로 「숫자를 지어내지 않는다」가 계약으로
+     *    성립하고, CPO 가 **후보 카드 «안»** 에서만 허용했다.
+     * 🔴 그래서 집계/요약 영역이 환산을 시작하면 이 단언은 **그대로 FAIL 한다**.
+     */
+    const scoped = src.replace(/convertToKrwStrict/g, "");
+    expect(scoped).not.toMatch(/krwEquivalent|convertToKrw|환산/);
   });
 
   it("🔴🔴 E-5 판매처 표의 네 칸이 고정이다", () => {

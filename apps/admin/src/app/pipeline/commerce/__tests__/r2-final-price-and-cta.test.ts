@@ -12,6 +12,11 @@ import {
   CONFIRM_CANDIDATE_PRICE_LABEL,
   CONFIRM_PRICE_FOREIGN_NOTE,
 } from "../recommended-price-copy";
+/**
+ * 🔵 CLOSE-3 §4 — 기대값을 **운영이 쓰는 그 함수** 로 만든다(상수 복제 0 · 환율표 0).
+ * 🔴 그래서 「환율표를 바꿔도 테스트가 따라온다」가 아니라 「**같은 함수를 쓰는가**」를 문다.
+ */
+import { convertToKrwStrict } from "@commerce/pricing";
 import type { GeminiTransientRow } from "../GeminiTransientCandidates";
 import { toSavedCandidateRows } from "../../../api/price-history/_lib/saved-candidate-rows";
 import { candidateReviewRowFromDb } from "../../../api/price-history/_lib/candidate-review";
@@ -204,20 +209,77 @@ describe("R2-C 🔵 「이 가격으로 확정」 — 🔴 **원화 후보에서
     }
   });
 
-  it("R2-C-2 🔴🔴 외화 후보에는 CTA 를 그리지 않고 **이유를 적는다**(조용히 빼지 않는다)", () => {
+  it("R2-C-2 🔵🔵 외화 후보도 **환산 KRW 로 확정한다**(CPO 가 전제를 철회했다)", () => {
+    /**
+     * 🔵🔵🔵 **CPO 지시 방향 전환이다 — 분모 변경이 아니다.**
+     *
+     * 🔴 이 단언의 1차 전제(「외화는 확정하지 않는다 · 환산이 금지축이다」)는
+     *    CLOSE-3 에서 **CPO 가 명시적으로 철회** 했다. 그래서 「버튼 0 · 안내문 1」을
+     *    **「버튼 1 · 환산값 전달」로 뒤집는다**(`not.toContain` 뒤집기는 이 자리와
+     *    R2-D-1/D-3 뿐이고, 전부 CPO 지시 범위다).
+     * 🔴🔴 **그래도 SOURCE 는 불변이다** — 넘어가는 값은 `row.priceAmount`(GBP 37)가
+     *    **아니라** 환산된 KRW 다. 그 둘이 같으면(= 환산을 건너뛰었으면) FAIL 한다.
+     */
     const rows = fxRows();
     expect(rows.length).toBeGreaterThan(0);
     const confirm = vi.fn();
     const m = mount({ rows, onConfirmPriceKrw: confirm });
     try {
-      /** 🔴 환산이 금지축이라 외화는 확정할 수 없다 — 버튼 0. */
-      expect(m.host.querySelectorAll('[data-testid="mi-candidate-confirm-price"]').length).toBe(0);
-      /** 🟢 그런데 **왜 없는지** 가 화면에 있다. */
-      const notes = [...m.host.querySelectorAll('[data-testid="mi-candidate-confirm-unavailable"]')];
-      expect(notes.length).toBeGreaterThan(0);
-      expect(notes[0].textContent).toBe(CONFIRM_PRICE_FOREIGN_NOTE);
+      const btns = [...m.host.querySelectorAll('[data-testid="mi-candidate-confirm-price"]')];
+      /** 🔵 외화 후보에도 CTA 가 **선다**. */
+      expect(btns.length).toBeGreaterThan(0);
+      expect(btns[0].textContent).toBe(CONFIRM_CANDIDATE_PRICE_LABEL);
+      (btns[0] as HTMLButtonElement).click();
+      expect(confirm).toHaveBeenCalledTimes(1);
+
+      /** 🔴 넘어간 값은 **화면이 이미 보여준 그 환산값** 이다(같은 함수 · 같은 숫자). */
+      const first = rows[0];
+      const expected = convertToKrwStrict(first.priceAmount as number, first.priceCurrency as string);
+      expect(expected, "🔴 분모 — 이 통화의 환율을 모르면 이 축은 측정불가다").not.toBeNull();
+      expect(confirm.mock.calls[0][0]).toBe(expected!.amountKrw);
+      /** 🔴🔴 **SOURCE ≠ SELLING** — 원본 외화 금액을 그대로 넘기면 FAIL 한다. */
+      expect(confirm.mock.calls[0][0]).not.toBe(first.priceAmount);
+
+      /** 🔴 철회된 문구는 **화면에 없다** — 상수는 남아 있어도 소비처가 0 이다. */
+      expect(m.host.textContent ?? "").not.toContain(CONFIRM_PRICE_FOREIGN_NOTE);
     } finally {
       m.cleanup();
+    }
+  });
+
+  it("R2-C-2b 🔵 외화 카드는 **원본 + 환산을 둘 다** 적고, KRW 카드는 환산 줄이 **없다**", () => {
+    /**
+     * 🔵 CLOSE-3 §2 — **방향 전환에 딸린 새 계약** 이다.
+     * 🔴 원본을 **덮어쓰지 않았다**는 것과 **중복 환산이 없다**는 것을 한 자리에서 문다.
+     */
+    const fx = fxRows();
+    expect(fx.length).toBeGreaterThan(0);
+    const a = mount({ rows: fx });
+    try {
+      const card = a.host.querySelector('[data-testid="mi-candidate-row"]');
+      expect(card).not.toBeNull();
+      /** 🟢 원본 — 통화 코드가 **그대로** 남아 있다(SOURCE 불변). */
+      const original = card!.querySelector('[data-testid="mi-candidate-price"]')?.textContent ?? "";
+      expect(original).toContain(fx[0].priceCurrency as string);
+      /** 🔵 환산 — **별도 줄** 에 「약 ₩…」이 선다. */
+      const krwLine = card!.querySelector('[data-testid="mi-candidate-price-krw"]');
+      expect(krwLine, "🔴 외화 카드에 환산 줄이 없다").not.toBeNull();
+      expect(krwLine!.textContent ?? "").toContain("약 ₩");
+    } finally {
+      a.cleanup();
+    }
+
+    const krw = krwRows();
+    expect(krw.length).toBeGreaterThan(0);
+    const b = mount({ rows: krw });
+    try {
+      /** 🔴 `₩88,000` 아래 `약 ₩88,000` 은 **같은 숫자를 두 번** 적는 것이다. */
+      expect(b.host.querySelectorAll('[data-testid="mi-candidate-price-krw"]').length).toBe(0);
+      expect(
+        b.host.querySelectorAll('[data-testid="mi-candidate-price-krw-unavailable"]').length,
+      ).toBe(0);
+    } finally {
+      b.cleanup();
     }
   });
 
@@ -253,10 +315,24 @@ describe("R2-D 🔴 owner 경계 — 이 영역이 최종가를 **만들거나 �
   const SRC = readFileSync(join(__dirname, "..", "MarketPriceComparison.tsx"), "utf8");
   const code = SRC.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
-  it("R2-D-1 이 파일에 **저장/네트워크/환산** 어휘가 0 이다", () => {
-    for (const forbidden of ["priceOverrideKrw", "updateSalePriceKrw", "exchangeRate", "convertToKrw"]) {
+  it("R2-D-1 이 파일에 **저장/네트워크** 어휘가 0 이고 환산은 «기존 owner» 만 쓴다", () => {
+    /**
+     * 🔵 CLOSE-3 §0 — **CPO 지시 방향 전환.** `convertToKrw` 금지를 **철회** 했다
+     *    (환산이 후보 카드 안에서 authorized 됐다). 🔴 나머지 셋은 **그대로 금지** 다 —
+     *    저장 owner(`priceOverrideKrw` · `updateSalePriceKrw`)와 환율 소유
+     *    (`exchangeRate`)를 이 영역이 가지면 두 번째 가격 owner 가 생긴다.
+     */
+    for (const forbidden of ["priceOverrideKrw", "updateSalePriceKrw", "exchangeRate"]) {
       expect(code).not.toContain(forbidden);
     }
+    /**
+     * 🔴🔴 그 대신 **어떤 환산인지** 를 못다 — 허용된 것은 「환율을 모르면 `null`」인
+     *    `convertToKrwStrict` **하나** 이고, 환율표를 직접 들거나 숫자에 곱하는 것은
+     *    **여전히 금지** 다(그 길이 `CAD 64 → 약 ₩64` 를 만든 자리다).
+     */
+    expect(code, "🔴 환산 owner 가 기존 함수가 아니다").toContain("convertToKrwStrict(");
+    expect(code, "🔴 이 영역이 환율표를 직접 들었다").not.toContain("FIXED_RATES_TO_KRW");
+    expect(code, "🔴 환율을 손으로 곱했다").not.toMatch(/priceAmount\s*\*\s*\d/);
   });
 
   it("R2-D-2 🔴 최종가를 **계산하지 않는다** — prop 을 그대로 쓴다", () => {
@@ -265,7 +341,22 @@ describe("R2-D 🔴 owner 경계 — 이 영역이 최종가를 **만들거나 �
     expect(code).not.toMatch(/finalPriceKrw\s*\?\?\s*recommendedPriceKrw/);
   });
 
-  it("R2-D-3 🟢 확정 handler 는 **후보 금액을 그대로** 넘긴다(환산·보정 0)", () => {
-    expect(code).toContain("onConfirmPriceKrw(row.priceAmount as number)");
+  it("R2-D-3 🔵 확정 handler 는 **KRW 는 그대로 · 외화는 환산값** 을 넘긴다(보정 0)", () => {
+    /**
+     * 🔵🔵 **CPO 지시 방향 전환.** 1차 단언은 「후보 금액을 **그대로**」였고 그것은
+     *    「외화는 확정하지 않는다」는 철회된 전제 위에 서 있었다.
+     * 🔴 그래서 축을 **둘로 가른다** — KRW 는 분기해서 그대로, 외화는 환산값.
+     *    그리고 🔴 **그 뒤에 산수를 붙이지 않는다**(보정·마진·수수료 0).
+     */
+    expect(code, "🔴 KRW 분기가 없다 — 원화 후보를 환산에 태우면 중복 환산이다").toContain(
+      'row.priceCurrency === "KRW"',
+    );
+    expect(code, "🔴 환산 실패를 `null` 로 받지 않는다 — 숫자를 지어낼 자리가 열린다").toContain(
+      "?.amountKrw ?? null",
+    );
+    expect(code, "🔴 handler 에 넘기는 값이 그 변수가 아니다").toContain("onConfirmPriceKrw(krw)");
+    expect(code, "🔴 환산값에 산수를 붙였다(두 번째 가격 owner)").not.toMatch(
+      /amountKrw\s*[*+/-]\s*\d/,
+    );
   });
 });

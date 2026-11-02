@@ -696,7 +696,16 @@ describe("H. 🔴 MI·가격 데이터는 **한 글자도** 바뀌지 않았다"
       "convertToKrw",
       "crossSellerReserved",
     ]) {
-      expect(AREA, `🔴 ${banned} 가 표시 영역에 들어왔다`).not.toContain(banned);
+      /**
+       * 🔵 CLOSE-3 — 환산은 **후보 카드 안에서만** 허용된다(CPO LOCK · `mi-candidate-row`).
+       * 🔴 그 카드가 쓰는 **`convertToKrwStrict`**(모르는 통화 → `null`)가 금지 문자열
+       *    `convertToKrw` 를 **부분문자열로 포함** 한다 ⟹ **분모에서 `…Strict` 만 «뺀다»**.
+       * 🔴 금지 목록은 **한 줄도 지우지 않았고** 비-strict `convertToKrw` 금지도 그대로다
+       *    (약화가 아니라 분모 변경이다).
+       */
+      expect(AREA.replace(/convertToKrwStrict/g, ""), `🔴 ${banned} 가 표시 영역에 들어왔다`).not.toContain(
+        banned,
+      );
     }
   });
 });

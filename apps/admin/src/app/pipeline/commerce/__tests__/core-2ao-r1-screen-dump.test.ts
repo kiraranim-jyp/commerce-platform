@@ -195,11 +195,19 @@ describe("CORE-2AO-R1 — 배포 전 화면 실측(마운트 DOM)", () => {
      *    즉 이 단언은 「영역이 **스스로** 권장가를 만들지 않는다」를 계속 문다.
      *    🟢 A 가 있을 때의 모양은 `core-next-step4-recommended-price` 가 담당한다.
      */
+    /**
+     * 🔵 CLOSE-3 — 환산은 **후보 카드 안에서만** 허용된다(CPO LOCK).
+     * 🔴 그래서 이 단언의 **분모에서 카드를 «뺀다»** — 요약/집계 영역의 환산 금지는
+     *    **그대로** 다(약화가 아니라 분모 변경이다). 금지 문자열 목록·방향 불변.
+     */
+    const cloneNoCards = container.cloneNode(true) as HTMLElement;
+    for (const c of [...cloneNoCards.querySelectorAll('[data-testid="mi-candidate-row"]')]) c.remove();
+    const allNoCards = (cloneNoCards.textContent ?? "").replace(/\s+/g, " ");
     for (const bad of ["추천 판매가", "적정 판매가", "약 ₩"]) {
-      expect(all, `🔴 금지 축이 열렸다: ${bad}`).not.toContain(bad);
+      expect(allNoCards, `🔴 금지 축이 열렸다: ${bad}`).not.toContain(bad);
     }
     expect(all, "🔴 영역이 스스로 권장 판매가격을 만들었다").not.toContain("권장 판매가");
-    expect(all, "🔴 A 를 넘기지 않았는데 원화 금액이 생겼다").not.toMatch(/[₩€$£¥]/);
+    expect(allNoCards, "🔴 A 를 넘기지 않았는데 원화 금액이 생겼다").not.toMatch(/[₩€$£¥]/);
   });
 });
 

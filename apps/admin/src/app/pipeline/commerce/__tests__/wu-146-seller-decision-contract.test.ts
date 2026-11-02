@@ -210,9 +210,17 @@ describe("1·2. seller-facing price owner = 1 · final judgement = 1", () => {
       /** 🔴 그리고 결론은 그 숫자를 **다시 적지 않는다**(중복 금지). */
       expect(decision, `🔴 결론이 금액을 또 적었다: ${n}`).not.toContain(n);
     }
-    /** 🔴 환산 **0** — 세 통화를 하나로 합치지 않는다(CPO 명시). */
-    expect(flat()).not.toContain("₩");
-    expect(flat()).not.toContain("약 ");
+    /**
+     * 🔴 환산 **0** — 세 통화를 하나로 합치지 않는다(CPO 명시).
+     * 🔵 CLOSE-3 — 환산은 **후보 카드 안에서만** 허용된다(CPO LOCK · `mi-candidate-row`).
+     * 🔴 그래서 이 단언의 **분모에서 카드를 «뺀다»** — 블록·근거 줄·결론의 환산 금지는
+     *    **그대로** 다(약화가 아니라 분모 변경이다).
+     */
+    const clone = container.cloneNode(true) as HTMLElement;
+    for (const c of [...clone.querySelectorAll('[data-testid="mi-candidate-row"]')]) c.remove();
+    const flatNoCards = (clone.textContent ?? "").replace(/\s+/g, " ").trim();
+    expect(flatNoCards).not.toContain("₩");
+    expect(flatNoCards).not.toContain("약 ");
   });
 
   it("🔴 1-c 결론이 **1차 화면** 에 있다 — 접힘 뒤로 숨지 않는다", () => {

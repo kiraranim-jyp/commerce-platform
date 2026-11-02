@@ -325,6 +325,13 @@ describe("§9 🔴 한 줄도 열지 않았다", () => {
      * 🟢 그래서 금지하는 것을 **「계산」** 으로 좁힌다 — 원가를 **읽는 것** 은 허용이고
      *    원가로 **무엇을 계산하는 것** 이 §9 금지다.
      */
+    /**
+     * 🔵 CLOSE-3 §0 — **분모(scope) 변경이다(금지 약화가 아니다).**
+     *    맨 `convertToKrw` 는 **여전히 금지** 이고, 빼는 것은 식별자
+     *    `convertToKrwStrict` **하나** 다 — 그 함수는 환율을 모르면 `null` 이라
+     *    숫자를 지어내지 않고, CPO 가 **후보 카드 안에서만** 허용했다.
+     */
+    const scoped = AREA.replace(/convertToKrwStrict/g, "");
     for (const banned of [
       "SAME_MIN_AXES",
       "threshold",
@@ -338,7 +345,7 @@ describe("§9 🔴 한 줄도 열지 않았다", () => {
       "권장 판매가",
       "적정 판매가",
     ]) {
-      expect(AREA, `🔴 ${banned} 가 표시 영역에 들어왔다`).not.toContain(banned);
+      expect(scoped, `🔴 ${banned} 가 표시 영역에 들어왔다`).not.toContain(banned);
     }
     /** 🟢 원가는 **읽기만** 한다 — 그 사실을 양방향으로 적는다. */
     expect(AREA, "🔴 원가 prop 배선이 사라졌다(CORE-2S §5-⑤)").toContain("costPriceKrw");

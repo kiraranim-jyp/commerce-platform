@@ -270,9 +270,16 @@ describe("B. 🔴 영역 (마운트 DOM)", () => {
     const os = sec("mi-same-overseas")!;
     expect(kr.textContent).toContain("KRW 88,000");
     expect(os.textContent).toContain("GBP 37");
-    /** 🔴 환산·기호 변환 0 — 이 영역 **안** 에 원화 환산이 없다(wu-056r1 과 같은 규칙). */
-    expect(os.textContent).not.toMatch(/₩|원화|환산|≈|[€$£¥]/);
-    expect(os.textContent).not.toMatch(/약\s*[0-9]/);
+    /**
+     * 🔴 환산·기호 변환 0 — 이 영역 **안** 에 원화 환산이 없다(wu-056r1 과 같은 규칙).
+     * 🔵 CLOSE-3 — 환산은 **후보 카드 안에서만** 허용된다(CPO LOCK · `mi-candidate-row`).
+     * 🔴 그래서 이 단언의 **분모에서 카드를 «뺀다»** — 영역(집계/요약) 자체의 환산·기호
+     *    변환 금지는 **그대로** 다(약화가 아니라 분모 변경이다).
+     */
+    const osNoCards = os.cloneNode(true) as HTMLElement;
+    for (const c of [...osNoCards.querySelectorAll('[data-testid="mi-candidate-row"]')]) c.remove();
+    expect(osNoCards.textContent).not.toMatch(/₩|원화|환산|≈|[€$£¥]/);
+    expect(osNoCards.textContent).not.toMatch(/약\s*[0-9]/);
   });
 
   it("B-4 🔴 SAME 이 아닌 후보는 이 영역에 **없다**(가격비교 제외)", async () => {
@@ -571,7 +578,14 @@ describe("C. 🔴🔴 MI → 영역 공급 배선", () => {
       "convertToKrw",
       "exchange-rates",
     ]) {
-      expect(AREA).not.toContain(forbidden);
+      /**
+       * 🔵 CLOSE-3 — 환산은 **후보 카드 안에서만** 허용된다(CPO LOCK · `mi-candidate-row`).
+       * 🔴 그 카드가 쓰는 **`convertToKrwStrict`**(모르는 통화 → `null`)가 금지 문자열
+       *    `convertToKrw` 를 **부분문자열로 포함** 한다 ⟹ **분모에서 `…Strict` 만 «뺀다»**.
+       * 🔴 금지 목록은 **한 줄도 지우지 않았고** 비-strict `convertToKrw` 금지도 그대로다
+       *    (약화가 아니라 분모 변경이다).
+       */
+      expect(AREA.replace(/convertToKrwStrict/g, "")).not.toContain(forbidden);
     }
   });
 });

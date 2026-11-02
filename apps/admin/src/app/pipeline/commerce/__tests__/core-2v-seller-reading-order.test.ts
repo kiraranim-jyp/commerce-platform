@@ -308,7 +308,14 @@ describe("D. 🔴 CPO §9 FAIL 조건", () => {
   });
 
   it("D-3 🔴 환산 흔적 0 · 통화 합산 0", () => {
-    const whole = ceoScreen().textContent ?? "";
+    /**
+     * 🔵 CLOSE-3 — 환산은 **후보 카드 안에서만** 허용된다(CPO LOCK).
+     * 🔴 그래서 이 단언의 **분모에서 카드를 «뺀다»** — 요약/집계 영역의 환산 금지와
+     *    통화 합산 금지는 **그대로** 다(약화가 아니라 분모 변경이다).
+     */
+    const clone = ceoScreen().cloneNode(true) as HTMLElement;
+    for (const c of [...clone.querySelectorAll('[data-testid="mi-candidate-row"]')]) c.remove();
+    const whole = clone.textContent ?? "";
     expect(whole).not.toMatch(/[₩€$£¥]/);
     expect(whole).not.toContain("약 ");
     for (const bad of ["GBP 37 ~ 58", "KRW 37", "GBP 88,000"]) {

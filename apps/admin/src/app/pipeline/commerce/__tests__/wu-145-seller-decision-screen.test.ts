@@ -275,8 +275,16 @@ describe("B. ① 가격 어휘는 하나다", () => {
     /** 🔴 서로 다른 **통화** 를 합쳐 범위로 적지 않는다(환산 0 · 합계 칸 없음). */
     expect(t1).not.toMatch(/\d+\s*~\s*\d+/);
     for (const cur of ["CAD", "GBP", "USD"]) expect(t1).toContain(cur);
-    expect(t1).not.toContain("₩");
-    expect(t1).not.toContain("약 ");
+    /**
+     * 🔵 CLOSE-3 — 환산은 **후보 카드 안에서만** 허용된다(CPO LOCK · `mi-candidate-row`).
+     * 🔴 그래서 이 단언의 **분모에서 카드를 «뺀다»** — 「통화를 합치지 않는다」는 가격
+     *    어휘 축의 환산 금지는 **그대로** 다(약화가 아니라 분모 변경이다).
+     */
+    const clone = container.cloneNode(true) as HTMLElement;
+    for (const c of [...clone.querySelectorAll('[data-testid="mi-candidate-row"]')]) c.remove();
+    const t1NoCards = (clone.textContent ?? "").replace(/\s+/g, " ").trim();
+    expect(t1NoCards).not.toContain("₩");
+    expect(t1NoCards).not.toContain("약 ");
   });
 });
 
