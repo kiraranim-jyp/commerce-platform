@@ -11,8 +11,30 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-🔵🔵🔵 CURRENT WU  **FINAL UX REBUILD = 구현·배포 완료 · CEO 화면 확인 1회만 남았다**
-                  🟢 전문 `docs/UIUX-FINAL-SPRINT.md` 맨 끝 **「실행 완료 기록」 ①~⑧**
+🔵🔵🔵 CURRENT WU  **PRICE & CANDIDATE UX FINAL FIX = 구현·배포 완료 · CEO 화면 1회만 남았다**
+                  🟢 전문 `docs/UIUX-FINAL-SPRINT.md` 맨 끝 **ⓞ~⑦**
+                  ```
+                  🔴🔴 **`6db15ecc` 를 운영 DB 로 깠다 — 기대와 정확히 일치한다**
+                     저장 후보 **4**(🇰🇷 1 · 🌎 3) · priceOverrideKrw **null** ·
+                     price_status/image_url/sold_out **전건 null**
+                     ⟹ §12 분기 **A 가 아니다**(데이터는 전부 있다) · **C+D**(가격 표시 · 우선순위)
+                  🟢 `79a09cfb` 는 후보 **1** · priceOverrideKrw **92,000** ⟹ CEO 캡처의
+                     ₩92,000 은 **복원 산출이고 정상** · 그 「국내 0」을 회귀 증거로 쓰지 않았다
+                  🟢 P1 해외 1차 소싱가에 **원 통화 + 약 ₩ 환산**(CORE-2E §4-4 보류 해제 ·
+                     `convertToKrwStrict` · 통화 혼합/미지원이면 **숫자 0**)
+                  🟢 P2 1차 **[가격 수정 →]**(`market-edit-price-link` · 같은 핸들러 ·
+                     `market-edit-final-price` 개수 **2 불변**)
+                  🟢 P3 후보 요약에 **행동** — 「… N곳 · 후보 보기」(`open` 0)
+                  🟢 신규 계약 **12** · 기존 **4파일 방향/분모 갱신**(약화 0) ·
+                     변이 **M3·M4·M5·M8·M9·M10 전부 FAIL → md5 복구**
+                  🟢 회귀 **758 files / 9,926 passed · 0 failed** · tsc 0 · build 0
+                  🔴 DB · schema · 복원 경로 · FX 정책 · 집계/적격성 정책 **전부 0**
+                  🟡 **CPO 판정 1건** — 덤프에 `GBP 30,200` 같은 행이 있어 환산이
+                     「약 ₩52,548,000」을 적는다. 🔴 **환산의 결함이 아니라 그 행의
+                     가격/통화 문제** 이고 §11 이 적격성 정책 변경을 금지해 **고치지 않았다**
+                  ```
+🔵 [이전] FINAL UX REBUILD — 접힘 3 → 1 · 1차 순서 재배치(`63c54ec2`)
+                  🟢 전문 `docs/UIUX-FINAL-SPRINT.md` **「실행 완료 기록」 ①~⑧**
                   🔴🔴 **CTO 가 할 코드 작업이 0 이다.** 다음 범위는 **CPO 가 지정** 한다
                   🔵 검증 상품 **고정** `/pipeline?resume=6db15ecc-7aa8-4589-b7d7-04375c25679e`
                   ```

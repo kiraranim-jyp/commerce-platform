@@ -100,6 +100,12 @@ import {
   CANDIDATE_LINK_TEXT,
   /** 🔵 FINAL UX REBUILD — 카드 안 「근거」 접힘의 라벨(어휘 owner 는 그 파일 하나다). */
   CANDIDATE_EVIDENCE_FOLD_LABEL,
+  /** 🔵 §5 — 요약 줄의 **행동** 어휘. */
+  CANDIDATE_LIST_OPEN_HINT,
+  /** 🔵 §3·§4 — 해외 1차 소싱가의 원화 환산 어휘(CORE-2E §4-4 의 보류를 푼다). */
+  SUMMARY_PRICE_KRW_PREFIX,
+  SUMMARY_PRICE_KRW_UNAVAILABLE,
+  overseasHasSingleCurrency,
   /**
    * 🔵🔵 `-02` — 🔴 `candidateReasonLines`(matchReasons 통째 렌더)를 **대체** 한다.
    *    카드는 **확인할 것만** 말한다. `matchReasons` 는 데이터/게이트에 **그대로 남는다**.
@@ -743,16 +749,42 @@ export function MarketPriceComparison({
                * 🔴 **금액을 문구에 담지 않는다**(1차 `₩ 1개` 계약) · 핸들러가 없으면
                *    **버튼을 그리지 않는다**(갈 곳 없는 버튼 금지).
                */}
-              {onApplyRecommendedPrice && (
-                <button
-                  type="button"
-                  data-testid="market-apply-recommended-price"
-                  onClick={onApplyRecommendedPrice}
-                  className="mt-1 rounded border border-border px-2 py-1 text-[11px] font-medium text-text-primary hover:bg-surface"
-                >
-                  {APPLY_RECOMMENDED_PRICE_LABEL}
-                </button>
-              )}
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                {onApplyRecommendedPrice && (
+                  <button
+                    type="button"
+                    data-testid="market-apply-recommended-price"
+                    onClick={onApplyRecommendedPrice}
+                    className="rounded border border-border px-2 py-1 text-[11px] font-medium text-text-primary hover:bg-surface"
+                  >
+                    {APPLY_RECOMMENDED_PRICE_LABEL}
+                  </button>
+                )}
+                {/**
+                 * ══════════════════════════════════════════════════════════════
+                 * 🔵🔵🔵 PRICE & CANDIDATE UX FINAL FIX §3 — **「가격 수정」이 여기 선다**
+                 * ══════════════════════════════════════════════════════════════
+                 *
+                 * 🔴🔴 **새 편집기를 만들지 않았다** — `onOpenPriceEditor` 는 상세의
+                 *    `market-edit-final-price` 와 **같은 함수** 이고 편집 owner 는
+                 *    `PriceEditor` **하나** 다(진입점이 둘일 뿐 값 owner 는 하나다).
+                 * 🔴 **금액을 적지 않는다** — 1차 `₩` 는 권장가 줄 하나다(UX-04-c 유지).
+                 * 🔴 `market-edit-final-price` 를 **여기에 쓰지 않는다** — 그 testid 는
+                 *    「두 시장에 같은 구조로 선다」(계약 R2-B · 개수 **2**)를 뜻하고,
+                 *    1차의 이것은 **시장과 무관한 단일 진입점** 이라 다른 축이다.
+                 * 🔴 핸들러가 없으면 **그리지 않는다**(갈 곳 없는 버튼 금지).
+                 */}
+                {onOpenPriceEditor && (
+                  <button
+                    type="button"
+                    data-testid="market-edit-price-link"
+                    onClick={onOpenPriceEditor}
+                    className="text-[11px] text-accent underline"
+                  >
+                    {EDIT_FINAL_PRICE_LINK_TEXT}
+                  </button>
+                )}
+              </div>
             </>
           )}
         </div>
@@ -1497,13 +1529,56 @@ function MarketBlock({
            */}
           {isSummary ? (
             head ? (
-              /** 🟢 CEO 요구 — **가격 숫자를 가장 크게.** */
+              <>
+              {/** 🟢 CEO 요구 — **가격 숫자를 가장 크게.** */}
               <p
                 data-testid="price-guide-headline"
                 className="mt-1 text-lg font-semibold tabular-nums text-text-primary"
               >
                 {head}
               </p>
+              {/**
+               * ══════════════════════════════════════════════════════════════
+               * 🔵🔵🔵 PRICE & CANDIDATE UX FINAL FIX §3·§4 — **원 통화 + 원화 환산**
+               * ══════════════════════════════════════════════════════════════
+               *
+               * 🔴🔴 **CORE-2E §4-4 가 보류한 그 줄이다.** 그때 막은 둘을 지시서가 풀었다 —
+               *    ⒜ `convertToKrwStrict` 라 **모르는 통화는 숫자를 만들지 않는다**
+               *       (`CAD 64 → 약 ₩64` 라는 거짓 숫자가 구조적으로 불가능하다)
+               *    ⒝ 환산 불가는 **조용히 빼지 않고** 「원화 환산 불가」로 적는다
+               * 🔴 **원본 줄을 덮어쓰지 않는다** — 위 `price-guide-headline` 은 한 글자도
+               *    안 바뀌었다(통화 ISO 그대로). 이 줄은 **추가** 다.
+               * 🔴 **국내에는 그리지 않는다** — `₩88,000` 아래 `약 ₩88,000` 은 같은 숫자를
+               *    두 번 적는 것이다(후보 카드가 쓰는 그 규칙과 **같다**).
+               * 🔴🔴 **통화가 섞이면 그리지 않는다** — 최저가를 하나로 고를 수 없다(WU-148).
+               *    그때 1차는 「GBP 37 · USD 80」 과 「통화가 여러 개라 …」를 그대로 말한다.
+               * 🔴 이 값은 **집계로 가지 않는다** — `buildPriceGuide`·`byCurrency` 는 이
+               *    변수를 **읽지 않는다**(표시 전용 · 새 가격 owner 0).
+               */}
+              {market === "OVERSEAS" && overseasHasSingleCurrency(g) && g.byCurrency[0]
+                ? (() => {
+                    const c = g.byCurrency[0]!;
+                    if (c.currency === "KRW") return null;
+                    const krw = convertToKrwStrict(c.lowest, c.currency);
+                    return krw ? (
+                      <p
+                        data-testid="market-summary-price-krw"
+                        className="text-[12px] tabular-nums text-text-secondary"
+                      >
+                        {SUMMARY_PRICE_KRW_PREFIX}
+                        {formatKrw(krw.amountKrw)}
+                      </p>
+                    ) : (
+                      <p
+                        data-testid="market-summary-price-krw-unavailable"
+                        className="text-[11px] text-text-tertiary"
+                      >
+                        {SUMMARY_PRICE_KRW_UNAVAILABLE}
+                      </p>
+                    );
+                  })()
+                : null}
+              </>
             ) : (
               /** 🔴 「가격을 못 가져왔다」와 「동일상품이 없다」는 다른 문장이다. */
               <p data-testid="price-guide-empty" className="text-[11px] text-text-tertiary">
@@ -1833,7 +1908,15 @@ function MarketColumn({
         <details data-testid="mi-candidate-list" className="mt-1">
           <summary className="cursor-pointer text-[11px] text-text-secondary">
             {/** 🔴 「N곳」은 **`list.length` 파생** 이다 — 상수에 넣으면 실제 행 수와 갈라진다. */}
-            {CANDIDATE_LIST_HEADING[market]} {list.length}곳
+            {CANDIDATE_LIST_HEADING[market]} {list.length}곳 ·{" "}
+            {/**
+              * 🔵 §5 — **행동을 적는다.** 「후보가 있다」만 적으면 셀러가 **무엇을 할 수
+              *    있는지** 를 모른다(CEO 화면에서 그렇게 보였다).
+              * 🔴 `open` 은 붙이지 않는다 — 바뀐 것은 **말** 뿐이다(WU-091 ① 유지).
+              */}
+            <span data-testid="mi-candidate-list-hint" className="text-accent underline">
+              {CANDIDATE_LIST_OPEN_HINT}
+            </span>
           </summary>
           {/**
             * ══════════════════════════════════════════════════════════════════

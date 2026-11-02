@@ -217,8 +217,18 @@ describe("C-1 seller-facing 가격 숫자의 owner 는 「📊 시장 판매 판
      * 🔴 그래서 환산 금지 단언의 **분모에서 카드를 «뺀다»** — owner 영역(결론·집계)의
      *    환산 금지는 **그대로** 다(약화가 아니라 분모 변경이다).
      */
+    /**
+     * 🔵 **PRICE & CANDIDATE UX FINAL FIX §3·§4 — 분모에 환산 «줄 하나» 를 더 뺀다.**
+     * 🔴 그 줄은 CPO 가 **요구한** 병기다(`convertToKrwStrict` · 모르는 통화는 숫자 0).
+     * 🔴🔴 **owner 는 여전히 하나다** — 그 줄 밖에 `₩`/「약 」이 생기면 여기서 FAIL 한다.
+     */
     const cloneNoCards = container.cloneNode(true) as HTMLElement;
-    for (const c of [...cloneNoCards.querySelectorAll('[data-testid="mi-candidate-row"]')]) c.remove();
+    for (const c of [
+      ...cloneNoCards.querySelectorAll(
+        '[data-testid="mi-candidate-row"],[data-testid="market-summary-price-krw"]',
+      ),
+    ])
+      c.remove();
     const htmlNoCards = cloneNoCards.innerHTML;
     expect(htmlNoCards).not.toContain("₩");
     expect(htmlNoCards).not.toContain("약 ");

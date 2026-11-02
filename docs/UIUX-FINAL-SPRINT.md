@@ -512,7 +512,111 @@ typecheck **0** · build **exit 0**
 ⒠ 🔴 「[가격 수정] 1차 배치」는 **구현하지 않았다**(위 ② 🔴⒜ · CPO 판정 사안)
 ```
 
-### ⑧ 🟡 **CEO Action — 화면 1회**
+---
+
+## 🟢🟢🟢 PRICE & CANDIDATE UX FINAL FIX — **실행 완료 기록**(2026-11-02 · 운영 2파일)
+
+### ⓪ 🔴🔴 **먼저 — `6db15ecc` 를 운영 DB 로 실제로 깠다**(§1 · 쓰기 0)
+
+```
+snapshot 6db15ecc  title "Hug Hairy Monster T-shirt" · status IN_PROGRESS
+  🔴 priceOverrideKrw = **null**        ← 그 상품은 **최종가를 아직 고른 적이 없다**
+  🟢 원상품 가격 EUR 40 (ORIGINAL)
+candidate_reviews **4행** — 🇰🇷 **1** · 🌎 **3**  ⟹ 🟢 **지시서 기대와 정확히 일치**
+  🇰🇷 miniboutique.co.kr   KRW 88,000 · PRESUMED_SAME · COMPARISON · SELLER_URL
+  🌎 junioredition.com     GBP 37     · SAME         · EXACT      · OVERSEAS_AUTO
+  🌎 villagekids.co.uk     GBP 21.2   · PRESUMED_SAME · COMPARISON · OVERSEAS_AUTO
+  🌎 global.trenbe.com     USD 80     · SAME         · EXACT      · SELLER_URL
+  🔴 price_status **전건 null** · image_url **전건 null** · sold_out **전건 null**
+```
+
+🔴🔴 **그래서 §12 분기는 A 가 아니다** — 데이터는 **전부 있다**. 분기 **C+D**(가격 «표시» ·
+정보 우선순위)로 확정했고, **DB·복원 경로는 한 줄도 건드리지 않았다.**
+
+🟢 **그리고 `79a09cfb` 와의 차이가 숫자로 갈렸다**(§2):
+```
+79a09cfb  후보 **1**(해외) · priceOverrideKrw **92,000 USER_EDITED** · price_status VERIFIED_CURRENT
+   ⟹ CEO 캡처의 「최종 선택 가격 ₩92,000 ✓선택됨」은 **복원 산출이고 정상** 이다
+🔴 그 스냅샷의 「국내 0」을 후보군 회귀 증거로 **쓰지 않았다**(§2 그대로)
+```
+
+### ① 🟢 구현 — **표시/배치만**(§11 금지 전수 준수)
+
+```
+P1 해외 1차 소싱가에 **원 통화 + 약 ₩ 환산 병기**
+   🔴🔴 **CORE-2E §4-4 가 보류해 둔 그 줄이다.** 그때 막은 둘을 지시서 §4 가 풀었다 —
+      ⒜ `convertToKrwStrict`(모르는 통화 → **숫자를 만들지 않는다**) ⒝ 「원화 환산 불가」
+   🔴 국내에는 그리지 않는다(같은 숫자 두 번) · **통화가 섞이면 만들지 않는다**(WU-148)
+   🔴 집계·FX 정책 **변경 0** — `buildPriceGuide`/`byCurrency` 는 이 값을 **읽지 않는다**
+P2 1차에 **[가격 수정 →]**(`market-edit-price-link`)
+   🔴 **새 편집기 0** — `onOpenPriceEditor` 는 상세의 것과 **같은 함수**(owner `PriceEditor` 하나)
+   🔴 `market-edit-final-price` 를 **쓰지 않았다** — 그 testid 는 「두 시장에 같은 구조」(개수 **2**)
+      를 뜻한다 ⟹ 1차의 단일 진입점과 **축이 다르다**(계약 R2 개수 2 **불변**)
+P3 후보 요약에 **행동** 을 적는다 — 「… N곳 · **후보 보기**」(`mi-candidate-list-hint`)
+   🔴 `open` 은 붙이지 않는다(WU-091 ①) — 바뀐 것은 **말** 뿐이다
+```
+
+### ② 🔴 기존 계약 **4파일 방향/분모 갱신** — 약화 0
+
+```
+core-2e-price-purpose D-1   🔴🔴 **방향 전환** — 그 줄이 CORE-2E §4-4 의 「되돌렸다」를
+   고정하고 있었다. 🟢 지금은 **더 세게** 문다 — ⒜ 환산은 **그 줄 하나** ⒝ 그 줄을 빼면
+   블록에 `₩` 가 **여전히 0**(다른 자리로 새지 않았다)
+core-2v D-3 · core-2w W-14 · wu-141-r3 C-1-b  **분모에 환산 줄 하나를 더 뺀다**
+   (CLOSE-3 이 카드에 쓴 「분모 분리」와 **같은 기법** · 금지 문구는 글자 그대로 남는다)
+```
+
+### ③ 🟢 신규 계약 **12**(`core-ux-rebuild-02-price-candidate.test.ts`)
+
+```
+⒜ 가격  PX-A-1 원 통화 + 환산 병기(기대값은 **운영 함수** 로 만든다) ·
+        A-2 국내엔 환산 0 · A-3 **통화 혼합이면 환산 0** · A-4 **모르는 통화 → 숫자 0 + 사유**
+⒜-2 최종가  PX-B-1 1차 [가격 수정] · B-2 핸들러 없으면 0 · B-3 **같은 핸들러**(1차 ↔ 상세) ·
+        B-4 `market-edit-final-price` **2 불변** · B-5 1차 `₩` 개수
+⒝ 후보  PX-C-1 건수 + 행동 · C-2 `open` 0 · C-3 카드가 **쓸 수 있는 상태**(판정·가격·판매처·확정) ·
+        C-4 외화 카드는 원 통화 + 환산
+```
+
+### ④ 🟢 음성 대조 — **전부 FAIL → md5 바이트 복구**
+
+```
+M3 외화 원가격을 KRW owner 로 직접      1 FAIL
+M4 **하드코딩 환율**(strict 우회)        2 FAIL
+M5 해외 환산 표시 제거                  2 FAIL
+M8 「후보 보기」 행동 제거               1 FAIL
+M9 1차 [가격 수정] 제거                 2 FAIL
+M10 국내/해외 대칭 파괴                 3 FAIL
+🟢 복구 md5 `432245d7ea9d0a76fb23b94b2767409b`
+🔴 **M8 이 1차에 「적용되지 않은 채 25 passed」로 나왔다** — perl 패턴이 안 맞았다.
+   🟢 적용 확인 마커가 그것을 잡았고 다시 돌려 **1 FAIL** 을 얻었다(그 함정의 재발 방지).
+```
+
+### ⑤ 🟢 측정
+
+```
+회귀 **758 files / 9,926 passed · 0 failed**(직전 757/9,913 → +1 파일 +13 건 = 신규 계약)
+typecheck **0** · build **exit 0**
+🔴 DB·schema·migration·복원 경로·FX 정책·집계 정책 **변경 0**
+```
+
+### ⑥ 🔴🔴 측정불가 / 한계 — 넘겨 읽지 않는다
+
+```
+⒜ 🔴 **6db15ecc 의 해외는 통화가 둘(GBP·USD)** 이라 1차 환산 줄이 **서지 않는다** —
+   「최저가를 하나로 고를 수 없다」는 WU-148 정책의 귀결이다(결함이 아니다).
+   🟢 그 상품에서 환산은 **후보 카드마다** 보인다(CLOSE-3).
+⒝ 🔴 운영 덤프 `ux04-b3-reviews.json` 만으로는 1차 가격 가이드를 세울 수 없다
+   (해외 행이 거의 `PRESUMED_SAME · COMPARISON`) ⟹ **그 축에서만** 리포의 기존 빌더를 썼다.
+⒞ 🔴🔴 **거짓 입력을 환산이 «증폭» 한다** — 덤프에 `GBP 30,200` 같은 행이 있고 화면이
+   「약 ₩52,548,000」을 적는다. 🔴 그것은 **환산의 결함이 아니라 그 행의 가격/통화 문제** 다.
+   §11 이 가격 적격성 정책 변경을 금지하므로 **고치지 않았다** — CPO 판정 사안으로 올린다.
+⒟ 🔴 `price_status` 전건 null ⟹ 6db15ecc 후보는 **전부 P2**(「상세 검증 전」)가 정상
+⒠ 🔴 실제 따져 화면은 CTO 가 볼 수 없다 ⟹ 위는 **운영 DB + 마운트 DOM** 이다
+```
+
+### ⑦ 🟡 **CEO Action — 화면 1회**
+
+
 
 ```
 URL   /pipeline?resume=6db15ecc-7aa8-4589-b7d7-04375c25679e   (🇰🇷1 + 🌎3)

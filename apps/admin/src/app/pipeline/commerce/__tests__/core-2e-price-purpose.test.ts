@@ -264,8 +264,31 @@ describe("CORE-2E D — 마운트 DOM(화면이 실제로 그 말을 하는가)"
     const block = txt("price-guide-overseas");
     expect(block).toContain(OVERSEAS_LOWEST_LABEL);
     expect(block, "🔴 해외 최저는 58 이다(80 이 아니다)").toContain("USD 58");
-    /** 🔴 환산을 넣으면 `CAD 64 → ₩64` 같은 거짓 숫자가 생긴다(C-3 가 그 사실을 고정). */
-    expect(block, "🔴 환산값이 생겼다 — C-3 를 다시 읽고 CPO 판정을 받는다").not.toContain("₩");
+    /**
+     * ════════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 **PRICE & CANDIDATE UX FINAL FIX §3·§4 — 이 단언의 «방향» 이 바뀌었다**
+     * ════════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 CORE-2E §4-4 는 환산을 **구현했다가 되돌리고** 이 줄로 그 사실을 고정했다.
+     *    막은 이유 둘 — ⒜ `convertToKrw` 가 모르는 통화를 그대로 KRW 로 만들어
+     *    `CAD 64 → 약 ₩64` 라는 **거짓 숫자** 를 냈다 ⒝ CPO 가 「허용」만 하고 요구는 안 했다.
+     * 🟢 이번 지시서 §4 가 **둘 다 해소** 했다 — `convertToKrwStrict`(모르는 통화면 숫자를
+     *    만들지 않고 「원화 환산 불가」)를 **지정** 했고 그 병기를 **요구** 했다.
+     * 🔴🔴 **약화가 아니다** — 지키는 성질(「거짓 환산 숫자를 만들지 않는다 · owner 는 하나」)은
+     *    그대로이고 아래가 **더 세게** 문다: ⒜ 환산은 **그 줄 하나** 이고 ⒝ 그 줄을 걷어내면
+     *    블록에 `₩` 가 **여전히 0** 이다(다른 자리로 새지 않았다).
+     */
+    const krwLine = container.querySelector('[data-testid="market-summary-price-krw"]');
+    expect(krwLine, "🔴 원 통화 옆 원화 환산이 사라졌다(§4 요구)").not.toBeNull();
+    expect(krwLine!.textContent ?? "").toContain("약 ₩");
+    const clone = container
+      .querySelector('[data-testid="price-guide-overseas"]')!
+      .cloneNode(true) as HTMLElement;
+    clone.querySelector('[data-testid="market-summary-price-krw"]')?.remove();
+    expect(
+      (clone.textContent ?? "").replace(/\s+/g, " "),
+      "🔴 환산값이 환산 줄 «밖» 에 생겼다",
+    ).not.toContain("₩");
     expect(container.querySelector('[data-testid="price-guide-krw"]')).toBeNull();
   });
 

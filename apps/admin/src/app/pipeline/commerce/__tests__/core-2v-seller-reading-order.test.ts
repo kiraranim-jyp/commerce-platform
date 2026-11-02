@@ -313,8 +313,19 @@ describe("D. 🔴 CPO §9 FAIL 조건", () => {
      * 🔴 그래서 이 단언의 **분모에서 카드를 «뺀다»** — 요약/집계 영역의 환산 금지와
      *    통화 합산 금지는 **그대로** 다(약화가 아니라 분모 변경이다).
      */
+    /**
+     * 🔵 **PRICE & CANDIDATE UX FINAL FIX §3·§4 — 분모에 환산 «줄 하나» 를 더 뺀다.**
+     * 🔴 CPO 가 「해외 소싱가는 원 통화 + 원화 환산 병기」를 **요구** 했다(CORE-2E §4-4 의
+     *    보류를 `convertToKrwStrict` 조건으로 푼 것) ⟹ 그 줄은 **허용된 환산** 이다.
+     * 🔴🔴 **약화가 아니다** — 그 줄 **밖** 의 환산·통화 합산 금지는 글자 그대로 남는다.
+     */
     const clone = ceoScreen().cloneNode(true) as HTMLElement;
-    for (const c of [...clone.querySelectorAll('[data-testid="mi-candidate-row"]')]) c.remove();
+    for (const c of [
+      ...clone.querySelectorAll(
+        '[data-testid="mi-candidate-row"],[data-testid="market-summary-price-krw"]',
+      ),
+    ])
+      c.remove();
     const whole = clone.textContent ?? "";
     expect(whole).not.toMatch(/[₩€$£¥]/);
     expect(whole).not.toContain("약 ");

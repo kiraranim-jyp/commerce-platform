@@ -510,6 +510,26 @@ export const CANDIDATE_LINK_TEXT = "판매 페이지 열기";
  * 🔴 확인할 것이 **없으면** 이 접힘은 **서지 않는다** — 빈 틀을 만들지 않는다.
  */
 export const CANDIDATE_EVIDENCE_FOLD_LABEL = "근거 확인";
+/**
+ * 🔵🔵 PRICE & CANDIDATE UX FINAL FIX §5 — **「후보가 있다」가 아니라 「후보를 볼 수 있다」.**
+ *
+ * 🔴 CEO 화면에서 요약이 「해외 소싱 후보 1곳」 뿐이라 **셀러가 할 행동이 안 보였다.**
+ * 🟢 그래서 요약 줄에 **행동** 을 붙인다. 🔴 `open` 을 붙이지 않는다(WU-091 ①) —
+ *    바뀌는 것은 **그 접힘을 열 수 있다는 사실을 말하는 것** 뿐이다.
+ */
+export const CANDIDATE_LIST_OPEN_HINT = "후보 보기";
+/**
+ * 🔵🔵🔵 PRICE & CANDIDATE UX FINAL FIX §3·§4 — **해외 1차 소싱가의 원화 환산.**
+ *
+ * 🔴🔴 **CORE-2E §4-4 가 보류했던 그 표시다**(이 파일 위쪽 블록). 그때 CPO 는 「허용」만
+ *    했고 CTO 가 **밀지 않았다** — ⒜ `convertToKrw` 가 모르는 통화를 그대로 KRW 로 만들어
+ *    `CAD 64 → 약 ₩64` 라는 **거짓 숫자** 를 냈고 ⒝ 계약 6건이 그 영역에 `₩` 를 금지했다.
+ * 🟢 이번 지시서 §4 가 그 두 조건을 **직접 지정** 했다 — `convertToKrwStrict`(모르는 통화는
+ *    **숫자를 만들지 않는다**) + 「원화 환산 불가」 문구. ⟹ 보류가 풀렸다.
+ * 🔴 **통화가 섞이면 그리지 않는다** — 최저가를 하나로 고를 수 없기 때문이다(WU-148).
+ */
+export const SUMMARY_PRICE_KRW_PREFIX = "약 ";
+export const SUMMARY_PRICE_KRW_UNAVAILABLE = "원화 환산 불가";
 
 /**
  * ══════════════════════════════════════════════════════════════════════════════

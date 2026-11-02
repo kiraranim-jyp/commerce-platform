@@ -293,8 +293,18 @@ describe("§8-6·7·8 국내/해외 분리 · 로직 불변", () => {
      * 🔴 그래서 이 단언의 **분모에서 카드를 «뺀다»** — 요약/집계 영역의 환산 금지와
      *    통화 합산 금지는 **그대로** 다(약화가 아니라 분모 변경이다).
      */
+    /**
+     * 🔵 **PRICE & CANDIDATE UX FINAL FIX §3·§4 — 분모에 환산 «줄 하나» 를 더 뺀다.**
+     * 🔴 그 줄은 CPO 가 **요구한** 병기(`convertToKrwStrict` · 모르면 숫자 0)다.
+     * 🔴🔴 그 줄 **밖** 의 환산·통화 합산 금지는 글자 그대로 남는다(약화 0).
+     */
     const clone = caseA().cloneNode(true) as HTMLElement;
-    for (const c of [...clone.querySelectorAll('[data-testid="mi-candidate-row"]')]) c.remove();
+    for (const c of [
+      ...clone.querySelectorAll(
+        '[data-testid="mi-candidate-row"],[data-testid="market-summary-price-krw"]',
+      ),
+    ])
+      c.remove();
     const whole = clone.textContent ?? "";
     expect(whole).not.toMatch(/[₩€$£¥]/);
     expect(whole).not.toContain("약 ");
