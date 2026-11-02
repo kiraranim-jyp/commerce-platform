@@ -138,6 +138,40 @@
 
 ---
 
+## §5 🟢🟢 **CPO 결정 — STOP-B ⒜ 승인됨**(2026-11-02) · 🔴 다시 묻지 않는다
+
+```
+🟢 **해외** 가격 집계 레코드에 **identity verdict 를 싣는 최소 계약 확장** 을 승인한다.
+🔴 **국내 가격 집계 정책은 건드리지 않는다**(EXACT|COMPARISON 그대로) — 이번 P0 는 해외다.
+🔴 새 verdict 체계를 만들지 않는다 — **기존 enum/type 을 재사용** 한다.
+🔴 구현 범위가 그보다 커지는 순간에만 STOP-B 재보고.
+```
+
+### 🔵 구현 좌표 — **조사 0**(이 세션이 코드로 확정했다)
+
+```
+owner      apps/admin/src/app/api/price-history/_lib/candidate-market.ts:216
+           summarizeCandidateOverseasPrices
+현재 결함   :259  `if (r.priceTier === "EXCLUDED") continue;`   ← **EXCLUDED 하나만** 뺀다
+           ⟹ `COMPARISON` · `REFERENCE` 금액이 「최저 확인가」가 된다(캡처의 CAD 26,300)
+           🔴 바로 위 주석이 그 사실을 적어 뒀다 — 「`REFERENCE` 는 빼지 않는다.
+              CPO 가 `EXCLUDED` 하나만 승인했고 …」(WU-062) ⟹ **이번에 그 승인이 확장됐다**
+계약        `CandidateOverseasPriceRecord` 에 **`verdict` 가 없다**(지금은 `priceTier` 뿐)
+           ⟹ 그래서 §5 ⒜ 확장이 필요하다. 생산자는 그 레코드를 만드는 곳
+              (`market-intelligence.ts` 의 `overseasEvidence.push` 경로)이다
+새 자격     `verdict ∈ {SAME, PRESUMED_SAME}` 만 **해외 1차 금액 집계**(byCurrency)
+           🔴 `byMarket` · `byPriceTier` · `count` 는 **건드리지 않는다**(WU-062 가 남긴 관측)
+```
+
+🔴🔴 **tier 축으로 대신 좁히지 않는다 — 실측 선례가 있다**:
+```
+이 레포 기록 — 「국내 참고가격 자격은 tier(EXACT|COMPARISON)이고 **SAME 만 허용하면
+국내 가격이 1 → 0 으로 사라진다**」. ⟹ tier 를 좁히는 길은 **이미 측정으로 닫혀 있다.**
+그래서 CPO 가 verdict 축(⒜)을 고른 것이다.
+```
+
+---
+
 ## §4 🟡 CPO 판정이 필요한 것(CTO 가 고르지 않았다)
 
 ```
@@ -148,3 +182,5 @@
    자기참조(다른 로케일)인지 다른 판매처인지 **미확인**. 자기참조면 그것은 후보가 아니다.
 ⒞ 🔴 덤프의 `GBP 30,200` 류 **가격/통화 적격성** 문제는 직전 스프린트에서 보류됐다.
 ```
+
+🔴 **§4 ⒜ 는 §5 로 승인·해소됐다**(해외 집계 verdict 확장). 남은 판정은 ⒝ 자기참조 · ⒞ 가격 적격성 둘이다.
