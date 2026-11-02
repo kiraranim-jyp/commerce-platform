@@ -216,3 +216,80 @@ marketDecisionLines        WU-146 상태 기계(판정·가격 문장) ⟹ §5 �
 🟡 **CEO Action — `docs/START-HERE.md` §18 ⑤항**(테스트 URL·상품·순서·예상결과 + 거짓경보 5).
 🔴 그 확인이 PASS 면 **UI/UX Sprint CLOSED** 이고 **추가 UI/UX WU 를 만들지 않는다.**
 🔴 Sprint 3(Discovery)는 **CPO 가 별도로 GO** 를 결정한다 — CTO 가 선제 설계하지 않는다.
+
+---
+
+## 🔵🔵🔵 CLOSE-3 착수점 — **구현은 검증됐고, 남은 것은 계약 범위 조정 17건**
+
+🔴 **다시 조사하지 않는다.** 아래가 전부다. 코드는 한 번 구현해 **typecheck 0** 까지 통과했고
+그 뒤 전체 회귀가 **계약 범위 문제** 를 드러내 되돌렸다(작업트리 clean 유지).
+
+### 🟢 1. 구현 — 이미 검증된 모양(그대로 다시 쓰면 된다)
+
+```
+`MarketPriceComparison.tsx`
+  import  { formatKrw, convertToKrwStrict } from "@commerce/pricing"
+  카드 가격 줄 **바로 아래** 에 추가(원본 줄은 한 글자도 안 바꾼다):
+    row.priceAmount != null && row.priceCurrency && row.priceCurrency !== "KRW"
+      → convertToKrwStrict(row.priceAmount, row.priceCurrency)
+          있으면  <p data-testid="mi-candidate-price-krw">약 ₩XX,XXX</p>
+          null    <p data-testid="mi-candidate-price-krw-unavailable">원화 환산 불가</p>
+  확정 CTA — KRW 는 원값 · 외화는 `?.amountKrw`, **null 이면 버튼 대신 안내문**
+`recommended-price-copy.ts`
+  CANDIDATE_PRICE_KRW_PREFIX = "약 " · CANDIDATE_PRICE_KRW_UNAVAILABLE = "원화 환산 불가"
+  CONFIRM_PRICE_NO_RATE_NOTE = "환율 정보가 없어 확정할 수 없습니다"
+  🔴 `CONFIRM_PRICE_FOREIGN_NOTE` 는 **폐기** 지만 상수는 남긴다(소비처 0 · 결정 이력)
+`CommerceWorkspace.tsx`  🟢 **변경 0** — R2 에서 이미 세 prop 을 넘긴다
+```
+
+### 🔴🔴 2. 진짜 작업 — **계약 «범위» 조정 17건 / 12파일**
+
+🔴🔴 **범위를 카드로 좁혀도 이 숫자가 줄지 않는다 — 이유를 적는다:**
+```
+그 계약들은 `container.textContent`(= **영역 전체**)를 읽는다. 카드는 그 영역 «안» 에
+있으므로, 카드에만 환산을 그려도 **그 텍스트에 잡힌다**.
+🔴 그리고 일부는 **개수** 계약이다(「금액 owner 는 하나 · ₩ N개」) ⟹ 환산 줄이
+   그 count 를 올린다.
+```
+
+🟢 **그래서 고치는 방법은 «뜻 반전» 이 아니라 «범위 명시» 다**(약화 0 · WU-148 의미 보존):
+```ts
+/** 🔵 CLOSE-3 — 환산은 **후보 카드 안에서만** 허용된다(CPO LOCK ②).
+ *  🔴 그래서 이 단언의 분모에서 카드를 «뺀다» — 집계/요약 영역의 환산 금지는 **그대로** 다. */
+const clone = container.cloneNode(true) as HTMLElement;
+for (const c of [...clone.querySelectorAll('[data-testid="mi-candidate-row"]')]) c.remove();
+const text = (clone.textContent ?? "").replace(/\s+/g, " ");   // ← 이것으로 기존 단언을 그대로 돌린다
+```
+🔴 **금지 목록을 줄이거나 단언을 지워서 PASS 시키지 않는다** — 분모만 바꾼다.
+
+### 🔴 3. 대상 파일 · 단언 수(실측 grep)
+
+```
+core-2e-price-purpose 3 · wu-141-r3-price-owner 2 · wu-144-seller-decision-e2e 2 ·
+wu-145-seller-decision-screen 2 · wu-146-seller-decision-contract 2 ·
+wu-148-market-price-signal 2 · core-2s-seller-screen 1 · core-2v-seller-reading-order 1 ·
+core-2w-price-qualification 1 · core-next-step4-recommended-price 1
++ core-2ao-r1-screen-dump(「약 ₩」 금지 목록) · wu-132-mi-same-price-comparison
++ 🟢 내 파일 둘은 **방향 전환** 이다(범위 조정 아님) —
+  `r2-final-price-and-cta`(R2-C-2 외화 확정 허용 · R2-D-1/D-3 환산 어휘 허용) ·
+  `ux04-b3-restore-render`(⒞-3 의 DATA_DEPENDENT 에 `mi-candidate-price-krw` 추가)
+```
+
+### 🔴 4. 변이 M1~M6(지시서 §10) — 설계 확정
+
+```
+M1 환산값을 `row.priceAmount` 에 대입            → 원본 줄 단언이 FAIL 해야 한다
+M2 `convertToKrw`(비-strict)로 바꿔 모르는 통화에 숫자 생성 → 「환산 불가」 단언 FAIL
+M3 외화 확정에 `row.priceAmount` 를 그대로 전달    → R2-D-3 FAIL
+M4 환산값을 `buildPriceGuide`/집계 입력에 전달      → 집계 불변 단언 FAIL
+M5 시장별 전용 카드 분기 추가                      → parity 단언 FAIL
+M6 확정 후 후보 row 를 mutate                      → source 불변 단언 FAIL
+```
+
+### 🟡 5. 왜 이 세션에서 끝내지 않았는가(§4-C)
+
+🔴 이 세션은 B-3 스프린트 · Sprint-2 Audit · CPO 2차 검증 · R2 · STEP 6 · CLOSE-2 를
+연속으로 돌렸고 **전체 회귀 6회**(각 ~6분)를 포함했다. 남은 용량으로 **12파일 / 17단언 +
+회귀 2회 + build + deploy** 를 끝까지 갈 수 없다 ⟹ 착수하면 **배선 절반에서 끊긴다**.
+🟢 그래서 **clean 으로 멈췄다**(배포 `a3472e84` 영향 0) — §4-C 가 「가장 나쁘다」고 적은
+상태를 만들지 않았다. 🔴 다음 세션은 위 1~4 로 **조사 0** 에서 시작한다.
