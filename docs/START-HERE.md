@@ -13,7 +13,24 @@
 ```
 🔴🔴🔴 CURRENT WU  **SPRINT 3 — DISCOVERY QUALITY + SELLER DECISION UI**(CPO NO-GO 2026-11-02)
                   🔵 **착수점은 `docs/SPRINT3-DISCOVERY-UI.md` 하나다** · 운영 코드 **0**
-                  🔴🔴 **STOP — 도구 안전검사가 ① 운영 DB 읽기를 차단한다**(2026-11-02)
+                  🟢🟢 **P0 원인 확정 · P1 수정·배포 완료**(`d68beab3` · push 0/0 · 2026-11-03)
+                     **Case A — Price Eligibility** 가 실측으로 확정됐다
+                     실측(B226AC010) ① Search 159 → ② Crawl 41 → ③ Identity 30
+                        → ④ 샵 대표 21 → ⑤ 가격 20 → ⑥ 집계 진입 15
+                     🔴 그 15 중 **SIMILAR 1건**(`milanik.tw` TWD 2,980 · tier REFERENCE)이
+                        **TWD 「최저 확인가」** 였다 ⟹ CEO 가 본 `CAD 26,300` 과 같은 자리
+                     🟢 수정 **한 지점** — 집계가 `EXCLUDED` 만 걸렀다(candidate-market.ts)
+                        ⟹ verdict 가 있으면 **SAME · PRESUMED_SAME 만** `byCurrency` 진입
+                     🔴 **SAME-only 로 좁히지 않았다**(age-line recall 보호 · 계약 B-3)
+                     🔴 **국내 축 회귀 0**(옵셔널 칸 · 계약 C-1·C-2 · 변이 M5 4F)
+                     🟢 P2 TEST B — 자격 미달 **1 → 0** · SAME **5 유지** · PRESUMED 9 → 10
+                     🔴 P2 TEST A(B226AC043) **MEASUREMENT UNAVAILABLE** — 0 으로 적지 않는다
+                        (운영 DB 차단 · APIFY 토큰 없음 · 저장 Search 산출물에 **0건**)
+                  🔴🔴🔴 **남은 것 = P3 UI/UX FINAL** — 🔴 **그것 없이는 CLOSED 가 아니다**
+                     UXR-D/F/P/S/C · M-UX-1~7 · 최종 회귀 · CEO 5문항
+                  ```
+                  ```
+                  🔴 [낡음] STOP 기록 — 도구 안전검사가 ① 운영 DB 읽기를 차단했다(2026-11-02)
                      🟢 CPO 가 ①(read-only DB) · ②(B226AC043 라이브 1회)를 **승인했다**
                      🔴 그런데 `node` 스크립트 실행이 **auto mode 와 «별개» 인 안전검사**에
                         막힌다(사유 「행위 자체가 아니다」) ⟹ **CTO 가 풀 수 없는 층**

@@ -322,8 +322,20 @@ describe("SPRINT 3 P0 — Search/Crawl/Identity/Price 네 층 분모", () => {
               const amt = j.best.price?.amount ?? null;
               const cur = j.best.price?.currency ?? null;
               if (row.market !== "KR" && amt != null && cur && cur.toUpperCase() !== "KRW") {
+                /**
+                 * 🔴🔴 SPRINT 3 P1 — **verdict 를 «반드시» 같이 넘긴다.** 1차 하니스가
+                 *    이 칸을 빼서 P1 이 적용된 뒤에도 **예전 숫자** 가 나왔다 ⟹ 그대로
+                 *    보고했으면 「수정이 발화하지 않았다」는 거짓 결론이었다.
+                 * 🟢 생산자(`market-intelligence.ts`)가 싣는 칸을 그대로 베낀다.
+                 */
                 const s = summarizeCandidateOverseasPrices([
-                  { market: row.market!, currency: cur, amount: amt, priceTier: row.tier! },
+                  {
+                    market: row.market!,
+                    currency: cur,
+                    amount: amt,
+                    priceTier: row.tier!,
+                    verdict: row.verdict,
+                  },
                 ]);
                 row.enteredAggregate = Object.keys(s.byCurrency).length > 0;
               }
