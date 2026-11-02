@@ -1386,15 +1386,28 @@ Git          clean · origin/main 0/0 · Production / 200
                완벽한 가격 DB · **후보를 줄여 정확도만 올리는 시스템**
             🟢 철학 — 「정답을 주는 것이 아니라 **좋은 후보를 많이** 찾아 가격·근거와 함께
                보여주고 **셀러의 판단을 돕는다**」
-[현재 단계]  **SPRINT 3 — P3 UI/UX FINAL** (CPO 확정 2026-11-03)
+[현재 단계]  **SPRINT 3 — P3 구현·계약 완료 · CEO 5문항 대기** (2026-11-03)
+            🔴🔴 **P3 는 «빼는 작업» 이 아니었다 — 측정이 그 이유를 말한다**
+            내가 1차에서 지목한 둘이 **전부 기존 결정** 이었다:
+              ⒜ 「국내 가격과 해외 소싱가를 기준으로 …」 → CPO 가 **한 줄로 줄여 고정** ·
+                 계약 **둘** 이 「설명문 == 1줄」로 잠가 뒀다
+              ⒝ 「현재 확인된 정보만으로는 …」 → **WU-130 ②** 가 「조회하지 않았다」로
+                 읽히는 것을 막기 위해 일부러 넣었다(지우면 더 나쁜 오독)
+            🔴🔴 그리고 **내 1차 진단이 하니스 산물이었다** — 기존 `firstScreen()` 이
+               닫힌 `<details>` 를 **통째로 제거** 해 `<summary>` 까지 지웠다 ⟹
+               「🌎 칸이 빈칸」·「②에 답 못함」·「비대칭」 **셋 다 거짓** 이었다
+               🟢 실제 1차 = 「**해외 소싱 후보 4곳 · 후보 보기**」가 보인다
+            🟢 ⟹ P3 산출물 = **그 상태를 계약으로 잠근 것**(운영 코드 **0**)
 [완료]      **P0 Case A** · **P1 Price Eligibility** · Contract **14** · Mutation **M1~M7** ·
             **P2 TEST B**(자격 미달 1 → 0 · SAME 5 유지) · Regression **9,940/0** ·
             Typecheck **0** · Build **0** · **Push** · **Deploy**(`d68beab3`·`f59bba76` · 0/0)
             🟢 그 전 자산 — 후보 저장(`candidate_reviews`) · Identity 6상태 · 국내·해외 가격
             배선 · 추천가 · `priceOverrideKrw`(**최종가 owner · 새로 만들지 않는다**) ·
             통화 환산/환산불가 · **re-entry 복원**(재진입에 Search/Crawl 재실행 0)
-[미해결]    🔴 **P3 UI/UX** · UXR-D/F/P/S/C · M-UX-1~7 · 최종 Regression ·
-            Production evidence · **CEO 5문항**
+[미해결]    🟡 **CEO 5문항 하나만 남았다**(Q1~Q5 · 실제 따져 화면)
+            🟢 P3 ✅ · UXR-D/F/P/S/C ✅(마운트 DOM 8 PASS) · M-UX ✅(4종 적용·FAIL·복구) ·
+               최종 Regression ✅ **9,948/0** · typecheck ✅ 0 · build ✅ 0
+            🔴 TEST A(B226AC043) **MEASUREMENT UNAVAILABLE** — 0 으로 적지 않는다
 [현재 STOP] **없다.** 🔴 단 **TEST A(B226AC043)는 `MEASUREMENT UNAVAILABLE`** —
             운영 DB/APIFY 접근 불가 · 🔴 **0 으로 처리하지 않는다**
 [다음 CTO]  🔵🔵 **P0~P2 를 다시 조사하지 않는다. START-HERE 에서 바로 P3 로 진입한다.**
