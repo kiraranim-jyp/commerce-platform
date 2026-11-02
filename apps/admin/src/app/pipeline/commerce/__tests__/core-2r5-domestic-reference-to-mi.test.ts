@@ -144,20 +144,45 @@ describe("CORE-2R-5 A — 국내 참고가격이 1차 🇰🇷 블록에 선다"
      * 🟢🟢 **약해지지 않았다 — 더 강해졌다**: 1차를 「**상세 접힘 «앞» 전부**」로 정의하면
      *    순서가 또 바뀌어도 지키는 성질(「금액 구역이 1차에 하나」)이 그대로 유지된다.
      */
-    const firstLayer = (h: string): string => h.slice(0, h.indexOf('data-testid="price-detail-fold"'));
+    /**
+     * ════════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 **FINAL UX REBUILD — 분모에서 «후보 카드» 를 뺀다**(CPO 2026-11-02)
+     * ════════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 후보 칸이 **1차로 올라왔다**(카드의 접힘 깊이를 3 → 1 로 줄인 그 이동) ⟹
+     *    1차 층 슬라이스에 **후보 행의 가격** 이 들어온다. 실측 `KRW 88,000` **3개** =
+     *    🇰🇷 집계 1 + 후보 카드 2.
+     * 🔴🔴 **약화가 아니다** — 이 단언이 지키는 성질은 처음부터 「**집계** 금액의 owner 는
+     *    하나」이고 후보 행 가격은 **집계가 아니다**(아래 `outsidePresumed` 가 이미 같은
+     *    이유로 그 구역을 걷어낸다 — 그 기법을 1차 층에도 **그대로** 쓴다).
+     * 🟢 그래서 **단언을 바꾸지 않고 분모만** 바꿨다 — 숫자 `1` 은 그대로다.
+     */
+    const stripCandidateList = (h: string): string =>
+      h.replace(/<details data-testid="mi-candidate-list"[\s\S]*?<\/details>/g, "");
+    const firstLayer = (h: string): string =>
+      stripCandidateList(h.slice(0, h.indexOf('data-testid="price-detail-fold"')));
     const summary = firstLayer(html);
     expect(summary, "🔴 1차 층을 잘라내지 못했다(상세 접힘이 사라졌다)").not.toBe("");
+    /** 🔴 분모를 **같이 잠근다** — 후보 구역을 못 걷어내면 위 단언이 공짜가 된다. */
+    expect(summary, "🔴 1차 층에서 후보 구역을 걷어내지 못했다").not.toContain(
+      'data-testid="mi-candidate-list"',
+    );
     expect((summary.match(/data-testid="domestic-reference"/g) ?? []).length).toBe(1);
     expect((summary.match(/KRW 88,000/g) ?? []).length).toBe(1);
     /**
      * 🔵 **그리고 새 순서를 «직접» 단언한다** — 되돌리면 여기서 잡힌다.
      *    (전에는 슬라이스가 순서를 암묵적으로 들고 있었고, 그래서 순서가 바뀔 때
      *     「0 을 세는」 모호한 FAIL 이 났다. 이제 순서는 순서로 문다.)
+     *
+     * 🔴🔴 **FINAL UX REBUILD 에서 방향이 뒤집혔다**(CPO 목표 화면 2026-11-02):
+     *    「상품 판단 → **소싱 가격** → 후보 → **추천 판매가** → ▼ 근거」.
+     *    ⟹ `market-blocks`(근거 숫자)가 `market-next-step`(추천가) **앞** 이다.
+     * 🟢 **약해지지 않았다** — 여전히 **엄격한 순서** 를 단언하고, 되돌리면 FAIL 한다.
      */
     expect(
-      summary.indexOf('data-testid="market-next-step"'),
-      "🔴 권장 판매가격이 근거보다 뒤로 갔다",
-    ).toBeLessThan(summary.indexOf('data-testid="market-blocks"'));
+      summary.indexOf('data-testid="market-blocks"'),
+      "🔴 소싱 가격이 추천 판매가보다 뒤로 갔다",
+    ).toBeLessThan(summary.indexOf('data-testid="market-next-step"'));
     /**
      * 🟢 그리고 **집계 축 전체** 로도 1회다(결론이 더는 금액을 인용하지 않는다).
      *

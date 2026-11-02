@@ -432,8 +432,17 @@ describe("UX-FINAL-01 ⒞ 🔵 국내/해외 DOM 구조·타이포가 **같다**
      * 🟢 표본에서 통화와 시장이 함께 움직여 구조 차이처럼 보이지만, **시장별 구조 분기
      *    금지**(⒞-2 가 `market === "KR" ?` 모양을 소스에서 직접 막는다)는 그대로다.
      */
+    /**
+     * 🔵 **FINAL UX REBUILD — 분모에 `mi-candidate-evidence` 를 더한다**(2026-11-02).
+     *
+     * 🔴 CPO 목표 화면이 「`blockers` · 내부 판정 문구는 기본 화면에서 제거(**근거 안으로**)」
+     *    라서 경고 줄들이 카드 **안** 의 `<details>` 로 들어갔다. 그 접힘은 **경고가 있을
+     *    때만** 선다(빈 틀 금지) ⟹ `mi-candidate-warning` 과 **정확히 같은 데이터 조건** 이다.
+     * 🟢 그래서 **같은 집합** 에 넣는다 — 구조 척추(항상 서는 줄)는 한 줄도 바뀌지 않았다.
+     */
     const DATA_DEPENDENT = new Set([
       "mi-candidate-price-unverified",
+      "mi-candidate-evidence",
       "mi-candidate-warning",
       "mi-candidate-price-krw",
       "mi-candidate-price-krw-unavailable",

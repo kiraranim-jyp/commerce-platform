@@ -1,0 +1,356 @@
+/** @vitest-environment jsdom */
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 FINAL UX REBUILD — **「존재」가 아니라 «노출» 을 잰다**(CPO 확정 2026-11-02)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **이 파일이 생긴 이유를 먼저 적는다.** 이 트랙은 **기술 PASS / 화면 FAIL** 을
+ *    **세 번** 냈다. 내 계약은 노드가 **있는지** 는 쟀지만 **몇 겹 뒤에 있는지** 를
+ *    재지 않았다 — 그 사이에 **배치/접힘** 이라는 층이 있고 **CEO 가 보는 것은 그 층** 이다.
+ *    (CEO NO-GO 실측: 후보 카드가 `price-detail-fold` → `mi-detail-fold` →
+ *     `mi-candidate-list` **세 겹** 뒤에 있어서 **세 번 펼쳐야** 보였다.)
+ *
+ * 🔵 그래서 네 축을 **새로** 잰다(기존 「데이터 존재 · DOM mounted」는 그대로 유지된다):
+ * ```
+ * ⒜ 접힘 깊이              카드의 조상 `<details>` 수 == 기대값
+ * ⒝ 1차 화면 노출 여부      `price-detail-fold` **밖** 에 무엇이 서는가
+ * ⒞ 의사결정 정보 우선순위   판단 → 소싱가격 → 후보 → 추천가 → 확정 → ⓘ **순서**
+ * ⒟ 국내/해외 구조 대칭      두 칸의 testid 척추가 **순서까지** 같다
+ * ```
+ *
+ * 🔴 입력은 **운영 `candidate_reviews` 실덤프** 다(fixture 조작 0) — 다른 계약들이 쓰는
+ *    그 파일 그대로이고, 두 시장이 **둘 다** 들어 있어야 ⒟ 가 성립한다(분모를 같이 잠근다).
+ * 🔴 **「Production UI PASS」로 쓰지 않는다** — 실제 따져 화면은 CTO 가 볼 수 없다.
+ *    이것은 **마운트 DOM 축** 이고 최종 판정은 CEO 1회다.
+ */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { act, createElement } from "react";
+import { createRoot } from "react-dom/client";
+import { describe, expect, it } from "vitest";
+import { MarketPriceComparison } from "../MarketPriceComparison";
+import { MI_SAME_EMPTY, CANDIDATE_LIST_HEADING } from "../mi-same-candidates";
+import { FINAL_PRICE_LABEL } from "../recommended-price-copy";
+/** 🔴 판매판단 문구 owner — 테스트가 문구를 **지어내지 않는다**(같은 맵을 읽는다). */
+import { FINAL_VERDICT_COPY } from "../DomesticPriceIntelligencePanel";
+import type { GeminiTransientRow } from "../GeminiTransientCandidates";
+import { toSavedCandidateRows } from "../../../api/price-history/_lib/saved-candidate-rows";
+import { candidateReviewRowFromDb } from "../../../api/price-history/_lib/candidate-review";
+
+const FIX = join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "api",
+  "price-history",
+  "_lib",
+  "__tests__",
+  "fixtures",
+  "ux04-b3-reviews.json",
+);
+interface Dump {
+  legacy: { rows: Record<string, unknown>[] };
+  sellerUrl: Record<string, unknown>[];
+}
+const dump = (): Dump => JSON.parse(readFileSync(FIX, "utf8")) as Dump;
+const restored = (raw: Record<string, unknown>[]): GeminiTransientRow[] =>
+  toSavedCandidateRows(raw.map((r) => candidateReviewRowFromDb(r))) as GeminiTransientRow[];
+
+/** 🔴 두 시장이 **둘 다** 있는 입력 — ⒟ 대칭 축의 분모다. */
+const bothMarkets = (): GeminiTransientRow[] => {
+  const d = dump();
+  return [...restored(d.legacy.rows), ...restored(d.sellerUrl)];
+};
+
+const SNAP = "c88d2ca4-bfe1-4851-9c1d-92f69222a3f2";
+
+function mount(props: Record<string, unknown>) {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  act(() => {
+    root.render(createElement(MarketPriceComparison, { snapshotId: SNAP, ...props }));
+  });
+  return {
+    host,
+    cleanup: () => {
+      act(() => root.unmount());
+      host.remove();
+    },
+  };
+}
+
+/**
+ * 🔵 **접힘 깊이** — 그 요소를 보려고 셀러가 펼쳐야 하는 `<details>` 의 수.
+ * 🔴 `container` 밖으로 올라가지 않는다(호스트 div 까지만 센다).
+ */
+function foldDepth(el: Element, stopAt: Element): number {
+  let d = 0;
+  let p: Element | null = el.parentElement;
+  while (p && p !== stopAt) {
+    if (p.tagName.toLowerCase() === "details") d += 1;
+    p = p.parentElement;
+  }
+  return d;
+}
+
+/**
+ * 🔵 **1차 화면** — `＋ 상세정보 보기` 를 **제거한** clone.
+ *
+ * 🔴 기존 `firstScreen()`(닫힌 `details` 를 **전부** 제거)과 **다른 축** 이다. 그쪽은
+ *    접힘의 `summary` 까지 같이 지우므로 「후보 N곳 요약이 첫 화면에 보인다」를 **잴 수
+ *    없다**. 🟢 이 축은 CPO 가 지정한 그 방법이고, CLOSE-3 의 「분모 분리」와 같은 기법이다.
+ */
+function firstScreenNode(host: HTMLElement): HTMLElement {
+  const clone = host.cloneNode(true) as HTMLElement;
+  clone.querySelector('[data-testid="price-detail-fold"]')?.remove();
+  return clone;
+}
+const text = (el: HTMLElement): string => (el.textContent ?? "").replace(/\s+/g, " ");
+
+/** 🟢 문서 순서 — 텍스트 `indexOf` 는 같은 글자가 두 번 나오면 틀린 자리를 집는다. */
+function docOrder(host: HTMLElement, ids: readonly string[]): number[] {
+  const all = [...host.querySelectorAll("[data-testid]")] as HTMLElement[];
+  return ids.map((id) => all.findIndex((e) => e.dataset.testid === id));
+}
+
+/* ═══════════════════ ⒜ 접힘 깊이 ═══════════════════ */
+
+describe("UXR-D ⒜ 접힘 깊이 — 후보 카드는 **한 번만** 펼치면 보인다", () => {
+  it("UXR-D-1 🔴🔴 모든 후보 카드의 조상 `<details>` 가 **정확히 1** 이다", () => {
+    const m = mount({ rows: bothMarkets() });
+    try {
+      const cards = [...m.host.querySelectorAll('[data-testid="mi-candidate-row"]')];
+      /** 🔴 분모를 같이 잠근다 — 카드가 0 이면 이 단언은 아무것도 보지 않는다. */
+      expect(cards.length, "🔴 후보 카드가 하나도 없다(분모 0)").toBeGreaterThan(0);
+      for (const c of cards) {
+        const d = foldDepth(c, m.host);
+        /**
+         * 🔴 **2 이상이면 CEO NO-GO 상태** 다(실측 3 — `price-detail-fold` →
+         *    `mi-detail-fold` → `mi-candidate-list`).
+         * 🔴 **0 이어도 FAIL** 이다 — 접힘 밖으로 꺼내면 후보가 「유력 후보」로 읽히고
+         *    그것이 2026-09-19 사고의 기전이다(WU-091 ①).
+         */
+        expect(d, `🔴 카드 접힘 깊이가 ${d} 다(1 이어야 한다)`).toBe(1);
+      }
+    } finally {
+      m.cleanup();
+    }
+  });
+
+  it("UXR-D-2 🔴 그 **유일한** 조상 접힘이 `mi-candidate-list` 다", () => {
+    const m = mount({ rows: bothMarkets() });
+    try {
+      const card = m.host.querySelector('[data-testid="mi-candidate-row"]')!;
+      let p: Element | null = card.parentElement;
+      let found: Element | null = null;
+      while (p && p !== m.host) {
+        if (p.tagName.toLowerCase() === "details") {
+          found = p;
+          break;
+        }
+        p = p.parentElement;
+      }
+      expect(found, "🔴 카드를 감싼 접힘이 없다").not.toBeNull();
+      expect(
+        found!.getAttribute("data-testid"),
+        "🔴 카드를 감싼 접힘이 후보 목록이 아니다(다른 층이 끼어들었다)",
+      ).toBe("mi-candidate-list");
+    } finally {
+      m.cleanup();
+    }
+  });
+
+  it("UXR-D-3 🔴 `mi-candidate-list` 에 `open` 이 **없다**(WU-091 ① 유지)", () => {
+    const m = mount({ rows: bothMarkets() });
+    try {
+      const lists = [...m.host.querySelectorAll('[data-testid="mi-candidate-list"]')];
+      expect(lists.length).toBeGreaterThan(0);
+      for (const l of lists) {
+        expect(l.tagName.toLowerCase()).toBe("details");
+        expect(l.hasAttribute("open"), "🔴 후보 목록이 펼쳐져 있다 — 「유력 후보」로 읽힌다").toBe(
+          false,
+        );
+      }
+    } finally {
+      m.cleanup();
+    }
+  });
+});
+
+/* ═══════════════════ ⒝ 1차 화면 노출 ═══════════════════ */
+
+describe("UXR-F ⒝ 1차 노출 — 첫 화면에 **무엇이 서는가**", () => {
+  it("UXR-F-1 🟢🟢 후보 목록 요약이 **1차에 선다**(CPO 의 `[후보 보기]`)", () => {
+    const m = mount({ rows: bothMarkets() });
+    try {
+      const first = firstScreenNode(m.host);
+      expect(
+        first.querySelectorAll('[data-testid="mi-candidate-list"]').length,
+        "🔴 후보 목록이 상세 접힘 안으로 되돌아갔다",
+      ).toBeGreaterThan(0);
+    } finally {
+      m.cleanup();
+    }
+  });
+
+  it("UXR-F-2 🟢 두 시장의 「후보 N곳」 요약이 **둘 다** 1차에 있다", () => {
+    const m = mount({ rows: bothMarkets() });
+    try {
+      const t = text(firstScreenNode(m.host));
+      for (const mk of ["KR", "OVERSEAS"] as const) {
+        expect(t, `🔴 1차에 ${mk} 후보 요약이 없다`).toContain(CANDIDATE_LIST_HEADING[mk]);
+      }
+    } finally {
+      m.cleanup();
+    }
+  });
+
+  it("UXR-F-3 🔴🔴 **최종 선택 가격은 1차에 없고 상세에 있다**(CPO LOCK ⒜)", () => {
+    const m = mount({ rows: bothMarkets(), finalPriceKrw: 85000, onOpenPriceEditor: () => {} });
+    try {
+      /** 🔴 1차에 올리면 가격 숫자가 넷(권장·국내·해외·최종)이 된다 — CPO 가 닫은 판정이다. */
+      expect(
+        firstScreenNode(m.host).querySelectorAll('[data-testid="market-final-price"]').length,
+        "🔴 최종 선택 가격이 1차로 올라왔다",
+      ).toBe(0);
+      /** 🟢 그리고 **삭제가 아니다** — 상세에는 그대로 있고 개수도 그대로다(시장별 1 × 2). */
+      expect(m.host.querySelectorAll('[data-testid="market-final-price"]').length).toBe(2);
+      expect(text(m.host), "🔴 최종 선택 가격이 아예 사라졌다").toContain(FINAL_PRICE_LABEL);
+    } finally {
+      m.cleanup();
+    }
+  });
+
+  it("UXR-F-4 🔴 설명·제외사유도 **1차에 없고 상세에 있다**(이동이지 삭제가 아니다)", () => {
+    /** 🔴 국내 후보가 SAME 가격까지 가지 못하는 입력 — `mi-same-empty` 가 서는 조건이다. */
+    const m = mount({ rows: bothMarkets() });
+    try {
+      const first = text(firstScreenNode(m.host));
+      const whole = text(m.host);
+      expect(first, "🔴 긴 부정문이 첫 화면에 올라왔다").not.toContain(MI_SAME_EMPTY);
+      expect(whole, "🔴 그 문장이 상세에도 없다(= 삭제됐다)").toContain(MI_SAME_EMPTY);
+      expect(
+        firstScreenNode(m.host).querySelectorAll('[data-testid="mi-same-empty"]').length,
+      ).toBe(0);
+      expect(m.host.querySelectorAll('[data-testid="mi-same-empty"]').length).toBeGreaterThan(0);
+    } finally {
+      m.cleanup();
+    }
+  });
+});
+
+/* ═══════════════════ ⒞ 의사결정 정보 우선순위 ═══════════════════ */
+
+describe("UXR-O ⒞ 우선순위 — 판단 → 소싱가격 → 후보 → 추천가 → 확정 → ⓘ → 상세", () => {
+  it("UXR-O-1 🔴🔴 일곱이 **이 순서로** 선다(CPO 목표 화면 그대로)", () => {
+    const m = mount({
+      rows: bothMarkets(),
+      /** 🔴 문구를 지어내지 않는다 — 운영 owner(`FINAL_VERDICT_COPY`)의 값을 그대로 넘긴다. */
+      sellVerdictCopy: FINAL_VERDICT_COPY.CONDITIONAL,
+      recommendedPriceKrw: 295796,
+      onApplyRecommendedPrice: () => {},
+      onOpenPriceCalculation: () => {},
+    });
+    try {
+      const ids = [
+        "market-sell-verdict",
+        "market-blocks",
+        "mi-same-domestic",
+        "mi-same-overseas",
+        "market-recommended-price",
+        "market-apply-recommended-price",
+        "market-price-calculation-link",
+        "price-detail-fold",
+      ] as const;
+      const at = docOrder(m.host, ids);
+      at.forEach((i, n) =>
+        expect(i, `🔴 ${ids[n]} 가 렌더되지 않았다(분모 0)`).toBeGreaterThanOrEqual(0),
+      );
+      for (let n = 1; n < at.length; n += 1) {
+        expect(at[n], `🔴 순서가 틀렸다: ${ids[n - 1]} → ${ids[n]}`).toBeGreaterThan(at[n - 1]!);
+      }
+    } finally {
+      m.cleanup();
+    }
+  });
+
+  it("UXR-O-2 🔴 후보 칸이 **상세 접힘보다 앞** 이다(배치로 되돌리면 FAIL)", () => {
+    const m = mount({ rows: bothMarkets() });
+    try {
+      const [kr, fold] = docOrder(m.host, ["mi-same-domestic", "price-detail-fold"]);
+      expect(kr).toBeGreaterThanOrEqual(0);
+      expect(fold, "🔴 후보 칸이 상세 접힘 안으로 되돌아갔다").toBeGreaterThan(kr!);
+    } finally {
+      m.cleanup();
+    }
+  });
+});
+
+/* ═══════════════════ ⒟ 국내/해외 구조 대칭 ═══════════════════ */
+
+describe("UXR-S ⒟ 대칭 — 두 칸의 testid 척추가 **순서까지** 같다", () => {
+  it("UXR-S-1 🟢 `mi-same-domestic` 과 `mi-same-overseas` 의 구조 척추가 같다", () => {
+    const m = mount({ rows: bothMarkets() });
+    try {
+      /**
+       * 🔴 **데이터 의존 줄은 분모에서 뺀다** — 행 수·가격 상태·경고는 상품마다 다르다.
+       *    🟢 지키는 성질은 **구역의 척추**(항상 서는 칸의 순서)다.
+       */
+      const spine = (id: string): string[] => {
+        const col = m.host.querySelector(`[data-testid="${id}"]`)!;
+        return [...col.querySelectorAll("[data-testid]")]
+          .map((n) => n.getAttribute("data-testid") ?? "")
+          .filter((t) => t === "mi-candidate-list" || t === "mi-candidate-empty");
+      };
+      const a = spine("mi-same-domestic");
+      const b = spine("mi-same-overseas");
+      expect(a.length, "🔴 국내 칸 척추가 비었다(분모 0)").toBeGreaterThan(0);
+      expect(a, "🔴 두 시장의 구역 척추가 어긋났다").toEqual(b);
+    } finally {
+      m.cleanup();
+    }
+  });
+});
+
+/* ═══════════════════ 카드 안쪽 — 근거는 접힘으로 ═══════════════════ */
+
+describe("UXR-C 카드 — **근거는 카드 안의 접힘** 이다(기본 화면에서 제거)", () => {
+  it("UXR-C-1 🔴 경고 줄은 `mi-candidate-evidence` **안** 에만 있다", () => {
+    const m = mount({ rows: bothMarkets() });
+    try {
+      const warns = [...m.host.querySelectorAll('[data-testid="mi-candidate-warning"]')];
+      expect(warns.length, "🔴 경고 줄이 하나도 없다(분모 0)").toBeGreaterThan(0);
+      for (const w of warns) {
+        expect(
+          w.closest('[data-testid="mi-candidate-evidence"]'),
+          "🔴 내부 판정 문구가 카드 기본 화면에 노출돼 있다",
+        ).not.toBeNull();
+      }
+    } finally {
+      m.cleanup();
+    }
+  });
+
+  it("UXR-C-2 🔴 확인할 것이 **없는** 카드에는 그 접힘이 **서지 않는다**(빈 틀 금지)", () => {
+    const m = mount({ rows: bothMarkets() });
+    try {
+      const cards = [...m.host.querySelectorAll('[data-testid="mi-candidate-row"]')];
+      const clean = cards.filter((c) => !c.querySelector('[data-testid="mi-candidate-warning"]'));
+      expect(clean.length, "🔴 경고 없는 카드가 표본에 없다(분모 0)").toBeGreaterThan(0);
+      for (const c of clean) {
+        expect(
+          c.querySelector('[data-testid="mi-candidate-evidence"]'),
+          "🔴 확인할 것이 없는데 빈 접힘이 섰다",
+        ).toBeNull();
+      }
+      /** 🔴 그 접힘도 **펼쳐 두지 않는다**. */
+      for (const d of m.host.querySelectorAll('[data-testid="mi-candidate-evidence"]')) {
+        expect(d.hasAttribute("open")).toBe(false);
+      }
+    } finally {
+      m.cleanup();
+    }
+  });
+});

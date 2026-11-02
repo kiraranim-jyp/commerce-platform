@@ -98,6 +98,8 @@ import {
   CANDIDATE_GROUP_ORDER,
   CANDIDATE_IMAGE_NONE,
   CANDIDATE_LINK_TEXT,
+  /** 🔵 FINAL UX REBUILD — 카드 안 「근거」 접힘의 라벨(어휘 owner 는 그 파일 하나다). */
+  CANDIDATE_EVIDENCE_FOLD_LABEL,
   /**
    * 🔵🔵 `-02` — 🔴 `candidateReasonLines`(matchReasons 통째 렌더)를 **대체** 한다.
    *    카드는 **확인할 것만** 말한다. `matchReasons` 는 데이터/게이트에 **그대로 남는다**.
@@ -545,6 +547,153 @@ export function MarketPriceComparison({
 
       {/**
        * ══════════════════════════════════════════════════════════════════════
+       * 🔴🔴🔴 ③ 가격 판단 근거 — **🇰🇷 국내 · 🌎 해외**(WU-140 ② 의 그 블록)
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * 🔴 CORE-UX-SELLER-01 에서 **순서만** 바뀌었다(① ② 뒤로). 블록 **안쪽은 불변** 이다.
+       *
+       * 🔴🔴 **성공 기준이 「위로 올라갔다」가 아니다**(CPO): 「페이지를 열었을 때 셀러가
+       *    **후보 목록을 읽지 않아도** 🇰🇷/🌎 의 동일상품 수 · 판매중 수 · 확인 가격 ·
+       *    가격 확인 필요 여부를 **먼저** 이해할 수 있는가」.
+       * 🟢 그래서 블록 **안쪽** 은 한 글자도 새로 계산하지 않는다 — `buildPriceGuide` 가
+       *    이미 내는 시장별 수치를 그 자리로 **옮긴** 것이다(집계 0 · 판정 0 · 환산 0).
+       *
+       * 🔴🔴 **성공 기준이 「위로 올라갔다」가 아니다**(CPO): 「페이지를 열었을 때 셀러가
+       *    **후보 목록을 읽지 않아도** 🇰🇷/🌎 의 동일상품 수 · 판매중 수 · 확인 가격 ·
+       *    가격 확인 필요 여부를 **먼저** 이해할 수 있는가」.
+       * 🟢 그래서 블록 **안쪽** 은 한 글자도 새로 계산하지 않는다 — `buildPriceGuide` 가
+       *    이미 내는 시장별 수치를 그 자리로 **옮긴** 것이다(집계 0 · 판정 0 · 환산 0).
+       */}
+      <div data-testid="market-blocks" className="mt-2 grid gap-2 md:grid-cols-2">
+        {(["KR", "OVERSEAS"] as const).map((mk) => (
+          <MarketBlock
+            key={mk}
+            market={mk}
+            judgement={judgement}
+            rows={rows}
+            /**
+             * 🔴🔴 CORE-2R-5 — **가격 evidence 의 «소비 위치» 를 1차로 올린다.**
+             *    이 집계(`candidateDomesticPrice` · `candidateOverseasPrice`)는
+             *    `EXACT | COMPARISON` 를 담는 **기존 정책 그대로** 이고, 지금까지
+             *    **`▸ MI 상세 분석` 접힘 안** 에만 그려져 셀러가 볼 수 없었다.
+             * 🔴 **승격이 아니다** — `PRESUMED_SAME → SAME` 을 하지 않았고 SAME 게이트도
+             *    threshold 도 한 글자 안 바꿨다. 바뀐 것은 **이미 만든 숫자를 어디서 보여
+             *    주는가** 뿐이다.
+             *
+             * ── 🔴🔴🔴 CORE-2S §5-④ — **해외도 «같은 정보 구조» 로 올렸다** ────────────
+             * ```
+             * 🔴 CORE-2R-5 는 **국내만** 1차로 올렸다 ⟹ 🇰🇷 는 가격이 첫 화면에 있고
+             *    🌎 는 **접힘을 열어야** 보였다. 그 비대칭이 CPO §5-④ 가 지목한 것이다
+             *    (「🌎 해외 블록을 🇰🇷 와 **같은 정보 구조** 로」).
+             * 🟢 **복제가 아니라 이동** 이다 — 아래 2차의 해외 칸은 `reference={null}` 로
+             *    껐다(국내가 CORE-2R-5 에서 그렇게 됐던 것과 **같은 처리**) ⟹ 같은
+             *    금액이 화면에 두 번 뜨지 않는다(「가격 숫자 중복 금지」 유지).
+             * 🔴 집계·환산·통화 처리는 **한 글자도** 바뀌지 않았다 — 같은
+             *    `OverseasReferencePrice` 에 같은 `OverseasPriceSummary` 를 넘긴다.
+             * ```
+             */
+            reference={mk === "KR" ? domesticReference : overseasReference}
+            variant="SUMMARY"
+            /**
+             * 🔵 FINAL UX REBUILD — `DETAIL` 이 쓰는 입력이라 1차에서도 **같은 값** 을
+             *    넘긴다(prop 을 두 벌로 만들지 않는다). 🔴 `SUMMARY` 는 그것으로
+             *    **아무것도 그리지 않는다**(`!isSummary` 게이트가 그것을 지킨다).
+             */
+            selection={mk === "KR" ? domestic : overseas}
+          />
+        ))}
+      </div>
+
+      {/**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔵🔵🔵 FINAL UX REBUILD — **후보 칸이 «1차» 로 올라왔다**(CPO NO-GO 2026-11-02)
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * 🔴🔴 CEO 화면 FAIL 의 원인은 복원이 아니라 **접힘 깊이** 였다. 이 두 칸이
+       *    `＋ 상세정보 보기` **안** 의 `▸ MI 상세 분석` **안** 에 있었고, 후보 카드는
+       *    그 안의 `mi-candidate-list` **안** 이라 **세 번 펼쳐야** 보였다.
+       * 🟢 그래서 **격자를 그대로 들어 올렸다** — JSX·props·순서·testid 를 한 글자도
+       *    바꾸지 않았고(이동) 카드의 조상 `<details>` 가 **`mi-candidate-list` 하나** 가 됐다.
+       * 🔴 `mi-candidate-list` 에 `open` 을 **붙이지 않았다** — 펼친 채로 두면 후보가
+       *    「유력 후보」로 읽힌다(WU-091 ① · 2026-09-19 사고의 기전).
+       * 🔴 그래서 1차에 서는 것은 **「후보 N곳」 요약 한 줄** 이고 그것이 CPO 목표 화면의
+       *    `[후보 보기]` 다. 카드 자체는 **여전히 접혀 있다.**
+       * 🔴🔴 **설명·집계·최종가는 같이 올라오지 않았다** — `mi-same-empty` ·
+       *    `mi-same-excluded` · `market-final-price` 는 **상세 근거 블록으로 옮겼다**
+       *    (CPO LOCK ⒜ 「최종 선택 가격은 상세 안에 둔다」를 지킨다).
+       */}
+        {/* 🔴 국내를 해외 «앞» 에 둔다 — 셀러의 질문 순서가 그렇다(WU-056 과 같은 이유). */}
+        <div className="mt-2 grid gap-2 md:grid-cols-2">
+        <MarketColumn
+          testId="mi-same-domestic"
+          heading={MI_SAME_DOMESTIC_HEADING}
+          /**
+           * 🔵🔵 CANDIDATE-UX-REFINE-01 U1/U7 — 🔴 이 컴포넌트는 **국내·해외가 공유** 한다.
+           *    이 prop 이 없으면 후보 제목·빈 상태가 **국내 칸에서도 「해외」라고 적는다.**
+           * 🔴 `testId` 로 시장을 추론하지 않는다 — testid 가 바뀌면 시장이 조용히 뒤집힌다.
+           */
+          market="KR"
+          /**
+           * 🔵 CORE-E2E-CLOSE-03 — 같은 `rows` 에서 **다른 선택기** 로 뽑는다.
+           * 🔴 `selectMiSameCandidates`(가격 집계 축)는 한 글자도 안 바꿨다(CPO §3).
+           */
+          presumed={domesticPresumed}
+          /** 🔵 CANDIDATE-EVIDENCE-VISIBILITY-01 — 같은 `rows` · 리스트 선택기 하나. */
+          list={domesticList}
+          /** 🔵 CORE-E2E-CLOSE-04 — 선택 owner 는 위 `useCandidateReview` 하나다. */
+          reviewApi={reviewApi}
+          /**
+           * 🔴🔴 CORE-2R-5 — **국내 집계는 여기서 «꺼진다».** 1차 🇰🇷 블록으로 **옮겼다**
+           *    (복제가 아니다). 두 곳에 두면 같은 `KRW 88,000` 이 화면에 두 번 뜨고
+           *    그것이 WU-145/149 가 닫은 「가격 owner 하나」 계약 위반이다.
+           * 🔴 해외 집계는 **그대로** 다(아래 `MarketColumn`) — 그 축은 이번 범위가 아니다.
+           */
+          reference={null}
+          referenceProps={{
+            title: DOMESTIC_REFERENCE_TITLE,
+            note: DOMESTIC_REFERENCE_NOTE,
+            scope: DOMESTIC_REFERENCE_SCOPE,
+            icon: "🇰🇷",
+            testId: "domestic-reference",
+            amountTestId: "domestic-lowest",
+          }}
+          /**
+           * 🔵 R2 STEP 7 — **후보 카드의 「이 가격으로 확정」 하나만 남았다.**
+           * 🔴🔴 `finalPriceKrw`·`onOpenPriceEditor` 는 **상세 근거 블록으로 옮겼다**
+           *    (FINAL UX REBUILD · CPO LOCK ⒜). 이 칸이 1차라서 거기 두면 최종 선택
+           *    가격이 첫 화면에 서고, 그것은 CPO 가 「직관성이 떨어진다」로 닫은 모양이다.
+           */
+          onConfirmPriceKrw={onConfirmPriceKrw}
+        />
+        <MarketColumn
+          testId="mi-same-overseas"
+          heading={MI_SAME_OVERSEAS_HEADING}
+          /** 🔵 U1/U7 — 🔴 국내 칸과 **같은 구조 · 시장명만 다르다**(CPO §1). */
+          market="OVERSEAS"
+          /** 🔵 CORE-E2E-CLOSE-03 — 해외도 **같은 구역** 이다(두 벌을 만들지 않는다). */
+          presumed={overseasPresumed}
+          /** 🔵 해외도 **같은 선택기** 를 쓴다(두 벌을 만들지 않는다). */
+          list={overseasList}
+          /** 🔵 CORE-E2E-CLOSE-04 — 🌎 도 **같은 owner** 를 쓴다(두 벌 금지). */
+          reviewApi={reviewApi}
+          /**
+           * 🔴🔴 CORE-2S §5-④ — **해외 집계도 여기서 «꺼진다».** 1차 🌎 블록으로
+           *    **옮겼다**(복제가 아니다 — 국내가 CORE-2R-5 에서 그렇게 됐던 것과 같다).
+           *    두 곳에 두면 같은 `GBP 37 · USD 58` 이 화면에 두 번 뜨고, 그것이
+           *    WU-145/149 가 닫은 「가격 숫자 중복 금지」 계약 위반이다.
+           * 🔴 제목·문구·🧾 아이콘·환산 금지는 **한 글자도 안 바뀌었다** — 1차에서
+           *    같은 컴포넌트에 같은 기본값으로 선다(`wu-056r1` 다섯이 그대로 유효하다).
+           */
+          reference={null}
+          /** 🔴 해외 블록의 제목·문구·🧾 아이콘은 **기본값 그대로** 다(`wu-056r1` 계약). */
+          referenceProps={{}}
+          /** 🔵 R2 STEP 7 — 🔴 **국내와 글자 그대로 같은 prop** 이다(§6 구조 통일). */
+          onConfirmPriceKrw={onConfirmPriceKrw}
+        />
+        </div>
+
+      {/**
+       * ══════════════════════════════════════════════════════════════════════
        * 🔵🔵🔵 CORE-UX-SELLER-01 ② — **「얼마에 팔면 되는가」가 그 다음이다**
        * ══════════════════════════════════════════════════════════════════════
        *
@@ -608,59 +757,6 @@ export function MarketPriceComparison({
           )}
         </div>
       )}
-
-      {/**
-       * ══════════════════════════════════════════════════════════════════════
-       * 🔴🔴🔴 ③ 가격 판단 근거 — **🇰🇷 국내 · 🌎 해외**(WU-140 ② 의 그 블록)
-       * ══════════════════════════════════════════════════════════════════════
-       *
-       * 🔴 CORE-UX-SELLER-01 에서 **순서만** 바뀌었다(① ② 뒤로). 블록 **안쪽은 불변** 이다.
-       *
-       * 🔴🔴 **성공 기준이 「위로 올라갔다」가 아니다**(CPO): 「페이지를 열었을 때 셀러가
-       *    **후보 목록을 읽지 않아도** 🇰🇷/🌎 의 동일상품 수 · 판매중 수 · 확인 가격 ·
-       *    가격 확인 필요 여부를 **먼저** 이해할 수 있는가」.
-       * 🟢 그래서 블록 **안쪽** 은 한 글자도 새로 계산하지 않는다 — `buildPriceGuide` 가
-       *    이미 내는 시장별 수치를 그 자리로 **옮긴** 것이다(집계 0 · 판정 0 · 환산 0).
-       *
-       * 🔴🔴 **성공 기준이 「위로 올라갔다」가 아니다**(CPO): 「페이지를 열었을 때 셀러가
-       *    **후보 목록을 읽지 않아도** 🇰🇷/🌎 의 동일상품 수 · 판매중 수 · 확인 가격 ·
-       *    가격 확인 필요 여부를 **먼저** 이해할 수 있는가」.
-       * 🟢 그래서 블록 **안쪽** 은 한 글자도 새로 계산하지 않는다 — `buildPriceGuide` 가
-       *    이미 내는 시장별 수치를 그 자리로 **옮긴** 것이다(집계 0 · 판정 0 · 환산 0).
-       */}
-      <div data-testid="market-blocks" className="mt-2 grid gap-2 md:grid-cols-2">
-        {(["KR", "OVERSEAS"] as const).map((mk) => (
-          <MarketBlock
-            key={mk}
-            market={mk}
-            judgement={judgement}
-            rows={rows}
-            /**
-             * 🔴🔴 CORE-2R-5 — **가격 evidence 의 «소비 위치» 를 1차로 올린다.**
-             *    이 집계(`candidateDomesticPrice` · `candidateOverseasPrice`)는
-             *    `EXACT | COMPARISON` 를 담는 **기존 정책 그대로** 이고, 지금까지
-             *    **`▸ MI 상세 분석` 접힘 안** 에만 그려져 셀러가 볼 수 없었다.
-             * 🔴 **승격이 아니다** — `PRESUMED_SAME → SAME` 을 하지 않았고 SAME 게이트도
-             *    threshold 도 한 글자 안 바꿨다. 바뀐 것은 **이미 만든 숫자를 어디서 보여
-             *    주는가** 뿐이다.
-             *
-             * ── 🔴🔴🔴 CORE-2S §5-④ — **해외도 «같은 정보 구조» 로 올렸다** ────────────
-             * ```
-             * 🔴 CORE-2R-5 는 **국내만** 1차로 올렸다 ⟹ 🇰🇷 는 가격이 첫 화면에 있고
-             *    🌎 는 **접힘을 열어야** 보였다. 그 비대칭이 CPO §5-④ 가 지목한 것이다
-             *    (「🌎 해외 블록을 🇰🇷 와 **같은 정보 구조** 로」).
-             * 🟢 **복제가 아니라 이동** 이다 — 아래 2차의 해외 칸은 `reference={null}` 로
-             *    껐다(국내가 CORE-2R-5 에서 그렇게 됐던 것과 **같은 처리**) ⟹ 같은
-             *    금액이 화면에 두 번 뜨지 않는다(「가격 숫자 중복 금지」 유지).
-             * 🔴 집계·환산·통화 처리는 **한 글자도** 바뀌지 않았다 — 같은
-             *    `OverseasReferencePrice` 에 같은 `OverseasPriceSummary` 를 넘긴다.
-             * ```
-             */
-            reference={mk === "KR" ? domesticReference : overseasReference}
-            variant="SUMMARY"
-          />
-        ))}
-      </div>
 
       {/**
        * ══════════════════════════════════════════════════════════════════════
@@ -731,6 +827,16 @@ export function MarketPriceComparison({
               rows={rows}
               reference={mk === "KR" ? domesticReference : overseasReference}
               variant="DETAIL"
+              /**
+               * 🔵🔵 FINAL UX REBUILD — **후보 칸에서 내려온 세 블록의 입력.**
+               * 🔴 `MarketColumn` 과 **같은 값** 이다(새 state·새 계산 0) —
+               *    `selection` 은 같은 선택기 산출, `finalPriceKrw` 는 `priceOverrideKrw`.
+               * 🟢 이 블록이 시장마다 **한 번** 서므로 `market-final-price` 개수가 **2** 로
+               *    유지된다(계약 R2 가 그 숫자를 문다).
+               */
+              selection={mk === "KR" ? domestic : overseas}
+              finalPriceKrw={finalPriceKrw}
+              onOpenPriceEditor={onOpenPriceEditor}
             />
           ))}
         </div>
@@ -1102,80 +1208,6 @@ export function MarketPriceComparison({
             {pendingReasons}
           </p>
         )}
-        {/* 🔴 국내를 해외 «앞» 에 둔다 — 셀러의 질문 순서가 그렇다(WU-056 과 같은 이유). */}
-        <div className="mt-2 grid gap-2 md:grid-cols-2">
-        <MarketColumn
-          testId="mi-same-domestic"
-          heading={MI_SAME_DOMESTIC_HEADING}
-          /**
-           * 🔵🔵 CANDIDATE-UX-REFINE-01 U1/U7 — 🔴 이 컴포넌트는 **국내·해외가 공유** 한다.
-           *    이 prop 이 없으면 후보 제목·빈 상태가 **국내 칸에서도 「해외」라고 적는다.**
-           * 🔴 `testId` 로 시장을 추론하지 않는다 — testid 가 바뀌면 시장이 조용히 뒤집힌다.
-           */
-          market="KR"
-          selection={domestic}
-          /**
-           * 🔵 CORE-E2E-CLOSE-03 — 같은 `rows` 에서 **다른 선택기** 로 뽑는다.
-           * 🔴 `selectMiSameCandidates`(가격 집계 축)는 한 글자도 안 바꿨다(CPO §3).
-           */
-          presumed={domesticPresumed}
-          /** 🔵 CANDIDATE-EVIDENCE-VISIBILITY-01 — 같은 `rows` · 리스트 선택기 하나. */
-          list={domesticList}
-          /** 🔵 CORE-E2E-CLOSE-04 — 선택 owner 는 위 `useCandidateReview` 하나다. */
-          reviewApi={reviewApi}
-          /**
-           * 🔴🔴 CORE-2R-5 — **국내 집계는 여기서 «꺼진다».** 1차 🇰🇷 블록으로 **옮겼다**
-           *    (복제가 아니다). 두 곳에 두면 같은 `KRW 88,000` 이 화면에 두 번 뜨고
-           *    그것이 WU-145/149 가 닫은 「가격 owner 하나」 계약 위반이다.
-           * 🔴 해외 집계는 **그대로** 다(아래 `MarketColumn`) — 그 축은 이번 범위가 아니다.
-           */
-          reference={null}
-          referenceProps={{
-            title: DOMESTIC_REFERENCE_TITLE,
-            note: DOMESTIC_REFERENCE_NOTE,
-            scope: DOMESTIC_REFERENCE_SCOPE,
-            icon: "🇰🇷",
-            testId: "domestic-reference",
-            amountTestId: "domestic-lowest",
-          }}
-          /**
-           * 🔵 R2 STEP 7 — **두 시장에 «같은» 세 prop 을 넘긴다**(§6 구조 통일).
-           * 🔴 값이 `priceOverrideKrw` 하나이므로 국내·해외가 **같은 숫자** 를 본다 —
-           *    시장별 최종가를 만들지 않았다(그러면 최종가가 둘이 된다).
-           */
-          finalPriceKrw={finalPriceKrw}
-          onConfirmPriceKrw={onConfirmPriceKrw}
-          onOpenPriceEditor={onOpenPriceEditor}
-        />
-        <MarketColumn
-          testId="mi-same-overseas"
-          heading={MI_SAME_OVERSEAS_HEADING}
-          /** 🔵 U1/U7 — 🔴 국내 칸과 **같은 구조 · 시장명만 다르다**(CPO §1). */
-          market="OVERSEAS"
-          selection={overseas}
-          /** 🔵 CORE-E2E-CLOSE-03 — 해외도 **같은 구역** 이다(두 벌을 만들지 않는다). */
-          presumed={overseasPresumed}
-          /** 🔵 해외도 **같은 선택기** 를 쓴다(두 벌을 만들지 않는다). */
-          list={overseasList}
-          /** 🔵 CORE-E2E-CLOSE-04 — 🌎 도 **같은 owner** 를 쓴다(두 벌 금지). */
-          reviewApi={reviewApi}
-          /**
-           * 🔴🔴 CORE-2S §5-④ — **해외 집계도 여기서 «꺼진다».** 1차 🌎 블록으로
-           *    **옮겼다**(복제가 아니다 — 국내가 CORE-2R-5 에서 그렇게 됐던 것과 같다).
-           *    두 곳에 두면 같은 `GBP 37 · USD 58` 이 화면에 두 번 뜨고, 그것이
-           *    WU-145/149 가 닫은 「가격 숫자 중복 금지」 계약 위반이다.
-           * 🔴 제목·문구·🧾 아이콘·환산 금지는 **한 글자도 안 바뀌었다** — 1차에서
-           *    같은 컴포넌트에 같은 기본값으로 선다(`wu-056r1` 다섯이 그대로 유효하다).
-           */
-          reference={null}
-          /** 🔴 해외 블록의 제목·문구·🧾 아이콘은 **기본값 그대로** 다(`wu-056r1` 계약). */
-          referenceProps={{}}
-          /** 🔵 R2 STEP 7 — 🔴 **국내와 글자 그대로 같은 세 prop** 이다(§6 구조 통일). */
-          finalPriceKrw={finalPriceKrw}
-          onConfirmPriceKrw={onConfirmPriceKrw}
-          onOpenPriceEditor={onOpenPriceEditor}
-        />
-        </div>
       </details>
       {/** 🔴 CORE-2AO-R2 — 여기까지가 `＋ 상세정보 보기` 안이다. */}
       </details>
@@ -1214,6 +1246,18 @@ function MarketBlock({
    *       (기본값이 있으면 새 호출부가 조용히 금액을 두 번 그릴 수 있다).
    */
   variant,
+  /**
+   * 🔵🔵 FINAL UX REBUILD — **`DETAIL` 에서만 쓰는 세 입력.**
+   *
+   * 🔴 전까지 이 셋은 `MarketColumn` 이 들고 있었다. 그 칸이 **1차로 올라가면서**
+   *    설명·제외사유·최종가가 같이 끌려 올라왔고, 그것이 CPO NO-GO 의 그 모양이다.
+   * 🔴 그래서 **값 owner 를 바꾸지 않고 자리만** 옮겼다 — `selection` 은 같은
+   *    `MiSameSelection`, `finalPriceKrw` 는 같은 `priceOverrideKrw` 다(계산 0).
+   * 🔴 `SUMMARY` 에서는 **그리지 않는다**(1차로 되돌아가면 안 된다).
+   */
+  selection,
+  finalPriceKrw,
+  onOpenPriceEditor,
 }: {
   market: "KR" | "OVERSEAS";
   judgement: MarketJudgement;
@@ -1225,6 +1269,10 @@ function MarketBlock({
    * 🟢 호출부가 시장별 집계를 골라 넘기므로 이 컴포넌트는 **시장을 판단하지 않는다**.
    */
   reference?: OverseasPriceSummary | null;
+  /** 🔵 FINAL UX REBUILD — `DETAIL` 전용(위 주석이 이유를 들고 있다). */
+  selection: MiSameSelection;
+  finalPriceKrw?: number | null;
+  onOpenPriceEditor?: () => void;
 }): JSX.Element {
   const g = buildPriceGuide(judgement, market);
   /**
@@ -1488,6 +1536,126 @@ function MarketBlock({
           )}
         </div>
       )}
+      {/**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔵🔵🔵 FINAL UX REBUILD — **설명·제외사유·최종가가 «상세 근거» 로 내려왔다**
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * 🔴🔴 후보 칸(`MarketColumn`)이 **1차로 올라가면서** 그 안에 같이 있던 세 블록이
+       *    첫 화면으로 끌려 올라왔다 — 그것이 CPO 가 NO-GO 로 지목한 **「설명이 먼저
+       *    오고 의사결정 정보가 묻힌다」** 그 모양이다. 🟢 그래서 **여기로 옮겼다**.
+       * 🔴 **한 글자도 지우지 않았다** — `MI_SAME_EMPTY` · `MI_SAME_EXCLUSION_TEXT` ·
+       *    `FINAL_PRICE_LABEL` 과 `data-testid` 넷이 **그대로** 다(이동이지 삭제가 아니다).
+       * 🔴 `DETAIL` 에서만 그린다 — 1차(`SUMMARY`)에 두면 되돌아간다.
+       * 🔴 **최종 선택 가격은 상세 안에 둔다**(CPO LOCK ⒜ 2026-11-02) — 1차에 올리면
+       *    가격 숫자가 넷(권장·국내·해외·최종)이 되어 직관성이 떨어진다는 그 판정이다.
+       * 🟢 시장마다 **한 번** 선다(`DETAIL` 블록이 KR·OVERSEAS 둘) ⟹ `market-final-price`
+       *    와 `market-edit-final-price` 의 **개수 2 가 그대로** 다(계약 R2).
+       */}
+      {!isSummary && (
+        <>
+      {selection.priced.length === 0 ? (
+        /** 🔴 「동일상품이 없다」로 적지 않는다 — 부재와 미발견은 다르다. */
+        <p data-testid="mi-same-empty" className="text-[11px] text-text-tertiary">
+          {MI_SAME_EMPTY}
+        </p>
+      ) : (
+        /**
+         * ══════════════════════════════════════════════════════════════════
+         * 🔵🔵🔵 CANDIDATE-UX-REFINE-04 A — **중복 표시 surface 를 «제거» 했다**
+         * ══════════════════════════════════════════════════════════════════
+         *
+         * 🔴🔴 여기 있던 `<ul data-testid="mi-same-row">` 가 **같은 후보를 두 번째로**
+         *    그렸고, 그쪽이 **접힘 «밖»** 이라 셀러가 **먼저** 보는 표면이었다.
+         * ```
+         * 실측 — 국내 beaumonde.co.kr 이 mi-same-row «와» mi-candidate-row 양쪽에 ·
+         *        해외 4건이 12건 «안» 에 중복
+         * 그 표면엔 이미지 **없음** · 판정 라벨 **없음**(🔴 WU-091 「행마다 판정 라벨」
+         *        불변식 미준수) · 경고 **없음**
+         * ⟹ `-01`·`-02`·`-03` 이 접힘 «안» 을 고쳤는데 **첫 화면이 안 바뀐** 이유다
+         * ```
+         * 🟢 **가격 집계는 한 글자도 안 죽는다** — 이 영역의 가격 owner 는 위
+         *    `<OverseasReferencePrice>` 와 `buildPriceGuide` 이고 `selection.priced` 는
+         *    **여기서 표시용** 이었다. `selectMiSameCandidates` **수정 0**.
+         * 🟢 **후보도 안 사라진다** — `priced` 는 tier **SAME** + 판매중 + 가격확인이고
+         *    `selectCandidateList` 의 `LIKELY_TIERS` 에 **반드시 포함** 된다(`CAND-07`).
+         * 🔴 `mi-same-empty`(결론)와 `mi-same-excluded`(제외 사유)는 **유지** — 후보
+         *    표면이 아니라 **말** 이다.
+         */
+        null
+      )}
+      {/**
+        * 🔴 아래 보류 구역은 **CLOSE-03 의 것** 이고 이제 위 리스트의 **부분집합** 이다.
+        *    🟢 그래서 **제거** 했다 — 같은 행이 두 번 서면 WU-081 금지에 걸린다.
+        */}
+      {/**
+        * 🔴🔴 **CANDIDATE-EVIDENCE-VISIBILITY-01 — CLOSE-03 의 `mi-presumed-area` 를 «제거» 했다.**
+        *    그 구역은 `PRESUMED_SAME` 만 그렸고, 이제 그 행들은 위 **후보 리스트의**
+        *    **부분집합** 이다(🟢 유력 군). 🔴 남겨 두면 같은 행이 **두 번** 서고
+        *    그것이 WU-081 이 금지한 복제다.
+        * 🟢 잃은 것은 **없다** — 범위 문장은 리스트의 그룹 배지가, 접힘은 리스트가,
+        *    선택은 같은 `<CandidateSelect>` 가 그대로 들고 있다.
+        */}
+      {selection.sameButExcluded.length > 0 && (
+        <ul data-testid="mi-same-excluded" className="space-y-0.5">
+          {selection.sameButExcluded.map(({ row, reason }) => (
+            <li key={row.discoveredUrl} className="text-[11px] text-text-tertiary">
+              {row.domain} — {MI_SAME_EXCLUSION_TEXT[reason]}
+            </li>
+          ))}
+        </ul>
+      )}
+      {/**
+        * ══════════════════════════════════════════════════════════════════════
+        * 🔵🔵🔵 R2 STEP 7/§9 — **「최종 선택 가격」 — 블록의 마지막 줄**
+        * ══════════════════════════════════════════════════════════════════════
+        *
+        * 🟢 국내/해외가 **같은 컴포넌트의 같은 줄** 이라 §6 의 「구조 동일」이 자동으로 성립한다
+        *    (전용 카드·전용 블록을 만들지 않았다 · 계약 D 10번 항목).
+        * 🔴 이 컴포넌트는 시장마다 **한 번만** 마운트된다(:1089 국내 · :1124 해외) ⟹
+        *    금액이 한 화면에 두 번 서지 않는다(`MarketBlock` 의 `SUMMARY/DETAIL` 과 다르다).
+        * 🔴 **값을 계산하지 않는다** — `finalPriceKrw` 는 `priceOverrideKrw` 를 그대로 받은 것이다.
+        * 🔴 **편집하지 않는다** — 입력칸이 없고, 수정은 기존 `PriceEditor` 로 **보낸다**(§10).
+        */}
+      {(finalPriceKrw != null || onOpenPriceEditor) && (
+        <div data-testid="market-final-price" className="mt-2 border-t border-border/60 pt-2">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+            <span className="text-[11px] text-text-secondary">{FINAL_PRICE_LABEL}</span>
+            {finalPriceKrw != null ? (
+              <span className="flex items-baseline gap-1">
+                <span
+                  data-testid="market-final-price-amount"
+                  className="text-lg font-semibold tabular-nums text-text-primary"
+                >
+                  {formatKrw(finalPriceKrw)}
+                </span>
+                {/** 🟢 **셀러가 고른 값** 임을 말한다 — 권장가(계산)와 구별되는 유일한 표시다. */}
+                <span data-testid="market-final-price-badge" className="text-[11px] text-text-tertiary">
+                  {FINAL_PRICE_SELECTED_BADGE}
+                </span>
+              </span>
+            ) : (
+              /** 🔴 없는 값을 숫자로 만들지 않는다 — 「0원」·「-」 금지. */
+              <span data-testid="market-final-price-none" className="text-[11px] text-text-tertiary">
+                {FINAL_PRICE_NONE_TEXT}
+              </span>
+            )}
+          </div>
+          {/** 🔴 갈 곳이 없으면 그리지 않는다(이 파일의 기존 규약 · 죽은 링크 금지). */}
+          {onOpenPriceEditor && (
+            <button
+              type="button"
+              data-testid="market-edit-final-price"
+              onClick={onOpenPriceEditor}
+              className="mt-1 text-[11px] text-accent underline"
+            >
+              {EDIT_FINAL_PRICE_LINK_TEXT}
+            </button>
+          )}
+        </div>
+      )}
+        </>
+      )}
     </div>
   );
 }
@@ -1563,7 +1731,6 @@ function MarketColumn({
    *    (새 타입 0 · 새 추론 0).
    */
   market,
-  selection,
   presumed,
   /** 🔵 CANDIDATE-EVIDENCE-VISIBILITY-01 — 후보 리스트(유력 + 확장). */
   list,
@@ -1571,25 +1738,21 @@ function MarketColumn({
   reference,
   referenceProps,
   /**
-   * 🔵🔵🔵 R2 STEP 7 — **최종 선택 가격.** 🔴 **값 owner 가 아니다**(표시 + 확정만).
+   * 🔵🔵🔵 R2 STEP 7 — **후보 가격 → 최종가 확정.** 🔴 **값 owner 가 아니다.**
    *
-   * 🔴 자리가 여기인 이유 — §6 템플릿이 「가격요약 → 후보 → **최종 선택 가격**」 이고
-   *    후보 리스트를 들고 있는 컴포넌트가 이것이다. 🟢 그리고 이 컴포넌트는
-   *    **국내·해외가 공유** 하므로 그 줄이 **두 시장에 자동으로 같은 구조로** 선다
-   *    (전용 컴포넌트 0 · §6 금지 준수 · 계약 D 10번 항목).
-   * 🔴 시장별 최종가를 만들지 않는다 — 값은 `priceOverrideKrw` **하나** 다.
+   * 🔴🔴 **FINAL UX REBUILD 에서 셋 중 둘이 빠졌다** — `finalPriceKrw`(표시)와
+   *    `onOpenPriceEditor`(수정 링크)는 **상세 근거 블록**(`MarketBlock`
+   *    `variant="DETAIL"`)으로 옮겼다. 이 칸이 1차로 올라왔고, 최종 선택 가격을
+   *    1차에 두지 않는 것이 CPO LOCK ⒜ 다.
+   * 🟢 남은 것은 **후보 카드 안의 「이 가격으로 확정」** 하나다 — 그 버튼은 CPO
+   *    목표 화면의 후보 카드 구성에 **들어 있다**.
    */
-  finalPriceKrw,
   onConfirmPriceKrw,
-  onOpenPriceEditor,
 }: {
   testId: string;
   heading: string;
   market: "KR" | "OVERSEAS";
-  selection: MiSameSelection;
-  finalPriceKrw?: number | null;
   onConfirmPriceKrw?: (krw: number) => void;
-  onOpenPriceEditor?: () => void;
   /**
    * 🔵🔵 CORE-E2E-CLOSE-03 — **동일 «가능성» 후보**(표시 전용).
    * 🔴 `selection` 과 **행이 겹치지 않는다** — 이쪽엔 SAME 이 오지 않는다.
@@ -1621,36 +1784,13 @@ function MarketColumn({
       <p className="text-[11px] font-medium text-text-primary">{heading}</p>
       {/* 🟢 MI 가 이미 낸 집계. 🔴 환산 0 · 통화별로만(그 성질은 그 컴포넌트의 계약이다). */}
       <OverseasReferencePrice summary={reference} {...referenceProps} />
-      {selection.priced.length === 0 ? (
-        /** 🔴 「동일상품이 없다」로 적지 않는다 — 부재와 미발견은 다르다. */
-        <p data-testid="mi-same-empty" className="text-[11px] text-text-tertiary">
-          {MI_SAME_EMPTY}
-        </p>
-      ) : (
-        /**
-         * ══════════════════════════════════════════════════════════════════
-         * 🔵🔵🔵 CANDIDATE-UX-REFINE-04 A — **중복 표시 surface 를 «제거» 했다**
-         * ══════════════════════════════════════════════════════════════════
-         *
-         * 🔴🔴 여기 있던 `<ul data-testid="mi-same-row">` 가 **같은 후보를 두 번째로**
-         *    그렸고, 그쪽이 **접힘 «밖»** 이라 셀러가 **먼저** 보는 표면이었다.
-         * ```
-         * 실측 — 국내 beaumonde.co.kr 이 mi-same-row «와» mi-candidate-row 양쪽에 ·
-         *        해외 4건이 12건 «안» 에 중복
-         * 그 표면엔 이미지 **없음** · 판정 라벨 **없음**(🔴 WU-091 「행마다 판정 라벨」
-         *        불변식 미준수) · 경고 **없음**
-         * ⟹ `-01`·`-02`·`-03` 이 접힘 «안» 을 고쳤는데 **첫 화면이 안 바뀐** 이유다
-         * ```
-         * 🟢 **가격 집계는 한 글자도 안 죽는다** — 이 영역의 가격 owner 는 위
-         *    `<OverseasReferencePrice>` 와 `buildPriceGuide` 이고 `selection.priced` 는
-         *    **여기서 표시용** 이었다. `selectMiSameCandidates` **수정 0**.
-         * 🟢 **후보도 안 사라진다** — `priced` 는 tier **SAME** + 판매중 + 가격확인이고
-         *    `selectCandidateList` 의 `LIKELY_TIERS` 에 **반드시 포함** 된다(`CAND-07`).
-         * 🔴 `mi-same-empty`(결론)와 `mi-same-excluded`(제외 사유)는 **유지** — 후보
-         *    표면이 아니라 **말** 이다.
-         */
-        null
-      )}
+      {/**
+       * 🔵 FINAL UX REBUILD — 이 자리에 있던 세 블록(`mi-same-empty` ·
+       *    `mi-same-excluded` · `market-final-price`)은 **상세 근거 블록
+       *    (`MarketBlock` `variant="DETAIL"`)으로 옮겼다** — 삭제 0.
+       *    🔴 이 칸이 1차로 올라왔으므로 여기 두면 긴 부정문·제외 사유·네 번째
+       *       가격 숫자가 **첫 화면에** 선다(CPO NO-GO 의 그 모양).
+       */}
       {/**
        * 🔴🔴 **「동일상품인데 빠진 것」을 조용히 버리지 않는다.**
        *    「동일상품이 없다」와 「동일상품인데 지금 가격을 확인하지 못했다」는 셀러가
@@ -1897,15 +2037,38 @@ function MarketColumn({
                           * 🔴 확인할 것이 없으면 **아무 줄도 서지 않는다** — 「✓ 모든 정보 일치」
                           *    같은 문장을 **만들지 않는다**(CPO §9). 등급이 이미 결과를 말한다.
                           */}
-                        {candidateWarningLines(row).map((line) => (
-                          <p
-                            key={line}
-                            data-testid="mi-candidate-warning"
-                            className="text-[11px] text-warning"
-                          >
-                            {line}
-                          </p>
-                        ))}
+                        {/**
+                          * ══════════════════════════════════════════════════════
+                          * 🔵🔵🔵 FINAL UX REBUILD — **근거는 카드 «안» 의 접힘으로**
+                          * ══════════════════════════════════════════════════════
+                          *
+                          * 🔴 CPO 목표 화면: 「`matchReasons` · `blockers` · 내부 판정
+                          *    문구는 **기본 화면에서 제거**(근거 안으로)」.
+                          * 🟢 **줄을 지우지 않았다** — `data-testid` · 어휘 owner
+                          *    (`candidateWarningLines`) · DOM 위치가 그대로다. 바뀐 것은
+                          *    **감싼 것 하나** 이고 React 는 닫힌 `details` 의 자식도
+                          *    렌더하므로 기존 마운트 DOM 계약이 전부 유지된다.
+                          * 🔴 `open` 을 **붙이지 않는다** · 확인할 것이 없으면 접힘 자체가
+                          *    **서지 않는다**(빈 틀 금지 · 「✓ 모든 정보 일치」 생성 금지).
+                          * 🔴 카드의 **조상 `<details>` 수를 늘리지 않는다** — 이것은 카드
+                          *    **안쪽** 이라 접힘 깊이 계약(카드 ≤ 1)과 무관하다.
+                          */}
+                        {candidateWarningLines(row).length > 0 ? (
+                          <details data-testid="mi-candidate-evidence" className="mt-1">
+                            <summary className="cursor-pointer text-[11px] text-text-tertiary">
+                              ▸ {CANDIDATE_EVIDENCE_FOLD_LABEL}
+                            </summary>
+                            {candidateWarningLines(row).map((line) => (
+                              <p
+                                key={line}
+                                data-testid="mi-candidate-warning"
+                                className="text-[11px] text-warning"
+                              >
+                                {line}
+                              </p>
+                            ))}
+                          </details>
+                        ) : null}
                         {/**
                           * 🔵 ⑤ — **선택과 이동을 같은 줄에** 둔다(CPO §4 목업).
                           * 🟢 선택은 **기존 저장 흐름** 이다(CLOSE-04 · 새 저장 로직 0 ·
@@ -1992,76 +2155,6 @@ function MarketColumn({
             {CANDIDATE_LIST_EMPTY_NOTE}
           </p>
         </>
-      )}
-      {/**
-        * 🔴 아래 보류 구역은 **CLOSE-03 의 것** 이고 이제 위 리스트의 **부분집합** 이다.
-        *    🟢 그래서 **제거** 했다 — 같은 행이 두 번 서면 WU-081 금지에 걸린다.
-        */}
-      {/**
-        * 🔴🔴 **CANDIDATE-EVIDENCE-VISIBILITY-01 — CLOSE-03 의 `mi-presumed-area` 를 «제거» 했다.**
-        *    그 구역은 `PRESUMED_SAME` 만 그렸고, 이제 그 행들은 위 **후보 리스트의**
-        *    **부분집합** 이다(🟢 유력 군). 🔴 남겨 두면 같은 행이 **두 번** 서고
-        *    그것이 WU-081 이 금지한 복제다.
-        * 🟢 잃은 것은 **없다** — 범위 문장은 리스트의 그룹 배지가, 접힘은 리스트가,
-        *    선택은 같은 `<CandidateSelect>` 가 그대로 들고 있다.
-        */}
-      {selection.sameButExcluded.length > 0 && (
-        <ul data-testid="mi-same-excluded" className="space-y-0.5">
-          {selection.sameButExcluded.map(({ row, reason }) => (
-            <li key={row.discoveredUrl} className="text-[11px] text-text-tertiary">
-              {row.domain} — {MI_SAME_EXCLUSION_TEXT[reason]}
-            </li>
-          ))}
-        </ul>
-      )}
-      {/**
-        * ══════════════════════════════════════════════════════════════════════
-        * 🔵🔵🔵 R2 STEP 7/§9 — **「최종 선택 가격」 — 블록의 마지막 줄**
-        * ══════════════════════════════════════════════════════════════════════
-        *
-        * 🟢 국내/해외가 **같은 컴포넌트의 같은 줄** 이라 §6 의 「구조 동일」이 자동으로 성립한다
-        *    (전용 카드·전용 블록을 만들지 않았다 · 계약 D 10번 항목).
-        * 🔴 이 컴포넌트는 시장마다 **한 번만** 마운트된다(:1089 국내 · :1124 해외) ⟹
-        *    금액이 한 화면에 두 번 서지 않는다(`MarketBlock` 의 `SUMMARY/DETAIL` 과 다르다).
-        * 🔴 **값을 계산하지 않는다** — `finalPriceKrw` 는 `priceOverrideKrw` 를 그대로 받은 것이다.
-        * 🔴 **편집하지 않는다** — 입력칸이 없고, 수정은 기존 `PriceEditor` 로 **보낸다**(§10).
-        */}
-      {(finalPriceKrw != null || onOpenPriceEditor) && (
-        <div data-testid="market-final-price" className="mt-2 border-t border-border/60 pt-2">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-            <span className="text-[11px] text-text-secondary">{FINAL_PRICE_LABEL}</span>
-            {finalPriceKrw != null ? (
-              <span className="flex items-baseline gap-1">
-                <span
-                  data-testid="market-final-price-amount"
-                  className="text-lg font-semibold tabular-nums text-text-primary"
-                >
-                  {formatKrw(finalPriceKrw)}
-                </span>
-                {/** 🟢 **셀러가 고른 값** 임을 말한다 — 권장가(계산)와 구별되는 유일한 표시다. */}
-                <span data-testid="market-final-price-badge" className="text-[11px] text-text-tertiary">
-                  {FINAL_PRICE_SELECTED_BADGE}
-                </span>
-              </span>
-            ) : (
-              /** 🔴 없는 값을 숫자로 만들지 않는다 — 「0원」·「-」 금지. */
-              <span data-testid="market-final-price-none" className="text-[11px] text-text-tertiary">
-                {FINAL_PRICE_NONE_TEXT}
-              </span>
-            )}
-          </div>
-          {/** 🔴 갈 곳이 없으면 그리지 않는다(이 파일의 기존 규약 · 죽은 링크 금지). */}
-          {onOpenPriceEditor && (
-            <button
-              type="button"
-              data-testid="market-edit-final-price"
-              onClick={onOpenPriceEditor}
-              className="mt-1 text-[11px] text-accent underline"
-            >
-              {EDIT_FINAL_PRICE_LINK_TEXT}
-            </button>
-          )}
-        </div>
       )}
     </div>
   );
