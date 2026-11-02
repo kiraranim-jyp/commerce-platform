@@ -1386,20 +1386,28 @@ Git          clean · origin/main 0/0 · Production / 200
                완벽한 가격 DB · **후보를 줄여 정확도만 올리는 시스템**
             🟢 철학 — 「정답을 주는 것이 아니라 **좋은 후보를 많이** 찾아 가격·근거와 함께
                보여주고 **셀러의 판단을 돕는다**」
-[현재 단계]  **SPRINT 3 — Discovery/Price 정확성 + UI/UX FINAL** · Gate = **P0 측정**
-[완료]      후보 저장(`candidate_reviews`) · Identity 체계(SAME/PRESUMED/SIMILAR/
-            DIFFERENT/UNKNOWN/CONFLICT) · 국내·해외 가격 배선 · 추천가 ·
-            `priceOverrideKrw`(**최종가 owner · 새로 만들지 않는다**) · 통화 환산/환산불가 ·
-            **re-entry 복원**(재진입에 Search/Crawl 재실행 0 · `savedCandidateRows`)
-[미해결]    🔴 **① Precision — 엉뚱한 상품 가격이 소싱가 집계에 들어간다**(CAD 26,300)
-            🔴 **② Recall — B226AC010 에서 기대 후보가 부족하다**
-            🔴 둘은 **한 문장으로 같이** 판정한다(§7-8) — 한쪽만 올리면 전략 위반이다
-[현재 STOP] P0 ① 운영 DB 읽기가 **도구 안전검사**에 막혀 있다(CTO 가 풀 수 없는 층) ·
-            🔴 추정으로 대체 금지 · 우회 금지 · 허용은 **구문/load-SKIP 검사 둘뿐**(§7-0-b)
-[다음 CTO]  권한이 열리면 **묻지 않고** §7-2 를 중간 종료 없이 —
-            ① DB → ② 라이브 1회 → CAD 26,300 한 행 → **Case A~D** → P1 **1개** 수정 →
-            계약 → M1~M7 → 회귀/typecheck/build/deploy → P2 TEST A/B →
-            **P3 UI/UX FINAL(UXR + M-UX)** → 최종 회귀 → **CEO 5문항** → 보고 **22절 1회**
+[현재 단계]  **SPRINT 3 — P3 UI/UX FINAL** (CPO 확정 2026-11-03)
+[완료]      **P0 Case A** · **P1 Price Eligibility** · Contract **14** · Mutation **M1~M7** ·
+            **P2 TEST B**(자격 미달 1 → 0 · SAME 5 유지) · Regression **9,940/0** ·
+            Typecheck **0** · Build **0** · **Push** · **Deploy**(`d68beab3`·`f59bba76` · 0/0)
+            🟢 그 전 자산 — 후보 저장(`candidate_reviews`) · Identity 6상태 · 국내·해외 가격
+            배선 · 추천가 · `priceOverrideKrw`(**최종가 owner · 새로 만들지 않는다**) ·
+            통화 환산/환산불가 · **re-entry 복원**(재진입에 Search/Crawl 재실행 0)
+[미해결]    🔴 **P3 UI/UX** · UXR-D/F/P/S/C · M-UX-1~7 · 최종 Regression ·
+            Production evidence · **CEO 5문항**
+[현재 STOP] **없다.** 🔴 단 **TEST A(B226AC043)는 `MEASUREMENT UNAVAILABLE`** —
+            운영 DB/APIFY 접근 불가 · 🔴 **0 으로 처리하지 않는다**
+[다음 CTO]  🔵🔵 **P0~P2 를 다시 조사하지 않는다. START-HERE 에서 바로 P3 로 진입한다.**
+            P3 UI/UX FINAL → UXR 5 → M-UX 7 → Full Regression → Typecheck → Build
+            → Deploy → Production evidence → **CEO 5문항** → **SPRINT 3 CLOSE**
+            🔴 **다시 설계하지 않는다 — 구현 → 계약 → 변이 → 회귀까지 끝낸다.**
+            🔴 P3 불변 — 국내/해외 `MarketColumn` **대칭** · 소싱가/추천가/최종가 **분리** ·
+               외화 원가격 + KRW 환산 · **환산 불가 시 숫자 생성 금지** ·
+               `priceOverrideKrw` **유지** · 후보 상세 **fold ≤ 1** ·
+               `mi-candidate-list` **`open` 금지** · 정상 최초 결과에서 **`[다시 분석]` 을
+               데이터 노출의 전제조건으로 만들지 않는다** · **새 price state/store 금지**
+            🟡 작업트리 `docs/core-2m-visual-review.html` 은 **회귀가 재생성한 산출물** 이다 —
+               🔴 CTO 변경물이 아니므로 **커밋하지 않고 제외** 한다
 [그 다음]   🔴 Sprint 3 CLOSED **전에는 넘어가지 않는다**. 그 뒤 순서는
             STEP 2 **Seller Decision** → STEP 3 **Registration** → STEP 4 **운영 자동화**
             (대량/반복 등록 · 실패 재처리 · 상태관리 · 가격변경 · 업데이트 · 모니터링)
