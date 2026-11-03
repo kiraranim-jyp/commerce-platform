@@ -135,6 +135,62 @@ describe("SPRINT5-IDENTITY-01 — BRAND_MISMATCH × PRESUMED_SAME 반사실", ()
     console.log(`\n🟢 CF 가 떨어뜨린 **human DIFFERENT**(= 막는 것) ${killed.length}건`);
     for (const k of killed) console.log(`   ${k}`);
 
+    /* ══════════════════════════════════════════════════════════════════════
+     * 🔴🔴 §5 — **발화 0 의 «이유» 를 A/B/C 로 가른다**(「안전」으로 적지 않기 위해)
+     * ══════════════════════════════════════════════════════════════════════ */
+    let candBrand = 0;
+    let brandDiffPairs = 0;
+    for (const [, c] of rows) {
+      const cb = (c.facts as { brand?: string | null }).brand ?? null;
+      const ob = (gt.origins[c.searchId]?.canonicalProduct as { brand?: { value?: string } })?.brand?.value ?? null;
+      if (cb) candBrand++;
+      if (cb && ob && cb.trim().toLowerCase().replace(/\s+/g, "") !== ob.trim().toLowerCase().replace(/\s+/g, ""))
+        brandDiffPairs++;
+    }
+    console.log("\n═══ §5 발화 0 의 이유 ═══");
+    console.log(`  후보 brand 보유 ${candBrand}/${rows.length} · **브랜드가 서로 다른 쌍 ${brandDiffPairs}**`);
+    console.log(
+      brandDiffPairs === 0
+        ? "  ⟹ 🔴 **A. 실제 GT 에 brand mismatch 사례가 부족하다**\n" +
+            "     (B 아님 — brand 는 읽혔고 비교도 됐다 · C 아님 — 축 자체는 측정 가능하다)\n" +
+            "     🔴 이 GT 는 「**같은 브랜드 안에서** 같은 상품인가」를 재려고 만든 집합이고,\n" +
+            "        이번 FP 는 「**다른 브랜드가 섞여 들어오는**」 **새 유형** 이라 분모가 없다."
+        : "  ⟹ 🟡 brand 불일치 쌍이 있다 — 위 CF 숫자를 recall 비용으로 읽어도 된다",
+    );
+
+    /* ══════════════════════════════════════════════════════════════════════
+     * 🔵 §5 — **controlled fixture 로 «축 동작» 만** 확인한다
+     * 🔴🔴 **이것을 「실제 상품 GT 의 recall 을 측정했다」로 적지 않는다.**
+     *    브랜드만 바꾼 **합성 쌍** 이고, 재는 것은 「그 축이 발화하면 CF 가 내리는가」 하나다.
+     * ══════════════════════════════════════════════════════════════════════ */
+    /**
+     * 🔴 **원상품 brand 도 있어야 한다.** 1차에 후보 brand 만 보고 donor 를 골랐더니
+     *    원상품 brand 가 **빈 문자열인 S6** 가 뽑혀 `BRAND_UNCONFIRMED` 가 났다
+     *    (`brandKnown = Boolean(x.brand && y.brand)` · cross-seller.ts:844).
+     *    🟢 내 단언이 그것을 FAIL 로 잡았다 — 「발화 안 함」을 「안전」으로 읽지 않게 한 자리다.
+     */
+    const donor = rows.find(([, c]) => {
+      const cb = (c.facts as { brand?: string | null }).brand;
+      const ob = (gt.origins[c.searchId]?.canonicalProduct as { brand?: { value?: string } })?.brand?.value;
+      return Boolean(cb) && Boolean(ob && ob.trim());
+    });
+    expect(donor, "🔴 양쪽 brand 가 있는 GT 쌍이 없다 — 합성조차 불가").toBeTruthy();
+    const [donorId, donorRow] = donor!;
+    const donorOrigin = originFacts.get(donorRow.searchId)!;
+    const synthetic = { ...(donorRow.facts as Record<string, unknown>), brand: "Hugo Boss" };
+    const sr = compareCrossSellerProducts(donorOrigin, synthetic as never) as {
+      verdict: string;
+      blockers?: { blocker: string }[];
+    };
+    const sBlk = (sr.blockers ?? []).map((b) => b.blocker);
+    console.log("\n═══ controlled fixture — 축 동작만(🔴 recall 측정 아님) ═══");
+    console.log(`  donor ${donorId}(${donorRow.domain}) 의 brand 만 "Hugo Boss" 로 바꿨다`);
+    console.log(`  verdict ${sr.verdict} · blockers ${JSON.stringify(sBlk)} · CF → ${applyCf(sr.verdict, sBlk)}`);
+    /** 🔴 축이 **발화하는지** 를 단언한다 — 발화하지 않으면 CF 자체가 검증 불가다. */
+    expect(sBlk, "🔴 브랜드를 다르게 해도 BRAND_MISMATCH 가 발화하지 않는다 — CF 검증 불가").toContain(
+      "BRAND_MISMATCH",
+    );
+
     /** 🔴 숫자를 단언으로 고정하지 않는다 — 이건 **측정** 이고 정책 승인이 아니다.
      *   🟢 단 측정이 성립했는지(분모가 0이 아닌지)는 단언한다. */
     expect(rows.length, "🔴 GT 가 비었다 — 측정불가").toBeGreaterThan(0);
