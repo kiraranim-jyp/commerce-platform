@@ -15,10 +15,19 @@
          → Evidence/Identity 판단 → **실제 소싱가** → 셀러가 **판매처 선택 + 최종 판매가 확정** → 등록
          🔴 「많이 찾는다」가 전략이다 — 후보를 줄여 정확도만 올리지 않는다
 
-상태     🟢 SPRINT 3 **CLOSED**   🟢🟢 **SPRINT 4 GATE(Search Intent) CLOSED — 전부 PASS**
-         🔵 다음 = **SPRINT 4 본체: N≥5 SEARCH SUPPLY DIAGNOSIS**(상시 ↔ 간헐)
+상태     🟢 SPRINT 3 **CLOSED**   🟢🟢 **SPRINT 4 GATE(Search Intent) PASS · 배포 완료**
+         🟢 PHASE A 완료 — push 0/0 · 배포 `4c84c93`(빌드로그 Commit 줄로 확인) ·
+            alias `ttaejyo.vercel.app` · prod `/` **200** · `/pipeline` 307 · `/api/.../check` 401
+         🔵 다음 = **PHASE B: N≥5 SEARCH SUPPLY DIAGNOSIS**(상시 ↔ 간헐) — 🔴 **지금 N=1**
          회귀 **9,991/0** · typecheck 0 · build 0 · 작업트리 clean
          (`docs/core-2m-visual-review.html` 1건은 회귀가 재생성한 산출물 — **커밋하지 않는다**)
+
+🔵🔵 **PHASE B 는 «한 명령» 이다 — 다시 만들지 않는다**
+         `node packages/database/scripts/sprint4-supply-diagnosis.mjs`
+         (read-only · 상한 없음 · 14칸 표 + 질의 원문 + 집계 + ⑦판정 자동)
+         🔴 그 스크립트가 **N<5 면 스스로 「MEASUREMENT UNAVAILABLE」** 을 낸다 ⟹ 추정 금지
+         🔴 그리고 **「query 칸 없음(구버전 실행)」 ↔ 「query=null(NO_MODEL_CODE)」** 을 가른다 —
+            현재 1건은 **배포 전 실행** 이라 칸이 없다(「질의 없음」으로 세지 않는다)
 
 🟢🟢 GATE 결과 — **질의는 정상이다. 다시 조사하지 않는다**
   C1 PASS  운영 로그 `[SP07-websearch]`(2026-11-03 05:11 UTC · B226AC038)의 **실제 전달값**:
@@ -44,8 +53,13 @@
   🔴 그 둘은 **1페이지 환경(2026-10-29)** 이고 운영은 지금 **2페이지** 다 ⟹ **같은 표에 넣지 않는다**
   🔴 2페이지 전환 뒤 관측은 **1건(organic 3 · page2 0)** 뿐이다 ⟹ 🔴🔴 **「2페이지 증액이
      그 실행에서 +0 이었다」는 사실이고, 그것을 「항상 +0」으로 적지 않는다**
-  🔵 해야 할 것 = 누적 `searchRun` 이 **N≥5** 가 될 때 판독 → 상시/간헐 확정 → 그때만 CPO 에 올린다
+  🔵 해야 할 것 = 누적 `searchRun` 이 **N≥5** 가 될 때 위 한 명령 → 상시/간헐 확정 → CPO 보고
      🟢 관측은 **자동으로 쌓인다**(대표님이 평소처럼 분석하면 `searchRun.query` 까지 남는다)
+  🟡 **PHASE A 의 마지막 한 칸이 남아 있다** — `searchRun.search.query` 가 운영에서 실제로
+     저장되는지는 **배포 뒤 첫 분석 실행** 에서만 확인된다(현재 1건은 배포 전 실행).
+     🔴 그 확인을 위해 **CEO 에게 실행을 요청하지 않는다** — PHASE B 첫 판독이 같이 증명한다
+     🟢 판정 셋 — ⒜ 보유 n≥1 ⟹ 영속화 PASS ⒝ 전건 「칸 없음」 ⟹ 아직 실행이 없다
+        ⒞ 「칸은 있고 전건 null」 ⟹ 🔴 그때는 **NO_MODEL_CODE 조사** 로 간다(영속화 결함 아님)
 
 바로 쓸 도구(재구축 0)
   runtime query 증명(4상품)  `sprint4-gate-02-query-live.test.ts`  `SPRINT4_QUERY=1` (검색 과금 0)
@@ -53,7 +67,8 @@
   저장 공급 분포 N=10×2      `sprint4-gate-03-supply-stored.test.ts`(네트워크 0)
   후단 공급량 추적           `search-supply-03-ac017-domestic.test.ts`  `AC017_DOMESTIC=1`
   층별 분모 funnel           `sprint3-discovery-funnel.test.ts`         `SPRINT3_FUNNEL=1`
-  운영 관측 판독             `packages/database/scripts/sprint3-searchrun-read.mjs`(node · read-only)
+  🔵 **PHASE B 판독(이걸 쓴다)**  `packages/database/scripts/sprint4-supply-diagnosis.mjs`
+  원시 JSON 판독(보조)       `packages/database/scripts/sprint3-searchrun-read.mjs`(최근 5건만)
   운영 질의 원문(로그)       `npx vercel logs --since 3h --query "SP07-websearch" -x --no-branch`
                              🔴 보존 창이 **짧다**(24시간 조회에 1건) ⟹ 이제 `searchRun.query` 를 먼저 본다
 
@@ -73,10 +88,11 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-🔴🔴🔴 CURRENT WU  **SPRINT 4 — SEARCH SUPPLY DIAGNOSIS (N≥5)**  ← 🔵 **지금 여기**
-                  🟢🟢 그 앞의 **GATE(Search Intent / Market Neutrality) 는 CLOSED** 다 —
-                     C1~C7 전부 PASS · 좌표와 숫자는 **맨 위 NEXT SESSION 블록 하나** 다
-                  🔴 남은 질문 하나 — **공급 부족이 상시인가 간헐인가**(누적 `searchRun` N≥5)
+🔴🔴🔴 CURRENT WU  **SPRINT 4 PHASE B — SEARCH SUPPLY DIAGNOSIS (N≥5)**  ← 🔵 **지금 여기**
+                  🟢🟢 GATE(Search Intent / Market Neutrality) **PASS** · PHASE A(배포) **완료**
+                     배포 `4c84c93` · prod 200 · 좌표와 숫자는 **맨 위 NEXT SESSION 블록 하나** 다
+                  🔴 남은 질문 하나 — **공급 부족이 상시인가 간헐인가**(누적 `searchRun` **N=1 → 5**)
+                  🔵 판독은 **한 명령** 이다 — `scripts/sprint4-supply-diagnosis.mjs`(N<5 면 스스로 거부)
                   🔴 질의 «구성» 을 바꾸는 것은 **CPO 결정** 이다(A/B 측정 선행 · 과금)
                   🔴 **아래 SPRINT 3 기록은 낡았다** — CLOSED 다(재조사 금지)
 ```
