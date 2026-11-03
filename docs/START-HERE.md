@@ -1432,7 +1432,28 @@ Identity/가격 «판정» 정책 · **Sprint 범위를 벗어나는 변경**
                완벽한 가격 DB · **후보를 줄여 정확도만 올리는 시스템**
             🟢 철학 — 「정답을 주는 것이 아니라 **좋은 후보를 많이** 찾아 가격·근거와 함께
                보여주고 **셀러의 판단을 돕는다**」
-[현재 단계]  **SPRINT 3 — P3 구현·계약 완료 · CEO 5문항 대기** (2026-11-03)
+[현재 단계]  🟢🟢 **SPRINT 3 — CLOSED**(CPO 판정 2026-11-03) ·
+            🔵 **다음 = SPRINT 4 — Search Supply Diagnosis**
+            ```
+            🟢 Sprint 3 가 해결한 것(한 줄씩)
+               관측 불가능 → **관측 가능**(실패 4칸: name·status·code·timeout)
+               로그 의존   → **Snapshot 영속**(`workspace.searchRun`)
+               공급원 불명 → **생산자별 측정**(WEB_SEARCH·OVERSEAS_AUTO·DOMESTIC_LISTING·GEMINI)
+               가격 혼입   → **자격 기반 차단**(SIMILAR 가 최저 확인가가 되던 경로)
+               UI 의심     → **근거로 부정**(props 8 → selector 8 → DOM 8)
+            🔴 CEO 화면 확인은 **CPO 가 대신 판정** 했다 — 추가 요구 없음
+            ```
+            🔵 **SPRINT 4 목표 = 「Search 공급 부족이 상시인가 간헐인가」를 데이터로 판정**
+            ```
+            기준  `searchRun` 누적 **N ≥ 5** · pages · organic · perPage · 실패 여부 ·
+                  공급원 분포  🟢 추가 운영 실행 요청 **0**(셀러 분석 때마다 자동 누적)
+            판정 후 분기 — 상시 부족 → provider/parameter · 간헐 → retry/timeout/안정성 ·
+                          정상 범위 → **Search 를 건드리지 않고 다음 병목으로**
+            🔴 지금은 **아무것도 다시 뜯지 않는다**(Search 파라미터 재조정 = 범위 초과)
+            🔴 첫 관측(B226AC038) — failed false · pages 1 · perPage [3] · organic 3 ·
+               WEB_SEARCH 1 · OVERSEAS_AUTO 4 · DOMESTIC_LISTING 1 ⟹ **N=1 · 판정 보류**
+            ```
+[이전 단계]  SPRINT 3 — P3 구현·계약 완료
             🔴🔴 **P3 는 «빼는 작업» 이 아니었다 — 측정이 그 이유를 말한다**
             내가 1차에서 지목한 둘이 **전부 기존 결정** 이었다:
               ⒜ 「국내 가격과 해외 소싱가를 기준으로 …」 → CPO 가 **한 줄로 줄여 고정** ·
