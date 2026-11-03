@@ -1443,7 +1443,25 @@ Identity/가격 «판정» 정책 · **Sprint 범위를 벗어나는 변경**
                UI 의심     → **근거로 부정**(props 8 → selector 8 → DOM 8)
             🔴 CEO 화면 확인은 **CPO 가 대신 판정** 했다 — 추가 요구 없음
             ```
-            🔵 **SPRINT 4 목표 = 「Search 공급 부족이 상시인가 간헐인가」를 데이터로 판정**
+            🔴🔴 **SPRINT 4 에는 «선행 Gate» 가 붙었다**(CPO 2026-11-03) —
+               `SEARCH INTENT / CANDIDATE SUPPLY GATE` 를 **먼저** 통과시킨다.
+            ```
+            핵심 질문 하나 — 🔴 AI Search 가 「상품을 검색」하고 있는가, 아니면
+              **「이 상품과 동일/유사한 상품의 국내·해외 «판매처» 를 찾는 검색」** 인가.
+              `brand + product name` 뿐이면 **FAIL**.
+            C1 **runtime 최종 query** 를 코드 경로와 함께 증명(선언값이 아니라 실제 전달값)
+            C2 query 에 식별정보 + **국내·해외 동일상품 판매처 탐색 의도** 포함 PASS/FAIL
+            C3 **Market neutrality** — 입력 URL 이 국내/해외라고 Search 시장을 제한하지 않는다
+            C4 `query → raw → parsed → dedup → producer → candidate → evidence → visible`
+               각 단계 공급량 추적 · Case A~E(Search/parser/producer/Evidence/UI)로 가른다
+            C5 **실제 상품 3개 이상** — 🔴 새 CEO 실행 요청 **0**(누적 `searchRun`·기존 저장 사용)
+            C6 문제면 **원인 + 최소 수정 범위** 특정   C7 정상이면 **N≥5 진단으로 복귀**
+            C8 Sprint 3 회귀 **불변**
+            🔴 금지 — MAX_*·provider·retry·timeout·질의 수 · SAME/PRESUMED threshold ·
+               Evidence scoring · GT policy · **UI/UX** (층을 섞지 않는다)
+            🟢 PASS 면 그대로 ↓ 아래 목표로 복귀 · FAIL 이면 **SEARCH QUERY INTENT CORRECTION**
+            ```
+            🔵 **SPRINT 4 본목표 = 「Search 공급 부족이 상시인가 간헐인가」를 데이터로 판정**
             ```
             기준  `searchRun` 누적 **N ≥ 5** · pages · organic · perPage · 실패 여부 ·
                   공급원 분포  🟢 추가 운영 실행 요청 **0**(셀러 분석 때마다 자동 누적)
