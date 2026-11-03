@@ -34,8 +34,14 @@ describe("SEARCH-RUN-OBSERVABILITY-02", () => {
     expect(ROUTE).toContain("snapshotId, auth.user.workspaceId");
   });
 
-  it("A-3 🔴 저장값 아홉 칸 + producer 넷이 전부 실린다", () => {
+  it("A-3 🔴 저장값 열 칸 + producer 넷이 전부 실린다", () => {
     for (const k of [
+      /**
+       * 🔵 SPRINT4-GATE-01 — **질의 원문이 관측값에 들어간다.**
+       * 🔴 이 칸이 없으면 「운영이 무슨 질의를 보냈는가」가 **로그 보존 창(1시간)**
+       *    밖에서 영구히 사라진다(Gate C1 이 실제로 그 벽에 막혔다 — 24시간에 1건).
+       */
+      "query",
       "searches",
       "pages",
       "perPage",

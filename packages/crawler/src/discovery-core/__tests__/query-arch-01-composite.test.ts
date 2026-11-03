@@ -154,6 +154,15 @@ describe("QUERY-ARCH-01 — 복합 Query", () => {
    * 🔴🔴 **운영 호출부가 재료를 채워야** 조립기가 의미를 갖는다. 1차 상태가 바로
    *    그 반대였다 — `productName: null · color: null` 이라 질의가 품번 하나였다.
    */
+  /**
+   * 🔵🔵 SPRINT4-GATE-01 로 **이 단언이 갱신됐다**(약화가 아니라 강화다).
+   *
+   * 🔴 그 칸 옮기기가 라우트 안 **인라인 리터럴** 이어서 이 단언이 **문자열** 밖에
+   *    볼 수 없었다. 🟢 이제 owner 가 함수(`webSearchIdentityFromDna`)이므로
+   *    **행동으로** 단언한다 — 재료가 비면 **문자열이 아니라 값** 으로 FAIL 한다.
+   * 🔴 그리고 운영 호출부가 그 owner 를 **실제로 부르는지** 를 같이 본다
+   *    (owner 가 옳아도 호출부가 안 부르면 질의는 다시 쪼그라든다 · WU-110 교훈).
+   */
   it("Q11 🔴🔴 운영 호출부가 **재료를 비워 보내지 않는다**", () => {
     const runner = readFileSync(
       join(__dirname, "../../../../../apps/admin/src/app/api/price-history/_lib/run-domestic-price-check.ts"),
@@ -162,10 +171,10 @@ describe("QUERY-ARCH-01 — 복합 Query", () => {
     const at = runner.indexOf("collectWebSearchUrls({");
     expect(at).toBeGreaterThan(0);
     const call = runner.slice(at, runner.indexOf("});", at));
-    expect(call, "productName 을 null 로 되돌렸다").toContain("productName: input.dna.title");
-    expect(call, "color 를 null 로 되돌렸다").toContain("color: input.dna.color");
-    expect(call, "상세 사실(facts) 배선이 끊겼다").toContain("facts:");
-    expect(call).toContain("input.dna.material");
+    /** 🔴 owner 를 거치지 않고 다시 인라인으로 돌아가면 FAIL. */
+    expect(call, "운영이 identity owner 를 부르지 않는다").toContain(
+      "identity: webSearchIdentityFromDna(input.dna, query.sourceUrl)",
+    );
   });
 });
 

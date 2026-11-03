@@ -8,41 +8,64 @@
 
 ---
 
-## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-03 인수인계)
+## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-03 인수인계 · 2차)
 
 ```
 전략     상품 URL 1개 → AI Search 로 **국내·해외 동일/유사 판매처를 최대한 많이** 찾고
          → Evidence/Identity 판단 → **실제 소싱가** → 셀러가 **판매처 선택 + 최종 판매가 확정** → 등록
          🔴 「많이 찾는다」가 전략이다 — 후보를 줄여 정확도만 올리지 않는다
 
-상태     🟢 SPRINT 3 **CLOSED**   🔵 SPRINT 4 = **SEARCH INTENT / CANDIDATE SUPPLY GATE**
-         HEAD `9094618b` · 0/0 · 회귀 **9,977/0** · typecheck 0 · build 0 · prod 200 · 작업트리 clean
+상태     🟢 SPRINT 3 **CLOSED**   🟢🟢 **SPRINT 4 GATE(Search Intent) CLOSED — 전부 PASS**
+         🔵 다음 = **SPRINT 4 본체: N≥5 SEARCH SUPPLY DIAGNOSIS**(상시 ↔ 간헐)
+         회귀 **9,991/0** · typecheck 0 · build 0 · 작업트리 clean
          (`docs/core-2m-visual-review.html` 1건은 회귀가 재생성한 산출물 — **커밋하지 않는다**)
 
-할 일    **C1 부터 바로** — 조사 0 · 질문 0 · 중간보고 0 · CEO 실행요청 0
-  C1  runtime **최종 Search query** 를 코드 경로와 함께 증명(선언값 ❌ · 실제 전달값 ⭕)
-  C2  그 query 에 **브랜드·품번·상품명·facts + 「국내해외 동일상품 판매처」 의도** 포함 PASS/FAIL
-      🔴 `brand + product name` 뿐이면 **FAIL**
-  C3  **Market neutrality** — 입력 URL 이 국내/해외라고 Search 시장을 제한하지 않는다
-  C4  `query→raw→parsed→dedup→producer→candidate→evidence→visible` 공급량 추적
-      → **Case A**(Search) **B**(parser) **C**(producer/dedup) **D**(Evidence) **E**(UI) 중 하나로 확정
-  C5  **실제 상품 3개 이상** · 🔴 새 실행 요청 0 — 누적 `searchRun`/기존 저장분을 쓴다
-  C6  문제면 **한 곳만** 최소 수정   C7 정상이면 **N≥5 Search Supply Diagnosis** 로 복귀
-  C8  Sprint 3 회귀 **불변** → 계약 → 변이 → 회귀 → typecheck → build → deploy → **보고 1회**
+🟢🟢 GATE 결과 — **질의는 정상이다. 다시 조사하지 않는다**
+  C1 PASS  운영 로그 `[SP07-websearch]`(2026-11-03 05:11 UTC · B226AC038)의 **실제 전달값**:
+           `"Bobo Choses" "B226AC038" Hidden Monster sweatshirt Blue loose fit 국내해외 동일상품 판매처`
+  C2 PASS  **실제 상품 4개 전건** brand · 품번 · 상품명 · facts(색상/핏) · **판매처 의도** 5/5
+           🔴 「brand + product name 뿐」이 **아니다** ⟹ FAIL 조건 미해당
+  C3 PASS  Market neutrality — identity 가 `market`/`sourceCountry`/`sourceSite` 를 **항상 null** ·
+           질의가 그 칸에 **반응하지 않고**(바이트 동일) · provider 요청에 `countryCode`/
+           `languageCode` **0** · 🟢 결과로도 반증(해외 원상품 10개에서 🇰🇷 URL 6상품·합 8)
+  C4       **Case A — Search 공급** (운영 실행 **1건** 기준 · B/C/D/E 손실 0)
+           raw 3(page1 3 · **page2 없음**) → dedup 3 → supplied 3 → accepted 2 → usable 1
+           → candidate 1 → Evidence SAME/EXACT USD 66 → **visible 1**
+           🔴 탈락 2는 **정확한 차단** 이다(`SELF_REFERENCE` · `UNREACHABLE`)
+  C5 PASS  실제 상품 **4개**(AC038 · AC017 · AC010 · AC009) · 새 검색 **0**(과금 0)
+  C6       최소 수정 **둘(관측만 · 동작 변경 0)** — ⒜ 「DNA→Search identity」 owner 하나
+           (`webSearchIdentityFromDna`) ⒝ `workspace.searchRun.search.query` **영속화**
+  C7 →     **N≥5 진단으로 복귀**(아래)
+
+🔴🔴 **그래서 다음 세션이 답할 질문은 «하나» 다 — 공급이 상시 부족인가 간헐인가**
+  🟢 저장분이 이미 분모를 준다(새 검색 0 · `sprint4-gate-03-supply-stored.test.ts` 가 고정):
+     `query-signal-ab`   n=10 · 실패 0 · organic **7~9** · 공급 0 **0건** (합 85)
+     `query-adopt-01`    n=10 · **실패 1** · 공급 0 **1건**              (합 67)
+  🔴 그 둘은 **1페이지 환경(2026-10-29)** 이고 운영은 지금 **2페이지** 다 ⟹ **같은 표에 넣지 않는다**
+  🔴 2페이지 전환 뒤 관측은 **1건(organic 3 · page2 0)** 뿐이다 ⟹ 🔴🔴 **「2페이지 증액이
+     그 실행에서 +0 이었다」는 사실이고, 그것을 「항상 +0」으로 적지 않는다**
+  🔵 해야 할 것 = 누적 `searchRun` 이 **N≥5** 가 될 때 판독 → 상시/간헐 확정 → 그때만 CPO 에 올린다
+     🟢 관측은 **자동으로 쌓인다**(대표님이 평소처럼 분석하면 `searchRun.query` 까지 남는다)
 
 바로 쓸 도구(재구축 0)
-  runtime query 증명   `search-supply-02-ac017-query.test.ts`      `AC017_QUERY=1`   (과금 0)
-  후단 공급량 추적     `search-supply-03-ac017-domestic.test.ts`   `AC017_DOMESTIC=1`
-  층별 분모 funnel     `sprint3-discovery-funnel.test.ts`          `SPRINT3_FUNNEL=1`
-  운영 관측 판독       `packages/database/scripts/sprint3-searchrun-read.mjs`(node · read-only)
+  runtime query 증명(4상품)  `sprint4-gate-02-query-live.test.ts`  `SPRINT4_QUERY=1` (검색 과금 0)
+  질의/중립 계약 10건        `sprint4-gate-01-query-intent.test.ts`(게이트 없음 · 회귀에 상주)
+  저장 공급 분포 N=10×2      `sprint4-gate-03-supply-stored.test.ts`(네트워크 0)
+  후단 공급량 추적           `search-supply-03-ac017-domestic.test.ts`  `AC017_DOMESTIC=1`
+  층별 분모 funnel           `sprint3-discovery-funnel.test.ts`         `SPRINT3_FUNNEL=1`
+  운영 관측 판독             `packages/database/scripts/sprint3-searchrun-read.mjs`(node · read-only)
+  운영 질의 원문(로그)       `npx vercel logs --since 3h --query "SP07-websearch" -x --no-branch`
+                             🔴 보존 창이 **짧다**(24시간 조회에 1건) ⟹ 이제 `searchRun.query` 를 먼저 본다
 
 🔴 금지  MAX_SEARCHES_PER_PRODUCT(1) · MAX_PAGES_PER_QUERY(2) · provider · retry · timeout ·
-         질의 수 · SAME/PRESUMED threshold · Evidence scoring · GT policy · **UI/UX** · mock PASS
-🔴 이미 끝난 것(재구현 금지)  P1 가격 자격(SAME·PRESUMED만 해외 1차 집계) · UXR 5 + M-UX ·
-         props→selector→DOM 8/8/8 · 2페이지 + `items[0]` 수정 · 실패 4칸 · `workspace.searchRun`
+         질의 수 · **질의 구성(QUERY-ARCH-01 · 판매처 신호 문자열)** · SAME/PRESUMED threshold ·
+         Evidence scoring · GT policy · **UI/UX** · mock PASS
+         🔴 질의 «구성» 을 바꾸는 것은 **CPO 결정** 이다(A/B 측정이 선행 · 과금 발생)
+🔴 이미 끝난 것(재구현 금지)  P1 가격 자격 · UXR 5 + M-UX · props→selector→DOM 8/8/8 ·
+         2페이지 + `items[0]` 수정 · 실패 4칸 · `workspace.searchRun` · **Sprint 4 Gate 전체**
 🔵 escalation 은 넷뿐  전략 · 범위 · 비용/리스크 · CEO 사업판단   (그 외는 **CTO 자율**)
 🔴 알려진 사실  AC017 국내 후단 **정상**(mustit → PRESUMED_SAME → COMPARISON → ₩109,000) ·
-         첫 관측 N=1(pages 1 · organic 3) ⟹ **공급 상시성 판정 보류**
+         AC038 국내 후보는 **DOMESTIC_LISTING** 산출(donokids ₩138,000) — WEB_SEARCH 아니다
 ```
 
 ---
@@ -50,7 +73,15 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-🔴🔴🔴 CURRENT WU  **SPRINT 3 — DISCOVERY QUALITY + SELLER DECISION UI**(CPO NO-GO 2026-11-02)
+🔴🔴🔴 CURRENT WU  **SPRINT 4 — SEARCH SUPPLY DIAGNOSIS (N≥5)**  ← 🔵 **지금 여기**
+                  🟢🟢 그 앞의 **GATE(Search Intent / Market Neutrality) 는 CLOSED** 다 —
+                     C1~C7 전부 PASS · 좌표와 숫자는 **맨 위 NEXT SESSION 블록 하나** 다
+                  🔴 남은 질문 하나 — **공급 부족이 상시인가 간헐인가**(누적 `searchRun` N≥5)
+                  🔴 질의 «구성» 을 바꾸는 것은 **CPO 결정** 이다(A/B 측정 선행 · 과금)
+                  🔴 **아래 SPRINT 3 기록은 낡았다** — CLOSED 다(재조사 금지)
+```
+```
+🔴 [낡음] CURRENT WU  **SPRINT 3 — DISCOVERY QUALITY + SELLER DECISION UI**(CPO NO-GO 2026-11-02)
                   🔵 **착수점은 `docs/SPRINT3-DISCOVERY-UI.md` 하나다** · 운영 코드 **0**
                   🟢🟢 **P0 원인 확정 · P1 수정·배포 완료**(`d68beab3` · push 0/0 · 2026-11-03)
                      **Case A — Price Eligibility** 가 실측으로 확정됐다

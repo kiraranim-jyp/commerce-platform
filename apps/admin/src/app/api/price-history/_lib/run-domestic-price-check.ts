@@ -48,7 +48,11 @@ import { collectUrlCandidatePool, type UrlCandidatePoolMetrics } from "./url-can
  */
 import { collectOverseasAutoPool, type OverseasAutoPoolMetrics } from "./overseas-auto-pool";
 /** 🟢 SEARCH-PROVIDER-07 — **검색만** 한다(URL 만 돌려준다). 후보 생성은 기존 pool 이 한다. */
-import { collectWebSearchUrls, type WebSearchPoolMetrics } from "./web-search-pool";
+import {
+  collectWebSearchUrls,
+  webSearchIdentityFromDna,
+  type WebSearchPoolMetrics,
+} from "./web-search-pool";
 /**
  * 🔴🔴 CORE-2R-4 STEP 2 — **다섯 번째 일시 후보 생산자.** 등록부 검색이 `unsupported`
  *    로 끝난 국내 판매처의 **목록/브랜드 페이지** 를 1-hop/2-hop 으로 뒤져 **상세 URL**
@@ -1580,28 +1584,16 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
        * 고쳐도 쓸 재료가 없어 질의가 **품번 하나** 로 쪼그라들었다(E2E-HISTORY-10 이
        * 「10건 중 8건 `NO_MODEL_CODE`」로 그 결과를 실측했다).
        *
+       * 🔵🔵 SPRINT4-GATE-01 — **그 칸 옮기기가 이제 «함수 하나» 다**
+       *    (`webSearchIdentityFromDna`). 🔴 여기에 인라인으로 두면 하니스가 그 블록을
+       *    **베껴야** 하고, 베낀 하니스는 위 사고를 **다시 못 본다**. 🟢 이제 운영과
+       *    하니스가 **같은 함수** 를 부른다(Gate C1 「실제 전달값」).
        * 🔴 **여기서 문자열을 조립하지 않는다** — Query owner 는 여전히
-       *    `buildDiscoverySearchQuery` 하나다. 이 블록은 **칸을 채우기만** 한다.
+       *    `buildDiscoverySearchQuery` 하나다.
        * 🔴 **지어내지 않는다** — 전부 `input.dna` 가 원본에서 실제로 읽은 값이다.
-       * 🔴 `size`/`ageRange` 는 **보내지 않는다** — denylist 가 노이즈로 판정한 축이다.
+       * 🔴 `size`/`ageRange`/**시장** 은 **보내지 않는다**(Market neutrality · leaf 주석).
        */
-      identity: {
-        brand: input.dna.brand.value || null,
-        /** 🟢 디자인명의 원천. 조립기가 denylist 로 코어 토큰만 남긴다. */
-        productName: input.dna.title || null,
-        productType: input.dna.category?.value ?? null,
-        genderAge: null,
-        color: input.dna.color,
-        size: null,
-        season: null,
-        productCode: input.dna.brandModelCode,
-        /** 🔴 상세설명 유래 사실 — 관측된 것만(없으면 빈 배열이고 질의에서 생략된다). */
-        facts: [input.dna.material, input.dna.fit].filter((v): v is string => Boolean(v)),
-        sourceUrl: query.sourceUrl,
-        sourceSite: null,
-        sourceCountry: null,
-        market: null,
-      },
+      identity: webSearchIdentityFromDna(input.dna, query.sourceUrl),
     });
     webSearchMetrics = pool.metrics;
     /** 🔴 계측을 로그로 내보낸다 — Production 응답은 CTO 가 읽을 수 없다

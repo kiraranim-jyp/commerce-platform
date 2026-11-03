@@ -3,6 +3,7 @@ import {
   buildDiscoverySearchQuery,
 } from "@commerce/crawler/src/discovery-core/query-planner";
 import type { ProductIdentity } from "@commerce/crawler/src/discovery-core/types";
+import type { ProductIdentityDna } from "@commerce/shared";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -256,6 +257,54 @@ function describeSearchError(err: unknown): {
     errorStatus: status,
     errorCode: code,
     timeout: name === "SearchTimeoutError" || name === "AbortError" || code === "UND_ERR_HEADERS_TIMEOUT",
+  };
+}
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 SPRINT4-GATE-01 — **「DNA → Search identity」 owner 를 하나로 만든다**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 **왜 옮겼나** — 이 「칸 옮기기」가 **운영 라우트 안에만** 있었다. 그래서
+ *    「운영이 실제로 무슨 질의를 보내는가」를 확인하려면 하니스가 그 블록을
+ *    **베껴야** 했고(`search-supply-02` 가 그 모양이다), **베낀 하니스는 운영이
+ *    칸 하나를 빠뜨리는 순간 그것을 보지 못한다.**
+ *    🔴 그 사고가 실제로 났다 — QUERY-ARCH-01 이 `productName`/`color` 를 **null 로
+ *    보내고 있었고** 질의가 **품번 하나** 로 쪼그라들었다(E2E-HISTORY-10 이 「10건 중
+ *    8건 `NO_MODEL_CODE`」로 그 결과를 실측했다). 조립기는 그때도 정상이었다.
+ * 🟢 그래서 **운영과 하니스가 같은 함수** 를 부른다 — 이제 질의 증명이 **베끼기 없이**
+ *    된다(Sprint 4 Gate C1 「선언값이 아니라 실제 전달값」).
+ *
+ * 🔴 **동작은 바뀌지 않는다** — 기존 블록을 **칸·순서·null 정책 그대로** 옮겼다.
+ * 🔴 **지어내지 않는다** — 전부 원본에서 실제로 읽힌 값(`dna`)이다.
+ * 🔴 `size`/`genderAge`/`season` 은 **보내지 않는다** — denylist 가 노이즈로 판정한 축이다.
+ *
+ * ── 🔴🔴 Market neutrality — **시장을 Search 에 넘기지 않는다** ──────────────
+ * ```
+ * sourceSite · sourceCountry · market 을 **항상 null** 로 둔다.
+ * 입력 URL 이 국내든 해외든 **Search 시장을 좁히지 않는다** —
+ * 「국내 URL 이면 국내만 / 해외 URL 이면 해외만」은 **제품 전략 위반** 이다.
+ * 🟢 계약이 이 셋을 직접 단언하고, 질의가 그 값에 **반응하지 않는 것** 까지 단언한다.
+ * ```
+ */
+export function webSearchIdentityFromDna(dna: ProductIdentityDna, sourceUrl: string): ProductIdentity {
+  return {
+    brand: dna.brand.value || null,
+    /** 🟢 디자인명의 원천. 조립기가 denylist 로 코어 토큰만 남긴다. */
+    productName: dna.title || null,
+    productType: dna.category?.value ?? null,
+    genderAge: null,
+    color: dna.color,
+    size: null,
+    season: null,
+    productCode: dna.brandModelCode,
+    /** 🔴 상세설명 유래 사실 — 관측된 것만(없으면 빈 배열이고 질의에서 생략된다). */
+    facts: [dna.material, dna.fit].filter((v): v is string => Boolean(v)),
+    sourceUrl,
+    /** 🔴🔴 **시장을 넘기지 않는다**(위 Market neutrality). */
+    sourceSite: null,
+    sourceCountry: null,
+    market: null,
   };
 }
 

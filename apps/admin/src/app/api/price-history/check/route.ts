@@ -213,6 +213,22 @@ export async function POST(request: Request) {
       at: new Date().toISOString(),
       search: m
         ? {
+            /**
+             * ════════════════════════════════════════════════════════════════
+             * 🔵🔵🔵 SPRINT4-GATE-01 — **보낸 질의 «원문» 을 같이 남긴다**
+             * ════════════════════════════════════════════════════════════════
+             *
+             * 🔴 **왜** — 저장된 관측값에 **질의가 없어서**, 「운영이 실제로 무슨
+             *    질의를 보냈는가」를 확인하려면 **Vercel tail 로그 창(1시간)** 안에
+             *    들어가야 했다. 그 창이 지나가면 **사람에게 재실행을 요구** 하게 된다
+             *    — SEARCH-RUN-OBSERVABILITY-02 가 없애려고 만든 그 루프다.
+             *    실측: Gate C1 에서 질의를 증명할 수 있는 운영 실행이 **24시간에 1건**
+             *    뿐이었다(로그 보존 한계). 🟢 이 칸 하나로 그 증명이 영속된다.
+             * 🔴🔴 **보안** — 이 문자열은 `web-search-pool` 이 만든 질의이고
+             *    **토큰이 들어갈 자리가 없다**(토큰은 URL 에만 실리고 이 칸에 오지 않는다).
+             *    🔴 그래서 「URL·본문·message 를 싣지 않는다」는 계약은 **그대로** 다.
+             */
+            query: m.query ?? null,
             searches: m.searches ?? null,
             pages: m.pagesReturned ?? null,
             perPage: m.organicPerPage ?? null,
