@@ -115,17 +115,35 @@ if (N < 5) {
   console.log("     「상시 부족」도 「간헐 부족」도 「정상」도 적지 않는다(CPO 기준 N≥5).");
   console.log("     🟢 관측은 자연 누적된다 — 평소 분석이 돌면 이 표가 채워진다.");
 } else {
+  /**
+   * 🔴🔴 **한 줄 판정을 내지 않는다.** 1차 판독에서 이 자리가
+   *    「🔴 상시 부족」 **하나** 를 찍었는데, 같은 데이터에 **실패 축(timeout 33%)** 과
+   *    **공급 축(중위 3)** 이 **동시에** 있었다 ⟹ 한 줄로 접으면 다음 사람이
+   *    **틀린 레버**(provider 교체)를 잡는다.
+   * 🟢 그래서 **축을 갈라** 적고, 결론은 **사람이 조합** 한다.
+   */
   const lowShare = ok.filter((v) => v <= 3).length / Math.max(1, ok.length);
-  const verdict =
-    stat.failed / N >= 0.4
-      ? "🔴 간헐 부족(실패 축) — 정상 run 과 실패 run 의 error/timeout 을 대조할 것"
-      : lowShare >= 0.6
-        ? "🔴 상시 부족 — provider / query parameter / page strategy 후보(🔴 변경은 CPO 결정)"
-        : lowShare > 0
-          ? "🟡 간헐 부족 — 낮은 run 과 정상 run 의 query 차이를 대조할 것"
-          : "🟢 공급 정상 — 병목을 ranking / discovery quality / identity 로 이동(🔴 CPO 결정 전 코드 변경 금지)";
-  console.log(`  ${verdict}`);
-  console.log(`  (근거: 성공 n=${ok.length} · organic≤3 비율 ${(lowShare * 100).toFixed(0)}% · failed ${stat.failed}/${N})`);
+  const med = ok.length ? ok[Math.floor(ok.length / 2)] : null;
+  console.log("  🔴 **한 줄 판정 금지** — 아래 세 축을 «각각» 읽고 사람이 조합한다.");
+  console.log(
+    `  ① 실패 축   failed ${stat.failed}/${N} (timeout ${stat.timeout})  ` +
+      (stat.failed === 0 ? "🟢 없음" : "🔴 **간헐 실패가 실재한다**(정상 run 과 error 를 대조)"),
+  );
+  console.log(
+    `  ② 공급 축   성공 n=${ok.length} · 중위 ${med} · organic≤3 비율 ${(lowShare * 100).toFixed(0)}%  ` +
+      (lowShare >= 0.6 ? "🔴 낮다" : lowShare > 0 ? "🟡 섞여 있다" : "🟢 충분"),
+  );
+  /**
+   * 🔴 **기준선과 대조하지 않으면 「상시」를 말할 수 없다.** 저장분(2026-10-29 · 같은 질의
+   *    골격 · **1페이지**)은 상품 10개에서 **중위 9 · 7~9** 였다(`sprint4-gate-03` 이 고정).
+   * 🔴 조건이 다르다(페이지 상한 · 상품 구성) ⟹ **차이를 원인으로 단정하지 않는다**.
+   */
+  console.log(
+    `  ③ 기준선   저장분 2026-10-29 n=10 **중위 9(7~9)** ↔ 이번 중위 ${med}  ` +
+      (med !== null && med < 7 ? "🔴 **낮아졌다 — 단 조건이 다르다(1p↔2p · 상품 구성)**" : "🟢 비슷"),
+  );
+  console.log("  🔴 ①이 크면 **간헐(환경/타임아웃)**, ②③이 같이 낮으면 **구조(질의/provider)** 쪽이다.");
+  console.log("  🔴 둘 다면 **둘 다** 라고 적는다 — 하나로 접지 않는다. 🔴 변경은 전부 CPO 결정.");
 }
 console.log("");
 await p.$disconnect();
