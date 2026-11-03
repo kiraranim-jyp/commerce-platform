@@ -186,7 +186,27 @@ describe("CORE-E2E-CLOSE-04 — 후보 선택 → 기존 저장 배선", () => {
     /** 🔴 **기존** 주소다 — 새 API 를 만들지 않았다. */
     expect(posts[0]!.url).toBe(`/api/price-history/${SNAPSHOT}/candidate-reviews`);
     const body = JSON.parse(String(posts[0]!.init!.body)) as Record<string, unknown>;
-    expect(body).toEqual({ candidateUrl: KR_PRESUMED.discoveredUrl, humanVerdict: "SAME" });
+    /**
+     * 🔵🔵 D3(STAGE 2)로 **이 단언이 갱신됐다**(약화가 아니라 강화다).
+     *
+     * 🔴 왜 — 국내 후보는 `candidate_reviews` 에 seen 행이 없어(079 `source` CHECK)
+     *    사람이 누르면 **맨몸 행**(domain·market·title null)이 생겼고, 재진입에서
+     *    「어느 판매처의 무엇을 판단했는가」가 사라졌다(STAGE 1 실측 4건).
+     * 🟢 그래서 후보 **식별 맥락** 을 같이 보낸다. 🔴 주소·메서드·개수는 **그대로** 다.
+     */
+    expect(body.candidateUrl).toBe(KR_PRESUMED.discoveredUrl);
+    expect(body.humanVerdict).toBe("SAME");
+    const candidate = body.candidate as Record<string, unknown> | undefined;
+    expect(candidate, "🔴 맥락이 빠지면 맨몸 행이 다시 생긴다").toBeTruthy();
+    expect(candidate!.domain).toBe(KR_PRESUMED.domain);
+    expect(candidate!.market).toBe(KR_PRESUMED.market);
+    /**
+     * 🔴🔴 **판정 어휘는 보내지 않는다** — 선택 UI 가 판정/가격 등급을 들면 그 영역이
+     *    다시 「판정처럼」 읽힌다(계약 `D-4` · `wu-136 E-2` 가 그것을 막는다).
+     */
+    for (const banned of ["priceTier", "systemVerdict", "matchTruth", "blockers", "matchReasons"]) {
+      expect(candidate, `🔴 선택 UI 가 판정 어휘를 보낸다: ${banned}`).not.toHaveProperty(banned);
+    }
   });
 
   /** 🟢 S-6 — **「저장됐다」를 말한다**(§8-6 · WU-131 §8 「눌렀다」와 다른 사실). */

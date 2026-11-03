@@ -100,6 +100,8 @@ import {
   CANDIDATE_LINK_TEXT,
   /** 🔵 FINAL UX REBUILD — 카드 안 「근거」 접힘의 라벨(어휘 owner 는 그 파일 하나다). */
   CANDIDATE_EVIDENCE_FOLD_LABEL,
+  /** 🔵 D1(STAGE 2) — 운영이 이미 저장한 **긍정 근거** 줄(복구 · 재판정 0). */
+  candidateEvidenceLines,
   /** 🔵 §5 — 요약 줄의 **행동** 어휘. */
   CANDIDATE_LIST_OPEN_HINT,
   /** 🔵 §3·§4 — 해외 1차 소싱가의 원화 환산 어휘(CORE-2E §4-4 의 보류를 푼다). */
@@ -137,7 +139,12 @@ import {
   type GeminiTransientRow,
 } from "./GeminiTransientCandidates";
 /** 🔵 CORE-E2E-CLOSE-04 — 저장 배선. 🔴 새 API 0 · POST 중복 구현 0(CPO §4). */
-import { useCandidateReview, type CandidateReviewApi } from "./use-candidate-review";
+import {
+  useCandidateReview,
+  type CandidateReviewApi,
+  /** 🔵 D3(STAGE 2) — 후보 맥락 타입. 🔴 화면이 이미 든 값만 담는다. */
+  type ReviewCandidateContext,
+} from "./use-candidate-review";
 import {
   /**
    * 🔵 CORE-NEXT STEP 4 — **A(권장 판매가격)의 말 owner.** 🔴 이 영역은 A 를
@@ -1775,7 +1782,7 @@ function CandidateSelect({
             type="button"
             data-testid={`mi-select-${v.toLowerCase()}`}
             aria-pressed={chosen === v}
-            onClick={() => api.onReview(row.discoveredUrl, v)}
+            onClick={() => api.onReview(row.discoveredUrl, v, { candidate: reviewContextOf(row) })}
             className={
               chosen === v
                 ? "rounded border border-accent px-1.5 py-0.5 text-[11px] text-accent"
@@ -1786,6 +1793,17 @@ function CandidateSelect({
           </button>
         ))}
       </div>
+      {/**
+        * 🔴🔴 D2(STAGE 2) — **여기에 입력칸을 두지 못한다. 계약이 막았고 그 계약이 맞다.**
+        *
+        * 1차 구현이 「판단 근거」 `<input>` 을 이 자리에 넣었고 기존 계약
+        * `core-2s-seller-screen D-3`(「결론 영역에 **입력칸·요청이 없다**」)이 **FAIL** 했다.
+        * 🔴 그 계약의 뜻은 **「셀러에게 조사/재분석을 요구하지 않는다」** 이고, 판단 근거를
+        *    적게 하는 것은 **셀러에게 글쓰기를 요구하는 것** 이라 정확히 그 금지에 든다.
+        * 🟢 그래서 **계약을 풀지 않고 UI 를 뺐다** — `humanNote` 의 **저장·복원 경로는
+        *    살아 있다**(hook `note` · POST `humanNote` · GET 복원 · DB 칸).
+        * 🔵 어디에 둘지는 **UX 계약 변경** 이라 CPO 결정이다(STAGE 2 STOP 조건 그대로).
+        */}
       {/** 🔴 「눌렀다」가 아니라 **「저장됐다」** 를 말한다(WU-131 §8). */}
       {save ? (
         <span data-testid="mi-select-save" className="text-[11px] text-text-tertiary">
@@ -1794,6 +1812,29 @@ function CandidateSelect({
       ) : null}
     </div>
   );
+}
+
+/**
+ * 🔵 D3 — **화면이 이미 들고 있는 «후보 식별» 값만** 보낸다.
+ *
+ * 🔴🔴 **판정 어휘는 여기서 보내지 않는다** — 1차 구현이 `priceTier`·`crossSellerBlockers`·
+ *    `matchTruth` 까지 담았고 계약 둘이 **FAIL** 했다:
+ *    `core-e2e-close-04 D-4`(「선택은 가격 집계에 들어가지 않는다」 — 이 함수 소스에
+ *    `priceTier` 금지) · `wu-136 E-2`(「이 영역 코드에 내부 판정 토큰이 **문자열로** 없다」).
+ *    🟢 그 둘이 맞다 — 선택 UI 가 판정/가격 어휘를 들면 **그 영역이 다시 판정처럼 읽힌다.**
+ * 🟢 그래서 **CPO 가 허용한 범위대로** 줄였다(「기존 데이터 모델과 충돌하지 않는 범위에서」).
+ *    남긴 것은 D3 의 **핵심 목적** 그대로다 — 재진입에서 「어느 판매처의 무엇을 판단했는가」.
+ * 🔴 지어내지 않는다 · 재판정하지 않는다 · 없는 칸은 **보내지 않는다**(`undefined`).
+ */
+function reviewContextOf(row: GeminiTransientRow): ReviewCandidateContext {
+  return {
+    domain: row.domain,
+    title: row.title ?? undefined,
+    market: row.market ?? undefined,
+    imageUrl: row.imageUrl ?? undefined,
+    priceAmount: row.priceAmount ?? undefined,
+    priceCurrency: row.priceCurrency ?? undefined,
+  };
 }
 
 function MarketColumn({
@@ -2136,11 +2177,28 @@ function MarketColumn({
                           * 🔴 카드의 **조상 `<details>` 수를 늘리지 않는다** — 이것은 카드
                           *    **안쪽** 이라 접힘 깊이 계약(카드 ≤ 1)과 무관하다.
                           */}
-                        {candidateWarningLines(row).length > 0 ? (
+                        {/**
+                          * 🔵🔵 D1(STAGE 2) — **긍정 근거를 같은 접힘 «안» 에 되살린다.**
+                          * 🔴 이것은 복구다 — 운영이 이미 저장한 `matchReasons` 의
+                          *    「근거:」 줄이 화면에서 **한 번도 보이지 않고 있었다**.
+                          * 🔴 보류(⚠)와 **다른 줄 · 다른 testid · 다른 색** 으로 가른다 —
+                          *    섞으면 카드가 다시 「스스로 모순」된다.
+                          * 🔴 내부 판정 어휘(`판정방법:`·`판정근거:`)는 leaf 가 버린다.
+                          */}
+                        {candidateWarningLines(row).length > 0 || candidateEvidenceLines(row).length > 0 ? (
                           <details data-testid="mi-candidate-evidence" className="mt-1">
                             <summary className="cursor-pointer text-[11px] text-text-tertiary">
                               ▸ {CANDIDATE_EVIDENCE_FOLD_LABEL}
                             </summary>
+                            {candidateEvidenceLines(row).map((line) => (
+                              <p
+                                key={line}
+                                data-testid="mi-candidate-evidence-line"
+                                className="text-[11px] text-text-secondary"
+                              >
+                                {line}
+                              </p>
+                            ))}
                             {candidateWarningLines(row).map((line) => (
                               <p
                                 key={line}

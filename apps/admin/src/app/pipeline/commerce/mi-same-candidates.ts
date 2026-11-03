@@ -583,6 +583,50 @@ export function candidateWarningLines(row: GeminiTransientRow): string[] {
 /** 🔴 「확인 필요」라고만 적으면 무엇을 확인할지 모른다 — 사유를 뒤에 붙인다. */
 export const CANDIDATE_WARNING_PREFIX = "⚠ 확인 필요:";
 
+/**
+ * ══════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 D1 — **긍정 근거를 «다시» 보이게 한다**(CPO STAGE 2 승인 2026-11-03)
+ * ══════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **새 기능이 아니라 «복구» 다.** 운영은 그 근거를 **이미 계산해 저장하고** 있었는데
+ *    (`matchReasons`) 화면이 **보류(blocker)만** 그렸다 ⟹ 카드가 「확인 필요」만 말하고
+ *    **왜 같다고 봤는지는 한 줄도 말하지 않았다**(STAGE 1 조사 결과).
+ *
+ * 🟢 **데이터는 이미 접두어로 갈라져 있다** — 운영이 그렇게 적는다:
+ * ```
+ * 근거: 상품군 TOP↔TOP · 근거: 색상 BLUE · 근거: 대상 KIDS      ← 🟢 여기만 쓴다
+ * 보류: 브랜드 Bobo Choses ↔ Hugo Boss                        ← 기존 ⚠ 줄이 담당
+ * 판정방법: CROSS_SELLER_AXES … · 판정근거: 교차판매처=PRESUMED_SAME …  ← 🔴 **제외**
+ * ```
+ * 🔴 **내부 판정 어휘를 이 영역에 들이지 않는다**(`wu-130 F-4` 와 충돌한다) — 그래서
+ *    **접두어 하나로만** 통과시키고 `판정방법:`/`판정근거:` 는 **명시적으로 버린다**.
+ * 🔴 **재판정하지 않는다** — 이미 있는 문자열을 고르기만 한다(점수·threshold·verdict **0**).
+ * 🔴 접두어는 **떼어서** 보여준다 — 셀러에게 「근거:」라는 말은 중복이다.
+ * 🔴 없으면 **빈 배열** 이다 — 「모두 일치」 같은 말을 **만들지 않는다**.
+ */
+const EVIDENCE_PREFIX = "근거: ";
+/** 🔴 이 접두어는 **들이지 않는다**(내부 정책 설명). */
+const INTERNAL_REASON_PREFIXES = ["판정방법:", "판정근거:"] as const;
+
+export function candidateEvidenceLines(row: GeminiTransientRow): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of row.matchReasons ?? []) {
+    const line = String(raw).trim();
+    if (INTERNAL_REASON_PREFIXES.some((p) => line.startsWith(p))) continue;
+    if (!line.startsWith(EVIDENCE_PREFIX)) continue;
+    const text = line.slice(EVIDENCE_PREFIX.length).trim();
+    if (!text || seen.has(text)) continue;
+    seen.add(text);
+    out.push(text);
+  }
+  if (out.length === 0) return [];
+  return [`${CANDIDATE_EVIDENCE_PREFIX} ${out.join(" · ")}`];
+}
+
+/** 🟢 긍정 근거 줄의 머리말 — 보류(⚠)와 **눈으로 갈라져야** 한다. */
+export const CANDIDATE_EVIDENCE_PREFIX = "✓ 확인된 근거:";
+
 /** 🔴 왜 그 후보가 가격비교에서 빠졌는가. 🟢 **조용히 버리지 않는다**(한 줄로 적는다). */
 export type MiSameExclusion = "NOT_SAME" | "SOLD_OUT" | "PRICE_UNCONFIRMED";
 

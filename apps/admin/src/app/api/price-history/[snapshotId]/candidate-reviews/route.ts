@@ -6,6 +6,7 @@ import {
   isHumanVerdict,
   listCandidateReviews,
   saveHumanVerdict,
+  type CandidateContextInput,
   type ReviewSource,
 } from "../../_lib/candidate-review";
 
@@ -68,8 +69,48 @@ export async function POST(request: Request, { params }: { params: Promise<{ sna
   if (!auth.ok) return auth.response;
   const { snapshotId } = await params;
 
+  /**
+   * 🔵 D3 — **타입을 믿지 않고 하나씩 검사한다.** 클라이언트가 보낸 값이고,
+   *    DB 에 그대로 들어가는 칸이라 모양이 틀리면 조용히 거짓 데이터가 된다.
+   * 🔴 모르는 칸은 **넘기지 않는다**(`undefined`) — `null` 로 덮어쓰지 않기 위해서다.
+   */
+  const sanitizeCandidateContext = (raw: unknown): CandidateContextInput | undefined => {
+    if (!raw || typeof raw !== "object") return undefined;
+    const c = raw as Record<string, unknown>;
+    const str = (k: string) => (typeof c[k] === "string" && c[k] ? (c[k] as string) : undefined);
+    const num = (k: string) => (typeof c[k] === "number" && Number.isFinite(c[k]) ? (c[k] as number) : undefined);
+    const arr = (k: string) =>
+      Array.isArray(c[k]) ? (c[k] as unknown[]).filter((v): v is string => typeof v === "string") : undefined;
+    const out: CandidateContextInput = {
+      domain: str("domain"),
+      title: str("title"),
+      market: str("market"),
+      imageUrl: str("imageUrl"),
+      priceAmount: num("priceAmount"),
+      priceCurrency: str("priceCurrency"),
+      priceStatus: str("priceStatus"),
+      systemVerdict: str("systemVerdict"),
+      matchTruth: str("matchTruth"),
+      priceTier: str("priceTier"),
+      blockers: arr("blockers"),
+      matchReasons: arr("matchReasons"),
+    };
+    return Object.values(out).some((v) => v !== undefined) ? out : undefined;
+  };
+
   const body = (await request.json().catch(() => null)) as
-    | { candidateUrl?: unknown; humanVerdict?: unknown; humanNote?: unknown; source?: unknown }
+    | {
+        candidateUrl?: unknown;
+        humanVerdict?: unknown;
+        humanNote?: unknown;
+        source?: unknown;
+        /**
+         * 🔵🔵 D3(STAGE 2) — **후보 맥락.** 🔴 국내 후보는 seen 행이 없어(079 `source`
+         *    CHECK) 사람이 누르면 **맨몸 행** 이 생겼다 ⟹ 재진입에서 판단 근거가 사라졌다.
+         * 🔴 **선택 인자다** — 없으면 오늘 동작 그대로.
+         */
+        candidate?: unknown;
+      }
     | null;
 
   const candidateUrl = typeof body?.candidateUrl === "string" ? body.candidateUrl.trim() : "";
@@ -97,6 +138,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ sna
     humanVerdict: body.humanVerdict,
     humanNote: typeof body?.humanNote === "string" ? body.humanNote : null,
     source: typeof body?.source === "string" ? (body.source as ReviewSource) : undefined,
+    /**
+     * 🔵 D3 — **검증한 값만** 내려보낸다. 🔴 지어내지 않는다(모르는 칸은 넘기지 않는다).
+     * 🔴 `source` 는 여기서도 **바꾸지 않는다** — 위장 금지(D4 는 CPO 사안).
+     */
+    candidate: sanitizeCandidateContext(body?.candidate),
   });
   if (!saved) {
     return NextResponse.json({ ok: false, error: "판단을 저장하지 못했습니다." }, { status: 500 });

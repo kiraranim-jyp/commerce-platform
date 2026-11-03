@@ -32,8 +32,49 @@ export interface CandidateReviewApi {
   saveState: Record<string, ReviewSaveState>;
   /** 🔴 `null` = **아직 안 읽었다**(「0건」이 아니다 · WU-131 §3-B). */
   history: ReviewHistoryRow[] | null;
-  /** 🔴 즉시 저장한다. 실패하면 **되돌리고 말한다.** */
-  onReview: (url: string, verdict: HumanReview) => void;
+  /**
+   * 🔵 D2(STAGE 2) — url → 사람이 적은 **판단 근거**(재진입 복원용).
+   * 🔴 비어 있는 것과 「아직 안 읽었다」를 섞지 않기 위해 **값이 있는 url 만** 담는다.
+   */
+  note: Record<string, string>;
+  /**
+   * 🔴 즉시 저장한다. 실패하면 **되돌리고 말한다.**
+   *
+   * 🔵🔵 D2·D3(STAGE 2) — **맥락과 사유를 같이 보낸다.**
+   * 🔴 왜 — 국내 후보는 `candidate_reviews` 에 **seen 행이 없다**(079 `source` CHECK 가
+   *    `WEB_SEARCH`/`DOMESTIC_LISTING` 을 금지해 기록 경로가 막혀 있다) ⟹ 사람이 누르면
+   *    **맨몸 행**(domain·market·title·system_* 전부 null)이 생겼다. 그러면 재진입에서
+   *    「내가 왜 이걸 SAME 이라 했는지」를 **영영 못 본다**(STAGE 1 실측 4건).
+   * 🔴 **선택 인자다** — 안 넘기면 **오늘 동작 그대로** 다.
+   * 🔴 `source` 는 **건드리지 않는다**(위장 금지 · migration 금지 · D4 는 CPO 사안).
+   */
+  onReview: (url: string, verdict: HumanReview, extra?: ReviewExtra) => void;
+}
+
+/**
+ * 🔵 D3 — **이미 화면이 들고 있는 값** 만 보낸다. 🔴 지어내지 않는다.
+ * 🔴 system 칸은 **INSERT 로 새 행이 생길 때만** 쓰인다 — 기존 행을 **덮지 않는다**
+ *    (WU-131 양방향 계약: 사람 판단 ↔ 시스템 판정은 서로 덮지 않는다).
+ */
+export interface ReviewCandidateContext {
+  domain?: string | null;
+  title?: string | null;
+  market?: string | null;
+  imageUrl?: string | null;
+  priceAmount?: number | null;
+  priceCurrency?: string | null;
+  priceStatus?: string | null;
+  systemVerdict?: string | null;
+  matchTruth?: string | null;
+  priceTier?: string | null;
+  blockers?: string[];
+  matchReasons?: string[];
+}
+
+export interface ReviewExtra {
+  /** 🔵 D2 — 사람이 **실제로 본 근거**. 🔴 시스템 정책으로 자동 변환하지 않는다. */
+  humanNote?: string | null;
+  candidate?: ReviewCandidateContext;
 }
 
 /**
@@ -49,6 +90,8 @@ export function useCandidateReview(
   const [review, setReview] = useState<Record<string, HumanReview>>({});
   const [saveState, setSaveState] = useState<Record<string, ReviewSaveState>>({});
   const [history, setHistory] = useState<ReviewHistoryRow[] | null>(null);
+  /** 🔵 D2 — 사람이 적은 판단 근거(url → 글). */
+  const [note, setNote] = useState<Record<string, string>>({});
 
   /**
    * 🟢 진입할 때 **이력을 읽는다** — 이것이 「다시 들어와도 판단이 남아 있다」의 전부다.
@@ -68,8 +111,14 @@ export function useCandidateReview(
       setHistory(json.reviews);
       /** 🟢 저장된 판단을 **버튼 상태로 되살린다** — 그래야 재진입 시 선택이 보인다. */
       const restored: Record<string, HumanReview> = {};
-      for (const r of json.reviews) if (r.humanVerdict) restored[r.candidateUrl] = r.humanVerdict;
+      /** 🔵 D2 — **근거도 같이 되살린다**(그 전까지 note 는 복원 경로가 없었다). */
+      const notes: Record<string, string> = {};
+      for (const r of json.reviews) {
+        if (r.humanVerdict) restored[r.candidateUrl] = r.humanVerdict;
+        if (typeof r.humanNote === "string" && r.humanNote) notes[r.candidateUrl] = r.humanNote;
+      }
       setReview((prev) => ({ ...restored, ...prev }));
+      setNote((prev) => ({ ...notes, ...prev }));
     } catch {
       /* 🔴 조용히 둔다 — 이력 조회 실패가 가격 화면을 깨뜨리지 않는다. */
     }
@@ -84,9 +133,19 @@ export function useCandidateReview(
    *    **되돌리고 말한다** — 저장 안 된 판단을 저장된 것처럼 보여주면 그 자체가 거짓이다.
    */
   const onReview = useCallback(
-    (url: string, verdict: HumanReview) => {
+    (url: string, verdict: HumanReview, extra?: ReviewExtra) => {
       const before = review[url];
       setReview((prev) => ({ ...prev, [url]: verdict }));
+      /** 🔵 D2 — 근거를 **보낸 경우에만** 화면 state 에도 반영한다(빈 값은 지운다). */
+      if (extra?.humanNote !== undefined) {
+        const text = (extra.humanNote ?? "").trim();
+        setNote((prev) => {
+          const next = { ...prev };
+          if (text) next[url] = text;
+          else delete next[url];
+          return next;
+        });
+      }
       /** 🔴 식별자가 없으면 **저장했다고 말하지 않는다** — 화면 state 로만 남는다. */
       if (!snapshotId) return;
       setSaveState((prev) => ({ ...prev, [url]: "SAVING" }));
@@ -95,7 +154,16 @@ export function useCandidateReview(
           const res = await fetch(`/api/price-history/${snapshotId}/candidate-reviews`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ candidateUrl: url, humanVerdict: verdict }),
+            /**
+             * 🔵 D2·D3 — 🔴 **안 넘기면 키 자체가 안 실린다**(`undefined` 는 JSON 에서
+             *    사라진다) ⟹ 기존 호출부의 요청 본문은 **한 글자도 바뀌지 않는다**.
+             */
+            body: JSON.stringify({
+              candidateUrl: url,
+              humanVerdict: verdict,
+              humanNote: extra?.humanNote,
+              candidate: extra?.candidate,
+            }),
           });
           const json = (await res.json().catch(() => null)) as { ok?: boolean } | null;
           if (!res.ok || !json?.ok) throw new Error("save failed");
@@ -116,5 +184,5 @@ export function useCandidateReview(
     [review, snapshotId, loadHistory],
   );
 
-  return { review, saveState, history, onReview };
+  return { review, saveState, history, note, onReview };
 }

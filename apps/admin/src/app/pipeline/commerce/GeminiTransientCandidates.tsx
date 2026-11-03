@@ -676,6 +676,8 @@ export interface ReviewHistoryRow {
   systemVerdict: string | null;
   matchTruth: string | null;
   humanVerdict: HumanReview | null;
+  /** 🔵 D2(STAGE 2) — 사람이 적은 판단 근거. 🔴 재진입에서 **그대로 복원** 된다. */
+  humanNote?: string | null;
   source: string;
   lastSeenAt: string;
   reviewedAt: string | null;

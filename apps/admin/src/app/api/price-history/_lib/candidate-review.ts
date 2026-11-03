@@ -44,6 +44,8 @@ export interface CandidateReviewRow {
   soldOut: boolean | null;
   matchReasons: string[];
   humanVerdict: HumanVerdict | null;
+  /** 🔵 D2 — 사람이 적은 판단 근거. 🔴 Identity 정책 입력이 **아니다**(보존·복원 전용). */
+  humanNote: string | null;
   source: ReviewSource;
   firstSeenAt: string;
   lastSeenAt: string;
@@ -108,6 +110,11 @@ const toRow = (r: any): CandidateReviewRow => ({
   soldOut: typeof r.sold_out === "boolean" ? r.sold_out : null,
   matchReasons: Array.isArray(r.match_reasons) ? r.match_reasons : [],
   humanVerdict: isHumanVerdict(r.human_verdict) ? r.human_verdict : null,
+  /**
+   * 🔵 D2(STAGE 2) — **사람이 적은 근거를 돌려준다.** 🔴 그 전까지 이 칸은 저장은
+   *    가능했지만 **읽히는 경로가 없어서** 재진입에서 사라졌다(실측 note 보유 0/38).
+   */
+  humanNote: typeof r.human_note === "string" ? r.human_note : null,
   source: r.source,
   firstSeenAt: r.first_seen_at,
   lastSeenAt: r.last_seen_at,
@@ -443,10 +450,53 @@ export async function recordSeenCandidates(input: {
 }
 
 /**
+ * 🔵 D3(STAGE 2) — 클라이언트가 보낸 **후보 맥락**. 🔴 전부 선택 칸이고
+ *    `undefined` 면 **열에 실리지 않는다**(기존 값을 덮지 않기 위해서다).
+ */
+export interface CandidateContextInput {
+  domain?: string;
+  title?: string;
+  market?: string;
+  imageUrl?: string;
+  priceAmount?: number;
+  priceCurrency?: string;
+  priceStatus?: string;
+  systemVerdict?: string;
+  matchTruth?: string;
+  priceTier?: string;
+  blockers?: string[];
+  matchReasons?: string[];
+}
+
+/** 🔴 값이 **있는 칸만** 컬럼으로 만든다 — 없는 칸을 `null` 로 적지 않는다. */
+function candidateContextColumns(c?: CandidateContextInput): Record<string, unknown> {
+  if (!c) return {};
+  const out: Record<string, unknown> = {};
+  const put = (col: string, v: unknown) => {
+    if (v !== undefined) out[col] = v;
+  };
+  put("candidate_domain", c.domain);
+  put("candidate_title", c.title);
+  put("market", c.market);
+  put("image_url", c.imageUrl);
+  put("price_amount", c.priceAmount);
+  put("price_currency", c.priceCurrency);
+  put("price_status", c.priceStatus);
+  put("system_verdict", c.systemVerdict);
+  put("match_truth", c.matchTruth);
+  put("price_tier", c.priceTier);
+  put("blockers", c.blockers);
+  put("match_reasons", c.matchReasons);
+  return out;
+}
+
+/**
  * 셀러 판단을 저장한다.
  *
- * 🔴🔴 **`system_*` 를 쓰지 않는다** — MI 산출을 사람 판단으로 덮지 않는 것이 이 WU 의 계약이다.
- * 🟢 후보 행이 아직 없으면(이력보다 먼저 눌린 경우) 만들면서 넣는다.
+ * 🔴🔴 **기존 행의 `system_*` 를 쓰지 않는다** — MI 산출을 사람 판단으로 덮지 않는 것이
+ *    이 WU 의 계약이다(UPDATE 경로는 `verdictFields` 뿐이다).
+ * 🟢 후보 행이 아직 없으면(이력보다 먼저 눌린 경우) 만들면서 넣는다 —
+ *    🔵 D3 부터는 그때 **후보 맥락도 같이** 심는다(맨몸 행 방지).
  */
 export async function saveHumanVerdict(input: {
   snapshotId: string;
@@ -456,6 +506,21 @@ export async function saveHumanVerdict(input: {
   humanVerdict: HumanVerdict;
   humanNote?: string | null;
   source?: ReviewSource;
+  /**
+   * 🔵🔵 D3(STAGE 2) — **새 행이 생길 때 맥락을 같이 심는다.**
+   *
+   * 🔴 왜 — 국내 후보는 `recordSeenCandidates` 가 **기록하지 못한다**(079 `source`
+   *    CHECK 가 `WEB_SEARCH`/`DOMESTIC_LISTING` 을 금지) ⟹ 사람이 누르면 이 함수가
+   *    **INSERT** 로 가고 `domain`/`market`/`title`/`system_*` 이 **전부 null** 인
+   *    **맨몸 행** 이 남았다(STAGE 1 실측 4건 · 그중 하나가 `biskuit.kr`).
+   *    그러면 재진입에서 「내가 왜 이걸 SAME 이라 했는지」를 **영영 못 본다**.
+   *
+   * 🔴🔴 **UPDATE 경로에는 쓰지 않는다** — WU-131 양방향 계약(사람 판단 ↔ 시스템 판정은
+   *    서로 덮지 않는다)을 지킨다. 행이 이미 있으면 그 `system_*` 는 **운영 산출** 이고
+   *    클라이언트 값으로 덮는 것이 바로 그 계약 위반이다.
+   * 🔴 `source` 는 **바꾸지 않는다**(위장 금지 · migration 금지 · D4 는 CPO 사안).
+   */
+  candidate?: CandidateContextInput;
 }): Promise<CandidateReviewRow | null> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return null;
@@ -496,6 +561,11 @@ export async function saveHumanVerdict(input: {
       origin_code: input.originCode,
       candidate_url: key,
       source: input.source ?? "SELLER_URL",
+      /**
+       * 🔵 D3 — **INSERT 에서만** 맥락을 심는다(위 주석). 🔴 `undefined` 인 칸은
+       *    객체에 **실리지 않으므로** 기존 기본값/`null` 을 덮지 않는다.
+       */
+      ...candidateContextColumns(input.candidate),
       ...verdictFields,
     })
     .select("*")
