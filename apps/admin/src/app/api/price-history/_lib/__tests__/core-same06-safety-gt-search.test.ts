@@ -200,6 +200,17 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
   skipped.push({ file: "query-adopt-01-production.json", why: "🟢 채택 Query E2E Production 실측 · 라벨 **없음**" });
   skipped.push({ file: "rc-01-input-url.json", why: "🟢 입력 URL A/B 추출 비교 · 라벨 **없음**" });
   /**
+   * 🔵 SPRINT5-BRAND-GT(2026-11-03) — **운영 `candidate_reviews` 의 사람 판정 행 전수 사본.**
+   * 🔴 그래서 **분모에 넣지 않는다** — `dsp-01-reviewed-same.json` 과 **같은 이유**(이중 집계).
+   *    그 라벨의 원본은 운영 DB 이고, 이 파일은 BRAND_MISMATCH 반사실 전용 고정본이다.
+   * 🟢 그래도 여기 적는 이유는 이 계약이 **전수 분류** 를 요구하기 때문이다 —
+   *    실제로 그 FAIL 이 이 파일을 잡았다(가드가 일했다 · 느슨하게 하지 않았다).
+   */
+  skipped.push({
+    file: "sprint5-brand-gt.json",
+    why: "🔴 `candidate_reviews` 사람판정 행 사본(BRAND_MISMATCH 반사실 전용) — **이중 집계 방지**",
+  });
+  /**
    * 🔵 CORE-E2E-CANDIDATE-02(2026-10-31) — **다상품 후보 «표시» 측정 기록.**
    * 🔴 사람 라벨이 아니다. `human` 칸은 **다른 fixture 에서 조인해 온 사본** 이고
    *    (wu-067/068 · wu-059 · wu-112) 그 셋은 위에서 이미 분모로 세어진다 ⟹
