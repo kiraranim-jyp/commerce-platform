@@ -627,6 +627,30 @@ export function candidateEvidenceLines(row: GeminiTransientRow): string[] {
 /** 🟢 긍정 근거 줄의 머리말 — 보류(⚠)와 **눈으로 갈라져야** 한다. */
 export const CANDIDATE_EVIDENCE_PREFIX = "✓ 확인된 근거:";
 
+/**
+ * ══════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 D2(STAGE 2-R) — **「내 판단」은 글쓰기가 아니라 «선택» 이다**(CPO 확정 2026-11-03)
+ * ══════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 1차 구현은 **결론 카드에 자유 입력칸** 을 뒀고 계약 `core-2s D-3` 가 FAIL 했다.
+ *    CPO 가 그 자리를 **`후보 → 근거 확인` 영역** 으로 옮기고 **선택형** 으로 고정했다:
+ *    「셀러에게 다시 조사·분석·장문의 글쓰기를 요구하는 UX 가 되어서는 안 된다.」
+ *
+ * 🔴 **자유 텍스트를 «필수» 로 만들지 않는다** — 그래서 이 화면에 `<input>` 이 **없다**
+ *    (그 계약은 그대로 살아 있고 이 구현이 그것을 지킨다).
+ * 🔴 **시스템 판정 어휘가 아니다** — 이 목록은 **사람이 본 것** 이고 `verdict`/`threshold`/
+ *    `matchTruth`/`blocker` 로 **자동 변환되지 않는다**(audit trail 전용).
+ * 🔴 그래서 `BRAND_MISMATCH` 같은 **내부 토큰을 쓰지 않는다** — 사람의 말로 적는다.
+ */
+export const HUMAN_NOTE_SECTION_LABEL = "👤 내 판단";
+export const HUMAN_NOTE_OPTIONS = [
+  "브랜드가 다름",
+  "상품명이 다름",
+  "품번/모델코드가 다름",
+  "상세설명이 다름",
+  "기타",
+] as const;
+
 /** 🔴 왜 그 후보가 가격비교에서 빠졌는가. 🟢 **조용히 버리지 않는다**(한 줄로 적는다). */
 export type MiSameExclusion = "NOT_SAME" | "SOLD_OUT" | "PRICE_UNCONFIRMED";
 

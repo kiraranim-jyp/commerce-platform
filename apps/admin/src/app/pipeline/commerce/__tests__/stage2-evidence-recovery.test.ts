@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   CANDIDATE_EVIDENCE_PREFIX,
   CANDIDATE_WARNING_PREFIX,
+  HUMAN_NOTE_OPTIONS,
   candidateEvidenceLines,
   candidateWarningLines,
 } from "../mi-same-candidates";
@@ -123,7 +124,7 @@ describe("STAGE2 — D3 사람 판정 맥락 보존", () => {
   });
 });
 
-describe("STAGE2 — D2 사유 저장 경로는 살아 있다(UI 만 보류)", () => {
+describe("STAGE2-R — D2 「내 판단」은 글쓰기가 아니라 선택이다", () => {
   it("D2-1 🟢 hook·POST·복원 경로가 `humanNote` 를 다룬다", () => {
     const H = strip(readFileSync(join(HERE, "use-candidate-review.ts"), "utf8"));
     expect(H).toContain("humanNote: extra?.humanNote");
@@ -132,10 +133,55 @@ describe("STAGE2 — D2 사유 저장 경로는 살아 있다(UI 만 보류)", (
   });
 
   /**
-   * 🔴🔴 **이 영역에는 입력칸을 두지 않는다** — `core-2s-seller-screen D-3` 이
-   *    「결론 영역에 입력칸·요청이 없다」로 막았고 그 계약이 맞다(1차 구현이 FAIL 했다).
+   * 🔴🔴 **자유 입력칸을 만들지 않는다** — `core-2s-seller-screen D-3`(「결론 영역에
+   *    입력칸·요청이 없다」)이 1차 구현을 FAIL 로 잡았고 그 계약이 맞다.
+   *    CPO: 「셀러에게 다시 조사·분석·장문의 글쓰기를 요구하는 UX 가 되어서는 안 된다.」
    */
-  it("D2-2 🔴 결론 카드에 입력칸을 만들지 않는다", () => {
+  it("D2-2 🔴 이 화면에 입력칸이 **하나도 없다**", () => {
     expect(CARD, "🔴 셀러에게 글쓰기를 요구하는 입력칸이 생겼다").not.toMatch(/<input\b/);
+    expect(CARD).not.toMatch(/<textarea\b/);
+  });
+
+  it("D2-3 🔴 「내 판단」은 **근거 확인 접힘 «안»** 에 있다(결론 영역 아님)", () => {
+    const at = CARD.indexOf('data-testid="mi-candidate-evidence"');
+    const end = CARD.indexOf("</details>", at);
+    expect(at, "🔴 근거 접힘을 찾지 못했다").toBeGreaterThan(0);
+    expect(CARD.slice(at, end), "🔴 내 판단이 근거 접힘 밖에 있다").toContain("<CandidateNoteChoices");
+  });
+
+  it("D2-4 🟢 사유는 **고정 선택지** 이고 내부 판정 토큰이 아니다", () => {
+    expect(HUMAN_NOTE_OPTIONS).toContain("브랜드가 다름");
+    expect(HUMAN_NOTE_OPTIONS).toContain("품번/모델코드가 다름");
+    expect(HUMAN_NOTE_OPTIONS).toContain("기타");
+    for (const banned of ["BRAND_MISMATCH", "MODEL_CODE", "NO_TITLE_OVERLAP", "PRESUMED_SAME"]) {
+      expect(HUMAN_NOTE_OPTIONS.join(" "), `🔴 내부 토큰이 사람 어휘에 섞였다: ${banned}`).not.toContain(banned);
+    }
+  });
+
+  /** 🔴 판정 없이 사유만 저장하면 `humanVerdict` 를 **지어내야** 한다 — 금지다. */
+  it("D2-5 🔴 판정을 고르기 전에는 사유 선택이 서지 않는다", () => {
+    /**
+     * 🔴 **좌표를 함수 끝으로 잡지 않는다** — 1차에 `indexOf("\n}")` 로 잘랐더니
+     *    **매개변수 블록의 `}`**(`}: {`)에서 끊겨 본문을 보지 못했다(내 단언이 FAIL 로 잡았다).
+     * 🟢 다음 함수 선언까지로 자른다.
+     */
+    const at = CARD.indexOf("function CandidateNoteChoices");
+    const body = CARD.slice(at, CARD.indexOf("function reviewContextOf", at));
+    expect(body).toContain("if (!chosen) return null;");
+    /** 🔴 같은 verdict 를 그대로 다시 보낸다 — 판정을 **바꾸지 않는다**. */
+    expect(body).toContain("api.onReview(row.discoveredUrl, chosen,");
+  });
+
+  it("D2-6 🔴 사유 선택이 시스템 판정·threshold 를 건드리지 않는다", () => {
+    /**
+     * 🔴 **좌표를 함수 끝으로 잡지 않는다** — 1차에 `indexOf("\n}")` 로 잘랐더니
+     *    **매개변수 블록의 `}`**(`}: {`)에서 끊겨 본문을 보지 못했다(내 단언이 FAIL 로 잡았다).
+     * 🟢 다음 함수 선언까지로 자른다.
+     */
+    const at = CARD.indexOf("function CandidateNoteChoices");
+    const body = CARD.slice(at, CARD.indexOf("function reviewContextOf", at));
+    for (const banned of ["matchTruth", "priceTier", "crossSellerVerdict", "threshold", "SAME_MIN_AXES"]) {
+      expect(body, `🔴 사유 UI 가 판정을 건드린다: ${banned}`).not.toContain(banned);
+    }
   });
 });

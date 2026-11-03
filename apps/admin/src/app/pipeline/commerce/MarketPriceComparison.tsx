@@ -102,6 +102,9 @@ import {
   CANDIDATE_EVIDENCE_FOLD_LABEL,
   /** 🔵 D1(STAGE 2) — 운영이 이미 저장한 **긍정 근거** 줄(복구 · 재판정 0). */
   candidateEvidenceLines,
+  /** 🔵 D2(STAGE 2-R) — 「내 판단」 어휘 owner. 🔴 내부 토큰이 아니라 **사람의 말** 이다. */
+  HUMAN_NOTE_OPTIONS,
+  HUMAN_NOTE_SECTION_LABEL,
   /** 🔵 §5 — 요약 줄의 **행동** 어휘. */
   CANDIDATE_LIST_OPEN_HINT,
   /** 🔵 §3·§4 — 해외 1차 소싱가의 원화 환산 어휘(CORE-2E §4-4 의 보류를 푼다). */
@@ -1815,6 +1818,65 @@ function CandidateSelect({
 }
 
 /**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 D2(STAGE 2-R) — **「내 판단」 사유를 «선택» 으로 남긴다**(CPO 확정 구조)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 **자리가 계약이다** — 결론 카드가 아니라 **`후보 → 근거 확인` 접힘 안** 이다.
+ *    1차 구현이 결론 카드에 자유 입력칸을 뒀다가 `core-2s D-3` 로 FAIL 했고,
+ *    CPO 가 이 자리로 옮기면서 **선택형** 으로 고정했다.
+ * 🔴 **`<input>` 을 쓰지 않는다** — 셀러에게 글쓰기를 요구하지 않는다(그 계약 유지).
+ * 🔴 **판정을 고른 뒤에만** 뜬다 — 사유는 판단에 붙는 것이고, 판정이 없으면
+ *    저장할 `humanVerdict` 를 **지어내야 한다**(그건 금지다).
+ * 🔴 **시스템 판정을 바꾸지 않는다** — 같은 verdict 를 그대로 다시 보내고
+ *    `humanNote` 만 더한다(threshold·matchTruth·blocker **0**).
+ * 🟢 같은 것을 다시 누르면 **지운다**(토글) — 잘못 고른 것을 되돌릴 수 있어야 한다.
+ */
+function CandidateNoteChoices({
+  row,
+  api,
+}: {
+  row: GeminiTransientRow;
+  api?: CandidateReviewApi;
+}): JSX.Element | null {
+  /** 🔴 핸들러가 없으면 아무것도 그리지 않는다(WU-081 규약). */
+  if (!api) return null;
+  const chosen = api.review[row.discoveredUrl];
+  /** 🔴 판정이 없으면 사유를 받지 않는다 — verdict 를 지어내지 않기 위해서다. */
+  if (!chosen) return null;
+  const note = api.note?.[row.discoveredUrl] ?? "";
+  return (
+    <div data-testid="mi-candidate-note" className="mt-1">
+      <p className="text-[11px] text-text-tertiary">{HUMAN_NOTE_SECTION_LABEL}</p>
+      <div className="flex flex-wrap gap-1">
+        {HUMAN_NOTE_OPTIONS.map((label) => (
+          <button
+            key={label}
+            type="button"
+            data-testid="mi-note-option"
+            aria-pressed={note === label}
+            onClick={() =>
+              api.onReview(row.discoveredUrl, chosen, {
+                /** 🟢 토글 — 같은 것을 다시 누르면 비운다. */
+                humanNote: note === label ? "" : label,
+                candidate: reviewContextOf(row),
+              })
+            }
+            className={
+              note === label
+                ? "rounded border border-accent px-1.5 py-0.5 text-[11px] text-accent"
+                : "rounded border border-border/60 px-1.5 py-0.5 text-[11px] text-text-tertiary"
+            }
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
  * 🔵 D3 — **화면이 이미 들고 있는 «후보 식별» 값만** 보낸다.
  *
  * 🔴🔴 **판정 어휘는 여기서 보내지 않는다** — 1차 구현이 `priceTier`·`crossSellerBlockers`·
@@ -2185,7 +2247,9 @@ function MarketColumn({
                           *    섞으면 카드가 다시 「스스로 모순」된다.
                           * 🔴 내부 판정 어휘(`판정방법:`·`판정근거:`)는 leaf 가 버린다.
                           */}
-                        {candidateWarningLines(row).length > 0 || candidateEvidenceLines(row).length > 0 ? (
+                        {candidateWarningLines(row).length > 0 ||
+                        candidateEvidenceLines(row).length > 0 ||
+                        Boolean(reviewApi?.review[row.discoveredUrl]) ? (
                           <details data-testid="mi-candidate-evidence" className="mt-1">
                             <summary className="cursor-pointer text-[11px] text-text-tertiary">
                               ▸ {CANDIDATE_EVIDENCE_FOLD_LABEL}
@@ -2208,6 +2272,13 @@ function MarketColumn({
                                 {line}
                               </p>
                             ))}
+                            {/**
+                              * 🔵🔵 D2(STAGE 2-R) — **「내 판단」은 여기 산다**(CPO 확정 구조).
+                              * 🔴 결론 영역이 **아니다** — 근거 상세 영역 안이다
+                              *    (`core-2s D-3` 「결론 영역에 입력칸·요청 없다」를 지킨다).
+                              * 🔴 **선택** 이다 — 자유 입력칸을 만들지 않는다.
+                              */}
+                            <CandidateNoteChoices row={row} api={reviewApi} />
                           </details>
                         ) : null}
                         {/**
