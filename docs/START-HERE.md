@@ -88,7 +88,22 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-🔴🔴🔴 CURRENT WU  **SPRINT 4 PHASE B — SEARCH SUPPLY DIAGNOSIS (N≥5)**  ← 🔵 **지금 여기**
+🔴🔴🔴 CURRENT WU  **SPRINT 5 — BRAND_MISMATCH 정책 🟡 HOLD(국내 TP 누적 대기)**  ← 🔵 **지금 여기**
+                  🟢 Sprint 5 Observability **PASS**(구현 0 — 이미 돼 있었다) ·
+                     Recall Gate **측정 완료**(FP 10/10 차단 · 확인된 TP 손실 **0**)
+                  🔴 **CPO LOCK ⒝** — 「`TP 손실 0` 을 안전성 증거로 쓰지 않는다」
+                     현재 TP 표본에 **국내 판매처가 자기 상호를 brand 에 적은 경우가 없다**
+                  🔵 재판정은 **한 명령** 이고 **스스로 「아직 아니다」를 말한다**:
+                     `node packages/database/scripts/sprint5-export-brand-gt.mjs`
+                     (🇰🇷 KR TP 가 0 이면 HOLD 유지 · 1 이상이면 ①②③ 를 찍어 준다)
+                  🔴 그때까지 금지 — BRAND_MISMATCH blocker 승격 · PRESUMED threshold ·
+                     scoring · Search · timeout · 가격 로직 · UI/UX **전부**
+                  🔴 **CEO 추가 실행 요청 0** — 평소 분석에서 자연 누적된다
+                  🟢 원인은 이미 확정돼 있다(재조사 금지) — `cross-seller.ts:1307`
+                     `blocked` 가 **SAME 분기에만** 쓰이고 PRESUMED 분기는 blockers 를 안 본다
+```
+```
+🔵 [직전] SPRINT 4 PHASE B — SEARCH SUPPLY DIAGNOSIS (N≥5) **완료**
                   🟢🟢 GATE(Search Intent / Market Neutrality) **PASS** · PHASE A(배포) **완료**
                      배포 `4c84c93` · prod 200 · 좌표와 숫자는 **맨 위 NEXT SESSION 블록 하나** 다
                   🔴 남은 질문 하나 — **공급 부족이 상시인가 간헐인가**(누적 `searchRun` **N=1 → 5**)

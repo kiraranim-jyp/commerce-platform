@@ -114,4 +114,41 @@ console.log(`  human SAME ${n((r) => r.humanVerdict === "SAME")} · DIFFERENT ${
 console.log(`  BRAND_MISMATCH 보유 ${n((r) => r.hasBrandMismatch)}`);
 console.log(`  후보 brand 원문 확보 ${n((r) => r.candidateBrandInReason)} · 🔴 상호 의심 ${n((r) => r.candidateBrandLooksLikeShopName === true)}`);
 console.log(`  → ${path.pathname}`);
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 재판정 GATE — **국내 TP 가 쌓였는가**(CPO LOCK ⒝ · 2026-11-03)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * CPO: 「`TP 손실 0` 을 안전성 증거로 해석하지 않는다 — 현재 TP 표본에 **국내 판매처의
+ * 자기 상호가 brand 로 들어간 경우가 없다**.」
+ * 🔴 그래서 이 스크립트가 **스스로** 「아직 아니다 / 이제 된다」를 말한다 —
+ *    다음 세션이 조건을 다시 유도하지 않게 한다.
+ * 🔴 숫자를 만들지 않는다 — 전부 위 fixture 행에서 센다.
+ */
+const scored = fixture.filter((r) => r.systemVerdict);
+const krTp = scored.filter((r) => r.market === "KR" && r.humanVerdict === "SAME");
+const krAny = scored.filter((r) => r.market === "KR");
+const krTpMismatch = krTp.filter((r) => r.hasBrandMismatch);
+console.log("\n═══ 재판정 GATE — BRAND_MISMATCH 정책(CPO HOLD ⒝) ═══");
+console.log(`  시스템 판정 보유 ${scored.length} · 🇰🇷 KR 후보 ${krAny.length} · **🇰🇷 KR TP(human SAME) ${krTp.length}**`);
+console.log(`  그중 BRAND_MISMATCH 발화 ${krTpMismatch.length}`);
+if (krTp.length === 0) {
+  console.log("  🟡 **아직 아니다 — HOLD 유지.** 국내 TP 가 0 이라 역위험(상호-brand)을 잴 분모가 없다.");
+  console.log("     🔴 「TP 손실 0」을 「국내에서도 안전」으로 적지 않는다.");
+  console.log("     🟢 평소 분석에서 국내 후보가 뜨고 사람이 판정하면 자연 누적된다(추가 실행 요청 0).");
+} else {
+  console.log("  🟢 **재판정 가능** — 아래 셋을 그대로 확인하고 CPO 에 올린다:");
+  console.log("     ① 국내 TP 에서 BRAND_MISMATCH 가 발화하는가");
+  console.log("     ② 발화하면 CF 에서 손실되는가(= recall 비용)");
+  console.log("     ③ 그 brand 가 **실제 상품 브랜드인가 / 판매처 상호인가**");
+  for (const r of krTp) {
+    console.log(
+      `     · ${r.candidateDomain} brand=${JSON.stringify(r.candidateBrandInReason)} ` +
+        `mismatch=${r.hasBrandMismatch} 상호의심=${r.candidateBrandLooksLikeShopName}`,
+    );
+  }
+  console.log("  🔴 자동 상호 판정은 **과소 계수한다**(도메인 글자 겹침뿐 · `Piccoli & Co™` 를 놓쳤다)");
+  console.log("     ⟹ 국내 건은 **brand 원문을 눈으로** 같이 확인한다.");
+}
 await p.$disconnect();
