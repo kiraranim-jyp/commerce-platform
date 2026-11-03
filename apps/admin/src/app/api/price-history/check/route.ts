@@ -3,7 +3,7 @@ import { requireUser } from "@/lib/auth/require-user";
 import { backfillCanonicalProduct, buildProductIdentityDna } from "@commerce/shared";
 import { computeMarketAlert, type AlertCategory } from "@commerce/pricing";
 import { resolveMarketCategoryScopes } from "../../domestic-price-sources/_lib/category-scope";
-import { getSnapshot } from "../../snapshots/_lib/snapshot";
+import { getSnapshot, saveSnapshotSearchRun } from "../../snapshots/_lib/snapshot";
 import { computeMarketIntelligence } from "../_lib/market-intelligence";
 import { openAlertIfNotActive, resolveAlertsNotIn } from "../_lib/price-alerts";
 import {
@@ -188,6 +188,52 @@ export async function POST(request: Request) {
       pricesRecorded: 0,
       sourceErrors: [error instanceof Error ? error.message : "국내 가격비교 확인 실패"],
     };
+  }
+
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 SEARCH-RUN-OBSERVABILITY-02 — **실행 관측값을 스냅샷에 남긴다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 그 전까지 이 값은 **응답과 Vercel tail 로그에만** 살았다 ⟹ 로그 창이 지나가면
+   *    「Search 가 왜 실패했는가」를 **사람에게 재실행시켜야** 확인할 수 있었다.
+   *
+   * 🔴 **상품 사실이 아니다** — `workspace.searchRun` 은 「마지막 분석 실행의 Search
+   *    실행 관측값」이다(CPO 확정). 🔴 `canonicalProduct` 등 다른 칸은 건드리지 않는다.
+   * 🔴🔴 **보안** — 토큰·Authorization·cookie·URL·response body·오류 message 전문을
+   *    **싣지 않는다.** 아래 칸은 전부 `web-search-pool` 이 이미 안전하게 정규화한 값이다.
+   * 🔴 **fail-soft** — 저장이 실패해도 분석 결과를 죽이지 않는다(await 하되 throw 0).
+   */
+  try {
+    const shop = domesticShop as Record<string, unknown>;
+    const m = (shop.webSearchMetrics ?? null) as Record<string, unknown> | null;
+    const count = (key: string): number =>
+      Array.isArray(shop[key]) ? (shop[key] as unknown[]).length : 0;
+    await saveSnapshotSearchRun(snapshotId, auth.user.workspaceId, {
+      at: new Date().toISOString(),
+      search: m
+        ? {
+            searches: m.searches ?? null,
+            pages: m.pagesReturned ?? null,
+            perPage: m.organicPerPage ?? null,
+            organic: m.organicResults ?? null,
+            failed: m.failed ?? null,
+            errorName: m.errorName ?? null,
+            errorStatus: m.errorStatus ?? null,
+            errorCode: m.errorCode ?? null,
+            timeout: m.timeout ?? null,
+          }
+        : null,
+      /** 🟢 **공급원별 후보 수** — 「국내가 WEB_SEARCH 였나 등록부였나」를 가른다. */
+      producers: {
+        WEB_SEARCH: count("webSearchEvidence"),
+        OVERSEAS_AUTO: count("overseasAutoEvidence"),
+        DOMESTIC_LISTING: count("domesticListingEvidence"),
+        GEMINI: count("geminiEvidence"),
+      },
+    });
+  } catch {
+    /** 🔴 관측 저장 실패가 분석을 죽이지 않는다. */
   }
 
   // N-4.18-K STEP K-2/K-4/K-9(대표님 지시, 2026-08-26: "알림을 만들기 위해

@@ -411,3 +411,51 @@ export async function markSnapshotRegistered(id: string): Promise<void> {
     console.warn("[snapshot] 등록완료 상태 갱신 실패:", error.message);
   }
 }
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 SEARCH-RUN-OBSERVABILITY-02 — **`workspace.searchRun` 한 칸만 덮는다**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 **왜 필요한가** — Vercel tail 로그가 지나가면 `[SP07-websearch]` 가 사라져
+ *    「Search 가 성공했는가 / 왜 실패했는가 / 공급원이 어디였는가」를 확인하려고
+ *    **사람에게 매번 재실행을 요구** 하게 됐다(그 루프가 실제로 반복됐다).
+ *
+ * 🔴🔴 **이 값은 «상품 사실» 이 아니다** — **「마지막 분석 실행의 Search 실행 관측값」**
+ *    이다(CPO 확정 2026-11-03). 상품 속성으로 읽지 않는다.
+ *
+ * 🔴🔴 **이 함수를 파일 «맨 끝» 에 둔다 — 자리가 계약이다.**
+ *    1차에 `saveSnapshot` 앞에 뒀더니 기존 계약
+ *    `p0channel03-product-identity`(「`createProductIdentity` 는 조회 없이 발급한다」 ·
+ *    그 slice 안에 `maybeSingle` 금지)가 **FAIL** 했다. 🟢 가드를 약화하지 않고
+ *    **위치를 옮겼다**(메모 `slice-contracts-encode-order-implicitly`).
+ *
+ * 🔴 **다른 workspace 칸을 건드리지 않는다** — 읽어서 `searchRun` «하나만» 바꿔 되쓴다.
+ * 🔴 **fail-soft** — 실패해도 `false` 만 돌려준다(분석 결과를 죽이지 않는다).
+ * 🔴 보안 — 받은 값을 그대로 넣는다. **토큰·본문·URL 을 넣지 않을 책임은 호출부** 에 있고
+ *    계약이 그것을 단언한다.
+ */
+export async function saveSnapshotSearchRun(
+  id: string,
+  workspaceId: string,
+  searchRun: unknown,
+): Promise<boolean> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return false;
+  const { data, error } = await supabase
+    .from("product_snapshots")
+    .select("workspace")
+    .eq("id", id)
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+  if (error || !data) return false;
+  const current = (data as { workspace?: Record<string, unknown> }).workspace ?? {};
+  /** 🟢 전개 뒤 **한 칸만** 덮는다 — 다른 칸은 읽은 값 그대로다. */
+  const next = { ...current, searchRun };
+  const { error: writeError } = await supabase
+    .from("product_snapshots")
+    .update({ workspace: next, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("workspace_id", workspaceId);
+  return !writeError;
+}
