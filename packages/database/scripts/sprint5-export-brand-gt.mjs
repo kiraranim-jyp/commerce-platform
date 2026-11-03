@@ -126,9 +126,36 @@ console.log(`  → ${path.pathname}`);
  *    다음 세션이 조건을 다시 유도하지 않게 한다.
  * 🔴 숫자를 만들지 않는다 — 전부 위 fixture 행에서 센다.
  */
+/**
+ * 🔴🔴 **1차 GATE 가 거짓 0 을 냈다 — 그 이유를 적는다.**
+ *    사람이 국내 후보에 판정을 누르면 `saveHumanVerdict` 가 **맨몸 행** 을 insert 한다
+ *    (`candidate_domain`/`market`/`system_*` 전부 null · candidate-review.ts:491).
+ *    seen 행이 있으면 update 라 맥락이 남지만, **국내 후보는 seen 에 없다**
+ *    (079 `source` CHECK 가 `WEB_SEARCH`/`DOMESTIC_LISTING` 을 금지 · route.ts:499).
+ *    ⟹ `market` 으로만 세면 **국내 TP 가 영원히 0** 으로 보인다. 실제로 그랬다.
+ * 🟢 그래서 **URL 에서 유도** 한다 — 🔴 이건 **진단용 유도값** 이고 운영
+ *    `classifyCandidateMarket` 을 대체하지 않는다(규칙 복제 아님 · `.kr` 과 알려진
+ *    국내 호스트만 본다). 🔴 모르면 null 로 둔다.
+ */
+const KNOWN_KR_HOSTS = ["donokids.com", "biskuit.kr", "mustit.co.kr", "miniboutique.co.kr", "littleluna.co.kr"];
+function hostOf(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return null;
+  }
+}
+function derivedMarket(r) {
+  if (r.market) return r.market;
+  const h = r.candidateDomain ?? hostOf(r.candidateUrl ?? "");
+  if (!h) return null;
+  if (h.endsWith(".kr") || KNOWN_KR_HOSTS.some((k) => h === k || h.endsWith(`.${k}`))) return "KR(유도)";
+  return null;
+}
 const scored = fixture.filter((r) => r.systemVerdict);
-const krTp = scored.filter((r) => r.market === "KR" && r.humanVerdict === "SAME");
-const krAny = scored.filter((r) => r.market === "KR");
+/** 🔴 재판정 분모는 **시스템 판정 유무와 무관하게** 사람 SAME 전부다(맨몸 행이 국내다). */
+const krTp = fixture.filter((r) => String(derivedMarket(r) ?? "").startsWith("KR") && r.humanVerdict === "SAME");
+const krAny = fixture.filter((r) => String(derivedMarket(r) ?? "").startsWith("KR"));
 const krTpMismatch = krTp.filter((r) => r.hasBrandMismatch);
 console.log("\n═══ 재판정 GATE — BRAND_MISMATCH 정책(CPO HOLD ⒝) ═══");
 console.log(`  시스템 판정 보유 ${scored.length} · 🇰🇷 KR 후보 ${krAny.length} · **🇰🇷 KR TP(human SAME) ${krTp.length}**`);
@@ -144,9 +171,16 @@ if (krTp.length === 0) {
   console.log("     ③ 그 brand 가 **실제 상품 브랜드인가 / 판매처 상호인가**");
   for (const r of krTp) {
     console.log(
-      `     · ${r.candidateDomain} brand=${JSON.stringify(r.candidateBrandInReason)} ` +
-        `mismatch=${r.hasBrandMismatch} 상호의심=${r.candidateBrandLooksLikeShopName}`,
+      `     · ${r.candidateDomain ?? hostOf(r.candidateUrl ?? "")} [${derivedMarket(r)}] ` +
+        `sys=${r.systemVerdict ?? "🔴 저장 안 됨"} blockers=${JSON.stringify(r.blockers)} ` +
+        `brand=${JSON.stringify(r.candidateBrandInReason)} mismatch=${r.hasBrandMismatch}`,
     );
+    if (!r.systemVerdict) {
+      console.log(
+        "       🔴 **맨몸 행** — 사람 판정만 있고 system 맥락이 없다 ⟹ 이 행만으로는 ①②를 못 센다" +
+          " (운영 로그 [C06R-row] 로 보강해야 한다)",
+      );
+    }
   }
   console.log("  🔴 자동 상호 판정은 **과소 계수한다**(도메인 글자 겹침뿐 · `Piccoli & Co™` 를 놓쳤다)");
   console.log("     ⟹ 국내 건은 **brand 원문을 눈으로** 같이 확인한다.");
