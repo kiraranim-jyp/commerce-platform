@@ -8,6 +8,45 @@
 
 ---
 
+## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-03 인수인계)
+
+```
+전략     상품 URL 1개 → AI Search 로 **국내·해외 동일/유사 판매처를 최대한 많이** 찾고
+         → Evidence/Identity 판단 → **실제 소싱가** → 셀러가 **판매처 선택 + 최종 판매가 확정** → 등록
+         🔴 「많이 찾는다」가 전략이다 — 후보를 줄여 정확도만 올리지 않는다
+
+상태     🟢 SPRINT 3 **CLOSED**   🔵 SPRINT 4 = **SEARCH INTENT / CANDIDATE SUPPLY GATE**
+         HEAD `9094618b` · 0/0 · 회귀 **9,977/0** · typecheck 0 · build 0 · prod 200 · 작업트리 clean
+         (`docs/core-2m-visual-review.html` 1건은 회귀가 재생성한 산출물 — **커밋하지 않는다**)
+
+할 일    **C1 부터 바로** — 조사 0 · 질문 0 · 중간보고 0 · CEO 실행요청 0
+  C1  runtime **최종 Search query** 를 코드 경로와 함께 증명(선언값 ❌ · 실제 전달값 ⭕)
+  C2  그 query 에 **브랜드·품번·상품명·facts + 「국내해외 동일상품 판매처」 의도** 포함 PASS/FAIL
+      🔴 `brand + product name` 뿐이면 **FAIL**
+  C3  **Market neutrality** — 입력 URL 이 국내/해외라고 Search 시장을 제한하지 않는다
+  C4  `query→raw→parsed→dedup→producer→candidate→evidence→visible` 공급량 추적
+      → **Case A**(Search) **B**(parser) **C**(producer/dedup) **D**(Evidence) **E**(UI) 중 하나로 확정
+  C5  **실제 상품 3개 이상** · 🔴 새 실행 요청 0 — 누적 `searchRun`/기존 저장분을 쓴다
+  C6  문제면 **한 곳만** 최소 수정   C7 정상이면 **N≥5 Search Supply Diagnosis** 로 복귀
+  C8  Sprint 3 회귀 **불변** → 계약 → 변이 → 회귀 → typecheck → build → deploy → **보고 1회**
+
+바로 쓸 도구(재구축 0)
+  runtime query 증명   `search-supply-02-ac017-query.test.ts`      `AC017_QUERY=1`   (과금 0)
+  후단 공급량 추적     `search-supply-03-ac017-domestic.test.ts`   `AC017_DOMESTIC=1`
+  층별 분모 funnel     `sprint3-discovery-funnel.test.ts`          `SPRINT3_FUNNEL=1`
+  운영 관측 판독       `packages/database/scripts/sprint3-searchrun-read.mjs`(node · read-only)
+
+🔴 금지  MAX_SEARCHES_PER_PRODUCT(1) · MAX_PAGES_PER_QUERY(2) · provider · retry · timeout ·
+         질의 수 · SAME/PRESUMED threshold · Evidence scoring · GT policy · **UI/UX** · mock PASS
+🔴 이미 끝난 것(재구현 금지)  P1 가격 자격(SAME·PRESUMED만 해외 1차 집계) · UXR 5 + M-UX ·
+         props→selector→DOM 8/8/8 · 2페이지 + `items[0]` 수정 · 실패 4칸 · `workspace.searchRun`
+🔵 escalation 은 넷뿐  전략 · 범위 · 비용/리스크 · CEO 사업판단   (그 외는 **CTO 자율**)
+🔴 알려진 사실  AC017 국내 후단 **정상**(mustit → PRESUMED_SAME → COMPARISON → ₩109,000) ·
+         첫 관측 N=1(pages 1 · organic 3) ⟹ **공급 상시성 판정 보류**
+```
+
+---
+
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
