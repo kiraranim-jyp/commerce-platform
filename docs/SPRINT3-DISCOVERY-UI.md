@@ -263,7 +263,119 @@ P3 (UI/UX FINAL) 은 **선택이 아니라 종료 조건** 이다.
 
 ---
 
-## §7 🔵🔵🔵 **CPO LONG SPRINT 작업지시서**(2026-11-02 수령) · 🔴 이것이 실행 규격이다
+## §8 🔵🔵🔵 **SEARCH-FAILURE-OBSERVABILITY-01**(CPO 2026-11-03) · 🔴 현재 WU
+
+🔴🔴 **§7 보다 이 절이 «지금» 이긴다** — Sprint 3 의 현재 단계는 UI 가 아니라 **Search 실행 안정성** 이다.
+
+### 8-0 출발 사실(운영 로그 실측 · 재조사 금지)
+
+```
+[SP07-websearch] query="…국내해외 동일상품 판매처" · searches 1
+                 **pages 0 · perPage [] · organic 0 · failed TRUE**
+[C06R-producers] WEB_SEARCH **0** · OVERSEAS_AUTO 4 · DOMESTIC_LISTING 0 · GEMINI 0
+🟢 Query 조립 정상 · 1 product = 1 search 정상 · 국내 후보 **후단 처리 정상**
+   (mustit → PRESUMED_SAME → TEXT_CONFIRMED → COMPARISON → KRW 109,000 → market KR)
+🔴 Case B(relevance) **철회** · Case C(후단) **근거 없음**
+🔴 `MAX_PAGES_PER_QUERY = 2` 가 원인인지 **미확정**(로그 1건)
+```
+
+### 8-1 범위 — **관측성만**
+
+```
+허용  error capture → safe normalization → SP07 telemetry
+금지  query/variant/분리검색/검색횟수/MAX_* 변경 · **2→1 롤백** · alias · relevance ·
+      Identity · price eligibility · candidate UI · mock 국내 후보 · 가격 계산
+```
+
+### 8-2 계측 — 🔴 **실제로 존재하는 값만**(임의 필드 금지)
+
+```
+필수  errorName · errorStatus · errorCode · timeout
+가능  provider · phase
+🔴🔴 **보안 최우선** — 토큰 · Authorization · 전체 header · **response body 전문** ·
+   URL 속 token · credential · cookie · secret **전부 금지**.
+   🟢 오류 «종류» 만 남긴다(예: errorName=TimeoutError · errorStatus=504 · timeout=true)
+```
+
+### 8-3 가려야 하는 실패 유형 셋
+
+```
+A Timeout            timeout=true
+B Provider/HTTP      errorStatus 4xx·5xx 또는 안전한 error code
+C 기타 실행 오류      errorName · errorCode
+🟢 목표는 원인 추측이 아니라 **다음 운영 실행 «1회» 로 계열을 판정** 하는 것
+```
+
+### 8-4 보존 — 기존 계측이 사라지면 FAIL
+
+```
+searches · pages(=pagesReturned) · perPage(=organicPerPage) · organic · failed
+🔴 2페이지가 실제로 몇 페이지 반환됐는지 확인 가능해야 한다
+```
+
+### 8-5 계약 5
+
+```
+TEST-01 provider error 주입 → failed=true · errorName 존재 · errorStatus|errorCode 존재
+TEST-02 timeout          → failed=true · timeout=true
+TEST-03 secret 보호       → 토큰·Authorization·credential·response body **미포함**
+TEST-04 성공 회귀         → failed=false · pages · perPage · organic 기존과 동일
+TEST-05 telemetry 회귀    → 기존 SEARCH-SUPPLY 계약 **9건 전부 유지**
+```
+
+### 8-6 🔵 **실행 → 보고를 «한 단계» 로 합친다**(CPO 정정 2026-11-03)
+
+🔴 전에는 §10(검증 순서)·§11(재실행 보고)·§15(보고 형식)로 **세 곳에 갈려** 있었다 —
+그래서 「어디까지가 실행이고 어디부터가 보고인가」가 흔들렸다. **하나로 적는다.**
+
+```
+① 계약 + 전체 regression   ② typecheck   ③ build   ④ commit · push · deploy
+⑤ **B226AC017 운영 1회 재실행**        ⑥ CTO 가 **먼저** 로그 판독(CEO 화면 공개 0)
+⑦ **완료 보고 1회** — 아래 여섯 절을 한 번에
+   1 변경(파일·내용·운영 영향)   2 테스트(계약·regression·typecheck·build)
+   3 배포(commit·push·production) 4 재실행 로그 원문
+      query / searches / pages / perPage / organic / failed /
+      errorName / errorStatus / errorCode / timeout
+   5 원인 판정  **CASE T(timeout) · CASE P(provider) · CASE C(설정/런타임) · CASE U(불충분)**
+   6 CPO 판단 선택지 **최대 2개** — 🔴 임의 구현 금지
+🔴 중간 보고를 반복하지 않는다(⑦ 1회).
+```
+
+🔴🔴 **⑤ 의 제약을 먼저 적는다** — 운영 재실행은 **로그인 뒤 화면** 이라 CTO 가 트리거할 수
+없다(메모 `production-payload-is-unreachable`). 🟢 ①~④ 까지는 CTO 가 끝내고, ⑤ 는
+**셀러/CEO 가 상품을 한 번 분석할 때** 자동으로 남는다 ⟹ 그 뒤 ⑥⑦ 을 CTO 가 수행한다.
+
+### 8-7 🔴 timeout 으로 나오더라도 **즉시 롤백하지 않는다**
+
+```
+함께 제출 — timeout 발생 시점 · provider 요청 구조 · page 1/2 처리 방식 · 현재 TIMEOUT_MS
+그 뒤 **CPO 가** 고른다 — A) TIMEOUT_MS 상향 + 2페이지 유지   B) 1페이지 롤백
+🔴 CTO 가 A/B 를 임의로 고르지 않는다.
+```
+
+### 8-8 완료 조건 — **7개**(🔴 「6개」는 오기였다 · CPO 정정)
+
+```
+□ 1 실패 원인이 로그에 **안전하게** 기록된다
+□ 2 timeout / provider / runtime 오류를 **구분** 할 수 있다
+□ 3 secret · response body **유출 0**
+□ 4 기존 SP07 measurement(searches·pages·perPage·organic·failed) **유지**
+□ 5 regression PASS
+□ 6 typecheck · build · deploy PASS
+□ 7 B226AC017 운영 재실행 결과를 **CTO 가 선판독**
+```
+
+### 8-9 성공했을 때만 다음으로 간다
+
+```
+failed=false · pages=2 · organic>0  ⟹ 그때 비로소
+Search result URL → 국내 URL 존재 → candidate → Crawl → Identity → market → price 추적
+🔴 그 전에는 **relevance/alias 작업을 시작하지 않는다.**
+```
+
+---
+
+## §7 🔵🔵🔵 **CPO LONG SPRINT 작업지시서**(2026-11-02 수령) · 🟡 P3 규격(지금은 §8 이 우선)
 
 🔴🔴 **이 절이 §2·§5 의 실행 조건을 이긴다.** §6 의 순서와 충돌하지 않는다(§6 = 순서 · §7 = 규격).
 

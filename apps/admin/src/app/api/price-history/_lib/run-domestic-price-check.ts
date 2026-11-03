@@ -1622,6 +1622,14 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
         organic: webSearchMetrics.organicResults,
         skipped: webSearchMetrics.skipped,
         failed: webSearchMetrics.failed,
+        /**
+         * 🔵 SEARCH-FAILURE-OBSERVABILITY-01 — **실패 계열을 한 줄에서 가른다.**
+         * 🔴 message/body/URL/토큰은 **싣지 않는다** — 종류만 남긴다.
+         */
+        errorName: webSearchMetrics.errorName,
+        errorStatus: webSearchMetrics.errorStatus,
+        errorCode: webSearchMetrics.errorCode,
+        timeout: webSearchMetrics.timeout,
       })}`,
     );
     if (pool.urls.length > 0) {

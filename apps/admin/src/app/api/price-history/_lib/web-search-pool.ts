@@ -92,6 +92,28 @@ export interface WebSearchPoolMetrics {
   skipped: WebSearchSkipReason | null;
   /** 🔴 호출했는데 실패했는가. 🔴 실패를 「결과 0」으로 적지 않기 위한 칸이다. */
   failed: boolean;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 SEARCH-FAILURE-OBSERVABILITY-01 — **왜 실패했는지를 «한 번» 으로 안다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 그 전까지 `catch` 가 오류를 **통째로 삼켰다**(`void err`) ⟹ 운영 로그에
+   *    `failed:true` 만 남고 **timeout 인지 provider 오류인지 설정 문제인지 구분 불가** 였다.
+   *    실측: B226AC017 운영 실행이 `failed:true · organic:0` 인데 **이유가 없었다.**
+   *
+   * 🔴🔴 **보안이 최우선이다.** 토큰이 **URL 에** 들어가는 호출이므로 아래를 **절대**
+   *    남기지 않는다 — 토큰 · Authorization · 전체 header · **response body** ·
+   *    URL · credential · cookie · **오류 message**.
+   * 🟢 남기는 것은 **오류의 «종류»** 뿐이다(이름 · HTTP 상태 · 코드 · timeout 여부).
+   */
+  /** 🟢 `err.name`(예: `AbortError` · `TypeError`). 실패가 아니면 `null`. */
+  errorName: string | null;
+  /** 🟢 provider 가 준 **HTTP 상태코드**. 네트워크 단계 실패면 `null`. */
+  errorStatus: number | null;
+  /** 🟢 런타임 오류 코드(예: undici `UND_ERR_*`). 없으면 `null`. */
+  errorCode: string | null;
+  /** 🔴 **timeout 인가** — `TIMEOUT_MS` 로 우리가 끊은 경우 `true`. */
+  timeout: boolean;
 }
 
 export interface WebSearchPoolResult {
@@ -131,9 +153,29 @@ interface ApifySearchOutcome {
   perPage: number[];
 }
 
+/**
+ * 🔵 SEARCH-FAILURE-OBSERVABILITY-01 — **상태코드를 «오류에 실어» 보낸다.**
+ * 🔴 전에는 상태를 **message 문자열** 에만 담았는데, message 는 보안상 로그에 쓸 수 없다
+ *    ⟹ 그래서 `failed:true` 만 남고 이유가 사라졌다. 🟢 칸으로 들고 간다.
+ */
+class SearchHttpError extends Error {
+  readonly status: number;
+  constructor(status: number) {
+    /** 🔴 message 에 **URL·본문을 넣지 않는다**(토큰이 URL 에 있다). */
+    super(`search HTTP ${status}`);
+    this.name = "SearchHttpError";
+    this.status = status;
+  }
+}
+
 async function apifySearch(query: string, token: string): Promise<ApifySearchOutcome> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  /** 🔴 **우리가 끊었는지** 를 구분한다 — provider 가 끊은 것과 섞이면 CASE T 를 못 가른다. */
+  let abortedByTimeout = false;
+  const timer = setTimeout(() => {
+    abortedByTimeout = true;
+    controller.abort();
+  }, TIMEOUT_MS);
   try {
     const res = await fetch(`${ENDPOINT}?token=${encodeURIComponent(token)}`, {
       method: "POST",
@@ -148,7 +190,7 @@ async function apifySearch(query: string, token: string): Promise<ApifySearchOut
       signal: controller.signal,
     });
     /** 🔴 **토큰이 URL 에 있으므로 `res.url`/오류 본문을 로그에 싣지 않는다.** */
-    if (!res.ok) throw new Error(`search HTTP ${res.status}`);
+    if (!res.ok) throw new SearchHttpError(res.status);
     const items = (await res.json()) as ApifySearchItem[];
     /**
      * ════════════════════════════════════════════════════════════════════════
@@ -179,9 +221,42 @@ async function apifySearch(query: string, token: string): Promise<ApifySearchOut
       }
     }
     return { urls, perPage };
+  } catch (err) {
+    /** 🟢 우리가 끊은 abort 를 **timeout 으로 표식** 해서 올려 보낸다(이름만 바꾼다). */
+    if (abortedByTimeout && err instanceof Error) {
+      const e = new Error("search timeout");
+      e.name = "SearchTimeoutError";
+      throw e;
+    }
+    throw err;
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * 🔵 SEARCH-FAILURE-OBSERVABILITY-01 — **안전 정규화.**
+ * 🔴 `message` 를 **쓰지 않는다** — URL·본문·토큰이 섞여 들어올 수 있다.
+ * 🟢 쓰는 것은 넷뿐이다 — 이름 · HTTP 상태 · 런타임 코드 · timeout 여부.
+ */
+function describeSearchError(err: unknown): {
+  errorName: string | null;
+  errorStatus: number | null;
+  errorCode: string | null;
+  timeout: boolean;
+} {
+  const e = err as { name?: unknown; code?: unknown; status?: unknown; cause?: { code?: unknown } } | null;
+  const name = typeof e?.name === "string" ? e.name : null;
+  const status = typeof e?.status === "number" ? e.status : null;
+  /** 🟢 undici 는 `cause.code`(예: `UND_ERR_*`)에 실린다 — 기존 WU-084 와 같은 자리다. */
+  const code =
+    typeof e?.code === "string" ? e.code : typeof e?.cause?.code === "string" ? e.cause.code : null;
+  return {
+    errorName: name,
+    errorStatus: status,
+    errorCode: code,
+    timeout: name === "SearchTimeoutError" || name === "AbortError" || code === "UND_ERR_HEADERS_TIMEOUT",
+  };
 }
 
 /**
@@ -199,6 +274,10 @@ export async function collectWebSearchUrls(input: WebSearchPoolInput): Promise<W
     pagesReturned: 0,
     skipped: null,
     failed: false,
+    errorName: null,
+    errorStatus: null,
+    errorCode: null,
+    timeout: false,
   };
 
   /** ① 🔴 질의 owner 는 **하나** 다 — 여기서 문자열을 조립하지 않는다. */
@@ -255,7 +334,12 @@ export async function collectWebSearchUrls(input: WebSearchPoolInput): Promise<W
      * 🔴 오류 «메시지» 는 남기지 않는다 — 토큰이 URL 에 있는 호출이라 안전측으로 간다.
      */
     metrics.failed = true;
-    void err;
+    /**
+     * 🔵 SEARCH-FAILURE-OBSERVABILITY-01 — **삼키지 않는다.**
+     * 🔴 `void err` 였다 ⟹ 운영에서 `failed:true` 만 남고 **이유가 사라졌다**.
+     * 🟢 **오류의 종류만** 남긴다(이름·상태·코드·timeout) — message/body/URL 0.
+     */
+    Object.assign(metrics, describeSearchError(err));
     return { urls: [], metrics };
   }
   return { urls, metrics };

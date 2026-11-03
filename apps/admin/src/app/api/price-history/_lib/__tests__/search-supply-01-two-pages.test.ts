@@ -104,6 +104,110 @@ describe("SEARCH-SUPPLY — 1 질의 · 최대 2 페이지", () => {
     expect(block, "🔴 로그에 페이지별 수가 없다").toContain("perPage: webSearchMetrics.organicPerPage");
   });
 
+  /* ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 SEARCH-FAILURE-OBSERVABILITY-01 — TEST-01~05
+   * ══════════════════════════════════════════════════════════════════════════ */
+
+  it("TEST-01 🔴 provider 오류 — failed + errorName + (status | code) 가 남는다", async () => {
+    const boom = Object.assign(new Error("x"), { name: "SearchHttpError", status: 503 });
+    const out = await collectWebSearchUrls({
+      identity: identity as never,
+      search: async () => {
+        throw boom;
+      },
+      token: "x",
+    });
+    expect(out.metrics.failed).toBe(true);
+    expect(out.metrics.errorName, "🔴 오류 이름이 사라졌다").toBe("SearchHttpError");
+    expect(
+      out.metrics.errorStatus ?? out.metrics.errorCode,
+      "🔴 상태코드도 코드도 없다 — 계열을 가를 수 없다",
+    ).toBeTruthy();
+    expect(out.metrics.errorStatus).toBe(503);
+    expect(out.metrics.timeout).toBe(false);
+  });
+
+  it("TEST-02 🔴 timeout — timeout=true 가 남는다", async () => {
+    const abort = Object.assign(new Error("x"), { name: "AbortError" });
+    const out = await collectWebSearchUrls({
+      identity: identity as never,
+      search: async () => {
+        throw abort;
+      },
+      token: "x",
+    });
+    expect(out.metrics.failed).toBe(true);
+    expect(out.metrics.timeout, "🔴 timeout 을 구분하지 못한다").toBe(true);
+    expect(out.metrics.errorName).toBe("AbortError");
+  });
+
+  it("TEST-02-b 🟢 undici 런타임 코드도 잡는다(cause.code)", async () => {
+    const err = Object.assign(new Error("fetch failed"), {
+      name: "TypeError",
+      cause: { code: "UND_ERR_SOCKET" },
+    });
+    const out = await collectWebSearchUrls({
+      identity: identity as never,
+      search: async () => {
+        throw err;
+      },
+      token: "x",
+    });
+    expect(out.metrics.errorCode).toBe("UND_ERR_SOCKET");
+    expect(out.metrics.errorName).toBe("TypeError");
+  });
+
+  /** 🔴🔴 TEST-03 — **보안이 최우선** 이다. 토큰·본문·URL 이 계측에 새면 FAIL. */
+  it("TEST-03 🔴 secret / body / URL 이 계측에 남지 않는다", async () => {
+    const leaky = Object.assign(
+      new Error("https://api.example/run?token=SECRET_TOKEN_VALUE body={\"a\":1}"),
+      { name: "TypeError", status: 401 },
+    );
+    const out = await collectWebSearchUrls({
+      identity: identity as never,
+      search: async () => {
+        throw leaky;
+      },
+      token: "SECRET_TOKEN_VALUE",
+    });
+    const dump = JSON.stringify(out.metrics);
+    for (const secret of ["SECRET_TOKEN_VALUE", "token=", "Authorization", "body=", "https://"]) {
+      expect(dump, `🔴 계측에 비밀/본문이 샜다: ${secret}`).not.toContain(secret);
+    }
+    /** 🟢 그러면서 **계열은 남는다**(종류만 남기는 것이 목적이다). */
+    expect(out.metrics.errorStatus).toBe(401);
+  });
+
+  it("TEST-04 🟢 성공 회귀 — failed=false 이고 기존 칸이 그대로다", async () => {
+    const out = await collectWebSearchUrls({
+      identity: identity as never,
+      search: async () => ["https://a.example/1", "https://b.example/2"],
+      token: "x",
+    });
+    expect(out.metrics.failed).toBe(false);
+    expect(out.metrics.errorName).toBeNull();
+    expect(out.metrics.errorStatus).toBeNull();
+    expect(out.metrics.errorCode).toBeNull();
+    expect(out.metrics.timeout).toBe(false);
+    expect(out.metrics.organicResults).toBe(2);
+    expect(out.metrics.pagesReturned).toBe(1);
+  });
+
+  it("TEST-05 🔴 운영 로그가 네 칸을 싣는다 · message 는 싣지 않는다", () => {
+    const RUNNER = readFileSync(join(__dirname, "..", "run-domestic-price-check.ts"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^\s*\/\/.*$/gm, "");
+    const at = RUNNER.indexOf("[SP07-websearch]");
+    const block = RUNNER.slice(at, at + 900);
+    for (const k of ["errorName", "errorStatus", "errorCode", "timeout"]) {
+      expect(block, `🔴 로그에 ${k} 가 없다`).toContain(`${k}: webSearchMetrics.${k}`);
+    }
+    /** 🔴 message/본문/URL 을 로그에 싣지 않는다. */
+    for (const banned of ["errorMessage", ".message", "responseBody", "res.url"]) {
+      expect(block, `🔴 로그에 위험한 값이 들어갔다: ${banned}`).not.toContain(banned);
+    }
+  });
+
   it("SS-02-c 🔴 소스가 모든 page item 을 읽는다(`items[0]` 단독 금지)", () => {
     expect(BODY, "🔴 `items[0]` 만 읽으면 2페이지가 버려진다").not.toMatch(/items\[0\]\?\.organicResults/);
     expect(BODY).toContain("for (const item of items)");
