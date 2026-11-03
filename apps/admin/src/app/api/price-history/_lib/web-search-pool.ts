@@ -41,8 +41,24 @@ const ENDPOINT = `https://api.apify.com/v2/acts/${ACTOR}/run-sync-get-dataset-it
  *    CPO 결정 사안이다(계약 테스트가 이 값을 직접 단언한다).
  */
 export const MAX_SEARCHES_PER_PRODUCT = 1;
-/** 🔴 1 페이지만 받는다 — 과금 단위가 **검색 페이지** 다. */
-const MAX_PAGES_PER_QUERY = 1;
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 SEARCH-SUPPLY — **1 → 2 페이지**(CPO 결정 2026-11-03)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 과금 단위가 **검색 페이지** 라 이 숫자가 곧 비용이다. 그래서 **2 로 고정** 하고
+ *    **질의 수는 늘리지 않는다**(`MAX_SEARCHES_PER_PRODUCT = 1` 유지).
+ *
+ * 🔴 **왜 1 로는 부족한가 — 실측이다**(저장분 `search-provider-05-raw` S1 전수):
+ * ```
+ * 질의 1회가 돌려준 URL   최대 **10** · 중위 **9** · 최소 0
+ * 그 수율을 대면 샵 대표가 **1~2곳** 이고 셀러에게 비교 재료가 없다
+ * (같은 상품 33질의 합집합 159 → Crawl 41 → 샵 대표 21 이 「더 찾을 수 있다」의 증거다)
+ * ```
+ * 🔴 그 **159 를 운영 분모로 쓰지 않는다** — 33질의 합집합이고 운영은 1질의다.
+ * 🔴 3페이지 이상은 **별도 비용 결정** 이다(CPO 명시) · 질의 variation 추가 **금지**.
+ */
+const MAX_PAGES_PER_QUERY = 2;
 const RESULTS_PER_PAGE = 20;
 /** 🔴 외부 호출이 오래 끌면 셀러 화면이 멈춘다 — 끊고 「실패」로 적는다. */
 const TIMEOUT_MS = 60_000;
@@ -112,9 +128,31 @@ async function apifySearch(query: string, token: string): Promise<string[]> {
     /** 🔴 **토큰이 URL 에 있으므로 `res.url`/오류 본문을 로그에 싣지 않는다.** */
     if (!res.ok) throw new Error(`search HTTP ${res.status}`);
     const items = (await res.json()) as ApifySearchItem[];
-    return (items[0]?.organicResults ?? [])
-      .map((o) => o.url)
-      .filter((u): u is string => typeof u === "string" && u.length > 0);
+    /**
+     * ════════════════════════════════════════════════════════════════════════
+     * 🔴🔴🔴 SEARCH-SUPPLY — **`items[0]` 만 읽으면 2페이지가 버려진다**
+     * ════════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 provider 는 **페이지당 item 하나** 를 돌려준다. 그래서 `maxPagesPerQuery` 만
+     *    2 로 올리고 이 줄을 그대로 두면 **변경이 no-op** 이다(비용만 늘고 후보는 그대로).
+     * 🟢 그래서 **모든 item 의 `organicResults` 를 이어 붙인다.**
+     * 🔴 **질의는 여전히 하나다** — 페이지를 합치는 것이지 검색을 늘리는 것이 아니다.
+     * 🔴 **순서를 유지한다**(1페이지가 먼저) · 같은 URL 은 **한 번만** 싣는다 —
+     *    뒤 단계(`collectUrlCandidatePool`)가 중복을 또 거르지만, 여기서 합치면서
+     *    생기는 중복을 **분모에 넣지 않기** 위해서다(「Search 18」이 거짓이 되지 않게).
+     */
+    const seen = new Set<string>();
+    const urls: string[] = [];
+    for (const item of items) {
+      for (const o of item?.organicResults ?? []) {
+        const u = o.url;
+        if (typeof u !== "string" || u.length === 0) continue;
+        if (seen.has(u)) continue;
+        seen.add(u);
+        urls.push(u);
+      }
+    }
+    return urls;
   } finally {
     clearTimeout(timer);
   }
