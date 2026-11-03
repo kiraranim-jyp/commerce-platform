@@ -74,8 +74,20 @@ export interface WebSearchPoolMetrics {
   searches: number;
   /** 🟢 보낸 질의 문자열 그대로(없으면 null). 토큰은 들어가지 않는다. */
   query: string | null;
-  /** 검색이 돌려준 organic 결과 수(중복 포함). */
+  /** 🔴 **중복 제거 «후»** 의 URL 수다 — 그 값이 다음 단계(후보 풀)의 입력 분모다. */
   organicResults: number;
+  /**
+   * 🔵🔵 SEARCH-SUPPLY — **페이지별 organic 수**(CPO 가 요구한 측정 칸).
+   *
+   * 🔴 그 전까지 계측이 **총합 하나** 뿐이라 「1페이지 → 2페이지로 늘려서 무엇이
+   *    늘었는가」를 **구조적으로 답할 수 없었다**. 🟢 그래서 **페이지별 raw 수** 와
+   *    **중복 제거 후** 를 같이 남긴다(「page 1 → page 2 → dedupe」 세 칸).
+   * 🔴 주입구(`search`)로 돌 때는 페이지를 가를 근거가 없어 **한 칸** 이다.
+   * 🟢 옵셔널이 아니다 — 비면 그 자체로 「측정 못 했다」가 되므로 **빈 배열** 로 둔다.
+   */
+  organicPerPage: number[];
+  /** 🔴 provider 가 실제로 돌려준 **페이지 수**(요청한 상한과 다를 수 있다). */
+  pagesReturned: number;
   /** 🔴 호출하지 않았다면 그 이유. 호출했으면 null. */
   skipped: WebSearchSkipReason | null;
   /** 🔴 호출했는데 실패했는가. 🔴 실패를 「결과 0」으로 적지 않기 위한 칸이다. */
@@ -109,7 +121,17 @@ export interface WebSearchPoolInput {
   signal?: string | null;
 }
 
-async function apifySearch(query: string, token: string): Promise<string[]> {
+/**
+ * 🔵 SEARCH-SUPPLY — **페이지별 수를 같이 돌려준다.** 🔴 URL 배열만 돌려주면
+ *    「1페이지 → 2페이지로 무엇이 늘었는가」를 영원히 답할 수 없다(CPO 측정 요구).
+ */
+interface ApifySearchOutcome {
+  urls: string[];
+  /** 🔴 **중복 제거 «전»** 의 페이지별 raw 수. */
+  perPage: number[];
+}
+
+async function apifySearch(query: string, token: string): Promise<ApifySearchOutcome> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
@@ -143,8 +165,12 @@ async function apifySearch(query: string, token: string): Promise<string[]> {
      */
     const seen = new Set<string>();
     const urls: string[] = [];
+    /** 🔴 페이지별 raw 수를 **중복 제거 전에** 센다 — 그래야 「page1/page2/dedupe」가 갈린다. */
+    const perPage: number[] = [];
     for (const item of items) {
-      for (const o of item?.organicResults ?? []) {
+      const page = item?.organicResults ?? [];
+      perPage.push(page.length);
+      for (const o of page) {
         const u = o.url;
         if (typeof u !== "string" || u.length === 0) continue;
         if (seen.has(u)) continue;
@@ -152,7 +178,7 @@ async function apifySearch(query: string, token: string): Promise<string[]> {
         urls.push(u);
       }
     }
-    return urls;
+    return { urls, perPage };
   } finally {
     clearTimeout(timer);
   }
@@ -169,6 +195,8 @@ export async function collectWebSearchUrls(input: WebSearchPoolInput): Promise<W
     searches: 0,
     query: null,
     organicResults: 0,
+    organicPerPage: [],
+    pagesReturned: 0,
     skipped: null,
     failed: false,
   };
@@ -194,12 +222,32 @@ export async function collectWebSearchUrls(input: WebSearchPoolInput): Promise<W
     return { urls: [], metrics };
   }
 
-  const run = input.search ?? ((q: string) => apifySearch(q, token));
+  /**
+   * 🔵 SEARCH-SUPPLY — 주입구는 **URL 배열** 그대로 받는다(기존 계약 유지).
+   *    🔴 그때는 페이지를 가를 근거가 없으므로 `perPage` 를 **한 칸** 으로 둔다 —
+   *       지어내지 않고 「가를 수 없었다」를 모양으로 남긴다.
+   */
+  const run: (q: string) => Promise<ApifySearchOutcome> = input.search
+    ? async (q: string) => {
+        const got = await input.search!(q);
+        return { urls: got, perPage: [got.length] };
+      }
+    : (q: string) => apifySearch(q, token);
   let urls: string[] = [];
   try {
     metrics.searches = MAX_SEARCHES_PER_PRODUCT;
-    urls = await run(query);
+    const out = await run(query);
+    /**
+     * 🔴🔴 **중복 제거는 «여기» 가 owner 다.** 1차에 provider 파서 안에만 뒀더니
+     *    주입 경로에서 중복이 분모에 남아 **「organicResults = 중복 제거 후」가 거짓**
+     *    이 됐다(계약 SS-02-d 가 그것을 FAIL 로 잡았다).
+     * 🟢 그래서 **경로와 무관하게** 한 번 더 접는다 — 멱등이고 순서를 유지한다.
+     */
+    urls = [...new Set(out.urls)];
+    /** 🔴 **중복 제거 후** 가 다음 단계의 입력 분모다. */
     metrics.organicResults = urls.length;
+    metrics.organicPerPage = out.perPage;
+    metrics.pagesReturned = out.perPage.length;
   } catch (err) {
     /**
      * 🔴🔴 실패를 **빈 결과로 바꾸지 않는다.** `failed: true` 가 남아야

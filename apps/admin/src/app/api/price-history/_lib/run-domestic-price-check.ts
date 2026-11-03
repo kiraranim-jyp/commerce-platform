@@ -1612,6 +1612,13 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
         snapshot: input.snapshotId,
         query: webSearchMetrics.query,
         searches: webSearchMetrics.searches,
+        /**
+         * 🔵 SEARCH-SUPPLY — **페이지별 수를 로그에 싣는다.** 🔴 Production 응답은
+         *    CTO 가 읽을 수 없으므로(메모 `production-payload-is-unreachable`) 이 줄이
+         *    「page1 → page2 → 중복제거」를 확인하는 **유일한 경로** 다.
+         */
+        pages: webSearchMetrics.pagesReturned,
+        perPage: webSearchMetrics.organicPerPage,
         organic: webSearchMetrics.organicResults,
         skipped: webSearchMetrics.skipped,
         failed: webSearchMetrics.failed,

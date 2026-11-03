@@ -75,6 +75,35 @@ describe("SEARCH-SUPPLY — 1 질의 · 최대 2 페이지", () => {
     expect(out.metrics.searches).toBe(1);
   });
 
+  /**
+   * 🔴🔴 SS-02-d — **측정 칸이 없으면 CPO 가 요구한 표를 만들 수 없다.**
+   *    「page 1 organic → page 2 organic → 중복 제거 후」 세 칸이 **계측에 남아야** 한다.
+   */
+  it("SS-02-d 🔴 페이지별 organic 수와 중복 제거 후 수가 «둘 다» 남는다", async () => {
+    const out = await collectWebSearchUrls({
+      identity: identity as never,
+      search: async () => ["https://a.example/1", "https://a.example/1", "https://b.example/2"],
+      token: "x",
+    });
+    /** 🔴 **중복 제거 후** 가 다음 단계의 입력 분모다. */
+    expect(out.metrics.organicResults, "🔴 중복이 분모에 남았다").toBe(2);
+    /** 🔴 페이지 칸이 비면 「측정 못 했다」가 드러나야 한다 — 지어내지 않는다. */
+    expect(Array.isArray(out.metrics.organicPerPage)).toBe(true);
+    expect(out.metrics.organicPerPage.length).toBe(1);
+    expect(out.metrics.pagesReturned).toBe(1);
+  });
+
+  it("SS-02-e 🔴 운영 로그가 페이지별 수를 싣는다(Production 확인 경로)", () => {
+    const RUNNER = readFileSync(join(__dirname, "..", "run-domestic-price-check.ts"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^\s*\/\/.*$/gm, "");
+    const at = RUNNER.indexOf("[SP07-websearch]");
+    expect(at).toBeGreaterThan(0);
+    const block = RUNNER.slice(at, at + 500);
+    expect(block, "🔴 로그에 페이지 수가 없다").toContain("pages: webSearchMetrics.pagesReturned");
+    expect(block, "🔴 로그에 페이지별 수가 없다").toContain("perPage: webSearchMetrics.organicPerPage");
+  });
+
   it("SS-02-c 🔴 소스가 모든 page item 을 읽는다(`items[0]` 단독 금지)", () => {
     expect(BODY, "🔴 `items[0]` 만 읽으면 2페이지가 버려진다").not.toMatch(/items\[0\]\?\.organicResults/);
     expect(BODY).toContain("for (const item of items)");
