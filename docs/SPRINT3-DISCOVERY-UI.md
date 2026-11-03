@@ -263,7 +263,68 @@ P3 (UI/UX FINAL) 은 **선택이 아니라 종료 조건** 이다.
 
 ---
 
-## §8 🔵🔵🔵 **SEARCH-FAILURE-OBSERVABILITY-01**(CPO 2026-11-03) · 🔴 현재 WU
+## §9 🔵🔵🔵 **SEARCH-RUN-OBSERVABILITY-02** — 🔴🔴 **현재 WU · 조사 0 · 질문 0 으로 시작**
+
+🔴 **CPO 결정이 끝났다. 중간 검토·선택지를 «묻지 않는다».** 구현부터 배포까지 한 덩어리.
+
+### 9-0 🟢 조사는 이미 끝났다(다시 하지 않는다)
+
+```
+🟢 응답 배선   **할 일 0** — `domesticShop.webSearchMetrics` 에 아홉 칸이 이미 나간다
+               searches · pages · perPage · organic · failed ·
+               errorName · errorStatus · errorCode · timeout
+🟢 producer    응답의 생산자별 배열에서 그대로 센다 —
+               `webSearchEvidence` · `overseasAutoEvidence` ·
+               `domesticListingEvidence` · `geminiEvidence`
+🔴 빠진 것     `snapshots/_lib/snapshot.ts` export 는 getSnapshot(Raw) · saveSnapshot ·
+               duplicateSnapshot · deleteSnapshot · markSnapshotRegistered 뿐 ⟹
+               **workspace 부분 갱신 helper 가 «없다»** ⟹ 그것을 세우는 것이 이 WU 다
+```
+
+### 9-1 저장 위치·의미(CPO 확정 2026-11-03 · 재질문 금지)
+
+```
+위치  **`product_snapshots.workspace.searchRun`** · 🔴 새 칸/테이블 **만들지 않는다** · migration **0**
+의미  🔴 **「마지막 상품 분석 실행의 Search 실행 관측값」** — **상품 사실/속성이 아니다**
+저장  searches · pages · perPage · organic · failed ·
+      errorName · errorStatus · errorCode · timeout ·
+      producer counts(WEB_SEARCH · OVERSEAS_AUTO · DOMESTIC_LISTING · GEMINI)
+🔴 금지 저장 — token · Authorization · cookie · credential · URL secret ·
+   response body · **error message 전문**
+```
+
+### 9-2 실행 순서 — **12단계 한 덩어리**
+
+```
+① snapshot.ts 에 workspace **부분 갱신 helper**(기존 saveSnapshot 패턴 재사용)
+   🔴 `searchRun` **한 칸만** 덮는다 — canonicalProduct 등 다른 칸 불변
+② /check 에서 `domesticShop.webSearchMetrics` + producer counts 를 그 칸에 저장
+③ 저장 계약  ④ 보안 계약  ⑤ **다른 workspace 칸 불변** 계약  ⑥ **fail-soft** 계약
+   (저장이 실패해도 분석이 죽지 않는다)
+⑦ mutation  ⑧ 전체 regression  ⑨ typecheck  ⑩ build  ⑪ commit/push  ⑫ deploy
+```
+
+### 9-3 🔴 이번 WU 금지
+
+```
+query · search count · MAX_SEARCHES_PER_PRODUCT · MAX_PAGES_PER_QUERY · **2→1 롤백** ·
+alias · relevance · Identity · price policy · candidate UI · mock data
+```
+
+### 9-4 완료 보고 — **1회 · 10절**
+
+```
+1 변경 파일/구현  2 계약 결과  3 mutation  4 regression  5 typecheck/build
+6 commit/push/deploy  7 searchRun 저장 구조  8 보안 검증
+9 운영 실행 필요 여부  10 다음 단계(있으면 **최대 1개**)
+🔴 중간 보고 금지 · 🔴 **배포 전까지 CEO 에게 운영 실행을 요청하지 않는다**
+```
+
+🟡 **배포 뒤 단 한 줄만** 전한다 — 「이제 운영 1회 실행하면 됩니다」. 그 전 CEO 할 일 **0**.
+
+---
+
+## §8 🔵🔵🔵 **SEARCH-FAILURE-OBSERVABILITY-01**(CPO 2026-11-03) · 🟢 완료(`2351aff9`)
 
 🔴🔴 **§7 보다 이 절이 «지금» 이긴다** — Sprint 3 의 현재 단계는 UI 가 아니라 **Search 실행 안정성** 이다.
 
