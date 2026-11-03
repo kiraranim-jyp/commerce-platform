@@ -8,7 +8,69 @@
 
 ---
 
-## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-03 인수인계 · 2차)
+## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-04 인수인계 · STAGE 4-G)
+
+```
+좌표   HEAD `47db4a3d` · main · worktree clean · prod 200
+       회귀 772 files / **10,013 passed / 0 failed** · typecheck 0
+       🔴 **조사는 전부 끝났다. 재조사 금지.** 바로 구현 → 배포 → 보고 1회.
+
+할 일  **STAGE 4-G — IDENTITY POLICY 01**(CPO GO · 제한적)
+  A  Generic 축만으로 **PRESUMED_SAME 생성 금지**   🔴 threshold·점수는 **한 글자도** 안 바꾼다
+  B  COLOR 를 Identity 에서 뺀다 — positive(+1) **제거** · `COLOR_VARIANT` **제거**
+     🔴🔴 `isColorUnverified` 는 **보존한다**(「색을 확인 못 했다」는 **차이가 아니다** ·
+        WU-063/064 실측: 풀면 Human DIFFERENT 2건만 올라가는 **순손실**)
+  C  MODEL CODE **주석/정의만**(동작 0) — 「모델 식별 O · 판매 단위 보증 X」
+
+착수점(조사 완료 · 좌표 확정)
+  `packages/crawler/src/comparison-search/cross-seller.ts`
+    :1306-1312  verdict 분기      ← A 가 손댈 **유일한 자리**
+       const blocked = blockers.length > 0;
+       if (!blocked && brandOk && corePoints >= SAME_MIN_AXES) return "SAME";        // 5
+       if (totalPoints >= PRESUMED_SAME_MIN_AXES && !sameSellerWithoutIdentity)
+         return "PRESUMED_SAME";                                                      // 3 ← 여기
+    :1234  totalPoints = axes.reduce(points)   🔴 blocker 가 **감점하지 않는다**
+    :1068  COLOR +1 (B)          :900  COLOR_VARIANT blocker (B)
+
+점수표(실측 · 다시 세지 않는다)
+  TITLE **2**(핵심)/1(일부) · MODEL_CODE **3**/2(부분) ·
+  CATEGORY 1 · COLOR 1 · MATERIAL 1 · FIT 1 · AUDIENCE 1 · SIZE 1 · IMAGE 1
+  🔴 Generic 만으로 3점이 되는 조합이 **실재** — `CATEGORY+COLOR+AUDIENCE` · `CATEGORY+MATERIAL+AUDIENCE`
+     (운영 FP **9건 전부** 이 모양: 「상품군 TOP↔TOP · 색상 BLUE · 대상 KIDS」)
+
+🟢 안전 근거(이미 측정됨 · 다시 재지 않는다)
+  GT TP **7건 전건** 이 TITLE(2) 또는 MODEL_CODE(3) 를 갖는다 ⟹ A 의 **GT TP 손실 예상 0**
+  biskuit 는 제목에 `B226AC009` 가 있어 Generic-only 가 **아니다** ⟹ **역위험 영향 0**
+  COLOR 제외 시 GT TP 손실 **0**(C42 는 색이 **일치**해서 SAME 이었다)
+
+🔴 반드시 보고해야 할 것 — 「FP 9건 차단」만 적으면 **승인 안 된다**(CPO 명시)
+  ① Generic-only FP 차단 ② **GT TP 보존 수치** ③ **운영 TP 영향 = 측정불가**
+     (운영 TP 7 중 **6 이 맨몸 행** 이라 근거가 없다 · 해결된 것으로 적지 않는다)
+  ④ biskuit PASS ⑤ COLOR/SIZE Variant PASS ⑥ Legacy GT 보존 PASS
+
+검증 대상(전부 기존 fixture · 새 데이터 0 · 네트워크 0)
+  SAME 보존   C05 · C27 · C42 · C14      품번 보존  C48 · C11 · C37
+  Legacy 보존 C19 · C20 · C25            영향 확인  C06(형태) · C50 · C51(고유명)
+  하니스      `stage3-identity-baseline` · `stage4-human-gt-evidence-matrix` ·
+              `stage4c-identity-vs-variant` · `sprint5-identity-02-brand-recall-gate`
+
+🔴 금지  DISTINCTIVE NAME 추출 · PRODUCT FORM · PATTERN · DESCRIPTION 판정 사용 ·
+        BRAND_MISMATCH 승격 · SAME/PRESUMED **threshold** · Search/Provider/Proxy ·
+        가격 · UI · DB/migration · **Legacy GT 수정** · TITLE 전체를 Generic 취급 ·
+        IMAGE 를 근거에서 삭제(보조로 **보존**)
+
+🔵 CPO 확인 대기 2건 — 답이 오면 그대로, 없으면 **아래 기본값** 으로 간다
+  ⒜ `COLOR_VARIANT` **하나만** 제거(기본값: 그렇다 · `isColorUnverified` 보존)
+  ⒝ SIZE +1 positive 도 뺄 것인가(기본값: **빼지 않는다** — 지시서에 명시 없음)
+
+실행 순서  구현 → 계약 추가 → 변이(각 1 FAIL 확인) → **전체 회귀 PASS 확인** →
+          typecheck → build → **그 뒤에** commit → push → 배포 Commit 확인 → 보고 1회
+🔴🔴 **회귀 PASS 를 확인하기 «전» 에 커밋하지 않는다**(지난 세션에서 순서를 어겼다)
+```
+
+---
+
+## ▶ [낡음] 이전 인수인계(2026-11-03 · 2차) — 참고만
 
 ```
 전략     상품 URL 1개 → AI Search 로 **국내·해외 동일/유사 판매처를 최대한 많이** 찾고
@@ -88,7 +150,16 @@
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-🔴🔴🔴 CURRENT WU  **SPRINT 5 — BRAND_MISMATCH 정책 🟡 HOLD(국내 TP 누적 대기)**  ← 🔵 **지금 여기**
+🔴🔴🔴 CURRENT WU  **STAGE 4-G — IDENTITY POLICY 01 구현**(CPO GO · 2026-11-04) ← 🔵 **지금 여기**
+                  🟢 조사 **전부 종료**(STAGE 3-A·4·4-B·4-C·4-D·4-E·4-F) — **재조사 금지**
+                  🔵 좌표·점수표·착수 라인·검증 대상은 **맨 위 NEXT SESSION 블록 하나** 다
+                  🔴 원인 확정 — `cross-seller.ts:1309` PRESUMED 분기가 **blocker 를 안 본다** +
+                     그 문턱 3점이 **아동의류 Generic 축으로 자동 충족**(운영 FP 9건 전부 그 모양)
+                  🔴 HOLD 유지 — DISTINCTIVE NAME · PRODUCT FORM · PATTERN · DESCRIPTION ·
+                     BRAND_MISMATCH · D4 migration
+```
+```
+🔴 [낡음] CURRENT WU  **SPRINT 5 — BRAND_MISMATCH 정책 🟡 HOLD(국내 TP 누적 대기)**
                   🟢 Sprint 5 Observability **PASS**(구현 0 — 이미 돼 있었다) ·
                      Recall Gate **측정 완료**(FP 10/10 차단 · 확인된 TP 손실 **0**)
                   🔴 **CPO LOCK ⒝** — 「`TP 손실 0` 을 안전성 증거로 쓰지 않는다」
