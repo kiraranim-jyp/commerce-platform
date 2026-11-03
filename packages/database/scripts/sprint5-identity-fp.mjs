@@ -54,6 +54,13 @@ for (const r of ONLY_LABELLED ? labelled : rows) {
       `${pad(r.price_amount, 8)} ${pad(r.price_currency, 4)}`,
   );
   console.log(`      "${String(r.candidate_title ?? "-").slice(0, 76)}"  blk=${JSON.stringify(r.blockers ?? null)}`);
+  /**
+   * 🔴 **왜 올라갔는가** 는 blocker 가 아니라 «근거 축» 이 말한다(§1 질문 1·2).
+   *    🔴 `match_reasons` 는 운영이 저장한 값 그대로다 — 내가 만들지 않는다.
+   */
+  if (process.env.REASONS === "1" && Array.isArray(r.match_reasons)) {
+    for (const why of r.match_reasons) console.log(`        · ${String(why).slice(0, 92)}`);
+  }
 }
 
 console.log(`\n── 집계 ─────────────────────────────────────────────────────`);
