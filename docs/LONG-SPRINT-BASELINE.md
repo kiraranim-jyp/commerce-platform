@@ -154,3 +154,122 @@ packages/crawler/src/shopify-market-probe.ts
 🔴 미완   라이브 재실측 · 선행조건 ①② 확인 · 원본가 불변 기준선 · PHASE 2~9 분모
 🔴 **PHASE 0 을 「문제 해결」로 적지 않는다** — 출발점을 정확히 세운 것이 전부다
 ```
+
+---
+---
+
+# 🔵 PHASE 1 — 실측 결과와 **원인 확정**(2026-11-05 · 운영 코드 변경 0)
+
+## 1. 🔴🔴 먼저 — **PHASE 0 의 내 서술을 정정한다**
+
+> PHASE 0 §3 이 「`market_country` 가 붙은 Smallable 관측이 **한 행도 없다** ⟹ 시장 행
+> 자체가 지금 없다」고 적었다. 🔴 **그 두 번째 문장이 틀렸다.**
+
+```
+Smallable 관측 248행 = **4시장 × 62행** (DB 실측)
+  market_code=fr  EUR 50~159      market_code=kr  EUR 49~155
+  market_code=us  EUR 53~167      market_code=jp  EUR 54~172
+  market_country  **전건 null**           last_checked  2026-10-29
+```
+⟹ 🟢 **시장 관측은 정상적으로 생성·저장되고 있다.** `market_code` 가 네 시장 전부 들어가고
+**금액도 시장별로 실제 다르다**(49 / 50 / 53 / 54 — 문서 §3 의 73/75/79/81 과 같은 순서).
+🔴 비어 있는 것은 **`market_country` 칸 하나** 와 **`currency` 가 전건 EUR** 이라는 것이다.
+
+---
+
+## 2. 🟢🟢 라이브 실측 — **요청 통화가 실제로 먹는다**
+
+🔴 **raw `node:https` 로는 6조합 전건 403 이었다.** 그것을 「사이트가 막는다」로 단정하지
+않고(WU-105 교훈) **운영 fetch 경로**(`fetchPlainHtmlWithFinalUrl` + Chrome UA)로 다시 쟀다.
+
+| 요청 | **실측(2026-11-05)** | 문서(2026-09-13) |
+|---|---|---|
+| `?currency=EUR&country=JP` | **EUR 54** | EUR 81 |
+| `?currency=JPY&country=JP` | 🟢🟢 **JPY 10,078** | JPY 13,365 |
+| `?currency=JPY&country=KR` | **JPY 9,145** | JPY 12,045 |
+| `?currency=USD&country=US` | 🟢 **USD 62** | USD 91 |
+| `?currency=KRW&country=KR` | 🟢 **KRW 82,673** | KRW 114,464 |
+| `?country=JP`(통화 미지정) | 🔴 **KRW 91,108** | KRW 127,008 |
+
+```
+🟢🟢 통화 **4종**(EUR · JPY · USD · KRW)이 모두 돌아온다 ⟹ **현지통화 관측이 가능하다**
+🔴 금액이 문서와 다른 이유는 **상품이 다르다** — 문서는 430701/430651, 이번은 **430753**
+   ⟹ 🔴 「JPY 13,365 가 유지되는가」는 **다른 상품이라 비교할 수 없다**(그 값을 인용하지 않는다)
+🟢 **구조적 결론은 그대로 유지된다** — 통화를 주지 않으면 **egress 가 국가를 정한다**
+   (문서 「KRW 127,008」 ↔ 이번 「KRW 91,108」 · 둘 다 한국 egress 의 결과)
+🟡 `?currency=JPY&country=KR` → JPY 9,145 는 **한국 가격을 엔화로 쓴 것** 이고
+   **일본 가격이 아니다**(문서 §3 의 그 경고가 지금도 유효하다)
+```
+
+---
+
+## 3. 🔴🔴🔴 원인 **완전 확정** — 둘이고 서로 다른 자리다
+
+**운영 probe 반환**(`probeSmallableMarkets` · 실측 4건)
+```json
+{"marketCode":"fr","amount":50,"currency":"EUR","sourceUrl":"…?currency=EUR&country=FR",
+ "shopMeta":null,"regularPrice":null,"available":true}
+반환 칸 — marketCode · amount · currency · sourceUrl · **shopMeta** · regularPrice · available
+```
+
+| # | 증상 | 원인(코드 좌표) |
+|---|---|---|
+| ① | `market_country` **전건 null** | 🔴 probe 반환에 **country 칸이 없다**. 저장부 `run-price-check.ts:137·218` 이 **`probe.shopMeta?.country` 만** 본다 ⟹ Smallable 은 Shopify 가 아니라 **`shopMeta: null`**(실측) ⟹ 언제나 null |
+| ② | `currency` **전건 EUR** | 🔴 `source-currency-policy.ts` `SOURCE_CURRENCY_RULES` 가 smallable 에 `currency:"EUR"` 를 강제하고, probe 가 **그 통화로만 요청** 한다. `:284` 가드는 **응답 통화가 요청 통화와 같은지** 확인하는 것이고 **정상 동작** 이다(🔴 지우지 않는다) |
+
+🟢 ①과 ②는 **독립** 이다 — ①은 통화를 바꾸지 않고도 닫을 수 있다.
+
+---
+
+## 4. 🔵🔵 그래서 **정책 충돌 1건** — 지시서 §11 에 따라 멈추고 보고한다
+
+### ① `market_country` 채우기 — 🟢 **정책 충돌 없다. 구현 가능하다.**
+```
+🟢 probe 가 `?country=XX` 를 **스스로 요청** 했으므로 그 국가는 **관측된 사실** 이다
+   (시장을 통화·URL·판매처에서 **역추론하는 것이 아니다** — run-price-check:73 금지 조항 준수)
+🟢 그리고 응답이 그 국가를 **확인해 주는지 검증할 함수가 이미 있다** —
+   `readSmallableRequestedCountry(html)`(smallable-market-probe.ts:186)
+🔵 설계 — probe 반환에 `marketCountry` 를 더하고(요청 국가 · 응답으로 **검증된 경우만**)
+   저장부가 `probe.shopMeta?.country ?? probe.marketCountry` 를 쓴다
+   🔴 Shopify 경로는 **그대로** 다(`shopMeta` 가 먼저) · 🔴 검증 실패면 **null**(추정 금지)
+```
+
+### ② 현지통화 관측 — 🔴🔴 **CPO 정책 결정이 선행한다**
+```
+🔴 Smallable 은 통화를 **스스로 선언하지 않는다** — 요청한 통화를 **되돌려 준다**(실측 4종).
+🔴 통화를 주지 않으면 **egress 가 정한다**(KRW 91,108) ⟹ 「사이트가 정하게 두기」는 **불가**.
+⟹ 🔴🔴 현지통화 관측에는 **「시장 → 통화」 대응을 우리가 정하는 것** 이 반드시 필요하다.
+   그런데 그것은 `GLOBAL-SOURCE-PRICE-POLICY-FINAL` **§F 가 금지한 하드코딩** 이다
+   (문서 §4 질문 1 이 적어 둔 바로 그 자리).
+
+🔵 **CPO 결정이 필요한 것 — 셋 중 하나다**
+   ⒜ §F 를 **열고** 시장→통화 대응표를 둔다(어디에? 코드 / 등록부 / 사이트별 규칙 파일)
+   ⒝ **현지통화 관측을 포기** 하고 Smallable 은 EUR 단일 통화로 둔다
+      (그러면 완료 조건 1·2 「JP 가 실제 JPY」는 **달성 불가** 로 남는다)
+   ⒞ Shopify 처럼 **사이트가 통화를 선언하는 판매처에서만** 현지통화를 쓴다
+      (🟢 그 경로는 **이미 동작한다** — `bobochoses.co.jp` JPY 10행이 그 증거다)
+🔴 CTO 는 셋 중 **아무것도 고르지 않았다.** 환산으로 만들지 않았고, 하드코딩하지 않았다.
+```
+
+🔴 **그리고 한국 행 표기**(문서 §4 질문 3)도 그대로 열려 있다 — CPO 의 이번 정책은
+「한국 시장 비교에는 **실제 확인된 KRW 만**」이고 「한국 배송에서 EUR 가 오면 **EUR 그대로
+보존**」이다 ⟹ 🟢 그 둘은 **②가 닫히기 전에도 지킬 수 있다**(EUR 49 를 KRW 로 바꾸지 않는다).
+
+---
+
+## 5. 🔵 다음 세션 착수 라인 — 조사 없이 구현부터
+
+```
+① 🟢 **`market_country` 구현**(정책 충돌 0) — §4-① 설계 그대로
+   probe 반환 `marketCountry` 추가 → 저장부 폴백 한 줄 → 계약 + 음성대조 + 회귀 + 배포
+   🔴 `shopMeta` 우선순위 불변 · 🔴 검증 실패 시 null · 🔴 역추론 금지
+   🟢 효과 — Smallable 248행이 다음 관측부터 **국가를 갖는다**(기존 행은 **고치지 않는다**)
+② 🔵 **②는 CPO 결정 대기** — 그 전에는 `currency` 를 건드리지 않는다
+③ 그 뒤 PHASE 2(국내) → PHASE 3(해외) → … 지시서 순서대로
+```
+
+🟢 재현 도구(커밋됨) — `packages/crawler/src/__tests__/phase1-smallable-live.test.ts`
+(`PHASE1_LIVE=1` · 운영 fetch 경로 · 과금 0) · `packages/database/scripts/phase1-smallable.mjs`
+(READ-ONLY · 위 §1 분포를 다시 낸다) · `phase1-live-probe.mjs`(🔴 raw fetch 403 재현용)
+
+🔴 **PHASE 1 을 완료로 적지 않는다** — ①은 구현 전이고 ②는 정책 대기다.
