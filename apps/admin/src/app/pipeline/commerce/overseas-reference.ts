@@ -200,12 +200,48 @@ export interface OverseasReferenceView {
   unknownMarketNote: string | null;
 }
 
-/** 🔴 등급 어휘는 owner(`match-display`)와 같은 말을 쓴다 — 사본을 만들지 않는다. */
+/**
+ * 🔴 등급 어휘는 owner(`match-display`)와 같은 말을 쓴다 — 사본을 만들지 않는다.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 STAGE 4-I / Ⓐ 어휘 정합(CPO GO, 2026-11-04) — **같은 상태를 같은 말로 부른다.**
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 **이 표가 owner 와 어긋나 있었다.** 같은 `TEXT_CONFIRMED` 하나를 두 곳이 다르게 불렀다:
+ * ```
+ * 후보 카드  match-display  TIERS.PRESUMED_SAME.label = 「동일상품 추정」   🟢 정확
+ * 이 표      TIER_LABEL.COMPARISON                    = 「유사상품」       🔴 과소
+ * ```
+ *    `TEXT_CONFIRMED → COMPARISON`(priceTierFromLink) 이고 `TEXT_CONFIRMED →
+ *    TIERS.PRESUMED_SAME`(domesticMatchDisplay) 다 — **한 상태의 두 이름** 이었다.
+ * 🔴 CPO 원칙: 「**`PRESUMED_SAME` 은 동일상품 추정이다. `SIMILAR` 는 유사상품 참고다.
+ *    두 상태를 같은 말로 표시하지 않는다.**」
+ *
+ * 🟢 그래서 **owner 의 label 을 그대로 쓴다**(새 어휘를 만들지 않는다):
+ * ```
+ * COMPARISON → TIERS.PRESUMED_SAME.label  「동일상품 추정」
+ * REFERENCE  → TIERS.SIMILAR.label + 참고  「유사상품 · 참고」   ← 「참고」 단독은 무엇의
+ *                                            참고인지 말하지 않았다(CPO 지시 ②)
+ * ```
+ * 🔴🔴 **노출 위치를 확인했고, 이 변경은 «현재» 화면을 바꾸지 않는다**(CPO 지시 ①·③):
+ * ```
+ * tierNote 소비처는 하나다 — buildOverseasReference(:291) → OverseasReferencePrice(:94)
+ * 렌더 ①  MarketPriceComparison:1400   🇰🇷 분기 showTierNote **false**(:1441)
+ *                                      🌎 분기 showTierNote **false**(:1465)  ← CORE-2V §5
+ * 렌더 ②  MarketColumn:1964            `reference={null}` ⟹ view null ⟹ **렌더 0**
+ *                                      (그리고 `referenceProps` 타입에 showTierNote 가 **없다**)
+ * ⟹ 🟢 「해외에만 과거 표현이 남아 있다」는 **사실이 아니다** — 국내·해외 **둘 다 꺼져 있다**
+ * ⟹ 🔴 그러나 **기본값이 `true`** 라, 누가 `showTierNote` 를 주거나 summary 를 넘기는
+ *    순간 **그 어휘가 그대로 노출된다** ⟹ 지금 고치는 것은 **잠재 결함** 이다
+ * ```
+ * 🔴 **판정·점수·eligibility 는 한 글자도 바뀌지 않았다** — `matchTruth` ·
+ *    `priceTierFromLink` · `SIMILAR → textOnly` · 집계 자격 **전부 불변**. 바뀐 것은 **말** 뿐이다.
+ */
 const TIER_LABEL: Record<string, string> = {
   EXACT: "동일상품",
   CONFIRMED: "동일상품",
-  COMPARISON: "유사상품",
-  REFERENCE: "참고",
+  COMPARISON: "동일상품 추정",
+  REFERENCE: "유사상품 · 참고",
   /**
    * 🔴🔴 WU-056 — **이 줄이 없어서 화면에 영문 내부 토큰이 찍혔다.**
    *

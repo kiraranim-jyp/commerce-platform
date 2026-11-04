@@ -116,11 +116,23 @@ describe("C. 안전 문구", () => {
     expect(OVERSEAS_REFERENCE_SCOPE).toMatch(/국내 최저가/);
   });
 
-  /** 🟢 등급은 owner 어휘로 **갈라서** 적는다 — 승격이 아니라 분류다. */
-  it("🟢 동일상품/유사상품을 합치지 않는다", () => {
+  /**
+   * 🟢 등급은 owner 어휘로 **갈라서** 적는다 — 승격이 아니라 분류다.
+   *
+   * 🔴🔴 **STAGE 4-I 에서 기대값을 갱신했다(의도된 어휘 전환 · CPO GO 2026-11-04).**
+   *    `COMPARISON` 은 `TEXT_CONFIRMED`(= `PRESUMED_SAME`)의 가격 등급이고 owner
+   *    (`match-display` TIERS.PRESUMED_SAME.label)는 그것을 **「동일상품 추정」** 이라 부른다.
+   *    이 표가 **「유사상품」** 이라 불러서 **같은 상태가 두 이름** 을 갖고 있었다.
+   * 🟢 느슨하게 하지 않고 **강화했다** — 「동일상품 추정」을 단언하고, 이 분포에
+   *    **「유사상품」이 나오지 않는다**(= 추정을 유사로 부르지 않는다)까지 단언한다.
+   * 🔴 집계·숫자·필터는 **한 글자도** 바뀌지 않았다(`EXACT 2 · COMPARISON 1` 그대로).
+   */
+  it("🟢 동일상품/동일상품 추정을 합치지 않는다", () => {
     const html = render(SUMMARY);
     expect(html).toContain("동일상품 2");
-    expect(html).toContain("유사상품 1");
+    expect(html).toContain("동일상품 추정 1");
+    /** 🔴 이 분포에 `REFERENCE` 가 없으므로 「유사상품」이라는 말이 설 자리가 없다. */
+    expect(html, "🔴 추정을 「유사상품」이라 부르면 셀러가 그 가격을 버린다").not.toContain("유사상품");
   });
 
   /** 🔴 승격 버튼이 없다 — transient 는 DB 로 올라가지 않는다. */

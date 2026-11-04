@@ -148,12 +148,24 @@ describe("A. 국내 참고가격 블록", () => {
       byMarket: { KR: 4 },
       byPriceTier: { EXACT: 1, COMPARISON: 1, REFERENCE: 1, EXCLUDED: 1 },
     });
+    /**
+     * 🔴🔴 **STAGE 4-I 에서 기대값을 갱신했다(의도된 어휘 전환 · CPO GO 2026-11-04).**
+     *    `COMPARISON`(= `TEXT_CONFIRMED` = `PRESUMED_SAME`)이 **「유사상품」** 이었고
+     *    `REFERENCE`(= `SIMILAR`)가 **「참고」** 였다 ⟹ 추정과 유사가 **뒤섞여** 있었다.
+     * 🟢 이제 owner 어휘로 갈린다 — `COMPARISON` **「동일상품 추정」** ·
+     *    `REFERENCE` **「유사상품 · 참고」**.
+     * 🟢 이 테스트의 **원래 목적(영문 토큰 누출 금지)은 그대로** 지켜지고,
+     *    거기에 **네 등급이 서로 다른 말을 쓴다** 는 단언이 더해졌다(강화).
+     */
     expect(html).toContain("동일상품 1");
-    expect(html).toContain("유사상품 1");
-    expect(html).toContain("참고 1");
+    expect(html).toContain("동일상품 추정 1");
+    expect(html).toContain("유사상품 · 참고 1");
     expect(html).toContain("동일상품 아님 1");
     /** 🔴 대문자 내부 토큰이 **하나도** 남지 않아야 한다. */
     expect(html).not.toMatch(/EXCLUDED|REFERENCE|COMPARISON|EXACT|CONFIRMED/);
+    /** 🔴 네 등급이 **서로 다른 말** 이다 — 두 상태가 같은 말을 쓰면 FAIL 한다. */
+    const labels = ["동일상품 1", "동일상품 추정 1", "유사상품 · 참고 1", "동일상품 아님 1"];
+    expect(new Set(labels).size).toBe(4);
   });
 
   /** 🟢 기본값이 해외다 — WU-049 호출부가 한 글자도 바뀌지 않는다. */

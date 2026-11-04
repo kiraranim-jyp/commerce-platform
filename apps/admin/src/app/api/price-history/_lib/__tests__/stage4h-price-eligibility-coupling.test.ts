@@ -92,10 +92,22 @@ describe("STAGE4-H — 어휘: 같은 상태를 두 곳이 다르게 부른다",
     expect(tierDisplay("PRESUMED_SAME").label).toBe("동일상품 추정");
   });
 
-  it("H-7 🔴🔴 가격 집계 쪽 어휘는 같은 상태를 **「유사상품」** 이라 부른다", () => {
+  /**
+   * 🟢🟢 **STAGE 4-I 가 이 결함을 고쳤고, 그래서 이 단언이 «뒤집혔다».**
+   *
+   * 🔴 4-H 가 적은 결함: 가격 집계 쪽이 같은 `TEXT_CONFIRMED` 를 **「유사상품」** 이라 불렀다.
+   * 🟢 4-I(CPO GO)가 owner 어휘로 정합시켰다 — `COMPARISON` → **「동일상품 추정」** ·
+   *    `REFERENCE` → **「유사상품 · 참고」**.
+   * 🔴 **원래 단언을 지우지 않고 방향을 뒤집었다** — 되돌아가면 다시 FAIL 한다
+   *    (이 저장소의 「수정이 들어가면 그 단언이 FAIL 로 뒤집히고 그것이 증거다」 규약).
+   * 🟢 행동 축 계약은 `stage4i-tier-vocabulary` 가 갖는다(렌더 결과로 단언).
+   */
+  it("H-7 🟢 [4-I 에서 수정됨] 가격 집계 어휘가 owner 와 **같은 말** 을 쓴다", () => {
     const src = read("pipeline/commerce/overseas-reference.ts");
     /** 🔴 소스로 본다 — `TIER_LABEL` 은 export 되지 않는다(사본을 만들지 않기 위해). */
-    expect(src).toContain('COMPARISON: "유사상품"');
+    expect(src, "🔴 추정을 「유사상품」이라 부르던 상태로 되돌아갔다").not.toContain('COMPARISON: "유사상품"');
+    expect(src).toContain('COMPARISON: "동일상품 추정"');
+    expect(src).toContain('REFERENCE: "유사상품 · 참고"');
     expect(src).toContain('EXACT: "동일상품"');
   });
 
