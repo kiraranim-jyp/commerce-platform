@@ -8,77 +8,87 @@
 
 ---
 
-## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-04 · STAGE 6 보완 종료)
+## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-04 · STAGE 7-1·7-2 배포)
 
 ```
-좌표   Ⓐ·C 배포 · A HOLD · B NO-GO · STAGE 5 종료 · FINAL-GATE 조사 종료
-       🔵🔵 **STAGE 6 + 보완 종료** — 🔴 **조사·측정 끝났다. 다시 하지 않는다.**
-       🔵 남은 것은 **구현 1건(승인됨)** 과 **CPO 결정 6건** 뿐이다
+좌표   🔵🔵 **CPO 실행 우선순위 1·2 구현·배포 완료**(`00ce755d` · `f38aae43` · push 0/0)
+       🔵 다음은 **3 → 4 → 5** 다(전부 CPO 승인 · 🔴 **6 은 불승인**)
+       🔴 조사·측정 끝났다. **다시 하지 않는다** — 아래 숫자가 전부다
 
-전문   `docs/STAGE6-EVIDENCE-DISCOVERY.md`           ← §보완-0~8 이 **최신 결론** 이다
-       `docs/FINAL-MARKET-COMPARISON-REVIEW.md` §11  ← **UNVERIFIED 분리 구현 스펙 4단계**
+전문   `docs/STAGE6-EVIDENCE-DISCOVERY.md` §보완-0~8   ← Evidence·FN·특별검증 결론
+       `docs/FINAL-MARKET-COMPARISON-REVIEW.md` §7~§12 ← 운영 데이터 실측
 
-🔴🔴🔴 **1차 보고의 숫자 넷을 정정했다 — 낡은 쪽을 인용하지 않는다**(§보완-0)
-  ① 「설명문 Model Code 는 유효하지 않다(1 SAME : 4 DIFFERENT)」 → **폐기**
-     ✅ 분모 **6**(5 아님) · **반증 방향 2/2 정확 · 긍정 방향 2/4**
-     ⟹ 🟢 **차단에는 유효 · SAME 확정에는 단독 불충분**(= 변경 C 주석이 실증됐다)
-  ② 「DIFFERENT 방어 8/8 · FP 0」 → 그것은 **verdict 축** 이다
-     ✅ **금액 자격 축에서는 사람 DIFFERENT 8 중 4 가 들어간다**
-  ③ 「FN 11」 → 한 덩어리가 아니다. PRESUMED_SAME **8**(= 화면·금액에 이미 있다)
-     ✅ **실제 손실은 4/17**(tier EXCLUDED)
-  ④ villagekids·trenbe 를 「분모 밖」이라며 검증까지 생략했다 → **셋 다 검증 완료**
+🟢🟢 **끝난 것 둘 — 재구현 금지**
+  **1 UNVERIFIED 가격 분리**(`00ce755d`) — 레코드 `priceStatus` · 집계 `unverifiedCount` ·
+    화면 「N곳은 **가격을 확인하지 못해** 위 금액에 넣지 않았습니다.」
+    🔴 `null` 은 **막지 않는다**(낡은 저장분 artifact · `derivePriceStatus` 는 null 을 못 낸다)
+  **2 노출 등급 ↔ 가격 자격 분리**(`f38aae43`) — 레코드 `blockers` ·
+    집계 `observedDifferenceCount` · 화면 「N곳은 **상품 차이가 확인돼** …」
+    🟢 집합 = `PRICE_DISQUALIFYING_BLOCKERS` **셋**(가격 파일 · Identity 집합의 **부분집합**)
+       `BRAND_MISMATCH` · `NO_TITLE_OVERLAP` · `SAME_SELLER_DISTINCT_LISTING`
+    🔴 **전체(`hasObservedDifference`)를 쓰지 않았다** — 반사실로 갈랐다:
+       A 전체 정밀도 11/15 · 재현 **11/18**(손실 1) ↔ B 채택 **12/16 · 12/18**(손실 **0**)
+    🔴 그래서 `MATERIAL`·`FIT`·`SIZE_SYSTEM`·`GARMENT_FORM`·`AUDIENCE_LINE`·
+       `MODEL_CODE_AGE_LINE` 은 **가격 자격에서 빠져 있다**(계약 A-3b 가 잠근다)
 
-🟢🟢 **두 축을 같이 적는다**(분모 25 · 🔴 시스템 전체 성능이 아니다)
-  사람 SAME 17      verdict SAME 6/17   금액 진입 13/17
-  사람 DIFFERENT 8  verdict SAME 0/8    금액 진입 🔴 **4/8**
-  🔴 경로는 **하나** — PRESUMED_SAME → crossSellerReserved → TEXT_CONFIRMED
-     → **COMPARISON** → 금액 자격 (C51·C19·C20·C25)
+🟢🟢 **운영 실측 전 → 후**(4상품 · 운영 함수 직접 호출)
+  AC073 CAD 370~19,100 · EUR 42~100 · GBP 39.5~75 · USD 22,200 → **GBP 75(1곳)**
+  AC033 CAD 260~27,100 · EUR 39 · GBP 58 · USD 9,700~12,700     → **GBP 58(1곳)**
+  AC110 CAD 325~18,500 · GBP 10.5~37                            → **GBP 37(1곳)**
+  AC043 CAD 26,300 · EUR 39 · GBP 39.5 · USD 11,300~12,700      → **(렌더 안 됨)**
+  🟢🟢 네 건 모두 살아남은 것이 **원상품 브랜드를 제목에 적은 그 후보 하나** 다
+     (빠진 것 — Diesel Viker Jeans · Hugo Boss · Marc Jacobs · Stone Island · D&G 로고티)
+  🟡 AC043 은 5건 전부 `BRAND_MISMATCH` ⟹ 남는 금액이 없어 **블록이 서지 않는다**
+     🟢 후보는 숨겨지지 않는다(개별 줄이 「가격 확인 필요」) · 🔵 그 상태의 문구는 **CPO 판단**
 
-🔵 **FN 11 을 막는 것은 넷이고 셋은 이미 이름이 있다**(§보완-6)
-  ① **브랜드 공백 4**(BRAND_UNCONFIRMED) ← 🔴 가장 아깝다. C48 은 corePoints **11**
-     🔴 공백이 **원상품 쪽인 것 2건**(공식몰·일본몰) ⟹ 후보를 고쳐선 안 풀린다
-  ② 증거 부족 5(corePoints 0~2) ← 한국어·에스토니아어·독일어 제목(WU-064/065/078 자리)
-  ③ FIT 어휘 2(`relaxed` ↔ `loose`) ④ AC↔AB 라인 2(CEO 는 SAME · 품번 보호 해체 문제)
+🔵 **다음 작업 셋 — 조사 없이 구현만 한다**
+  **3 브랜드 Evidence 공급**(CPO 승인 · 🔴 완화가 아니다)
+     🔴 원상품 brand 가 비면 **상세설명·공식 상품정보에서 보충 추출** · 후보도 같이 ·
+        추출값과 **출처 보존** · **브랜드 미확보 ↔ 브랜드 불일치 구분**
+     🟢 분모 — FN 11 중 **4건**(`BRAND_UNCONFIRMED`) · C48 은 `corePoints` **11**(기준 5의 2배)
+     🔴🔴 공백이 **원상품 쪽인 것 2건**(C48 bobochoses.com · C14 kihanan) ⟹ 후보만 고쳐선 안 풀린다
+     🔴 WU-134 선례 — 공식몰 `vendor` 가 **시즌코드**(`AW26`)라 거부된다(`site-brand-name.ts`)
+  **4 FIT 동의어 정규화**(제한적 승인) — `relaxed fit ↔ loose fit`
+     🔴 조건 넷 — 사전 보완 · **원본 표현 보존** · 정규화 결과 **별도 기록** ·
+        「실제 다른 핏을 동일 취급」 회귀 테스트 포함
+     🔴 FIT 를 **강한 Identity 증거로 승격하거나 점수를 올리지 않는다**
+     🟢 효과 — 저장 GT S1-4(kolkid.ca · human SAME)의 `FIT` 보류가 사라진다
+  **5 COLOR / PATTERN 추출 분리**(추출만 승인)
+     🔴 실측 — `Conker Stripe`(**무늬**)가 **COLOR 칸으로** 들어온다(C19 · human DIFFERENT)
+        그래서 `COLOR_VARIANT` 가 **발화하지 못했다**(C19 를 막은 것은 다른 사유다)
+     🔴 **PATTERN 을 Identity 점수·blocker 에 반영하는 것은 아직 불승인** — 추출·비교까지만
+  🔴🔴 **6 AC↔AB 완화 · 소매 축 신설 — 불승인**(건드리지 않는다)
 
-🟢🟢 **C19/C20 `AW26MS185` 답 — 색상·무늬 «옵션» 차이다. 상품 형태 차이가 아니다**
-  Grey Melange(=「our grey」) → 사람 SAME · **Graystone** → DIFFERENT · **Conker Stripe** → DIFFERENT
-  🟢 **4/4 일관** ⟹ 🔴🔴 **변경 B(COLOR 제거)는 이 넷을 전부 구별 불가로 만든다**(NO-GO 재실증)
-  🔴 단 C19 는 색상 축이 **놓쳤다** — `Conker Stripe` 는 **무늬 이름** 이다(COLOR 칸에 패턴이 섞인다)
+🔴 **CPO 완료 기준 6항**(다음 보고는 테스트 통과만으로 완료 처리하지 않는다)
+  ① DIFFERENT 후보가 동일상품 가격 집계에 들어가지 않는지
+  ② 유사 후보의 **노출은 유지** 되는지
+  ③ UNVERIFIED 가 VERIFIED 집계에 섞이지 않는지
+  ④ **브랜드 누락 ↔ 브랜드 불일치** 가 분리되는지
+  ⑤ FIT·PATTERN 정규화가 기존 SAME/DIFFERENT 판정을 **훼손하지 않는지**
+  ⑥ 🟡 **실제 상품 상세 화면에서 셀러가 그 차이를 이해할 수 있는지**(CTO 가 볼 수 없다)
 
-🟢🟢 **소매/의류 형태 축 = CPO 의 «보류» 가 맞다**(원문 실측)
-  B226AC010 에서 3/3 정합 · 🔴 B226AC009 에서 **kids21「Short sleeves」가 사람 SAME**(반증 1)
-  🔴🔴 그리고 **얻는 것이 0** — 새로 막을 S1-5 는 **이미 MODEL_CODE 충돌로 EXCLUDED** 다
-  ⟹ 얻는 것 0 · 잃는 것 1 = **순손실**(WU-123/125 와 같은 방향) · 🔴 「원상품은 반팔」로 적지 않는다
+🟢 재현 도구(커밋됨 · READ-ONLY · 네트워크 0 · 과금 0)
+  `final-market-review-dump.mjs`(ORIGIN_CODE) + `final-market-review.test.ts`(전→후 자동 출력) ·
+  `stage7-2-effect.mjs`(blockers 가 금액 자격을 어떻게 가르는지) ·
+  `stage7-2-price-eligibility-cf.test.ts`(반사실 A vs B · 네트워크 0) ·
+  `stage6-special-cases.mjs`(villagekids · trenbe)
 
-🟡 **villagekids 는 「판단 불가」 그대로** + 새 사실 하나 — 그 판매처 후보 제목 전수에
-  **Bobo Choses 가 없고 BRAND_MISMATCH 가 거의 전건** 인데 **전건이 COMPARISON(금액 자격)** 이다
-  🔴 CPO ① 의 `Denim Blue Jeans`(GBP 39.5)가 그 줄이고 보류가 **5개** 붙어 있다
-  🟢 그 줄은 UNVERIFIED ⟹ **승인된 분리 작업이 금액에서 뺀다**(후보 보존)
-  🔴 단 `pale-blue-3d-logo` 계열은 `price_status=null`(낡은 저장분)이라 **그 수정으로 안 빠진다**
-
-🔵 구현 대기 **1건**(승인됨 · 조사 불필요)
-  **UNVERIFIED 가격 분리** — 스펙 `FINAL-MARKET-COMPARISON-REVIEW.md` §11 · 선례 **WU-062**
-  `e.priceStatus` 는 **이미 있다**(run-domestic-price-check:359) · push 자리
-  market-intelligence **:293 · :361** · 🔴 **`null` 은 막지 않는다**(낡은 저장분이 조용히 사라진다)
-  🟢 효과 — `CAD 370~19,100`(51배 · Diesel Jeans 혼입) · `USD 22,200` 이 사라진다 · Recall 손실 0
-
-🔵 CPO 결정 **6건**(CTO 가 하나도 열지 않았다 · §보완-8)
-  ① 브랜드 «공급»(완화 아님) ② 노출 등급 ↔ 가격 자격 분리(4-H Ⓑ) ③ AC↔AB 라인
-  ④ FIT 동의어 ⑤ COLOR 칸에 섞인 패턴 ⑥ 소매 축(= 보류 유지 권고)
-
-🔴 재조사 금지 — 후보 **25**(GT 33 중 라이브 확보 · 제외 8 = **측정불가**) · 설명문 **21/25** ·
-  사람 SAME 17 · DIFFERENT 8 · 설명문 유래 품번 **6**
-🔴 **칸이 없어서 못 잰 것** — Style Code · Manufacturer Code · 컬렉션 · 시즌 · 캐릭터명 ·
-  패턴명 · 디자인명 ⟹ **0% 가 아니라 측정불가** · 칸 신설은 **CPO 승인 사안**
-🔴 C06 주의 — 이 fixture 라벨은 **SAME**(CEO 조서 2026-10-27 재라벨)이고 R2 의
-  「C06 DIFFERENT」와 **분모·라벨 버전이 다르다** ⟹ 두 숫자를 같은 표에 넣지 않는다
+🔴 분모 주의 — 라이브 25쌍(SAME 17 · DIFF 8) ↔ 저장 GT 33쌍(SAME 18 · DIFF 9)은 **다른 분모** 다.
+  🔴 어느 숫자도 **Identity 시스템 전체 성능이 아니다**.
+  🔴 C06 은 이 fixture 에서 **SAME**(CEO 조서 2026-10-27 재라벨)이다.
 
 🔴 금지(그대로)  A · B · 점수/threshold · 새 blocker · **Legacy GT 수정** ·
-  `priceTierFromLink` · `SIMILAR → textOnly` 완화 · **가격 안전장치 완화**(강화는 허용) ·
-  `descriptionScore → SAME` · **상세설명 Model Code 긍정 승격** · 색상사전 확대 ·
-  패턴/소매 축 신설 · 국내 REFERENCE 신설 · Search 공급량/provider · DB/Migration ·
-  테스트 기대값 수정 · 새 네트워크/과금 · 사람 판정 이력 삭제 ·
-  `human_verdict` → MI/가격/알림/등록 payload
+  `priceTierFromLink` · `OBSERVED_DIFFERENCE_BLOCKERS` · `SIMILAR → textOnly` 완화 ·
+  **가격 안전장치 완화**(강화는 허용) · `descriptionScore → SAME` · 상세설명 Model Code 긍정 승격 ·
+  AC↔AB 완화 · 소매 축 · PATTERN → 판정/blocker · 국내 REFERENCE 신설 ·
+  Search 공급량/provider · DB/Migration · 테스트 기대값 수정 · 새 네트워크/과금 ·
+  사람 판정 이력 삭제 · 후보 숨김 · `human_verdict` → MI/가격/알림/등록 payload
+
+🔴🔴 **두 가지 작업 수칙**(이번 세션에 각각 한 번 밟았다)
+  ⒜ 미커밋 구현의 복구 수단으로 **`git checkout --` 를 쓰지 않는다** — 구현이 날아간다.
+     변이는 **파일 백업 → 복구** 로 돌린다(md5 로 확인)
+  ⒝ 한국어가 든 블록을 **heredoc(python/bash)으로 쓰지 않는다** — 글자가 깨진다. Write/Edit 로 쓴다
+  ⒞ 변이 **적용 확인** 은 「원본에도 있는 문자열」로 세지 않는다 — **증가/감소** 로 센다
 ```
 
 ---
