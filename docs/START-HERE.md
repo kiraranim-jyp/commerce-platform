@@ -8,57 +8,63 @@
 
 ---
 
-## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-04 · STAGE 4-G-R1 종료)
+## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-04 · STAGE 4-G-R2 종료)
 
 ```
-좌표   STAGE 4-G  C 배포 · A HOLD · B **NO-GO 확정** · R1 분석 **종료**
+좌표   C 배포 · A **HOLD(판정 하나로 좁혀짐)** · B **NO-GO 확정** · R1·R2 분석 **종료**
        🔴 **조사·구현·측정 전부 끝났다. 다시 하지 않는다.**
-       🔵 **다음 한 수 = CPO 가 A 를 ①CONTRACT REVISION 승인 / ②영구 보류 중 고르는 것**
-          (B 는 측정으로 닫혔다 · CTO 코드 작업 **없음**)
+       🔵 **다음 한 수 = CPO 가 «질문 하나» 에 답하는 것** (CTO 코드 작업 **없음**)
 
-전문   `docs/STAGE4G-R1-REGRESSION-IMPACT.md`   ← 표 4개 + 10문 답. **먼저 읽는다**
-보조   `docs/STAGE4G-IDENTITY-POLICY-01.md`     ← 1차 측정(되돌리는 diff 3줄 · 계약 39건 전수)
+전문   `docs/STAGE4G-R2-POLICY-A-BUSINESS-IMPACT.md`  ← 표 D + 조사 A/B/C. **먼저 읽는다**
+보조   `docs/STAGE4G-R1-REGRESSION-IMPACT.md`         ← 39건 분류 + B NO-GO 근거
+       `docs/STAGE4G-IDENTITY-POLICY-01.md`           ← 되돌리는 diff 3줄
 
-🔴🔴🔴 R1 의 결론 한 줄 — **B 는 FP 를 한 건도 줄이지 않고 TP 만 2건 지운다**
-  CORE-SAME-05 GT   SAME **6/18 → 4/18** · FN 12 → 14 · **FP 1 → 1**
-  WU-068 통합 GT    EXACT **16 → 14** · 🔴 **잃은 2건이 둘 다 true SAME** ·
-                    precision **87.5% → 85.7%** · recall **37.8% → 32.4%**(둘 다 악화)
-  ⟹ 🔴 **B NO-GO 확정.** 다시 열지 않는다
+🔵🔵 **CPO 가 답할 질문은 하나다**
+  「**교차판매처의 제목 불일치를 정상으로 보던 불변식(p4)을,
+    Generic-only 추정 금지(A)와 바꿀 것인가.**」
+  🔴 그 둘은 **같은 축의 양 끝** 이고 동시에 가질 수 없다
+  🟡 CTO 권고 = **C → B**(C 는 R2 에서 이미 충족 · 「A 영구 보류」는 권고하지 않는다)
 
-🔴🔴 그리고 **B 의 두 조각이 서로의 손실을 «상쇄만» 한다**(이것이 NO-GO 의 구조적 이유)
-  B-1 (COLOR +1 제거)        TP 6→**4** · C42(human SAME) **EXACT 이탈** · FP 1
-  B-2 (COLOR_VARIANT 제거)   TP 6 유지 · 🔴 **C25(human DIFFERENT)가 SAME·EXACT 유입** · FP 1→**2**
-  A+B                        TP **4** · C25 는 다시 막히지만 **C42 는 죽은 채 남는다**
-  ⟹ 어떤 조합에도 **순이득이 없다** · 🔴 그래서 「COLOR 만 빼기」도 불가다
+🟢🟢 R2 가 R1 을 정정했다 — **둘 다 A 에 유리한 방향이다**
+  ⒜ 「CF-3 증거가 약해진다」 → 🔴 **틀렸다.** A 는 CF-3 **False SAME 4건을 제거** 하고
+     **true SAME 20 → 20(손실 0)** · precision **55.6% → 62.5%(개선)**
+     🟢 빠지는 4건은 **전부 파생쌍** · 사람이 직접 라벨한 쌍 **0건**
+     🔴 단 wu-066 핀 **둘** 이 깨진다(`>=16` · `prec<60`) ⟹ 상대 비교로 **재도출** 필요
+  ⒝ 「운영 TP 측정불가 6건」 → 🔴 **과했다. 구조적으로 1건** 이었고 그 1건도 닫혔다
 
-🔴 **STAGE 4-G 보고 2건을 R1 이 정정했다**
-  ⒜ C42 하락은 **A 가 아니라 B-1** 의 효과다 — A 단독에서 C42 는 **EXACT 그대로**
-  ⒝ A 가 잃는 1쌍(`430700↔B226AC112`)의 **가격 영향은 0** 이다
-     (`goesIntoSameProductPrice` 가 **이미 false** · 실측)
+🟢🟢🟢 **A 의 운영 TP 비용 = 순 0 으로 «확정»** (재수집 0 · 네트워크 0 · 과금 0)
+  저장 `blockers` 가 답을 갖고 있었다 — `NO_TITLE_OVERLAP` **부재 ⟺ TITLE 축 존재**
+  (운영 owner 가 상호배타 전수다) ⟹ `hasIdentifyingEvidence` 참 ⟹ **A 가 못 건드린다**
+  TP-06·17·21 TITLE 축 보유 · TP-23·25·26 **SAME 경로**(A 는 PRESUMED_SAME 만 건드린다)
+  ⟹ **6/7 영향 0 확정**
+🔴🔴 그리고 마지막 1건은 **GT 모순쌍** 이다 — `TP-16` 과 `FP-20` 이 **같은 쌍** 인데 라벨이 반대
+  `B226AC009 :: villagekids.co.uk/products/pale-blue-3d-logo-t-shirt`
+  09:05 human **DIFFERENT** → 16:29 human **SAME** · **다른 칸은 전부 동일**
+  ⟹ 🟢 A 가 차단하면 **TP −1 그리고 FP −1 ⟹ 순 0**
 
-🟡 A 의 현재 상태 — **CONTRACT REVISION 대기**
-  🟢 이득  Generic-only 운영 FP **9/9 차단**(Hugo Boss·Levi's·Marc Jacobs 가 동일상품 후보로 서는 것)
-  🟢 비용  CORE-SAME-05 GT **한 칸도 안 움직인다**(TP 6 · FN 12 · FP 1 불변) · 가격 영향 **0**
-  🔴 대가  회귀 **7건** — 운영 판정 변화는 **1쌍뿐** 이고 나머지는 소스 앵커 1 + 반사실 4
-  🔴 그중 **폐기해야 하는 «진짜 불변식» 이 1건** — `p4-candidate-truth-gate`
-     「다른 판매처 쌍은 영향이 없다」(MI-DISCOVERY-P4 가 실제로 넣었다 되돌린 대조군)
-  🔴 그리고 `wu-066` CF-3 근거가 **16 → 12** 로 약해진다(재해석은 CPO 몫)
+🔵🔵 **부수 발견(별도 과제 · 이번에 고치지 않았다)** — `candidate_reviews` 에
+  **모순 감지/해소 경로가 없다.** 나중 라벨이 이전 것을 **덮지 않고 둘 다 남는다**
+  ⟹ 🔴 3순위(「후보 검토 → GT 누적 → MI 개선」)의 **전제가 흔들린다** — 쌓을수록 모순이 누적된다
+  🔴 schema/정책 영역이라 **CPO 판정 사안** 이다
 
-🔴 측정불가(그대로 남는다 · 0 으로 세지 않는다)
-  ⒜ 운영 TP 7 중 **6 이 근거 문장 없는 맨몸 행** ⟹ A 의 **운영 recall 비용 측정불가**
-  ⒝ `430700↔B226AC112` 의 **human 라벨이 없다** ⟹ A 가 잃는 1건이 TP 인지 미확정
-  ⒞ B-1/B-2 조각별 값은 **CORE-SAME-05 한 분모에서만** 쟀다
+🟢 A 의 수지(실측 · 다시 재지 않는다)
+  이득  Generic-only 운영 FP **9/9 차단**(Hugo Boss·Levi's·Marc Jacobs 가 동일상품 후보로 서는 것)
+  비용  가격 영향 **0** · `CORE-SAME-05` **6/12/1 불변** · `wu-068` EXACT **16 그대로** ·
+        `wu-059` EXACT **12 그대로** · 운영 TP **순 0**
+  대가  회귀 **7건** — 🔴 진짜 폐기 **1건**(p4 불변식) · wu-066 핀 **2 재도출** ·
+        반사실 **4**(wu-064/065/066/068) · 소스 앵커 **1**(core-2ad)
+  🔴 역위험 1 — 반사실 결합 CF 승격이 `[C47]` → **`[C08, C47]`**(C08 = human DIFFERENT · 운영 0)
 
-🟢 Variant 정책의 선행 조건(Q7 답) — **새 증거가 먼저다**
-  C25 를 «색 말고 다른 축» 으로 막을 수단이 **없다** — 품번이 원상품과 **같고**(AW26MS185)
-  색 칸이 `sweatshirt in graystone`(**제목 유래 오염값** · STAGE 4-D)
-  ⟹ 🔴 COLOR 를 corePoints 에서만 빼는 안도 **C42 를 같이 죽인다** ⟹ 효과 0
+🔴 측정불가(0 으로 세지 않는다)
+  ⒜ `430700↔B226AC112` **human 라벨 없음** ⟹ A 가 잃는 1쌍이 TP 인지 미확정(🟢 가격 영향 0 확정)
+  ⒝ `TP-16/FP-20` 모순쌍의 **올바른 라벨** — 사람 판단
+  ⒞ 운영 분모 21 은 **「사람 판정이 있는 행 전수」** 다 ⟹ 「전체 FP 9 감소」로 일반화 금지
 
-🔴 금지(그대로 유효)  DISTINCTIVE NAME 추출 · PRODUCT FORM · PATTERN · DESCRIPTION 판정 ·
-        BRAND_MISMATCH 승격 · SAME/PRESUMED threshold · Search/Provider/Proxy · 가격 · UI ·
-        DB/migration · **Legacy GT 수정** · TITLE 전체를 Generic 취급 · IMAGE 삭제 ·
-        `isColorUnverified` 완화 · COLOR **충돌**(색조 불일치) 제거 ·
-        🔴 **테스트를 통과시키기 위한 기대값 변경**
+🔴 금지(그대로 유효)  A 구현 · B 구현 · DISTINCTIVE NAME · PRODUCT FORM · PATTERN ·
+        DESCRIPTION 판정 · BRAND_MISMATCH 승격 · SAME/PRESUMED threshold · Search/Provider ·
+        가격 · UI · DB/Migration · **Legacy GT 수정** · TITLE 전체를 Generic 취급 ·
+        IMAGE 삭제 · `isColorUnverified` 완화 · COLOR **충돌** 제거 ·
+        🔴 **테스트를 통과시키기 위한 기대값 변경** · 🔴 **새 네트워크 요청/과금**
 ```
 
 ---
