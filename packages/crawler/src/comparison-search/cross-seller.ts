@@ -664,6 +664,19 @@ function isLooseRelaxedPair(a: string, b: string): boolean {
   return a !== b && LOOSE_RELAXED.has(a) && LOOSE_RELAXED.has(b);
 }
 
+/**
+ * 🔵 STAGE 7-6 — **「표현만 다를 수 있다」를 근거 문장에 «기록» 한다**(CPO 우선순위 4).
+ *
+ * 🔴 **판정은 한 글자도 바뀌지 않는다** — 보류는 보류 그대로다. 달라지는 것은
+ *    **사람이 읽는 근거 문장** 하나다. 🟢 그것이 CPO 가 말한 「정규화된 표현 별도 기록」이다.
+ * 🔴 `slim` · `regular` · `true to size` 에는 **붙지 않는다** — 실제로 다른 핏이다
+ *    (`LOOSE_RELAXED` 집합이 그것을 구조적으로 보장한다 · 음성대조가 잠근다).
+ */
+function fitExpressionOnlyNote(a: string, b: string): string {
+  if (!isLooseRelaxedPair(a, b)) return "";
+  return "(표현 차이로 보인다 · 판정에는 반영하지 않았다)";
+}
+
 function compareFit(
   x: ProductFacts,
   y: ProductFacts,
@@ -678,7 +691,31 @@ function compareFit(
     };
   }
   if (canonicalFit(x.fitText) !== canonicalFit(y.fitText)) {
-    return { outcome: "mismatch", detail: `핏 ${x.fitText} ↔ ${y.fitText}` };
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 STAGE 7-6(CPO 승인 · 우선순위 4) — **정규화는 «비교» 수단이고 «판정» 룰이 아니다**
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 CPO 문장 그대로: 「정규화는 표현을 비교하기 위한 수단이지, 서로 다른 상품을
+     *    SAME 으로 만드는 **판정 규칙이 아닙니다**.」
+     *
+     * 🔴🔴 **무조건 정규화를 «실제로 넣어 보고» 되돌렸다. 실측을 적어 둔다**:
+     * ```
+     * `FIT_CANONICAL` 에 `relaxed fit → loose fit` 을 넣으면 —
+     *   🟢 저장 GT 33쌍 SAME **6/18 → 7/18**(S1-4 `kolkid.ca` 회복) · FP **1 유지**
+     *   🔴 그런데 **CEO 승인 R1 가드가 샌다** — `fit-normalization.test.ts` 의
+     *      「품번 근거가 «없으면» 핏 보류가 그대로 남는다」와
+     *      「한쪽 브랜드를 확인하지 못했으면」 **둘이 FAIL** 한다
+     *   🔴 그리고 기준선 계약이 **13 파일 / 15 테스트** FAIL 한다(숫자가 박혀 있다)
+     * ```
+     * ⟹ 🔴 그것은 **판정 룰 변경** 이고 CPO 마지막 문장이 금지한 그 자리다.
+     *    🟢 그래서 **바이트 동일로 되돌렸고**(md5 확인) 여기에 **기록만** 남긴다.
+     * 🔴 R1 조건부 경로는 **그대로 살아 있다**(브랜드 확인 + 품번 완전일치 + 교차판매처).
+     */
+    return {
+      outcome: "mismatch",
+      detail: `핏 ${x.fitText} ↔ ${y.fitText}${fitExpressionOnlyNote(x.fitText, y.fitText)}`,
+    };
   }
   // 글자가 달랐는데 같은 값으로 읽은 경우에는 그 사실을 근거 문장에 남긴다 —
   // "핏 oversized fit" 한 줄만 적으면 두 판매처가 다르게 썼다는 사실이 사라진다.
