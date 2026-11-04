@@ -8,63 +8,71 @@
 
 ---
 
-## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-04 · STAGE 4-G-R2 종료)
+## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-04 · STAGE 4-H 종료)
 
 ```
-좌표   C 배포 · A **HOLD(판정 하나로 좁혀짐)** · B **NO-GO 확정** · R1·R2 분석 **종료**
+좌표   C 배포 · A **HOLD(Ⓑ 선행 조건)** · B **NO-GO** · R1·R2·4-H 분석 **종료**
        🔴 **조사·구현·측정 전부 끝났다. 다시 하지 않는다.**
-       🔵 **다음 한 수 = CPO 가 «질문 하나» 에 답하는 것** (CTO 코드 작업 **없음**)
+       🔵 **다음 한 수 = CPO 가 Ⓐ(어휘) 승인 여부를 고르는 것** (CTO 코드 작업 **없음**)
 
-전문   `docs/STAGE4G-R2-POLICY-A-BUSINESS-IMPACT.md`  ← 표 D + 조사 A/B/C. **먼저 읽는다**
-보조   `docs/STAGE4G-R1-REGRESSION-IMPACT.md`         ← 39건 분류 + B NO-GO 근거
-       `docs/STAGE4G-IDENTITY-POLICY-01.md`           ← 되돌리는 diff 3줄
+전문   `docs/STAGE4H-PRICE-ELIGIBILITY-ARCHITECTURE.md`  ← 7조사 + 선택지 Ⓐ/Ⓑ/Ⓒ. **먼저 읽는다**
+보조   `docs/STAGE4G-R2-POLICY-A-BUSINESS-IMPACT.md` · `docs/STAGE4G-R1-REGRESSION-IMPACT.md`
+       `docs/STAGE4G-IDENTITY-POLICY-01.md`(되돌리는 diff 3줄)
 
-🔵🔵 **CPO 가 답할 질문은 하나다**
-  「**교차판매처의 제목 불일치를 정상으로 보던 불변식(p4)을,
-    Generic-only 추정 금지(A)와 바꿀 것인가.**」
-  🔴 그 둘은 **같은 축의 양 끝** 이고 동시에 가질 수 없다
-  🟡 CTO 권고 = **C → B**(C 는 R2 에서 이미 충족 · 「A 영구 보류」는 권고하지 않는다)
+🔵🔵 **최상위 전략(CPO LOCK · 2026-11-04)** — 100% 동일상품 증명이 목적이 «아니다»
+  후보 발견 **Recall 우선** · Identity 는 **가능성 구분** · 가격은 **eligibility 구분** ·
+  유사상품은 **버리지 않고 참고로** · 최종 결정은 **셀러**
 
-🟢🟢 R2 가 R1 을 정정했다 — **둘 다 A 에 유리한 방향이다**
-  ⒜ 「CF-3 증거가 약해진다」 → 🔴 **틀렸다.** A 는 CF-3 **False SAME 4건을 제거** 하고
-     **true SAME 20 → 20(손실 0)** · precision **55.6% → 62.5%(개선)**
-     🟢 빠지는 4건은 **전부 파생쌍** · 사람이 직접 라벨한 쌍 **0건**
-     🔴 단 wu-066 핀 **둘** 이 깨진다(`>=16` · `prec<60`) ⟹ 상대 비교로 **재도출** 필요
-  ⒝ 「운영 TP 측정불가 6건」 → 🔴 **과했다. 구조적으로 1건** 이었고 그 1건도 닫혔다
+🟢🟢🟢 4-H 의 답 — **CPO 4단계 신뢰도 분리는 «이미 코드에 있다»**
+  tier EXACT      = 동일상품 가격      · 🟢 가격 «판정» 입력 (market-intelligence:747 「EXACT 뿐이다」)
+  tier COMPARISON = 동일상품 **추정** 가격 · 🔴 판정 입력 X · 🟢 표시 O   ← PRESUMED_SAME
+  tier REFERENCE  = 유사상품 참고 가격  · 🟡 **해외만**(국내 버킷은 EXACT|COMPARISON 만)
+  tier EXCLUDED   = 가격 비교 불가
+  🟢 `crossSellerReserved`(match-truth:233)가 **그 분리의 구현체** 다 —
+     「추정은 품번이 exact 여도 EXACT 가 못 된다」 ⟹ CF-3 폐기와 **같은 문장** 이다
 
-🟢🟢🟢 **A 의 운영 TP 비용 = 순 0 으로 «확정»** (재수집 0 · 네트워크 0 · 과금 0)
-  저장 `blockers` 가 답을 갖고 있었다 — `NO_TITLE_OVERLAP` **부재 ⟺ TITLE 축 존재**
-  (운영 owner 가 상호배타 전수다) ⟹ `hasIdentifyingEvidence` 참 ⟹ **A 가 못 건드린다**
-  TP-06·17·21 TITLE 축 보유 · TP-23·25·26 **SAME 경로**(A 는 PRESUMED_SAME 만 건드린다)
-  ⟹ **6/7 영향 0 확정**
-🔴🔴 그리고 마지막 1건은 **GT 모순쌍** 이다 — `TP-16` 과 `FP-20` 이 **같은 쌍** 인데 라벨이 반대
-  `B226AC009 :: villagekids.co.uk/products/pale-blue-3d-logo-t-shirt`
-  09:05 human **DIFFERENT** → 16:29 human **SAME** · **다른 칸은 전부 동일**
-  ⟹ 🟢 A 가 차단하면 **TP −1 그리고 FP −1 ⟹ 순 0**
+🔴🔴🔴 **그런데 분리가 «하나» 안 돼 있다 — 그것이 4-H 의 핵심**
+  `matchTruth` 한 칸이 **셋을 동시에** 결정한다:
+     priceTierFromLink(가격) · domesticMatchDisplay(배지) · **isDefaultVisibleTier(기본 노출)**
+  ⟹ 🔴 「추정 근거를 거두는」 변경이 **자동으로 「후보를 화면에서 내리는」 변경** 이 된다
 
-🔵🔵 **부수 발견(별도 과제 · 이번에 고치지 않았다)** — `candidate_reviews` 에
-  **모순 감지/해소 경로가 없다.** 나중 라벨이 이전 것을 **덮지 않고 둘 다 남는다**
-  ⟹ 🔴 3순위(「후보 검토 → GT 누적 → MI 개선」)의 **전제가 흔들린다** — 쌓을수록 모순이 누적된다
-  🔴 schema/정책 영역이라 **CPO 판정 사안** 이다
+🔴🔴 **그래서 R2 의 A 권고를 정정한다** — A 는 후보를 SIMILAR 로 내리지 «않는다»
+  A → PRESUMED_SAME→SIMILAR → `deriveMatchTruth` 의 `SIMILAR → textOnly` →
+  level **low**(운영 전건 · WU-088) → **INSUFFICIENT_EVIDENCE** →
+  tier **EXCLUDED** · 배지 **UNKNOWN** → `isDefaultVisibleTier` **false**
+  ⟹ 🔴🔴 **기본 화면에서 내려가고 참고 가격도 되지 못한다**
+  ⟹ 🔵 **권고 수정: `Ⓑ 분리` 없이는 A 를 적용하지 않는다**
+  🟢 그 `SIMILAR → textOnly` 줄은 **올바르다**(P0-A.29-F R1 실측: 그 경로로 다른 신발 10건이
+     「비교 가능한 유사상품」으로 섰다) ⟹ **완화하면 그 사고가 돌아온다**
 
-🟢 A 의 수지(실측 · 다시 재지 않는다)
-  이득  Generic-only 운영 FP **9/9 차단**(Hugo Boss·Levi's·Marc Jacobs 가 동일상품 후보로 서는 것)
-  비용  가격 영향 **0** · `CORE-SAME-05` **6/12/1 불변** · `wu-068` EXACT **16 그대로** ·
-        `wu-059` EXACT **12 그대로** · 운영 TP **순 0**
-  대가  회귀 **7건** — 🔴 진짜 폐기 **1건**(p4 불변식) · wu-066 핀 **2 재도출** ·
-        반사실 **4**(wu-064/065/066/068) · 소스 앵커 **1**(core-2ad)
-  🔴 역위험 1 — 반사실 결합 CF 승격이 `[C47]` → **`[C08, C47]`**(C08 = human DIFFERENT · 운영 0)
+🔴🔴 **어휘 불일치 1건 — 지금 셀러가 오해할 수 있다**
+  같은 `TEXT_CONFIRMED` 를 두 곳이 다르게 부른다:
+     후보 카드 `match-display` TIERS.PRESUMED_SAME = 🟢 **「동일상품 추정」**(정확)
+     가격 집계 `overseas-reference` TIER_LABEL.COMPARISON = 🔴 **「유사상품」**(과소)
+  🟢 국내는 이미 막았다(`CORE-2U-A` 가 `showTierNote` 로 껐다 — CEO 가 본 「유사상품 1」)
+  🔴 **기본값이 true 라 해외에는 그대로 살아 있다**
 
-🔴 측정불가(0 으로 세지 않는다)
-  ⒜ `430700↔B226AC112` **human 라벨 없음** ⟹ A 가 잃는 1쌍이 TP 인지 미확정(🟢 가격 영향 0 확정)
-  ⒝ `TP-16/FP-20` 모순쌍의 **올바른 라벨** — 사람 판단
-  ⒞ 운영 분모 21 은 **「사람 판정이 있는 행 전수」** 다 ⟹ 「전체 FP 9 감소」로 일반화 금지
+🔵 선택지(🔴 CTO 는 구현 0 · 고르지 않았다) — 전문 §8
+  Ⓐ **어휘만 정합**  🟢 **READY** — 판정 0 · 점수 0 · eligibility 0 · 계약 1~2건
+  Ⓑ **노출 등급 ↔ 가격 등급 분리**  🟡 CONTRACT REVISION — A 의 **선행 조건**
+     🟢 선례가 있다 — `priceTierWithVerifiedSame`(「matchTruth 를 안 건드리고 tier 만 덮는다」)
+  Ⓒ 국내 REFERENCE 축 신설  🔴 **NO-GO(지금)** — 가격 집계 구조 변경 · §00-B 충돌
+  🔵 CTO 권고 = **Ⓐ 먼저 → Ⓑ 측정 → 그 뒤 A**
 
-🔴 금지(그대로 유효)  A 구현 · B 구현 · DISTINCTIVE NAME · PRODUCT FORM · PATTERN ·
-        DESCRIPTION 판정 · BRAND_MISMATCH 승격 · SAME/PRESUMED threshold · Search/Provider ·
-        가격 · UI · DB/Migration · **Legacy GT 수정** · TITLE 전체를 Generic 취급 ·
-        IMAGE 삭제 · `isColorUnverified` 완화 · COLOR **충돌** 제거 ·
-        🔴 **테스트를 통과시키기 위한 기대값 변경** · 🔴 **새 네트워크 요청/과금**
+🟢 그리고 **이미 전략대로 동작하는 것**(다시 조사하지 않는다)
+  다른 색상·사이즈 후보 보존 🟢 — `COLOR_VARIANT` 는 SAME 만 막고 CONFLICT 로 안 내린다 ·
+  `SIZE_SYSTEM` 비차단(WU-045) · 해외 `SAME_MODEL_OPTION_DIFF` 「옵션 다름 — 참고 가격」 기본 노출
+  🔴 국내엔 그 등급이 **없다**(옵션 데이터 부재 · 코드 결함 아님)
+  ⑧ 비용 게이트 ↔ 노출 결합 🟢 **이미 분리됨**(「되살린 것은 평가가 아니라 표시뿐」 · 추가 HTTP 0)
+
+🔴 측정불가 — ⒜ Generic-only 9건의 `confidence`(fixture 에 칸 없음) ⒝ `TIER_LABEL` 의 실제
+  화면 자리(따져 화면은 CTO 가 볼 수 없다) ⒞ Ⓑ 가 깨는 계약 수(구현 금지라 미측정)
+  ⒟ 국내 「옵션만 다름」 부재의 분모
+
+🔴 금지(그대로 유효)  A 구현 · B 구현 · 점수/threshold · 새 blocker · **Legacy GT 수정** ·
+  Search/Provider · 가격 집계 구조 · UI 임의 변경 · DB/Migration · **테스트 기대값 수정** ·
+  **새 네트워크 요청/과금** · `isColorUnverified` 완화 · COLOR **충돌** 제거 ·
+  🔴 `deriveMatchTruth` 의 `SIMILAR → textOnly` 완화(2026-09-20 사고가 돌아온다)
 ```
 
 ---
