@@ -232,6 +232,32 @@ export interface CandidateOverseasPriceRecord {
    *    막으면 **기존 후보가 조용히 사라진다**(이 파일의 기존 원칙).
    */
   priceStatus?: string | null;
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 STAGE 7-2(CPO 승인 · 실행 우선순위 2) — **노출 등급 ↔ 가격 «자격» 분리**
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 CPO 과제 원문: 「`PRESUMED_SAME → TEXT_CONFIRMED → COMPARISON` 경로가
+   *    **DIFFERENT 사례를 금액 집계로 유입** 시키는 문제를 해결하라. 🔴 후보를
+   *    **숨겨서** 해결하지 말고 **노출은 유지하고 가격의 의미와 집계 자격을 분리** 하라.」
+   *
+   * 🟢🟢 **새 축을 만들지 않았다.** 쓰는 술어는 **이미 있는 `hasObservedDifference`** 다 —
+   *    「양쪽에서 **서로 다른 값을 읽었다**」와 「**읽지 못했다**」를 가르는 owner 이고,
+   *    `BRAND_UNCONFIRMED` 를 **의도적으로 제외** 한다(「모르는 것을 반증으로 쓰지 않는다」).
+   *    🔴 그 분류표(`OBSERVED_DIFFERENCE_BLOCKERS`)를 **한 글자도 고치지 않았다** — Identity 정책이다.
+   *
+   * 🔴 **반사실을 먼저 쟀다**(저장 GT 33쌍 · `stage7-2-price-eligibility-cf.test.ts`):
+   * ```
+   * 현행   사람 SAME 12/18 진입 · 🔴 사람 DIFFERENT 6/9 진입   정밀도 12/18
+   * 적용후 사람 SAME 11/18 진입 · 🟢 사람 DIFFERENT 4/9 진입   정밀도 **11/15**
+   * 바뀌는 행 3 — 🟢 C19·C20(human DIFFERENT) 차단 · 🔴 S1-4(human SAME) 손실 1
+   *   🔵 그 손실의 사유는 `FIT`(`relaxed fit` ↔ `loose fit`)이고 **CPO 우선순위 4
+   *      (FIT 동의어 정규화)가 그것을 되돌린다** ⟹ 두 작업은 연결돼 있다
+   * ```
+   * 🔴🔴 **옵셔널이다 — 넘기지 않으면 동작이 한 글자도 바뀌지 않는다.**
+   * 🔴 **tier·verdict·Identity 판정은 불변** 이다 — 바뀌는 것은 **«금액 자격» 하나** 다.
+   */
+  blockers?: readonly string[] | null;
 }
 
 /**
@@ -245,6 +271,52 @@ const PRICE_ELIGIBLE_VERDICTS = new Set(["SAME", "PRESUMED_SAME"]);
  *    그 값을 **읽기만** 한다 — 가격 신뢰도를 여기서 다시 판정하지 않는다.
  */
 const PRICE_VERIFIED_STATUS = "VERIFIED_CURRENT";
+
+/**
+ * ══════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 STAGE 7-2 — **동일상품 «금액» 자격을 잃는 보류: 「상대가 스스로 다르다고 말한」 셋**
+ * ══════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 **이것은 가격 정책이다. Identity 정책이 아니다.** 그래서 Identity 파일
+ *    (`cross-seller.ts`)이 아니라 **가격 쪽** 에 둔다 — 거기에 두면 「Identity 가
+ *    이 축으로 판정한다」로 읽힌다.
+ * 🟢 그래도 **느슨해질 수 없다** — 계약이 이 집합이 `OBSERVED_DIFFERENCE_BLOCKER_LIST`
+ *    의 **부분집합** 임을 단언한다(Identity 가 「관측된 차이」로 인정하지 않는 것을
+ *    가격이 혼자 차이로 쓰는 일이 **구조적으로 불가능**).
+ *
+ * ── 🔴 왜 `hasObservedDifference` «전체» 를 쓰지 않는가 — 반사실로 갈랐다 ───────
+ * ```
+ * 저장 GT 33쌍 · 금액 자격                      정밀도        재현
+ *   현행                                      12/18 (66.7%)  12/18
+ *   A 전체(hasObservedDifference)              11/15 (73.3%)  🔴 11/18  ← 손실 1
+ *   B 이 집합                                  **12/16 (75.0%)**  🟢 **12/18**  ← 손실 0
+ * ⟹ 🟢 **B 가 A 를 두 축에서 모두 이긴다.** 막는 것은 같고(C19·C20 · human DIFFERENT)
+ *    잃는 것만 없다(A 는 `FIT` 로 S1-4 human SAME 을 잃었다).
+ * ```
+ * 🔴 운영 실측도 같은 방향이다 — A 는 **같은 브랜드·같은 제목** 후보를 떨어뜨렸다:
+ * ```
+ * B226AC033 junioredition 「Bobo Choses Pop Sweatshirt by Bobo Choses」 GBP 58
+ *           VERIFIED_CURRENT · 보류 **[MATERIAL]** 하나
+ * B226AC110 junioredition 「Bobo Choses Embossed T-Shirt by Bobo Choses」 GBP 37
+ *           VERIFIED_CURRENT · 보류 **[MODEL_CODE_AGE_LINE]**
+ *           🔴 그 축(AC↔AB)은 **CEO 가 SAME 이라 라벨한** 축이고 **CPO ③ 가 현행 유지** 다
+ * ```
+ * 🔴 그래서 **표기·정규화·정책 축은 넣지 않았다** — `MATERIAL`·`FIT`·`SIZE_SYSTEM`
+ *    (CPO ④ 동의어 정규화 대상) · `GARMENT_FORM`·`AUDIENCE_LINE`(CPO ⑥ 보류) ·
+ *    `MODEL_CODE_AGE_LINE`(CPO ③ 현행 유지).
+ * 🔴 **집합을 넓히거나 좁히는 것은 제품 정책 변경** 이다 — 코드에서 임의로 고치지 않는다.
+ */
+const PRICE_DISQUALIFYING_BLOCKERS: ReadonlySet<string> = new Set([
+  /** 브랜드를 **읽었고 서로 달랐다**(「확인 못 했다」가 아니다). */
+  "BRAND_MISMATCH",
+  /** 제목이 **하나도 겹치지 않는다** — 겹침이 「없다」는 관측이다. */
+  "NO_TITLE_OVERLAP",
+  /** 🔴 **같은 판매처가 서로 다른 두 상품으로 진열했다** — 판매처 스스로의 선언이다. */
+  "SAME_SELLER_DISTINCT_LISTING",
+]);
+
+/** 🟢 계약이 「부분집합인가」를 검사하는 지점(사본 금지). */
+export const PRICE_DISQUALIFYING_BLOCKER_LIST: readonly string[] = [...PRICE_DISQUALIFYING_BLOCKERS];
 
 export interface CandidateOverseasPriceSummary {
   /** 가격 증거가 있는 해외/UNKNOWN 후보 수. */
@@ -286,6 +358,14 @@ export interface CandidateOverseasPriceSummary {
    * 🟢 이 칸이 있어야 화면이 **「왜 숫자가 줄었는지」** 를 말할 수 있다.
    */
   unverifiedCount: number;
+  /**
+   * 🔵🔵 STAGE 7-2 — **「상품 차이가 관측돼」 금액에서 빠진 수.**
+   *
+   * 🔴 `unverifiedCount`(= 가격을 못 읽었다)와 **다른 사실** 이라 칸을 갈랐다 —
+   *    합치면 화면이 「가격을 못 봤다」와 「다른 상품으로 보인다」를 같은 말로 한다.
+   * 🔴 후보는 **그대로 보인다** — 빠지는 것은 `byCurrency` 하나다.
+   */
+  observedDifferenceCount: number;
 }
 
 export function summarizeCandidateOverseasPrices(
@@ -308,6 +388,8 @@ export function summarizeCandidateOverseasPrices(
   const lowestBySeller = new Map<string, Map<string, number>>();
   /** 🔴 STAGE 7-1 — 금액 집계에서 「가격 미확인」으로 빠진 수(관측용 · 금액에 합치지 않는다). */
   let unverifiedCount = 0;
+  /** 🔵 STAGE 7-2 — **관측된 차이** 때문에 금액에서 빠진 수(관측용 · 금액에 합치지 않는다). */
+  let observedDifferenceCount = 0;
   for (const r of records) {
     byMarket[r.market] = (byMarket[r.market] ?? 0) + 1;
     byPriceTier[r.priceTier] = (byPriceTier[r.priceTier] ?? 0) + 1;
@@ -346,6 +428,23 @@ export function summarizeCandidateOverseasPrices(
      * 🟢 **관측은 지우지 않는다** — `byMarket`·`byPriceTier` 는 위에서 **이미** 세어졌다.
      */
     if (r.verdict != null && !PRICE_ELIGIBLE_VERDICTS.has(r.verdict)) continue;
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 STAGE 7-2 — **「관측된 차이」가 있으면 동일상품 금액으로 쓰지 않는다.**
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 🟢 집합은 `PRICE_DISQUALIFYING_BLOCKERS`(이 파일 머리) 하나이고 **가격 정책** 이다.
+     *    🟢 계약이 그것이 Identity 의 「관측된 차이」 집합의 **부분집합** 임을 단언한다.
+     * 🔴 `BRAND_UNCONFIRMED` 는 **없다** ⟹ 「브랜드를 못 읽었다」로 가격을 지우지
+     *    않는다(실측: 그 사유의 4건이 **사람 SAME** 이다).
+     * 🔴 `MATERIAL`·`FIT`·`MODEL_CODE_AGE_LINE` 도 **없다** — 표기·정규화·정책 축이다.
+     * 🔴 **금액 자격만** 좁힌다 — tier·verdict·노출은 **불변** 이다(CPO: 숨기지 말라).
+     * 🟢 넘기지 않으면(`undefined`) 이 줄이 **아무것도 하지 않는다**(하위호환).
+     */
+    if (r.blockers != null && r.blockers.some((b) => PRICE_DISQUALIFYING_BLOCKERS.has(b))) {
+      observedDifferenceCount += 1;
+      continue;
+    }
     if (r.amount == null || !Number.isFinite(r.amount)) continue;
     /**
      * ══════════════════════════════════════════════════════════════════════
@@ -399,5 +498,12 @@ export function summarizeCandidateOverseasPrices(
       highestAmount: Math.max(...amounts),
     };
   }
-  return { count: records.length, byCurrency, byMarket, byPriceTier, unverifiedCount };
+  return {
+    count: records.length,
+    byCurrency,
+    byMarket,
+    byPriceTier,
+    unverifiedCount,
+    observedDifferenceCount,
+  };
 }

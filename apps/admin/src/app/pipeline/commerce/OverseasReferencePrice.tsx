@@ -149,6 +149,15 @@ export function OverseasReferencePrice({
               {view.unverifiedPriceNote}
             </p>
           )}
+          {/**
+           * 🔵🔵 STAGE 7-2 — **「가격을 못 읽었다」와 「상품 차이가 확인됐다」를 가른다.**
+           *    🔴 한 줄로 합치면 셀러가 두 사실을 같은 말로 읽는다.
+           */}
+          {view.observedDifferenceNote && (
+            <p data-testid="reference-observed-diff" className="text-xs text-muted-foreground">
+              {view.observedDifferenceNote}
+            </p>
+          )}
         </>
       )}
     </section>

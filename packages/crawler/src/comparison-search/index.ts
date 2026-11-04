@@ -65,6 +65,15 @@ export {
   MIN_STRONG_KR_SELLER_SIGNALS,
 } from "./market-evidence";
 export type { MarketEvidence } from "./market-evidence";
+/**
+ * 🔵🔵 STAGE 7-2 — **「관측된 차이」 술어를 barrel 로 내보낸다**(새 규칙 0 · 사본 0).
+ *
+ * 🔴 가격 **집계 자격** 이 그 술어를 읽어야 하고(`candidate-market.ts`), 집계 쪽에
+ *    분류표를 다시 적으면 **둘이 갈라진다**(이 저장소가 반복해 막아 온 「owner 둘」).
+ * 🔴 `OBSERVED_DIFFERENCE_BLOCKERS` 자체는 **Identity 정책** 이라 고치지 않는다 —
+ *    내보내는 것은 **읽는 함수** 뿐이다.
+ */
+export { hasObservedDifference, OBSERVED_DIFFERENCE_BLOCKER_LIST } from "./cross-seller";
 export { extractLooxlooOptions } from "./looxloo";
 export { extractDeuxbebeOptions } from "./deuxbebe";
 /** N-4.18-Q3 PART H-3-4 — dHash 이미지 교차비교(Evidence 저장까지만, confidence/

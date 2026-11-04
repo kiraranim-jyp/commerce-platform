@@ -328,7 +328,7 @@ describe("④ 🔴🔴 해외 축의 격리", () => {
      *     「왜 FAIL 인지」를 구분하지 못했다).
      */
     expect(Object.keys(s).sort()).toEqual(
-      ["byCurrency", "byMarket", "byPriceTier", "count", "unverifiedCount"].sort(),
+      ["byCurrency", "byMarket", "byPriceTier", "count", "unverifiedCount", "observedDifferenceCount"].sort(),
     );
     /** 🔴 통화를 섞은 칸(합계·총액·KRW 환산)이 **하나도 없다**. */
     for (const k of Object.keys(s)) {

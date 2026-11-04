@@ -265,6 +265,7 @@ export async function computeMarketIntelligence(
      * 🔴 **국내 축에도 같이 넘긴다** — CPO ④ 는 시장을 가리지 않는다.
      */
     priceStatus: string | null;
+    blockers: readonly string[] | null;
   }[] = [];
   /**
    * 🔴 WU-056 — **이번 확인으로 들어온 국내 가격** 만 담는다(아래 루프에서 채운다).
@@ -315,6 +316,7 @@ export async function computeMarketIntelligence(
            *    (run-domestic-price-check.ts:359). 🔴 여기서 다시 판정하지 않는다.
            */
           priceStatus: e.priceStatus,
+          blockers: e.crossSellerBlockers,
         });
         if (e.market === "OVERSEAS") geminiPricedCount.overseas += 1;
         else geminiPricedCount.marketUnknown += 1;
@@ -400,6 +402,7 @@ export async function computeMarketIntelligence(
          *    **그대로 남는다**(낡은 저장분 artifact · 집계기 주석 참고).
          */
         priceStatus: e.priceStatus,
+        blockers: e.crossSellerBlockers,
       });
     }
     /** 🔴 REFERENCE/EXCLUDED 는 기존 국내 후보와 **같은 이유로** 가격 버킷에

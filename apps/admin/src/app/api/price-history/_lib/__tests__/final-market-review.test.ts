@@ -147,7 +147,9 @@ describe("FINAL MARKET COMPARISON — CPO 데이터 검토표", () => {
           amount: Number(r.price_amount),
           priceTier: String(r.price_tier ?? "COMPARISON"),
           sellerKey: r.candidate_domain ?? undefined,
-          ...(withStatus ? { priceStatus: r.price_status ?? null } : {}),
+          ...(withStatus
+            ? { priceStatus: r.price_status ?? null, blockers: (r.blockers as string[] | null) ?? null }
+            : {}),
         }));
 
     for (const [label, rs] of [
@@ -167,7 +169,8 @@ describe("FINAL MARKET COMPARISON — CPO 데이터 검토표", () => {
         `   후: ${vAfter ? vAfter.lines.map((l) => `${l.lowest}(${l.scope})`).join(" · ") : "(렌더 안 됨)"}` +
           `   미확인=${after.unverifiedCount}`,
       );
-      console.log(`   후 미확인 줄: ${vAfter?.unverifiedPriceNote ?? "(없음)"}`);
+      console.log(`   후 미확인 줄: ${vAfter?.unverifiedPriceNote ?? "(none)"}`);
+      console.log(`   후 차이 줄:   ${vAfter?.observedDifferenceNote ?? "(none)"}`);
       /** 🔴 관측은 지우지 않는다 — 등급 분포와 후보 수가 **전후 동일** 해야 한다(WU-062 선례). */
       expect(after.count, "🔴 후보 수가 줄었다 — 후보를 숨긴 것이다").toBe(before.count);
       expect(after.byPriceTier, "🔴 등급 관측이 바뀌었다").toEqual(before.byPriceTier);

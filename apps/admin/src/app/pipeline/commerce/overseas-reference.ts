@@ -40,6 +40,11 @@ export interface OverseasPriceSummary {
    *    `highestAmount` 가 추가된 것과 **같은 모양**).
    */
   unverifiedCount?: number;
+  /**
+   * 🔵🔵 STAGE 7-2 — **관측된 상품 차이** 때문에 금액 집계에서 빠진 수.
+   * 🔴 **선택** 이다 — 이 칸이 없는 기존 fixture/호출부도 그대로 돈다(하위호환).
+   */
+  observedDifferenceCount?: number;
 }
 
 /** 🔴 화면 문구는 **여기 하나**만 쓴다 — 두 곳에 적으면 갈라진다. */
@@ -212,6 +217,12 @@ export interface OverseasReferenceView {
    * 🟢 성질이 `unknownMarketNote`(「확인하지 못했다」)와 **같아서** 그 옆에 선다.
    */
   unverifiedPriceNote: string | null;
+  /**
+   * 🔵🔵 STAGE 7-2 — **상품 차이가 관측됐다** 는 사실을 화면이 말한다.
+   * 🔴 `unverifiedPriceNote`(= 가격을 못 읽었다)와 **다른 사실** 이다 — 한 줄로 합치지 않는다.
+   * 🔴 금액을 이 줄에 합치지 않는다 · 🟢 후보는 **그대로 보인다**(숨기지 않는다).
+   */
+  observedDifferenceNote: string | null;
 }
 
 /**
@@ -356,6 +367,16 @@ export function buildOverseasReference(
     unverifiedPriceNote:
       (summary.unverifiedCount ?? 0) > 0
         ? `${summary.unverifiedCount}곳은 가격을 확인하지 못해 위 금액에 넣지 않았습니다.`
+        : null,
+    /**
+     * 🔵🔵 STAGE 7-2 — **「다른 상품」이라고 단정하지 않는다.** 관측된 것은 **차이** 다.
+     *    🔴 그래서 「다른 상품입니다」가 아니라 「**차이가 확인돼**」로 적는다 —
+     *       최종 판단은 셀러가 한다(CPO 표의 마지막 줄).
+     *    🔴 금액을 적지 않는다 · 🟢 후보는 그대로 보인다.
+     */
+    observedDifferenceNote:
+      (summary.observedDifferenceCount ?? 0) > 0
+        ? `${summary.observedDifferenceCount}곳은 상품 차이가 확인돼 동일상품 가격에 넣지 않았습니다.`
         : null,
   };
 }
