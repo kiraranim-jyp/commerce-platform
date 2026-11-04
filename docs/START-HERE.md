@@ -33,16 +33,24 @@
 
 🔵 **지금 CTO 상태 — 구현 중인 것 없음**
    우선순위 5(COLOR/PATTERN 추출 분리)는 **보류**(표준 §9) — 🔴 착수하지 않는다
-   🔵 CPO 지침 1·2 는 **제출 완료** — 표준 §12(5계층 ↔ 코드 매핑) · §13(불일치 9건)
-   🔵 다음은 **CPO 가 §13 집행 순서를 정하는 것** 이다
+   🟢 CPO 지침 1·2 **제출 완료** — 표준 §12(5계층 ↔ 코드 매핑) · §13(불일치 9건)
+   🟢🟢 **CPO 1차 집행(A·C·B) 완료 — 표준 §14**(🔴 운영 코드 변경 0 · enum 0 · DB 0)
 
-🟡 **§13 불일치 중 「동작 변경 0」 으로 닫을 수 있는 후보 둘**(🔴 CTO 가 착수하지 않았다)
-   A 🔴 `CrossSellerVerdict` 에 **`DIFFERENT` 가 없다** — 코드는 `CONFLICT` 다
-     (사람 라벨 `DIFFERENT` ↔ 시스템 `CONFLICT` · `cross-seller.ts:77`)
-   B 🔴 Evidence 상태 enum **부재** — `PRESENT/MISSING/NOT_MEASURED/CONFLICT` 가 코드에 **0**
-     (특히 **`NOT_MEASURED` 가 어디에도 없다** ⟹ ⑤ 「미측정 ≠ 실패 0」을 코드가 말하지 못한다)
-   🔴 C(Identity Signal 계층 부재) · D(`facts.brand` 가 `??` 체인으로 출처를 덮는다) ·
-      G(스타일 코드 칸 없음)도 **구조 부재** 다 — 동작 결함이 아니다
+🔴🔴 **§14-A 가 고정한 것 — 두 판정 체계를 «같은 열에 적지 않는다»**
+   사람 라벨   `SAME` · `SIMILAR` · **`DIFFERENT`** · `UNDECIDED`  (candidate-review.ts:20)
+   시스템      `SAME` · `PRESUMED_SAME` · `SIMILAR` · `UNKNOWN` · **`CONFLICT`**  (cross-seller.ts:77)
+   🔴 `CONFLICT` 는 **조기 반환**(:1041 · `axes: []`) — **점수를 계산하지도 보지도 않는다**.
+      「적어도 한 축에서 **서로 다른 값을 읽었다**」는 **관측** 이고 「다른 상품」 선언이 아니다
+   🔴🔴 **두 값은 서로 번역되지 않는다**(실측) — 사람 DIFFERENT 8 중 `CONFLICT` 는 **2** ·
+      시스템 `CONFLICT` 3 중 **1 은 사람 SAME**(AC↔AB) ⟹ 🔴 enum 에 `DIFFERENT` 를 더해도
+      같아지지 않는다. **「DIFFERENT 방어 N건」을 `CONFLICT` 건수로 적지 않는다**
+   🔴 verdict 문자열을 바꾸면 **저장분·판정·가격 자격·화면이 동시에 움직인다**(§14-A-3)
+
+🟡 **§13 에서 남은 것**(🔴 CTO 가 착수하지 않았다 · CPO 결정)
+   B Evidence 상태 enum — 🔴 **구조 변경 보류** · 선행 결정 셋이 §14-B-3 에 있다
+     (생산자 없음 · 「칸이 없다」는 스키마 사실 · Evidence `CONFLICT` 가 matcher 와 이름 충돌)
+   D `facts.brand` 가 `??` 체인으로 출처를 덮는다 · G 스타일 코드 칸 없음 → **다음 정책 검토**
+   C 는 §14-C 로 **문서 고정 완료**(코드 선언 상수화는 별도 승인)
 
 🟢🟢 **끝난 것 — 재구현 금지**(전부 배포 · push 0/0)
    1 UNVERIFIED 가격 분리 `00ce755d` · 2 노출↔가격 자격 분리 `f38aae43` ·

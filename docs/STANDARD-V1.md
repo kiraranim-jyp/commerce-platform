@@ -392,3 +392,154 @@ IMAGE_DISPLAY_NOTE    후보 카드 이미지                                 �
 이 세션에서 **고치지 않았다** — 전부 §11(「표준에 없는 동작을 임의로 만들지 않는다」)에 따른다.
 🔵 집행 순서는 CPO 가 정한다. 🟡 **A 와 B 는 「동작 변경 0」 으로 닫을 수 있는 후보** 다
 (어휘 사전 · 상태 enum 추가 후 기존 값 매핑). 🔴 CTO 가 착수하지 않았다.
+
+---
+---
+
+# 🔵 §14 (CTO) **1차 집행 — A · C · B**(CPO 지시 2026-11-04 · 🔴 운영 코드 변경 0)
+
+> 🔴 이 절은 **문서 산출물** 이다 — enum 추가 **0** · verdict 변경 **0** · DB **0** ·
+> Identity 점수/blocker **0** · 사람 판정 이력 **0** · 우선순위 5 착수 **0**.
+> 🔴 CPO 가 금지한 「시스템 enum 추가」를 하지 않았다 — **대응 관계만 정의** 한다.
+
+---
+
+## 14-A. **Human Label ↔ System Verdict 용어 사전**
+
+### A-1 🔴 `CONFLICT` 의 실제 의미와 발화 조건 (코드 확인)
+
+```
+생산 자리  cross-seller.ts:1041 — **단 한 곳** 이고 «조기 반환» 이다
+조건       conflicts.length > 0 && !skipConflictReturn
+반환       { verdict: "CONFLICT", **axes: []**, conflicts, blockers, identifierConfirmed: false }
+🔴🔴 그래서 `CONFLICT` 는 **「점수가 낮다」가 아니다** — 점수를 **계산하지도 보지도 않는다**.
+   「적어도 한 축에서 **서로 다른 값을 읽었다**」는 **관측** 이다.
+예외       skipConflictReturn = ageLineDesignMatch && 충돌이 **MODEL_CODE 하나뿐**
+           ⟹ 그때는 조기 반환을 건너뛰고 `MODEL_CODE_AGE_LINE` **blocker** 로 남는다
+           (= SAME 에는 못 닿고 **보류 이하** 다 · AC↔AB 정책의 그 자리)
+충돌 축 6  AUDIENCE · GENDER · CATEGORY · COLOR · MODEL_CODE · COMPOSITION
+```
+
+🔴 **`conflicts`(충돌) ↔ `blockers`(보류)는 다른 배열이고 다른 결과를 낸다** —
+충돌은 **조기 반환(CONFLICT)**, 보류는 **SAME 차단(점수는 계산됨)**.
+
+### A-2 사람 `DIFFERENT` ↔ 시스템 verdict **대응 관계**(실측 · 라이브 25쌍)
+
+| 사람 라벨 | 시스템 verdict | 건수 | 의미 |
+|---|---|---|---|
+| **DIFFERENT 8** | `CONFLICT` | **2** | 🟢 시스템도 「축이 어긋났다」고 말했다(S1-5·S1-6 · 품번 `AC141`) |
+| | `PRESUMED_SAME` | **4** | 🔴 축이 **모자라지 않았고** 충돌도 없었다(C51·C19·C20·C25) |
+| | `SIMILAR` | **1** | 증거가 1점뿐(C22) |
+| | `UNKNOWN` | **1** | 추출 실패(S6-4 · 제목 「concept」) |
+| **SAME 17** | `SAME` | **8** | (7-5 뒤) |
+| | `PRESUMED_SAME` | **6** | 🔴 보류 — 브랜드 공백 · FIT 어휘 등 |
+| | `CONFLICT` | **1** | 🔴 AC↔AB 라인(S1-7 · `AB046`) |
+| | `SIMILAR` | **2** | 현지어 제목(S2-1·S3-1) |
+
+🔴🔴 **그래서 `DIFFERENT` 와 `CONFLICT` 는 서로 번역되지 않는다**:
+```
+사람 DIFFERENT ⊅ 시스템 CONFLICT   — DIFFERENT 8 중 CONFLICT 는 **2** 뿐이다
+시스템 CONFLICT ⊅ 사람 DIFFERENT   — CONFLICT 3 중 **1 은 사람 SAME** 이다(AC↔AB)
+⟹ 🔴 `DIFFERENT` 를 시스템 enum 에 더해도 **그 둘이 같아지지 않는다.**
+   시스템이 내는 것은 **「무엇이 어긋났는가」** 이고 사람이 내는 것은 **「다른 상품인가」** 다.
+```
+
+### A-3 저장 데이터와 소비 코드 영향 (확인)
+
+```
+저장    candidate_reviews.system_verdict (text · 시스템 문자열 그대로)
+        candidate_reviews.human_verdict  🔴 **HUMAN_VERDICTS = SAME · SIMILAR · DIFFERENT · UNDECIDED**
+                                          (candidate-review.ts:20)
+🔴 두 칸은 **서로 덮지 않는다**(기존 계약 · 「그 불일치가 GT 다」)
+🔴 그리고 **값 집합이 애초에 다르다** — 사람에게 `PRESUMED_SAME`·`CONFLICT` 가 **없고**
+   시스템에 `DIFFERENT`·`UNDECIDED` 가 **없다**
+소비    deriveMatchTruth(cross.verdict) · crossSellerReserved(= PRESUMED_SAME) ·
+        PRICE_ELIGIBLE_VERDICTS = { SAME, PRESUMED_SAME } · 화면 tier 라벨
+⟹ 🔴 verdict 문자열을 바꾸면 **저장분 · 판정 · 가격 자격 · 화면** 이 동시에 움직인다
+   (그래서 CPO 가 enum 변경을 금지한 것이 맞다)
+```
+
+### A-4 **표준 §3.1 용어 사전 보완**(이 표가 §3.1 의 각주다)
+
+| 표준 용어 | 누가 내는가 | 코드 값 | 의미 |
+|---|---|---|---|
+| `SAME` | 양쪽 | 시스템 `SAME` / 사람 `SAME` | 🔴 **같은 글자인데 근거가 다르다** — 시스템은 「축 5점 + 무충돌 + 브랜드 확인」, 사람은 육안 |
+| `PRESUMED_SAME` | **시스템만** | `PRESUMED_SAME` | 동일상품 추정 · 🔴 가격은 `COMPARISON` 상한 |
+| `SIMILAR` | 양쪽 | 시스템 `SIMILAR` / 사람 `SIMILAR` | 증거 1점 이상 · 확정 아님 |
+| `DIFFERENT` | **사람만** | 사람 `DIFFERENT` | 🔴 시스템 enum 에 **없다** |
+| `CONFLICT` | **시스템만** | `CONFLICT` | 🔴 「축이 어긋났다」는 **관측** — 「다른 상품」 선언이 아니다 |
+| `UNKNOWN` | **시스템만** | `UNKNOWN` | 근거 부족 |
+| `UNDECIDED` | **사람만** | 사람 `UNDECIDED` | 판단 보류 |
+
+🔴 **보고·문서에서 두 체계를 한 열에 섞어 적지 않는다.** 섞으면 「DIFFERENT 방어 N건」이
+`CONFLICT` 건수로 읽히고, 위 표가 보여 주듯 그 둘은 **2 ↔ 8** 로 어긋난다.
+
+---
+
+## 14-C. **Identity Signal 계층 — 논리적 책임과 코드 owner**
+
+🔴 새 서비스·데이터 모델 **만들지 않았다**(CPO 지시). 아래는 **책임의 정의와 현 owner** 다.
+
+**논리적 책임**(표준 §1 계층 2)
+```
+① 그 Evidence 가 **동일성에 대해 무엇을 말하는가** — 긍정 근거인가 반증인가
+② **단독으로 쓸 수 있는가** — 아니면 어떤 다른 근거와 함께여야 하는가
+③ **없을 때의 의미** — 「모른다」인가 「다르다」인가(표준 §0.3 ③)
+④ **예외 조건** — 그 신호를 내려놓아도 되는 자리와 그 근거
+```
+
+| 축 | ① 의미 | ② 단독 | ③ 부재의 의미 | ④ 예외 | 현 코드 owner |
+|---|---|---|---|---|---|
+| **FIT** | 🔴 **반증 전용** — 같으면 1점, 다르면 보류 | X | **모른다**(`핏 정보 없음` → `unknown`) | 🟡 **R1** — 브랜드 확인 + 품번 완전일치 + 교차판매처면 `loose ↔ relaxed` 를 같게 읽는다 | `compareFit`(:667~) · `FIT_CANONICAL` · `LOOSE_RELAXED` · `isLooseRelaxedPair` · 🔴 **①~④ 가 그 함수 주석에만 있다** |
+| **IMAGE** | 보조 근거 | X | 모른다 | — | 🔴 **「SAME 정원 제외」가 `corePoints` 필터 한 줄**(:1281)뿐 |
+
+🔵 **그래서 C 의 결론**: 계층은 **코드에 존재한다 — 흩어져 있다.** 필요한 것은 새 모듈이
+아니라 **그 네 질문의 답이 한 자리에 적혀 있는 것** 이다. 🔴 이 표가 그 자리다(표준 안).
+🔴 그 이상(코드에 선언 상수를 만드는 것)은 **별도 승인** 이다 — 이번에 하지 않았다.
+
+---
+
+## 14-B. **Evidence 상태 4종 — 개념 정의와 기존 데이터 매핑**(🔴 구조 변경 0)
+
+### B-1 CPO 의 네 질문에 대한 **코드 사실**
+
+| 질문 | 답 |
+|---|---|
+| `NOT_MEASURED` 를 추출기가 기록하는가 | 🔴 **아니다.** 그 상태가 **코드에 없다**(전수 grep 0). |
+| 「추출을 시도하지 않았다」 ↔ 「추출할 칸 자체가 없다」를 구분하는가 | 🔴 **구분하지 않는다.** 둘 다 **항목 부재** 로 같은 모양이다. 🟡 단 **경로 상태**(`ProductUrlFactsResult.status` = `OK`/`UNREACHABLE`/`NOT_PRODUCT_URL`/`REDIRECTED_AWAY`/`NO_FACTS`)는 **있다** ⟹ 「페이지를 못 읽었다」와 「읽었는데 그 칸이 없다」는 **그 칸으로 갈릴 수 있다**(현재 Evidence 층은 그것을 쓰지 않는다). |
+| 기존 `EvidenceItem` 항목 부재와 어떻게 연결하는가 | 현재 `MISSING` 과 `NOT_MEASURED` 가 **같은 표현**(항목이 없음)이다. |
+| `CONFLICT` 는 서로 다른 출처에서 충돌할 때만 쓰는가 | 🔴 **Evidence 층에는 `CONFLICT` 개념이 없다.** 지금 `conflicts`/`blockers` 는 **matcher 층의 «쌍 비교» 결과** 다 ⟹ **「한 상품 안에서 출처가 엇갈림」과 「두 상품을 비교해 어긋남」은 다른 사실** 이고, 전자를 담는 자리가 없다. |
+
+### B-2 **기존 상태 → 표준 4종 매핑**(현행 표현 기준 · 🔴 코드 변경 0)
+
+| 표준 상태 | 현행 표현 | 갈라지는가 |
+|---|---|---|
+| `PRESENT` | `EvidenceItem` 이 **있다**(`{value, source}`) | 🟢 그대로 |
+| `MISSING` | 항목이 **없다** | 🔴 `NOT_MEASURED` 와 **구별 안 됨** |
+| `NOT_MEASURED` | 항목이 **없다** (같은 모양) · 🟡 측정불가 7속성은 **칸 자체가 없다** | 🔴 **표현 수단 없음** |
+| `CONFLICT` | 🔴 Evidence 층 **없음** · matcher 의 `conflicts`(쌍 비교)는 **다른 층의 사실** | 🔴 **자리 없음** |
+
+### B-3 🔴 그래서 **구조 변경을 보류하는 것이 맞다**(CPO 판단과 같은 결론 · 근거)
+```
+① enum 만 추가하면 **전건 PRESENT/MISSING** 으로 채워진다 — `NOT_MEASURED` 를 낼
+   생산자가 없기 때문이다 ⟹ 표준 §0.3 ⑤ 를 **코드가 말하는 척만** 하게 된다
+② 「칸이 없다」(측정불가 7속성)는 **추출기가 아니라 «스키마» 의 사실** 이다 —
+   런타임 상태 enum 으로 표현할 대상인지부터 정해야 한다
+③ Evidence 층 `CONFLICT` 를 만들면 **matcher 의 `conflicts` 와 이름이 겹친다** —
+   §13-A 와 **같은 종류의 어휘 충돌** 을 새로 만드는 셈이다
+⟹ 🔴 CTO 는 enum 을 추가하지 않았다. 선행 결정 셋(①②③)은 **CPO 판단 사안** 이다
+```
+
+---
+
+## 14-D. 🔵 이번 1차 집행이 **고정한 것**과 **열어 둔 것**
+
+```
+🟢 고정   A 용어 사전(§14-A-4) — 두 판정 체계를 **같은 열에 적지 않는다**
+         C Identity Signal 네 질문의 답을 FIT·IMAGE 에 대해 **한 자리에** 적었다
+         B 기존 표현 → 표준 4종 매핑 · **구조 변경 보류 근거 셋**
+🔴 열림   D 브랜드 출처 덮어쓰기 · G Style Code — **다음 정책 검토 대상**(CPO 등록)
+         B 의 선행 결정 셋 · C 의 코드 선언 상수화 — **별도 승인**
+🔴 변경 0 운영 코드 · enum · verdict · DB · Identity 점수/blocker · 사람 판정 이력 ·
+         우선순위 5
+```
