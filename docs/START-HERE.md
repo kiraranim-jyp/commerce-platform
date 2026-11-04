@@ -8,58 +8,57 @@
 
 ---
 
-## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-04 · STAGE 4-G 종료)
+## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-04 · STAGE 4-G-R1 종료)
 
 ```
-좌표   STAGE 4-G **측정 종료 · C 배포** · worktree clean
+좌표   STAGE 4-G  C 배포 · A HOLD · B **NO-GO 확정** · R1 분석 **종료**
        🔴 **조사·구현·측정 전부 끝났다. 다시 하지 않는다.**
-       🔵 **다음 한 수 = CPO 가 ①②③ 중 하나를 고르는 것** (CTO 코드 작업 **없음**)
+       🔵 **다음 한 수 = CPO 가 A 를 ①CONTRACT REVISION 승인 / ②영구 보류 중 고르는 것**
+          (B 는 측정으로 닫혔다 · CTO 코드 작업 **없음**)
 
-전문   `docs/STAGE4G-IDENTITY-POLICY-01.md`  ← 숫자가 전부 여기 있다. 먼저 읽는다.
+전문   `docs/STAGE4G-R1-REGRESSION-IMPACT.md`   ← 표 4개 + 10문 답. **먼저 읽는다**
+보조   `docs/STAGE4G-IDENTITY-POLICY-01.md`     ← 1차 측정(되돌리는 diff 3줄 · 계약 39건 전수)
 
-무엇이 됐는가
-  🟢 C  MODEL CODE 정의(주석) — 「모델 식별 O · 판매 단위 보증 X」 **구현·배포 · 동작 0**
-  🟡 A  Generic 축만으로 PRESUMED_SAME 금지   구현 → 전수 측정 → **되돌렸다**
-  🟡 B  COLOR 를 Identity 에서 제외           구현 → 전수 측정 → **되돌렸다**
+🔴🔴🔴 R1 의 결론 한 줄 — **B 는 FP 를 한 건도 줄이지 않고 TP 만 2건 지운다**
+  CORE-SAME-05 GT   SAME **6/18 → 4/18** · FN 12 → 14 · **FP 1 → 1**
+  WU-068 통합 GT    EXACT **16 → 14** · 🔴 **잃은 2건이 둘 다 true SAME** ·
+                    precision **87.5% → 85.7%** · recall **37.8% → 32.4%**(둘 다 악화)
+  ⟹ 🔴 **B NO-GO 확정.** 다시 열지 않는다
 
-🔴🔴 왜 A·B 를 커밋하지 않았는가 — **헌장 §4-D**
-  구현 상태 전체 회귀 = **28 files / 39 tests FAIL**(HEAD 기준선 0 failed)
-  그 39 중 **25 가 Legacy GT 기준선 가드** 다 — 「기준선 숫자가 그대로다」를 **감지하려고**
-  존재하는 테스트이고, **작업지시서가 「Legacy GT 수정」을 금지** 한다
-  ⟹ CTO 가 그 숫자를 다시 박을 수 없다(§4-D: 계약 변경은 임의 구현 금지 · 분석해 올린다)
+🔴🔴 그리고 **B 의 두 조각이 서로의 손실을 «상쇄만» 한다**(이것이 NO-GO 의 구조적 이유)
+  B-1 (COLOR +1 제거)        TP 6→**4** · C42(human SAME) **EXACT 이탈** · FP 1
+  B-2 (COLOR_VARIANT 제거)   TP 6 유지 · 🔴 **C25(human DIFFERENT)가 SAME·EXACT 유입** · FP 1→**2**
+  A+B                        TP **4** · C25 는 다시 막히지만 **C42 는 죽은 채 남는다**
+  ⟹ 어떤 조합에도 **순이득이 없다** · 🔴 그래서 「COLOR 만 빼기」도 불가다
 
-🟢🟢 안전성 — **새 False SAME 0** (확정됐다)
-  p53 거짓 SAME **10/10 그대로 막힌다** · GT 14 FP **6/7 → 6/7**(불변) ·
-  Legacy DIFFERENT C20·C25 **SAME 으로 안 올라간다**
-  🔴 단 그 안전성은 **A 와 B 를 «같이» 넣어야** 성립한다(B 단독 = WU-043 참사 재발)
+🔴 **STAGE 4-G 보고 2건을 R1 이 정정했다**
+  ⒜ C42 하락은 **A 가 아니라 B-1** 의 효과다 — A 단독에서 C42 는 **EXACT 그대로**
+  ⒝ A 가 잃는 1쌍(`430700↔B226AC112`)의 **가격 영향은 0** 이다
+     (`goesIntoSameProductPrice` 가 **이미 false** · 실측)
 
-🔴 비용 — 측정된 recall 손실
-  GT 14          TP **7/7 유지**(FN 0) · 🔴 C42(human SAME) SAME → **PRESUMED_SAME**
-  wu-068 GT 63   EXACT **16 → 14**            ← 가격비교의 「동일상품」 칸이 바뀐다
-  wu-066 186쌍   CF-3 False SAME **16 → 12**  ← 「CF-3 은 참사」 증거가 약해진다
-  wu-064/065     결합 CF 승격 `[C47]` → **`[C08, C47]`**  (🔴 C08 은 Human DIFFERENT)
-  p4 불변식      🔴🔴 「다른 판매처 쌍은 영향이 없다」가 **깨진다** · **A 단독으로 positive 1건 상실**
+🟡 A 의 현재 상태 — **CONTRACT REVISION 대기**
+  🟢 이득  Generic-only 운영 FP **9/9 차단**(Hugo Boss·Levi's·Marc Jacobs 가 동일상품 후보로 서는 것)
+  🟢 비용  CORE-SAME-05 GT **한 칸도 안 움직인다**(TP 6 · FN 12 · FP 1 불변) · 가격 영향 **0**
+  🔴 대가  회귀 **7건** — 운영 판정 변화는 **1쌍뿐** 이고 나머지는 소스 앵커 1 + 반사실 4
+  🔴 그중 **폐기해야 하는 «진짜 불변식» 이 1건** — `p4-candidate-truth-gate`
+     「다른 판매처 쌍은 영향이 없다」(MI-DISCOVERY-P4 가 실제로 넣었다 되돌린 대조군)
+  🔴 그리고 `wu-066` CF-3 근거가 **16 → 12** 로 약해진다(재해석은 CPO 몫)
 
-🟢 이득 — **운영 분모 하나에만 있다**
-  Generic-only 운영 FP **9건**(「상품군 TOP↔TOP · 색상 BLUE/RED · 대상 KIDS」 · Hugo Boss·Levi's…)
-  🔴 Generic-only TP 0 · 🔴🔴 근거 문장 없는 TP **6/7 은 측정불가**(0 으로 세지 않는다)
-  🔴🔴 **그 9건은 A 로도 B 로도 죽는다** ⟹ **B 의 독립 이득 = 0 · 비용 = 32건**
-       (A-only 회귀 FAIL **7** ↔ A+B **39**)
+🔴 측정불가(그대로 남는다 · 0 으로 세지 않는다)
+  ⒜ 운영 TP 7 중 **6 이 근거 문장 없는 맨몸 행** ⟹ A 의 **운영 recall 비용 측정불가**
+  ⒝ `430700↔B226AC112` 의 **human 라벨이 없다** ⟹ A 가 잃는 1건이 TP 인지 미확정
+  ⒞ B-1/B-2 조각별 값은 **CORE-SAME-05 한 분모에서만** 쟀다
 
-🔵 CPO 판정 ①②③ — 전문 §5. 🔴 **A 와 B 를 «따로» 판정하면 안 된다**(안전성이 결합이다)
-  ① A 만 승인(FAIL 7 · p4 불변식 포기 + positive 1 상실)
-  ② A+B 승인 + **Legacy GT 25건 재박기 명시 승인**(CPO 가 금지를 직접 풀어야 한다)
-  ③ 둘 다 보류 · C 만 유지(**현재 상태** · 운영 FP 9 잔존)
-
-🟢 되돌리는 자리는 **세 줄** 이다 — 전문 §6 에 diff 와 **갱신해야 할 계약 39건 전수** 가 있다
-🟢 `stage4g-identity-policy-01.test.ts` 가 CI 에 상주한다 —
-   `replicationGate`(복제식 ↔ 운영 verdict mismatch **0**) + 정책별 표 + 운영 FP 9 집계
-   🔴 A·B 를 다시 넣으면 그 파일 `C-2` 가 **FAIL 한다** — 그것이 「전문을 읽어라」는 신호다
+🟢 Variant 정책의 선행 조건(Q7 답) — **새 증거가 먼저다**
+  C25 를 «색 말고 다른 축» 으로 막을 수단이 **없다** — 품번이 원상품과 **같고**(AW26MS185)
+  색 칸이 `sweatshirt in graystone`(**제목 유래 오염값** · STAGE 4-D)
+  ⟹ 🔴 COLOR 를 corePoints 에서만 빼는 안도 **C42 를 같이 죽인다** ⟹ 효과 0
 
 🔴 금지(그대로 유효)  DISTINCTIVE NAME 추출 · PRODUCT FORM · PATTERN · DESCRIPTION 판정 ·
         BRAND_MISMATCH 승격 · SAME/PRESUMED threshold · Search/Provider/Proxy · 가격 · UI ·
         DB/migration · **Legacy GT 수정** · TITLE 전체를 Generic 취급 · IMAGE 삭제 ·
-        `isColorUnverified` 완화 · COLOR **충돌**(색조 불일치) 제거
+        `isColorUnverified` 완화 · COLOR **충돌**(색조 불일치) 제거 ·
+        🔴 **테스트를 통과시키기 위한 기대값 변경**
 ```
 
 ---
