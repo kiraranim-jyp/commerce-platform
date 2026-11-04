@@ -139,6 +139,16 @@ export function OverseasReferencePrice({
           {view.unknownMarketNote && (
             <p className="text-xs text-muted-foreground">{view.unknownMarketNote}</p>
           )}
+          {/**
+           * 🔴🔴 STAGE 7-1 — **가격을 확인하지 못한 판매처가 몇 곳인지 말한다.**
+           *    🔴 이 줄이 없으면 집계 분리가 **후보를 숨긴 것처럼** 읽힌다(CPO 금지).
+           *    🔴 문구의 owner 는 `buildOverseasReference` 하나다 — 여기서 만들지 않는다.
+           */}
+          {view.unverifiedPriceNote && (
+            <p data-testid="reference-unverified" className="text-xs text-muted-foreground">
+              {view.unverifiedPriceNote}
+            </p>
+          )}
         </>
       )}
     </section>

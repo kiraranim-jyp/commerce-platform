@@ -315,8 +315,27 @@ describe("④ 🔴🔴 해외 축의 격리", () => {
       EUR: { count: 2, lowestAmount: 90, highestAmount: 100 },
       USD: { count: 1, lowestAmount: 80, highestAmount: 80 },
     });
-    /** 🔴 합계 금액 칸이 **없다**(있으면 통화를 섞었다는 뜻이다). */
-    expect(Object.keys(s)).toEqual(["count", "byCurrency", "byMarket", "byPriceTier"]);
+    /**
+     * 🔴 합계 금액 칸이 **없다**(있으면 통화를 섞었다는 뜻이다).
+     *
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔵🔵 STAGE 7-1 — **칸이 하나 늘었고 그것은 «금액이 아니다»**(의도된 변경)
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔴 `unverifiedCount` 는 **건수** 다 — 금액도, 통화 혼합도, 환산도 아니다.
+     * 🔴 그래서 이 단언을 **느슨하게 하지 않고 «강화»** 한다 — 「키 목록이 같다」
+     *    대신 **「금액/합계/환산을 뜻하는 칸이 하나도 없다」** 를 직접 단언한다
+     *    (키를 더 늘려도 **합계 칸이면 FAIL** 한다 · 전엔 **무엇을 더해도** FAIL 이라
+     *     「왜 FAIL 인지」를 구분하지 못했다).
+     */
+    expect(Object.keys(s).sort()).toEqual(
+      ["byCurrency", "byMarket", "byPriceTier", "count", "unverifiedCount"].sort(),
+    );
+    /** 🔴 통화를 섞은 칸(합계·총액·KRW 환산)이 **하나도 없다**. */
+    for (const k of Object.keys(s)) {
+      expect(k).not.toMatch(/total|sum|krw|converted|환산/i);
+    }
+    /** 🟢 그리고 새 칸은 **숫자(건수)** 이고 금액 범위를 만들지 않는다. */
+    expect(typeof s.unverifiedCount).toBe("number");
   });
 
   it("🔴 DB 에 쓰지 않는다 — 해외 블록에 저장 호출이 없다", () => {

@@ -34,6 +34,12 @@ export interface OverseasPriceSummary {
   byCurrency: Record<string, { count: number; lowestAmount: number; highestAmount?: number }>;
   byMarket: Record<string, number>;
   byPriceTier: Record<string, number>;
+  /**
+   * 🔴🔴 STAGE 7-1 — 금액 집계에서 **「가격 미확인」으로 빠진 수**.
+   * 🔴 **선택** 이다 — 이 칸이 없는 기존 fixture/호출부도 그대로 돈다(하위호환 ·
+   *    `highestAmount` 가 추가된 것과 **같은 모양**).
+   */
+  unverifiedCount?: number;
 }
 
 /** 🔴 화면 문구는 **여기 하나**만 쓴다 — 두 곳에 적으면 갈라진다. */
@@ -198,6 +204,14 @@ export interface OverseasReferenceView {
   tierNote: string | null;
   /** 시장이 `UNKNOWN` 인 후보가 섞여 있으면 그 사실을 적는다(해외로 단정하지 않는다). */
   unknownMarketNote: string | null;
+  /**
+   * 🔴🔴🔴 STAGE 7-1 — **「왜 숫자가 줄었는지」를 화면이 말한다.**
+   *
+   * 🔴 이 줄이 없으면 집계 분리가 **후보를 숨긴 것처럼** 읽힌다(CPO 금지).
+   * 🔴 **금액을 이 줄에 합치지 않는다** — 범위를 만들지 않는다(§11 ④ 명시).
+   * 🟢 성질이 `unknownMarketNote`(「확인하지 못했다」)와 **같아서** 그 옆에 선다.
+   */
+  unverifiedPriceNote: string | null;
 }
 
 /**
@@ -334,5 +348,14 @@ export function buildOverseasReference(
     tierNote: showTierNote && tierParts.length > 0 ? tierParts.join(" · ") : null,
     /** 🔴 `UNKNOWN` 을 「해외」로 적지 않는다 — 시장을 확인하지 못한 것이다. */
     unknownMarketNote: unknown > 0 ? `${unknown}곳은 판매 시장을 확인하지 못했습니다.` : null,
+    /**
+     * 🔴🔴 STAGE 7-1 — **「빠졌다」가 아니라 「확인하지 못했다」로 적는다.**
+     *    🔴 그 후보는 **그대로 보인다**(후보 카드) ⟹ 「제외했습니다」로 적으면 거짓이다.
+     *    🔴 금액을 적지 않는다 — 미확인 금액을 화면에 숫자로 올리지 않는다.
+     */
+    unverifiedPriceNote:
+      (summary.unverifiedCount ?? 0) > 0
+        ? `${summary.unverifiedCount}곳은 가격을 확인하지 못해 위 금액에 넣지 않았습니다.`
+        : null,
   };
 }

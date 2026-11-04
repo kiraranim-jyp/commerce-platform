@@ -133,7 +133,12 @@ describe("FINAL MARKET COMPARISON — CPO 데이터 검토표", () => {
     console.log(`\n⑥ 품절 확인 ${soldOut.length} · 🔴 그중 집계에 가격이 남은 건 ${soldOutPricedInAgg.length}`);
 
     /* ── ⑦ 운영 집계기를 «직접» 불러 화면 문자열을 만든다 ──────────── */
-    const toRecords = (rs: Row[]) =>
+    /**
+     * 🔵🔵 STAGE 7-1 — **`withStatus` 가 「후」 다.** 반사실을 같은 입력에서 두 번 돌려
+     *    CPO 완료 기준 ①③(「UNVERIFIED 가 VERIFIED 집계에 섞이지 않는지」)을 **숫자로** 낸다.
+     * 🔴 운영 레코드가 실제로 넘기는 칸 그대로다(`market-intelligence.ts` 의 두 push).
+     */
+    const toRecords = (rs: Row[], withStatus: boolean) =>
       rs
         .filter((r) => r.price_amount != null && r.price_currency)
         .map((r) => ({
@@ -142,13 +147,32 @@ describe("FINAL MARKET COMPARISON — CPO 데이터 검토표", () => {
           amount: Number(r.price_amount),
           priceTier: String(r.price_tier ?? "COMPARISON"),
           sellerKey: r.candidate_domain ?? undefined,
+          ...(withStatus ? { priceStatus: r.price_status ?? null } : {}),
         }));
 
     for (const [label, rs] of [
       ["🇰🇷 국내", rows.filter((r) => r.market === "KR")],
       ["🌎 해외", rows.filter((r) => r.market !== "KR")],
     ] as const) {
-      const summary = summarizeCandidateOverseasPrices(toRecords(rs) as never);
+      /* 🔵 STAGE 7-1 「전 → 후」 — 같은 입력 · 같은 운영 함수 · 바뀐 것은 칸 하나다. */
+      const before = summarizeCandidateOverseasPrices(toRecords(rs, false) as never);
+      const after = summarizeCandidateOverseasPrices(toRecords(rs, true) as never);
+      const vBefore = buildOverseasReference(before as never, { showTierNote: true });
+      const vAfter = buildOverseasReference(after as never, { showTierNote: true });
+      console.log(`\n🔵 STAGE 7-1 ${label} — 전 → 후`);
+      console.log(
+        `   전: ${vBefore ? vBefore.lines.map((l) => `${l.lowest}(${l.scope})`).join(" · ") : "(렌더 안 됨)"}`,
+      );
+      console.log(
+        `   후: ${vAfter ? vAfter.lines.map((l) => `${l.lowest}(${l.scope})`).join(" · ") : "(렌더 안 됨)"}` +
+          `   미확인=${after.unverifiedCount}`,
+      );
+      console.log(`   후 미확인 줄: ${vAfter?.unverifiedPriceNote ?? "(없음)"}`);
+      /** 🔴 관측은 지우지 않는다 — 등급 분포와 후보 수가 **전후 동일** 해야 한다(WU-062 선례). */
+      expect(after.count, "🔴 후보 수가 줄었다 — 후보를 숨긴 것이다").toBe(before.count);
+      expect(after.byPriceTier, "🔴 등급 관측이 바뀌었다").toEqual(before.byPriceTier);
+
+      const summary = before;
       const view = buildOverseasReference(summary as never, { showTierNote: true });
       console.log(`\n⑦ ${label} — 집계 ${JSON.stringify({ count: summary.count, byPriceTier: summary.byPriceTier })}`);
       if (!view) {

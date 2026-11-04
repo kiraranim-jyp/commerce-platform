@@ -206,6 +206,32 @@ export interface CandidateOverseasPriceRecord {
    *    ⟹ 좁히면 CPO 가 열어 둔 recall 을 닫는다(「국내가 1 → 0」 선례와 같은 성질).
    */
   verdict?: string | null;
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 STAGE 7-1(CPO 승인 · 실행 우선순위 1) — **확인되지 않은 가격은 «확인가» 가 아니다**
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 **실측이 먼저다**(FINAL-MARKET-COMPARISON-REVIEW §7~§9 · 스냅샷 `6cf3e50e`):
+   * ```
+   * 화면이 🌎 `CAD 370 ~ 19,100`(**51배**)을 냈고 그 안에 「**Diesel Viker Jeans**」
+   * (다른 브랜드)가 있었다 · `USD 22,200`(통화 오인 의심) · 7건 중 **6건이
+   * `UNVERIFIED_SEARCH`** 이고, 유일한 `VERIFIED_CURRENT`(junioredition GBP 75)가
+   * **유일하게 원상품과 제목이 일치** 했다.
+   * ```
+   * ⟹ 🔴 **「검색 결과에서 주워 온 숫자」와 「상세 페이지에서 확인한 가격」을 한 범위로
+   *    합치면 안 된다.** 그것이 CPO ① 「£21.20 과 £37 을 합치지 말라」와 같은 뿌리다.
+   *
+   * 🟢 **선례가 WU-062 다** — 「금액(`byCurrency`)에서만 뺀다 · `count`/`byMarket`/
+   *    `byPriceTier` 는 **관측으로 유지**」. 후보는 **하나도 숨기지 않는다**(CPO 명시).
+   *
+   * 🔴🔴 **옵셔널이다 — 넘기지 않으면 동작이 한 글자도 바뀌지 않는다**(`sellerKey`·
+   *    `highestAmount`·`verdict` 가 추가된 것과 **같은 모양**).
+   * 🔴🔴 **`null` 은 막지 않는다.** `derivePriceStatus`(match.ts:568)는 `VERIFIED_CURRENT`
+   *    또는 `UNVERIFIED_SEARCH` **둘만** 낸다 ⟹ `null` 은 **낡은 저장분의 artifact** 이고
+   *    (DB 실측 경계: `10-20~11-01 null 104` → `11-02~03 null 0 · 채워짐 37`),
+   *    막으면 **기존 후보가 조용히 사라진다**(이 파일의 기존 원칙).
+   */
+  priceStatus?: string | null;
 }
 
 /**
@@ -213,6 +239,12 @@ export interface CandidateOverseasPriceRecord {
  * 🔴 집합을 넓히거나 좁히는 것은 **제품 정책 변경** 이다 — 코드에서 임의로 고치지 않는다.
  */
 const PRICE_ELIGIBLE_VERDICTS = new Set(["SAME", "PRESUMED_SAME"]);
+
+/**
+ * 🟢 **확인가의 단일 술어**(STAGE 7-1). 🔴 owner 는 `derivePriceStatus` 이고 이 파일은
+ *    그 값을 **읽기만** 한다 — 가격 신뢰도를 여기서 다시 판정하지 않는다.
+ */
+const PRICE_VERIFIED_STATUS = "VERIFIED_CURRENT";
 
 export interface CandidateOverseasPriceSummary {
   /** 가격 증거가 있는 해외/UNKNOWN 후보 수. */
@@ -243,6 +275,17 @@ export interface CandidateOverseasPriceSummary {
   byMarket: Record<string, number>;
   /** 🟢 동일상품 축(EXACT/COMPARISON)과 참고 축을 가른다 — 승격이 아니라 분류다. */
   byPriceTier: Record<string, number>;
+  /**
+   * 🔴🔴 STAGE 7-1 — **금액 집계에서 «가격 미확인» 으로 빠진 수.**
+   *
+   * 🔴 「후보가 사라졌다」가 아니다 — `count`·`byMarket`·`byPriceTier` 는 **그대로** 세고
+   *    후보 카드도 그대로 선다. 빠지는 것은 **`byCurrency` 하나** 다.
+   * 🔴 그래서 이 수의 의미를 좁게 고정한다 — **「동일상품 가격으로 쓸 자격이 있고
+   *    금액도 있는데 그 금액이 확인되지 않은」** 후보다(EXCLUDED·부적격 verdict·
+   *    금액 없음은 **이 수에 들어가지 않는다** · 아래 루프 순서가 그것을 보장한다).
+   * 🟢 이 칸이 있어야 화면이 **「왜 숫자가 줄었는지」** 를 말할 수 있다.
+   */
+  unverifiedCount: number;
 }
 
 export function summarizeCandidateOverseasPrices(
@@ -263,6 +306,8 @@ export function summarizeCandidateOverseasPrices(
    *    해외 축의 동작을 **한 글자도 바꾸지 않는** 이유다.
    */
   const lowestBySeller = new Map<string, Map<string, number>>();
+  /** 🔴 STAGE 7-1 — 금액 집계에서 「가격 미확인」으로 빠진 수(관측용 · 금액에 합치지 않는다). */
+  let unverifiedCount = 0;
   for (const r of records) {
     byMarket[r.market] = (byMarket[r.market] ?? 0) + 1;
     byPriceTier[r.priceTier] = (byPriceTier[r.priceTier] ?? 0) + 1;
@@ -303,6 +348,23 @@ export function summarizeCandidateOverseasPrices(
     if (r.verdict != null && !PRICE_ELIGIBLE_VERDICTS.has(r.verdict)) continue;
     if (r.amount == null || !Number.isFinite(r.amount)) continue;
     /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔴🔴🔴 STAGE 7-1 — **확인되지 않은 금액을 확인가 집계에 넣지 않는다.**
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 **순서가 의미다.** 이 줄이 `byMarket`·`byPriceTier`(관측) **뒤** 이고
+     *    `EXCLUDED`·verdict·금액 유무 **뒤** 다 ⟹ `unverifiedCount` 는
+     *    **「자격도 금액도 있는데 확인만 안 된」** 수 하나를 정확히 가리킨다.
+     *    (순서를 올리면 「동일상품 아님」까지 「미확인」으로 세어 화면이 거짓을 말한다)
+     * 🔴 `null` 은 **막지 않는다**(위 칸 주석 — 낡은 저장분 artifact).
+     * 🟢 `priceTierFromLink` 는 **건드리지 않았다** — tier 는 그대로이고 바뀌는 것은
+     *    **«금액 자격»** 하나다(= 좁히는 방향 = 가격 안전장치 **강화**).
+     */
+    if (r.priceStatus != null && r.priceStatus !== PRICE_VERIFIED_STATUS) {
+      unverifiedCount += 1;
+      continue;
+    }
+    /**
      * 🔴🔴 CORE-2T — **키가 있으면 판매처 단위로 모은다.** 집계는 루프 뒤에서 한 번에
      *    한다(그래야 「같은 판매처의 두 번째 레코드」가 형성대를 넓히지 못한다).
      */
@@ -337,5 +399,5 @@ export function summarizeCandidateOverseasPrices(
       highestAmount: Math.max(...amounts),
     };
   }
-  return { count: records.length, byCurrency, byMarket, byPriceTier };
+  return { count: records.length, byCurrency, byMarket, byPriceTier, unverifiedCount };
 }

@@ -257,6 +257,14 @@ export async function computeMarketIntelligence(
      *    바뀌면 회귀다(CPO ④ · 「tier 를 좁혀 국내가 1 → 0」 선례).
      */
     verdict: string | null;
+    /**
+     * 🔴🔴 STAGE 7-1 — **가격 신뢰도 축.** 「검색 결과에서 주워 온 숫자」가
+     *    «확인가» 범위에 들어가는 것을 막는다(실측: 스냅샷 `6cf3e50e` 에서 7건 중
+     *    **6건이 `UNVERIFIED_SEARCH`** 였고 `CAD 370 ~ 19,100`(51배)을 만들었다).
+     * 🟢 **이미 계산된 값을 옮기기만** 한다(`derivePriceStatus` owner) — 새 판정 0.
+     * 🔴 **국내 축에도 같이 넘긴다** — CPO ④ 는 시장을 가리지 않는다.
+     */
+    priceStatus: string | null;
   }[] = [];
   /**
    * 🔴 WU-056 — **이번 확인으로 들어온 국내 가격** 만 담는다(아래 루프에서 채운다).
@@ -301,6 +309,12 @@ export async function computeMarketIntelligence(
           matchTruth: e.matchTruth,
           /** 🔴 SPRINT 3 P1 — 지어내지 않는다. 판정이 이미 낸 값 그대로다. */
           verdict: e.crossSellerVerdict ?? null,
+          /**
+           * 🔴🔴 STAGE 7-1 — **가격 신뢰도도 지어내지 않는다.** `e.priceStatus` 는
+           *    `enrichCandidatePrices` → `derivePriceStatus` 가 이미 낸 값이다
+           *    (run-domestic-price-check.ts:359). 🔴 여기서 다시 판정하지 않는다.
+           */
+          priceStatus: e.priceStatus,
         });
         if (e.market === "OVERSEAS") geminiPricedCount.overseas += 1;
         else geminiPricedCount.marketUnknown += 1;
@@ -378,6 +392,14 @@ export async function computeMarketIntelligence(
          * 🔴 **해외 축(`overseasEvidence`)에는 넘기지 않는다** — 그 축의 숫자가 바뀌면 §9 위반이다.
          */
         sellerKey: e.domain,
+        /**
+         * 🔴🔴 STAGE 7-1 — **국내도 같은 규칙이다.** CPO ④ 는 「UNVERIFIED 가격을
+         *    VERIFIED 가격 집계에 섞지 말라」이고 **시장을 가리지 않는다**.
+         * 🔴 실측 근거 — 국내 유일 가격이던 `KRW 88,000`(miniboutique)의 신뢰도가
+         *    `null` 이었다(FINAL 보고 ①). 🟢 `null` 은 **막지 않으므로** 그 줄은
+         *    **그대로 남는다**(낡은 저장분 artifact · 집계기 주석 참고).
+         */
+        priceStatus: e.priceStatus,
       });
     }
     /** 🔴 REFERENCE/EXCLUDED 는 기존 국내 후보와 **같은 이유로** 가격 버킷에
