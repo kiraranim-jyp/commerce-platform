@@ -8,67 +8,64 @@
 
 ---
 
-## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-04 · STAGE 4-I 종료)
+## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-04 · STAGE 5 종료)
 
 ```
-좌표   C 배포 · **Ⓐ 어휘 정합 배포** · A **HOLD(Ⓑ 선행)** · B **NO-GO** · R1·R2·4-H·4-I 종료
-       🔴 **조사·구현·측정 전부 끝났다. 다시 하지 않는다.**
-       🔵 **다음 한 수 = CPO 가 Ⓑ(후보 노출 등급 ↔ 가격 eligibility 분리) 설계를 열지 결정**
-          (CPO 명시: 「다음 단계는 Ⓑ가 아니다. A를 안전하게 닫은 뒤 **별도 판단** 으로 설계한다」)
+좌표   STAGE 5 종료 · C 배포 · Ⓐ 배포 · A HOLD(Ⓑ 선행) · B NO-GO · Ⓑ 설계 미승인
+       🔴 **조사·측정 전부 끝났다. 다시 하지 않는다.**
+       🔵 **다음 한 수 = CPO 지시 대기**(제품 전략상 필요한 축을 지정)
 
-전문   `docs/STAGE4H-PRICE-ELIGIBILITY-ARCHITECTURE.md`  ← 구조(7조사 · Ⓐ/Ⓑ/Ⓒ)
-보조   `docs/STAGE4G-R2-POLICY-A-BUSINESS-IMPACT.md` · `docs/STAGE4G-R1-REGRESSION-IMPACT.md`
-       `docs/STAGE4G-IDENTITY-POLICY-01.md`(A·B 되돌리는 diff 3줄 · 계약 39건 전수)
+전문   `docs/STAGE5-REGISTRATION-FLOW.md`              ← 흐름 실측 + 남은 두 칸
+보조   `docs/STAGE4H-PRICE-ELIGIBILITY-ARCHITECTURE.md`(구조) ·
+       `docs/STAGE4G-R2-...md` · `docs/STAGE4G-R1-...md` · `docs/STAGE4G-IDENTITY-POLICY-01.md`
 
-🟢🟢 **STAGE 4-I 완료 — 코드 변경은 «두 줄» 이다**
-  `overseas-reference.ts` TIER_LABEL
-    COMPARISON  「유사상품」   → **「동일상품 추정」**   (= owner TIERS.PRESUMED_SAME.label)
-    REFERENCE   「참고」       → **「유사상품 · 참고」** (= owner TIERS.SIMILAR.label + 참고)
-  🟢 EXACT「동일상품」· EXCLUDED「동일상품 아님」은 **한 글자도 안 바뀌었다**(WU-056 보존)
-  🔴 판정·점수·threshold·`matchTruth`·`priceTierFromLink`·eligibility·`SIMILAR → textOnly`
-     **전부 불변**(계약 I-10~I-13 이 잠근다 · `cross-seller.ts` md5 212b5904… 불변)
+🟢🟢 **STAGE 5 가 고친 것 — 등록 안내문이 셀러를 «없는 곳» 으로 보내고 있었다**
+  `validate-payload.ts` 옵션조합 MISSING 안내문
+    전: 「**Settings** 의 「기본 재고 수량」을 입력하면 …」  🔴 Settings 에 그 칸이 **없다**
+    후: 「**상품정보 → 재고** 의 「기본 재고 수량」을 …」    🟢 실제 칸 위치(`SourceDataView`)
+  🔴 그 문장은 **셀러 화면까지 간다**(죽은 문자열이 아니다 · 계약 S5-6/S5-7 이 행동으로 증명):
+     validate-payload reason → readiness.ts hint → readiness-state why → RegistrationStatusBanner
+  🔴 그리고 같은 블록의 `where`(sectionId 유래)는 **다른 곳** 을 말해 **인접 두 줄이 모순** 이었다
+  🟢 판정·점수·eligibility **0** — `MISSING` 그대로이고 재고를 지어내지 않는다
 
-🔴🔴 **4-H 의 서술 하나를 정정했다(호출부를 봤다)**
-  4-H: 「`showTierNote` 기본값이 true 라 **해외에는 그 어휘가 살아 있다**」 → **사실이 아니다**
-  실제: `MarketPriceComparison:1400` 의 🇰🇷/🌎 **두 분기 모두 `showTierNote: false`** ·
-        둘째 렌더(`MarketColumn:1964`)는 `reference={null}` ⟹ **렌더 0** ·
-        `referenceProps` 타입에 `showTierNote` 가 **없다**(그 경로로는 켤 수 없다)
-  ⟹ 🟢 이 수정은 **「잠재 결함」** 을 고친 것이다 — 기본값이 `true` 라 누가 그 칸을 켜거나
-     summary 를 넘기는 순간 그 어휘가 노출된다(계약 I-6~I-8 이 그 사실을 고정한다)
+🔴🔴 **등록 MISSING 7 중 «5 는 운영 값이 아니다»**(DB 실측 · 하니스 한계)
+  WU-135 하니스는 `seller_settings`/`coupang_seller_profiles` 를 **읽지 않는다** ⟹
+  운영에는 이미 들어 있다:
+    택배사 `naver_delivery_company_code` = **EPOST** · 제조사 **규하맘샵** ·
+    품질보증기준 ✓ · A/S 업체명 **규하맘샵AS** · A/S 전화 ✓
+  🟢 재확인 도구(READ-ONLY · 커밋됨) —
+     `packages/database/scripts/stage5-seller-settings-probe.mjs`
+     `packages/database/scripts/stage5-profile-probe.mjs`
 
-🔴 **범위 밖이라 «건드리지 않은» 것 넷**(CPO §7 「임의 확장하지 말고 중단 후 보고」)
-  ⒜ `DomesticPriceIntelligencePanel` `CANDIDATE_LABEL.REVIEW_REQUIRED`「유사상품」
-     → **`matchType` 축** 이고 tier 가 아니다(그 파일 주석이 「일부러 다르다」고 적는다)
-  ⒝ `ComparisonShopSearch:94`「유사상품 · 확인 필요」 → **matchLevel(신뢰도) 축**
-  ⒞ `DomesticShopSearch:424`「유사상품이 N건」(= COMPARISON 수) → 🟢 **렌더되지 않는다**(WU-149)
-  ⒟ `match-display` TIERS → 🟢 **이미 정확하다**(owner · 바꿀 이유 없음)
-  🔴 ⒜⒝ 를 고치면 tier 축과 신뢰도 축이 **한 말로 뭉개진다** ⟹ CPO 판정 사안
+🟡 **그래서 운영에서 등록까지 남은 칸은 «둘» 이다**(둘 다 셀러 입력 · 코드 결함 아님)
+  ⒜ `기본 재고 수량` — 상품정보 → 재고 (🟢 이번에 안내문이 그곳을 가리키게 됐다)
+  ⒝ `소재` — 🟢 「상세페이지 참조」 경로가 **이미 있다**(`MissingFieldsBulkPanel`)
+  🔴 「MISSING 7」을 **운영 차단 7건으로 적지 않는다**
 
-🟢 기존 계약 **3건 FAIL → 갱신·강화**(느슨하게 하지 않았다)
-  `wu-049` 「동일상품 2 · **동일상품 추정 1**」 + 「유사상품」 **부재** 단언 추가
-  `wu-056` 네 등급이 **서로 다른 말** 이라는 단언 추가(영문 토큰 금지는 그대로)
-  `stage4h` H-7 **방향을 뒤집었다** — 되돌아가면 다시 FAIL 한다(지우지 않았다)
-🟢 음성 대조 — M1(COMPARISON 되돌림) **4 FAIL** · M2(REFERENCE 되돌림) **3 FAIL** → 바이트 복원
+🟢 **조사해서 «이상 없음» 으로 닫은 것**(다시 조사하지 않는다)
+  Settings 실재 확인 — 배송 프로필 · 브랜드 관리 · 판매자 정보(제조사·품질보증기준·A/S 3칸) 전부 있다
+  `section-options` 는 실제로 그려진다(죽은 id 아님) · 바로가기 버튼 동작한다
+  등록 실패 응답은 `step`·`retryable`·`resolution` 을 준다 · 재시도/수정 경로 있다
+  (SmartStore 는 `editedFields` + 확인 화면 · Coupang 은 단일 요청 · 🔴 LotteON 은 UPDATE 없음)
+  🔴 후보 human_verdict 가 등록 payload 에 **안 들어가는 것은 설계** 다(WU-131 계약 · 건드리지 않았다)
 
-🔵🔵 **최상위 전략(CPO LOCK)** — 100% 동일상품 증명이 목적이 «아니다»
-  후보 발견 **Recall 우선** · Identity 는 **가능성 구분** · 가격은 **eligibility 구분** ·
-  유사상품은 **버리지 않고 참고로** · 최종 결정은 **셀러**
-  🟢 그 4단계는 **이미 코드에 있다** — tier EXACT/COMPARISON/REFERENCE/EXCLUDED ·
-     `crossSellerReserved` 가 「추정은 확정 가격이 못 된다」를 구현한다(CF-3 폐기와 같은 문장)
+🔵🔵 **재발 방지 계약 8건 신설** — `stage5-guidance-destination.test.ts`
+  🟢 체계 가드 `S5-5` — **「Settings」를 가리키며 칸을 인용한 안내문 전수**(현재 2건)가
+     실제 Settings 소스에 있는지 본다 ⟹ 없는 곳을 가리키면 **FAIL**
+  🔴 이 저장소에서 **같은 버그가 7주 넘게 살아 있었다**(2026-10-06 CEO 보고 ·
+     `naverFieldSectionId` 주석) — 그때 교훈이 「위치는 주석이 아니라 테스트가 지킨다」였다
+  🟢 음성 대조 — 안내문을 Settings 로 되돌리면 **3 FAIL**(S5-1·S5-4·**S5-5**) → 바이트 복원
 
-🔴🔴 **Ⓑ 를 열 때의 전제(4-H §2 · 다시 조사하지 않는다)**
-  `matchTruth` 한 칸이 **가격 tier · 배지 · 기본 노출** 셋을 동시에 결정한다 ⟹
-  A 를 그냥 넣으면 Generic-only 후보가 **UNKNOWN/EXCLUDED** 로 가서 **기본 화면에서 내려간다**
-  🟢 분리 선례 = `priceTierWithVerifiedSame`(「matchTruth 안 건드리고 tier 만 덮는다」)
-
-🔴 측정불가 — ⒜ `TIER_LABEL` 의 실제 화면 자리(따져 화면은 CTO 가 볼 수 없다 · 지금은 꺼져 있다)
-  ⒝ Generic-only 9건의 `confidence` ⒞ Ⓑ 가 깨는 계약 수 ⒟ 국내 「옵션만 다름」 부재의 분모
+🔴 내가 틀린 것 둘(둘 다 사전 포착) — ⒜ `grep | head` 가 잘려 「품질보증기준이 Settings 에
+  없다」는 **거짓 결함을 하나 더 보고할 뻔했다**(전수로 다시 확인해 취소) ⒝ `buildPriorityItems`
+  인자를 2개로 넘겼고 **typecheck 가 잡았다**(TS2554 · 런타임은 통과했다)
 
 🔴 금지(그대로 유효)  A 구현 · B 구현 · 점수/threshold · 새 blocker · **Legacy GT 수정** ·
   `priceTierFromLink`/eligibility · `SIMILAR → textOnly` 완화 · 국내 REFERENCE 신설 ·
   Search/Provider · 가격 집계 구조 · DB/Migration · **테스트 기대값 수정**(갱신은 근거와 함께) ·
   **새 네트워크 요청/과금** · `isColorUnverified` 완화 · COLOR **충돌** 제거 ·
-  🔴 `matchType`/`matchLevel` 축 어휘를 tier 어휘와 **합치는 것**
+  `matchType`/`matchLevel` 축 어휘를 tier 어휘와 합치는 것 ·
+  🔴 `candidate_reviews`(human_verdict)를 MI·가격·알림·등록 payload 에 넣는 것
 ```
 
 ---

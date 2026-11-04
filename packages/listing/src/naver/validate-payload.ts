@@ -829,7 +829,38 @@ export function validateNaverPayload(
         "detailAttribute.optionInfo.optionCombinations",
         false,
         "MISSING",
-        "옵션 그룹은 선언됐는데 보낼 옵션 조합이 0개입니다 — 원본에서 옵션별 재고를 확인하지 못했습니다. Settings의 「기본 재고 수량」을 입력하면 조합이 복구됩니다(재고를 0이나 999로 임의로 메우지 않습니다).",
+        /**
+         * ══════════════════════════════════════════════════════════════════
+         * 🔴🔴 STAGE 5 — **이 문장이 셀러를 «없는 곳» 으로 보내고 있었다.**
+         * ══════════════════════════════════════════════════════════════════
+         *
+         * 전 문장: 「**Settings** 의 「기본 재고 수량」을 입력하면 …」
+         * 🔴 그런데 `Settings` 에는 그 칸이 **없다**(실측: `apps/admin/src/app/settings`
+         *    전수에 `기본 재고`·`sellerDefaultStock` **0건**). 실제 칸은
+         *    **상품정보(`SourceDataView`)의 「기본 재고 수량」** 하나다.
+         *
+         * 🔴 이 문장은 화면까지 **그대로 간다**(죽은 문자열이 아니다):
+         * ```
+         * validate-payload reason
+         *   → readiness.ts        hint = f.reason
+         *   → readiness-state.ts  detail → why
+         *   → RegistrationStatusBanner  <p>{guide.why}</p>   ← 셀러가 읽는다
+         * ```
+         * 🔴 그리고 같은 블록의 `where`(sectionId 유래)는 **다른 곳** 을 말했다 ⟹
+         *    인접한 두 줄이 서로 모순이었다.
+         *
+         * 🟢 그래서 **이미 맞게 적고 있던 화면의 말** 로 통일한다 —
+         *    `PlatformPreview` 의 옵션 섹션이 「**상품정보 → 재고**에서 기본 재고수량을
+         *    채우면 등록됩니다」라고 적고 있다. 셋이 같은 곳을 가리키게 한다.
+         * 🔴 판정은 한 글자도 바뀌지 않는다 — `MISSING` 그대로이고 재고를 지어내지 않는다.
+         *
+         * 🔴🔴 **이 저장소에서 같은 버그가 전에 한 번 7주 넘게 살아 있었다**
+         *    (`readiness.ts` `naverFieldSectionId` 주석 · 2026-10-06 CEO 보고
+         *     「바로가기가 기본정보로 보내는데 실제 입력 위치는 고시정보다」).
+         *    🟢 그래서 이번에는 **문장과 목적지를 계약으로 묶어 둔다**
+         *    (`stage5-guidance-destination.test.ts`).
+         */
+        "옵션 그룹은 선언됐는데 보낼 옵션 조합이 0개입니다 — 원본에서 옵션별 재고를 확인하지 못했습니다. 상품정보 → 재고의 「기본 재고 수량」을 입력하면 조합이 복구됩니다(재고를 0이나 999로 임의로 메우지 않습니다).",
       );
     }
     const negativeFinalPriceCombos = combos.filter((c) => originProduct.salePrice + c.price < 0);
