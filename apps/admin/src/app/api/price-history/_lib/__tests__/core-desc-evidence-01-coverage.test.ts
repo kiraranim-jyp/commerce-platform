@@ -406,6 +406,49 @@ describe.skipIf(!LIVE)("CORE-DESC-EVIDENCE-01 — Evidence coverage(라이브)",
         );
       }
 
+      /* ══════════════════════════════════════════════════════════════════════
+       * 🔵🔵🔵 [13] STAGE 7-4 반사실 — **브랜드 공백을 증거에서 메우면 무엇이 바뀌는가**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔴 CPO 승인 ①: 「브랜드가 비어 있으면 상세설명·공식 상품정보에서 **보충 추출** ·
+       *    추출값과 **출처 보존** · **브랜드 미확보와 브랜드 불일치를 구분**」.
+       *    🔴 완화가 **아니다** — `BRAND_MISMATCH` 는 그대로 둔다.
+       * 🔴 **구현 전에 분모를 잡는다.** 재는 것은 둘이다 — ① FN 회수 ② DIFFERENT 누출.
+       * 🔴 그리고 **한계를 먼저 적는다** — 이 하니스의 **원상품 facts 에는 evidence 가 없다**
+       *    (`productFactsFromIdentityDna` 산출) ⟹ 🔴 **후보측 공백만** 측정된다.
+       *    원상품측 공백 2건(C48 bobochoses.com · C14 kihanan)은 **여기서 측정불가** 다.
+       */
+      console.log(`\n${"═".repeat(104)}`);
+      console.log("  [13] 🔵 STAGE 7-4 반사실 — 후보 brand 공백을 DESCRIPTION 증거로 메운다");
+      console.log(`${"═".repeat(104)}`);
+      let recovered = 0;
+      let leaked = 0;
+      let filled = 0;
+      for (const p of usable) {
+        if (p.human !== "SAME" && p.human !== "DIFFERENT") continue;
+        const f = factsOf(p.url);
+        if (f.brand) continue;
+        /** 🟢 증거는 **이미 붙어 있다** — 지어내지 않고 그 값을 읽는다. */
+        const fromEvidence = items(f.evidence, "BRAND").find((i) => i.source === "DESCRIPTION")?.value;
+        if (!fromEvidence) continue;
+        filled += 1;
+        const before = String(same05Judge(p.origin, f).cross.verdict);
+        const after = String(same05Judge(p.origin, { ...f, brand: fromEvidence } as ProductFacts).cross.verdict);
+        const up = (v: string) => v === "SAME" || v === "PRESUMED_SAME";
+        const moved = before !== after;
+        if (moved && p.human === "SAME" && !up(before) && up(after)) recovered += 1;
+        if (moved && p.human === "DIFFERENT" && !up(before) && up(after)) leaked += 1;
+        console.log(
+          `  ${pad(p.id, 6)} ${pad(host(p.url), 22)} human=${pad(p.human, 10)} ` +
+            `brand「없음」→「${fromEvidence.slice(0, 20)}」 ${pad(before, 14)} → ${pad(after, 14)}` +
+            `${moved ? " 🔵변화" : " 🟢불변"}`,
+        );
+      }
+      console.log(
+        `\n  🔵 후보 brand 를 메울 수 있는 쌍 **${filled}** · 🟢 SAME 회수 **${recovered}** · ` +
+          `🔴 DIFFERENT 누출 **${leaked}**`,
+      );
+      console.log("  🔴 원상품측 공백(C48 · C14)은 이 하니스에서 **측정불가** — origin facts 에 evidence 가 없다");
+
       /** 🔴 이 측정의 **유일한 PASS 조건** — 증거는 늘어도 판정은 그대로다. */
       expect(changed).toBe(0);
       expect(usable.length).toBeGreaterThan(0);
