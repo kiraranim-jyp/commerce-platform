@@ -72,6 +72,16 @@ export interface ShopifyProductLike {
   images?: string[];
   featured_image?: { url?: string } | string | null;
   image?: string | null;
+  /**
+   * 🔵🔵 STAGE 7-5 — **사이트가 두 자리에 스스로 적은 자기 이름**
+   *    (`extractSiteBrandName` 산출 · `og:site_name` == JSON-LD `Organization.name`).
+   *
+   * 🔴 이 함수는 **순수** 이고 HTML 을 모른다 ⟹ 값은 **호출부가 넘긴다**
+   *    (WU-134 가 원상품 경로에서 `siteBrandName` 을 넘긴 것과 **같은 모양**).
+   * 🔴 **브랜드 칸이 아니다** — `vendor` 가 **있고 시즌코드로 거부됐을 때만** 쓰인다.
+   *    (그 조건이 없으면 멀티브랜드 편집샵에 사이트 이름이 박힌다 · WU-009 실측)
+   */
+  siteBrandName?: string | null;
 }
 
 function shopifyTags(input: ShopifyProductLike): string[] {
@@ -188,9 +198,38 @@ export function productFactsFromShopifyProduct(input: ShopifyProductLike, domain
    *
    * 🔴 ①이 null 이면 ②③은 **예전과 똑같이** 동작한다 — 추가 전용이다.
    */
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 STAGE 7-5 ③-a — **공식몰 도메인 표를 «늘리지 않고» 같은 구멍을 닫는다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 **실측** — `OFFICIAL_STORE_BRANDS` 는 항목이 **하나**(`bobochoses.com`)다.
+   *    그래서 **같은 브랜드의 일본 공식몰** `bobochoses.co.jp` 는 `vendor` 가
+   *    시즌코드라 ②에서 떨어지고 ③에서도 못 걸려 **brand `null`** 이 된다 ⟹
+   *    `BRAND_UNCONFIRMED`(STAGE 6 보완 FN 4건 중 **C11 · C37**).
+   * 🔴 그 표에 `.co.jp` 를 **추가하지 않았다** — 도메인 표 확대는 ⒜ 일반화되지 않고
+   *    ⒝ 「domain → brand」 금지축(`wu-080-brand-producer`)과 같은 모양이다.
+   * 🟢 대신 **WU-134 가 이미 만든 회수기** 를 쓴다 — `extractSiteBrandName` 는
+   *    `og:site_name` **과** JSON-LD `Organization.name` 이 **같을 때만**, 그리고
+   *    브랜드 어휘 규칙을 통과할 때만 값을 낸다(사이트가 **두 자리에 스스로** 적은 이름).
+   *
+   * 🔴🔴 **발화 조건을 WU-134 와 «같게» 좁혔다 — 「모르면 채우지 않는다」**:
+   * ```
+   * ① vendor 가 **있고**  ② 그것이 **시즌코드로 거부되고**
+   * ③ 사이트가 자기 이름을 **두 자리에 같이** 적어 뒀다
+   * ```
+   * 🔴 그래서 **멀티브랜드 편집샵에서는 발화하지 않는다** — 그쪽 `vendor` 는
+   *    시즌코드가 아니어서 ②가 가져간다. WU-009 가 측정한 FP
+   *    (「`og:site_name` 을 브랜드로 쓰면 리테일러 25/26 에 「Smallable」이 박힌다」)가
+   *    **구조적으로 재현되지 않는다**.
+   * 🔴 그리고 **도메인 표 «뒤»** 에 둔다 — 기존 `.com` 의 값을 바꾸지 않기 위해서다.
+   * 🟢 넘기지 않으면(`undefined`) 이 줄이 **아무것도 하지 않는다**(하위호환).
+   */
   const brand =
     brandFromTitleByClause(title, vendor) ??
-    (vendor && !SEASON_CODE_ONLY_RE.test(vendor) ? vendor : (OFFICIAL_STORE_BRANDS[domain] ?? null));
+    (vendor && !SEASON_CODE_ONLY_RE.test(vendor)
+      ? vendor
+      : (OFFICIAL_STORE_BRANDS[domain] ?? (vendor ? (input.siteBrandName?.trim() || null) : null)));
 
   // 색상은 설명문 첫 문장에 그대로 나온다(실측: "Light heather grey sweatshirt.").
   // 수식어가 둘 붙는 표기까지 읽는 extractLeadingColorPhrase를 먼저 쓰고, 그래도

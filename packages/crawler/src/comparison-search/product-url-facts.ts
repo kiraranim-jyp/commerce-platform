@@ -11,6 +11,7 @@ import { productFactsFromListing, productFactsFromShopifyProduct } from "./selle
 import { jsonLdProductDescription, jsonLdProductImages } from "./jsonld-product-description";
 import { classifyUrlShape, toCrawlerUrl } from "./url-shape";
 import { extractShopifyHandle, fetchPlainHtmlWithFinalUrl } from "../shopify-product-json";
+import { extractSiteBrandName } from "../site-brand-name";
 import { fetchWithDomainRateLimit } from "../rate-limit/domain-rate-limiter";
 /** 🔴 MI-020 — **순수 함수** 하나만 가져온다(HTML 문자열 → JSON-LD). Playwright 없다. */
 /** 🔴 WU-053 — microdata 도 **순수 리더** 로만 가져온다(Product scope 1개 게이트 내장). */
@@ -257,6 +258,70 @@ export function brandFromHtml(html: string): string | null {
   return null;
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 STAGE 7-5 — **후보 경로의 브랜드 공백을 «좁게» 메운다**(CPO 승인 · 우선순위 3)
+ * ════════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 **왜 필요했나**(STAGE 6 보완 §보완-6 · FN 4건 중 2건):
+ * ```
+ * bobochoses.co.jp 는 **브랜드 공식몰** 인데 Shopify `vendor` 가 **시즌코드** 라
+ * 거부되고(`SEASON_CODE_ONLY_RE`), `OFFICIAL_STORE_BRANDS` 에는 `.com` **하나만**
+ * 있어서 brand 가 `null` 이 된다 ⟹ `BRAND_UNCONFIRMED`(C11 · C37).
+ * ```
+ * 🔴 **먼저 측정했고 다른 길이 닫혔다**(`05845358`) — 상세설명 BRAND 증거로 메울 수
+ *    있는 쌍은 **0** 이었다(그 생산자는 제목 alias + 「brand:」 라벨뿐이다).
+ * 🔴 도메인 표에 `.co.jp` 를 **추가하지 않았다**(일반화 0 · 금지축과 같은 모양).
+ *
+ * 🔴🔴 **발화 조건 셋 — WU-134 와 같다. 「모르면 채우지 않는다」**:
+ * ```
+ * ① vendor 가 **있다**        (없으면 **아무것도 하지 않는다** — HTTP 도 안 쓴다)
+ * ② 그 vendor 가 **시즌코드로 거부된다**
+ * ③ 사이트가 자기 이름을 **두 자리에 같이** 적어 뒀다
+ *    (`og:site_name` == JSON-LD `Organization.name` · 브랜드 어휘 통과)
+ * ```
+ * 🔴 ②가 **멀티브랜드 편집샵을 구조적으로 배제** 한다 — 그쪽 vendor 는 시즌코드가
+ *    아니므로 기존 분기가 가져가고 이 함수는 **값을 내지 않는다**. 그래서 WU-009 가
+ *    측정한 FP(「리테일러 25/26 에 사이트 이름이 박힌다」)가 재현되지 않는다.
+ * 🔴 **추가 HTTP 는 ①②를 통과한 경우에만 1회** 다(CPO: 「거부된 vendor 에 한정」).
+ *    🟢 그 1회를 `httpCalls` 에 **정직하게 더한다** — 비용을 숨기지 않는다.
+ */
+const SEASON_CODE_ONLY_FOR_RECOVERY = /^(ss|aw|fw|pe)\d{2}$/i;
+
+export async function recoverSiteBrandNameIfVendorRejected(
+  vendor: string | undefined,
+  crawlerUrl: string,
+): Promise<{ value: string | null; httpCalls: number }> {
+  const v = vendor?.trim();
+  /** 🔴 ① vendor 가 없으면 **지어내지 않는다**(HTTP 0). */
+  if (!v) return { value: null, httpCalls: 0 };
+  /** 🔴 ② 거부되지 않은 vendor 는 그 자체가 브랜드다 — 손대지 않는다(HTTP 0). */
+  if (!SEASON_CODE_ONLY_FOR_RECOVERY.test(v)) return { value: null, httpCalls: 0 };
+  const fetched = await fetchPlainHtmlWithFinalUrl(crawlerUrl);
+  if (!fetched) return { value: null, httpCalls: 1 };
+  /** 🔴 ③ 두 자리가 같을 때만 값이 나온다 — 아니면 `null`(「모른다」). */
+  return { value: extractSiteBrandName(fetched.html)?.value ?? null, httpCalls: 1 };
+}
+
+/**
+ * 🔵 STAGE 7-5 — **PLAIN_HTML 후보는 HTML 을 이미 들고 있다** ⟹ **추가 HTTP 0**.
+ *
+ * 🔴 여기서도 조건을 **같게** 지킨다 — 페이지가 브랜드를 **적어 뒀는데** 그 값이
+ *    브랜드 어휘를 통과하지 못한 경우에만 사이트 자기 이름을 쓴다.
+ *    🟢 `brandFromHtml` 이 **null** 이라는 사실만으로는 쓰지 않는다 — 그러면
+ *       브랜드를 적지 않은 **편집샵 전부** 에 사이트 이름이 박힌다(WU-009 실측 FP).
+ * 🔴 「적어 뒀다」의 판별은 **기존 패턴 재사용** 이다(`BRAND_PATTERNS` · 사본 0).
+ */
+export function siteBrandNameIfPageDeclaredBrandRejected(html: string): string | null {
+  const declared = BRAND_PATTERNS.map((re) => re.exec(html)?.[1]).find((hit): hit is string =>
+    Boolean(hit?.trim()),
+  );
+  /** 🔴 브랜드 자리가 **비어 있으면** 회수하지 않는다. */
+  if (!declared) return null;
+  /** 🔴 그 값이 **살아 있으면** `brandFromHtml` 이 이미 썼다 — 여기 오지 않는다. */
+  return extractSiteBrandName(html)?.value ?? null;
+}
+
 export async function factsFromProductUrl(url: string): Promise<ProductUrlFactsResult> {
   const none = { candidate: null, httpCalls: 0, fetchPath: "NONE" as const };
 
@@ -294,8 +359,10 @@ export async function factsFromProductUrl(url: string): Promise<ProductUrlFactsR
       //    아니다. 아래 HTML 경로가 그 일을 한다.
       return htmlPath(crawlerUrl, dedupeKey, domain, 1);
     }
+    const siteBrandName = await recoverSiteBrandNameIfVendorRejected(body.vendor, crawlerUrl);
     const facts = productFactsFromShopifyProduct(
       {
+        siteBrandName: siteBrandName.value,
         title: body.title,
         handle: body.handle,
         url: crawlerUrl,
@@ -375,7 +442,7 @@ export async function factsFromProductUrl(url: string): Promise<ProductUrlFactsR
         /** 🔵 SPRINT-02 — **품번이 보강된** facts 를 넘긴다(그 외 칸은 그대로다). */
         facts: suppliedFacts,
       },
-      httpCalls: 1,
+      httpCalls: 1 + siteBrandName.httpCalls,
       fetchPath: "SHOPIFY_JSON",
     };
   }
@@ -453,7 +520,7 @@ async function htmlPath(
    *    가격·브랜드는 identity 축이 아니다(brand 는 기존 축이고 값이 **없을 때만** 채운다).
    */
   const micro = extractMicrodataFromHtml(html);
-  const brand = brandFromHtml(html) ?? micro?.brand ?? null;
+  const brand = brandFromHtml(html) ?? micro?.brand ?? siteBrandNameIfPageDeclaredBrandRejected(html);
   /**
    * ══════════════════════════════════════════════════════════════════════════════
    * 🔴🔴🔴 CORE-2AC — **이미 받은 HTML 의 상세 증거를 facts owner 까지 «전달» 한다**

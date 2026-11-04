@@ -101,7 +101,18 @@ describe("B. 배선 경계", () => {
    */
   it("🔴 JSON-LD 가 microdata 보다 우선한다", () => {
     expect(src).toMatch(/priceFromJsonLd\(html\)\s*\?\?\s*micro\?\.price\s*\?\?/);
-    expect(src).toContain("brandFromHtml(html) ?? micro?.brand ?? null");
+    /**
+     * 🔵🔵 **STAGE 7-5 — 브랜드 사슬에도 «꼬리» 가 하나 붙었다**(2026-11-04 · 의도된 변경).
+     *
+     * 🔴 전 단언은 꼬리가 `?? null` 이라는 **글자** 를 봤다. 그래서 「추가 전용」 변경에도
+     *    FAIL 했다 — 가격 축에서 WU-151 이 겪은 **그 자리** 다.
+     * 🟢 그래서 **느슨하게 하지 않고 «성질» 로 바꿨다** — 「구조화 둘이 앞이다」를
+     *    **좌표로** 단언하고, 꼬리의 정체까지 같이 잠근다.
+     * 🔴 꼬리를 **앞으로 옮기면** 아래 좌표 단언이 FAIL 한다(그것이 이 계약의 목적이다).
+     * 🔴 그리고 꼬리가 **브랜드를 지어내지 않는다** 는 것은 `stage7-5-brand-supply` 가 본다
+     *    (vendor 없음 → 회수 0 · 편집샵 → 회수 0 · 두 자리 불일치 → null).
+     */
+    expect(src).toMatch(/brandFromHtml\(html\)\s*\?\?\s*micro\?\.brand\s*\?\?/);
     /** 🔴 구조화 둘이 **앞** 이라는 사실을 좌표로도 잠근다. */
     const jsonLdAt = src.indexOf("priceFromJsonLd(html)");
     const microAt = src.indexOf("micro?.price");
@@ -109,6 +120,14 @@ describe("B. 배선 경계", () => {
     expect(jsonLdAt).toBeGreaterThan(-1);
     expect(microAt).toBeGreaterThan(jsonLdAt);
     if (godoAt > -1) expect(godoAt, "🔴 새 가격 자리가 구조화보다 앞으로 왔다").toBeGreaterThan(microAt);
+    /** 🔵 브랜드 축도 같은 모양으로 잠근다 — 구조화 둘 **뒤** 에만 꼬리가 온다. */
+    const brandHtmlAt = src.indexOf("brandFromHtml(html)");
+    const brandMicroAt = src.indexOf("micro?.brand");
+    const brandTailAt = src.indexOf("siteBrandNameIfPageDeclaredBrandRejected(html)");
+    expect(brandMicroAt).toBeGreaterThan(brandHtmlAt);
+    if (brandTailAt > -1) {
+      expect(brandTailAt, "🔴 사이트 이름 회수가 구조화보다 앞으로 왔다").toBeGreaterThan(brandMicroAt);
+    }
   });
 
   /** 🔴🔴 **sku 를 올리지 않는다** — identity 를 바꾸지 않겠다는 계약이다. */
