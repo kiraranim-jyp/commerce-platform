@@ -8,64 +8,72 @@
 
 ---
 
-## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-04 · 표준안 v1 대기)
+## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-04 · 표준 v1 확정)
 
 ```
-좌표   🔴🔴 **CTO 는 지금 구현하지 않는다.** CPO 가 **표준안 v1** 을 쓰는 중이다 —
-       「스마트스토어 상품자동등록 — Product Intelligence & Seller Decision Standard v1」
-       🔴 **우선순위 5(COLOR/PATTERN 분리)를 착수하지 않았다**(CPO 보류 지시).
-       🔴 표준안이 나오기 «전» 에 Evidence 축·Identity·가격 정책을 **더 건드리지 않는다**
-          — 개별 축을 계속 더하면 정책이 다시 파편화된다(CPO 문장).
+🔵🔵🔵 **최상위 기준이 생겼다 — `docs/STANDARD-V1.md`**
+   「Product Intelligence & Seller Decision Standard v1.0」(CPO 확정 2026-11-04)
+   🔴🔴 **이 블록과 표준이 충돌하면 «표준» 이 이긴다.** CTO 는 표준 조항을 고치지 않는다.
+   🔴🔴 **표준에 없는 동작을 CTO 가 임의로 만들지 않는다**(§11).
 
-🔵🔵🔵 **CPO 가 요청한 입력은 제출됐다**
-   `docs/STANDARD-V1-INPUT-CURRENT-BEHAVIOUR.md` — **174줄 · 정책 제안 0 · 구현 0**
-   ① 축 어휘가 **둘** 이고 `FIT`·`IMAGE` 가 층마다 **반대 의미** 다(가장 먼저 닫을 것)
-   ② Evidence 속성 **12개** × CPO 의 여섯 질문(출처 · 보존 · Identity 사용 · 단독 ·
-      누락↔불일치 · 사람 판단 정합) 표
-   ③ Identity 판정식 · 관측된 차이 9 ↔ 집합 밖 2(`BRAND_UNCONFIRMED`·`COLOR_VARIANT`)
-   ④ 가격 자격 사슬 **다섯 조건** · 환산 금지 · 권장 판매가격 **미구현**
-   ⑤ Seller UX 문구 owner · 🔵 **미확정 9건**(전부 측정 끝 · 판단만 남았다)
+제품 정의  국내외 **소싱 의사결정 플랫폼** — 수집·자동등록 도구가 아니다
+한 줄      **발견은 넓게 · 근거는 풍부하게 · 판정은 정교하게 · 가격은 엄격하게 · 최종 결정은 판매자에게**
+우선순위   Search/Discovery = **Recall** · Identity/가격 집계 = **Precision**
+
+🔴 절대 불변 7(표준 §0.3) — ①후보 발견 ↔ Identity 분리 ②Identity ↔ 가격 자격 분리
+   ③누락 ↔ 불일치 구분 ④원본 + 정규화 **둘 다** 보존 ⑤**미측정 ≠ 실패 0**
+   ⑥사람 판정 이력 임의 변경 금지 ⑦판매자에게 근거 공개
+
+🔴 금지(표준 §8 결정 · 승인 없이 열지 않는다)
+   FIT 무조건 정규화 **불승인**(R1 가드 2건 + 기준선 13파일) · AC↔AB 완화 **금지** ·
+   독립 소매 축 **신설 불승인** · `COLOR_VARIANT` 분류 변경 **별도 승인** ·
+   MATERIAL 규칙 변경 **불승인** · PATTERN → Identity 반영 **금지**(추출만) ·
+   검색 공급자/횟수/검색어 전략 변경 **불승인**(§4 미완결) · 후보 노출 축소 **금지** ·
+   가격 자격 임의 완화 **금지** · 환산·통화 합계 **금지** · 「시장 평균」 **금지**
+
+🔵 **지금 CTO 상태 — 구현 중인 것 없음**
+   우선순위 5(COLOR/PATTERN 추출 분리)는 **보류**(표준 §9) — 🔴 착수하지 않는다
+   🔵 CPO 지침 1·2 는 **제출 완료** — 표준 §12(5계층 ↔ 코드 매핑) · §13(불일치 9건)
+   🔵 다음은 **CPO 가 §13 집행 순서를 정하는 것** 이다
+
+🟡 **§13 불일치 중 「동작 변경 0」 으로 닫을 수 있는 후보 둘**(🔴 CTO 가 착수하지 않았다)
+   A 🔴 `CrossSellerVerdict` 에 **`DIFFERENT` 가 없다** — 코드는 `CONFLICT` 다
+     (사람 라벨 `DIFFERENT` ↔ 시스템 `CONFLICT` · `cross-seller.ts:77`)
+   B 🔴 Evidence 상태 enum **부재** — `PRESENT/MISSING/NOT_MEASURED/CONFLICT` 가 코드에 **0**
+     (특히 **`NOT_MEASURED` 가 어디에도 없다** ⟹ ⑤ 「미측정 ≠ 실패 0」을 코드가 말하지 못한다)
+   🔴 C(Identity Signal 계층 부재) · D(`facts.brand` 가 `??` 체인으로 출처를 덮는다) ·
+      G(스타일 코드 칸 없음)도 **구조 부재** 다 — 동작 결함이 아니다
 
 🟢🟢 **끝난 것 — 재구현 금지**(전부 배포 · push 0/0)
-   1 UNVERIFIED 가격 분리          `00ce755d`
-   2 노출 ↔ 가격 «자격» 분리        `f38aae43`  (집합 셋 · 전체 아님 · 손실 0)
-   3 CPO 확정 문구                 `bca20f46`  (`MARKET_EMPTY_NO_COMPARABLE_PRICE` 글자 고정)
-   3-브랜드 공급 측정              `05845358`  (🔴 상세설명 경로 회수 **0** 이라는 측정)
-   3 브랜드 Evidence 배선          `2ee66cef`  (verdict SAME **6/17 → 8/17** · FP 0 유지)
-   4 FIT 표현 «기록»               `99b56bb7`  (🔴 판정 룰 변경은 **바이트 동일로 되돌렸다**)
+   1 UNVERIFIED 가격 분리 `00ce755d` · 2 노출↔가격 자격 분리 `f38aae43` ·
+   3 확정 문구 `bca20f46` · 브랜드 측정 `05845358` · 브랜드 배선 `2ee66cef` ·
+   4 FIT **기록만** `99b56bb7`(🔴 판정 룰 변경은 바이트 동일 복구) ·
+   표준 입력 `f2f67ba5`
+   🟢 가격 자격 **다섯 조건** · 🟢 verdict SAME 6/17 → **8/17** · FP **0** 유지
 
-🔵 **CPO 판정 대기 1건**(CTO 가 열지 않았다)
-   「`relaxed fit ↔ loose fit` 무조건 정규화로 S1-4 를 회복할 것인가」
-   🟢 효과 — 저장 GT SAME **6/18 → 7/18** · FP **1 유지** · DIFFERENT 누출 **0**
-   🔴 비용 — **CEO 승인 R1 가드 2건**(`fit-normalization.test.ts`) + **기준선 13파일 / 15 테스트**
-   🔴 그래서 **CTO 가 임의로 열 수 없다**(헌장 §3 STOP — 정책 결정 필요)
+🔴 분모 주의 — 라이브 25쌍(SAME 17·DIFF 8) ↔ 저장 GT 33쌍(SAME 18·DIFF 9)은 **다른 분모** ·
+  🔴 어느 숫자도 **Identity 시스템 전체 성능이 아니다** · C06 은 이 fixture 에서 **SAME**
 
-🔴 금지(그대로)  A · B · 점수/threshold · 새 blocker · **Legacy GT 수정** · `priceTierFromLink` ·
-  `OBSERVED_DIFFERENCE_BLOCKERS` · `FIT_CANONICAL` · `SIMILAR → textOnly` 완화 ·
-  **가격 안전장치 완화**(강화는 허용) · `descriptionScore → SAME` ·
-  상세설명 Model Code 긍정 승격 · AC↔AB 완화 · 독립 소매 축 · PATTERN → 판정/blocker ·
-  브랜드 **불일치** 완화 · 국내 REFERENCE 신설 · Search 공급량/provider · DB/Migration ·
-  테스트 기대값 수정 · 새 네트워크/과금 · 사람 판정 이력 삭제 · **후보 노출 축소**
-
-🔴 분모 주의 — 라이브 25쌍(SAME 17·DIFF 8) ↔ 저장 GT 33쌍(SAME 18·DIFF 9)은 **다른 분모** 다.
-  🔴 어느 숫자도 **Identity 시스템 전체 성능이 아니다** · C06 은 이 fixture 에서 **SAME**(CEO 재라벨)
-
-🟡 **실제 국내·해외 노출 화면 검수는 CPO/CEO 몫이고 아직 남아 있다** —
-  🔴 「테스트·운영 데이터 검증 완료 ≠ 실제 화면 검수 완료」(CPO 명시)
+🟡 **실제 화면 검수는 CPO/CEO 몫이고 아직 남아 있다**(표준 §10 · 10항) —
+  🔴 「테스트·운영 데이터 검증 완료 ≠ 실제 화면 검수 완료」 ·
+  🔴 **제품 전체가 표준 적합 상태라고 선언하지 않는다**(표준 §11)
 
 🟢 재현 도구(커밋됨 · READ-ONLY · 과금 0)
-  `final-market-review-dump.mjs`(ORIGIN_CODE) + `final-market-review.test.ts`(전→후 자동 출력) ·
+  `final-market-review-dump.mjs`(ORIGIN_CODE) + `final-market-review.test.ts`(전→후 자동) ·
   `stage7-2-effect.mjs` · `stage7-2-price-eligibility-cf.test.ts`(반사실 A/B · 네트워크 0) ·
   `core-desc-evidence-01-coverage.test.ts`(`CORE_DESC_EVIDENCE_LIVE=1` · 절 `[7]`~`[13]`) ·
   `stage6-special-cases.mjs` · `stage7-5-brand-supply.test.ts` · `stage7-6-fit-expression-record.test.ts`
 
-🔴🔴 **작업 수칙 넷**(이번 트랙에서 각각 밟았다)
-  ⒜ 미커밋 구현의 복구 수단으로 **`git checkout --` 를 쓰지 않는다** — 구현이 날아간다.
+🔴🔴 **작업 수칙 넷**(이 트랙에서 각각 밟았다)
+  ⒜ 미커밋 구현의 복구에 **`git checkout --` 를 쓰지 않는다** — 구현이 날아간다.
      변이는 **파일 백업 → 복구**(md5 확인)
-  ⒝ 한국어가 든 블록을 **heredoc(python/bash)으로 쓰지 않는다** — 글자가 깨진다. Write/Edit 로 쓴다
+  ⒝ 한국어가 든 블록을 **heredoc 으로 쓰지 않는다** — 글자가 깨진다. Write/Edit 로 쓴다
   ⒞ 변이 **적용 확인** 은 「원본에도 있는 문자열」로 세지 않는다 — **증가/감소** 로 센다.
      그리고 **「순서 단언」은 줄 삭제 변이를 못 잡는다** — 행동으로 단언한다
   ⒟ 칸 이름을 추측하지 않는다 — 타입/`information_schema` 에서 **읽는다**
+
+🔵 참고 문서  `docs/STANDARD-V1-INPUT-CURRENT-BEHAVIOUR.md`(현행 동작 174줄 · 표준의 기준 자료) ·
+  `docs/STAGE6-EVIDENCE-DISCOVERY.md` §보완 · `docs/FINAL-MARKET-COMPARISON-REVIEW.md` §7~§12
 ```
 
 ---

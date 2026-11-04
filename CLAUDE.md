@@ -467,6 +467,31 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 
 ## 12. 현재 상태 — MI 측정 트랙 **전부 종료** (갱신 2026-10-12)
 
+### 🔵🔵🔵 **0-STANDARD. 최상위 기준은 `docs/STANDARD-V1.md` 다** (CPO 확정 2026-11-04)
+
+```
+🔵🔵🔵 **「Product Intelligence & Seller Decision Standard v1.0」이 제품 운영 표준이다.**
+   🔴🔴 **이 헌장(§12 포함)·START-HERE·메모리가 표준과 충돌하면 «표준» 이 이긴다.**
+   🔴🔴 **표준에 없는 동작을 CTO 가 임의로 만들지 않는다**(표준 §11).
+   🔴 CTO 는 표준 «조항» 을 고치지 않는다 — 표준 변경은 CPO 산출물이다.
+
+   제품 정의   국내외 **소싱 의사결정 플랫폼**(수집·자동등록 도구가 아니다)
+   한 줄       **발견은 넓게 · 근거는 풍부하게 · 판정은 정교하게 ·
+                가격은 엄격하게 · 최종 결정은 판매자에게**
+   우선순위    Search/Discovery = **Recall** · Identity/가격 집계 = **Precision**
+
+   🔴 절대 불변 7(표준 §0.3) — ①후보 발견 ↔ Identity 분리 ②Identity ↔ 가격 자격 분리
+      ③누락 ↔ 불일치 구분 ④원본 + 정규화 **둘 다** 보존 ⑤**미측정 ≠ 실패 0**
+      ⑥사람 판정 이력 임의 변경 금지 ⑦판매자에게 근거 공개
+   🔴 5계층을 섞지 않는다(표준 §1) — Evidence Attribute / Identity Signal /
+      Matcher Rule / Price Eligibility / Seller Display
+      🔴🔴 **`FIT`·`IMAGE` 가 Evidence 층에서 PROBE 라는 사실은 Matcher 의 그 조건이
+         «없다» 는 뜻이 아니다**(표준 §1.2 · 코드 자리는 표준 §12)
+   🟢 표준의 기준 자료 = `docs/STANDARD-V1-INPUT-CURRENT-BEHAVIOUR.md`(현행 동작 174줄)
+   🟢 표준 ↔ 코드 **불일치 9건** 은 표준 **§13** 에 있다(🔴 사실 기록 · 수정 0)
+🔵 **작업 좌표는 그 다음이다 — `docs/START-HERE.md` §NEXT SESSION 하나.**
+```
+
 ### 🔵🔵🔵 **0-POINTER. 진입점은 `docs/START-HERE.md`(MASTER HANDOFF) 하나다** (갱신 2026-10-26)
 
 ```
