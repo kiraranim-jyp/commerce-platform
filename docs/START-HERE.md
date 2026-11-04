@@ -8,56 +8,40 @@
 
 ---
 
-## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-04 · FINAL QUALITY GATE 조사 완료)
+## ▶▶ NEXT SESSION — **이 바로 읽고 시작한다**(2026-11-04 · STAGE 6 종료)
 
 ```
-좌표   Ⓐ·C 배포 · A HOLD · B NO-GO · STAGE 5 종료
-       🔵🔵 **FINAL MARKET COMPARISON — 조사 완료 · 구현 1건 대기**
-       🔴 조사·측정 끝났다. **다시 하지 않는다.** 전문에 숫자가 다 있다.
+좌표   ⓐ·C 배포 · A HOLD · B NO-GO · STAGE 5 종료 · FINAL-GATE 조사 종료
+       🔵🔵 **STAGE 6(Evidence Discovery) 종료** — 구현 대기 2건
+       🔴 조사·상세설명 분석 끝났다. **다시 하지 않는다.**
 
-전문   `docs/FINAL-MARKET-COMPARISON-REVIEW.md`  ← §7~§12 가 최신 결론. **먼저 읽는다**
-       §11 에 **구현 스펙 4단계**(파일·줄·선례)가 있다 ⟹ 조사 없이 구현만 하면 된다
+전문   `docs/STAGE6-EVIDENCE-DISCOVERY.md`            ← Evidence 상세설명 전수 결로
+       `docs/FINAL-MARKET-COMPARISON-REVIEW.md` §11  ← **UNVERIFIED 분리 구현 스펙 4단계**
 
-🔴🔴🔴 **최신 운영 데이터가 화면의 «틀린 숫자» 를 드러냈다**(스냅샷 6cf3e50e · 11-03 · B226AC073)
-  🌎 CAD 370 ~ 19,100  판매처 2곳  🔴🔴 **51배** · 그 안에 「**Diesel Viker Jeans**」(다른 브랜드)
-  🌎 EUR 42 ~ 100 · GBP 39.5 ~ 75 · USD 22,200(🔴 통화 오인 의심)
-  🇰🇷 **렌더되지 않는다 — 국내 후보 0**(최신 스냅샷 10건 전수 KR 0)
-  🟢 7건 중 **6건이 UNVERIFIED_SEARCH** · 유일한 VERIFIED(junioredition GBP 75)가
-     **유일하게 원상품과 제목이 일치** 한다(`Taxi Saurus Tag Denim Pants by Bobo Choses`)
+🔴🔴🔴 **STAGE 6 결로 셋 (다시 재지 않는다)**
+  ① 상세설명에서만 나온 **Model Code 5건 → 사람 라벨 SAME 1 : DIFFERENT 4**
+     (C05 / C19·C20·S1-5·S1-6) ⟹ 🔴 **식별 근거로 승급 금지**
+  ② 🟢 상세설명은 **소재의 유일한 공급원**(TITLE 0% → DESC 60%) · 초상 16%→56%
+  ③ 🟢🟢 **지금 문제는 오판이 아니라 recall 이다** —
+     DIFFERENT 방어 **8/8** · **FP 0** · SAME **6/17** · Evidence 추가로 verdict 변화 **0**
+  🔴 PRODUCT_NAME·FORM·MATERIAL 은 SAME·DIFFERENT **전건에 있다** ⟹ 식별력 아니다
 
-🟢🟢 **그래서 CPO ①③④ 가 «한 수정» 으로 닫힌다** — UNVERIFIED 를 검증 금액 집계에서 분리
-  ⟹ `GBP 75 · 판매처 1곳` 만 남고 CAD 51배·USD 22,200·Diesel Jeans 가 **전부 사라진다**
-  🟢 후보는 **보존**(「미확인」 표시) ⟹ Recall 손실 0 · 🟢 선례 **WU-062**(금액에서만 뺀다)
-  🔴 구현 스펙은 전문 §11 — 4단계 · `e.priceStatus` 는 **이미 있다**(run-domestic:359)
-  🔴 `priceTierFromLink` 는 **건드리지 않는다**(tier 불변 · «금액 자격» 만 좁힌다 = 강화)
+🔵 **다시 물어야 할 것은 하나** — **FN 11건을 막는 것이 무엇인가**(recall 축).
+  🔴 그 답 전에 Evidence 를 더하지 않는다
 
-🔴 **내 앞선 보고 ⑤를 정정했다** — `price_status=null` 은 **저장 artifact** 다
-  `derivePriceStatus`(match.ts:568)는 null 을 **낼 수 없다** ·
-  DB 경계 — `10-20~11-01 null 104` → **`11-02~03 null 0 · 채워짐 37`**
-  ⟹ 🔴 집계에서 `null` 을 막지 않는다(낡은 저장분이고, 막으면 기존 후보가 조용히 사라진다)
+🔵 구현 대기 2건(CPO 삹인 후 · 조사 불필요)
+  Ⓐ **UNVERIFIED 가곁 분리** — 스펙 FINAL §11 · 선례 WU-062 · `e.priceStatus` 이미 있다
+     🟢 효과 — 화면의 `CAD 370~19,100`(51배·Diesel Jeans)·`USD 22,200` 이 사라진다
+  Ⓑ 의류 형태 축(T-shirt ↔ Long Sleeve) — 🔴 **CPO 가 축을 여는 결정이 선행**
 
-🔴🔴 **② villagekids 충돌 — 복원했고 「판단 불가」가 답이다**(이력 삭제 0)
-  같은 URL 31행 중 사람 판정 2건 · **모든 축이 글자 그대로 같다**
-  (원상품 제목·URL · 후보 제목 · verdict · truth · tier · 가격 · blockers 4개 전부 동일)
-  차이는 **snapshot id 와 7시간 24분** 뿐이다 · 🔴 `human_note` **둘 다 없음** · 🔴 **이미지 없음**
-  ⟹ 사람이 **이미지 없이** 판단했다(WU-099 패턴) ⟹ 🔵 **CPO 판단 대상으로 남긴다**
-  🟡 그 후보는 UNVERIFIED 라 위 수정만으로 **금액 집계에서는 빠진다**(후보로는 남는다)
+🔴 상세설명 추가 재조사 금지 — 후보 25 · 원문 확보 **21/25(84%)** · 제외 8(상세 §1)
+🔴 칸이 **없어서** 못 잼 것 — Style Code·Manufacturer Code·컨렉션·시즌·추릭터명·
+  패턴명·디자인명 ⟹ **추추기 변경은 CPO 삹인 사안**(0% 가 아니다)
 
-🔴 **③ 의류 형태 축은 별건이다** — `GARMENT_FORM` 이 있으나 `T-shirt ↔ Long Sleeve` 를
-  **둘 다 SHIRT 로 읽어 발화하지 않는다**(WU-123 실측) · 소매 길이 축은 WU-123/125 가
-  「재현 0/18 · 새 축 금지」로 닫았다 ⟹ 🔵 **CPO 가 그 축을 여는 결정이 선행** 한다
-
-🟢 재현 도구(커밋됨 · READ-ONLY · 네트워크 0 · 과금 0)
-  `final-market-review-dump.mjs`(ORIGIN_CODE/SNAPSHOT_ID) · `final-market-review.test.ts`(skip-safe)
-  `final-villagekids-conflict.mjs` · `final-pricestatus-provenance.mjs` · `final-latest-snapshot.mjs`
-
-🔴 분모 주의 — 화면은 **한 스냅샷** 이다(`origin_code` 로 묶으면 39개 분석이 합쳐진다) ·
-  같은 URL 39행은 **39개 스냅샷** 이고 중복이 아니다(같은 `(snapshot_id,url)` 2행 **0건**)
-
-🔴 금지(그대로)  A · B · 점수/threshold · 새 blocker · Legacy GT 수정 · `priceTierFromLink` ·
-  `SIMILAR → textOnly` 완화 · **가격 안전장치 완화**(강화는 허용) · 국내 REFERENCE 신설 ·
-  Search 공급량/provider · DB/Migration · 테스트 기대값 수정 · 새 네트워크/과금 ·
-  사람 판정 이력 삭제 · `human_verdict` → MI/가격/알림/등록 payload
+🔴 금지(그대로)  A · B · 점수/threshold · 새 blocker · Legacy GT 수정 ·
+  `priceTierFromLink` · `SIMILAR → textOnly` 완화 · 가겍 안전장치 완화 · descriptionScore → SAME ·
+  상세설명 Model Code 승급 · 국내 REFERENCE 신설 · Search 공급량 · DB/Migration ·
+  테스트 기대값 수정 · 사람 판정 이력 삭제 · `human_verdict` → payload
 ```
 
 ---
