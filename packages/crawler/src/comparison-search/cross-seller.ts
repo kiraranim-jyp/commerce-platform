@@ -1040,6 +1040,33 @@ export function compareCrossSellerProducts(
   // 부분 일치를 함께 세지 않는다: slugCarriesCode가 참이면서 modelCode가
   // "partial"인 경우가 실제로 있어(B126AI018 ↔ B126AI01831152), 두 번 세면 같은
   // 근거로 2점을 더 얻는다.
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵 STAGE 4-G / IDENTITY POLICY 01 **C**(CPO GO, 2026-11-04) — **정의만 적는다.**
+   *    🔴 동작 변경 **0** — 점수 · `identifierConfirmed` · `compareModelCode` 전부 그대로다.
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * > **브랜드 품번은 «모델» 을 식별한다. «판매 단위(SKU)» 를 보증하지 않는다.**
+   *
+   * 🟢 실측이 그 둘을 가른다(STAGE 4-C/4-D · 다시 재지 않는다):
+   * ```
+   * AW26MS185  →  Grey Melange · Graystone · Conker Stripe   ← 같은 품번, 다른 색/무늬
+   * ```
+   *    즉 품번이 같다고 **같은 진열 단위** 는 아니다. 반대도 성립한다 —
+   *    품번이 달라도 같은 모델일 수 있다(`B226AC009`(kids) ↔ `B226AB040`(baby) · WU-143).
+   *
+   * 🔴 그래서 이 축에 **두 가지를 기대하지 않는다**:
+   * ```
+   * ✅ 기대해도 되는 것   「같은 모델이다」 — 그래서 가장 강한 식별 축이다
+   * ❌ 기대하면 틀리는 것 「같은 색/사이즈/세트 구성이다」 — 그 축들은 **따로** 본다
+   * ```
+   * 🔴 품번 하나로 SAME 을 확정하지 않는 현재 설계(`IDENTIFIER_AXIS_POINTS`(3)가 혼자서는
+   *    `SAME_MIN_AXES`(5)에 못 닿는다)가 **바로 이 정의의 구현** 이다. 완화 금지.
+   *
+   * 🔴🔴 **STAGE 4-G 의 A·B 는 이 커밋에 들어 있지 않다** — 구현해서 전수 측정했고
+   *    회귀 **39건** 과 충돌해 **CPO 판정으로 올렸다**. 다시 구현하기 «전» 에
+   *    `docs/STAGE4G-IDENTITY-POLICY-01.md` 를 **먼저 읽는다**(숫자가 거기 있다).
+   */
   if (identifierConfirmed) {
     axes.push({ axis: "MODEL_CODE", points: IDENTIFIER_AXIS_POINTS, detail: "브랜드 품번 일치" });
   } else if (modelCode === "partial") {

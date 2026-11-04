@@ -8,64 +8,58 @@
 
 ---
 
-## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-04 인수인계 · STAGE 4-G)
+## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-04 · STAGE 4-G 종료)
 
 ```
-좌표   HEAD `47db4a3d` · main · worktree clean · prod 200
-       회귀 772 files / **10,013 passed / 0 failed** · typecheck 0
-       🔴 **조사는 전부 끝났다. 재조사 금지.** 바로 구현 → 배포 → 보고 1회.
+좌표   STAGE 4-G **측정 종료 · C 배포** · worktree clean
+       🔴 **조사·구현·측정 전부 끝났다. 다시 하지 않는다.**
+       🔵 **다음 한 수 = CPO 가 ①②③ 중 하나를 고르는 것** (CTO 코드 작업 **없음**)
 
-할 일  **STAGE 4-G — IDENTITY POLICY 01**(CPO GO · 제한적)
-  A  Generic 축만으로 **PRESUMED_SAME 생성 금지**   🔴 threshold·점수는 **한 글자도** 안 바꾼다
-  B  COLOR 를 Identity 에서 뺀다 — positive(+1) **제거** · `COLOR_VARIANT` **제거**
-     🔴🔴 `isColorUnverified` 는 **보존한다**(「색을 확인 못 했다」는 **차이가 아니다** ·
-        WU-063/064 실측: 풀면 Human DIFFERENT 2건만 올라가는 **순손실**)
-  C  MODEL CODE **주석/정의만**(동작 0) — 「모델 식별 O · 판매 단위 보증 X」
+전문   `docs/STAGE4G-IDENTITY-POLICY-01.md`  ← 숫자가 전부 여기 있다. 먼저 읽는다.
 
-착수점(조사 완료 · 좌표 확정)
-  `packages/crawler/src/comparison-search/cross-seller.ts`
-    :1306-1312  verdict 분기      ← A 가 손댈 **유일한 자리**
-       const blocked = blockers.length > 0;
-       if (!blocked && brandOk && corePoints >= SAME_MIN_AXES) return "SAME";        // 5
-       if (totalPoints >= PRESUMED_SAME_MIN_AXES && !sameSellerWithoutIdentity)
-         return "PRESUMED_SAME";                                                      // 3 ← 여기
-    :1234  totalPoints = axes.reduce(points)   🔴 blocker 가 **감점하지 않는다**
-    :1068  COLOR +1 (B)          :900  COLOR_VARIANT blocker (B)
+무엇이 됐는가
+  🟢 C  MODEL CODE 정의(주석) — 「모델 식별 O · 판매 단위 보증 X」 **구현·배포 · 동작 0**
+  🟡 A  Generic 축만으로 PRESUMED_SAME 금지   구현 → 전수 측정 → **되돌렸다**
+  🟡 B  COLOR 를 Identity 에서 제외           구현 → 전수 측정 → **되돌렸다**
 
-점수표(실측 · 다시 세지 않는다)
-  TITLE **2**(핵심)/1(일부) · MODEL_CODE **3**/2(부분) ·
-  CATEGORY 1 · COLOR 1 · MATERIAL 1 · FIT 1 · AUDIENCE 1 · SIZE 1 · IMAGE 1
-  🔴 Generic 만으로 3점이 되는 조합이 **실재** — `CATEGORY+COLOR+AUDIENCE` · `CATEGORY+MATERIAL+AUDIENCE`
-     (운영 FP **9건 전부** 이 모양: 「상품군 TOP↔TOP · 색상 BLUE · 대상 KIDS」)
+🔴🔴 왜 A·B 를 커밋하지 않았는가 — **헌장 §4-D**
+  구현 상태 전체 회귀 = **28 files / 39 tests FAIL**(HEAD 기준선 0 failed)
+  그 39 중 **25 가 Legacy GT 기준선 가드** 다 — 「기준선 숫자가 그대로다」를 **감지하려고**
+  존재하는 테스트이고, **작업지시서가 「Legacy GT 수정」을 금지** 한다
+  ⟹ CTO 가 그 숫자를 다시 박을 수 없다(§4-D: 계약 변경은 임의 구현 금지 · 분석해 올린다)
 
-🟢 안전 근거(이미 측정됨 · 다시 재지 않는다)
-  GT TP **7건 전건** 이 TITLE(2) 또는 MODEL_CODE(3) 를 갖는다 ⟹ A 의 **GT TP 손실 예상 0**
-  biskuit 는 제목에 `B226AC009` 가 있어 Generic-only 가 **아니다** ⟹ **역위험 영향 0**
-  COLOR 제외 시 GT TP 손실 **0**(C42 는 색이 **일치**해서 SAME 이었다)
+🟢🟢 안전성 — **새 False SAME 0** (확정됐다)
+  p53 거짓 SAME **10/10 그대로 막힌다** · GT 14 FP **6/7 → 6/7**(불변) ·
+  Legacy DIFFERENT C20·C25 **SAME 으로 안 올라간다**
+  🔴 단 그 안전성은 **A 와 B 를 «같이» 넣어야** 성립한다(B 단독 = WU-043 참사 재발)
 
-🔴 반드시 보고해야 할 것 — 「FP 9건 차단」만 적으면 **승인 안 된다**(CPO 명시)
-  ① Generic-only FP 차단 ② **GT TP 보존 수치** ③ **운영 TP 영향 = 측정불가**
-     (운영 TP 7 중 **6 이 맨몸 행** 이라 근거가 없다 · 해결된 것으로 적지 않는다)
-  ④ biskuit PASS ⑤ COLOR/SIZE Variant PASS ⑥ Legacy GT 보존 PASS
+🔴 비용 — 측정된 recall 손실
+  GT 14          TP **7/7 유지**(FN 0) · 🔴 C42(human SAME) SAME → **PRESUMED_SAME**
+  wu-068 GT 63   EXACT **16 → 14**            ← 가격비교의 「동일상품」 칸이 바뀐다
+  wu-066 186쌍   CF-3 False SAME **16 → 12**  ← 「CF-3 은 참사」 증거가 약해진다
+  wu-064/065     결합 CF 승격 `[C47]` → **`[C08, C47]`**  (🔴 C08 은 Human DIFFERENT)
+  p4 불변식      🔴🔴 「다른 판매처 쌍은 영향이 없다」가 **깨진다** · **A 단독으로 positive 1건 상실**
 
-검증 대상(전부 기존 fixture · 새 데이터 0 · 네트워크 0)
-  SAME 보존   C05 · C27 · C42 · C14      품번 보존  C48 · C11 · C37
-  Legacy 보존 C19 · C20 · C25            영향 확인  C06(형태) · C50 · C51(고유명)
-  하니스      `stage3-identity-baseline` · `stage4-human-gt-evidence-matrix` ·
-              `stage4c-identity-vs-variant` · `sprint5-identity-02-brand-recall-gate`
+🟢 이득 — **운영 분모 하나에만 있다**
+  Generic-only 운영 FP **9건**(「상품군 TOP↔TOP · 색상 BLUE/RED · 대상 KIDS」 · Hugo Boss·Levi's…)
+  🔴 Generic-only TP 0 · 🔴🔴 근거 문장 없는 TP **6/7 은 측정불가**(0 으로 세지 않는다)
+  🔴🔴 **그 9건은 A 로도 B 로도 죽는다** ⟹ **B 의 독립 이득 = 0 · 비용 = 32건**
+       (A-only 회귀 FAIL **7** ↔ A+B **39**)
 
-🔴 금지  DISTINCTIVE NAME 추출 · PRODUCT FORM · PATTERN · DESCRIPTION 판정 사용 ·
-        BRAND_MISMATCH 승격 · SAME/PRESUMED **threshold** · Search/Provider/Proxy ·
-        가격 · UI · DB/migration · **Legacy GT 수정** · TITLE 전체를 Generic 취급 ·
-        IMAGE 를 근거에서 삭제(보조로 **보존**)
+🔵 CPO 판정 ①②③ — 전문 §5. 🔴 **A 와 B 를 «따로» 판정하면 안 된다**(안전성이 결합이다)
+  ① A 만 승인(FAIL 7 · p4 불변식 포기 + positive 1 상실)
+  ② A+B 승인 + **Legacy GT 25건 재박기 명시 승인**(CPO 가 금지를 직접 풀어야 한다)
+  ③ 둘 다 보류 · C 만 유지(**현재 상태** · 운영 FP 9 잔존)
 
-🔵 CPO 확인 대기 2건 — 답이 오면 그대로, 없으면 **아래 기본값** 으로 간다
-  ⒜ `COLOR_VARIANT` **하나만** 제거(기본값: 그렇다 · `isColorUnverified` 보존)
-  ⒝ SIZE +1 positive 도 뺄 것인가(기본값: **빼지 않는다** — 지시서에 명시 없음)
+🟢 되돌리는 자리는 **세 줄** 이다 — 전문 §6 에 diff 와 **갱신해야 할 계약 39건 전수** 가 있다
+🟢 `stage4g-identity-policy-01.test.ts` 가 CI 에 상주한다 —
+   `replicationGate`(복제식 ↔ 운영 verdict mismatch **0**) + 정책별 표 + 운영 FP 9 집계
+   🔴 A·B 를 다시 넣으면 그 파일 `C-2` 가 **FAIL 한다** — 그것이 「전문을 읽어라」는 신호다
 
-실행 순서  구현 → 계약 추가 → 변이(각 1 FAIL 확인) → **전체 회귀 PASS 확인** →
-          typecheck → build → **그 뒤에** commit → push → 배포 Commit 확인 → 보고 1회
-🔴🔴 **회귀 PASS 를 확인하기 «전» 에 커밋하지 않는다**(지난 세션에서 순서를 어겼다)
+🔴 금지(그대로 유효)  DISTINCTIVE NAME 추출 · PRODUCT FORM · PATTERN · DESCRIPTION 판정 ·
+        BRAND_MISMATCH 승격 · SAME/PRESUMED threshold · Search/Provider/Proxy · 가격 · UI ·
+        DB/migration · **Legacy GT 수정** · TITLE 전체를 Generic 취급 · IMAGE 삭제 ·
+        `isColorUnverified` 완화 · COLOR **충돌**(색조 불일치) 제거
 ```
 
 ---
