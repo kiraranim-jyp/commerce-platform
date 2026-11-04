@@ -1519,6 +1519,13 @@ function MarketBlock({
                *       `buildOverseasReference` 와 어긋나지 않게 그 함수의 조건을 읽는다.
                */
               hasReferencePrice(reference),
+              /**
+               * 🔵🔵 STAGE 7-3 — **금액 자격을 «잃은» 후보 수.** 집계가 이미 센 값이고
+               *    여기서 다시 판정하지 않는다(7-1 가격 미확인 + 7-2 상품 차이).
+               * 🔴 둘을 더해서 넘기는 이유 — 이 문장이 묻는 것은 **「비교할 금액이 0인가」**
+               *    하나다. 사유별 문장은 금액 블록이 각각 말한다(그 블록이 설 때).
+               */
+              (reference?.unverifiedCount ?? 0) + (reference?.observedDifferenceCount ?? 0),
             )}
           </p>
             </>
