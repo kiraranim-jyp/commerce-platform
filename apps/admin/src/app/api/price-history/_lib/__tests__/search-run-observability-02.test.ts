@@ -34,7 +34,7 @@ describe("SEARCH-RUN-OBSERVABILITY-02", () => {
     expect(ROUTE).toContain("snapshotId, auth.user.workspaceId");
   });
 
-  it("A-3 🔴 저장값 열 칸 + producer 넷이 전부 실린다", () => {
+  it("A-3 🔴 저장값 열 칸 + producer **여섯** 이 전부 실린다", () => {
     for (const k of [
       /**
        * 🔵 SPRINT4-GATE-01 — **질의 원문이 관측값에 들어간다.**
@@ -54,7 +54,19 @@ describe("SEARCH-RUN-OBSERVABILITY-02", () => {
     ]) {
       expect(ROUTE, `🔴 저장값에 ${k} 가 없다`).toContain(`${k}:`);
     }
-    for (const p of ["WEB_SEARCH", "OVERSEAS_AUTO", "DOMESTIC_LISTING", "GEMINI"]) {
+    /**
+     * 🔴🔴 MI-FUNNEL-PERSIST-01 — **넷 → 여섯으로 강화했다.**
+     *    `SELLER_URL`/`REVIEWED_SAME` 이 빠져 있던 동안 그 둘이 낸 후보가 관측값에서
+     *    **사라져** 「후보 합이 생산자 합과 다르다」는 모양이 났다(실측 AC073 · AC036).
+     */
+    for (const p of [
+      "WEB_SEARCH",
+      "OVERSEAS_AUTO",
+      "DOMESTIC_LISTING",
+      "GEMINI",
+      "SELLER_URL",
+      "REVIEWED_SAME",
+    ]) {
       expect(ROUTE, `🔴 producer ${p} 가 없다`).toContain(`${p}:`);
     }
   });

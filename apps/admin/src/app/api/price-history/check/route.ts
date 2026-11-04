@@ -192,6 +192,74 @@ export async function POST(request: Request) {
 
   /**
    * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MI-FUNNEL-PERSIST-01 — **생산자 × 시장 funnel 을 «한 번» 계산한다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 **왜 이 자리로 올라왔나 — 계측이 거짓 블로커를 만들었다.**
+   * ```
+   * `candidate_reviews` 는 **세 생산자만** 받는다(OVERSEAS_AUTO · GEMINI · SELLER_URL).
+   * 🔴 국내 후보를 «실제로 만드는» 둘(WEB_SEARCH · DOMESTIC_LISTING)은 079 의
+   *    `source` CHECK 가 금지해서 그 표에 **들어갈 수 없다**(아래 `seen` 주석).
+   * ⟹ 그 표를 전수로 세면 🇰🇷 는 **구조적으로 0 에 가깝게** 나온다.
+   * 🔴 실제로 2026-11-05 전수가 「국내 후보 총 1행」을 냈고 그것이
+   *    **「국내 공급이 비어 있다」는 블로커 판정** 으로 올라갔다. 🔴 그 판정의 근거는
+   *    제품 사실이 아니라 **계측의 맹점** 이다(헌장 §5-B 「측정불가 ≠ 0」 그 자리).
+   * ```
+   * 🟢 그래서 **이미 있는 관측 칸**(`workspace.searchRun` · jsonb · migration 0)에
+   *    생산자 × 시장 funnel 을 같이 남긴다. 🔴 **schema 0 · 새 표 0 · 새 enum 0.**
+   * 🔴 그리고 **같은 값을 두 번 계산하지 않는다** — 아래 `[C06R-*]` 로그가 쓰던
+   *    `PRODUCERS`/`all`/`cut` 을 여기로 올려 **저장과 로그가 한 산출을 공유** 한다.
+   *    (로그만 있던 때는 Vercel 보존 창 밖에서 그 숫자가 사라졌다 — 실측 24시간에 1건.)
+   *
+   * 🔴 **관측 전용** — 판정 0 · 가격 0 · 응답 0 · UI 0 · Search 0 · Identity 0.
+   * 🔴 `market` 은 운영 `classifyCandidateMarket` 산출을 **그대로** 쓴다(복제 0).
+   */
+  const PRODUCERS: ReadonlyArray<
+    readonly [string, readonly GeminiTransientEvidence[] | null | undefined]
+  > = [
+    ["WEB_SEARCH", domesticShop.webSearchEvidence],
+    ["DOMESTIC_LISTING", domesticShop.domesticListingEvidence],
+    ["OVERSEAS_AUTO", domesticShop.overseasAutoEvidence],
+    ["SELLER_URL", domesticShop.urlCandidateEvidence],
+    ["GEMINI", domesticShop.geminiEvidence],
+    ["REVIEWED_SAME", domesticShop.reviewedSameEvidence],
+  ];
+  const all: Array<{ p: string; e: GeminiTransientEvidence }> = [];
+  for (const [p, arr] of PRODUCERS) for (const e of arr ?? []) all.push({ p, e });
+  /** 🔴 시장 한 칸의 단계표 — 「후보 있음」과 「SAME/PRESUMED + 가격」을 **뭉치지 않는다**. */
+  const cut = (m: string): Record<string, number> => {
+    const rows = all.filter(({ e }) => e.market === m);
+    const same = rows.filter(({ e }) => e.crossSellerVerdict === "SAME");
+    const presumed = rows.filter(({ e }) => e.crossSellerVerdict === "PRESUMED_SAME");
+    return {
+      candidates: rows.length,
+      SAME: same.length,
+      PRESUMED_SAME: presumed.length,
+      SIMILAR: rows.filter(({ e }) => e.crossSellerVerdict === "SIMILAR").length,
+      CONFLICT: rows.filter(({ e }) => e.crossSellerVerdict === "CONFLICT").length,
+      withPrice: rows.filter(({ e }) => e.priceAmount != null).length,
+      sameOrPresumedWithPrice: same
+        .concat(presumed)
+        .filter(({ e }) => e.priceAmount != null).length,
+    };
+  };
+  /**
+   * 🔴 생산자 × 시장 교차 — 「국내가 **어느 생산자** 에서 왔나」를 가른다.
+   *    이것이 없으면 「국내 1건」을 보고도 WEB_SEARCH 인지 목록 hop 인지 알 수 없다.
+   */
+  const producerMarketCut = (
+    arr: readonly GeminiTransientEvidence[] | null | undefined,
+  ): Record<string, number> => {
+    const xs = arr ?? [];
+    return {
+      KR: xs.filter((e) => e.market === "KR").length,
+      OVERSEAS: xs.filter((e) => e.market === "OVERSEAS").length,
+      UNKNOWN_MARKET: xs.filter((e) => e.market !== "KR" && e.market !== "OVERSEAS").length,
+    };
+  };
+
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
    * 🔵🔵🔵 SEARCH-RUN-OBSERVABILITY-02 — **실행 관측값을 스냅샷에 남긴다**
    * ══════════════════════════════════════════════════════════════════════════
    *
@@ -240,13 +308,34 @@ export async function POST(request: Request) {
             timeout: m.timeout ?? null,
           }
         : null,
-      /** 🟢 **공급원별 후보 수** — 「국내가 WEB_SEARCH 였나 등록부였나」를 가른다. */
+      /**
+       * 🟢 **공급원별 후보 수** — 「국내가 WEB_SEARCH 였나 등록부였나」를 가른다.
+       * 🔴🔴 MI-FUNNEL-PERSIST-01 — **여섯 전수** 다. 넷만 적던 때는 `SELLER_URL`/
+       *    `REVIEWED_SAME` 이 낸 후보가 관측값에서 **사라져** 합이 맞지 않았다.
+       */
       producers: {
         WEB_SEARCH: count("webSearchEvidence"),
         OVERSEAS_AUTO: count("overseasAutoEvidence"),
         DOMESTIC_LISTING: count("domesticListingEvidence"),
         GEMINI: count("geminiEvidence"),
+        SELLER_URL: count("urlCandidateEvidence"),
+        REVIEWED_SAME: count("reviewedSameEvidence"),
       },
+      /** 🔴 판정 전 탈락 — 「후보가 없었다」와 「만들었는데 버렸다」를 가른다. */
+      weakDropped: count("weakCandidateEvidence"),
+      /**
+       * 🔵🔵 MI-FUNNEL-PERSIST-01 — **국내/해외/미확정 단계표를 영속화한다.**
+       * 🔴 「국내도 해외도 아님」을 **0 으로 뭉개지 않는다**(`UNKNOWN_MARKET`).
+       */
+      funnel: {
+        KR: cut("KR"),
+        OVERSEAS: cut("OVERSEAS"),
+        UNKNOWN_MARKET: cut("UNKNOWN"),
+      },
+      /** 🔴 생산자 × 시장 — 국내 후보의 **출처** 가 여기서만 보인다. */
+      producerMarkets: Object.fromEntries(
+        PRODUCERS.map(([p, arr]) => [p, producerMarketCut(arr)]),
+      ),
     });
   } catch {
     /** 🔴 관측 저장 실패가 분석을 죽이지 않는다. */
@@ -433,18 +522,11 @@ export async function POST(request: Request) {
    */
   try {
     /* eslint-disable no-console */
-    const PRODUCERS: ReadonlyArray<
-      readonly [string, readonly GeminiTransientEvidence[] | null | undefined]
-    > = [
-      ["WEB_SEARCH", domesticShop.webSearchEvidence],
-      ["DOMESTIC_LISTING", domesticShop.domesticListingEvidence],
-      ["OVERSEAS_AUTO", domesticShop.overseasAutoEvidence],
-      ["SELLER_URL", domesticShop.urlCandidateEvidence],
-      ["GEMINI", domesticShop.geminiEvidence],
-      ["REVIEWED_SAME", domesticShop.reviewedSameEvidence],
-    ];
-    const all: Array<{ p: string; e: GeminiTransientEvidence }> = [];
-    for (const [p, arr] of PRODUCERS) for (const e of arr ?? []) all.push({ p, e });
+    /**
+     * 🔴🔴 MI-FUNNEL-PERSIST-01 — `PRODUCERS`/`all`/`cut` 은 **위로 올라갔다**.
+     *    같은 산출을 저장(`workspace.searchRun.funnel`)과 로그가 **공유** 한다 —
+     *    두 벌로 계산하면 둘이 갈라지고 어느 쪽이 사실인지 알 수 없게 된다.
+     */
     /** 🔴 생산자별 건수 — 뭉쳐 적으면 어느 축이 끊겼는지 알 수 없다. */
     console.log(
       `[C06R-producers] ${JSON.stringify({
@@ -453,25 +535,6 @@ export async function POST(request: Request) {
         weakDropped: (domesticShop.weakCandidateEvidence ?? []).length,
       })}`,
     );
-    /** 🔴 시장별 단계 — `market` 은 운영 `classifyCandidateMarket` 산출을 **그대로** 쓴다. */
-    const cut = (
-      m: string,
-    ): Record<string, number> => {
-      const rows = all.filter(({ e }) => e.market === m);
-      const same = rows.filter(({ e }) => e.crossSellerVerdict === "SAME");
-      const presumed = rows.filter(({ e }) => e.crossSellerVerdict === "PRESUMED_SAME");
-      return {
-        candidates: rows.length,
-        SAME: same.length,
-        PRESUMED_SAME: presumed.length,
-        SIMILAR: rows.filter(({ e }) => e.crossSellerVerdict === "SIMILAR").length,
-        CONFLICT: rows.filter(({ e }) => e.crossSellerVerdict === "CONFLICT").length,
-        withPrice: rows.filter(({ e }) => e.priceAmount != null).length,
-        sameOrPresumedWithPrice: same
-          .concat(presumed)
-          .filter(({ e }) => e.priceAmount != null).length,
-      };
-    };
     console.log(
       `[C06R-funnel] ${JSON.stringify({
         snapshot: snapshotId,
