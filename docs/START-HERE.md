@@ -8,80 +8,67 @@
 
 ---
 
-## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-04 · 표준 v1 확정)
+## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-05 · MI 통합 스프린트)
 
 ```
-🔵🔵🔵 **최상위 기준이 생겼다 — `docs/STANDARD-V1.md`**
-   「Product Intelligence & Seller Decision Standard v1.0」(CPO 확정 2026-11-04)
-   🔴🔴 **이 블록과 표준이 충돌하면 «표준» 이 이긴다.** CTO 는 표준 조항을 고치지 않는다.
-   🔴🔴 **표준에 없는 동작을 CTO 가 임의로 만들지 않는다**(§11).
+🔵🔵🔵 **최상위 기준** `docs/STANDARD-V1.md` — 충돌하면 **표준이 이긴다** · 조항은 CTO 가 안 고친다
+🔵 **현재 스프린트** = CPO 「MI 통합 완성 스프린트」(개별 PHASE 검토 방식 **폐기**)
+   목표 한 줄 — **「해외 URL 하나로 국내외 후보 + Evidence + 동일상품 가격을 한 화면에」**
+   🔴🔴 **Smallable·FIT·COLOR 같은 개별 항목에 전체를 끌려가지 않는다**(CPO 명시)
 
-제품 정의  국내외 **소싱 의사결정 플랫폼** — 수집·자동등록 도구가 아니다
-한 줄      **발견은 넓게 · 근거는 풍부하게 · 판정은 정교하게 · 가격은 엄격하게 · 최종 결정은 판매자에게**
-우선순위   Search/Discovery = **Recall** · Identity/가격 집계 = **Precision**
+🔴🔴🔴 **CPO 질문에 지금은 «NO» 다 — 블로커가 «하나» 로 특정됐다**(운영 DB 전수 2026-11-05)
+```
+candidate_reviews 전수   스냅샷 **64** · 🌎 해외 후보 **141** · 🇰🇷 국내 후보 **총 1행**
+국내 후보가 있는 스냅샷   **1 / 64**        최근 12 스냅샷 — 🇰🇷 **전부 0**
+최근 12 스냅샷 SAME       2개 스냅샷에서 1건씩 · 나머지 **0**
+```
+⟹ 🟢 **해외 축은 동작한다**(스냅샷당 1~8 후보 · 가격 · tier 자격)
+⟹ 🔴🔴 **국내 축이 구조적으로 비어 있다** ⟹ 「국내 가격 형성대」가 **렌더될 입력이 없다**
+   🔴 그래서 **「국내 후보 공급」이 CPO 질문의 YES 를 막는 단일 블로커** 다
 
-🔴 절대 불변 7(표준 §0.3) — ①후보 발견 ↔ Identity 분리 ②Identity ↔ 가격 자격 분리
-   ③누락 ↔ 불일치 구분 ④원본 + 정규화 **둘 다** 보존 ⑤**미측정 ≠ 실패 0**
-   ⑥사람 판정 이력 임의 변경 금지 ⑦판매자에게 근거 공개
-
-🔴 금지(표준 §8 결정 · 승인 없이 열지 않는다)
-   FIT 무조건 정규화 **불승인**(R1 가드 2건 + 기준선 13파일) · AC↔AB 완화 **금지** ·
-   독립 소매 축 **신설 불승인** · `COLOR_VARIANT` 분류 변경 **별도 승인** ·
-   MATERIAL 규칙 변경 **불승인** · PATTERN → Identity 반영 **금지**(추출만) ·
-   검색 공급자/횟수/검색어 전략 변경 **불승인**(§4 미완결) · 후보 노출 축소 **금지** ·
-   가격 자격 임의 완화 **금지** · 환산·통화 합계 **금지** · 「시장 평균」 **금지**
-
-🔵 **지금 CTO 상태 — 구현 중인 것 없음**
-   우선순위 5(COLOR/PATTERN 추출 분리)는 **보류**(표준 §9) — 🔴 착수하지 않는다
-   🟢 CPO 지침 1·2 **제출 완료** — 표준 §12(5계층 ↔ 코드 매핑) · §13(불일치 9건)
-   🟢🟢 **CPO 1차 집행(A·C·B) 완료 — 표준 §14**(🔴 운영 코드 변경 0 · enum 0 · DB 0)
-
-🔴🔴 **§14-A 가 고정한 것 — 두 판정 체계를 «같은 열에 적지 않는다»**
-   사람 라벨   `SAME` · `SIMILAR` · **`DIFFERENT`** · `UNDECIDED`  (candidate-review.ts:20)
-   시스템      `SAME` · `PRESUMED_SAME` · `SIMILAR` · `UNKNOWN` · **`CONFLICT`**  (cross-seller.ts:77)
-   🔴 `CONFLICT` 는 **조기 반환**(:1041 · `axes: []`) — **점수를 계산하지도 보지도 않는다**.
-      「적어도 한 축에서 **서로 다른 값을 읽었다**」는 **관측** 이고 「다른 상품」 선언이 아니다
-   🔴🔴 **두 값은 서로 번역되지 않는다**(실측) — 사람 DIFFERENT 8 중 `CONFLICT` 는 **2** ·
-      시스템 `CONFLICT` 3 중 **1 은 사람 SAME**(AC↔AB) ⟹ 🔴 enum 에 `DIFFERENT` 를 더해도
-      같아지지 않는다. **「DIFFERENT 방어 N건」을 `CONFLICT` 건수로 적지 않는다**
-   🔴 verdict 문자열을 바꾸면 **저장분·판정·가격 자격·화면이 동시에 움직인다**(§14-A-3)
-
-🟡 **§13 에서 남은 것**(🔴 CTO 가 착수하지 않았다 · CPO 결정)
-   B Evidence 상태 enum — 🔴 **구조 변경 보류** · 선행 결정 셋이 §14-B-3 에 있다
-     (생산자 없음 · 「칸이 없다」는 스키마 사실 · Evidence `CONFLICT` 가 matcher 와 이름 충돌)
-   D `facts.brand` 가 `??` 체인으로 출처를 덮는다 · G 스타일 코드 칸 없음 → **다음 정책 검토**
-   C 는 §14-C 로 **문서 고정 완료**(코드 선언 상수화는 별도 승인)
+🔵 **다음 세션의 유일한 착수점 — 국내 후보 공급을 운영에서 발화시킨다**
+   ① 🔴 메모리에 「국내 공급은 해결됐다(목록→페이지네이션→상세URL→KRW 88,000)」가 있는데
+      **운영 DB 는 국내 1행** 이다 ⟹ 🔴 **그 경로가 운영에서 돌지 않는다**는 뜻이다.
+      **먼저 그 간극을 코드로 추적한다**(하니스에서는 되는데 운영에서 안 되는 WU-110/134 모양)
+   ② 기존 사실(재조사 금지) — 등록부 34곳 중 **26곳 어댑터 없음**(WU-115) ·
+      국내 후보의 실질 공급자는 **AI URL 풀** 이고 `/check` body 에 `candidateUrls` 가
+      **없으면 돌지 않는다**(WU-126) · 자동 1회차는 `{snapshotId}` 만 보낸다
+   ③ 🔴 그 ②가 여전히 참인지 **운영 경로로 확인** 하고, 참이면 **공급 배선**이 이번 작업이다
+   🔴 금지 — threshold/8축 완화로 후보를 늘리지 않는다 · 후보 노출 축소 0 · Registry 확대는
+      §12-0 금지축이라 **CPO 결정** 이다(어댑터 신설로 풀지 않는다)
 
 🟢🟢 **끝난 것 — 재구현 금지**(전부 배포 · push 0/0)
-   1 UNVERIFIED 가격 분리 `00ce755d` · 2 노출↔가격 자격 분리 `f38aae43` ·
-   3 확정 문구 `bca20f46` · 브랜드 측정 `05845358` · 브랜드 배선 `2ee66cef` ·
-   4 FIT **기록만** `99b56bb7`(🔴 판정 룰 변경은 바이트 동일 복구) ·
-   표준 입력 `f2f67ba5`
-   🟢 가격 자격 **다섯 조건** · 🟢 verdict SAME 6/17 → **8/17** · FP **0** 유지
+   가격 자격 **5조건**(tier ≠ EXCLUDED · verdict 적격 · 금액 · priceStatus · blocker 3)
+   `00ce755d` UNVERIFIED 분리 · `f38aae43` 가격 자격 분리 · `bca20f46` 확정 문구 ·
+   `2ee66cef` 브랜드 배선(verdict SAME 6/17→**8/17** · FP 0) · `99b56bb7` FIT 기록 ·
+   `374658b5` 표준 연결 · `94327ee9` §14 · `64fb8fd5` PHASE 0 · `e7b5b301` PHASE 1 실측
 
-🔴 분모 주의 — 라이브 25쌍(SAME 17·DIFF 8) ↔ 저장 GT 33쌍(SAME 18·DIFF 9)은 **다른 분모** ·
-  🔴 어느 숫자도 **Identity 시스템 전체 성능이 아니다** · C06 은 이 fixture 에서 **SAME**
+🟡 **Smallable — 테스트 사이트 하나로 내려놨다**(CPO 지시 · 전체를 막지 않는다)
+   🟢 시장 관측은 **정상 저장** 된다(248행 = 4시장 × 62 · `market_code` fr/kr/us/jp ·
+      금액 실제 다름 49/50/53/54) · 🔴 비어 있는 건 `market_country` 와 `currency`(전건 EUR)
+   🟢 라이브 실측 — 요청 통화가 **실제로 먹는다**(EUR 54 / **JPY 10,078** / USD 62 / KRW 82,673) ·
+      통화 미지정이면 **egress 가 정한다**(KRW 91,108)
+   🟢 ① `market_country` 채우기는 **정책 충돌 0** (probe 가 `?country=XX` 를 스스로 요청 =
+      관측된 사실 · 검증 함수 `readSmallableRequestedCountry` 이미 있음)
+   🔵 ② 현지통화는 **CPO 결정 대기**(§F 하드코딩 금지와 충돌 · ⒜열기 ⒝포기 ⒞선언하는 사이트만)
+   🔴 `smallable-market-probe.ts:284` 통화 재확인 가드 **유지**(지우지 않는다)
 
-🟡 **실제 화면 검수는 CPO/CEO 몫이고 아직 남아 있다**(표준 §10 · 10항) —
-  🔴 「테스트·운영 데이터 검증 완료 ≠ 실제 화면 검수 완료」 ·
-  🔴 **제품 전체가 표준 적합 상태라고 선언하지 않는다**(표준 §11)
+🔴 금지(표준 §8 · 그대로)  Identity SAME/PRESUMED_SAME 기준 · 점수/blocker · 사람 GT ·
+  `DIFFERENT`↔`CONFLICT` 의미 · FIT 무조건 정규화 · AC↔AB · COLOR_VARIANT 분류 ·
+  가격 자격 완화 · 해외 원본가 KRW 환산 · Evidence enum · DB 스키마 불필요 확장 ·
+  후보 노출 축소 · 검색 공급자/횟수/전략 변경(표준 §4 미완결)
 
-🟢 재현 도구(커밋됨 · READ-ONLY · 과금 0)
-  `final-market-review-dump.mjs`(ORIGIN_CODE) + `final-market-review.test.ts`(전→후 자동) ·
-  `stage7-2-effect.mjs` · `stage7-2-price-eligibility-cf.test.ts`(반사실 A/B · 네트워크 0) ·
-  `core-desc-evidence-01-coverage.test.ts`(`CORE_DESC_EVIDENCE_LIVE=1` · 절 `[7]`~`[13]`) ·
-  `stage6-special-cases.mjs` · `stage7-5-brand-supply.test.ts` · `stage7-6-fit-expression-record.test.ts`
+🔴🔴 **보고 방식** — 중간 검토 요청 **중단**. 전체 완료(배포 + 실제 화면 확인)까지 간 뒤
+  **CTO 1차 검토 보고 1회**. 🔴 단 정책 충돌 · 보안 · 데이터 손실 · 비가역 상업 실행은 멈추고 보고.
+  🔴 **개별 사이트 미완성으로 전체를 중단하지 않는다**(CPO 명시).
 
-🔴🔴 **작업 수칙 넷**(이 트랙에서 각각 밟았다)
-  ⒜ 미커밋 구현의 복구에 **`git checkout --` 를 쓰지 않는다** — 구현이 날아간다.
-     변이는 **파일 백업 → 복구**(md5 확인)
-  ⒝ 한국어가 든 블록을 **heredoc 으로 쓰지 않는다** — 글자가 깨진다. Write/Edit 로 쓴다
-  ⒞ 변이 **적용 확인** 은 「원본에도 있는 문자열」로 세지 않는다 — **증가/감소** 로 센다.
-     그리고 **「순서 단언」은 줄 삭제 변이를 못 잡는다** — 행동으로 단언한다
-  ⒟ 칸 이름을 추측하지 않는다 — 타입/`information_schema` 에서 **읽는다**
+🟢 재현 도구  `mi-screen-readiness.mjs`(위 전수 숫자 · READ-ONLY) ·
+  `final-market-review-dump.mjs`+`final-market-review.test.ts`(화면 전→후) ·
+  `phase1-smallable-live.test.ts`(`PHASE1_LIVE=1`) · `stage7-2-price-eligibility-cf.test.ts`
 
-🔵 참고 문서  `docs/STANDARD-V1-INPUT-CURRENT-BEHAVIOUR.md`(현행 동작 174줄 · 표준의 기준 자료) ·
-  `docs/STAGE6-EVIDENCE-DISCOVERY.md` §보완 · `docs/FINAL-MARKET-COMPARISON-REVIEW.md` §7~§12
+🔴🔴 작업 수칙 — ⒜ 미커밋 구현에 `git checkout --` 금지(파일 백업으로 변이 복구) ⒝ 한국어는
+  heredoc 금지(Write/Edit) ⒞ 변이 적용 확인은 **증감** 으로 · 「순서 단언」은 줄 삭제를 못 잡는다
+  ⒟ 칸 이름은 타입/`information_schema` 에서 **읽는다** ⒠ **하니스 성공 ≠ 운영 동작**(①이 그 자리다)
 ```
 
 ---
