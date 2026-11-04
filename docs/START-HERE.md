@@ -8,64 +8,60 @@
 
 ---
 
-## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-04 · STAGE 5 종료)
+## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-04 · FINAL MARKET COMPARISON)
 
 ```
-좌표   STAGE 5 종료 · C 배포 · Ⓐ 배포 · A HOLD(Ⓑ 선행) · B NO-GO · Ⓑ 설계 미승인
-       🔴 **조사·측정 전부 끝났다. 다시 하지 않는다.**
-       🔵 **다음 한 수 = CPO 지시 대기**(제품 전략상 필요한 축을 지정)
+좌표   STAGE 5 종료 · Ⓐ 배포 · C 배포 · A HOLD(Ⓑ 선행) · B NO-GO · Ⓑ 설계 미승인
+       🔵🔵 **FINAL MARKET COMPARISON = CPO 데이터 검토 «대기»**
+       🔴 조사·측정 끝났다. 다시 하지 않는다. **CTO 코드 작업 없음.**
 
-전문   `docs/STAGE5-REGISTRATION-FLOW.md`              ← 흐름 실측 + 남은 두 칸
-보조   `docs/STAGE4H-PRICE-ELIGIBILITY-ARCHITECTURE.md`(구조) ·
+전문   `docs/FINAL-MARKET-COMPARISON-REVIEW.md`   ← CPO 검토표 + 판정 3건. **먼저 읽는다**
+보조   `docs/STAGE5-REGISTRATION-FLOW.md` · `docs/STAGE4H-PRICE-ELIGIBILITY-ARCHITECTURE.md`
        `docs/STAGE4G-R2-...md` · `docs/STAGE4G-R1-...md` · `docs/STAGE4G-IDENTITY-POLICY-01.md`
 
-🟢🟢 **STAGE 5 가 고친 것 — 등록 안내문이 셀러를 «없는 곳» 으로 보내고 있었다**
-  `validate-payload.ts` 옵션조합 MISSING 안내문
-    전: 「**Settings** 의 「기본 재고 수량」을 입력하면 …」  🔴 Settings 에 그 칸이 **없다**
-    후: 「**상품정보 → 재고** 의 「기본 재고 수량」을 …」    🟢 실제 칸 위치(`SourceDataView`)
-  🔴 그 문장은 **셀러 화면까지 간다**(죽은 문자열이 아니다 · 계약 S5-6/S5-7 이 행동으로 증명):
-     validate-payload reason → readiness.ts hint → readiness-state why → RegistrationStatusBanner
-  🔴 그리고 같은 블록의 `where`(sectionId 유래)는 **다른 곳** 을 말해 **인접 두 줄이 모순** 이었다
-  🟢 판정·점수·eligibility **0** — `MISSING` 그대로이고 재고를 지어내지 않는다
+🔴🔴 **먼저 — 로컬에서 discovery 를 돌릴 수 없다(측정 한계 · 다시 시도하지 말 것)**
+  `comparison-shop.ts:141` service-role 키 없으면 `return []`  ⟹ 해외 등록부 **0**
+  `[SP07-websearch]` **NOT_CONFIGURED**                        ⟹ AI Search **0**
+  🟢 `core-e2e-close-06` 는 그래서 **스스로 측정을 거부한다**(열화 게이트가 작동한다)
+  🔴 그 0 을 「후보가 없다」로 **적지 않는다** ⟹ 🟢 **운영 산출물**(`candidate_reviews`)을 읽는다
 
-🔴🔴 **등록 MISSING 7 중 «5 는 운영 값이 아니다»**(DB 실측 · 하니스 한계)
-  WU-135 하니스는 `seller_settings`/`coupang_seller_profiles` 를 **읽지 않는다** ⟹
-  운영에는 이미 들어 있다:
-    택배사 `naver_delivery_company_code` = **EPOST** · 제조사 **규하맘샵** ·
-    품질보증기준 ✓ · A/S 업체명 **규하맘샵AS** · A/S 전화 ✓
-  🟢 재확인 도구(READ-ONLY · 커밋됨) —
-     `packages/database/scripts/stage5-seller-settings-probe.mjs`
-     `packages/database/scripts/stage5-profile-probe.mjs`
+🟢🟢 **실제 화면 한 장(운영 데이터) — 정확성 모순 0**
+  원상품 `B226AC009` · 스냅샷 `6db15ecc` · 후보 **4**(🇰🇷 1 · 🌎 3)
+    🇰🇷 miniboutique.co.kr   PRESUMED_SAME COMPARISON **KRW 88,000**  신뢰도 🔴null
+    🌎 villagekids.co.uk     PRESUMED_SAME COMPARISON **GBP 21.2**    신뢰도 🔴null
+    🌎 global.trenbe.com     **SAME** EXACT            **USD 80**     신뢰도 🔴null
+    🌎 junioredition.com     **SAME** EXACT            **GBP 37**     🟢VERIFIED_CURRENT
+  화면 문자열 — 🇰🇷 `KRW 88,000 · 판매처 1곳` / 🌎 `GBP 21.2 ~ 37 · 2곳` · `USD 80 · 1곳`
+  🟢 점검 전부 **0** — 시장 모순 0 · 중복 0 · 가격 오표시 0 · tier 불일치 0 · 품절 오표시 0
+  🟢 **환산은 이 영역에 «없는 것이 정상»** 이다(`wu-056r1` · `₩`/`약` 0 · 합계 칸 없음)
+  🟢🟢 **STAGE 4-I 어휘가 실데이터에서 발화했다** — `COMPARISON` → 「**동일상품 추정**」
 
-🟡 **그래서 운영에서 등록까지 남은 칸은 «둘» 이다**(둘 다 셀러 입력 · 코드 결함 아님)
-  ⒜ `기본 재고 수량` — 상품정보 → 재고 (🟢 이번에 안내문이 그곳을 가리키게 됐다)
-  ⒝ `소재` — 🟢 「상세페이지 참조」 경로가 **이미 있다**(`MissingFieldsBulkPanel`)
-  🔴 「MISSING 7」을 **운영 차단 7건으로 적지 않는다**
+🔵🔵 **CPO 판정 3건**(🔴 전부 LOCK 영역 · CTO 가 고치지 않았다 · 전문 §3)
+  ① 🔴🔴 가격 4건 중 **3건이 신뢰도 `null`(모름)인데 전부 금액 집계에 들어간다**
+     — **국내 유일 가격**(KRW 88,000)과 **해외 최저값**(GBP 21.2)이 거기 있다
+     — WU-111 모순의 실데이터 재현(집계는 priceStatus 를 안 보고 UI 는 VERIFIED 만 본다)
+  ② 🔴 `GBP 21.2 ~ 37` 범위가 **추정(21.2) ↔ 확정(37)** 을 한 줄로 합친다
+     — 그리고 21.2 의 `villagekids` 는 **R2 가 찾은 GT 모순쌍** 이다
+  ③ 🟡 `trenbe` 「**Long Sleeve**」가 `SAME · EXACT` 다(원상품은 반팔) — 사람 눈 판정 필요
 
-🟢 **조사해서 «이상 없음» 으로 닫은 것**(다시 조사하지 않는다)
-  Settings 실재 확인 — 배송 프로필 · 브랜드 관리 · 판매자 정보(제조사·품질보증기준·A/S 3칸) 전부 있다
-  `section-options` 는 실제로 그려진다(죽은 id 아님) · 바로가기 버튼 동작한다
-  등록 실패 응답은 `step`·`retryable`·`resolution` 을 준다 · 재시도/수정 경로 있다
-  (SmartStore 는 `editedFields` + 확인 화면 · Coupang 은 단일 요청 · 🔴 LotteON 은 UPDATE 없음)
-  🔴 후보 human_verdict 가 등록 payload 에 **안 들어가는 것은 설계** 다(WU-131 계약 · 건드리지 않았다)
+🟢 재현 도구(커밋됨 · READ-ONLY · 네트워크 0)
+  `packages/database/scripts/final-market-review-dump.mjs`  (`ORIGIN_CODE=` `SNAPSHOT_ID=` 로 다른 상품)
+  `apps/.../__tests__/final-market-review.test.ts`          (덤프 없으면 **skip** · CI 안전)
 
-🔵🔵 **재발 방지 계약 8건 신설** — `stage5-guidance-destination.test.ts`
-  🟢 체계 가드 `S5-5` — **「Settings」를 가리키며 칸을 인용한 안내문 전수**(현재 2건)가
-     실제 Settings 소스에 있는지 본다 ⟹ 없는 곳을 가리키면 **FAIL**
-  🔴 이 저장소에서 **같은 버그가 7주 넘게 살아 있었다**(2026-10-06 CEO 보고 ·
-     `naverFieldSectionId` 주석) — 그때 교훈이 「위치는 주석이 아니라 테스트가 지킨다」였다
-  🟢 음성 대조 — 안내문을 Settings 로 되돌리면 **3 FAIL**(S5-1·S5-4·**S5-5**) → 바이트 복원
+🔴 분모 주의(두 번 틀렸다 · 전문 §0-A) — ⒜ 화면은 **한 스냅샷** 이다(`origin_code` 로 묶으면
+  39개 분석이 합쳐진다) ⒝ 같은 URL 39행은 **39개 스냅샷** 이고 **중복이 아니다**
+  (같은 `(snapshot_id,url)` 2행 이상 **0건** · 부분 유니크가 지킨다)
 
-🔴 내가 틀린 것 둘(둘 다 사전 포착) — ⒜ `grep | head` 가 잘려 「품질보증기준이 Settings 에
-  없다」는 **거짓 결함을 하나 더 보고할 뻔했다**(전수로 다시 확인해 취소) ⒝ `buildPriorityItems`
-  인자를 2개로 넘겼고 **typecheck 가 잡았다**(TS2554 · 런타임은 통과했다)
+🟡 **남은 것 = CPO 가 할 두 가지**
+  ① 위 판정 3건 검토 ② 🔴 **배포 후 실제 화면 확인**(따져 화면은 CTO 가 볼 수 없다)
+  🔵 그 둘이 닫히면 CPO 계획대로 **셀러 중심 UI/UX 개선** 으로 넘어간다
 
 🔴 금지(그대로 유효)  A 구현 · B 구현 · 점수/threshold · 새 blocker · **Legacy GT 수정** ·
   `priceTierFromLink`/eligibility · `SIMILAR → textOnly` 완화 · 국내 REFERENCE 신설 ·
-  Search/Provider · 가격 집계 구조 · DB/Migration · **테스트 기대값 수정**(갱신은 근거와 함께) ·
-  **새 네트워크 요청/과금** · `isColorUnverified` 완화 · COLOR **충돌** 제거 ·
-  `matchType`/`matchLevel` 축 어휘를 tier 어휘와 합치는 것 ·
-  🔴 `candidate_reviews`(human_verdict)를 MI·가격·알림·등록 payload 에 넣는 것
+  Search 공급량/provider · **가격 정책·집계 조건** · DB/Migration · 테스트 기대값 수정 ·
+  **새 네트워크 요청/과금** · `isColorUnverified` 완화 · COLOR 충돌 제거 ·
+  `matchType`/`matchLevel` 어휘를 tier 어휘와 합치기 ·
+  `candidate_reviews`(human_verdict) → MI/가격/알림/등록 payload
 ```
 
 ---
