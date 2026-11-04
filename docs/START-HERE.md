@@ -8,60 +8,56 @@
 
 ---
 
-## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-04 · FINAL MARKET COMPARISON)
+## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-04 · FINAL QUALITY GATE 조사 완료)
 
 ```
-좌표   STAGE 5 종료 · Ⓐ 배포 · C 배포 · A HOLD(Ⓑ 선행) · B NO-GO · Ⓑ 설계 미승인
-       🔵🔵 **FINAL MARKET COMPARISON = CPO 데이터 검토 «대기»**
-       🔴 조사·측정 끝났다. 다시 하지 않는다. **CTO 코드 작업 없음.**
+좌표   Ⓐ·C 배포 · A HOLD · B NO-GO · STAGE 5 종료
+       🔵🔵 **FINAL MARKET COMPARISON — 조사 완료 · 구현 1건 대기**
+       🔴 조사·측정 끝났다. **다시 하지 않는다.** 전문에 숫자가 다 있다.
 
-전문   `docs/FINAL-MARKET-COMPARISON-REVIEW.md`   ← CPO 검토표 + 판정 3건. **먼저 읽는다**
-보조   `docs/STAGE5-REGISTRATION-FLOW.md` · `docs/STAGE4H-PRICE-ELIGIBILITY-ARCHITECTURE.md`
-       `docs/STAGE4G-R2-...md` · `docs/STAGE4G-R1-...md` · `docs/STAGE4G-IDENTITY-POLICY-01.md`
+전문   `docs/FINAL-MARKET-COMPARISON-REVIEW.md`  ← §7~§12 가 최신 결론. **먼저 읽는다**
+       §11 에 **구현 스펙 4단계**(파일·줄·선례)가 있다 ⟹ 조사 없이 구현만 하면 된다
 
-🔴🔴 **먼저 — 로컬에서 discovery 를 돌릴 수 없다(측정 한계 · 다시 시도하지 말 것)**
-  `comparison-shop.ts:141` service-role 키 없으면 `return []`  ⟹ 해외 등록부 **0**
-  `[SP07-websearch]` **NOT_CONFIGURED**                        ⟹ AI Search **0**
-  🟢 `core-e2e-close-06` 는 그래서 **스스로 측정을 거부한다**(열화 게이트가 작동한다)
-  🔴 그 0 을 「후보가 없다」로 **적지 않는다** ⟹ 🟢 **운영 산출물**(`candidate_reviews`)을 읽는다
+🔴🔴🔴 **최신 운영 데이터가 화면의 «틀린 숫자» 를 드러냈다**(스냅샷 6cf3e50e · 11-03 · B226AC073)
+  🌎 CAD 370 ~ 19,100  판매처 2곳  🔴🔴 **51배** · 그 안에 「**Diesel Viker Jeans**」(다른 브랜드)
+  🌎 EUR 42 ~ 100 · GBP 39.5 ~ 75 · USD 22,200(🔴 통화 오인 의심)
+  🇰🇷 **렌더되지 않는다 — 국내 후보 0**(최신 스냅샷 10건 전수 KR 0)
+  🟢 7건 중 **6건이 UNVERIFIED_SEARCH** · 유일한 VERIFIED(junioredition GBP 75)가
+     **유일하게 원상품과 제목이 일치** 한다(`Taxi Saurus Tag Denim Pants by Bobo Choses`)
 
-🟢🟢 **실제 화면 한 장(운영 데이터) — 정확성 모순 0**
-  원상품 `B226AC009` · 스냅샷 `6db15ecc` · 후보 **4**(🇰🇷 1 · 🌎 3)
-    🇰🇷 miniboutique.co.kr   PRESUMED_SAME COMPARISON **KRW 88,000**  신뢰도 🔴null
-    🌎 villagekids.co.uk     PRESUMED_SAME COMPARISON **GBP 21.2**    신뢰도 🔴null
-    🌎 global.trenbe.com     **SAME** EXACT            **USD 80**     신뢰도 🔴null
-    🌎 junioredition.com     **SAME** EXACT            **GBP 37**     🟢VERIFIED_CURRENT
-  화면 문자열 — 🇰🇷 `KRW 88,000 · 판매처 1곳` / 🌎 `GBP 21.2 ~ 37 · 2곳` · `USD 80 · 1곳`
-  🟢 점검 전부 **0** — 시장 모순 0 · 중복 0 · 가격 오표시 0 · tier 불일치 0 · 품절 오표시 0
-  🟢 **환산은 이 영역에 «없는 것이 정상»** 이다(`wu-056r1` · `₩`/`약` 0 · 합계 칸 없음)
-  🟢🟢 **STAGE 4-I 어휘가 실데이터에서 발화했다** — `COMPARISON` → 「**동일상품 추정**」
+🟢🟢 **그래서 CPO ①③④ 가 «한 수정» 으로 닫힌다** — UNVERIFIED 를 검증 금액 집계에서 분리
+  ⟹ `GBP 75 · 판매처 1곳` 만 남고 CAD 51배·USD 22,200·Diesel Jeans 가 **전부 사라진다**
+  🟢 후보는 **보존**(「미확인」 표시) ⟹ Recall 손실 0 · 🟢 선례 **WU-062**(금액에서만 뺀다)
+  🔴 구현 스펙은 전문 §11 — 4단계 · `e.priceStatus` 는 **이미 있다**(run-domestic:359)
+  🔴 `priceTierFromLink` 는 **건드리지 않는다**(tier 불변 · «금액 자격» 만 좁힌다 = 강화)
 
-🔵🔵 **CPO 판정 3건**(🔴 전부 LOCK 영역 · CTO 가 고치지 않았다 · 전문 §3)
-  ① 🔴🔴 가격 4건 중 **3건이 신뢰도 `null`(모름)인데 전부 금액 집계에 들어간다**
-     — **국내 유일 가격**(KRW 88,000)과 **해외 최저값**(GBP 21.2)이 거기 있다
-     — WU-111 모순의 실데이터 재현(집계는 priceStatus 를 안 보고 UI 는 VERIFIED 만 본다)
-  ② 🔴 `GBP 21.2 ~ 37` 범위가 **추정(21.2) ↔ 확정(37)** 을 한 줄로 합친다
-     — 그리고 21.2 의 `villagekids` 는 **R2 가 찾은 GT 모순쌍** 이다
-  ③ 🟡 `trenbe` 「**Long Sleeve**」가 `SAME · EXACT` 다(원상품은 반팔) — 사람 눈 판정 필요
+🔴 **내 앞선 보고 ⑤를 정정했다** — `price_status=null` 은 **저장 artifact** 다
+  `derivePriceStatus`(match.ts:568)는 null 을 **낼 수 없다** ·
+  DB 경계 — `10-20~11-01 null 104` → **`11-02~03 null 0 · 채워짐 37`**
+  ⟹ 🔴 집계에서 `null` 을 막지 않는다(낡은 저장분이고, 막으면 기존 후보가 조용히 사라진다)
 
-🟢 재현 도구(커밋됨 · READ-ONLY · 네트워크 0)
-  `packages/database/scripts/final-market-review-dump.mjs`  (`ORIGIN_CODE=` `SNAPSHOT_ID=` 로 다른 상품)
-  `apps/.../__tests__/final-market-review.test.ts`          (덤프 없으면 **skip** · CI 안전)
+🔴🔴 **② villagekids 충돌 — 복원했고 「판단 불가」가 답이다**(이력 삭제 0)
+  같은 URL 31행 중 사람 판정 2건 · **모든 축이 글자 그대로 같다**
+  (원상품 제목·URL · 후보 제목 · verdict · truth · tier · 가격 · blockers 4개 전부 동일)
+  차이는 **snapshot id 와 7시간 24분** 뿐이다 · 🔴 `human_note` **둘 다 없음** · 🔴 **이미지 없음**
+  ⟹ 사람이 **이미지 없이** 판단했다(WU-099 패턴) ⟹ 🔵 **CPO 판단 대상으로 남긴다**
+  🟡 그 후보는 UNVERIFIED 라 위 수정만으로 **금액 집계에서는 빠진다**(후보로는 남는다)
 
-🔴 분모 주의(두 번 틀렸다 · 전문 §0-A) — ⒜ 화면은 **한 스냅샷** 이다(`origin_code` 로 묶으면
-  39개 분석이 합쳐진다) ⒝ 같은 URL 39행은 **39개 스냅샷** 이고 **중복이 아니다**
-  (같은 `(snapshot_id,url)` 2행 이상 **0건** · 부분 유니크가 지킨다)
+🔴 **③ 의류 형태 축은 별건이다** — `GARMENT_FORM` 이 있으나 `T-shirt ↔ Long Sleeve` 를
+  **둘 다 SHIRT 로 읽어 발화하지 않는다**(WU-123 실측) · 소매 길이 축은 WU-123/125 가
+  「재현 0/18 · 새 축 금지」로 닫았다 ⟹ 🔵 **CPO 가 그 축을 여는 결정이 선행** 한다
 
-🟡 **남은 것 = CPO 가 할 두 가지**
-  ① 위 판정 3건 검토 ② 🔴 **배포 후 실제 화면 확인**(따져 화면은 CTO 가 볼 수 없다)
-  🔵 그 둘이 닫히면 CPO 계획대로 **셀러 중심 UI/UX 개선** 으로 넘어간다
+🟢 재현 도구(커밋됨 · READ-ONLY · 네트워크 0 · 과금 0)
+  `final-market-review-dump.mjs`(ORIGIN_CODE/SNAPSHOT_ID) · `final-market-review.test.ts`(skip-safe)
+  `final-villagekids-conflict.mjs` · `final-pricestatus-provenance.mjs` · `final-latest-snapshot.mjs`
 
-🔴 금지(그대로 유효)  A 구현 · B 구현 · 점수/threshold · 새 blocker · **Legacy GT 수정** ·
-  `priceTierFromLink`/eligibility · `SIMILAR → textOnly` 완화 · 국내 REFERENCE 신설 ·
-  Search 공급량/provider · **가격 정책·집계 조건** · DB/Migration · 테스트 기대값 수정 ·
-  **새 네트워크 요청/과금** · `isColorUnverified` 완화 · COLOR 충돌 제거 ·
-  `matchType`/`matchLevel` 어휘를 tier 어휘와 합치기 ·
-  `candidate_reviews`(human_verdict) → MI/가격/알림/등록 payload
+🔴 분모 주의 — 화면은 **한 스냅샷** 이다(`origin_code` 로 묶으면 39개 분석이 합쳐진다) ·
+  같은 URL 39행은 **39개 스냅샷** 이고 중복이 아니다(같은 `(snapshot_id,url)` 2행 **0건**)
+
+🔴 금지(그대로)  A · B · 점수/threshold · 새 blocker · Legacy GT 수정 · `priceTierFromLink` ·
+  `SIMILAR → textOnly` 완화 · **가격 안전장치 완화**(강화는 허용) · 국내 REFERENCE 신설 ·
+  Search 공급량/provider · DB/Migration · 테스트 기대값 수정 · 새 네트워크/과금 ·
+  사람 판정 이력 삭제 · `human_verdict` → MI/가격/알림/등록 payload
 ```
 
 ---
