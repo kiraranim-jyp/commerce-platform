@@ -308,11 +308,22 @@ Bobo Choses ↔ Lacoste · STONE ISLAND JUNIOR · Gray Label · Petite Maison ·
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-🔴🔴🔴 CURRENT WU  **STAGE 4-G — IDENTITY POLICY 01 구현**(CPO GO · 2026-11-04) ← 🔵 **지금 여기**
-                  🟢 조사 **전부 종료**(STAGE 3-A·4·4-B·4-C·4-D·4-E·4-F) — **재조사 금지**
-                  🔵 좌표·점수표·착수 라인·검증 대상은 **맨 위 NEXT SESSION 블록 하나** 다
-                  🔴 원인 확정 — `cross-seller.ts:1309` PRESUMED 분기가 **blocker 를 안 본다** +
-                     그 문턱 3점이 **아동의류 Generic 축으로 자동 충족**(운영 FP 9건 전부 그 모양)
+🟢🟢🟢 CURRENT WU  **없다 — MI LONG SPRINT 기술 작업 «종결»**(CPO 최종 판정 2026-11-05)
+                  🔵 기준 커밋 **`5de9537`** · alias `ttaejyo.vercel.app` · clean · 0 ahead/behind
+                  🔵 회귀 **787 files / 10,155 passed / 0 failed** · typecheck 0 · build 0
+                  🔴🔴 **CTO 가 할 코드 작업이 없다.** 다음 작업은 **CEO 화면 검수 결과** 로
+                     시작한다(CPO 명시) — 선제적으로 WU 를 만들지 않는다.
+                  🟡 남은 것 둘 — ① **CEO 실제 화면 검수**(경로는 맨 위 NEXT SESSION 블록)
+                     ② GBP ×100 파서 = 🟢 **CPO 가 「수정 불필요」로 판정**(영향 범위 가둬짐 ·
+                     권위 테이블 외화>1000 **0건** · 집계 유입 구조적 불가 · WU-079 유지)
+                  🔵 좌표·실측 숫자·검수 체크리스트는 **맨 위 NEXT SESSION 블록 하나** 다
+
+🔴 [낡음 · 발견은 유효] 이전 CURRENT WU  **STAGE 4-G — IDENTITY POLICY 01**
+                  🔴 그 WU 의 **원인 확정은 그대로 유효** 하다 — `cross-seller.ts:1309`
+                     PRESUMED 분기가 **blocker 를 안 본다** + 문턱 3점이 **아동의류 Generic
+                     축으로 자동 충족**(운영 FP 9건 · 🔴 2026-11-05 라이브에서 **신규 5건 재현**)
+                  🟢 **그러나 가격은 오염되지 않는다** — `BRAND_MISMATCH` 가 **금액 자격** 에서
+                     막는다(운영 89건 → 집계 **0건** 실측) ⟹ 🔴 Identity 축은 **CPO 동결 유지**
                   🔴 HOLD 유지 — DISTINCTIVE NAME · PRODUCT FORM · PATTERN · DESCRIPTION ·
                      BRAND_MISMATCH · D4 migration
 ```
