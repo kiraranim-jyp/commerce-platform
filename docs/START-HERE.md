@@ -308,11 +308,26 @@ Bobo Choses ↔ Lacoste · STONE ISLAND JUNIOR · Gray Label · Petite Maison ·
 ## 0. 한 줄 상태 — 이것만 보고도 다음 행동이 정해진다
 
 ```
-🟢🟢🟢 CURRENT WU  **없다 — MI LONG SPRINT 기술 작업 «종결»**(CPO 최종 판정 2026-11-05)
-                  🔵 기준 커밋 **`5de9537`** · alias `ttaejyo.vercel.app` · clean · 0 ahead/behind
+🟢🟢🟢 CURRENT WU  **없다 — MI LONG SPRINT 기술 작업 «종결»**(CPO 최종 인계 2026-11-05)
+                  🔵 **기술 기준 커밋 `5de9537`** · 문서 정정 `010d0770` ·
+                     alias `ttaejyo.vercel.app` · clean · 0 ahead/behind
                   🔵 회귀 **787 files / 10,155 passed / 0 failed** · typecheck 0 · build 0
                   🔴🔴 **CTO 가 할 코드 작업이 없다.** 다음 작업은 **CEO 화면 검수 결과** 로
-                     시작한다(CPO 명시) — 선제적으로 WU 를 만들지 않는다.
+                     시작한다(CPO 명시) — 🔴 검수 «전» 에는 **새 WU 를 만들거나 기능 개발을
+                     재개하지 않는다.** 검수 뒤에 ⒜ 기대 동작과의 차이 확인 ⒝ 전략 영향 판단
+                     ⒞ **필요할 때만** 다음 작업 정의 — 그 순서다.
+
+🔴🔴🔴 **다음 작업의 «필수 주의사항» 둘**(CPO 가 검증 원칙으로 승격 · 2026-11-05)
+                  ① 🔴 `candidate_reviews` 를 **전체 생산자 데이터로 간주하지 않는다** —
+                     그 표는 세 생산자만 담는다(WEB_SEARCH · DOMESTIC_LISTING 구조적 부재).
+                     🟢 생산자/시장 축은 `workspace.searchRun`(producers · producerMarkets ·
+                     funnel)으로 읽는다. 🔴 그 표의 「🇰🇷 0」은 **국내 공급량이 아니다**.
+                  ② 🔴 `priceTier` 를 **가격 집계 자격으로 간주하지 않는다** — 자격은 **다섯**
+                     (tier ≠ EXCLUDED · verdict 적격 · 금액 · priceStatus · blocker 3)이고
+                     `BRAND_MISMATCH` 는 **집계 단계** 에서 막는다(운영 89건 → 집계 **0건**).
+                     🔴 `sameOrPresumedWithPrice` 도 자격이 아니다(「가격을 들고 있다」다).
+                  🔴 이 둘은 **실제로 거짓 결론을 CPO 까지 올린 오류** 다 — 추론하지 말고
+                     집계기(`summarizeCandidateOverseasPrices` · 순수 함수)를 **직접 돌린다**.
                   🟡 남은 것 둘 — ① **CEO 실제 화면 검수**(경로는 맨 위 NEXT SESSION 블록)
                      ② GBP ×100 파서 = 🟢 **CPO 가 「수정 불필요」로 판정**(영향 범위 가둬짐 ·
                      권위 테이블 외화>1000 **0건** · 집계 유입 구조적 불가 · WU-079 유지)
