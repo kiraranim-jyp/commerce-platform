@@ -52,10 +52,51 @@ const snaps = await p.$queryRawUnsafe(`
    limit 5
 `);
 
+/**
+ * 🔵🔵 MI-INTEGRATION — **해외 축도 「과거 수치 재사용」이 아니라 재확인** 해야 한다(CPO §2).
+ *
+ * 🟢 그래서 **운영이 실제로 발견한** 해외 후보 URL 을 꺼낸다(`OVERSEAS_AUTO` 산출).
+ * 🔴 **URL 만** 꺼낸다 — 과거 판정·가격은 **가져오지 않는다**. 판정은 이번 실행에서
+ *    운영 러너가 **처음부터 다시** 낸다(그것이 「재확인」의 뜻이다).
+ * 🔴 CTO 가 후보를 고르지 않는다 — 최근 스냅샷의 해외 후보를 **그대로** 쓴다.
+ */
+const overseas = await p.$queryRawUnsafe(`
+  select candidate_url, candidate_domain, snapshot_id, origin_code
+    from candidate_reviews
+   where market = 'OVERSEAS' and source = 'OVERSEAS_AUTO'
+     and snapshot_id = (
+       select snapshot_id from candidate_reviews
+        where market = 'OVERSEAS' and source = 'OVERSEAS_AUTO'
+        group by snapshot_id order by max(first_seen_at) desc limit 1
+     )
+   order by candidate_url
+`);
+
+/**
+ * 🔴🔴 **원상품을 섞지 않는다.** 러너는 특정 `dna` 에 대해 후보를 판정하므로, 해외
+ *    후보는 **그 후보가 발견된 원상품** 으로 돌려야 한다. 그래서 그 스냅샷의
+ *    `source_url` 을 같이 꺼낸다(국내 축과 **다른 원상품** 일 수 있다).
+ */
+const overseasSnapRows = await p.$queryRawUnsafe(`
+  select s.id, s.source_url, s.title
+    from product_snapshots s
+   where s.id in (
+     select snapshot_id from candidate_reviews
+      where market = 'OVERSEAS' and source = 'OVERSEAS_AUTO'
+      group by snapshot_id order by max(first_seen_at) desc limit 1
+   )
+`);
+const overseasSnap = overseasSnapRows[0] ?? null;
+
 const out = {
   at: new Date().toISOString(),
   sources,
   snapshots: snaps,
+  overseasSnapshot: overseasSnap,
+  /** 🔴 URL 과 도메인뿐이다 — 과거 verdict/price 는 **의도적으로** 담지 않았다. */
+  overseasCandidateUrls: overseas.map((o) => o.candidate_url),
+  overseasSnapshotId: overseas[0]?.snapshot_id ?? null,
+  overseasOriginCode: overseas[0]?.origin_code ?? null,
   counts: {
     sources: sources.length,
     byStrategy: sources.reduce((a, s) => {
@@ -79,6 +120,10 @@ console.log("=== DOMESTIC-FUNNEL 입력 덤프 ===");
 console.log("등록부 행:", out.counts.sources, "· http url 보유:", out.counts.withHttpUrl);
 console.log("수집전략:", JSON.stringify(out.counts.byStrategy));
 console.log("source_type:", JSON.stringify(out.counts.bySourceType));
+console.log(
+  `🌎 해외 후보 URL(운영 발견 · 판정 미포함): ${out.overseasCandidateUrls.length}건 ` +
+    `· 스냅샷 ${String(out.overseasSnapshotId ?? "-").slice(0, 8)} · ${out.overseasOriginCode ?? "-"}`,
+);
 console.log("원상품 후보:");
 for (const s of snaps)
   console.log(`  ${String(s.id).slice(0, 8)}  brand=${s.brand ?? "-"}  code=${s.code ?? "-"}  ${String(s.title ?? "").slice(0, 40)}`);
