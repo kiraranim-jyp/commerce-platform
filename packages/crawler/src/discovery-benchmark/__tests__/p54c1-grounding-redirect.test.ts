@@ -214,7 +214,26 @@ describe("extractCanonicalUrl — 속성 순서가 달라도 읽는다", () => {
 
 /* ══════════════ live probe — 실제 사이트 ══════════════ */
 
-describe("live PageProbe — 실제 응답으로 검증(Gemini 호출 0)", () => {
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴 MI-INTEGRATION(2026-11-05) — **이 블록에 게이트를 붙였다. 지우지 않았다.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 **왜** — 이 블록은 게이트 없이 **회귀 안에서 실제 HTTP** 를 쳤다
+ *    (`junioredition.com` · `littleluna.co.kr`). 외부 사이트가 느려지거나 rate-limit
+ *    을 걸면 **`npx vitest run` 전체가 빨간색** 이 된다.
+ *    🔴 실측: 전체 회귀에서 **1 failed**(8,357ms) → **고립 실행은 18/18 PASS**
+ *       ⟹ 제품 결함이 아니라 **환경** 이었다. 🔴 그 둘을 가르는 데 매번 사람이 든다.
+ * 🔴 그리고 이 저장소의 규칙이 이미 그것을 금지한다 — 이 트랙의 라이브 하니스 전부가
+ *    「게이트 없으면 SKIP · 회귀에서 외부 HTTP 금지」를 따른다(`DOMESTIC_FUNNEL` ·
+ *    `MI_INTEGRATION` · `CLOSE_06_PROBE` · `WU_172_PROBE` …). **이 블록만 예외였다.**
+ *
+ * 🟢 **검증 능력을 잃지 않는다** — `P54C1_LIVE=1` 로 그대로 돌아간다(실측 18/18 PASS).
+ * 🔴 단언·URL·기대값·타임아웃을 **한 글자도 바꾸지 않았다** — 게이트 한 줄만 더했다.
+ */
+const LIVE = process.env.P54C1_LIVE === "1";
+
+describe.runIf(LIVE)("live PageProbe — 실제 응답으로 검증(Gemini 호출 0)", () => {
   it("🔴 GET 하나로 status·finalUrl·canonical 을 모두 얻는다", async () => {
     const seen: { bytes: number; httpCalls: number }[] = [];
     const probe = createLivePageProbe({ onResult: (r) => seen.push({ bytes: r.bytes, httpCalls: r.httpCalls }) });
