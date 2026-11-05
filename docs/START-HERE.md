@@ -149,18 +149,47 @@ Bobo Choses ↔ Lacoste · STONE ISLAND JUNIOR · Gray Label · Petite Maison ·
    회귀에서 실제 HTTP(`junioredition`·`littleluna`)를 쳤다(전체 1 failed ↔ 고립 18/18 PASS).
    🟢 `P54C1_LIVE=1` 게이트 한 줄 · 단언/URL/기대값 **무변경** ⟹ 회귀 결정론 확보.
 
-🔵🔵 **다음 세션의 착수점 — 남은 것은 B 축 하나이고 «기다리면 쌓인다»**
-   ① 🔴 **실제 분석 1회가 돌면** `funnel` 이 채워진다 ⟹ `node packages/database/scripts/
-      mi-screen-readiness.mjs` **한 명령** 으로 🇰🇷 SAME/PRESUMED → 가격까지 읽힌다
-      🔴 현재 6건은 **배포 전 실행** 이라 `funnel` 이 비어 있다(스크립트가 그렇게 **말한다**)
-      🔴 그 1회를 위해 **CEO 에게 실행을 요청하지 않는다** — 평소 분석이면 자동으로 쌓인다
-   ② 🔴 **B 축(🇰🇷 SAME/PRESUMED)은 로컬에서 측정불가** 다 — pool 경계는 점수를 매기지
-      않고(`withConfidence` 는 호출부가 배열 단위로 부른다), 운영 `query` 를 손으로 지어
-      verdict 를 만들면 **운영과 다른 숫자** 가 된다. 🔴 그 숫자를 B 축이라 적지 않는다
-   ③ 🟡 **독립 축 둘** — ⒜ Search `timeout 2/6`(33%) ⒝ 위 목록 hop 상한 14.
-      🔴 둘 다 표준 §8(검색 공급자/횟수/전략)이라 **CPO 결정** ⟹ 보고만 한다
+🟢🟢🟢 **[B 축 운영 실측 완료 2026-11-05] 기다린 그 1회가 «스스로» 돌았다 — 국내가 연결됐다**
+```
+🟢 `node packages/database/scripts/mi-screen-readiness.mjs` 한 명령 · funnel 보유 **3/9**
+   (🔴 배포 전/후가 섞여 있다 — **같은 표로 집계하지 않는다**)
+
+■ Bobo Choses Pop sweatshirt (2026-11-05 01:57Z · post-deploy)
+  producers        WEB_SEARCH **4** · OVERSEAS_AUTO 6 · DOMESTIC_LISTING 0
+  producerMarkets  WEB_SEARCH → **KR 1** · OVERSEAS 1 · UNKNOWN 2
+                   OVERSEAS_AUTO → KR 0 · OVERSEAS 6
+  funnel.KR        후보 **1** · **SAME 1** · withPrice **1** · SAME/PRESUMED+가격 **1**
+  funnel.OVERSEAS  후보 7 · SAME 1 · PRESUMED 6 · withPrice 7
+  search           organic 10 · failed false
+⟹ 🟢🟢 **국내 축이 운영에서 KR 분류 → SAME → 가격까지 전부 연결됐다**
+⟹ 🟢 그리고 그 국내 후보의 출처는 **WEB_SEARCH** 다(`producerMarkets` 가 그것을 말한다 —
+   이 칸을 더한 이유가 정확히 이것이다). 🔴 목록 hop 은 그 실행에서 0 이다
+■ Bonjour 2건  WEB_SEARCH **0** → 🇰🇷 **0** · 한 건은 search **failed true**(organic 0)
+⟹ 🟡 n=3 에서 **「WEB_SEARCH 가 국내를 공급한다」** 가 보인다. 🔴 단정하지 않는다(n=3)
+⟹ 🔴 그래서 Search 실패(**3/9**)는 **국내 축을 0 으로 만드는** 축이다 — §8 동결이라 보고만
+```
+🔴🔴 **`sameOrPresumedWithPrice` 를 «가격 자격» 으로 읽지 않는다** — 그것은 「가격을 들고
+   있다」이고 `byCurrency` 진입(= `BRAND_MISMATCH` 등 차단 통과)은 **집계 단계의 별 사실** 이다.
+   🔴 내가 그 둘을 섞어 CPO 에게 **거짓 결론을 한 번 올렸다**(tier 를 자격으로 읽었다).
+
+🟢🟢 **[GBP ×100 가둠 완료] 권위 테이블에는 «0건» 이다 — 집계 유입이 구조적으로 없다**
+```
+🟢 `price_observations`(가격 집계·판정·알림의 권위 입력) 외화 **>1000 → 0건**
+   GBP 14~210 · EUR 20~180 · USD 27~566 · CAD 84~300 · JPY 2,980~39,900 · KRW 26,000~385,000
+🟢 코드 추적 — `savedCandidateRows`(= `candidate_reviews` 복원)는 등장이 **셋**(주석·계산·
+   **반환**)뿐이고 집계 입력 루프(`for (const e of geminiEvidence ?? [])` → `overseasEvidence`
+   → `summarizeCandidateOverseasPrices`)에 **닿지 않는다** ⟹ 가격 형성대 유입 **불가**
+🟡 남은 유일한 노출면 = **재진입 후보 카드 표시** 뿐이고, 그 행은 `priceStatus = null` 이라
+   화면이 **「판매판정 미반영」** 을 붙인다(확정 가격으로 읽히지 않는다)
+🔴 파서는 **고치지 않았다**(WU-079 REJECT 축) ⟹ 영향 범위가 확인됐으니 **CPO 판정**
+```
+
+🔵🔵 **남은 것은 둘이고 둘 다 CTO 권한 밖이다 — 기능 개발은 CPO 가 종료했다**
+   ① 🔴 **실제 셀러 화면 검수(CEO)** — `/pipeline` → 상품 분석 → 📊 시장 판매 판단 →
+      후보의 **`▸ 판단 근거`** 펼침. 🔴 HTTP 200/307/401·마운트 DOM 으로 UI PASS 를 적지 않는다
+   ② 🟡 **GBP ×100 파서** — 영향 범위는 위에서 가둬졌다(집계 0 · 표시만) ⟹ CPO 판정
    🔴 금지 — threshold/8축 완화 0 · 후보 노출 축소 0 · Registry/어댑터 신설 0 ·
-      `candidate_reviews` 의 `source` enum 확대 0(migration · CPO 결정 · 코드가 `D4` 로 표시)
+      `candidate_reviews` `source` enum 확대 0 · 가격 파서 0 · 검색 provider/질의/재시도 0
 
 🟢🟢 **끝난 것 — 재구현 금지**(전부 배포 · push 0/0)
    가격 자격 **5조건**(tier ≠ EXCLUDED · verdict 적격 · 금액 · priceStatus · blocker 3)
