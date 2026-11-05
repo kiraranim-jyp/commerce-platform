@@ -29,7 +29,7 @@ import type { JSX, ReactNode } from "react";
  */
 import { transientDisplay, CANDIDATE_WARNING_PREFIX } from "./mi-same-candidates";
 /** 🔵 `-03` — 🔴 축의 «말» owner 는 이 파일 하나다(영문 토큰을 화면에 내보내지 않는다). */
-import { blockerText } from "./blocker-text";
+import { blockerText, EVIDENCE_NONE_TEXT, splitEvidenceReasons } from "./blocker-text";
 
 /**
  * 🔴 `GeminiTransientEvidence`(run-domestic-price-check.ts)의 **화면이 읽는 칸만**
@@ -348,6 +348,26 @@ export const STOCK_TEXT = {
   UNKNOWN: "⚪ 재고 확인불가",
 } as const;
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 EVIDENCE-SURFACE-01 — **후보 상세 Evidence 영역의 «말»**(CPO 승인 2026-11-05)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 CPO 가 가른 경계를 그대로 구현한다:
+ * ```
+ * 후보 «카드»   판정 · 가격 · 판매처 · 핵심 상태        ← 🟢 **간결함 유지**(`-03` 정책)
+ * 후보 «상세»   일치 근거 · 불일치 근거 · 관측값 · 출처 · 미확인  ← 🔵 이 영역
+ * ```
+ * 🔴 **새 화면/새 모듈을 만들지 않았다** — 같은 카드 안의 **접힘 하나** 다.
+ * 🔴 **기본 접힘** 이다(`open` 을 쓰지 않는다) — 펼쳐 두면 후보가 「유력」으로 읽히고
+ *    그것이 2026-09-19 사고(「유력 후보 5건」)의 기전이다(WU-091 계약).
+ * 🔴 **판정/집계 어휘를 쓰지 않는다** — 이 영역은 근거를 «보여줄» 뿐이다.
+ */
+export const EVIDENCE_SUMMARY_LABEL = "판단 근거";
+export const EVIDENCE_AGREE_LABEL = "같다고 본 점";
+export const EVIDENCE_HOLD_LABEL = "다른 점 · 확인 필요";
+export const EVIDENCE_SOURCE_LABEL = "출처";
+
 export function stockText(soldOut: boolean | null | undefined): string {
   if (soldOut === true) return STOCK_TEXT.SOLD_OUT;
   if (soldOut === false) return STOCK_TEXT.IN_STOCK;
@@ -437,13 +457,23 @@ export function GeminiTransientCandidates({
            * 🟢 말의 owner 는 `blocker-text.ts` 하나다 — 모르는 토큰은 「기타 사유」로 묶는다.
            * 🔴 중복은 접는다(blocker 와 conflict 가 같은 축을 가리킬 수 있다).
            */
-          const blockers = Array.from(
+          const blockersAll = Array.from(
             new Set(
               [...(row.crossSellerBlockers ?? []), ...(row.crossSellerConflicts ?? [])].map(
                 blockerText,
               ),
             ),
-          ).slice(0, 2);
+          );
+          const blockers = blockersAll.slice(0, 2);
+          /**
+           * 🔵 EVIDENCE-SURFACE-01 — **카드는 그대로, 상세에만** 근거를 펼친다.
+           * 🔴 카드의 `blockers` 는 **2개 상한 그대로** 다(간결함 유지). 상세는
+           *    `blockersAll` 전수를 쓴다 — 「2개만 보여서 나머지를 못 봤다」를 없앤다.
+           * 🔴 `matchReasons` 를 **그대로 찍지 않는다** — owner(`blocker-text.ts`)가
+           *    내부 진단 줄(판정방법·판정근거·유사도 %)을 걸러 낸 결과만 쓴다.
+           */
+          const evidence = splitEvidenceReasons(row.matchReasons);
+          const evidenceHold = Array.from(new Set([...evidence.hold, ...blockersAll]));
           return (
             <li key={row.discoveredUrl} className="rounded border border-border/60 p-2">
               {/* 🔴🔴 WU-028 — 한 줄: **출처 · 판정 · 시장**. 출처가 행에 있어야
@@ -568,6 +598,35 @@ export function GeminiTransientCandidates({
                   {CANDIDATE_WARNING_PREFIX} {blockers.join(" · ")}
                 </p>
               )}
+              {/**
+                * 🔵🔵🔵 EVIDENCE-SURFACE-01 — **후보 상세 Evidence 영역**(CPO 승인).
+                *
+                * 🔴 **기본 접힘** — `open` 을 쓰지 않는다(WU-091 의 그 계약).
+                * 🔴 둘 다 비어도 **영역을 숨기지 않는다** — 「근거가 없다」는 셀러가
+                *    알아야 하는 사실이고, 숨기면 「확인했는데 근거가 없다」와
+                *    「아직 안 봤다」가 **같은 화면** 이 된다(이 저장소의 그 원칙).
+                */}
+              <details data-testid="gt-evidence" className="mt-0.5">
+                <summary className="cursor-pointer text-[11px] text-text-tertiary">
+                  ▸ {EVIDENCE_SUMMARY_LABEL}
+                </summary>
+                <div className="mt-1 space-y-0.5 border-l border-border/40 pl-2">
+                  <p data-testid="gt-evidence-agree" className="text-[11px] text-text-tertiary">
+                    {EVIDENCE_AGREE_LABEL} —{" "}
+                    {evidence.agree.length > 0 ? evidence.agree.join(" · ") : EVIDENCE_NONE_TEXT}
+                  </p>
+                  <p data-testid="gt-evidence-hold" className="text-[11px] text-text-tertiary">
+                    {EVIDENCE_HOLD_LABEL} —{" "}
+                    {evidenceHold.length > 0 ? evidenceHold.join(" · ") : EVIDENCE_NONE_TEXT}
+                  </p>
+                  {/* 🔴 CPO §3 「출처」 — 어휘는 카드 뱃지와 **같은 상수** 다. */}
+                  {row.source && (
+                    <p data-testid="gt-evidence-source" className="text-[11px] text-text-tertiary">
+                      {EVIDENCE_SOURCE_LABEL} — {SOURCE_LABEL[row.source]}
+                    </p>
+                  )}
+                </div>
+              </details>
               {/**
                * 🔴🔴 WU-081 — **사람 검토.** `onReview` 가 없으면 이 블록은 **렌더되지 않는다**
                *    (기존 두 구역이 그 상태다 — 한 픽셀도 바뀌지 않는다).

@@ -50,3 +50,66 @@ export function blockerText(token: string): string {
 
 /** 🟢 계약이 「축을 임의로 늘리지 않았다」를 셀 수 있게 열어 둔다. */
 export const KNOWN_BLOCKER_TOKENS = Object.keys(BLOCKER_TEXT);
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 EVIDENCE-SURFACE-01 — **근거 줄을 셋으로 «가른다»**(CPO 승인 2026-11-05)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **왜 필요했나** — 셀러 카드는 **차단 사유만** 보여주고(`blockerText`)
+ *    **일치 근거는 `diagnostic` 구역에만** 있었다. 그래서 셀러가 「왜 다른 상품인가」는
+ *    읽을 수 있는데 **「왜 같은 상품인가」는 읽을 수 없었다** ⟹ 소싱 판단의 절반이 없었다.
+ *
+ * 🟢🟢 **새 어휘를 만들지 않는다 — 운영이 쓴 말을 «고르기만» 한다.**
+ *    운영 `cross-seller.ts` 는 이미 축 이름이 한국어인 줄을 쓴다(운영 DB 실측):
+ * ```
+ * 근거: 대상 KIDS · 근거: 상품군 TOP↔TOP · 근거: 색상 BLUE · 근거: 브랜드 품번 일치 ·
+ * 근거: 소재 organic cotton:100 · 근거: 핏 loose fit ↔ relaxed fit(표현 차이 …)
+ * 보류: 핵심 상품명에 겹치는 말이 없다 · 보류: 연령 라인 CHILD ↔ BABY ·
+ * 보류: 옷의 형태 SWEATSHIRT ↔ TOP · 보류: 소재 … ↔ …
+ * ```
+ * 🔴 **접두어가 없는 줄은 «내부 진단» 이고 내보내지 않는다**(운영 DB 실측):
+ * ```
+ * ❌ 판정방법: CROSS_SELLER_AXES — …            (내부 경로 이름)
+ * ❌ 판정근거: 입력 텍스트등급=low · 품번증거=unavailable … → TEXT_CONFIRMED(순위 3)
+ * ❌ 모델명 유사도 0%                           🔴 WU-094 가 **자기모순** 을 실측한 줄이다
+ *    (「유사도 0%」와 「URL slug 일치」가 같이 찍혔다 ⟹ 셀러 판단 근거로 쓸 수 없다)
+ * ❌ 브랜드 일치 / 브랜드 불일치 / 카테고리 일치   🔴 **다른 생산자**(텍스트 점수기)의 거친
+ *    요약이고 BRAND 축은 이미 blocker 로 나온다 ⟹ 같은 뜻을 두 말로 적지 않는다
+ * ```
+ * 🔴 **값은 운영이 관측한 그대로 둔다** — CPO 가 요구한 「원본 관측값」이 그것이다
+ *    (`TOP↔TOP`·`organic cotton:100` 은 내부 코드가 아니라 **관측된 값** 이다).
+ * 🔴 **판정하지 않는다** — 점수·threshold·완화 0. 이 파일은 여전히 라벨 전용이다.
+ */
+export const EVIDENCE_AGREE_PREFIX = "근거: ";
+export const EVIDENCE_HOLD_PREFIX = "보류: ";
+/** 🔴 「근거가 없다」를 빈 칸으로 두지 않는다 — 셀러가 「못 그렸다」와 구별해야 한다. */
+export const EVIDENCE_NONE_TEXT = "확인된 근거 없음";
+
+export interface SplitEvidence {
+  /** 🟢 같다고 본 축. */
+  agree: string[];
+  /** 🔴 다르거나 확인되지 않아 **보류** 한 축. */
+  hold: string[];
+}
+
+export function splitEvidenceReasons(
+  reasons: readonly string[] | null | undefined,
+): SplitEvidence {
+  const agree: string[] = [];
+  const hold: string[] = [];
+  for (const raw of reasons ?? []) {
+    if (typeof raw !== "string") continue;
+    const line = raw.trim();
+    if (line.startsWith(EVIDENCE_AGREE_PREFIX)) {
+      agree.push(line.slice(EVIDENCE_AGREE_PREFIX.length).trim());
+      continue;
+    }
+    if (line.startsWith(EVIDENCE_HOLD_PREFIX)) {
+      hold.push(line.slice(EVIDENCE_HOLD_PREFIX.length).trim());
+      continue;
+    }
+    /** 🔴 그 외는 **내부 진단** 이다 — 조용히 버리는 것이 아니라 «의도적으로» 제외한다. */
+  }
+  return { agree, hold };
+}

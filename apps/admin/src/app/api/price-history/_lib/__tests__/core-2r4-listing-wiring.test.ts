@@ -296,9 +296,15 @@ describe("CORE-2R-4 B — 목록 탐색 생산자(네트워크 0)", () => {
      *    **정답 샵(`donokids.com` · P1 · 실효 10번째)을 잘랐고** 그것이 CEO Production
      *    FAIL 의 실제 원인이었다. 🟢 전수로 늘린 것이 **아니다** — 포털/오픈마켓을
      *    `isListingHopTarget` 로 먼저 빼고(13곳) 그 위에 **백스톱** 으로만 남긴다.
-     * 🔴 그래도 상한은 **작게** 유지한다 — 전수 크롤링이 되면 안 된다(아래 E-4 가 짝이다).
+     *
+     * 🔴🔴 **DOMESTIC-FUNNEL(2026-11-05) — 14 도 잘랐다.** 라이브 실측에서
+     *    `isListingHopTarget` 통과가 **21** 이고 상한 14 가 **7곳을 잘랐다**(그중
+     *    `littleluna.co.kr` 은 WU-116 이 **₩117,000 을 관측한** 샵이다).
+     * 🟢🟢 **CPO 결정 — 14 → 21 승인**(후보 발견은 넓히고 판정은 건드리지 않는다).
+     * 🔴 그래도 상한은 **유한하게** 유지한다 — 전수 크롤링이 되면 안 된다(E-4 가 짝이다).
+     *    🔴 그래서 단언을 **없애지 않고 숫자만** 올린다(가드를 푸는 것이 아니다).
      */
-    expect(MAX_LISTING_HOP_SITES).toBeLessThanOrEqual(16);
+    expect(MAX_LISTING_HOP_SITES).toBeLessThanOrEqual(21);
     expect(MAX_LISTING_URLS_PER_SITE).toBeLessThanOrEqual(3);
     expect(MAX_DETAIL_URLS_PER_SITE).toBeLessThanOrEqual(10);
   });
