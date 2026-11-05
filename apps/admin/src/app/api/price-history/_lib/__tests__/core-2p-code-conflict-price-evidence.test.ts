@@ -61,8 +61,19 @@ interface GtCand {
   calibrationLabel: "SAME" | "DIFFERENT" | "UNCERTAIN";
 }
 
+/**
+ * 🔴🔴 SPRINT 2 — **게이트를 붙였다. 지우지 않았다.**
+ *
+ * 🔴 이 테스트는 회귀 안에서 `shopifySiteStrategy.extract` 로 **실제 HTTP** 를 친다 ⟹
+ *    외부 호스트가 느려지거나 rate-limit 을 걸면 **`npx vitest run` 전체가 빨간색** 이 된다
+ *    (실측 2026-11-05: 「🔴 원상품 추출 실패 — 측정불가」 · 같은 세션의 E2E 가 그 호스트를
+ *    반복 호출한 뒤에 났다). 🔴 이 저장소의 규칙은 「회귀에서 외부 HTTP 금지」다.
+ * 🟢 `CORE2P_LIVE=1` 로 그대로 돌아간다 — 단언·URL·기대값 **무변경**.
+ */
+const CORE2P_LIVE = process.env.CORE2P_LIVE === "1";
+
 describe("CORE-2P — Scoped code conflict → price evidence (운영 변경 0)", () => {
-  it("identity 회복과 가격 evidence 회복을 갈라서 잰다", async () => {
+  it.runIf(CORE2P_LIVE)("identity 회복과 가격 evidence 회복을 갈라서 잰다", async () => {
     /* ── 원상품 ─────────────────────────────────────────────────────── */
     const ex = await shopifySiteStrategy.extract(ORIGIN);
     expect(ex?.productData, "🔴 원상품 추출 실패 — 측정불가").toBeTruthy();

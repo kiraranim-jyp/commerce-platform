@@ -62,6 +62,26 @@ function withCode(facts: ProductFacts, code: string | null): ProductFacts {
   return { ...facts, brandModelCode: code } as ProductFacts;
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴 SPRINT 2 — **라이브 두 테스트(C·G)에 게이트를 붙였다. 지우지 않았다.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 **왜** — C(:162)와 G(:385)가 `shopifySiteStrategy.extract(ORIGIN)` + 원시
+ *    `fetch(t.url)` 로 **회귀 안에서 실제 HTTP** 를 쳤다. 외부 호스트가 느려지거나
+ *    rate-limit 을 걸면 **`npx vitest run` 전체가 빨간색** 이 된다.
+ *    🔴 실측(2026-11-05) — 같은 실행에서 **C 는 통과하고 G 는 실패** 했다
+ *       (`expected undefined to be truthy` · 같은 호스트 · 같은 코드) ⟹ **환경** 이다.
+ *       🔴 그리고 그 원인은 같은 세션의 E2E 가 그 호스트를 반복 호출한 것이다.
+ * 🔴 이 저장소의 규칙이 이미 그것을 금지한다 — 라이브 하니스는 전부 게이트를 쓴다
+ *    (`DOMESTIC_FUNNEL` · `MI_INTEGRATION` · `SPRINT2_E2E` · `P54C1_LIVE` …).
+ *
+ * 🟢 **검증 능력을 잃지 않는다** — `CORE2I_LIVE=1` 로 그대로 돌아간다.
+ * 🔴 A·B(순수 소스 축)는 **게이트 없이 그대로** 회귀에 남는다 — 그 둘은 HTTP 가 0 이다.
+ * 🔴 단언·URL·기대값을 **한 글자도 바꾸지 않았다**(게이트 한 줄만 더했다).
+ */
+const CORE2I_LIVE = process.env.CORE2I_LIVE === "1";
+
 describe("CORE-2I — Identity / Seller-managed 분리 검증 (운영 변경 0)", () => {
   /**
    * ── A. 축 전수와 «점수» — 운영 코드에서 읽는다 ───────────────────────────
@@ -159,7 +179,7 @@ describe("CORE-2I — Identity / Seller-managed 분리 검증 (운영 변경 0)"
   /**
    * ── C/D/E. 실제 사례 재검증 + CF-ID 반사실 ──────────────────────────────
    */
-  it("C — B226AC009 실제 후보에서 Identity 칸과 판정을 분리해 잰다", async () => {
+  it.runIf(CORE2I_LIVE)("C — B226AC009 실제 후보에서 Identity 칸과 판정을 분리해 잰다", async () => {
     /* ── 원상품 ─────────────────────────────────────────────────────────── */
     const ex = await shopifySiteStrategy.extract(ORIGIN);
     expect(ex?.productData, "🔴 원상품 추출 실패 — 측정불가").toBeTruthy();
@@ -382,7 +402,7 @@ describe("CORE-2I — Identity / Seller-managed 분리 검증 (운영 변경 0)"
    *
    * 🔴 입력만 바꾼다(운영 코드 0) · 🔴 CTO 가 축을 열지 않는다 — **측정만** 한다.
    */
-  it("G — Layer C 오염 제거 / Brand+Code 동시 보유 반사실", async () => {
+  it.runIf(CORE2I_LIVE)("G — Layer C 오염 제거 / Brand+Code 동시 보유 반사실", async () => {
     const ex = await shopifySiteStrategy.extract(ORIGIN);
     expect(ex?.productData).toBeTruthy();
     let dna = buildProductIdentityDna(

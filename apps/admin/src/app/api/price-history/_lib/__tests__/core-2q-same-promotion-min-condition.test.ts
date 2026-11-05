@@ -57,8 +57,20 @@ interface GtCand {
   calibrationLabel: "SAME" | "DIFFERENT" | "UNCERTAIN";
 }
 
+/**
+ * 🔴🔴 SPRINT 2 — **라이브 it 하나에 게이트를 붙였다. 지우지 않았다.**
+ *
+ * 🔴 이 파일의 그 테스트는 회귀 안에서 원상품을 **실제로 fetch** 한다 ⟹ 외부 호스트가
+ *    느려지거나 rate-limit 을 걸면 `npx vitest run` **전체가 빨간색** 이 된다(이 세션에서
+ *    실측됐다). 🔴 이 저장소의 규칙은 「회귀에서 외부 HTTP 금지 · 게이트 없으면 SKIP」이고
+ *    같은 계열의 라이브 하니스는 **전부** 게이트를 쓴다 — 이 파일만 예외였다.
+ * 🟢 `CORE2_LIVE=1` 로 그대로 돌아간다 · 🔴 순수 테스트는 **게이트 없이 그대로** 남는다.
+ * 🔴 단언·URL·기대값을 한 글자도 바꾸지 않았다(게이트 한 줄만 더했다).
+ */
+const CORE2_LIVE = process.env.CORE2_LIVE === "1";
+
 describe("CORE-2Q — TEXT_CONFIRMED → SAME 최소 조합 (운영 변경 0)", () => {
-  it("조합 행렬을 만들고 가격 집계까지 연결한다", async () => {
+  it.runIf(CORE2_LIVE)("조합 행렬을 만들고 가격 집계까지 연결한다", async () => {
     /* ── 원상품 ─────────────────────────────────────────────────────── */
     const ex = await shopifySiteStrategy.extract(ORIGIN);
     expect(ex?.productData, "🔴 원상품 추출 실패 — 측정불가").toBeTruthy();

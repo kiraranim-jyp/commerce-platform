@@ -542,7 +542,14 @@ export interface DomesticPriceCheckResult {
  * 엔진 자체가 이 문자열을 토큰으로 처리 못 하는 것으로 보인다. 실제 상품명
  * 텍스트는 전혀 건드리지 않고, 맨 앞 "[...]" 패턴만 제거한다(가운데/끝에 있는
  * 괄호는 실제 모델 정보일 수 있어 손대지 않는다). */
-function stripLeadingDevTag(title: string): string {
+/**
+ * 🔵 SPRINT 2 — **`export` 한 단어만 더했다**(동작 변화 0 · 정규식 한 글자도 안 바꿨다).
+ *    🔴 **왜** — E2E 하니스가 운영 `query` 와 **같은 네 줄** 을 만들려면 이 함수가 필요하다.
+ *       그때 길이 둘이고 하나는 틀렸다:
+ *       ❌ 하니스에 같은 정규식을 **복제** 한다 — 운영이 바뀌면 둘이 조용히 갈라진다
+ *       ✅ 운영 owner 를 **그대로 쓴다** ⟹ 그래서 export 다
+ */
+export function stripLeadingDevTag(title: string): string {
   return title.replace(/^\s*\[[^\]]*\]\s*/, "").trim();
 }
 

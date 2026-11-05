@@ -27,7 +27,12 @@ import type { JSX, ReactNode } from "react";
  * 🔴 WU-132 — 등급 선택 owner. 🟢 이 파일은 **타입만** 거꾸로 내보내므로(아래
  *    `GeminiTransientRow`) 런타임 순환이 생기지 않는다(type import 는 지워진다).
  */
-import { transientDisplay, CANDIDATE_WARNING_PREFIX } from "./mi-same-candidates";
+/** 🔴 SPRINT 2 — 근거 접힘의 «말» owner 를 여기서 끌어온다(새 어휘를 만들지 않는다). */
+import {
+  transientDisplay,
+  CANDIDATE_WARNING_PREFIX,
+  CANDIDATE_EVIDENCE_FOLD_LABEL,
+} from "./mi-same-candidates";
 /** 🔵 `-03` — 🔴 축의 «말» owner 는 이 파일 하나다(영문 토큰을 화면에 내보내지 않는다). */
 import { blockerText, EVIDENCE_NONE_TEXT, splitEvidenceReasons } from "./blocker-text";
 
@@ -363,7 +368,19 @@ export const STOCK_TEXT = {
  *    그것이 2026-09-19 사고(「유력 후보 5건」)의 기전이다(WU-091 계약).
  * 🔴 **판정/집계 어휘를 쓰지 않는다** — 이 영역은 근거를 «보여줄» 뿐이다.
  */
-export const EVIDENCE_SUMMARY_LABEL = "판단 근거";
+/**
+ * 🔴🔴 SPRINT 2 — **새 어휘를 만들었던 것을 되돌렸다.**
+ *
+ * 1차에 이 상수를 `"판단 근거"` 로 **새로 적었다.** 🔴 그런데 같은 개념을 그리는
+ * **다른 표면**(`MarketPriceComparison` 의 후보 접힘)이 이미 `CANDIDATE_EVIDENCE_FOLD_LABEL`
+ * (= **「근거 확인」**)을 쓰고 있었다 ⟹ **두 화면이 같은 뜻을 다른 말로** 부르게 됐다.
+ * 🔴 그리고 그것이 실제 문제를 만들었다 — CPO 가 CEO 에게 안내한 검수 경로 문구가
+ *    「후보의 ▸ **판단 근거**」였는데, 📊 시장 판매 판단 화면의 그 접힘은 **「근거 확인」**
+ *    이다 ⟹ **CEO 가 지시서의 문구를 그 화면에서 찾을 수 없다.**
+ * 🟢 그래서 **기존 owner 로 모은다**(MATCHING-UNIFY-1 과 같은 원칙 — 「두 화면이 같은
+ *    뜻을 다른 말로 하지 않는다」). 🔴 기존 리터럴을 바꾸지 않았다(그쪽 계약 유지).
+ */
+export const EVIDENCE_SUMMARY_LABEL = CANDIDATE_EVIDENCE_FOLD_LABEL;
 export const EVIDENCE_AGREE_LABEL = "같다고 본 점";
 export const EVIDENCE_HOLD_LABEL = "다른 점 · 확인 필요";
 export const EVIDENCE_SOURCE_LABEL = "출처";
