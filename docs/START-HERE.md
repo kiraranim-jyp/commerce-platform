@@ -55,19 +55,38 @@ DOMESTIC_LISTING 이 후보를 낸 실행   **3 / 6**
 🔴 판정 0 · 가격 0 · 응답 0 · UI 0 · Search 0 · Identity 0 · schema 0 · Registry 0
 ```
 
-🔵🔵 **다음 세션의 착수점 — 「측정」이지 「구현」이 아니다**
+🟢🟢 **[측정 완료 2026-11-05 · DOMESTIC-FUNNEL `e4c9de27`] CPO A 축은 «열려 있다»**
+```
+라이브(운영 함수 · 목록 hop · 원상품 B226AC009):
+  donokids.com · market **KR** · **88,000 KRW** · basis REGISTERED_SHOP_AND_KRW
+⟹ 🟢 국내 후보는 생기고 **KR 로 분류되고 가격까지 붙는다** — 「분류 연결부」 결함 **0**
+🔴 재현 — `node packages/database/scripts/domestic-funnel-dump.mjs` →
+   `DOMESTIC_FUNNEL=1 npx vitest run ...domestic-funnel-live.test.ts`
+```
+🔴🔴 **그 측정이 공급 쪽 결함 하나를 찾았다 — CORE-2R-7 의 전제가 반증됐다**
+```
+등록부 **35** → 전문몰 **21** → visited **14**(상한) → 상세 URL **1** → 후보 **1**
+🔴 `MAX_LISTING_HOP_SITES = 14` 가 **7곳을 잘랐다**(kidikidi · kream · **littleluna.co.kr** ·
+   nokimore · ocokorea · ssg) — 🔴 littleluna 는 WU-116 이 **₩117,000 을 관측한** 샵이다
+🔴 그 상수 주석은 「대상 수는 **12~13** 이라 상한은 **백스톱**」이라 적었다 ⟹ 등록부가 21 로
+   늘어 **백스톱이 실제 커터가 됐다**(그 WU 가 「6 이 정답 샵을 잘랐다」로 고친 함정의 재발)
+🔵 **상한을 바꾸지 않았다** — HTTP 44 → 약 65 이고 표준 §8 ⟹ **CPO 결정**(상수 한 줄)
+🟢 visited 14 탈락 — NO_BRAND_BLOCK 9 · NO_BRAND_LISTING 2 · BRAND_LISTING_NO_CODE 1 ·
+   ROBOTS_DISALLOW_ALL 2 · 후보를 낸 곳은 donokids 하나
+```
+
+🔵🔵 **다음 세션의 착수점 — 남은 것은 B 축 하나이고 «기다리면 쌓인다»**
    ① 🔴 **실제 분석 1회가 돌면** `funnel` 이 채워진다 ⟹ `node packages/database/scripts/
-      mi-screen-readiness.mjs` **한 명령** 으로 🇰🇷 후보 → SAME/PRESUMED → 가격까지 읽힌다
+      mi-screen-readiness.mjs` **한 명령** 으로 🇰🇷 SAME/PRESUMED → 가격까지 읽힌다
       🔴 현재 6건은 **배포 전 실행** 이라 `funnel` 이 비어 있다(스크립트가 그렇게 **말한다**)
       🔴 그 1회를 위해 **CEO 에게 실행을 요청하지 않는다** — 평소 분석이면 자동으로 쌓인다
-   ② 🔵 그 판독으로 갈라야 하는 것은 **둘** 이다 —
-      ⒜ 🇰🇷 후보가 **생기는데** `market` 이 KR 로 안 붙는가(분류 축)
-      ⒝ 🇰🇷 후보가 KR 로 붙는데 **SAME/PRESUMED 에서 막히는가**(Identity 축 · 동결됨)
-      🔴 둘을 가르기 «전에» MI 를 건드리지 않는다
-   ③ 🟡 **독립 축 하나가 이미 측정됐다** — Search `timeout 2/6`(33%). 🔴 재시도/질의 변경은
-      **CPO 결정** 이다(표준 §8 「검색 공급자/횟수/전략 변경」 금지) ⟹ 보고만 한다
+   ② 🔴 **B 축(🇰🇷 SAME/PRESUMED)은 로컬에서 측정불가** 다 — pool 경계는 점수를 매기지
+      않고(`withConfidence` 는 호출부가 배열 단위로 부른다), 운영 `query` 를 손으로 지어
+      verdict 를 만들면 **운영과 다른 숫자** 가 된다. 🔴 그 숫자를 B 축이라 적지 않는다
+   ③ 🟡 **독립 축 둘** — ⒜ Search `timeout 2/6`(33%) ⒝ 위 목록 hop 상한 14.
+      🔴 둘 다 표준 §8(검색 공급자/횟수/전략)이라 **CPO 결정** ⟹ 보고만 한다
    🔴 금지 — threshold/8축 완화 0 · 후보 노출 축소 0 · Registry/어댑터 신설 0 ·
-      `candidate_reviews` 의 `source` enum 확대 0(그것은 migration 이고 CPO 결정이다)
+      `candidate_reviews` 의 `source` enum 확대 0(migration · CPO 결정 · 코드가 `D4` 로 표시)
 
 🟢🟢 **끝난 것 — 재구현 금지**(전부 배포 · push 0/0)
    가격 자격 **5조건**(tier ≠ EXCLUDED · verdict 적격 · 금액 · priceStatus · blocker 3)
