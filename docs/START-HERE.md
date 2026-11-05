@@ -125,6 +125,30 @@ Bobo Choses ↔ Lacoste · STONE ISLAND JUNIOR · Gray Label · Petite Maison ·
 🔴 **화면 축 덤프는 아직 없다** — 재실행에서 원상품 추출이 막혀 **열화 게이트가 측정을
    거부** 했다(같은 호스트를 더 두드리지 않았다) ⟹ 그 한 칸은 **측정불가** 로 남는다.
 
+🟢🟢 **[CPO §2 종결 2026-11-05 · `2e7b0070`] 브랜드 충돌은 «이미» 가격 자격을 막는다**
+```
+🔴 **직전 보고 정정** — 「다른 브랜드 2건이 해외 소싱 가격대에 들어간다」는 **과장이었다.**
+   `tier === COMPARISON` 을 근거로 썼는데 tier 는 **관측/분류** 이고 **가격 자격이 아니다.**
+🟢 `PRICE_DISQUALIFYING_BLOCKERS` 에 **`BRAND_MISMATCH` 가 이미 있고**(STAGE 7-2),
+   전달도 이미 있다(`blockers: e.crossSellerBlockers` 해외·국내 **둘 다** · 계약 C-1 `toBe(2)`),
+   기준 레코드가 **`PRESUMED_SAME`** 이라 그 경로가 **이미 시험되고 있었다**.
+   ⟹ 🟢 **누락된 차단 없음 ⟹ 정책/코드 변경 0**
+
+운영 전수 증명(`candidate_reviews` 가격 보유 **159건** → 운영 집계기):
+  금액 집계 **55** · 상품차이 제외 **101** · BRAND_MISMATCH **89건 → 집계 0건**
+  🟢 PRESUMED_SAME + BRAND_MISMATCH 도 **0건** · 🟢 관측(count·byMarket)은 **전건 유지**
+  🟢 BRAND_UNCONFIRMED 는 막지 않는다 · 🟢 과차단 없음 · 🟢 CONFLICT 는 verdict 축에서 막힌다
+🔴 **측정불가** — 「브랜드 충돌 **그리고** 품번 일치」 표본이 운영에 **0건**(PASS 로 적지 않는다)
+🟡 **부수 관측** — junioredition GBP 8100·8800·15100·15200·30200 = `81.00→8100` **소수점
+   유실 ×100 패턴** 추정. 🔴 단정 금지 — 그 행은 `priceStatus=null`(낡은 저장분)이고 운영
+   집계 입력은 **live transient evidence** 이지 `candidate_reviews` 가 **아니다** ⟹ 화면 유입
+   **미확인**. 가격 파서는 WU-079 REJECT 축 ⟹ **CPO 판정 사안**
+🔴 그 `byCurrency` 범위를 **화면 값으로 읽지 않는다**(여러 스냅샷을 몰아 넣은 값이다)
+```
+🟢 **회귀가 외부 HTTP 에 의존하던 것을 고쳤다** — `p54c1` 의 `live PageProbe` 가 게이트 없이
+   회귀에서 실제 HTTP(`junioredition`·`littleluna`)를 쳤다(전체 1 failed ↔ 고립 18/18 PASS).
+   🟢 `P54C1_LIVE=1` 게이트 한 줄 · 단언/URL/기대값 **무변경** ⟹ 회귀 결정론 확보.
+
 🔵🔵 **다음 세션의 착수점 — 남은 것은 B 축 하나이고 «기다리면 쌓인다»**
    ① 🔴 **실제 분석 1회가 돌면** `funnel` 이 채워진다 ⟹ `node packages/database/scripts/
       mi-screen-readiness.mjs` **한 명령** 으로 🇰🇷 SAME/PRESUMED → 가격까지 읽힌다
