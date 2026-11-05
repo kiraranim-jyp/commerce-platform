@@ -92,6 +92,39 @@ DOMESTIC_LISTING 이 후보를 낸 실행   **3 / 6**
    `SELLER_URL` 로 기록되는 출처 한계는 **알려진 한계** 로 유지)
 ```
 
+🟢🟢 **[B/C 축 실측 완료 2026-11-05 · `63f46401`] 기다리지 않고 «운영 러너로» 쟀다**
+```
+🟢 재현 — `node packages/database/scripts/domestic-funnel-dump.mjs` →
+   `MI_INTEGRATION=1 npx vitest run ...mi-integration-live.test.ts`
+   🟢 러너가 `query`/`withConfidence`/`judgeDomesticCandidate` 를 **스스로** 부른다
+      ⟹ 🔴 수작업 판정이 **구조적으로 불가능** 하다(임의 쿼리 0 · 과금 0)
+
+🇰🇷 국내 donokids.com  **PRESUMED_SAME · COMPARISON · 88,000 KRW · VERIFIED_CURRENT**
+   ⟹ 🟢🟢 **B·C 축 PASS** — 국내 후보가 판정까지 가고 가격까지 붙는다
+   🔴 그 행 `market` 이 **UNKNOWN** 인 것은 **하니스 한계** 다(로컬 `registrySources:0`) —
+      등록부 집합을 주면 **KR**(`REGISTERED_SHOP_AND_KRW` · `e4c9de27` 실측)
+      🔴 「국내 후보가 KR 로 분류되지 않는다」로 **적지 않는다**
+🌎 해외 6건  market=OVERSEAS 3 · SAME/PRESUMED 3 · 가격 3 · tier 자격 3
+   junioredition GBP 58(품번 일치 · VERIFIED) · designerkidswear CAD 260 · folkberlin EUR 39
+   🔴 3건은 `.com`+KRW 라 UNKNOWN — WU-051 설계대로 **올바른 차단**
+```
+🔴🔴 **그리고 진짜 발견 — 해외 후보 6 중 «5건이 다른 브랜드» 인데 전부 가격 자격을 얻는다**
+```
+Bobo Choses ↔ Lacoste · STONE ISLAND JUNIOR · Gray Label · Petite Maison · Piccoli & Co™
+🔴 6/6 PRESUMED_SAME + tier COMPARISON ⟹ 그중 **다른 브랜드 2건**(Stone Island CAD 260 ·
+   Gray Label EUR 39)이 **해외 소싱 가격대에 들어간다**
+🟢🟢 이것은 **STAGE 4-G 가 이미 원인 확정한 기전** 이다 — `cross-seller.ts:1309` PRESUMED
+   분기가 **blocker 를 안 보고** 문턱 3점이 아동의류 Generic 축(상품군·색상·대상)으로
+   **자동 충족**. 🔴 운영 FP 9건에 **신규 5건 독립 재현**(표본 원상품 1 · 생산자 1)
+🔴 **고치지 않았다** — Identity 문턱/blocker·가격 자격은 CPO 동결 ⟹ **CPO 판정 사안**
+🟢 단 ②의 Evidence 상세가 그 사실을 **화면에서 말한다**
+   (「다른 점 — 브랜드 Bobo Choses ↔ STONE ISLAND JUNIOR」) ⟹ ②의 가치가 실측으로 증명됐다
+```
+🟢 **Evidence 실제 데이터 PASS** — 일치 근거 **7/7** · 불일치 **7/7** · 둘 다 없음 **0** ·
+   내부 진단 누출 **0**(전수 단언). 🟢 진짜 동일상품은 근거가 **일곱 축** 으로 선다.
+🔴 **화면 축 덤프는 아직 없다** — 재실행에서 원상품 추출이 막혀 **열화 게이트가 측정을
+   거부** 했다(같은 호스트를 더 두드리지 않았다) ⟹ 그 한 칸은 **측정불가** 로 남는다.
+
 🔵🔵 **다음 세션의 착수점 — 남은 것은 B 축 하나이고 «기다리면 쌓인다»**
    ① 🔴 **실제 분석 1회가 돌면** `funnel` 이 채워진다 ⟹ `node packages/database/scripts/
       mi-screen-readiness.mjs` **한 명령** 으로 🇰🇷 SAME/PRESUMED → 가격까지 읽힌다
