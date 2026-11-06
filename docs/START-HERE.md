@@ -8,6 +8,30 @@
 
 ---
 
+## 🔴🔴 LIFECYCLE 실측 — `searchRun` 에 후보 행을 넣으려면 **잠금이 먼저다**(2026-11-06)
+
+```
+🟢 `saveSnapshotSearchRun`(snapshot.ts:439) — 읽고 **`searchRun` 한 칸만** 덮는다(안전)
+🔴🔴 그러나 `POST /api/snapshots` → `saveSnapshot({ workspace: body.workspace })` 는
+   `body.id` 가 있으면 **UPDATE** 다 — **클라이언트가 보낸 workspace 로 통째 덮는다**.
+   그 파일 주석이 스스로 적어 뒀다 — 「그 뒤의 **모든 편집 저장은** 받은 id 를 실어 update 로 온다」
+⟹ 🔴 `searchRun` 에 국내 후보 행을 넣으면 **셀러가 상품을 한 번 편집하는 순간 사라진다**
+🔴 그래서 CPO 조건(「보존을 보장할 수 없다면 임의 구현하지 말고 최소 변경안을 보고」)대로
+   **구현하지 않았다.**
+```
+
+🟡 **최소 변경안 셋 (🔴 CTO 가 고르지 않았다)**
+```
+🟢 ⓐ `saveSnapshot` 의 update 경로가 **`searchRun` 을 보존** 하게 한다
+     (클라이언트 workspace 에 그 칸이 없으면 기존 값을 살린다) · migration **0** · 운영 1파일
+     🔴 단 「전체 덮어쓰기」의 의미를 바꾸므로 **회귀 범위를 먼저 재는 것이 선행** 이다
+   ⓑ 후보 행을 `candidate_reviews` 에 넣는다 — 🔴 079 `source` CHECK 확장(**migration**)
+   ⓒ 별도 관측 테이블 — 🔴 migration · 이 트랙의 금지축
+🟢 제 제안은 **ⓐ** 다 — migration 0 이고 원인을 그 자리에서 고친다.
+```
+
+---
+
 ## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-06 · MI 셀러 화면)
 
 ```
