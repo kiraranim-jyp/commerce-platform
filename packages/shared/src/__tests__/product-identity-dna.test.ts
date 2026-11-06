@@ -141,21 +141,130 @@ describe("buildDomesticShopQuery", () => {
     expect(buildDomesticShopQuery(dna)).toBe("B126AC050");
   });
 
-  it("SKU 없이 modelName만 있으면 브랜드+모델명을 검색어로 쓴다", () => {
-    const dna = buildProductIdentityDna(baseProduct({ modelName: field("B126AC050") }));
-    expect(buildDomesticShopQuery(dna)).toBe("Bobo Choses B126AC050");
+  /**
+   * 🔴🔴 **위 단언 혼자서는 「SKU 우선」을 증명하지 못했다**(음성 대조 M3 가 잡았다) —
+   *    `baseProduct` 의 slug 품번이 **`B126AC050` 으로 같아서** SKU 분기를 지워도
+   *    `brandModelCode` 가 같은 답을 냈다(**동어반복**). 🟢 그래서 둘을 **다르게** 둔다.
+   *
+   * 🟡 **CPO 판정 사안 1건(CTO 가 바꾸지 않았다)** — 여기서 이기는 `sku` 는
+   *    `AAA1804922`(Smallable **판매처 재고번호** · 실측 예)이고 `brandModelCode` 는
+   *    `B126AC050`(**브랜드 품번**)이다. 🔴 국내 샵 검색에서 재고번호는 거의 무의미한데
+   *    기존 정책이 **SKU 를 1순위** 로 고정하고 있다(이 함수 주석 · `resolveIdentifier`).
+   *    🔴 `resolveBrandModelCode` 의 주석은 스스로 「브랜드 품번은 sku 필드에서
+   *    가져오지 않는다 — Smallable 재고번호와 모양이 같아 못 가른다」고 적어 뒀다.
+   *    ⟹ 🔴 **순서를 바꾸는 것은 기존 정책 변경이라 CTO 가 하지 않았다.**
+   */
+  it("🔴 SKU 와 품번이 «다를» 때도 SKU 가 이긴다(기존 정책 유지 · 잠금)", () => {
+    const dna = buildProductIdentityDna(baseProduct({ sku: field("AAA1804922") }));
+    expect(dna.brandModelCode).toBe("B126AC050");
+    expect(buildDomesticShopQuery(dna)).toBe("AAA1804922");
   });
 
-  it("식별자가 전혀 없으면 브랜드+핵심 상품명 토큰으로 검색어를 만든다", () => {
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 **IPES-D §3 — 이 블록의 세 단언이 «의도적으로» 갱신됐다**(2026-11-06)
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 세 단언이 전부 FAIL 했고 **원인은 하나** 였다 — `baseProduct` 의
+   *    `sourceUrl = "https://bobochoses.com/products/**b126ac050**"` 라
+   *    `brandModelCode` 가 **slug 에서 항상 나온다**. 즉 세 fixture 는 전부
+   *    「품번이 있는 상품」이었는데 단언은 **품번보다 영문 제목을 앞세우고** 있었다.
+   *
+   * 🔴🔴 **그 순서는 `buildDomesticShopQuery` 자기 주석과 충돌한다** —
+   *    주석: 「SKU/**Style Code** 단독 → 브랜드+모델명 → 브랜드+핵심 상품명」.
+   *    ⟹ 구현이 주석의 **Style Code 단계를 빠뜨리고** 있었고 단언이 그 누락을 고정했다.
+   *
+   * 🔴 **왜 품번이 영문 제목보다 앞인가**(국내 축 한정 근거):
+   *    국내 샵 상품명은 한국어라 영문 제목과 **토큰이 겹치지 않는다**.
+   *    품번은 언어 중립이라 그 벽을 넘는다(`littleluna.co.kr` 제목에
+   *    `AW26MS185` 가 그대로 있다 · ROOTCAUSE-FIX-01 실측).
+   *
+   * 🟢 **그래서 「지어내지 않는다」 속성은 아래에서 «더 강하게» 지킨다** —
+   *    품번이 **어디에도 없을 때** 는 폴백이 그대로임을 단언한다(URL 까지 비운다).
+   */
+  it("🟢 SKU 가 없고 품번(Style Code)이 있으면 **품번 단독** 으로 검색한다", () => {
+    const dna = buildProductIdentityDna(baseProduct({ modelName: field("B126AC050") }));
+    /** 🔴 전엔 `"Bobo Choses B126AC050"` 였다 — 브랜드 접두를 **붙이지 않는다**. */
+    expect(buildDomesticShopQuery(dna)).toBe("B126AC050");
+  });
+
+  it("🟢 식별자가 없어도 품번이 있으면 핵심 상품명보다 **품번이 이긴다**", () => {
     const dna = buildProductIdentityDna(
       baseProduct({ title: field("Bobo Choses Denim Pants Blue 8Y SS26"), color: field("Blue") }),
     );
-    expect(buildDomesticShopQuery(dna)).toBe("Bobo Choses denim pants");
+    /** 🔴 전엔 `"Bobo Choses denim pants"` 였다(영문 제목 축). */
+    expect(buildDomesticShopQuery(dna)).toBe("B126AC050");
   });
 
-  it("브랜드도 identifier도 없으면 원본 title로 폴백한다(지어내지 않는다)", () => {
-    const dna = buildProductIdentityDna(baseProduct({ brand: field(""), title: field("") }));
+  it("🔴 품번이 «어디에도» 없으면 폴백은 그대로다 — 지어내지 않는다", () => {
+    const dna = buildProductIdentityDna(
+      /** 🔴 slug 까지 비운다 — 안 비우면 그 품번이 들어와 폴백 축을 못 본다. */
+      baseProduct({ brand: field(""), title: field(""), sourceUrl: "https://bobochoses.com/products/denim" }),
+    );
+    expect(dna.brandModelCode).toBeNull();
     expect(buildDomesticShopQuery(dna)).toBe("");
+  });
+
+  it("🟢 품번이 없을 때의 기존 세 폴백 단계가 **그대로 살아 있다**", () => {
+    const noCode = (o: Partial<CanonicalProduct> = {}) =>
+      buildProductIdentityDna(baseProduct({ sourceUrl: "https://bobochoses.com/products/denim", ...o }));
+    /** ⒜ 브랜드 + 핵심 상품명 */
+    expect(
+      buildDomesticShopQuery(noCode({ title: field("Bobo Choses Denim Pants Blue 8Y SS26"), color: field("Blue") })),
+    ).toBe("Bobo Choses denim pants");
+    /** ⒝ 브랜드 + 모델명(모델명이 «이름» 일 때는 전과 같다) */
+    expect(buildDomesticShopQuery(noCode({ modelName: field("Bolder Sweatshirt") }))).toBe(
+      "Bobo Choses Bolder Sweatshirt",
+    );
+    /** ⒞ 브랜드 단독 */
+    expect(buildDomesticShopQuery(noCode({ title: field("") }))).toBe("Bobo Choses");
+  });
+
+  /**
+   * 🔴🔴 **음성 대조 — 「설명문에서 읽은 품번」이 국내 쿼리에 실제로 닿는지** 를
+   *    이 단언 하나가 잡는다. `description` 의 라벨만 있고 제목·slug·sku·modelName
+   *    에는 품번이 **없는** 상품이다 ⟹ 설명문 축을 끊으면 이 단언이 FAIL 한다.
+   */
+  it("🟢🟢 **상세설명 라벨에서만** 읽은 품번도 국내 쿼리가 된다", () => {
+    const dna = buildProductIdentityDna(
+      baseProduct({
+        sourceUrl: "https://www.junioredition.com/products/hug-hairy-monster-tee",
+        title: field("Hug Hairy Monster T-shirt"),
+        description: field("Light blue t-shirt. Product code B226AC009 AW26 Made in Portugal."),
+      }),
+    );
+    expect(dna.brandModelCode).toBe("B226AC009");
+    expect(buildDomesticShopQuery(dna)).toBe("B226AC009");
+  });
+});
+
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ * 🔵🔵 **IPES-D §2 — 칸이 «없는» 스냅샷에서 DNA 가 터지던 자리**(2026-11-06)
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 운영 스냅샷 619건 중 `modelName` 키가 **아예 없는 것 44건** 이었고
+ *    `product.modelName.value` 가 TypeError 로 던져 **후보 발견이 0** 이었다.
+ * 🟢 실측 — 수정 뒤 DNA 생성 성공 **575 → 619**(실패 44 → **0**).
+ */
+describe("IPES-D §2 — 선택 칸이 없어도 DNA 가 만들어진다", () => {
+  it("🟢 `modelName` 칸이 없어도 던지지 않는다", () => {
+    const { modelName: _omitted, ...withoutModelName } = baseProduct();
+    const dna = buildProductIdentityDna(withoutModelName as CanonicalProduct);
+    /** 🔴 없는 값을 지어내지 않는다 — 그 tier 를 **건너뛸** 뿐이다. */
+    expect(dna.identifier).toBeNull();
+    expect(dna.brandModelCode).toBe("B126AC050");
+  });
+
+  it("🟢 `sku` 칸이 없어도 던지지 않는다", () => {
+    const { sku: _omitted, ...withoutSku } = baseProduct({ modelName: field("Bolder Sweatshirt") });
+    const dna = buildProductIdentityDna(withoutSku as CanonicalProduct);
+    expect(dna.identifier).toEqual({ value: "Bolder Sweatshirt", tier: "MODEL_NAME" });
+  });
+
+  it("🔴 값이 «있을 때» 의 tier 순서는 한 글자도 바뀌지 않았다", () => {
+    const dna = buildProductIdentityDna(baseProduct({ sku: field("AAA123"), modelName: field("Bolder") }));
+    expect(dna.identifier).toEqual({ value: "AAA123", tier: "SKU" });
   });
 });
 

@@ -120,9 +120,21 @@ function coreTitleTokensOf(title: string, brand: string, color: string | null, m
 }
 
 function resolveIdentifier(product: CanonicalProduct): ProductIdentifier | null {
-  const sku = product.sku.value.trim();
+  /**
+   * 🔴🔴 **IPES-D §2 — 칸이 «없는» 스냅샷에서 터지던 자리다**(2026-11-06 실측).
+   * ```
+   * 운영 스냅샷 619건 중 `modelName` 키가 **아예 없는 것 44건**
+   *   ⟹ `product.modelName.value` 가 TypeError 로 던져
+   *      `buildProductIdentityDna` 자체가 실패했다
+   *   ⟹ 🔴 그 44건은 **후보 발견이 한 건도 돌지 않았다**(국내·해외 둘 다)
+   * ```
+   * 🟢 그래서 **optional 접근으로 바꿨다** — 없으면 그 tier 를 **건너뛴다**.
+   * 🔴 값이 «있을 때» 의 동작은 **한 글자도 바뀌지 않는다**(tier 순서·trim 동일).
+   * 🔴 없는 값을 **지어내지 않는다** — 둘 다 없으면 그대로 `null` 이다.
+   */
+  const sku = product.sku?.value?.trim() ?? "";
   if (sku) return { value: sku, tier: "SKU" };
-  const modelName = product.modelName.value.trim();
+  const modelName = product.modelName?.value?.trim() ?? "";
   if (modelName) return { value: modelName, tier: "MODEL_NAME" };
   return null;
 }
@@ -268,6 +280,40 @@ const MAX_CORE_TITLE_TOKENS_IN_QUERY = 6;
 export function buildDomesticShopQuery(dna: ProductIdentityDna): string {
   if (dna.identifier?.tier === "SKU") {
     return dna.identifier.value;
+  }
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 **IPES-D §3 — 「Style Code 단독」이 위 주석에 적혀 있는데 «구현에
+   *        없었다».** 이 분기가 그 누락을 메운다(CPO 2026-11-06 지시 §3).
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 **새 검색 규칙이 아니다 — 이 함수가 스스로 선언한 우선순위의 복원이다.**
+   *    위 주석: 「SKU/**Style Code** 단독 → 브랜드+모델명 → …」 ·
+   *    대표님 예시: 「**`B126AC050` 단독** 검색이 1순위」 ← 그것이 `brandModelCode` 다.
+   *
+   * 🔴 **실측으로 확인된 결과**(운영 owner 직접 호출 · 스냅샷 619):
+   * ```
+   * description 을 비우는 반사실에서
+   *   🟢 해외 검색 쿼리가 달라진다      386 / 575   ⟸ 설명문이 쿼리에 «닿고 있었다»
+   *   🔴 국내 샵 검색 쿼리가 달라진다      0 / 575   ⟸ 🔴 **여기만 안 닿았다**
+   * B226AC009 — brandModelCode "B226AC009"(설명문 유래)
+   *   해외 쿼리 ①  "B226AC009"                             🟢 품번으로 검색
+   *   국내 쿼리    "Bobo Choses Hug Hairy Monster T-shirt"  🔴 품번이 없다
+   * ```
+   * 🔴 **왜 영문 제목이 국내에서 약한가** — 국내 샵 상품명은 한국어라
+   *    영문 제목과 **토큰이 겹치지 않는다**(`NO_TITLE_OVERLAP` 이 측정한 그 축).
+   *    🟢 품번은 **언어 중립** 이라 그 벽을 넘는 유일한 신호다
+   *    (실측 선례: `littleluna.co.kr` 제목에 `AW26MS185` 가 그대로 있다 ·
+   *     ROOTCAUSE-FIX-01 이 ⒝ 제목 축을 넣은 바로 그 근거).
+   *
+   * 🔴 **SKU 보다 뒤에 둔다** — `sku` 는 판매처가 직접 준 값이라 더 강하다.
+   * 🔴 **`MODEL_NAME` 보다 앞에 둔다** — 그것은 영문 제목이고 위 이유로 약하다.
+   * 🔴🔴 **이것은 «발견» 축이다.** 동일상품 판정은 한 글자도 바뀌지 않는다 —
+   *    매칭은 여전히 원본 title/brand/sku 를 쓴다(이 함수 주석의 그 계약).
+   */
+  const styleCode = dna.brandModelCode?.trim();
+  if (styleCode) {
+    return styleCode;
   }
   if (dna.identifier?.tier === "MODEL_NAME") {
     return dna.brand.value ? `${dna.brand.value} ${dna.identifier.value}` : dna.identifier.value;
