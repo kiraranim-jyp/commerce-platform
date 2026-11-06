@@ -134,7 +134,23 @@ describe("MI-INTEGRATION — 국내/해외 축을 운영 러너로 재확인", (
       };
 
       /* ══════════════ 🇰🇷 국내 — 운영 목록 hop 이 «발견한» URL 로 ══════════════ */
-      const krSnap = dump.snapshots[0];
+      /**
+       * 🔵 **MLS2 FALLBACK(CPO 결정 2026-11-06)** — 파일럿 원상품을 **고를 수 있게** 한다.
+       *
+       * 🔴 왜: `bobochoses.com` 이 **간헐적 HTTP 429** 를 내서 특정 상품에서 원상품 추출이
+       *    실패했다(실측 — 같은 호스트에서 요청마다 200/429 가 갈린다). 그때 이 하니스가
+       *    **`snapshots[0]` 하나에 고정** 돼 있어 **전체 검증이 한 URL 에 종속** 됐다.
+       *    ⟹ CPO: 「한 사이트가 막혀도 다른 상품으로 검증을 계속할 수 있어야 한다」.
+       * 🟢 기본값은 **종전과 같다**(`snapshots[0]`) — 지정하지 않으면 동작 불변이다.
+       * 🔴 429 를 **우회하지 않는다** — 대상을 바꾸는 것뿐이다(UA 변조 · 프록시 · 재시도 루프 0).
+       */
+      const want = process.env.MI_ORIGIN_CODE?.trim().toLowerCase();
+      const picked = want ? dump.snapshots.find((s) => s.source_url.toLowerCase().includes(want)) : null;
+      const krSnap = picked ?? dump.snapshots[0];
+      if (want) {
+        /** 🔴 지정이 **빗나갔으면 그 사실을 적는다** — 조용히 다른 상품을 재지 않는다. */
+        console.log(`[MI-pilot] MI_ORIGIN_CODE=${want} → ${krSnap.source_url}${picked ? "" : "  🔴 덤프에 없어 기본값"}`);
+      }
       const kr = await originOf(krSnap.source_url);
       console.log(
         `\n[MI-origin-KR] ${String(krSnap.id).slice(0, 8)} brand="${kr.dna.brand.value}" code=${kr.dna.brandModelCode}`,

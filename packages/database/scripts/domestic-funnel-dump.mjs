@@ -42,14 +42,15 @@ const sources = await p.$queryRawUnsafe(`
  * 🔴 원상품은 **실재하는 스냅샷** 에서 고른다. 🔴 URL 을 지어내지 않는다.
  * 🟢 국내 이력이 있는 품번(B226AC009)을 1순위로, 없으면 최신 스냅샷을 쓴다.
  */
+const PILOT = (process.env.MI_ORIGIN_CODE ?? 'b226ac009').toLowerCase();
 const snaps = await p.$queryRawUnsafe(`
   select id, source_url, title, workspace_id,
          (workspace->'canonicalProduct'->'brand'->>'value') as brand,
          (workspace->'canonicalProduct'->>'brandModelCode') as code
     from product_snapshots
    where source_url is not null
-   order by (source_url ilike '%b226ac009%') desc, updated_at desc
-   limit 5
+   order by (source_url ilike '%' || '${PILOT}' || '%') desc, updated_at desc
+   limit 8
 `);
 
 /**
