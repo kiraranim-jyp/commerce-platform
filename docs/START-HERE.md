@@ -8,7 +8,18 @@
 
 ---
 
-## 🔴🔴 LIFECYCLE 실측 — `searchRun` 에 후보 행을 넣으려면 **잠금이 먼저다**(2026-11-06)
+## 🟢🟢 [해결됨 2026-11-06 · `fbbbac33`] LIFECYCLE — **ⓐ 와 ⓑ 가 «둘 다» 집행됐다**
+
+```
+🟢 ⓐ `searchRun` 보존 — `83e70ee5`(셀러 편집이 그 칸을 더는 지우지 않는다)
+🟢 ⓑ 국내 후보 «행» 영속 — migration **082** + 배선 **`fbbbac33`**
+⟹ 🔴 **아래 「구현하지 않았다」·「CTO 가 고르지 않았다」는 «그 시점의» 상태다.**
+   CPO 가 ⓒ(=ⓑ)로 승인했고 집행됐다 — 아래는 **근거 기록** 으로만 읽는다.
+🟢 그리고 후보 행은 `searchRun` 이 **아니라** `candidate_reviews` 로 갔다 ⟹
+   O-1 보안 계약(「searchRun 은 숫자만 담는다」)이 **그대로 유지** 된다.
+```
+
+<details><summary>🔴 [근거 보존] 당시 실측 — searchRun 에 후보 행을 넣으면 사라진다</summary>
 
 ```
 🟢 `saveSnapshotSearchRun`(snapshot.ts:439) — 읽고 **`searchRun` 한 칸만** 덮는다(안전)
@@ -30,35 +41,61 @@
 🟢 제 제안은 **ⓐ** 다 — migration 0 이고 원인을 그 자리에서 고친다.
 ```
 
+</details>
+
 ---
 
 ## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-06 · MI 셀러 화면)
 
 ```
-🔵 HEAD `6b4b9235` 배포 · git clean · 0/0 · 운영 코드 변경 0
+🔵 HEAD **`fbbbac33`** 배포 · git clean · 0/0
+   회귀 **10,207 / 0 failed**(기준선 동일) · typecheck **0** · build **0**
 
 🟢 **끝난 것** — Evidence 기준 확정(`docs/MLS2-FINAL-EVIDENCE-STANDARD.md` 16절) ·
    확장 후보군 180행 전수 적용(HIGH 48 · POSSIBLE 33 · CONFLICTED 91 · INSUFFICIENT 8) ·
    CPO 제출 비교표 3종(`%TEMP%\mi-p0-02\mls2-*.tsv` · `mls2-HIGH48-review.html`)
 
-🔴🔴🔴 **셀러 화면을 막는 것이 «하나» 로 확정됐다 — 국내 후보의 «행» 이 없다**
+🟢🟢🟢 **[2026-11-06 해결] 「국내 후보의 행이 없다」 — 그 블로커가 닫혔다**
 ```
-`workspace.searchRun`(9건)은 **집계 숫자만** 담는다 — producers · funnel · producerMarkets.
-🔴 후보 **행**(URL·상품명·가격·Evidence)이 **0건** 이다(전수 문자열 검사: `http` 포함 0).
-`candidate_reviews` 는 `WEB_SEARCH`·`DOMESTIC_LISTING` 을 **담지 못한다**(079 source CHECK).
-⟹ 🔴 첫 화면이 요구하는 **「국내 후보 수 · 국내 판매가격」의 원천이 없다.**
-
-🟢🟢 **단 두 사실을 갈라 적는다 — 섞으면 거짓이다**
-   ⒜ 국내 **생산자는 돈다** — WEB_SEARCH **10** · DOMESTIC_LISTING **3**(9상품 중 3상품)
-   ⒝ 그 **산출을 버린다** ⟹ 🔴 「국내 검색이 안 돈다」도 「국내 후보가 없다」도 **사실이 아니다**
-🔴 searchRun 9건 중 **검색 실패 3**(SearchTimeoutError) — 그 0 은 **측정불가** 다
+🟢 migration **082** 가 `source` 에 WEB_SEARCH·DOMESTIC_LISTING 을 더했고(적용·검증 완료),
+   `fbbbac33` 이 생산자를 **배선** 했다 — `check/route.ts` 의 `seen` 이 이제 **다섯** 을 담는다.
+🟢 라이브 DB 제약 실측 — 일곱 값 전부 들어 있다(CHECK 정의 직접 확인).
+🟢 O-1 은 **유지** 된다 — 후보 행은 `candidate_reviews` 로 가고 `searchRun` 은 숫자만 담는다.
+🟢 계약 4건(D3-4 · A-6 · I-7 · I-8 · B-1)은 **느슨해지지 않고 방향만 틀었다** —
+   「그 값을 쓰지 말라」 → **「자기 이름으로만 적어라」**(SQL↔TS 양방향 대조 · 배열↔라벨 쌍 단언).
+🟢 변이 3종 전부 FAIL → 바이트 복구(M1 출처위장 · M2 두줄제거 · M3 searchRun URL 유입).
 ```
 
-🟡 **다음 한 수 = CPO 판정 1건 → 그 뒤 화면**
-   「국내 후보 **행** 을 영속할 자리를 열 것인가」
-   ⒜ 079 `source` CHECK 에 두 생산자 추가(**migration 필요**)
-   🟢 ⒝ `searchRun` 에 후보 행 배열 추가(**migration 0** · 이미 `workspace` jsonb 를 쓴다)
-   🔴 CTO 가 고르지 않았다 — 둘 다 「신규 schema/데이터 구조 변경」 금지에 닿는다
+🔴🔴 **그런데 저장은 «아직 비어 있다» — 0 을 「공급 0」으로 읽지 않는다**
+```
+실측(2026-11-06 · 배선 후) — candidate_reviews 기준선 **180행 / URL 90 / GT 38 불변** ·
+   source 분포 OVERSEAS_AUTO 156 · GT_IMPORT 17 · SELLER_URL 7 ·
+   🔴 **WEB_SEARCH 0 · DOMESTIC_LISTING 0**
+🟢 이유는 하나다 — **배선 이후 분석 실행이 «아직 0회»** 다(소급 backfill 은 하지 않았다 ·
+   그 URL·제목은 재수집해야 생기고 **사이트 재접속은 금지** 다).
+🟢 생산자는 전부터 돌고 있었다 — searchRun 9건에서 **WEB_SEARCH 10 · DOMESTIC_LISTING 3**.
+🔴 그 9건 중 **검색 실패 3**(SearchTimeoutError) — 그 0 은 **측정불가** 다.
+```
+
+🟡🟡 **다음 한 수 = 인증된 분석 «1회» 다 — 🔴 CTO 가 할 수 없다**
+```
+🔴 CTO 는 그 실행을 일으킬 수 없다(실측):
+   · Production `/api/price-history/check` → **401**(인증 미들웨어)
+   · 로컬 `recordSeenCandidates` → `getSupabaseAdmin()` 이 **SUPABASE_SERVICE_ROLE_KEY** 를
+     요구하고 그 키는 **로컬에 없다**(`.env.example` 의 placeholder 뿐)
+🟡 **CEO Action — 딱 1회**: `/pipeline` → 아동의류 상품 하나 → **「새 상품 분석」**
+   🟢 그것만으로 국내 후보 행이 `candidate_reviews` 에 쌓인다(그 뒤는 CTO 가 읽을 수 있다).
+🔵 그 뒤 CTO 가 바로 할 일 — `node packages/database/scripts/mi-screen-readiness.mjs`
+   로 국내 행을 읽어 **STEP 6 국내외 비교표** 를 CPO 에게 제출하고 **정지**.
+🔴 **두 구간을 같은 분모로 세지 않는다** — 배선 이전 180행에는 국내 둘이 없다.
+```
+
+🔴🔴 **STEP 5(후보 상세설명 Evidence)는 선행 판정 대기 — CTO 가 고르지 않았다**
+```
+`candidate_reviews` **24칸에 후보 상세설명/HTML 칸이 없다**(확정) ⟹ 현재 저장분으로는
+돌릴 수 없고, 그 데이터는 후보 페이지를 다시 열어야 생긴다(= **금지된 사이트 재접속**).
+🟡 CPO 판정 둘 — ⒜ 상세설명 저장 칸 신설(**migration**) ⒝ 다음 분석 수집분부터 사용
+```
 
 🔴 **재구현 금지(이미 있다)** — `seller-probability.ts`(표현 계층) ·
    `korean-discovery-query.ts` · 분석 스크립트 5종(`packages/database/scripts/mls2-*.mjs`)
