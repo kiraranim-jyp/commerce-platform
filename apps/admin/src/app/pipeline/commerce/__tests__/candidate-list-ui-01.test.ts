@@ -50,11 +50,21 @@ describe("CANDIDATE-LIST-UI-01 A — CPO 네 상태", () => {
     expect(d.reason).toContain("색상");
   });
 
-  /** 🔴🔴 **CPO ② 의 핵심** — C22 는 SAME 도 SIMILAR 도 **확정하지 않는다**. */
-  it("A-3 🔴 핵심 일치인데 **후보 이미지 0** → 검토 필요(C22)", () => {
-    const d = resolveSellerDisplay({ result: r(), imageEvidence: "NONE" });
+  /**
+   * 🔴🔴 **CPO ② 의 핵심** — C22 는 SAME 도 SIMILAR 도 **확정하지 않는다**.
+   * 🔴 **C22 의 실제 모양은 `ONE_SIDE` 다**(원본 7장 · 후보 **0장**) — 1차 구현이
+   *    `NONE` 만 막아서 **그 케이스를 놓쳤다**. 비교에 필요한 것은 «양쪽» 이다.
+   */
+  it("A-3 🔴 핵심 일치인데 **후보 이미지 0**(한쪽만 있음) → 검토 필요(C22)", () => {
+    const d = resolveSellerDisplay({ result: r(), imageEvidence: "ONE_SIDE" });
     expect(d.state).toBe("NEEDS_REVIEW");
     expect(d.label).toBe("검토 필요");
+    expect(d.reason).toContain("한쪽 이미지가 없어");
+  });
+
+  it("A-3b 🔴 양쪽 다 이미지가 없어도 검토 필요다", () => {
+    const d = resolveSellerDisplay({ result: r(), imageEvidence: "NONE" });
+    expect(d.state).toBe("NEEDS_REVIEW");
     expect(d.reason).toContain("이미지가 없습니다");
   });
 
@@ -89,11 +99,11 @@ describe("CANDIDATE-LIST-UI-01 B — 순서가 계약이다", () => {
   });
 
   /** 🔴🔴 이미지가 없으면 「차이가 없다」를 **확인한 것이 아니다** — C22 가 그 증거다. */
-  it("B-2 🔴 이미지 부족이 「동일」을 **막는다**(③ > ④)", () => {
-    const withImg = resolveSellerDisplay({ result: r(), imageEvidence: "BOTH" });
-    const noImg = resolveSellerDisplay({ result: r(), imageEvidence: "NONE" });
-    expect(withImg.state).toBe("LIKELY_SAME");
-    expect(noImg.state).toBe("NEEDS_REVIEW");
+  it("B-2 🔴 이미지 부족이 「동일」을 **막는다**(③ > ④) — 한쪽만 있어도 막는다", () => {
+    expect(resolveSellerDisplay({ result: r(), imageEvidence: "BOTH" }).state).toBe("LIKELY_SAME");
+    expect(resolveSellerDisplay({ result: r(), imageEvidence: "NONE" }).state).toBe("NEEDS_REVIEW");
+    /** 🔴 C22 의 모양 — 이것이 통과하면 그 골든 케이스가 「동일」로 새어 나간다. */
+    expect(resolveSellerDisplay({ result: r(), imageEvidence: "ONE_SIDE" }).state).toBe("NEEDS_REVIEW");
   });
 
   /** 🔴 강한 불일치는 **무엇보다 먼저** 다. */

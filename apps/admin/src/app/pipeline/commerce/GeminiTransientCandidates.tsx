@@ -35,6 +35,11 @@ import {
 } from "./mi-same-candidates";
 /** 🔵 `-03` — 🔴 축의 «말» owner 는 이 파일 하나다(영문 토큰을 화면에 내보내지 않는다). */
 import { blockerText, EVIDENCE_NONE_TEXT, splitEvidenceReasons } from "./blocker-text";
+/**
+ * 🔵 CANDIDATE-LIST-UI-01 — **표현 계층을 재구현하지 않는다**(CPO 금지).
+ * 🔴 `seller-probability.ts` 가 말의 owner 다 — 이 파일은 **호출만** 한다.
+ */
+import { classifySellerProbability, resolveSellerDisplay } from "./seller-probability";
 
 /**
  * 🔴 `GeminiTransientEvidence`(run-domestic-price-check.ts)의 **화면이 읽는 칸만**
@@ -491,6 +496,38 @@ export function GeminiTransientCandidates({
            */
           const evidence = splitEvidenceReasons(row.matchReasons);
           const evidenceHold = Array.from(new Set([...evidence.hold, ...blockersAll]));
+          /**
+           * ══════════════════════════════════════════════════════════════════
+           * 🔵🔵 CANDIDATE-LIST-UI-01 — **추가 근거 안내 «별도 줄»**(CPO ⒜ 승인)
+           * ══════════════════════════════════════════════════════════════════
+           *
+           * 🔴🔴 **기존 판정을 덮지 않는다.** `verdictDisplay`(위 `verdict`)는 그대로
+           *    `gt-verdict` 에 서고 이 줄은 **그 옆에 따로** 선다 — CPO 가 ⒝(라벨 교체)가
+           *    아니라 ⒜(어휘 분리)를 고른 이유다. 「유사상품」이 **두 의미** 가 되는 것을
+           *    막는다(기존 = `crossSellerVerdict SIMILAR` · 이 줄 = 핵심 일치 + 보조 차이).
+           * 🔴 **판정을 만들지 않는다** — 이미 계산된 값만 읽는다(threshold · 8축 · 가격 **0**).
+           * 🟢 `splitEvidenceReasons` 산출(`evidence`)을 **그대로** 넘긴다(재계산 0).
+           * 🔴 이미지 축은 **대조 가능성** 이다 — 한쪽만 있으면 실물을 가를 수 없다
+           *    (C22 는 원본 7장 · 후보 **0장** 이고 CEO 가 「이미지 비교 필요」라 했다).
+           */
+          const probability = classifySellerProbability({
+            crossSellerBlockers: row.crossSellerBlockers,
+            crossSellerConflicts: row.crossSellerConflicts,
+            matchTruth: row.matchTruth,
+            agreement: evidence,
+          });
+          const hasOriginImage = originImageUrl != null;
+          const hasCandidateImage = row.imageUrl != null;
+          const display = resolveSellerDisplay({
+            result: probability,
+            conflicts: row.crossSellerConflicts,
+            imageEvidence:
+              hasOriginImage && hasCandidateImage
+                ? "BOTH"
+                : hasOriginImage || hasCandidateImage
+                  ? "ONE_SIDE"
+                  : "NONE",
+          });
           return (
             <li key={row.discoveredUrl} className="rounded border border-border/60 p-2">
               {/* 🔴🔴 WU-028 — 한 줄: **출처 · 판정 · 시장**. 출처가 행에 있어야
@@ -508,6 +545,18 @@ export function GeminiTransientCandidates({
                 <span data-testid="gt-verdict" className="text-[11px] font-medium text-text-primary">
                   {verdict ? `${verdict.icon} ${verdict.label}` : "판정 미확인"}
                 </span>
+                {/**
+                 * 🔵🔵 CANDIDATE-LIST-UI-01 — **추가 근거 안내.** 🔴 위 `gt-verdict` 와
+                 *    **다른 노드** 다(덮지 않는다 · CPO ⒜). 말의 owner 는
+                 *    `seller-probability.ts` 이고 이 파일은 문구를 만들지 않는다.
+                 */}
+                <span
+                  data-testid="gt-display-state"
+                  className="rounded bg-surface px-1 text-[10px] font-medium text-text-secondary"
+                  title={display.reason}
+                >
+                  {display.label}
+                </span>
                 {/* 🔴 시장은 확인된 경우에만 — UNKNOWN 이면 이 뱃지가 «없다». */}
                 {market && (
                   <span data-testid="gt-market" className="rounded bg-surface px-1 text-[10px] text-text-secondary">
@@ -515,6 +564,15 @@ export function GeminiTransientCandidates({
                   </span>
                 )}
               </div>
+              {/**
+               * 🔵🔵 CANDIDATE-LIST-UI-01 — **사유를 «보이는 글자» 로 적는다.**
+               * 🔴 `title` 속성(툴팁)으로만 두지 않는다 — CPO: 「`NEEDS_REVIEW` 는
+               *    **이미지가 없다는 사실을 숨기지 않아야** 한다」. 툴팁은 숨긴 것이다.
+               * 🟢 문구는 `seller-probability.ts` 가 만든 것을 **그대로** 쓴다.
+               */}
+              <p data-testid="gt-display-reason" className="mt-0.5 text-[10px] text-text-tertiary">
+                {display.reason}
+              </p>
               {/**
                * 🔴🔴 WU-132 ④ — **원본 ↔ 후보 사진을 나란히.** 이것이 셀러가
                *    「동일상품인가」를 실제로 가르는 수단이다(글자만으로는 못 가른다 —

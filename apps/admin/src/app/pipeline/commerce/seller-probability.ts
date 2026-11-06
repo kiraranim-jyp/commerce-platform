@@ -350,11 +350,22 @@ export function resolveSellerDisplay(input: SellerDisplayInput): SellerDisplay {
       differingAxes,
     };
   }
-  if (coreMatched && input.imageEvidence === "NONE") {
+  /**
+   * 🔴🔴 **[정정] 비교에 필요한 것은 «양쪽» 이다** — C22 실측이 이 조건을 고쳤다.
+   *    C22 는 원본 **7장** · 후보 **0장** 이라 `ONE_SIDE` 인데, 1차 구현은 `NONE` 만
+   *    막아서 **그 케이스를 놓쳤다**(CPO ② 가 지목한 바로 그 후보다).
+   * 🟢 그래서 게이트는 **「대조할 수 있는가」** 다 — `BOTH` 가 아니면 확인 불가.
+   * 🔴 `UNKNOWN`(호출부가 안 넘김)은 **「없다」가 아니다** ⟹ 막지 않는다.
+   */
+  const cannotCompareImages = input.imageEvidence === "NONE" || input.imageEvidence === "ONE_SIDE";
+  if (coreMatched && cannotCompareImages) {
     return {
       state: "NEEDS_REVIEW",
       label: SELLER_DISPLAY_LABEL.NEEDS_REVIEW,
-      reason: "핵심 식별정보는 같지만 실물 차이를 확인할 이미지가 없습니다",
+      reason:
+        input.imageEvidence === "ONE_SIDE"
+          ? "핵심 식별정보는 같지만 한쪽 이미지가 없어 실물 차이를 확인할 수 없습니다"
+          : "핵심 식별정보는 같지만 실물 차이를 확인할 이미지가 없습니다",
       differingAxes,
     };
   }
