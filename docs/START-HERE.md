@@ -48,8 +48,29 @@
 ## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-06 · MI 셀러 화면)
 
 ```
-🔵 HEAD **`fbbbac33`** 배포 · git clean · 0/0
-   회귀 **10,207 / 0 failed**(기준선 동일) · typecheck **0** · build **0**
+🔵 HEAD **`4550d50c`** 배포 · git clean · 0/0
+   회귀 **10,235 / 0 failed** · typecheck **0** · build **0**
+
+🟡🟡 **다음 한 수 = 후보 카드 «화면 배선» 하나다**(CPO 승인 ①⒜·②·③ 집행 완료)
+```
+🔴🔴 **먼저 알아야 할 사실** — `seller-probability.ts`(표현 계층)는
+   **화면 소비처가 «0» 이다**(`.tsx` 전수 grep · 쓰는 곳은 분석 스크립트 5종뿐).
+   ⟹ UI 작업의 실체는 「라벨 조정」이 아니라 **쓰이지 않는 계층을 화면에 연결** 하는 것이다.
+
+🟢 **의미 계층은 닫혔다**(`4550d50c` · 계약 17 · 변이 3종) — 그대로 호출만 하면 된다:
+   resolveSellerDisplay({result, conflicts, imageEvidence})
+     → LIKELY_SAME 「동일상품 가능성 높음」 · LIKELY_SIMILAR 「유사상품」
+       NEEDS_REVIEW 「검토 필요」 · LIKELY_DIFFERENT 「다른 상품일 수 있음」
+   CODE_FIELD_LABEL — 품번 세 칸(원상품 품번 / 일치 확인 / 판매처 자체 코드)
+🟢 셀러 4상태 저장은 **이미 가능** — `HUMAN_VERDICTS` 에 SIMILAR 가 있다(migration 0).
+
+🔴 **표면을 전수로 먼저 센다** — 이 저장소에서 한 장만 고쳐 UX FAIL 이 **세 번** 났다
+   (메모 `owner-in-the-work-order-is-not-the-whole-screen`). 후보를 그리는 `.tsx` 는
+   `MarketPriceComparison` · `GeminiTransientCandidates` · `CandidateComparison` ·
+   `DomesticShopSearch` · `ComparisonShopSearch` 가 1차 후보다.
+🔴 화면 축은 **마운트 DOM** 으로만 완료 선언한다(Render PASS ≠ 소스 PASS).
+🔴 CPO 범위 — **표시 계층만** 이다. 판정 로직·임계값·가격 eligibility·GT **변경 0**.
+```
 
 🟢 **끝난 것** — Evidence 기준 확정(`docs/MLS2-FINAL-EVIDENCE-STANDARD.md` 16절) ·
    확장 후보군 180행 전수 적용(HIGH 48 · POSSIBLE 33 · CONFLICTED 91 · INSUFFICIENT 8) ·
