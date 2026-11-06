@@ -8,7 +8,43 @@
 
 ---
 
-## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-06 · MLS2 FINAL)
+## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-06 · MI 셀러 화면)
+
+```
+🔵 HEAD `6b4b9235` 배포 · git clean · 0/0 · 운영 코드 변경 0
+
+🟢 **끝난 것** — Evidence 기준 확정(`docs/MLS2-FINAL-EVIDENCE-STANDARD.md` 16절) ·
+   확장 후보군 180행 전수 적용(HIGH 48 · POSSIBLE 33 · CONFLICTED 91 · INSUFFICIENT 8) ·
+   CPO 제출 비교표 3종(`%TEMP%\mi-p0-02\mls2-*.tsv` · `mls2-HIGH48-review.html`)
+
+🔴🔴🔴 **셀러 화면을 막는 것이 «하나» 로 확정됐다 — 국내 후보의 «행» 이 없다**
+```
+`workspace.searchRun`(9건)은 **집계 숫자만** 담는다 — producers · funnel · producerMarkets.
+🔴 후보 **행**(URL·상품명·가격·Evidence)이 **0건** 이다(전수 문자열 검사: `http` 포함 0).
+`candidate_reviews` 는 `WEB_SEARCH`·`DOMESTIC_LISTING` 을 **담지 못한다**(079 source CHECK).
+⟹ 🔴 첫 화면이 요구하는 **「국내 후보 수 · 국내 판매가격」의 원천이 없다.**
+
+🟢🟢 **단 두 사실을 갈라 적는다 — 섞으면 거짓이다**
+   ⒜ 국내 **생산자는 돈다** — WEB_SEARCH **10** · DOMESTIC_LISTING **3**(9상품 중 3상품)
+   ⒝ 그 **산출을 버린다** ⟹ 🔴 「국내 검색이 안 돈다」도 「국내 후보가 없다」도 **사실이 아니다**
+🔴 searchRun 9건 중 **검색 실패 3**(SearchTimeoutError) — 그 0 은 **측정불가** 다
+```
+
+🟡 **다음 한 수 = CPO 판정 1건 → 그 뒤 화면**
+   「국내 후보 **행** 을 영속할 자리를 열 것인가」
+   ⒜ 079 `source` CHECK 에 두 생산자 추가(**migration 필요**)
+   🟢 ⒝ `searchRun` 에 후보 행 배열 추가(**migration 0** · 이미 `workspace` jsonb 를 쓴다)
+   🔴 CTO 가 고르지 않았다 — 둘 다 「신규 schema/데이터 구조 변경」 금지에 닿는다
+
+🔴 **재구현 금지(이미 있다)** — `seller-probability.ts`(표현 계층) ·
+   `korean-discovery-query.ts` · 분석 스크립트 5종(`packages/database/scripts/mls2-*.mjs`)
+🔴 **다시 돌아가지 않는다** — 429 조사 · 개별 사이트 추출 · Evidence 기준 재설계 ·
+   후보 재수집(CPO 가 전부 금지했다)
+```
+
+---
+
+## ▶ [직전] 2026-11-06 · MLS2 FINAL
 
 ```
 🔵 **현재 좌표** — MLS2 FINAL SPRINT. HEAD `ae9a47d8` 배포됨 · git clean · 0/0
