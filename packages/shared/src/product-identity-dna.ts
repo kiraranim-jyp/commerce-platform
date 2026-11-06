@@ -105,6 +105,12 @@ export interface ProductIdentityDna {
   /** 등록에 실제로 쓰이는 이미지 URL 전체(대표 1장만이 아니라). 이미지 교차
    * 비교는 한 쌍이라도 강하게 일치하면 근거로 보기 때문에 여러 장이 필요하다. */
   imageUrls: string[];
+  /**
+   * 🟡 **MLS2 STEP 2** — 한글 상품명 원문 + 출처(`AI_GENERATED` 등). 없으면 `null`.
+   * 🔴 optional 이 아니라 **nullable** 로 둔다 — 「칸이 없다」와 「값이 없다」를 가른다.
+   * 🔴 비교/판정 축은 이 칸을 읽지 않는다(CPO: Identity 증거 자동 인정 금지).
+   */
+  koreanTitle: { value: string; source: string | null } | null;
 }
 
 /** brand/color/material의 각 단어를 title 토큰에서 제거한다 — 매처가 그 셋을
@@ -234,6 +240,20 @@ export function buildProductIdentityDna(product: CanonicalProduct): ProductIdent
     sizeRange: resolveSizeRange(product),
     audienceSignals: resolveAudienceSignals(product),
     urlSlug: extractUrlSlug(product.sourceUrl),
+    /**
+     * 🟡 **MLS2 STEP 2 — 한글 상품명을 «원문과 출처 그대로» 옮긴다**(CPO 승인 2026-11-06).
+     *
+     * 🔴 **이 칸은 검색어가 아니다.** `buildKoreanDiscoveryQueries` 가 고유 식별
+     *    토큰(품번)과 **함께일 때만** 질의로 만든다 — 그 모듈이 거부 조건을 쥔다.
+     *    🔴 실측 근거: 지금 `titleKo` 의 한글 부분은 전부 일반 카테고리 명사다
+     *       (「키즈 티셔츠」 · 「바지」) ⟹ 단독 질의는 브랜드 전체 카탈로그를 부른다.
+     * 🔴 **Identity 증거로 쓰지 않는다**(CPO: 「자동 인정하지 않는다」) —
+     *    `compareCrossSellerProducts` · `deriveMatchTruth` 는 이 칸을 **읽지 않는다**.
+     * 🔴 **번역을 만들지 않는다** — 있는 값을 옮기고 `source` 를 같이 들고 간다.
+     */
+    koreanTitle: product.titleKo?.value?.trim()
+      ? { value: product.titleKo.value.trim(), source: product.titleKo.source ?? null }
+      : null,
     imageUrls: product.images.map(getSelectedImageUrl),
   };
 }
@@ -375,6 +395,8 @@ export function identityDnaFromFields(input: {
   return {
     sourceUrl: input.sourceUrl ?? "",
     brand: { value: brandValue, confident: false },
+    /** 🔴 이 어댑터는 한글 상품명 소스를 받지 않는다 — **지어내지 않고** null 이다. */
+    koreanTitle: null,
     identifier: sku ? { value: sku, tier: "SKU" } : null,
     title: input.title,
     coreTitleTokens: coreTitleTokensOf(input.title, brandValue, color, material),

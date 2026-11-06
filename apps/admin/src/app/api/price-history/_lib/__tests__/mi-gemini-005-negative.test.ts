@@ -47,6 +47,7 @@ const DNA: ProductIdentityDna = {
   ageRange: "4 years",
   sizeRange: ["4Y"],
   audienceSignals: ["kids"],
+  koreanTitle: null,
   urlSlug: "test-tunic",
   imageUrls: [],
 };

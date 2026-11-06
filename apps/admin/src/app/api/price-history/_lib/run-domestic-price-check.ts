@@ -26,6 +26,7 @@ import {
 } from "@commerce/shared";
 /** 🔴 CORE-2R-4 — 브랜드 한글 표기 **등록부**(실측 전용). 새 사전을 만들지 않았다. */
 import { lookupBrandAlias } from "@commerce/crawler";
+import { buildKoreanDiscoveryQueries } from "@commerce/shared";
 import { isCollectableAccess } from "../../comparison-shops/_lib/comparison-shop";
 /* 🔴 MI-GEMINI-INTEGRATION-005 — flag 기본 OFF. OFF 면 아래 분기가 한 줄도 돌지 않고
  *    기존 동작이 **100% 유지** 된다(§13). */
@@ -1172,10 +1173,17 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
    * 🔴 alias 는 **등록부에서만** 온다(`lookupBrandAlias`) — 새 alias 를 **만들지 않는다**.
    * 🔴 품번이 없으면 한글 질의를 **만들지 않는다**(일반 명사 단독 질의 금지).
    */
-  const koreanAlias = lookupBrandAlias(input.dna.brand.value || undefined);
-  const koreanTerms =
-    koreanAlias && input.dna.brandModelCode ? [`${koreanAlias} ${input.dna.brandModelCode}`] : [];
-  const searchTerms = [...englishTerms, ...koreanTerms];
+  /**
+   * 🔵 **MLS2 STEP 2(CPO 승인)** — 한글 질의 생성의 owner 는 `buildKoreanDiscoveryQueries`
+   *    **하나** 다. 🔴 이 자리에서 문자열을 조립하지 않는다(1차 구현의 인라인을 걷었다).
+   * 🔴 그 모듈이 **거부 조건** 을 쥔다 — alias 미등록 / 품번 없음이면 **빈 배열** 이다.
+   */
+  const koreanQuery = buildKoreanDiscoveryQueries({
+    brandAlias: lookupBrandAlias(input.dna.brand.value || undefined),
+    brandModelCode: input.dna.brandModelCode,
+    koreanTitle: input.dna.koreanTitle,
+  });
+  const searchTerms = [...englishTerms, ...koreanQuery.queries];
   const searchTerm = searchTerms[0] ?? searchTitle;
 
   // STEP 1 — 활성 소스 대상으로 검색해서 동일상품 후보를 찾고, 신뢰도에 따라

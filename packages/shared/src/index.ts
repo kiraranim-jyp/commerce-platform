@@ -25,3 +25,4 @@ export * from "./common-field";
 export * from "./common-confirmation";
 // MARKET-RESEARCH-ERROR-UX-01 — 외부 사이트 장애를 셀러의 말로 바꾸는 공통 분류.
 export * from "./extraction-failure";
+export * from "./korean-discovery-query";
