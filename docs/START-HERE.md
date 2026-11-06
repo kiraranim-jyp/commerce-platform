@@ -22,11 +22,16 @@
    (메모 `degraded-live-run-is-not-a-zero` · `origin-brand-recovery-fails-intermittently`)
 🔴 **「국내 후보 0」·「발견 실패」로 적지 않는다** — 원상품 추출이 애초에 안 됐다
 ```
+🟢🟢 **[갱신 `49b1e7d4`] 하니스가 더 이상 한 URL 에 종속되지 않는다** — `MI_ORIGIN_CODE`
+   로 파일럿 원상품을 고른다(CEO GT 보유 6상품: AC009 23 · AC033 6 · AC110 4 ·
+   AC036 2 · AC170 2 · AC073 1). 🔴 429 는 **간헐적** 이고 요청마다 갈린다(실측).
+
 🟡 **다음 세션의 첫 명령 — 준비 단계 없이 그대로 실행한다**
-   ① 429 해소 확인: `curl -s -o /dev/null -w '%{http_code}' <원상품 URL>` → **200** 이어야 한다
-      🔴 429 면 **거기서 멈추고** 그 사실만 보고한다(우회·UA 변조 금지)
-   ② `cd apps/admin && MI_INTEGRATION=1 npx vitest run \
-        src/app/api/price-history/_lib/__tests__/mi-integration-live.test.ts --testTimeout=600000`
+   ① `MI_ORIGIN_CODE=b226ac033 npx tsx packages/database/scripts/domestic-funnel-dump.mjs`
+   ② `cd apps/admin && MI_INTEGRATION=1 MI_ORIGIN_CODE=b226ac033 npx vitest run \
+        src/app/api/price-history/_lib/__tests__/mi-integration-live.test.ts --testTimeout=900000`
+      🔴 「원상품 추출 실패(열화)」면 **품번을 바꿔 ①②를 다시** 돈다(6상품을 돌려 본다)
+      🔴 전부 실패하면 **거기서 멈추고 그 사실만** 보고한다(우회 · UA 변조 · 재시도 루프 금지)
    ③ 그 산출로 STEP 3(고확률 ↔ CEO GT 대조 · 🔴 근거 없는 행은 **분모에서 제외**)
    ④ STEP 4 가격 자격 · ⑤ 후보 상세 Evidence 화면 배선 · ⑥ AC033/AC110 확장
 🔴 **분류 함수는 이미 있다** — `seller-probability.ts`(표현 계층) · 재구현 금지
