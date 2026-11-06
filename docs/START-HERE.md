@@ -48,8 +48,44 @@
 ## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-06 · MI 셀러 화면)
 
 ```
-🔵 HEAD **`4550d50c`** 배포 · git clean · 0/0
-   회귀 **10,235 / 0 failed** · typecheck **0** · build **0**
+🔵 HEAD **`b99e4183`** · git clean · 0/0 · 운영 코드 **0** · DB **0** · GT **0**
+   회귀 **10,251 / 0 failed** · typecheck **0** · build **0**
+
+🟡🟡🟡 **다음 세션은 여기서 시작한다 — ① 부터. 과거 조사를 반복하지 않는다**(CPO 확정)
+```
+① **Contract P2 보호 계약** ← 🔴 반드시 ③ «보다 먼저»
+   `compareCrossSellerProducts` · `compareModelCode` · `deriveMatchTruth` ·
+   `priceTierFromLink` 가 신규 `evidence` 를 **읽지 않는다**(참조 0)를 계약으로 잠근다.
+   🟢 이미 실측됐다 — cross-seller.ts · match-truth.ts · model-code.ts 에서
+      `description`/`evidence` 참조 **0** · `product-facts.ts:801` 이 P2 를 선언한다.
+   🔴 이 계약 없이 ③ 을 열면 다음 사람이 그것을 판정에 연결한다.
+② **C15 «클래스» 대체 사례 확인** — `beaumonde.co.kr/goods/goods_view.php?goodsNo=1000014021`
+   (title 「**보보쇼즈** 26FW … B226AC010」 · humanGt **SAME** · facts.brand **null**)
+   🔴 **C15 자체가 아니다** — 같은 유형의 **대체** 사례다(CPO 명시). 원문 검증 완료로 쓰지 않는다.
+   🔴 C15 는 C-코드↔URL 매핑이 리포에 **없어** 특정 불가(기록 기반 판정과 구분).
+③ **브랜드 증거 수집 구현** — DESCRIPTION 출처 증거 추가 · **판매처명 제외** ·
+   불명확하면 **UNKNOWN**. 🔴 matcher 에 **연결하지 않는다**.
+④ **화면 5상태** — 브랜드 확인 / 설명문에서 발견 / 판매처명으로 제외 / 표기 불명확 / 미확인
+   🟢 `CANDIDATE-LIST-UI-01` 의 **⒜ 어휘 분리** 방식을 그대로 쓴다(그 선택이 72 계약을 보호했다).
+⑤ 회귀 + 기존 결과 ↔ 신규 표시 비교 보고.
+```
+🔴🔴 **절대 바꾸지 않는 원칙 6**(CPO 확정) — ⒜ 브랜드 증거와 동일상품 판정은 **별개** 다
+⒝ **`UNKNOWN` 은 `MISMATCH` 가 아니다** ⒞ **판매처명은 제조사 브랜드 증거가 아니다**
+⒟ 다국어 alias 를 **승인 없이 판정에 연결하지 않는다** ⒠ 신규 evidence 가 기존
+SAME/SIMILAR 결과를 **바꾸지 않는다** ⒡ 기존 **GT·운영 판정 수정 0**.
+
+🟢 **승인 범위 = 증거 수집 + 별도 표시까지.** 🔴 **미승인** — matcher · Identity ·
+   BRAND 판정 정책 변경 · alias 운영 반영 · 임계값.
+
+🟢 **조사 산출(재조사 금지)** — `%TEMP%/mi-url-evidence/` step1~step4 JSON/CSV ·
+   스크립트 `mi-url-evidence-dump` · `mi-brand-evidence-survey` · `mi-brand-shadow-sim` ·
+   라이브 하니스 `mi-url-evidence-live.test.ts`(기본 SKIP · `MI_URL_EVIDENCE=1`)
+```
+확정된 사실 — BRAND 부재 146 = **추출누락 62** + 올바른 불일치 63 + 원상품부재 20 + 미확인 1
+             품번 증거 출처는 **DESCRIPTION 71 · TITLE 3**(설명문이 이미 주 공급원)
+             Shadow Sim — CONFIRMED_MATCH 61 · MISMATCH **0** · 기존 SAME 차단 **0/45**
+🔴 GT 분모 **6** · `CONFIRMED_MISMATCH` 0(판별력 미측정) · 국내 후보 **1건**(P0 측정 불가)
+```
 
 🟡🟡 **다음 한 수 = 후보 카드 «화면 배선» 하나다**(CPO 승인 ①⒜·②·③ 집행 완료)
 ```
