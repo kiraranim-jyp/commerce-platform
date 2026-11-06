@@ -8,7 +8,34 @@
 
 ---
 
-## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-06 · IPES)
+## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-06 · MLS2 FINAL)
+
+```
+🔵 **현재 좌표** — MLS2 FINAL SPRINT. HEAD `ae9a47d8` 배포됨 · git clean · 0/0
+   STEP 2(한글 질의 생성기) 🟢 완료 · 승인 기준 셋 `49c1dde4` `809d9d22` `ae9a47d8`
+
+🔴🔴 **STEP 1(B226AC009 운영 재분석)이 «외부 요인» 으로 막혔다 — 측정불가다**
+```
+`shopifySiteStrategy.extract(bobochoses.com/en-kr/products/b226ac009-…)` → **null**
+직접 확인 — 그 URL **HTTP 429** · `.json` 도 **429**(레이트리밋)
+🟢 내가 박아 둔 **열화 게이트가 발화해 측정을 거부했다** — 「후보 0」으로 찍지 않았다
+   (메모 `degraded-live-run-is-not-a-zero` · `origin-brand-recovery-fails-intermittently`)
+🔴 **「국내 후보 0」·「발견 실패」로 적지 않는다** — 원상품 추출이 애초에 안 됐다
+```
+🟡 **다음 세션의 첫 명령 — 준비 단계 없이 그대로 실행한다**
+   ① 429 해소 확인: `curl -s -o /dev/null -w '%{http_code}' <원상품 URL>` → **200** 이어야 한다
+      🔴 429 면 **거기서 멈추고** 그 사실만 보고한다(우회·UA 변조 금지)
+   ② `cd apps/admin && MI_INTEGRATION=1 npx vitest run \
+        src/app/api/price-history/_lib/__tests__/mi-integration-live.test.ts --testTimeout=600000`
+   ③ 그 산출로 STEP 3(고확률 ↔ CEO GT 대조 · 🔴 근거 없는 행은 **분모에서 제외**)
+   ④ STEP 4 가격 자격 · ⑤ 후보 상세 Evidence 화면 배선 · ⑥ AC033/AC110 확장
+🔴 **분류 함수는 이미 있다** — `seller-probability.ts`(표현 계층) · 재구현 금지
+🔴 대조 스크립트도 있다 — `packages/database/scripts/mls2-probability-vs-gt.mjs`
+```
+
+---
+
+## ▶ [직전] 2026-11-06 · IPES
 
 ```
 🔵 **현재 좌표** — IPES(IDENTICAL PRODUCT EVIDENCE STANDARD) 트랙
