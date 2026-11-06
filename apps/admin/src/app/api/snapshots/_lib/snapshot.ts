@@ -271,10 +271,62 @@ export async function saveSnapshot(
   };
 
   if (input.id) {
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 **SEARCHRUN-PRESERVATION — UPDATE 가 `searchRun` 을 «버리지 않는다»**
+     *        (CPO 승인 2026-11-06 · migration 0 · **update 분기 한정**)
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 🔴🔴 **왜 필요한가**(실측) — 이 분기는 `workspace` 를 **통째 교체** 한다. 그런데
+     *    유일한 클라이언트(`pipeline/page.tsx:422`)가 `workspace` 를 **리터럴로 새로
+     *    만들고** 그 파일에 `searchRun` 이라는 글자가 **0회** 나온다 ⟹
+     *    **셀러가 상품을 한 번 편집해 저장하면 `searchRun` 이 조용히 사라졌다.**
+     *    🔴 그 칸은 「마지막 분석 실행의 Search 관측값」이고 국내 후보 보존의 자리다.
+     *
+     * 🔴🔴 **「삭제」와 「누락」을 가른다 — 이 블록의 전부가 그것이다.**
+     * ```
+     * 키 없음            → 🟢 기존 값 **보존**(클라이언트가 그 칸을 모른다 · 삭제 의도가 아니다)
+     * `searchRun: null`  → 🔴 **null 저장**(명시적 입력)
+     * `searchRun: {}`    → 🔴 **빈 객체 저장**(명시적 입력)
+     * 신규 값 있음        → 🔴 **신규 값으로 교체**
+     * ```
+     * 🔴 그래서 판단축이 **own-property 존재** 이고 **truthiness 가 아니다** —
+     *    truthiness 로 쓰면 `null`/`{}` 이 「누락」으로 읽혀 **삭제 계약이 깨진다**.
+     *
+     * 🔴 **INSERT 경로는 건드리지 않는다.** 🔴 **다른 workspace 칸도 손대지 않는다.**
+     * 🔴 **동시성은 이 변경이 고치지 않는다**(CPO 확인) — 낙관적 락·버전 칸은 범위 밖이다.
+     * 🟢 fail-soft — 조회가 실패하면 **기존 동작 그대로**(교체) 간다. 저장을 죽이지 않는다.
+     */
+    let workspaceToWrite = input.workspace;
+    const incoming: unknown = input.workspace;
+    const hasSearchRunKey =
+      typeof incoming === "object" &&
+      incoming !== null &&
+      Object.prototype.hasOwnProperty.call(incoming, "searchRun");
+    if (!hasSearchRunKey) {
+      const { data: prior } = await supabase
+        .from("product_snapshots")
+        .select("workspace")
+        .eq("id", input.id)
+        .eq("workspace_id", input.workspaceId)
+        .maybeSingle();
+      const priorWorkspace = (prior as { workspace?: Record<string, unknown> } | null)?.workspace;
+      if (
+        priorWorkspace &&
+        typeof priorWorkspace === "object" &&
+        Object.prototype.hasOwnProperty.call(priorWorkspace, "searchRun")
+      ) {
+        /** 🟢 **그 한 칸만** 되살린다 — 수신 workspace 의 다른 칸은 그대로다. */
+        workspaceToWrite = {
+          ...(input.workspace as object),
+          searchRun: priorWorkspace.searchRun,
+        } as unknown as typeof input.workspace;
+      }
+    }
     // 남의 스냅샷 id를 보내도 workspace가 다르면 0행이 갱신된다(덮어쓰기 불가).
     const { data, error } = await supabase
       .from("product_snapshots")
-      .update({ ...row, updated_at: new Date().toISOString() })
+      .update({ ...row, workspace: workspaceToWrite, updated_at: new Date().toISOString() })
       .eq("id", input.id)
       .eq("workspace_id", input.workspaceId)
       .select()
