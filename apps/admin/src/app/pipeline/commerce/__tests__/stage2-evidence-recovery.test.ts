@@ -116,10 +116,64 @@ describe("STAGE2 — D3 사람 판정 맥락 보존", () => {
     expect(upd).not.toContain("candidateContextColumns");
   });
 
-  it("D3-4 🔴 `source` 를 위장하지 않는다(migration 0 · D4 는 CPO 사안)", () => {
+  /**
+   * 🔵🔵 **migration 082 가 이 계약의 «전제» 를 바꿨다**(2026-11-06 · CPO 승인 안 ⓒ).
+   *
+   * 🔴 전까지 이 테스트는 「`WEB_SEARCH`·`DOMESTIC_LISTING` 을 **쓰지 말라**」였다 —
+   *    079 의 `source` CHECK 가 그 둘을 담지 못했고, 기존 값으로 적으면 그 후보의
+   *    **원래 출처가 영구히 거짓** 이 되기 때문이다.
+   * 🟢 082 가 그 둘을 **승인했다** ⟹ 계약은 금지에서 **「자기 이름으로만 적어라」** 가 된다.
+   *
+   * 🔴 느슨해지지 않게 **두 축으로** 잠근다:
+   *    ⒜ 승인 집합을 **SQL CHECK 에서 읽어** TS 와 **양방향** 대조한다 — 한쪽만 늘거나
+   *       줄면 FAIL 이다(TS 가 앞서면 저장이 23514 로 터지고, SQL 이 앞서면 승인된
+   *       출처가 조용히 버려진다).
+   *       🔴 기대값을 구현 상수에서 import 하지 않는다 — 그러면 **동어반복** 이다.
+   *    ⒝ **승인되지 않은 생산자**(`REVIEWED_SAME`)는 **여전히 금지** 다 — 082 는 둘만 더했다.
+   */
+  it("D3-4 🔴 `source` 어휘가 **승인 집합과 정확히 같다**(082 · 위장·무단 추가 금지)", () => {
     const W = strip(readFileSync(join(HERE, "..", "..", "api", "price-history", "_lib", "candidate-review.ts"), "utf8"));
-    for (const banned of ["WEB_SEARCH", "DOMESTIC_LISTING", "REVIEWED_SAME"]) {
-      expect(W, `🔴 금지된 source 값이 writer 에 들어왔다: ${banned}`).not.toContain(`"${banned}"`);
+    /** 🔴 리포 루트까지 **7단계** 다 — __tests__ · commerce · pipeline · app · src · admin · apps. */
+    const sql = readFileSync(
+      join(
+        __dirname,
+        "..", "..", "..", "..", "..", "..", "..",
+        "packages", "database", "prisma", "migrations_manual",
+        "082_candidate_reviews_domestic_sources.sql",
+      ),
+      "utf8",
+    );
+
+    /** 🟢 DB 가 **실제로 허용** 하는 집합 — ADD CONSTRAINT 블록에서만 읽는다(DROP 쪽이 아니다). */
+    const addAt = sql.indexOf("ADD CONSTRAINT candidate_reviews_source_check");
+    expect(addAt, "🔴 082 에서 ADD CONSTRAINT 를 찾지 못했다").toBeGreaterThan(0);
+    const approved = [
+      ...new Set(
+        (sql.slice(addAt, sql.indexOf("COMMIT;", addAt)).match(/'([A-Z_]+)'::text/g) ?? []).map((m) =>
+          m.replace(/'|::text/g, ""),
+        ),
+      ),
+    ].sort();
+
+    /** 🟢 TS writer 가 **선언** 하는 집합. */
+    const unionAt = W.indexOf("export type ReviewSource");
+    expect(unionAt, "🔴 ReviewSource 선언을 찾지 못했다").toBeGreaterThan(0);
+    const declared = [
+      ...new Set(
+        (W.slice(unionAt, W.indexOf(";", unionAt)).match(/"([A-Z_]+)"/g) ?? []).map((m) => m.replace(/"/g, "")),
+      ),
+    ].sort();
+
+    expect(approved.length, "🔴 082 의 승인 집합을 읽지 못했다").toBe(7);
+    expect(declared, "🔴 TS `ReviewSource` 와 DB CHECK 가 갈라졌다").toEqual(approved);
+    /** 🔴 승인된 둘이 실제로 그 집합에 있다 — 082 가 되돌려지면 여기서 잡힌다. */
+    for (const added of ["WEB_SEARCH", "DOMESTIC_LISTING"]) {
+      expect(approved, `🔴 082 가 승인한 출처가 사라졌다: ${added}`).toContain(added);
+    }
+    /** 🔴 그리고 승인되지 않은 것은 **어느 쪽에도** 없다. */
+    for (const banned of ["REVIEWED_SAME"]) {
+      expect(approved, `🔴 승인되지 않은 source 가 DB 에 들어왔다: ${banned}`).not.toContain(banned);
+      expect(declared, `🔴 승인되지 않은 source 가 writer 에 들어왔다: ${banned}`).not.toContain(banned);
     }
   });
 });

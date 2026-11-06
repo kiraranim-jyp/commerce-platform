@@ -3,15 +3,18 @@
  * 🔵 MI 통합 — 「한 화면에 무엇이 나오는가」 판독기 (read-only · SELECT only)
  * ════════════════════════════════════════════════════════════════════════════
  *
- * 🔴🔴🔴 **먼저 읽는다 — 이 표에는 «맹점» 이 있다.**
+ * 🔴🔴🔴 **먼저 읽는다 — 이 표의 맹점은 «시점에 따라» 다르다.**
  * ```
- * 아래 ① `candidate_reviews` 전수는 **세 생산자만** 담는다 —
- *   OVERSEAS_AUTO · GEMINI · SELLER_URL
- * 🔴 국내 후보를 «실제로 만드는» 둘은 그 표에 **구조적으로 들어갈 수 없다**:
- *   **WEB_SEARCH** · **DOMESTIC_LISTING**
- *   (079 migration 의 `source` CHECK 가 다섯 값뿐이고 그 둘이 없다 ⟹
- *    다른 값으로 적으면 「이 후보가 어디서 왔는가」가 영구히 거짓이 된다)
- * ⟹ 🔴🔴 **그러므로 ①의 🇰🇷 열은 「국내 공급량」이 아니다.** 거의 항상 0 에 가깝다.
+ * 🔵 **2026-11-06(migration 082 + 배선) «이후» 실행** — 맹점이 **닫혔다.**
+ *    ① 이 다섯 생산자를 담는다 — OVERSEAS_AUTO · GEMINI · SELLER_URL ·
+ *      **WEB_SEARCH** · **DOMESTIC_LISTING**
+ *
+ * 🔴 **그 «이전» 에 쓰인 행(기준선 180행)에는 국내 둘이 없다.**
+ *    (079 의 `source` CHECK 가 다섯 값뿐이었고 그 둘이 없었다 ⟹ 국내 후보 «행» 이
+ *     버려졌다. 🔴 소급 backfill 은 **하지 않았다** — 그 URL·제목은 다시 수집해야
+ *     생기고 사이트 재접속은 금지다.)
+ * ⟹ 🔴🔴 **그러므로 과거 구간에서 ①의 🇰🇷 열을 「국내 공급량」으로 읽지 않는다.**
+ *    배선 이후 실행이 섞여 있으면 **두 구간을 같은 분모로 세지 않는다**(first_seen_at 로 가른다).
  *
  * 🔴 실측 사고(2026-11-05) — ①이 「국내 후보 총 1행 / 64 스냅샷」을 냈고 그것이
  *    「국내 공급이 구조적으로 비어 있다」는 **블로커 판정** 으로 올라갔다. 같은 날
@@ -29,7 +32,7 @@ const padL = (s, n) => " ".repeat(Math.max(0, n - String(s ?? "-").length)) + St
 const padR = (s, n) => String(s ?? "-") + " ".repeat(Math.max(0, n - String(s ?? "-").length));
 
 /* ══════════════════════════════════════════════════════════════════════════
- * ① candidate_reviews — 🔴 **세 생산자만** 담는 표(위 맹점 참조)
+ * ① candidate_reviews — 🔵 **082 이후 다섯 생산자** / 🔴 그 이전 행은 셋뿐(위 맹점 참조)
  * ══════════════════════════════════════════════════════════════════════════ */
 const r = await p.$queryRawUnsafe(`
   select snapshot_id, origin_code,
@@ -47,7 +50,8 @@ const r = await p.$queryRawUnsafe(`
   order by max(first_seen_at) desc limit 12
 `);
 console.log("\n=== ① candidate_reviews 최근 12 스냅샷 ===");
-console.log("🔴 이 표의 🇰🇷 열은 «국내 공급량이 아니다» — WEB_SEARCH·DOMESTIC_LISTING 이 빠져 있다.");
+console.log("🔵 082+배선(2026-11-06) 이후 행은 WEB_SEARCH·DOMESTIC_LISTING 을 담는다.");
+console.log("🔴 그 이전 행에는 둘이 «없다»(backfill 0) — 두 구간을 같은 분모로 세지 않는다.");
 console.log("  snapshot  origin        후보  🇰🇷  🌎  ❔  가격  검증  tier자격 SAME  사람  최근");
 for (const x of r)
   console.log(

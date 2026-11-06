@@ -145,19 +145,32 @@ describe("MI-FUNNEL-PERSIST-01 — 국내 funnel 영속화", () => {
     expect(before, "🔴 저장 호출이 try 로 감싸여 있지 않다").toContain("try {");
   });
 
-  /* ── B. 🔴🔴 맹점은 «그대로» 다 — 영속 범위를 임의로 늘리지 않았다 ──────── */
+  /* ── B. 🔵 맹점이 «닫혔다» — 단 승인된 범위까지만 ───────────────────────── */
 
-  it("B-1 🔴🔴 `candidate_reviews` 범위를 늘리지 않았다 — migration 0", () => {
+  /**
+   * 🔵🔵 **migration 082 가 이 계약을 뒤집었다**(2026-11-06 · CPO 승인 안 ⓒ).
+   *
+   * 🔴 전까지는 「범위를 늘리지 않았다 — migration 0」이었다. 그 금지의 **이유** 는
+   *    079 `source` CHECK 가 국내 둘을 담지 못한 것이었고, 그래서 국내 후보 **행이
+   *    버려졌다**(생산은 되고 있었다 — 전수 9건에서 WEB_SEARCH 10 · DOMESTIC_LISTING 3).
+   * 🟢 082 가 그 둘을 승인했으므로 이제 **담는 것이 계약** 이다.
+   * 🔴 그러나 **승인된 다섯까지** 다 — `reviewedSameEvidence` 는 082 가 승인하지 않았고,
+   *    기존 값으로 적으면 그 후보의 **원래 출처를 덮는다**(upsert).
+   */
+  it("B-1 🟢 `candidate_reviews` 가 승인된 다섯 생산자를 담는다(082 · 그 이상 금지)", () => {
     const seenAt = CODE.indexOf("const seen = [");
     expect(seenAt).toBeGreaterThan(0);
     const seenBlock = CODE.slice(seenAt, CODE.indexOf("];", seenAt));
-    /** 🟢 세 생산자 그대로. */
-    for (const k of ["overseasAutoEvidence", "geminiEvidence", "urlCandidateEvidence"]) {
+    for (const k of [
+      "overseasAutoEvidence",
+      "geminiEvidence",
+      "urlCandidateEvidence",
+      "webSearchEvidence",
+      "domesticListingEvidence",
+    ]) {
       expect(seenBlock, `🔴 ${k} 가 빠졌다`).toContain(k);
     }
-    /** 🔴 079 `source` CHECK 가 이 둘을 금지한다 — 다른 값으로 적으면 데이터가 거짓이 된다. */
-    expect(seenBlock).not.toContain("webSearchEvidence");
-    expect(seenBlock).not.toContain("domesticListingEvidence");
+    expect(seenBlock, "🔴 REVIEWED_SAME 은 082 가 승인하지 않았다").not.toContain("reviewedSameEvidence");
   });
 
   it("B-2 🔴🔴 전수 census 스크립트가 자기 맹점을 **선언** 한다", () => {

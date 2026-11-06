@@ -108,14 +108,31 @@ describe("CORE-2R-4 A — 일시 샵 계약(DB 오염 차단)", () => {
   });
 
   /**
-   * 🔴 `candidate_reviews.source` check constraint 에 `DOMESTIC_LISTING` 이 **없다**.
-   *    기존 값으로 적으면 그 후보의 **원래 출처를 덮는다** ⟹ 이력 저장에 넣지 않는다.
+   * 🔵🔵 **migration 082 가 전제를 바꿨다** — 전까지 이 계약은 「`DOMESTIC_LISTING` 을
+   *    이력 저장에 **넣지 말라**」였다(079 CHECK 가 담지 못해서다). 082 가 그 값과
+   *    `WEB_SEARCH` 를 **승인** 했으므로 이제 잠글 것은 **「자기 이름으로만 적어라」** 다.
+   *
+   * 🔴 그래서 **배열 ↔ 라벨을 «쌍으로»** 단언한다 — 둘을 따로 세면 **출처 위장**
+   *    (예: 국내 후보를 `SELLER_URL` 로 적어 원래 출처를 덮는 것)을 **못 잡는다**.
+   *    🟢 이 모양이 전보다 강하다: 위장 · 누락 · 무단 추가를 **한 번에** 잡는다.
    */
-  it("A-6 🔴 이력 저장(`recordSeenCandidates`)에 다섯 번째 출처를 넣지 않았다", () => {
+  it("A-6 🟢 이력 저장이 다섯 생산자를 **자기 이름으로** 적는다(082 · 위장 금지)", () => {
     const at = ROUTE_CODE.indexOf("recordSeenCandidates({");
     expect(at).toBeGreaterThan(0);
     const block = ROUTE_CODE.slice(ROUTE_CODE.lastIndexOf("const seen = [", at), at);
-    expect(block).not.toContain("domesticListingEvidence");
+    for (const [field, source] of [
+      ["webSearchEvidence", "WEB_SEARCH"],
+      ["domesticListingEvidence", "DOMESTIC_LISTING"],
+      ["overseasAutoEvidence", "OVERSEAS_AUTO"],
+      ["geminiEvidence", "GEMINI"],
+      ["urlCandidateEvidence", "SELLER_URL"],
+    ] as const) {
+      const row = block.split("\n").find((l) => l.includes(`domesticShop.${field}`));
+      expect(row, `🔴 ${field} 가 이력 저장에서 빠졌다`).toBeTruthy();
+      expect(row, `🔴 ${field} 의 출처가 위장됐다 — "${source}" 이어야 한다`).toContain(`"${source}"`);
+    }
+    /** 🔴 082 는 **둘만** 더했다 — 승인되지 않은 생산자는 여전히 들어가지 않는다. */
+    expect(block, "🔴 REVIEWED_SAME 은 082 가 승인하지 않았다").not.toContain("reviewedSameEvidence");
   });
 });
 

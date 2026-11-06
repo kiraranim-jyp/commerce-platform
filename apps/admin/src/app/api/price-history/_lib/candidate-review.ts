@@ -24,8 +24,24 @@ export function isHumanVerdict(v: unknown): v is HumanVerdict {
   return typeof v === "string" && (HUMAN_VERDICTS as readonly string[]).includes(v);
 }
 
-/** 🔴 출처. DB check constraint 와 같은 집합이다. */
-export type ReviewSource = "OVERSEAS_AUTO" | "DOMESTIC_REGISTRY" | "SELLER_URL" | "GEMINI" | "GT_IMPORT";
+/**
+ * 🔴 출처. DB check constraint 와 **같은 집합** 이다 — 갈라지면 저장이 23514 로 터진다.
+ *
+ * 🔵 **일곱이다** — 079 의 다섯 + migration **082** 가 더한 국내 둘
+ *    (`WEB_SEARCH` · `DOMESTIC_LISTING` · CPO 승인 2026-11-06 안 ⓒ).
+ * 🔴 이름을 지어내지 않았다 — `run-domestic-price-check` 의 evidence 라벨이고
+ *    `workspace.searchRun.producers` 의 키와도 **같은 문자열** 이다.
+ * 🔴 `REVIEWED_SAME`(여섯째 생산자)은 **승인되지 않았다** — 그 후보의 행은 이미 이 표에
+ *    있고, 기존 값으로 적으면 upsert 가 **원래 출처를 덮는다**.
+ */
+export type ReviewSource =
+  | "OVERSEAS_AUTO"
+  | "DOMESTIC_REGISTRY"
+  | "SELLER_URL"
+  | "GEMINI"
+  | "GT_IMPORT"
+  | "WEB_SEARCH"
+  | "DOMESTIC_LISTING";
 
 export interface CandidateReviewRow {
   candidateUrl: string;

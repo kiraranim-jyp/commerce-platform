@@ -487,14 +487,13 @@ export async function POST(request: Request) {
    *    **새 판정과 함께** 서고, 📚 이력 구역에도 그 행이 그대로 있다.
    */
   /**
-   * 🔴🔴 CORE-2R-4 — **`domesticListingEvidence` 도 여기에 «넣지 않는다».**
+   * 🔵🔵 CORE-2R-4 — **[2026-11-06 정정] `domesticListingEvidence` 는 이제 «넣는다».**
    *
-   * 이유는 WU-132 와 **같다** — 079 migration 의 `source` check constraint 가
-   * 다섯 값(`OVERSEAS_AUTO` · `DOMESTIC_REGISTRY` · `SELLER_URL` · `GEMINI` ·
-   * `GT_IMPORT`)뿐이고 `DOMESTIC_LISTING` 이 **없다**. 🔴 기존 값으로 적으면
-   * 「이 후보가 어디서 처음 왔는가」가 **영구히 거짓** 이 된다(upsert 가 덮는다).
-   * 🔴 새 enum 값 추가는 **migration** 이고 이번 범위 밖이다(CPO 가 schema 를 닫았다).
-   * 🟢 화면에서 잃는 것은 없다 — 그 후보는 이번 조회의 후보 구역에 **새 판정과 함께** 선다.
+   * 🔴 전까지 넣지 않은 이유는 079 `source` check constraint 가 다섯 값뿐이고
+   *    `DOMESTIC_LISTING` 이 **없었기** 때문이다(기존 값으로 적으면 「이 후보가 어디서
+   *    처음 왔는가」가 영구히 거짓이 된다 — upsert 가 덮는다).
+   * 🟢 **migration 082 가 그 둘을 승인했다**(CPO 안 ⓒ) ⟹ 아래 `seen` 이 **자기 이름으로**
+   *    적는다. 🔴 `REVIEWED_SAME` 은 여전히 승인 밖이다(위 WU-132 주석 그대로 유효).
    */
   /**
    * ══════════════════════════════════════════════════════════════════════════
@@ -510,10 +509,12 @@ export async function POST(request: Request) {
    * 🔴 **SAME/PRESUMED 분포 없음**(`[MI-REAL-12]` 는 **DROPPED 만** 찍는다)
    * 🔴 **가격 확인 수 없음**
    * ```
-   * 🔴🔴 **DB 로 보완할 수 없다** — 바로 아래 `seen` 은 **세 생산자만** 담고
-   *    (`webSearchEvidence`·`domesticListingEvidence` 가 **빠져 있다**) 079 의
-   *    `source` check constraint 가 그 값을 **금지** 한다(아래 주석의 그 이유).
-   *    ⟹ migration 없이 영속화할 수 없고 다른 값으로 적으면 **데이터가 거짓** 이 된다.
+   * 🔵🔵 **[2026-11-06 정정] DB 로 보완할 수 «있게» 됐다** — 그때는 아래 `seen` 이
+   *    **세 생산자만** 담았고(`webSearchEvidence`·`domesticListingEvidence` 가 빠져 있었다)
+   *    079 `source` CHECK 가 그 값을 금지했다. 🟢 **migration 082** 가 그 둘을 승인해
+   *    이제 `seen` 이 **다섯** 을 담는다 ⟹ 국내 후보의 URL·제목·판정이 **영속된다**.
+   * 🔴 아래 로그 블록은 **그대로 둔다** — 영속은 「승인된 후보 행」이고, 이 로그는
+   *    `weakCandidateEvidence`·탈락 단계까지 포함한 **funnel 관측** 이라 범위가 다르다.
    *
    * 🟢 그래서 **읽기 전용 로그 한 블록** 만 더한다 — 제품 동작 **0**:
    *    판정 0 · 가격 0 · 저장 0 · 응답 0 · UI 0 · Search 0 · Identity 0 · schema 0.
@@ -559,7 +560,22 @@ export async function POST(request: Request) {
 
   try {
     const dna = buildProductIdentityDna(product);
+    /**
+     * 🔵🔵 **migration 082 가 국내 둘을 열었다**(CPO 승인 2026-11-06 안 ⓒ).
+     *
+     * 🔴 전까지 국내 생산자는 **돌고 있었는데 행이 버려졌다** — 079 `source` CHECK 가
+     *    `WEB_SEARCH`·`DOMESTIC_LISTING` 을 담지 못하고, `workspace.searchRun` 은
+     *    **집계만** 담았다(URL·제목을 싣는 것은 O-1 보안 계약이 금지한다).
+     *    ⟹ 「국내 후보가 없다」도 「국내 검색이 안 돈다」도 **사실이 아니었다**.
+     * 🔴 **출처를 위장하지 않는다** — 각 배열은 **자기 이름으로만** 적는다. 기존 값으로
+     *    적으면 upsert 가 그 후보의 「어디서 처음 왔는가」를 **영구히 덮는다**.
+     * 🔴 `reviewedSameEvidence` 는 **넣지 않는다** — 082 가 승인하지 않았고, 그 후보의
+     *    행은 **이미 이 표에 있다**(재투입 URL 의 출처가 바로 이 표다).
+     * 🟢 O-1 은 **그대로** 다 — `searchRun` 에는 여전히 숫자만 남는다.
+     */
     const seen = [
+      ...(domesticShop.webSearchEvidence ?? []).map((e: GeminiTransientEvidence) => ({ e, source: "WEB_SEARCH" as const })),
+      ...(domesticShop.domesticListingEvidence ?? []).map((e: GeminiTransientEvidence) => ({ e, source: "DOMESTIC_LISTING" as const })),
       ...(domesticShop.overseasAutoEvidence ?? []).map((e: GeminiTransientEvidence) => ({ e, source: "OVERSEAS_AUTO" as const })),
       ...(domesticShop.geminiEvidence ?? []).map((e: GeminiTransientEvidence) => ({ e, source: "GEMINI" as const })),
       ...(domesticShop.urlCandidateEvidence ?? []).map((e: GeminiTransientEvidence) => ({ e, source: "SELLER_URL" as const })),

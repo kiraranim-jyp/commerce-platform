@@ -134,36 +134,74 @@ describe("CORE-E2E-CLOSE-06R — 계측 블록", () => {
     for (const forbidden of ["retry", "variation", "splitQuery", "buildDiscoverySearchQuery"]) {
       expect(CODE).not.toContain(forbidden);
     }
-    /** 🔴 `seen` 은 **그대로 세 생산자** 다 — 영속 범위를 임의로 늘리지 않았다. */
+    /**
+     * 🔵 `seen` 은 이제 **다섯 생산자** 다 — migration 082 가 국내 둘을 **승인** 했다.
+     * 🔴 늘어난 것은 **영속 «범위»** 뿐이고 Search·Identity·가격 축은 그대로다
+     *    (위의 `webSearch: true` 하나 · retry/variation/split 0 단언이 그것을 지킨다).
+     * 🔴 그리고 **승인된 다섯까지** 다 — `reviewedSameEvidence` 는 082 가 승인하지 않았다.
+     */
     const seenAt = CODE.indexOf("const seen = [");
     expect(seenAt).toBeGreaterThan(0);
     const seenBlock = CODE.slice(seenAt, CODE.indexOf("];", seenAt));
-    expect(seenBlock).toContain("overseasAutoEvidence");
-    expect(seenBlock).toContain("geminiEvidence");
-    expect(seenBlock).toContain("urlCandidateEvidence");
-    /** 🔴 WEB_SEARCH·DOMESTIC_LISTING 을 **넣지 않았다** — DB CHECK 가 금지한다. */
-    expect(seenBlock).not.toContain("webSearchEvidence");
-    expect(seenBlock).not.toContain("domesticListingEvidence");
+    for (const field of [
+      "overseasAutoEvidence",
+      "geminiEvidence",
+      "urlCandidateEvidence",
+      "webSearchEvidence",
+      "domesticListingEvidence",
+    ]) {
+      expect(seenBlock, `🔴 ${field} 가 영속 범위에서 빠졌다`).toContain(field);
+    }
+    expect(seenBlock, "🔴 REVIEWED_SAME 은 082 가 승인하지 않았다").not.toContain("reviewedSameEvidence");
   });
 
   /**
-   * 🔴🔴 I-8 — **DB `source` 어휘를 늘리지 않았다**(migration 0).
-   *    🟢 그리고 그 제약이 왜 막는지를 계약이 직접 든다 — 다음 사람이 「다른 값으로
-   *       적자」로 가지 않게.
+   * 🔵🔵 I-8 — **`source` 어휘는 「다섯 + 082 가 더한 둘」 = 일곱** 이다.
+   *
+   * 🔴 전까지 이 계약의 이름은 「다섯 그대로다」였다. 082 **적용 후에도 그 단언은
+   *    기술적으로 통과한다**(079 «파일» 은 안 바뀌니까) — 그래서 **이름과 의도가
+   *    조용히 거짓** 이 되는 자리였다. 🟢 그 거짓을 계약으로 바꿔 둔다:
+   *      ⒜ 079 는 **원본 그대로** 다(과거 migration 을 **고쳐 쓰지 않는다**)
+   *      ⒝ 늘어난 어휘는 **082 에만** 있고 **정확히 둘** 이다
+   *    🔴 ⒜ 가 중요하다 — 적용된 migration 을 나중에 편집하면 **파일과 DB 가 갈라진다**.
    */
-  it("I-8 source 어휘가 다섯 그대로다", () => {
-    const sql = readFileSync(
-      /** 🔴 **8단계** 다 — `apps/admin` 에서 리포 루트까지 둘이 더 있다(계산해 확인했다). */
-      path.join(
-        __dirname,
-        "../../../../../../../../packages/database/prisma/migrations_manual/079_candidate_reviews.sql",
-      ),
-      "utf8",
-    );
-    expect(sql).toContain(
+  it("I-8 source 어휘는 079 다섯 + 082 둘 = 일곱이다(과거 migration 무편집)", () => {
+    /** 🔴 **8단계** 다 — `apps/admin` 에서 리포 루트까지 둘이 더 있다(계산해 확인했다). */
+    const manual = (f: string) =>
+      readFileSync(
+        path.join(__dirname, "../../../../../../../../packages/database/prisma/migrations_manual/", f),
+        "utf8",
+      );
+
+    /** ⒜ 🔴 079 는 **손대지 않았다** — 다섯 그대로이고 새 값이 섞이지 않았다. */
+    const sql079 = manual("079_candidate_reviews.sql");
+    expect(sql079).toContain(
       "source in ('OVERSEAS_AUTO', 'DOMESTIC_REGISTRY', 'SELLER_URL', 'GEMINI', 'GT_IMPORT')",
     );
-    expect(sql).not.toContain("WEB_SEARCH");
-    expect(sql).not.toContain("DOMESTIC_LISTING");
+    expect(sql079, "🔴 적용된 migration 을 사후 편집했다 — 파일과 DB 가 갈라진다").not.toContain("WEB_SEARCH");
+    expect(sql079).not.toContain("DOMESTIC_LISTING");
+
+    /** ⒝ 🟢 늘어난 둘은 **082 에만** 있다 — 그리고 기존 다섯을 빼지 않았다. */
+    const sql082 = manual("082_candidate_reviews_domestic_sources.sql");
+    const addAt = sql082.indexOf("ADD CONSTRAINT candidate_reviews_source_check");
+    expect(addAt, "🔴 082 에서 ADD CONSTRAINT 를 찾지 못했다").toBeGreaterThan(0);
+    const approved = [
+      ...new Set(
+        (sql082.slice(addAt, sql082.indexOf("COMMIT;", addAt)).match(/'([A-Z_]+)'::text/g) ?? []).map((m) =>
+          m.replace(/'|::text/g, ""),
+        ),
+      ),
+    ];
+    expect(approved.sort(), "🔴 082 의 승인 집합이 일곱이 아니다").toEqual(
+      [
+        "DOMESTIC_LISTING",
+        "DOMESTIC_REGISTRY",
+        "GEMINI",
+        "GT_IMPORT",
+        "OVERSEAS_AUTO",
+        "SELLER_URL",
+        "WEB_SEARCH",
+      ].sort(),
+    );
   });
 });
