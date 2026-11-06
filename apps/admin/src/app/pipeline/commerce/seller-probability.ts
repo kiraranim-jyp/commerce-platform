@@ -247,3 +247,162 @@ export function sellerProbabilitySummary(r: SellerProbabilityResult): string {
   if (r.unknownCount > 0) return `${core} · 미확인 ${r.unknownCount}건`;
   return core;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 CANDIDATE-LIST-UI-01 — **CPO 4상태 표시 계층**(승인 2026-11-06 ②③)
+ * ══════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **판정을 만들지 않는다.** 아래 전부 **이미 계산된 값을 읽어 «말» 로 바꾸는 것** 이다 —
+ *    Identity 임계값 · 8축 · 가격 eligibility · GT **변경 0**.
+ *
+ * ── CPO 가 고정한 네 상태 ───────────────────────────────────────────────────
+ * ```
+ * SAME      핵심 식별정보 일치 · 주요 차이 없음
+ * SIMILAR   핵심 식별정보 일치 · **컬러·형태 등 차이 확인**      ← C19 · C20
+ * 검토 필요  근거 충돌 **또는 이미지 부족**                      ← C22
+ * DIFFERENT 실제 다른 상품이라는 근거 확인
+ * ```
+ * 🔴 **내부 토큰에 `SAME`/`DIFFERENT` 를 쓰지 않는다** — 이 파일 머리(:46)가 적어 둔
+ *    그 이유 때문이다(Identity 어휘를 재사용하면 「판정이 여기서 일어난다」고 읽힌다).
+ *    🟢 그 넷은 **셀러가 읽는 라벨** 이고 타입 값은 기존 어휘 계열로 둔다.
+ */
+
+/**
+ * 🔴 **보조 축의 «확정» 차이** — 핵심 식별정보가 같아도 실물이 다를 수 있는 자리다.
+ * 🟢 토큰을 **지어내지 않았다** — `cross-seller.ts` 가 실제로 내는 값들이다.
+ * 🔴 `COLOR_VARIANT` 는 **보류**(색조는 같고 색상명만 다름)라 **차이로 세지 않는다** —
+ *    그 구분이 WU-044 의 계약이고 섞으면 「다른 표기」가 「다른 상품」이 된다.
+ */
+export const SUPPORTING_DIFF_LABEL: Record<string, string> = {
+  COLOR: "색상",
+  FIT: "핏",
+  GARMENT_FORM: "형태",
+  MATERIAL: "소재",
+  SET: "구성",
+};
+
+/**
+ * 🔴 **이미지 근거** — 「실물 차이를 눈으로 확인할 수 있는가」. CPO ② 가 C22 에서
+ *    요구한 축이다(후보 이미지 **0** 이라 SAME 도 SIMILAR 도 확정 금지).
+ * 🔴 `UNKNOWN` 은 「없다」가 **아니다** — 호출부가 안 넘긴 상태다(기본값).
+ */
+export type ImageEvidence = "BOTH" | "ONE_SIDE" | "NONE" | "UNKNOWN";
+
+/** 🟢 셀러 화면이 쓰는 네 칸. 🔴 Identity 어휘를 피한 이름이다. */
+export type SellerDisplayState = "LIKELY_SAME" | "LIKELY_SIMILAR" | "NEEDS_REVIEW" | "LIKELY_DIFFERENT";
+
+export const SELLER_DISPLAY_LABEL: Record<SellerDisplayState, string> = {
+  LIKELY_SAME: "동일상품 가능성 높음",
+  LIKELY_SIMILAR: "유사상품",
+  NEEDS_REVIEW: "검토 필요",
+  LIKELY_DIFFERENT: "다른 상품일 수 있음",
+};
+
+export interface SellerDisplayInput {
+  result: SellerProbabilityResult;
+  /** 🟢 `crossSellerConflicts` 를 **그대로** 넘긴다 — 이 함수가 다시 판정하지 않는다. */
+  conflicts?: readonly string[] | null;
+  imageEvidence?: ImageEvidence;
+}
+
+export interface SellerDisplay {
+  state: SellerDisplayState;
+  label: string;
+  /** 🔴 **왜 그 상태인지** — 내부 토큰이 아니라 셀러가 읽는 사실이다. */
+  reason: string;
+  /** 🟢 차이가 확인된 보조 축의 **사람 말**(「색상」·「형태」…). 없으면 빈 배열. */
+  differingAxes: string[];
+}
+
+/**
+ * 🔴🔴 **순서가 계약이다** — 위에서 아래로, 먼저 걸린 것이 이긴다:
+ * ```
+ * ① 강한 불일치(브랜드·품번)        → 다른 상품일 수 있음
+ * ② 핵심 일치 + 보조 축 «확정» 차이  → **유사상품**              ← CPO ③ (C19·C20)
+ * ③ 핵심 일치 + **이미지 없음**      → **검토 필요**              ← CPO ② (C22)
+ * ④ 핵심 일치 + 차이 없음            → 동일상품 가능성 높음
+ * ⑤ 그 외(근거 부족·미확인)          → 검토 필요
+ * ```
+ * 🔴 ③ 이 ④ **앞** 에 온다 — 이미지가 없으면 「차이가 없다」를 **확인한 것이 아니다**
+ *    (C22 는 브랜드·품번이 맞는데 실제로는 다른 상품이었고 CEO 가 「이미지 비교 필요」라 했다).
+ * 🔴 ②가 ③ 앞인 이유 — 차이가 **이미 확인됐으면** 이미지가 없어도 유사상품으로 말할 수 있다.
+ */
+export function resolveSellerDisplay(input: SellerDisplayInput): SellerDisplay {
+  const r = input.result;
+  const differingAxes = [...new Set(input.conflicts ?? [])]
+    .filter((t) => t in SUPPORTING_DIFF_LABEL)
+    .map((t) => SUPPORTING_DIFF_LABEL[t]);
+
+  if (r.strongMismatchCount > 0) {
+    return {
+      state: "LIKELY_DIFFERENT",
+      label: SELLER_DISPLAY_LABEL.LIKELY_DIFFERENT,
+      reason: "브랜드 또는 상품코드가 서로 다릅니다",
+      differingAxes,
+    };
+  }
+  const coreMatched = r.matchedCount >= 2;
+  if (coreMatched && differingAxes.length > 0) {
+    return {
+      state: "LIKELY_SIMILAR",
+      label: SELLER_DISPLAY_LABEL.LIKELY_SIMILAR,
+      reason: `핵심 식별정보는 같고 ${differingAxes.join(" · ")}이(가) 다릅니다`,
+      differingAxes,
+    };
+  }
+  if (coreMatched && input.imageEvidence === "NONE") {
+    return {
+      state: "NEEDS_REVIEW",
+      label: SELLER_DISPLAY_LABEL.NEEDS_REVIEW,
+      reason: "핵심 식별정보는 같지만 실물 차이를 확인할 이미지가 없습니다",
+      differingAxes,
+    };
+  }
+  if (coreMatched) {
+    return {
+      state: "LIKELY_SAME",
+      label: SELLER_DISPLAY_LABEL.LIKELY_SAME,
+      reason: "핵심 식별정보가 일치하고 확인된 차이가 없습니다",
+      differingAxes,
+    };
+  }
+  return {
+    state: "NEEDS_REVIEW",
+    label: SELLER_DISPLAY_LABEL.NEEDS_REVIEW,
+    reason:
+      r.weakMismatchCount > 0
+        ? "상품명 표기가 달라 추가 확인이 필요합니다"
+        : "확인된 핵심 근거가 부족합니다",
+    differingAxes,
+  };
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵 **품번 «세 칸» 을 같은 의미로 표시하지 않는다**(CPO 지시 2026-11-06 표)
+ * ══════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 이 구분이 이번 트랙에서 **거짓 블로커를 만든 자리** 다 — 추출 축이 비었다고
+ *    「후보가 원상품 품번을 놓쳤다」로 읽었는데 **확인 축은 그 품번을 잡고 있었다**.
+ * ```
+ * ORIGIN_EXTRACTED  원상품에서 확보한 품번                (원상품 `brandModelCode`)
+ * CANDIDATE_CONFIRMED 원상품 품번이 후보 근거에서 확인됨   (`confirmBrandCodeInEvidence`)
+ * SELLER_OWN        확인되지 않은 **판매처 코드**          (`sellerSku` · 품번이 아니다)
+ * ```
+ * 🔴 셋을 한 칸에 합치지 않는다 — 합치면 판매처 코드가 품번처럼 보인다.
+ */
+export type CodeFieldKind = "ORIGIN_EXTRACTED" | "CANDIDATE_CONFIRMED" | "SELLER_OWN";
+
+export const CODE_FIELD_LABEL: Record<CodeFieldKind, string> = {
+  ORIGIN_EXTRACTED: "원상품 품번",
+  CANDIDATE_CONFIRMED: "원상품 품번과 일치 확인",
+  SELLER_OWN: "판매처 자체 코드(미확인)",
+};
+
+/**
+ * 🔴 **판매처 코드를 품번으로 승격하지 않는다** — 그 금지는 실측으로 확정됐다
+ *    (`candidate-code-parity-01` · 승격하면 `slugCarriesCode` 로 **근거 없는 SAME** 이 난다).
+ * 🟢 그래서 이 함수는 **라벨만** 고른다. 값을 바꾸거나 합치지 않는다.
+ */
+export function codeFieldLabel(kind: CodeFieldKind): string {
+  return CODE_FIELD_LABEL[kind];
+}
