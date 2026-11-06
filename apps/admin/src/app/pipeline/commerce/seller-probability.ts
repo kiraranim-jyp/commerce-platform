@@ -49,11 +49,37 @@ export interface CoreAxisFinding {
  */
 export type SellerProbability = "HIGH" | "POSSIBLE" | "CONFLICTED" | "INSUFFICIENT";
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 **CPO 보정(2026-11-06) — 불일치는 «두 등급» 이다**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 CPO 가 1차 구현의 `MISMATCHED ≥ 1 → CONFLICTED` 를 **반려했다**:
+ * ```
+ * 「이 규칙을 **모든 불일치에 일괄 적용하면 안 된다**.
+ *   · 브랜드가 확실히 다름       → **강한 불일치**
+ *   · 제조사 품번이 확실히 다름  → **강한 불일치**
+ *   · 상품명이 다름 → 번역 · 표기 · 시즌명 · **판매처 자체 상품명** 차이인지 검토
+ *   브랜드와 제조사 품번이 일치하고 **상품명만 다르다면,
+ *   상품명 차이만으로 고확률 후보에서 탈락시키지 않는다.」**
+ * ```
+ * 🟢 **이 저장소의 실측이 그 보정을 지지한다** — 국내 판매처는 상품명을 **자기 말로**
+ *    다시 쓴다(「허그 헤어리 몬스터 티셔츠」 ↔ 「Hug Hairy Monster T-shirt」 ·
+ *    토큰 겹침 0). `NO_TITLE_OVERLAP` 이 측정한 것은 **표기 차이** 이고
+ *    「다른 상품」이 아니다.
+ * 🔴 반대로 **브랜드·품번은 언어 중립** 이라 「확실히 다름」이 곧 다른 상품이다.
+ */
+const STRONG_AXES = new Set<CoreIdentityAxis>(["BRAND", "DETAIL_IDENTIFIER"]);
+
 export interface SellerProbabilityResult {
   probability: SellerProbability;
   findings: CoreAxisFinding[];
   matchedCount: number;
   mismatchedCount: number;
+  /** 🔴 **브랜드·품번의 확정 불일치** — 이것만 고확률을 막는다. */
+  strongMismatchCount: number;
+  /** 🟡 **상품명 표기 차이** — 막지 않는다. 🔴 단 **숨기지도 않는다**(화면이 말한다). */
+  weakMismatchCount: number;
   unknownCount: number;
   /** 🟢 가산 근거(색상·소재·연령·카테고리·형태…) — 🔴 **핵심 불일치를 덮지 않는다**. */
   supporting: string[];
@@ -160,11 +186,21 @@ function supportingLines(agreement: SplitEvidence | null | undefined): string[] 
 export function classifySellerProbability(input: SellerProbabilityInput): SellerProbabilityResult {
   const findings = [brandAxis(input), productNameAxis(input), detailIdentifierAxis(input)];
   const matchedCount = findings.filter((f) => f.state === "MATCHED").length;
-  const mismatchedCount = findings.filter((f) => f.state === "MISMATCHED").length;
+  const mismatched = findings.filter((f) => f.state === "MISMATCHED");
+  const strongMismatchCount = mismatched.filter((f) => STRONG_AXES.has(f.axis)).length;
+  const weakMismatchCount = mismatched.length - strongMismatchCount;
   const unknownCount = findings.filter((f) => f.state === "UNKNOWN").length;
 
+  /**
+   * 🔴🔴 **CPO 보정 — 막는 것은 «강한» 불일치뿐이다**(브랜드 · 제조사 품번).
+   * ```
+   * 브랜드 ✅ + 품번 ✅ + 상품명 ❌(표기 차이)  → **HIGH**  ← 전엔 CONFLICTED 였다
+   * 브랜드 ✅ + 상품명 ✅ + 품번 ❌(확정 불일치) → **CONFLICTED**(별도 검토)
+   * ```
+   * 🔴 `UNKNOWN` 은 **불일치가 아니다** — 분모에서 빠지고 막지도 않는다.
+   */
   const probability: SellerProbability =
-    mismatchedCount > 0
+    strongMismatchCount > 0
       ? "CONFLICTED"
       : matchedCount >= 2
         ? "HIGH"
@@ -176,7 +212,9 @@ export function classifySellerProbability(input: SellerProbabilityInput): Seller
     probability,
     findings,
     matchedCount,
-    mismatchedCount,
+    mismatchedCount: mismatched.length,
+    strongMismatchCount,
+    weakMismatchCount,
     unknownCount,
     supporting: supportingLines(input.agreement),
     conflicting: input.agreement?.hold ?? [],
@@ -199,7 +237,13 @@ export const SELLER_PROBABILITY_LABEL: Record<SellerProbability, string> = {
 /** 🟢 「근거 2개 중 …」을 셀러가 읽을 수 있게 **한 줄** 로. 🔴 점수를 만들지 않는다. */
 export function sellerProbabilitySummary(r: SellerProbabilityResult): string {
   const core = `핵심 근거 ${r.matchedCount}/3 일치`;
-  if (r.mismatchedCount > 0) return `${core} · 확인된 불일치 ${r.mismatchedCount}건`;
+  /** 🔴 강한 불일치를 **먼저** 말한다 — 셀러가 가장 먼저 알아야 하는 사실이다. */
+  if (r.strongMismatchCount > 0) return `${core} · 확인된 불일치 ${r.strongMismatchCount}건`;
+  /**
+   * 🟡 **상품명 표기 차이는 「불일치」로 적지 않는다** — CPO 보정대로 「검토」 축이다.
+   *    🔴 국내 판매처가 상품명을 자기 말로 다시 쓰는 것이 **정상** 이라서다.
+   */
+  if (r.weakMismatchCount > 0) return `${core} · 상품명 표기 차이 ${r.weakMismatchCount}건`;
   if (r.unknownCount > 0) return `${core} · 미확인 ${r.unknownCount}건`;
   return core;
 }

@@ -46,15 +46,50 @@ describe("MLS2 §3 — 고확률 분류", () => {
    * 🔴🔴 **CPO 규칙의 핵심** — 「강한 불일치가 발견되면 단순 일치 개수만으로
    *    고확률 분류하지 않는다」. 그래서 불일치 검사가 **개수 검사보다 먼저** 온다.
    */
-  it("🔴🔴 일치가 2개여도 **확인된 불일치가 하나라도** 있으면 고확률이 아니다", () => {
+  /**
+   * ══════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 **CPO 보정(2026-11-06) — 이 단언이 «뒤집혔다»**
+   * ══════════════════════════════════════════════════════════════════════
+   * 1차 구현은 `MISMATCHED ≥ 1 → CONFLICTED` 였고 CPO 가 **반려** 했다:
+   * 「브랜드와 제조사 품번이 일치하고 **상품명만 다르다면, 상품명 차이만으로
+   *   고확률 후보에서 탈락시키지 않는다**.」
+   * 🟢 근거 — 국내 판매처는 상품명을 자기 말로 다시 쓴다(토큰 겹침 0 이 **정상**).
+   */
+  it("🟢🟢 브랜드·품번이 맞고 **상품명만** 다르면 고확률을 유지한다(CPO 보정)", () => {
     const r = classifySellerProbability({
       crossSellerBlockers: ["NO_TITLE_OVERLAP"],
       matchTruth: "EXACT_IDENTIFIER",
       agreement: AGREE_GENERIC,
     });
-    expect(r.mismatchedCount).toBe(1);
+    expect(r.strongMismatchCount).toBe(0);
+    expect(r.weakMismatchCount).toBe(1);
+    expect(r.probability).toBe("HIGH");
+    /** 🔴 그래도 **숨기지 않는다** — 셀러가 읽을 말로 적는다. */
+    expect(sellerProbabilitySummary(r)).toContain("상품명 표기 차이");
+    expect(sellerProbabilitySummary(r)).not.toContain("확인된 불일치");
+  });
+
+  it("🔴🔴 **브랜드** 가 확실히 다르면 — 다른 축이 맞아도 고확률이 아니다", () => {
+    const r = classifySellerProbability({
+      crossSellerBlockers: ["BRAND_MISMATCH"],
+      matchTruth: "EXACT_IDENTIFIER",
+      agreement: AGREE_WITH_NAME,
+    });
+    expect(r.strongMismatchCount).toBe(1);
     expect(r.probability).toBe("CONFLICTED");
     expect(SELLER_PROBABILITY_LABEL[r.probability]).toBe("다른 상품일 수 있음");
+  });
+
+  it("🔴🔴 **제조사 품번** 이 확실히 다르면 — 브랜드·상품명이 맞아도 별도 검토다", () => {
+    const r = classifySellerProbability({
+      crossSellerBlockers: [],
+      crossSellerConflicts: ["MODEL_CODE"],
+      matchTruth: null,
+      agreement: AGREE_WITH_NAME,
+    });
+    expect(r.matchedCount).toBe(2);
+    expect(r.strongMismatchCount).toBe(1);
+    expect(r.probability).toBe("CONFLICTED");
   });
 
   it("🔴 「미확인」을 「일치」로 세지 않는다 — 전부 미확인이면 근거 부족이다", () => {

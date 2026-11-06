@@ -1144,7 +1144,38 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
    * 폴백도 "이 상품을 가리키는 말"이어야 한다. 사다리의 첫 칸이 곧 가장 좁은
    * 그 말이므로 같은 값을 쓴다(두 곳이 다른 정책을 갖지 않는다).
    */
-  const searchTerms = buildCrossSellerSearchQueries(input.dna).map(stripLeadingDevTag).filter(Boolean);
+  const englishTerms = buildCrossSellerSearchQueries(input.dna).map(stripLeadingDevTag).filter(Boolean);
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 **MLS2 §1-2 — 한글 질의를 «사다리 뒤에» 더한다**(CPO 지시 2026-11-06)
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * CPO 요구: 「**영어 검색과 한글 검색을 모두 실행한다**」 ·
+   *           「원본 영어 상품명을 **항상 보존** 한다」 ·
+   *           「등록된 브랜드 alias 는 공식 검색어로 사용」.
+   * 🟢 그래서 **영문 사다리를 그대로 두고 뒤에 붙인다** — 영문이 결과를 내면
+   *    루프가 거기서 멈추므로(`confirmedExternalSame` / 0건 조건) **기존 동작 불변** 이고
+   *    한글 질의는 **영문이 못 찾았을 때만** 실제 HTTP 를 쓴다.
+   *
+   * 🔴🔴 **`titleKo` 는 쓰지 않았다 — 실측으로 반증됐다**(2026-11-06 · 스냅샷 619):
+   * ```
+   * titleKo 빈값 **484**(source ORIGINAL — 번역이 생성된 적이 없다) · 한글 포함 113
+   * 🔴 그 113건의 한글 토큰이 **전부 일반 카테고리 명사** 다 —
+   *    「키즈 티셔츠」 · 「바지」 · 「티셔츠」 · 「남성 셔츠」 ⟹ **식별력 0**
+   * 🔴 그것을 검색어로 쓰면 브랜드 **전체 카탈로그** 가 돌아온다. 이 저장소가 이미
+   *    그 실패를 측정해 뒀다 — 「페페」 단독 재검색 = **100건** 이고 사이트별 상위 5건
+   *    제한 때문에 **목표 상품이 밀려나 못 찾는다**(`comparison-search/index.ts` 주석).
+   * ⟹ 🔴 CPO 승인 범위이지만 **구현하면 해로운 것이 측정됐다** ⟹ 보고하고 멈췄다.
+   * ```
+   * 🟢 **대신 식별력이 있는 한글 질의를 쓴다** — 같은 실측이 가리키는 그 모양
+   *    (「alias + 식별 토큰」 = 「페페 Vernice Nero」가 3건으로 좁혀진 골든케이스).
+   * 🔴 alias 는 **등록부에서만** 온다(`lookupBrandAlias`) — 새 alias 를 **만들지 않는다**.
+   * 🔴 품번이 없으면 한글 질의를 **만들지 않는다**(일반 명사 단독 질의 금지).
+   */
+  const koreanAlias = lookupBrandAlias(input.dna.brand.value || undefined);
+  const koreanTerms =
+    koreanAlias && input.dna.brandModelCode ? [`${koreanAlias} ${input.dna.brandModelCode}`] : [];
+  const searchTerms = [...englishTerms, ...koreanTerms];
   const searchTerm = searchTerms[0] ?? searchTitle;
 
   // STEP 1 — 활성 소스 대상으로 검색해서 동일상품 후보를 찾고, 신뢰도에 따라
