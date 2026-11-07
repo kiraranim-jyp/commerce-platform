@@ -208,6 +208,14 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
    */
   skipped.push({ file: "ceo-evidence-review-db.json", why: "🔴 `candidate_reviews` 읽기 전용 덤프 — **이중 집계 방지** · 화면 표시 전용" });
   /**
+   * 🔵 CEO-EVIDENCE-REVIEW GT(2026-11-07) — **CEO 육안 판정 11건**(4상태).
+   * 🔴 **분모에 넣지 않는다** — 이 11쌍은 `wu-059`/`wu-068` 의 **같은 쌍** 이고 그 라벨을
+   *    여기서 또 세면 **이중 집계** 다. 🔴 그리고 **C42 가 SAME → DIFFERENT 로 뒤집혔다** ⟹
+   *    `SAME05_BASELINE` 숫자가 바뀌므로 **CPO 승인 전에는 적용하지 않는다**.
+   * 🟢 보존하는 이유는 CPO §1 「기존 검토 데이터와 GT 는 삭제하지 않고 이력을 보존한다」.
+   */
+  skipped.push({ file: "ceo-evidence-review-gt.json", why: "🔴 wu-059/wu-068 과 **같은 쌍** 의 재판정 — 이중 집계 방지 · 🔴 C42 뒤집힘은 **CPO 승인 전 미적용**" });
+  /**
    * 🔵 SPRINT5-BRAND-GT(2026-11-03) — **운영 `candidate_reviews` 의 사람 판정 행 전수 사본.**
    * 🔴 그래서 **분모에 넣지 않는다** — `dsp-01-reviewed-same.json` 과 **같은 이유**(이중 집계).
    *    그 라벨의 원본은 운영 DB 이고, 이 파일은 BRAND_MISMATCH 반사실 전용 고정본이다.
