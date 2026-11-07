@@ -180,7 +180,7 @@
 🟢 예상 변경 — 운영 **2 파일 · 약 +25줄** · 계약 **A1~A5 · B1~B3 · C1~C2** · 변이 **M1~M4**
 ```
 
-### 🟡🟡 **0-CEO-LOOP. CEO 판단 재사용 — 감사 완료 · 설계안 제출 · CPO 승인 대기**(2026-11-07)
+### 🟢🟢 **0-CEO-LOOP. CEO 판단 재사용 — `083` 적용 + 쓰기 경로 «완료»**(2026-11-07)
 
 🔵 감사 `docs/CEO-JUDGMENT-REUSE-AUDIT.md` · 설계 `docs/CEO-JUDGMENT-REUSE-DESIGN.md`(8절).
 🔴 **설계·조사·Shadow 만** — 운영 판정 0 · 자동 차단 0 · GT 원본 0 · **migration 0** · DB 쓰기 0.
@@ -245,13 +245,47 @@
    `service_role` bypassrls=true(서버 전용 · owner `supabase-admin.ts` 하나) · 클라이언트 접근 **0**
    🔴 승인 범위 밖 불변 실측 — `candidate_reviews` 칸 24 · 행 200 · 사람 판단 38 ·
       `ceo_judgments` **0행**(GT_IMPORT 적재 0) · `pg_default_acl` 24(전역 변경 0)
-   🟡 **미확인 셋**(쓰기 경로가 없어서) — version 2 공존 · `state` CHECK 거부 · 축 0행 저장
-🔵🔵 **다음 한 수 둘 — 서로 독립이고 CPO 가 순서를 지정한다**
-   ⒜ **쓰기 경로 구현**(CPO ② · 🟢 **이제 막힌 것이 없다** — 표가 생겼다) ·
-      🟢 그때 위 「미확인 셋」을 같이 확인한다
-   ⒝ **과거 DIFFERENT 표시 UI**(🔴 CPO: 083 과 **묶지 말고 독립** 진행) ·
-      좌표 `CEO-JUDGMENT-REUSE-DESIGN.md` §3-2 · **C06 필수 회귀**
-   🔴 `GT_IMPORT` **13행** 적재는 **별도 승인** 대상(명세는 `CEO-GT-IMPORT-SPEC.md`)
+
+🟢🟢🟢 **CEO 판단 «쓰기 경로» 완료 — `1defe49c`**(CPO 완료 승인 2026-11-07)
+   🔴🔴 **완료 범위는 «본문 한정» 이다**(CPO 확정 경계 · 🔴 **소급 확대 금지**):
+   ```
+   🟢 완료    판단 **본문 저장** · **append-only 버전 이력**(`version` · `supersedes_id`)
+   🔴 미완료  **축 저장** · 축 `state` CHECK **실제 INSERT 거부 검증** · 축 INSERT **원자성**
+   🟡 별도 승인 RPC migration **084** · `GT_IMPORT` **13행**(미승인 · 적재 **0행**) ·
+             과거 DIFFERENT **표시 UI** · **BL-3**
+   🔴 나중에 축 기능을 더해도 **이번 구현을 「축 저장까지 완료」로 적지 않는다.**
+   ```
+   🔴 **축을 뺀 이유**(범위 ⒞) — Supabase JS 에 트랜잭션 API 가 **없고** apps/admin 은
+      Prisma 를 들일 수 없다(계약이 금지 · 의존성 0) · RPC 는 **추가 migration** ⟹
+      보상 삭제는 **원자적이 아니고** 「축 없는 판단」이 남아 083 의 **「축 미입력 ↔ 확인 불가」**
+      구분을 깨뜨린다 ⟹ 🟢 **그 경로 자체를 만들지 않았다**(계약 D-2 가 잠근다)
+   🟢 운영 코드 **2파일**(`_lib/ceo-judgment.ts` · `[snapshotId]/ceo-judgments/route.ts`) ·
+      추가 3(계약 19 · 범위 문서 · DB 검증 스크립트) · **기존 파일 수정 0**
+   🟢 재사용(사본 0) — `requireUser` · `getSnapshot` · **`reviewKey`** · `getSupabaseAdmin`
+   🟢 DB 실측 **10항 PASS** — version 1·2 보존 · 동일 내용 재제출 **새 버전** ·
+      같은 version **23505 거부** · 임의 verdict **23514 거부** · 메모 미입력 **null** ·
+      정리 후 잔여 **0**
+   🔴 **데이터 보호는 두 사실이다** — ⒜ 검증 데이터는 전용 키로 쓰고 **지웠다**(잔여 0)
+      ⒝ 기존 사람 판단 **38건** · `candidate_reviews` **200행** 은 🔴 **변경 0 이고,
+      그것은 「원상복구」가 아니다 — 검증 스크립트가 그 표를 «읽지도 않는다»**
+   🟢 회귀 **809 files / 10,370 passed / 0 failed** · typecheck 0 · build exit 0 ·
+      신규 route 인증 없는 요청 **401**
+
+🔵🔵 **다음 한 수 = 과거 DIFFERENT «표시» UI**(CPO 지시 · **독립 작업**)
+```
+🔵 좌표 `CEO-JUDGMENT-REUSE-DESIGN.md` **§3-2 · §3-3** — 🔴 **재조사·재질문 금지**(CPO 명시)
+🟢 읽을 데이터가 이미 있다 — `candidate_reviews` 사람 판단 **38행**
+   (SAME 22 · DIFFERENT 15 · SIMILAR 1 · 🟢 `villagekids…pale-blue-3d-logo` **충돌 1건**)
+🟢 표시 자리도 있다 — 📚 「이전에 확인한 후보」 구역 · `listCandidateReviews`
+🔴🔴 **필수 회귀 다섯**
+   ① **C06** — 과거 DIFFERENT → **최신 SAME 이력이 표시** 된다
+   ② 과거 DIFFERENT 때문에 **현재 SAME 후보가 사라지지 않는다**
+   ③ `villagekids` **충돌 이력 보존**
+   ④ 과거 판단은 **표시만** — 자동 제외·차단·가격비교 차단에 **쓰지 않는다**
+   ⑤ UI 에 **「제외됨」·「차단」 어휘 0**
+🔴 **표시 UI 만** 구현한다 — 검색·판정·가격 로직 변경 **금지**
+🔴 화면 축은 **마운트 DOM** 으로만 완료 선언한다(Render PASS ≠ 소스 PASS)
+```
 ```
 
 ---
