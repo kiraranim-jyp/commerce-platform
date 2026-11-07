@@ -45,15 +45,38 @@
 
 ---
 
-## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-06 · MI 셀러 화면)
+## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-07 · MI 브랜드 증거 트랙)
 
 ```
-🔵 HEAD **`b99e4183`** · git clean · 0/0 · 운영 코드 **0** · DB **0** · GT **0**
-   회귀 **10,251 / 0 failed** · typecheck **0** · build **0**
+🔵 HEAD **`31a965d9` → 이 세션 커밋** · git clean · 운영 코드 **0** · DB **0** · GT **0**
 
-🟡🟡🟡 **다음 세션은 여기서 시작한다 — ① 부터. 과거 조사를 반복하지 않는다**(CPO 확정)
+🔴🔴🔴 **다음 한 수는 코드가 아니다 — CPO 판정 «셋» 이 막고 있다**
+   전문 `docs/MI-BRAND-STEP3AGT-GT-TARGETS.md` §9. 🔴 **재조사 금지.**
+
+   ① 조건 ⑦ 해석 — GT 확대 대상 21 조합이 **전부 기존 행** 이다
+      해석 A(기존 **GT 값** 만 보호) ⟹ 판정 가능 · 해석 B(기존 **행** UPDATE 금지) ⟹ **대상 0건**
+      🟢 079 계약은 그 쓰기를 **설계된 경로** 로 규정한다(system_* ↔ human_verdict 상호 비간섭)
+   ② 조건 ③(선노출 금지) 충족 방법 — ⒜ 자립 검토 화면 신설 ⒝ 운영 UI 가림(**미승인** · 계약 FAIL)
+      🔴 기존 화면은 `gt-verdict`·`gt-display-state`·`gt-display-reason`·`gt-blockers` 를
+         **판정 버튼과 같은 카드에** 렌더한다 ⟹ 조건 ③ **미충족**(실측)
+   ③ GT 분모 — 「같은 판매처 다른 리스팅」 **7/21** 을 넣는가 · 층화(cap1 8 · cap2 12)를 쓰는가
+
+🟢 **STEP 3A-GT 실측 — 다시 재지 않는다**
+   판정 «단위» = **21 조합**  🔴 (58 «행» 이 아니다 — 고유 후보 URL 19 · 원상품 제목 17 ·
+      「Hug Hairy Monster T-shirt」 **38행** 이 같은 상품의 반복 스냅샷이다)
+   신규 GT 완료 **0** · 미완료 **21** · 기존 GT 변경/UPDATE **0**
+   기준선 `candidate_reviews` 행 **190** · GT 행 **38** · GT 조합 **19**
+   판매처명이 브랜드 자리 — 넓은 기준 **4**(전부 「원문 맨 앞」 · tinyapple 3 · 미니부띠끄 1) ·
+      🔴 게이트 **발화 0** ⟹ **판매처명 게이트 안전성 미입증 유지**(분모 190 으로 넓혀도 0)
+   브랜드 편향 **12/21 = 57%** · 설명문 보유 **21/21**
+   🔴 소요시간을 적지 않는다 — 단위가 58→21 로 바뀌어 「30~60분」 추정치는 무효다
+
+🟢 **끝난 STEP(재실행 금지)** — ① Contract P2 계약 **21건**(`contract-p2-evidence-isolation.test.ts`) ·
+   ② beaumonde 원문 확인 · 2.5 재분류 **62건** · 3A shadow 전수 · 3A-R 게이트 둘 수정(조사 10/10) ·
+   3A-M 수동 판독 **12건**(ATTRIBUTED 9/9 · 과소추출 1)
+🔴 **STEP 3B 는 계속 보류** — 독일어 지시사 귀속 · 상점 큐레이션 ↔ 상품 귀속 · 게이트 필요성
 ```
-① **Contract P2 보호 계약** ← 🔴 반드시 ③ «보다 먼저»
+🔴 [끝난 지시 · 기록] ① **Contract P2 보호 계약** ← 🔴 반드시 ③ «보다 먼저»
    `compareCrossSellerProducts` · `compareModelCode` · `deriveMatchTruth` ·
    `priceTierFromLink` 가 신규 `evidence` 를 **읽지 않는다**(참조 0)를 계약으로 잠근다.
    🟢 이미 실측됐다 — cross-seller.ts · match-truth.ts · model-code.ts 에서

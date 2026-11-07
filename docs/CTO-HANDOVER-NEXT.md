@@ -1,98 +1,106 @@
-# CTO HANDOVER — 다음 세션 즉시 실행
+# CTO 인수인계 — 다음 세션이 **이 파일 하나만** 읽는다
 
-## 1. 현재 상태
-```
-HEAD  fbbbac33  (feat(국내 후보 영속): 생산자 둘을 candidate_reviews 에 배선)
-git   clean · origin/main 0/0
-회귀  10,207 passed / 0 failed(기준선 동일) · typecheck 0 · build 0
-운영  https://ttaejyo.vercel.app  (/ 200 · /pipeline 307 · /check 401)
-      🔴 HTTP 상태는 **배포 증거가 아니다**(메모 production-307-is-not-route-evidence)
-```
+> 🔴 프로젝트 전체를 다시 조사하지 않는다. 좌표는 `docs/START-HERE.md` **§NEXT SESSION** 과 이 파일뿐이다.
+> 기준 HEAD `31a965d9`(+ 이 세션 커밋) · 작업트리 clean · 운영 코드 변경 **0** · DB **0** · GT **0**.
 
-## 2. 완료(재조사 금지 · 근거는 커밋/경로만)
-| 작업 | 커밋 |
-|---|---|
-| migration **082** — `source` 에 `WEB_SEARCH`·`DOMESTIC_LISTING` 추가·적용·검증 | `288c12e3` + `prisma/migrations_manual/082_*.sql` |
-| 🆕 **국내 생산자 배선** — `seen` 이 다섯을 담는다 · 계약 4건 갱신 · 변이 3종 | `fbbbac33` |
-| 🆕 082 misfiling 정정(새 디렉터리 + 번호충돌 → 정본 082) · **DB 변경 0** | `fbbbac33` |
-| SEARCHRUN-PRESERVATION — 셀러 편집이 `searchRun` 을 지우지 않는다 | `83e70ee5` |
-| 한글 질의 생성기(식별력 게이트) | `ae9a47d8` |
-| 고확률 2-of-3 표현 계층 + 강/약 불일치 분리 | `49c1dde4` · `809d9d22` |
-| 국내 쿼리에 품번 반영 · DNA null-safe | `ef65e33b` |
-| Evidence 기준 확정(16절) | `docs/MLS2-FINAL-EVIDENCE-STANDARD.md` |
+---
 
-🟢 **라이브 DB 제약 실측(2026-11-06)** — `candidate_reviews_source_check` 에 **일곱 값 전부** 있다.
-🟢 **O-1 보안 계약 유지** — 후보 행은 `candidate_reviews` 로 가고 `searchRun` 은 숫자만 담는다.
+## 0. 🔴🔴🔴 다음 한 수는 **코드가 아니다** — CPO 판정 셋이 막고 있다
 
-## 3. 🔴🔴 지금 막힌 것은 «하나» 고 CTO 범위 밖이다
+전문 `docs/MI-BRAND-STEP3AGT-GT-TARGETS.md`(9절). 🔴 **재조사 금지.**
 
 ```
-저장 자리는 열렸고 배선도 끝났는데 **국내 행이 0** 이다 — 이유는 **배선 이후 분석 실행이
-«아직 0회»** 이기 때문이다. 🔴 「공급 0」·「국내 후보 없음」으로 **읽지 않는다**.
-
-실측 — candidate_reviews 180행 / URL 90 / GT 38 **불변** ·
-       OVERSEAS_AUTO 156 · GT_IMPORT 17 · SELLER_URL 7 · 🔴 WEB_SEARCH 0 · DOMESTIC_LISTING 0
-🟢 생산자는 전부터 돈다 — searchRun 9건에서 WEB_SEARCH **10** · DOMESTIC_LISTING **3**
-🔴 그 9건 중 검색 실패 **3**(SearchTimeoutError) ⟹ 그 0 은 **측정불가** 다
-🔴 소급 backfill 은 **하지 않았다** — 재수집이 필요하고 사이트 재접속은 금지다
+① 조건 ⑦ 해석        GT 확대 대상 **21 조합이 전부 기존 행** 이다(human_verdict 만 null)
+                     해석 A = 기존 **GT 값** 만 보호  ⟹ 21 조합 판정 가능(079 설계 경로)
+                     해석 B = 기존 **행** UPDATE 금지 ⟹ **대상 0건** · 새 저장 자리 필요(migration · 미승인)
+② 조건 ③ 충족 방법    🔴 기존 화면이 시스템 판정을 **판정 버튼과 같은 카드에** 렌더한다
+                     ⒜ 자립 검토 화면 신설(운영 UI 변경 0) ↔ ⒝ 운영 UI 가림(미승인 · 계약 FAIL)
+③ GT 분모            「같은 판매처 다른 리스팅」 **7/21** 을 넣는가 · 층화(cap1 8 · cap2 12) 적용 여부
 ```
 
-🔴 **CTO 가 그 실행을 일으킬 수 없다(실측 · 추정 아님)**
+🔴 **CTO 가 셋 중 하나도 고르지 않았다.** ①②가 정해지면 CTO 몫은 **대상 제시 + 저장 확인** 이고
+판정 자체는 **CEO** 가 한다.
+
+---
+
+## 1. 확정 숫자 — 다시 재지 않는다
+
 ```
-Production /api/price-history/check  → **401**(인증 미들웨어)
-로컬 recordSeenCandidates            → getSupabaseAdmin() 이 SUPABASE_SERVICE_ROLE_KEY 를
-                                        요구하고 그 키는 **로컬에 없다**(.env.example 뿐)
+판정 «단위»            **21 조합**   🔴 58 «행» 이 아니다
+  행 58 → 고유 후보 URL **19** → 고유 (원상품URL, 후보URL) 조합 **22** → 기존 GT 1 제외 = **21**
+  🔴 원인 — 같은 원상품 반복 스냅샷(원상품 제목 17개 · 「Hug Hairy Monster T-shirt」가 **38행**)
+신규 GT 완료 **0** · 미완료 **21** · 기존 GT 변경/UPDATE **0**
+기준선                 `candidate_reviews` 행 **190** · GT 행 **38** · GT 조합 **19**
+분포(21)               Bobo Choses 12 · Wynken 4 · Bonjour 3 · Main Story 2 /
+                       junioredition 17 · nickis 2 · miniboutique 1 · tiptoeboutique 1
+설명문 보유             **21/21** 🟢 (사람이 읽을 원문이 전건 있다)
+판매처명 브랜드 자리     넓은 기준 **4**(전부 「원문 맨 앞」 · tinyapple 3 · 미니부띠끄 1) ·
+                       🔴 게이트 **발화 0** ⟹ 안전성 **미입증 유지**(분모 190 으로 넓혀도 0)
+🔴 소요시간은 적지 않는다 — 단위가 58→21 로 바뀌어 「30~60분」은 무효다
 ```
 
-🟡 **CEO Action — 딱 1회**: `/pipeline` → 아동의류 상품 하나 → **「새 상품 분석」**
+🟢 산출 — `%TEMP%/mi-url-evidence/step3agt-targets.json`·`.csv` ·
+`step3agt-sellername.json`. 스크립트 `mi-brand-step3agt-targets.mjs` ·
+`mi-brand-step3agt-sellername.mjs`(**둘 다 읽기 전용**).
+🔴 그 JSON 의 `_hidden_*` 칸은 **판정자에게 가릴 값** 이다(조건 ③).
 
-## 4. 그 1회 뒤 다음 세션이 바로 할 일
+---
+
+## 2. 끝난 STEP — **재실행 금지**
+
 ```
-① node packages/database/scripts/mi-screen-readiness.mjs
-   🟢 ① 표의 🇰🇷 열과 ② searchRun 을 **같이** 읽는다
-   🔴 배선 이전 180행과 이후 행을 **같은 분모로 세지 않는다**(first_seen_at 로 가른다)
-② STEP 6 국내외 비교표를 CPO 에게 제출하고 **정지**
-   ① 국내 저장 건수(producer별) ② 원상품별 국내 후보 ③ URL·제목·가격·이미지·근거
-   ④ 중복/부분유니크 충돌 ⑤ 검색실패 ↔ 후보없음 ↔ 저장실패 **구분**
-   ⑥ 해외 HIGH 48 / POSSIBLE 33 과 원상품별 비교 ⑦ 기존 판정 ↔ 예상 판정(🔴 자동 변경 금지)
-🔴 CTO 는 CPO_CONFIRMED/REJECTED 를 판정하지 않는다
+STEP 1    Contract P2 보호 계약 **21건** (`contract-p2-evidence-isolation.test.ts`) ·
+          변이 3종 FAIL → 복구 · 🔴 선언부에 `(` 를 붙여야 rename 변이를 잡는다(M2 가 찾았다)
+STEP 2    beaumonde 원문 확인 — 「보보쇼즈」는 **TITLE** 에 있고 설명문엔 없다
+STEP 2.5  62건 A~F 재분류 — 실제 BRAND 추출 누락 **62/62** 확정(CPO 가 자기 가설을 철회했다)
+STEP 3    설계안 7항 제출(`docs/MI-BRAND-EVIDENCE-DESIGN-STEP3.md`) · 구현 **0**
+STEP 3A   shadow 전수 62 · 역방향 대조 · Contract P2 유지 확인
+STEP 3A-R 게이트 둘 수정 — 라벨 보호 · 한국어 조사 경계 **10/10** · 판매처명 게이트 `allowLead:false`
+STEP 3A-M 수동 판독 **12건** — ATTRIBUTED **9/9** 타당 · 과소추출 **1** · miniboutique 포함
+STEP 3A-GT 대상·분포·경로 검증(이 세션) — 🔴 조건 ②③⑦ 충돌 보고
 ```
 
-## 5. 🔴 STEP 5(후보 상세설명 Evidence) — 선행 판정 대기
+🔴 **STEP 3B 는 보류 유지** — 독일어 지시사 귀속 2건 · 상점 큐레이션 ↔ 상품 귀속 구분 ·
+판매처명 게이트 필요성/안전성 · `ATTRIBUTED` 를 실제 추출기에 넣을지. **전부 CPO 미승인.**
+
+---
+
+## 3. 🔴 절대 바꾸지 않는 원칙 6 (CPO 확정 · 유지)
+
 ```
-`candidate_reviews` **24칸에 후보 상세설명/HTML 칸이 없다**(확정) ⟹ 현재 저장분으로
-돌릴 수 없고, 그 데이터는 후보 페이지를 다시 열어야 생긴다(= **금지된 사이트 재접속**).
-🟡 CPO 판정 둘 — ⒜ 상세설명 저장 칸 신설(**migration**) ⒝ 다음 분석 수집분부터 사용
-🔴 CTO 가 고르지 않았다.
+⒜ 브랜드 증거와 동일상품 판정은 **별개** 다
+⒝ **`UNKNOWN` 은 `MISMATCH` 가 아니다**
+⒞ **판매처명은 제조사 브랜드 증거가 아니다**
+⒟ 다국어 alias 를 **승인 없이 판정에 연결하지 않는다**(현 등록부 한국어 alias **4개** 그대로)
+⒠ 신규 evidence 가 기존 SAME/SIMILAR 결과를 **바꾸지 않는다**
+⒡ 기존 **GT·운영 판정 수정 0**
 ```
-🔴 열릴 때의 방향은 고정이다 — 원본의 BRAND·PRODUCT_NAME·DETAIL_IDENTIFIER 를 **기준으로**
-후보 상세설명 안에서 찾는다(원본 상세설명 재분석이 **아니다**). 우선순위 BRAND MISMATCH →
-DETAIL_IDENTIFIER UNKNOWN/MISMATCH → PRODUCT_NAME MISMATCH. 🔴 기존 판정 자동 변경 금지 ·
-UNKNOWN → MISMATCH 금지 · 같은 원문 중복 계산 금지.
 
-## 6. 🟢 갱신된 계약 — 되돌리지 않는다
-| 테스트 | 지금 잠그는 것 |
-|---|---|
-| D3-4 | **SQL CHECK ↔ TS union 양방향 대조**(한쪽만 늘면 FAIL · 기대값 import 금지) |
-| A-6 | **배열 ↔ 라벨 쌍 단언** — 위장·누락·무단추가를 한 번에 잡는다 |
-| I-7 | `seen` **다섯** 생산자 · Search/Identity 금지축 단언 유지 |
-| I-8 | 079 **무편집** + 082 가 **정확히 둘** 을 더했다(적용된 migration 사후편집 금지) |
-| B-1 | 승인된 다섯을 담는다 · **그 이상 금지** |
-| O-1 | `searchRun` 은 **숫자만** — URL·제목 유입 금지(🟢 그대로 유효) |
+🔴 **미승인** — 운영 추출기 · `product-evidence.ts` · `facts.brand` 연결 · matcher · Identity ·
+BRAND 정책/임계값 · alias 확대 · GT/DB/schema/UI 변경 · 외부 URL 재방문 · 독일어 문법 규칙.
 
-🔴 `REVIEWED_SAME` 은 **승인 밖** 이다 — 그 후보의 행은 이미 이 표에 있고, 기존 값으로
-적으면 upsert 가 **원래 출처를 덮는다**.
+---
 
-## 7. 변경 금지
-해외 검색·수집 로직 · Identity 임계값/판정 · Evidence 정책 · 가격 eligibility ·
-CEO GT 38 · 해외 후보 180행 · O-1 보안계약 · 새 검색/수집 경로 · 사이트 재접속 · 429 조사 ·
-브랜드 alias 등록부 · 기존 판정 덮어쓰기 · **적용된 migration 사후 편집**.
+## 4. 측정불가 — 0 으로 적지 않는다
 
-## 8. 🔴 이번 세션이 남기는 교훈 1건
 ```
-migration 을 **정본 디렉터리** 에 **빈 번호** 로 넣는다.
-082 는 처음 `packages/database/migrations_manual/`(그 커밋이 **새로 만든** 디렉터리)에
-`080` 으로 들어갔고, 정본 `prisma/migrations_manual/` 에는 **080·081 이 이미 있었다**
-⟹ 정본 순서대로 적용하면 **그 파일이 보이지 않는다**. 🟢 DB 는 멀쩡했다(적용·검증됨) —
-   틀린 것은 **파일 위치와 번호** 뿐이었고 그래서 **DB 변경 0** 으로 고쳤다.
+🔴 21 조합의 **GT 정확도 효과 측정불가**(판정 0건)
+🔴 판매처명 게이트 **발화 0** ⟹ 안전성 미입증(분모 190)
+🔴 브랜드 편향 **57%**(Bobo Choses 12/21)
+🔴 7/21 이 **같은 판매처 다른 리스팅** ⟹ 한 분모로 쓸 수 없다
+🔴 코퍼스가 관측 중 늘어난다 — 행 **183 → 190**(분모를 고정 인용하지 않는다)
+🔴 국내 축 분모 없음 — `market='KR'` 행 **1**(국내 P0 정확도 여전히 측정불가)
+```
+
+---
+
+## 5. 이 세션에서 내가 틀린 것 둘 (다음 사람이 반복하지 않도록)
+
+```
+🔴 ⒜ `originCode` 를 **URL 로만 조인** 해 58행이 서로 다른 원상품처럼 찍혔다
+   🟢 `step25-brand-reclassify.json`(originCode 보유)과 **행 정렬 검증** 후 쓰고,
+      최종 단위는 **DB 의 (원상품 source_url, 후보 URL)** 로 직접 조인했다
+   🔴 그대로 보고했으면 **3배 과대 분모**(58)가 올라갔다
+🔴 ⒝ `candidate_reviews.system_tier` 라는 **없는 칸** 을 읽었다(42703)
+   🟢 `information_schema` 로 읽어 `price_tier`·`match_truth` 로 고쳤다 — 이 트랙 **15번째** 같은 실수
 ```
