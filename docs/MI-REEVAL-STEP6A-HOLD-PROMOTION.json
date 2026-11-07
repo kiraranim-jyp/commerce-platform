@@ -1,0 +1,228 @@
+{
+ "note": "🔴 Shadow 전용 · 운영 반영 0 · 두 분모(33 · 22)를 같이 적는다 · 점수/확률 0",
+ "baseline": {
+  "all33": {
+   "denom": 27,
+   "tp": 6,
+   "fp": 1,
+   "fn": 12,
+   "tn": 8
+  },
+  "excludingMainStory22": {
+   "denom": 22,
+   "tp": 5,
+   "fp": 1,
+   "fn": 12,
+   "tn": 4
+  }
+ },
+ "blanketPromotion": {
+  "PRESUMED_SAME → SAME": {
+   "all": {
+    "denom": 27,
+    "tp": 14,
+    "fp": 6,
+    "fn": 4,
+    "tn": 3
+   },
+   "ms": {
+    "denom": 22,
+    "tp": 13,
+    "fp": 3,
+    "fn": 4,
+    "tn": 2
+   }
+  },
+  "SIMILAR → SAME": {
+   "all": {
+    "denom": 27,
+    "tp": 9,
+    "fp": 2,
+    "fn": 9,
+    "tn": 7
+   },
+   "ms": {
+    "denom": 22,
+    "tp": 8,
+    "fp": 1,
+    "fn": 9,
+    "tn": 4
+   }
+  },
+  "CONFLICT → SAME": {
+   "all": {
+    "denom": 27,
+    "tp": 7,
+    "fp": 2,
+    "fn": 11,
+    "tn": 7
+   },
+   "ms": {
+    "denom": 22,
+    "tp": 6,
+    "fp": 2,
+    "fn": 11,
+    "tn": 3
+   }
+  },
+  "셋 모두(= 과거 저하 조건)": {
+   "all": {
+    "denom": 27,
+    "tp": 18,
+    "fp": 8,
+    "fn": 0,
+    "tn": 1
+   },
+   "ms": {
+    "denom": 22,
+    "tp": 17,
+    "fp": 4,
+    "fn": 0,
+    "tn": 1
+   }
+  }
+ },
+ "conditionalPromotion": {
+  "보류 + 품번 일치": {
+   "all": {
+    "denom": 27,
+    "tp": 9,
+    "fp": 3,
+    "fn": 9,
+    "tn": 6
+   },
+   "ms": {
+    "denom": 22,
+    "tp": 8,
+    "fp": 1,
+    "fn": 9,
+    "tn": 4
+   },
+   "promoted": [
+    "C11",
+    "C48",
+    "C19",
+    "C20",
+    "C37"
+   ]
+  },
+  "보류 + 품번 일치 + 충돌 0": {
+   "all": {
+    "denom": 27,
+    "tp": 9,
+    "fp": 3,
+    "fn": 9,
+    "tn": 6
+   },
+   "ms": {
+    "denom": 22,
+    "tp": 8,
+    "fp": 1,
+    "fn": 9,
+    "tn": 4
+   },
+   "promoted": [
+    "C11",
+    "C48",
+    "C19",
+    "C20",
+    "C37"
+   ]
+  },
+  "PRESUMED_SAME + 품번 일치": {
+   "all": {
+    "denom": 27,
+    "tp": 9,
+    "fp": 3,
+    "fn": 9,
+    "tn": 6
+   },
+   "ms": {
+    "denom": 22,
+    "tp": 8,
+    "fp": 1,
+    "fn": 9,
+    "tn": 4
+   },
+   "promoted": [
+    "C11",
+    "C48",
+    "C19",
+    "C20",
+    "C37"
+   ]
+  }
+ },
+ "recoveredSevenNature": [
+  {
+   "id": "C27",
+   "gt": "SAME",
+   "baseline": "PRESUMED_SAME",
+   "nature": "🟢 신규 증거(원문에서 찾았다)",
+   "blockers": [
+    "BRAND_UNCONFIRMED"
+   ],
+   "ceo": "SAME"
+  },
+  {
+   "id": "C11",
+   "gt": "SAME",
+   "baseline": "PRESUMED_SAME",
+   "nature": "🔴 **상태 승격**(운영이 품번을 이미 갖고 있었다)",
+   "blockers": [
+    "BRAND_UNCONFIRMED"
+   ],
+   "ceo": null
+  },
+  {
+   "id": "C48",
+   "gt": "SAME",
+   "baseline": "PRESUMED_SAME",
+   "nature": "🔴 **상태 승격**(운영이 품번을 이미 갖고 있었다)",
+   "blockers": [
+    "BRAND_UNCONFIRMED"
+   ],
+   "ceo": null
+  },
+  {
+   "id": "C14",
+   "gt": "SAME",
+   "baseline": "PRESUMED_SAME",
+   "nature": "🟢 신규 증거(원문에서 찾았다)",
+   "blockers": [
+    "BRAND_UNCONFIRMED"
+   ],
+   "ceo": null
+  },
+  {
+   "id": "C37",
+   "gt": "SAME",
+   "baseline": "PRESUMED_SAME",
+   "nature": "🔴 **상태 승격**(운영이 품번을 이미 갖고 있었다)",
+   "blockers": [
+    "BRAND_UNCONFIRMED"
+   ],
+   "ceo": null
+  },
+  {
+   "id": "S1-1",
+   "gt": "SAME",
+   "baseline": "SIMILAR",
+   "nature": "🟢 신규 증거(원문에서 찾았다)",
+   "blockers": [],
+   "ceo": null
+  },
+  {
+   "id": "S1-4",
+   "gt": "SAME",
+   "baseline": "PRESUMED_SAME",
+   "nature": "🟢 신규 증거(원문에서 찾았다)",
+   "blockers": [
+    "FIT"
+   ],
+   "ceo": null
+  }
+ ],
+ "promotedByStateOnly": 3,
+ "newEvidence": 4
+}

@@ -1,0 +1,161 @@
+{
+ "note": "🔴 Shadow 한정 수정 · 운영 extractor 변경 0 · 🔴 `B-shadow-v1` 수치를 덮지 않는다(두 열로 적는다)",
+ "aGroupUnchanged": true,
+ "bShadow": {
+  "BRAND": {
+   "v1": {
+    "match": 17,
+    "mismatch": 1,
+    "unknown": 89
+   },
+   "v2": {
+    "match": 17,
+    "mismatch": 1,
+    "unknown": 89
+   }
+  },
+  "MODEL_CODE": {
+   "v1": {
+    "match": 18,
+    "mismatch": 8,
+    "unknown": 63
+   },
+   "v2": {
+    "match": 18,
+    "mismatch": 8,
+    "unknown": 63
+   }
+  },
+  "PRODUCT_TYPE": {
+   "v1": {
+    "match": 63,
+    "mismatch": 9,
+    "unknown": 37
+   },
+   "v2": {
+    "match": 63,
+    "mismatch": 9,
+    "unknown": 37
+   }
+  },
+  "DESIGN": {
+   "v1": {
+    "match": 37,
+    "mismatch": 49,
+    "unknown": 22
+   },
+   "v2": {
+    "match": 37,
+    "mismatch": 49,
+    "unknown": 22
+   }
+  },
+  "PRINT_PATTERN": {
+   "v1": {
+    "match": 10,
+    "mismatch": 2,
+    "unknown": 32
+   },
+   "v2": {
+    "match": 10,
+    "mismatch": 2,
+    "unknown": 32
+   }
+  },
+  "COLOR": {
+   "v1": {
+    "match": 61,
+    "mismatch": 14,
+    "unknown": 29
+   },
+   "v2": {
+    "match": 60,
+    "mismatch": 13,
+    "unknown": 31
+   }
+  },
+  "MATERIAL": {
+   "v1": {
+    "match": 57,
+    "mismatch": 6,
+    "unknown": 39
+   },
+   "v2": {
+    "match": 57,
+    "mismatch": 6,
+    "unknown": 39
+   }
+  },
+  "SLEEVE_FORM": {
+   "v1": {
+    "match": 1,
+    "mismatch": 1,
+    "unknown": 22
+   },
+   "v2": {
+    "match": 1,
+    "mismatch": 1,
+    "unknown": 22
+   }
+  },
+  "FIT": {
+   "v1": {
+    "match": 5,
+    "mismatch": 0,
+    "unknown": 23
+   },
+   "v2": {
+    "match": 5,
+    "mismatch": 0,
+    "unknown": 23
+   }
+  },
+  "AUDIENCE": {
+   "v1": {
+    "match": 0,
+    "mismatch": 0,
+    "unknown": 37
+   },
+   "v2": {
+    "match": 0,
+    "mismatch": 0,
+    "unknown": 37
+   }
+  },
+  "SIZE_OPTION": {
+   "v1": {
+    "match": 0,
+    "mismatch": 0,
+    "unknown": 0
+   },
+   "v2": {
+    "match": 0,
+    "mismatch": 0,
+    "unknown": 0
+   }
+  }
+ },
+ "changedPairAxes": [
+  {
+   "axis": "COLOR",
+   "domain": "folkberlin.com",
+   "from": "MATCH",
+   "to": "MISMATCH",
+   "why": "양쪽 모두 있으나 겹치는 값이 없다 — 원본 grey ↔ 후보 blue"
+  },
+  {
+   "axis": "COLOR",
+   "domain": "villagekids.co.uk",
+   "from": "MISMATCH",
+   "to": "UNKNOWN",
+   "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+  },
+  {
+   "axis": "COLOR",
+   "domain": "folkberlin.com",
+   "from": "MISMATCH",
+   "to": "UNKNOWN",
+   "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+  }
+ ]
+}

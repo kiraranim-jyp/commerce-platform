@@ -5,7 +5,34 @@
 
 ---
 
-## 0. 🟡 **다음 한 수 — CPO §5 「404 상태 분리·재분류」 조사 (미착수)**
+## 0-Z. 🔴🔴 **다음 한 수 = MI 재평가 STEP 6 의 «CPO 판정 넷» 이다**
+
+전문 [`docs/MI-REEVAL-STEP6-HOLD-AND-COLOR.md`](MI-REEVAL-STEP6-HOLD-AND-COLOR.md) ·
+STEP 5 [`docs/MI-REEVAL-STEP5-SHADOW.md`](MI-REEVAL-STEP5-SHADOW.md). 🔴 **재조사 금지 · 운영 반영 0.**
+
+```
+🔴🔴 기존 MI 의 약점은 **「놓친 SAME」** 이다 — 거짓 SAME 이 아니다
+   33쌍(확정 27) `TP 6 · FP 1 · FN 12 · TN 8` / 22쌍 `TP 5 · FP 1 · FN 12 · TN 4`
+   FN 12 = PRESUMED_SAME 8 + SIMILAR 3 + CONFLICT 1
+🔴🔴 **무조건 승격 = 과거 저하 조건 재현** (33쌍 FP 1→8 · 22쌍 FP 1→4 · 둘 다 FN 0)
+   🟢 그 재현을 **계약으로 고정** 했다 — FP 가 안 늘면 테스트가 FAIL 한다
+🟡 조건부(보류 + 품번 일치)는 **22쌍만** 통과(FP 1 · FN 12→9 · 승격 C11·C48·C19·C20·C37)
+   🔴 C19·C20 이 Main Story 라 33쌍에서는 FP 3
+🔴 V1 회수 7 = **상태 승격 3**(C11·C48·C37 · 근거 증가 0 · 전부 `BRAND_UNCONFIRMED`) +
+   **신규 증거 4**(C27·C14·S1-1·S1-4 · 후보측 품번 공백을 원문에서 확인)
+🟢 STEP 6-B — folkberlin COLOR 거짓 일치 제거(**선언된 색상 자리** 를 읽는 방식) ·
+   A군 **0쌍 변경** · B군 3 (쌍,축) 전부 COLOR · 정당한 grey/blue 보존
+🔴 단어 경계 결함(`embroidered`→red · `elastane`→tan)은 **적용하지 않았다**(A군 4쌍 변동)
+
+CPO 판정 넷 — ① 보류 승격 운영 반영(🟡 권고: 신규 증거 4건 축만 따로 검증)
+             ② 상태 승격 3건 허용 여부(🔴 WU-080 REJECT 축)
+             ③ 단어 경계 결함 수정(🟡 권고: 고치는 쪽) ④ v2 를 기준으로 쓸 것인가
+🔴 **CTO 는 넷 중 아무것도 고르지 않았다.** 승인 전 운영 변경 금지.
+```
+
+---
+
+## 0. 🟡 [대기 · 위 판정 뒤] **CPO §5 「404 상태 분리·재분류」 조사 (미착수)**
 
 ```
 🟢 Main Story 한정 제외는 **배포 완료** 다(`21d4a5fa` · Production 200) — 재구현 금지.

@@ -154,11 +154,74 @@ const DESIGN_STOP = new Set([
  */
 export interface ExtractOptions {
   useObserved?: boolean;
+  /**
+   * 🔵🔵 **브랜드 엔티티가 COLOR 축으로 유입되는 것을 막는다**(CPO 결정 ④ · Shadow 한정).
+   * ```
+   * 실측 — `folkberlin.com` 후보 설명문 「The **Gray Label** logo embroidery …」 에서
+   *        `Gray` 가 **색상** 으로 추출돼 원본 `grey` 와 MATCH 가 됐다.
+   *        🔴 그런데 그 상품의 실제 색상은 제목의 「''Blue Moon''」(blue) 이다.
+   * ⟹ 🔴 동의어 문제가 아니라 **추출 결함** 이다(브랜드명 안의 색상 단어).
+   * ```
+   * 🔴 `false`(기본)면 **STEP 5 측정과 바이트 동일** 하다 — 기존 수치를 덮지 않기 위해서다.
+   * 🟢 `true` 면 `B-shadow-v2` 측정이 된다(CPO 가 별도 버전으로 재라고 했다).
+   */
+  colorBrandGuard?: boolean;
+  /**
+   * 🔴🔴🔴 **단어 경계 검사** — 이것이 진짜 결함이었다(CPO ④ 를 조사하다 찾았다).
+   * ```
+   * 1차 구현은 `text.indexOf(form)` 만 썼다 ⟹ **부분 문자열이 그대로 걸렸다**:
+   *   「embroide**red**」      → COLOR `red`
+   *   「elas**tan**e」         → COLOR `brown`(tan)
+   *   「**Gray** Label logo」  → COLOR `grey`      ← CPO 가 지목한 그 사례
+   * 🔴 즉 `folkberlin` 의 거짓 일치는 **브랜드명 문제이기도 하지만 근본은 경계 부재** 다.
+   * ```
+   * 🟢 고치는 방법은 이 리포가 이미 쓰는 그 규칙이다 — **양 끝이 글자/숫자가 아니어야 한다**
+   *    (`excluded-brands.ts` · `brand-alias.ts` 의 `WORDISH` 경계와 같은 축).
+   * 🔴 기본값 **false** ⟹ STEP 5 산출은 **바이트 동일** 하다(기존 수치를 덮지 않는다).
+   */
+  wordBoundary?: boolean;
 }
+
+/**
+ * 🔴 **브랜드 표지 명사** — 색상 토큰 «바로 뒤» 에 이것이 오면 그 색상은
+ *    상품 색상이 아니라 **고유명사의 일부** 다(`Gray **Label**` · `Blue **Studio**`).
+ * 🟢 좁게 둔다 — 넓히면 「Blue Moon」 같은 **실제 색상 표기** 를 죽인다.
+ * 🔴 `moon` 같은 일반 명사를 넣지 않는다(그 길로 가면 실제 색상이 사라진다).
+ */
+const BRAND_MARKER_NOUNS: readonly string[] = [
+  "label", "logo", "brand", "studio", "atelier", "collective", "company", "co.", "라벨", "로고",
+];
+
+/**
+ * 🔵🔵🔵 **선언된 색상 자리** — 마커 사전보다 **이것이 정답이다**(실측으로 확정).
+ *
+ * `folkberlin.com` 후보 설명문 전문을 읽어 보니:
+ * ```
+ * `Gray` 가 **네 번** 나오고 **전부 브랜드/인명** 이다 —
+ *    @301 「The **Gray Label** logo」 · @598 「About the Brand **Gray Label**」
+ *    @703 「Founded by Emily **Gray** in 2011」  ← 🔴 **창업자 이름** · 마커가 뒤에 없다
+ *    @717 「**Gray Label** is committed …」
+ * 🔴 그래서 **브랜드 표지 명사 사전만으로는 @703 을 막을 수 없다**(실측 · 가드 통과).
+ * 🟢🟢 그런데 그 설명문은 **「Colour: Blue Moon」** 이라고 **선언** 해 두었다.
+ * ⟹ 🟢 CPO 조건(「실제 색상 Blue Moon 은 **원문 근거가 확인될 때만** 추출」)을 그대로 만족한다.
+ * ```
+ * 🔴 선언 자리가 있으면 **그 값만** COLOR 로 쓴다 — 산문에서 긁지 않는다.
+ * 🔴 선언 자리가 없으면 기존대로 산문을 본다(없는 것을 만들지 않는다).
+ */
+const COLOR_LABEL_RE = /(?:colou?r|색상|컬러)\s*[:：]\s*([^\n.;|]{1,40})/i;
 
 const findForms = (hay: string, axis: KeywordAxis, where: Keyword["where"], opts: ExtractOptions = {}): Keyword[] => {
   const useObserved = opts.useObserved !== false;
-  const raw = NFKC(hay);
+  let raw = NFKC(hay);
+  /**
+   * 🟢🟢 **선언된 색상 자리가 있으면 그 값만 본다**(가드 ON 일 때만 · CPO 조건 ④).
+   * 🔴 그래서 「Colour: Blue Moon」 을 적어 둔 상품에서 **브랜드명·인명의 색상 단어가
+   *    더 이상 들어오지 않는다**. 🔴 선언이 없으면 아무것도 바꾸지 않는다.
+   */
+  if (opts.colorBrandGuard === true && axis === "COLOR") {
+    const m = COLOR_LABEL_RE.exec(raw);
+    if (m?.[1]) raw = m[1];
+  }
   const text = low(raw);
   const out: Keyword[] = [];
   for (const entry of OBSERVED) {
@@ -169,11 +232,41 @@ const findForms = (hay: string, axis: KeywordAxis, where: Keyword["where"], opts
       const f = low(form);
       let i = text.indexOf(f);
       while (i >= 0) {
-        out.push({
-          axis, raw: raw.slice(i, i + f.length), keyword: form, normalized: entry.norm,
-          basis: normalizeToken(form) === entry.norm ? "NORMALIZED" : "OBSERVED",
-          where, offset: i, context: ctx(raw, i, f.length),
-        });
+        /**
+         * 🔵 **COLOR 전용 가드** — 색상 토큰 «바로 뒤» 가 브랜드 표지 명사면 건너뛴다.
+         * 🔴 COLOR 축에만 적용한다. 다른 축(소재·형태)에 넓히면 근거 없이 축이 죽는다.
+         */
+        const guarded = opts.colorBrandGuard === true && axis === "COLOR"
+          && (() => {
+            const after = text.slice(i + f.length, i + f.length + 14);
+            const next = after.replace(/^[\s'"”’`,.\-–—()[\]]+/, "");
+            return BRAND_MARKER_NOUNS.some((m) => next.startsWith(low(m)));
+          })();
+        /**
+         * 🔴🔴 **경계 검사** — 양 끝이 글자/숫자면 그 일치는 **부분 문자열** 이다.
+         *    `red` ⊂ `embroidered` · `tan` ⊂ `elastane` 가 그렇게 들어왔다.
+         * 🔴 한글은 조사가 붙으므로 **뒤쪽만** 느슨하게 둔다(앞은 엄격) — `excluded-brands`
+         *    의 조사 처리와 같은 축이지만 여기서는 **열거 없이** 「한글이면 허용」으로 둔다.
+         *    🔴 그래서 「파란색」·「블루계열」이 살아 있고 「embroidered」는 막힌다.
+         */
+        const boundaryBad = opts.wordBoundary === true && (() => {
+          const prev = i > 0 ? text[i - 1]! : "";
+          const next = text[i + f.length] ?? "";
+          const latin = /[a-z0-9]/;
+          const hangul = /[가-힣]/;
+          const isLatinForm = /[a-z]/.test(f);
+          if (prev && (latin.test(prev) || (!isLatinForm && hangul.test(prev)))) return true;
+          if (next && isLatinForm && latin.test(next)) return true;
+          if (next && !isLatinForm && hangul.test(next) && f.length < 3) return true;
+          return false;
+        })();
+        if (!guarded && !boundaryBad) {
+          out.push({
+            axis, raw: raw.slice(i, i + f.length), keyword: form, normalized: entry.norm,
+            basis: normalizeToken(form) === entry.norm ? "NORMALIZED" : "OBSERVED",
+            where, offset: i, context: ctx(raw, i, f.length),
+          });
+        }
         i = text.indexOf(f, i + f.length);
       }
     }
