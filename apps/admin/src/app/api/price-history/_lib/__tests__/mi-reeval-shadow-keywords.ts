@@ -144,13 +144,28 @@ const DESIGN_STOP = new Set([
   "아동", "유아", "키즈", "주니어", "상품", "제품", "브랜드", "색상", "소재", "사이즈", "옵션",
 ]);
 
-const findForms = (hay: string, axis: KeywordAxis, where: Keyword["where"]): Keyword[] => {
+/**
+ * 🔵🔵 **동의어 연결 «전/후» 를 가르는 스위치**(CPO 조건 — 「동의어 연결 전후 결과 별도 기록」).
+ * ```
+ * useObserved = true   🟢 OBSERVED 사전을 쓴다(티셔츠 ↔ T-shirt · 면 ↔ cotton …)
+ * useObserved = false  🔴 **정규화 후 완전 일치만** — 한국어 표현이 이어지지 않는다
+ * ```
+ * 🔴 두 결과를 **같은 칸에 넣지 않는다** — 그래서 측정이 「동의어가 새로 만든 MATCH」를 셀 수 있다.
+ */
+export interface ExtractOptions {
+  useObserved?: boolean;
+}
+
+const findForms = (hay: string, axis: KeywordAxis, where: Keyword["where"], opts: ExtractOptions = {}): Keyword[] => {
+  const useObserved = opts.useObserved !== false;
   const raw = NFKC(hay);
   const text = low(raw);
   const out: Keyword[] = [];
   for (const entry of OBSERVED) {
     if (entry.axis !== axis) continue;
     for (const form of entry.forms) {
+      /** 🔴 동의어 OFF 면 **정규화값과 같은 표기만** 쓴다(= 완전 일치 축). */
+      if (!useObserved && normalizeToken(form) !== entry.norm) continue;
       const f = low(form);
       let i = text.indexOf(f);
       while (i >= 0) {
@@ -185,7 +200,8 @@ export interface ExtractInput {
 }
 
 /** ① **키워드 추출 · 정규화**. 🔴 없는 것은 **만들지 않는다**. */
-export function extractKeywords(input: ExtractInput): Keyword[] {
+export function extractKeywords(input: ExtractInput, opts: ExtractOptions = {}): Keyword[] {
+  const useObserved = opts.useObserved !== false;
   const out: Keyword[] = [];
   const texts: [string, Keyword["where"]][] = [
     [input.title ?? "", "TITLE"],
@@ -198,7 +214,11 @@ export function extractKeywords(input: ExtractInput): Keyword[] {
     if (!hay) continue;
     const text = low(hay);
     for (const s of BRAND_SYNONYMS) {
-      for (const [form, basis] of [[s.en, "IDENTICAL"], [s.ko, "REGISTRY"]] as const) {
+      /** 🔴 동의어 OFF 면 **한글 표기를 잇지 않는다**(영문 그대로만 본다). */
+      const forms = useObserved
+        ? ([[s.en, "IDENTICAL"], [s.ko, "REGISTRY"]] as const)
+        : ([[s.en, "IDENTICAL"]] as const);
+      for (const [form, basis] of forms) {
         const i = text.indexOf(low(form));
         if (i < 0) continue;
         out.push({
@@ -238,11 +258,11 @@ export function extractKeywords(input: ExtractInput): Keyword[] {
 
   /* ── 사전 축들 ── */
   for (const axis of ["PRODUCT_TYPE", "COLOR", "MATERIAL", "SLEEVE_FORM", "AUDIENCE", "FIT", "PRINT_PATTERN"] as KeywordAxis[]) {
-    for (const [hay, where] of texts) if (hay) out.push(...findForms(hay, axis, where));
+    for (const [hay, where] of texts) if (hay) out.push(...findForms(hay, axis, where, opts));
   }
   /** 구조화 칸도 같은 사전으로 읽는다 — 출처만 다르다. */
-  if (input.color) out.push(...findForms(input.color, "COLOR", "STRUCTURED"));
-  if (input.material) out.push(...findForms(input.material, "MATERIAL", "STRUCTURED"));
+  if (input.color) out.push(...findForms(input.color, "COLOR", "STRUCTURED", opts));
+  if (input.material) out.push(...findForms(input.material, "MATERIAL", "STRUCTURED", opts));
 
   /* ── DESIGN — 🔴 사전이 아니라 **불용어 제외 토큰** 이다 ── */
   const titleTokens = low(input.title ?? "").split(/[^a-z0-9가-힣]+/).filter(Boolean);
