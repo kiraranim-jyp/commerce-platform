@@ -1,7 +1,42 @@
 # GLOBAL-MARKET-LOCAL-CURRENCY-PROBE
 
 **등록일** 2026-09-13 · **지시** CEO, 2026-09-13 (`GLOBAL-ORIGIN-PRICE-WIRING-1` STEP 8)
-**상태** 🔵 미착수 · **우선순위** ③ (Bobo ORIGIN_FX wiring → Production 화면 확인 → 이것)
+**상태** 🔴 **완료 조건 1·2 의 전제가 반증됐다 — 판정은 `docs/PHASE2-SMALLABLE-LOCAL-CURRENCY-VERDICT.md`**
+
+---
+
+## 🔴🔴🔴 2026-11-07 추가 — **이 문서를 읽고 바로 구현하지 않는다**
+
+```
+🔴 아래 완료 조건 1·2 는 **「`?currency=JPY` 가 돌려주는 값이 일본 시장이 스스로 정한
+   엔화 가격」** 이라는 전제 위에 있다. 🔴 **라이브 실측이 그 전제를 반증했다**(PHASE 2).
+
+국가 × 통화 격자(상품 430753 · 2026-11-07)
+          EUR      JPY        USD
+   JP      54     10,078       63
+   KR      49      9,145       57
+   US      53      9,892       62
+   JPY/EUR  186.630 · 186.633 · 186.642   편차 **0.006%**
+   🔴 단일 환율 구간이 비어 있지 않다 ⟹ **하나의 환율표가 격자 전부를 설명한다**
+
+⟹ 🔴🔴 Smallable 의 `?currency=JPY` 는 **사이트가 자기 환율로 EUR 를 바꾼 값** 이다.
+   그것을 저장하는 것은 **이 문서 §2 가 절대 금지한 그 행위** 와 같은 산술이다
+   (환산 주체만 우리에서 사이트로 바뀐다).
+🟢 운영 코드가 처음부터 그렇게 적어 뒀다 — `smallable-market-probe.ts:28-30`.
+
+🟢 **현지통화 관측은 다른 경로에서 «이미» 작동한다**(운영 DB 실측) —
+   `louisemisha.com` en-jp **JPY**(6통화) · `bobochoses.com` en-us **USD** ·
+   `junioredition.com` en-int JPY ↔ `www.smallable.com` **1통화(EUR)**.
+   ⟹ 🔴 아래 §1 의 「지금은 전부 EUR이다」는 **Smallable 한 판매처의 성질** 이고
+      제품 전체의 결함이 아니다.
+
+🟢 완료 조건 **3·4·5 는 이미 충족** 돼 있다(`—` 표시 · 원본가 불변 · 라이브 실측).
+🔴 완료 조건 **1·2 는 Smallable 에서 구조적으로 달성 불가** 다.
+🟢 그 결론을 **계약 10건 + 변이 3종** 으로 잠갔다 —
+   `packages/crawler/src/__tests__/phase2-market-currency-is-not-site-fx.test.ts`.
+🔴 그리고 PHASE 1 의 「① `market_country` 채우기」는 **효과 0 · 의미 충돌** 로 정정됐다
+   (글로벌 시장 카드가 그 칸을 읽지 않고 `global-market.ts:44` 가 읽기를 금지한다).
+```
 
 ---
 

@@ -5,7 +5,29 @@
 
 ---
 
-## 0-Z. 🔴🔴 **다음 한 수 = MI 재평가 STEP 6 의 «CPO 판정 넷» 이다**
+## 0-Y. 🔵🔵 **전략 기준선이 재정렬됐다 — 다음 한 수는 「국내 가격 매칭 정확도」다**
+
+🔴 **좌표는 `docs/START-HERE.md` §0-STRATEGY 하나다**(CPO 확정 2026-11-07 · 우선순위 9 + 실행 순서 7).
+
+```
+🟢 실행 순서 **1 종료** — `a0b3c08` Smallable 현지통화는 **STOP(구현 0)** 으로 닫혔다.
+   전문 `docs/PHASE2-SMALLABLE-LOCAL-CURRENCY-VERDICT.md`(10절). 🔴 **재조사 금지.**
+   🔵 CPO 질문의 답 — **JP 조회는 JPY 가 아니다**(DB 62행 전건 EUR · 라이브 EUR 54)
+   🔴🔴 그리고 **JPY 를 요청해도 그것은 사이트 자체 환산** 이다 —
+      JPY/EUR 비율이 JP·KR·US 에서 **편차 0.006%**(단일 환율표가 격자 전부를 설명한다)
+      ⟹ 저장하면 그 문서가 금지한 「환율로 현지 통화를 만들어 내기」와 **같은 산술**
+   🟢 현지통화는 **다른 판매처에서 이미 작동한다**(louisemisha en-jp JPY 등 6통화)
+   🔴 PHASE 1 의 「① market_country 채우기」는 **효과 0 · 의미 충돌** 로 정정(구현 0)
+   🟢 계약 **10** + 변이 **M1~M3 전부 FAIL → 바이트 복구** · 운영 diff **0**
+
+🔵 **다음 = 실행 순서 2 「국내 가격 매칭 정확도」**
+   SAME / PRESUMED_SAME / SIMILAR / DIFFERENT 구분 + **가격비교 적격성** 검증.
+   🔴🔴 **threshold 완화 금지**(CPO 명시). 🟢 기준선은 아래 §0-Z 를 그대로 쓴다.
+```
+
+---
+
+## 0-Z. 🟢 **MI 재평가 STEP 6 — 종료 · CPO 판정 넷 대기**(실행 순서 2 의 기준선이다)
 
 전문 [`docs/MI-REEVAL-STEP6-HOLD-AND-COLOR.md`](MI-REEVAL-STEP6-HOLD-AND-COLOR.md) ·
 STEP 5 [`docs/MI-REEVAL-STEP5-SHADOW.md`](MI-REEVAL-STEP5-SHADOW.md). 🔴 **재조사 금지 · 운영 반영 0.**
