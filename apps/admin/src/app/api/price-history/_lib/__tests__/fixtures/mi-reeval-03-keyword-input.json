@@ -1,0 +1,2186 @@
+{
+ "source": "desc-compare.json(쌍) + step2-evidence.json(후보 설명문 전문) + product_snapshots(원본 전문)",
+ "note": "🔴 설명문은 «전문» 이다(400자 발췌가 아니다) · 번역 0 · 가공 0",
+ "pairs": [
+  {
+   "originUrl": "https://bobochoses.com/products/b226ab097-stamp-bloom-all-over-reversible-anorak",
+   "originCode": "B226AB097",
+   "candidateUrl": "https://junioredition.com/products/stamp-bloom-all-over-reversible-jacket-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "CONFLICT",
+   "humanGt": null,
+   "origin": {
+    "title": "Stamp Bloom all over reversible anorak",
+    "description": "Navy blue anorak. Relaxed fit. Responsibly made in China. Exterior A: 100% Recycled Polyamide Exterior B: 100% Recycled Polyamide",
+    "descriptionKo": "브랜드: Bobo Choses\n색상: Navy blue\n소재: 100% Recycled Polyamide\n옵션 Clothing size: 6M, 9M, 12M, 18M, 24M\n원문 설명: \"Navy blue anorak. Relaxed fit. Responsibly made in China. Exterior A: 100% Recycled Polyamide Exterior B: 100% Recycled Polyamide\"",
+    "brand": "Bobo Choses",
+    "color": "Navy blue",
+    "material": "100% Recycled Polyamide"
+   },
+   "candidate": {
+    "title": "Stamp Bloom All Over Reversible Jacket by Bobo Choses",
+    "description": "Stamp Bloom All Over Reversible Jacket by Bobo Choses. A cosy and stylish collared fleece jacket with a colour block design in navy blue, cream and brown and an all over stamp bloom design on the reverse. A fun and versatile winter essential. Colour - Navy Blue. 100% Recycled Polyester 100% Recycled Polyamide lining. Product code B226AC097 AW26 Made in China."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/products/b226ab097-stamp-bloom-all-over-reversible-anorak",
+   "originCode": "B226AB097",
+   "candidateUrl": "https://nickis.com/products/colmar-daunenjacke-reversible-quilted-marineblau-7404628282",
+   "candidateDomain": "nickis.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Stamp Bloom all over reversible anorak",
+    "description": "Navy blue anorak. Relaxed fit. Responsibly made in China. Exterior A: 100% Recycled Polyamide Exterior B: 100% Recycled Polyamide",
+    "descriptionKo": "브랜드: Bobo Choses\n색상: Navy blue\n소재: 100% Recycled Polyamide\n옵션 Clothing size: 6M, 9M, 12M, 18M, 24M\n원문 설명: \"Navy blue anorak. Relaxed fit. Responsibly made in China. Exterior A: 100% Recycled Polyamide Exterior B: 100% Recycled Polyamide\"",
+    "brand": "Bobo Choses",
+    "color": "Navy blue",
+    "material": "100% Recycled Polyamide"
+   },
+   "candidate": {
+    "title": "Daunenjacke Reversible Quilted Marineblau",
+    "description": "Diese wendbare Colmar Steppjacke mit Kapuze in der Farbe Navy Blue-Dark Blue ist zwei Jacken in einer und passt sich so jedem Anlass an. Die nicht abnehmbare Kapuze und das weiche Obermaterial aus 100% recyceltem Polyamid überzeugen mit ihrem leicht knittrigen Griff und der strahlenden Farbwiedergabe für einen modernen, sportlichen Look. Eine wasserabweisende Ausrüstung mit geringer Umweltbelastung schützt zuverlässig vor Nässe. Auf der einen Seite ist die Jacke breit und regelmäßig gesteppt, während die andere Seite völlig glatt und in einer kontrastierenden Farbe gehalten ist – so lässt sich der Look je nach Lust und Laune wechseln. Gepolstert ist die Jacke mit einer natürlichen Daunenfüllung aus 90% Daunen und 10% Federn, was für angenehme Wärme bei geringem Gewicht sorgt. Praktische, bequeme Seitentaschen bieten zusätzlichen Stauraum, und ein Kantenschutz am Bein sorgt für zusätzliche Strapazierfähigkeit. Ein durchgehender seitlicher Reißverschluss mit personalisiertem Zipper sorgt für einfaches An- und Ausziehen. Der Colmar-Patch am linken Ärmel sowie der \"C\"-Patch auf der rechten Rückseite verleihen der Jacke eine unverwechselbare, markentypische Note."
+   }
+  },
+  {
+   "originUrl": null,
+   "originCode": "B226AC009",
+   "candidateUrl": "https://biskuit.kr/product/%eb%b3%b4%eb%b3%b4%ec%87%bc%ec%a6%88-%ed%97%88%ea%b7%b8-%ed%97%a4%ec%96%b4%eb%a6%ac-%eb%aa%ac%ec%8a%a4%ed%84%b0-%ed%8b%b0%ec%85%94%ec%b8%a0-b226ac009/8891/category/367/display/1/",
+   "candidateDomain": "biskuit.kr",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "origin": {
+    "title": "",
+    "description": null,
+    "descriptionKo": null,
+    "brand": null,
+    "color": null,
+    "material": null
+   },
+   "candidate": {
+    "title": "[보보쇼즈] 허그 헤어리 몬스터 티셔츠 B226AC009 - 비스킷",
+    "description": "소재: 오가닉 코튼 100% 라이트 블루 컬러의 티셔츠로, 루즈한 핏으로 편안하게 착용하기 좋습니다. Made in Portugal. · 찬물 30°C 세탁 · 표백제 사용 금지 · 저온 다림질 가능 · 드라이클리닝 금지 · 건조기 사용 금지 ** 세탁 시 단독 세탁을 권장드리며, 상품 내부에 부착된 케어 라벨을 확인하신 후 안내된 방법에 따라 세탁해 주세요. 세탁 방법 미확인으로 인한 변형 또는 손상은 교환 및 반품이 어려울 수 있는 점 참고 부탁드립니다."
+   }
+  },
+  {
+   "originUrl": null,
+   "originCode": "B226AC009",
+   "candidateUrl": "https://bobochoses.com/products/b226ab040-hug-hairy-monster-t-shirt",
+   "candidateDomain": "bobochoses.com",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "origin": {
+    "title": "",
+    "description": null,
+    "descriptionKo": null,
+    "brand": null,
+    "color": null,
+    "material": null
+   },
+   "candidate": {
+    "title": "Hug Hairy Monster T-shirt",
+    "description": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal."
+   }
+  },
+  {
+   "originUrl": null,
+   "originCode": "B226AC009",
+   "candidateUrl": "https://bornyesterdaykids.com/products/bobo-choses-baby-hug-hairy-monster-l-s-t-shirt-booo-bo-choses-tag-denim-pants-set-light-blue-red",
+   "candidateDomain": "bornyesterdaykids.com",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "origin": {
+    "title": "",
+    "description": null,
+    "descriptionKo": null,
+    "brand": null,
+    "color": null,
+    "material": null
+   },
+   "candidate": {
+    "title": "Bobo Choses Baby Hug Hairy Monster l/s T-shirt & Booo Bo Choses Denim Pants Set ~ Light Blue/Red",
+    "description": null
+   }
+  },
+  {
+   "originUrl": null,
+   "originCode": "B226AC009",
+   "candidateUrl": "https://cemarose.ca/products/bobo-choses-kids-booty-ghosts-sweatshirt-light-blue-c7907",
+   "candidateDomain": "cemarose.ca",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "origin": {
+    "title": "",
+    "description": null,
+    "descriptionKo": null,
+    "brand": null,
+    "color": null,
+    "material": null
+   },
+   "candidate": {
+    "title": "Bobo Choses-Kids Booty Ghosts Sweatshirt Light Blue",
+    "description": "Product Reference: B226AC031/451"
+   }
+  },
+  {
+   "originUrl": null,
+   "originCode": "B226AC009",
+   "candidateUrl": "https://cissywears.com/products/bobo-choses-babyhug-hairy-monster-t-shirt",
+   "candidateDomain": "cissywears.com",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "origin": {
+    "title": "",
+    "description": null,
+    "descriptionKo": null,
+    "brand": null,
+    "color": null,
+    "material": null
+   },
+   "candidate": {
+    "title": "Bobo Choses Baby Hug Hairy Monster T-Shirt",
+    "description": "Everyone else makes monsters that are scary. Bobo Choses makes monsters you'd actually want to cuddle. The little hairy monster looks completely content being hugged, and somehow that sums up the whole All About Monsters collection. It's about making the strange feel friendly and proving that the things we're told to be scared of are often the nicest characters of all. The soft blue is lovely too. It keeps everything feeling fresh and calm, while the bright green monster gives it just enough personality. It's playful without shouting about it. This is one of those prints that gets people asking, \"Where's that from?\" because it feels completely different to the usual dinosaurs, trucks and slogans. We're not scared of monsters around here. We embrace them."
+   }
+  },
+  {
+   "originUrl": null,
+   "originCode": "B226AC009",
+   "candidateUrl": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+   "candidateDomain": "global.trenbe.com",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "origin": {
+    "title": "",
+    "description": null,
+    "descriptionKo": null,
+    "brand": null,
+    "color": null,
+    "material": null
+   },
+   "candidate": {
+    "title": "Bobo Choses Kids Hug Hairy Monster Long Sleeve T-Shirt (Light Blue) B226AC009 451 160484657 [P]",
+    "description": "Gender : Men Brand : BOBO CHOSES Product Name : Bobo Choses Kids Hug Hairy Monster Long Sleeve T-Shirt (Light Blue) B226AC009 451 160484657 [P] Color : Light Blue SKU : 26FW B226AC009 451 trenbe Code : 160484657"
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac009-hug-hairy-monster-t-shirt",
+   "originCode": "B226AC009",
+   "candidateUrl": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+   "candidateDomain": "global.trenbe.com",
+   "baselineSystemVerdict": "SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Hug Hairy Monster T-shirt",
+    "description": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Light blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "Light blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Bobo Choses Kids Hug Hairy Monster Long Sleeve T-Shirt (Light Blue) B226AC009 451 160484657 [P]",
+    "description": "Gender : Men Brand : BOBO CHOSES Product Name : Bobo Choses Kids Hug Hairy Monster Long Sleeve T-Shirt (Light Blue) B226AC009 451 160484657 [P] Color : Light Blue SKU : 26FW B226AC009 451 trenbe Code : 160484657"
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/ko-kr/products/b226ac009-hug-hairy-monster-t-shirt",
+   "originCode": "B226AC009",
+   "candidateUrl": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "SAME",
+   "origin": {
+    "title": "Hug Hairy Monster T-shirt",
+    "description": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "descriptionKo": "상품 종류: 티셔츠\n색상: Light blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.\"",
+    "brand": "",
+    "color": "Light blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+    "description": "Hug Hairy Monster T-Shirt by Bobo Choses. Relaxed fit tee in a soft blue, featuring long sleeves, a round neck and a large monster hug print across the front. Colour - Light Blue. 100% Organic Cotton. Product code B226AC009 AW26 Made in Portugal."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac009-hug-hairy-monster-t-shirt",
+   "originCode": "B226AC009",
+   "candidateUrl": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Hug Hairy Monster T-shirt",
+    "description": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Light blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "Light blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+    "description": "Hug Hairy Monster T-Shirt by Bobo Choses. Relaxed fit tee in a soft blue, featuring long sleeves, a round neck and a large monster hug print across the front. Colour - Light Blue. 100% Organic Cotton. Product code B226AC009 AW26 Made in Portugal."
+   }
+  },
+  {
+   "originUrl": null,
+   "originCode": "B226AC009",
+   "candidateUrl": "https://www.junioredition.com/products/hug-hairy-monster-baby-t-shirt-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "origin": {
+    "title": "",
+    "description": null,
+    "descriptionKo": null,
+    "brand": null,
+    "color": null,
+    "material": null
+   },
+   "candidate": {
+    "title": "Hug Hairy Monster Baby T-Shirt by Bobo Choses",
+    "description": "Hug Hairy Monster Baby T-Shirt by Bobo Choses. Light blue tee featuring a sweet print across the chest of a hugging monster. Designed with long sleeves, a loose fit, shoulder snap fastening and a round neck. Colour - Light Blue. 100% Organic Cotton. Product code B226AB040 AW26 Made in Portugal."
+   }
+  },
+  {
+   "originUrl": null,
+   "originCode": "B226AC009",
+   "candidateUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "SAME",
+   "humanGt": "SAME",
+   "origin": {
+    "title": "",
+    "description": null,
+    "descriptionKo": null,
+    "brand": null,
+    "color": null,
+    "material": null
+   },
+   "candidate": {
+    "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+    "description": "Hug Hairy Monster T-Shirt by Bobo Choses. Relaxed fit tee in a soft blue, featuring long sleeves, a round neck and a large monster hug print across the front. Colour - Light Blue. 100% Organic Cotton. Product code B226AC009 AW26 Made in Portugal."
+   }
+  },
+  {
+   "originUrl": null,
+   "originCode": "B226AC009",
+   "candidateUrl": "https://kids21.com/products/700005621lbl",
+   "candidateDomain": "kids21.com",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "origin": {
+    "title": "",
+    "description": null,
+    "descriptionKo": null,
+    "brand": null,
+    "color": null,
+    "material": null
+   },
+   "candidate": {
+    "title": "Bobo Choses Hug Hairy Monster T-shirt",
+    "description": "Description: Short sleeves. Round neckline. Graphic print at the front. Straight fit. Material composition: 100% Organic Cotton"
+   }
+  },
+  {
+   "originUrl": null,
+   "originCode": "B226AC009",
+   "candidateUrl": "https://m.luxboy.com/product/a14338197cb8698cd92c86431cce8d05",
+   "candidateDomain": "m.luxboy.com",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "DIFFERENT",
+   "origin": {
+    "title": "",
+    "description": null,
+    "descriptionKo": null,
+    "brand": null,
+    "color": null,
+    "material": null
+   },
+   "candidate": {
+    "title": "보보쇼즈(BOBO CHOSES) 키즈 긴팔티셔츠 B226AC009 | SINCE 2002 No.1 명품쇼핑, 럭스보이",
+    "description": "키즈 긴팔티셔츠 59,000원. 럭스보이에서 정품보장, 실사용 후기, 최대혜택가를 확인하세요."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac009-hug-hairy-monster-t-shirt",
+   "originCode": "B226AC009",
+   "candidateUrl": "https://miniboutique.co.kr/product/bobo-chosest-shirt-b226ac009/28043/",
+   "candidateDomain": "miniboutique.co.kr",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Hug Hairy Monster T-shirt",
+    "description": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Light blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "Light blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "[BOBO CHOSES]T-Shirt - B226AC009 - 미니부띠끄 miniboutique",
+    "description": "미니부띠끄 | BOBO CHOSES의 감각적인 디자인이 돋보이는 상품입니다. 아이의 개성을 살려주는 특별한 스타일과 편안함을 담은 프리미엄 수입 아동복 큐레이션을 지금 미니부띠끄에서 경험해보세요."
+   }
+  },
+  {
+   "originUrl": null,
+   "originCode": "B226AC009",
+   "candidateUrl": "https://www.parkette.ca/products/hug-hairy-monster-sweatshirt",
+   "candidateDomain": "parkette.ca",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "DIFFERENT",
+   "origin": {
+    "title": "",
+    "description": null,
+    "descriptionKo": null,
+    "brand": null,
+    "color": null,
+    "material": null
+   },
+   "candidate": {
+    "title": "Hug Hairy Monster Sweatshirt",
+    "description": "The Hug Hairy Monster Sweatshirt by Bobo Choses is a beige marl crewneck with a line drawing of a red-haired kid wrapped in a hug with a green scaly monster, both mid-smile. It has a relaxed drop-shoulder shape with a ribbed neck, cuffs, and hem. 66% Cotton, 34% Organic Cotton Made in Spain Bobo Choses' AW26 All About Monsters collection reimagines the villains of childhood stories as friendly, misunderstood companions. These monsters are not here to scare. They want to play, to belong, and to be liked for who they are. The collection treats being different as something to celebrate, built around the idea that the traits that set someone apart are the ones worth holding onto. Bobo Choses is a lifestyle brand that knows how to play. Founded in 2008 on the sunny coast of Spain, they've grown into a global favourite for kids and grownups alike—offering bold prints, comfy shapes, and collections that tell a story. With a commitment to creativity, community, and sustainability, Bobo Choses is all about making the everyday more fun."
+   }
+  },
+  {
+   "originUrl": null,
+   "originCode": "B226AC009",
+   "candidateUrl": "https://scoutandcokids.com/collections/bobo-choses/products/bobo-choses-hug-hairy-monster-t-shirt",
+   "candidateDomain": "scoutandcokids.com",
+   "baselineSystemVerdict": "SAME",
+   "humanGt": "SAME",
+   "origin": {
+    "title": "",
+    "description": null,
+    "descriptionKo": null,
+    "brand": null,
+    "color": null,
+    "material": null
+   },
+   "candidate": {
+    "title": "Bobo Choses - Hug Hairy Monster T-shirt",
+    "description": "Best friends! Bobo Choses light blue long-sleeved top with 'Hug Hairy Monster' print."
+   }
+  },
+  {
+   "originUrl": null,
+   "originCode": "B226AC009",
+   "candidateUrl": "https://www.stockmann.ee/et-ee/bobo-choses-trikoosark-hug-monster/18119748633-1.html",
+   "candidateDomain": "stockmann.ee",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "origin": {
+    "title": "",
+    "description": null,
+    "descriptionKo": null,
+    "brand": null,
+    "color": null,
+    "material": null
+   },
+   "candidate": {
+    "title": "BOBO CHOSES Trikoos&auml;rk Hug Monster | Stockmann",
+    "description": "See pikkade varrukatega pluus on valmistatud pehmest mahepuuvillast, mis tundub lapse naha vastas meeldiv ja on hästi hingav. Vaba lõikega mudelil on ümar kaelus. Esikülge kaunistab lõbus käsitsi joonistatud stiilis trükk, kus karvane koletis ja rõõmus tegelane kallistavad teineteist. Mänguline muster lisab igapäevasele riietusele rõõmsat ilmet. Mahepuuvill teeb pluusi vastupidavaks ja mugavaks."
+   }
+  },
+  {
+   "originUrl": null,
+   "originCode": "B226AC009",
+   "candidateUrl": "https://www.thefrontshop.com/products/hug-hairy-monster-t-shirt",
+   "candidateDomain": "thefrontshop.com",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "origin": {
+    "title": "",
+    "description": null,
+    "descriptionKo": null,
+    "brand": null,
+    "color": null,
+    "material": null
+   },
+   "candidate": {
+    "title": "Bobo Choses - Hug Hairy Monster T-Shirt",
+    "description": "· Soft cotton long-sleeve tee with a comfortable, breathable feel · Features a playful monster hug graphic in vibrant colors · Classic crewneck with a relaxed, easy fit · Perfect for everyday wear and seasonal layering Bobo Choses Size : child's height 2-3Y: 98 cm 4-5Y: 110 cm 6-7Y: 122 cm 8-9Y: 134 cm 10-11Y: 148 cm 12-13Y: 158 cm 100% Organic Cotton"
+   }
+  },
+  {
+   "originUrl": null,
+   "originCode": "B226AC009",
+   "candidateUrl": "https://www.tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+   "candidateDomain": "tinyapple.net",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "origin": {
+    "title": "",
+    "description": null,
+    "descriptionKo": null,
+    "brand": null,
+    "color": null,
+    "material": null
+   },
+   "candidate": {
+    "title": "Bobo Choses Hug Hairy Monster T-shirt, Light Blue",
+    "description": "Tinyapple | FW26 Bobo Choses | Hug Hairy Monster T-shirt, Light Blue 100% Organic Cotton Wash Cold-30° Do Not Bleach Iron Low Do not Dry-clean Do Not Tumble Dry B226AC009"
+   }
+  },
+  {
+   "originUrl": null,
+   "originCode": "B226AC009",
+   "candidateUrl": "https://www.tinyapple.net/en-kr/products/bobo-choses-bobo-choses-pop-t-shirt-blue",
+   "candidateDomain": "tinyapple.net",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "origin": {
+    "title": "",
+    "description": null,
+    "descriptionKo": null,
+    "brand": null,
+    "color": null,
+    "material": null
+   },
+   "candidate": {
+    "title": "Bobo Choses Bobo Choses Pop T-shirt, Blue",
+    "description": "Tinyapple | FW26 Bobo Choses | Bobo Choses Pop T-shirt, Blue 100% Organic Cotton Wash Cold-30° Do Not Bleach Do Not Iron Do not Dry-clean Do Not Tumble Dry B226AC142"
+   }
+  },
+  {
+   "originUrl": null,
+   "originCode": "B226AC009",
+   "candidateUrl": "https://www.tinyapple.net/en-kr/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+   "candidateDomain": "tinyapple.net",
+   "baselineSystemVerdict": "SAME",
+   "humanGt": "SAME",
+   "origin": {
+    "title": "",
+    "description": null,
+    "descriptionKo": null,
+    "brand": null,
+    "color": null,
+    "material": null
+   },
+   "candidate": {
+    "title": "Bobo Choses Hug Hairy Monster T-shirt, Light Blue",
+    "description": "Tinyapple | FW26 Bobo Choses | Hug Hairy Monster T-shirt, Light Blue 100% Organic Cotton Wash Cold-30° Do Not Bleach Iron Low Do not Dry-clean Do Not Tumble Dry B226AC009"
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac009-hug-hairy-monster-t-shirt",
+   "originCode": "B226AC009",
+   "candidateUrl": "https://villagekids.co.uk/products/pale-blue-3d-logo-t-shirt",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Hug Hairy Monster T-shirt",
+    "description": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Light blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "Light blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Pale Blue 3D Logo T-Shirt",
+    "description": null
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/ko-kr/products/b226ac009-hug-hairy-monster-t-shirt",
+   "originCode": "B226AC009",
+   "candidateUrl": "https://villagekids.co.uk/products/pale-blue-3d-logo-t-shirt",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "origin": {
+    "title": "Hug Hairy Monster T-shirt",
+    "description": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "descriptionKo": "상품 종류: 티셔츠\n색상: Light blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.\"",
+    "brand": "",
+    "color": "Light blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Pale Blue 3D Logo T-Shirt",
+    "description": null
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac009-hug-hairy-monster-t-shirt",
+   "originCode": "B226AC009",
+   "candidateUrl": "https://villagekids.co.uk/products/blue-tie-dye-polo-bear-t-shirt",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Hug Hairy Monster T-shirt",
+    "description": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Light blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "Light blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Blue Tie-Dye Polo Bear T-Shirt",
+    "description": null
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/ko-kr/products/b226ac009-hug-hairy-monster-t-shirt",
+   "originCode": "B226AC009",
+   "candidateUrl": "https://www.junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "candidateDomain": null,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "origin": {
+    "title": "Hug Hairy Monster T-shirt",
+    "description": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "descriptionKo": "상품 종류: 티셔츠\n색상: Light blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.\"",
+    "brand": "",
+    "color": "Light blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+    "description": "Hug Hairy Monster T-Shirt by Bobo Choses. Relaxed fit tee in a soft blue, featuring long sleeves, a round neck and a large monster hug print across the front. Colour - Light Blue. 100% Organic Cotton. Product code B226AC009 AW26 Made in Portugal."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/ko-kr/products/b226ac009-hug-hairy-monster-t-shirt",
+   "originCode": "B226AC009",
+   "candidateUrl": "https://scoutandcokids.com/products/bobo-choses-hug-hairy-monster-t-shirt",
+   "candidateDomain": null,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "origin": {
+    "title": "Hug Hairy Monster T-shirt",
+    "description": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "descriptionKo": "상품 종류: 티셔츠\n색상: Light blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.\"",
+    "brand": "",
+    "color": "Light blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Bobo Choses - Hug Hairy Monster T-shirt",
+    "description": "Best friends! Bobo Choses light blue long-sleeved top with 'Hug Hairy Monster' print."
+   }
+  },
+  {
+   "originUrl": "https://www.junioredition.com/en-kr/collections/4-years/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses?utm_source=chatgpt.com",
+   "originCode": "B226AC010",
+   "candidateUrl": "https://junioredition.com/products/booty-ghosts-t-shirt-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "CONFLICT",
+   "humanGt": null,
+   "origin": {
+    "title": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+    "description": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses. Relaxed fit tee in heather grey, featuring long sleeves, a round neck and a large Bobo Choses ghosts print across the front. Colour - Heather Grey. 100% Organic Cotton. Product code B226AC010 AW26 Made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Heather Grey\n소재: 100% Organic Cotton\n옵션 Size: 2-3 Years, 4-5 Years, 6-7 Years, 8-9 Years, 10-11 Years, 12-13 Years\n원문 설명: \"Booty Ghosts Long Sleeve T-Shirt by Bobo Choses. Relaxed fit tee in heather grey, featuring long sleeves, a round neck and a large Bobo Choses ghosts print across the front. Colour - Heather Grey. 100% Organic Cotton. Product code B226AC010 AW26 Made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "Heather Grey",
+    "material": "100% Organic Cotton"
+   },
+   "candidate": {
+    "title": "Booty Ghosts T-Shirt by Bobo Choses",
+    "description": "Booty Ghosts T-Shirt by Bobo Choses. Relaxed fit light blue tee featuring short sleeves, a ribbed neckline and a large playful print across the front of two ghosts wearing booties. Colour - Light Blue. 100% Organic Cotton. Product code B226AC141 AW26 Made in Portugal."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac010-booty-ghosts-t-shirt",
+   "originCode": "B226AC010",
+   "candidateUrl": "https://junioredition.com/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Booty Ghosts T-shirt",
+    "description": "Heather grey t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Heather grey\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Heather grey t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "Heather grey",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+    "description": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses. Relaxed fit tee in heather grey, featuring long sleeves, a round neck and a large Bobo Choses ghosts print across the front. Colour - Heather Grey. 100% Organic Cotton. Product code B226AC010 AW26 Made in Portugal."
+   }
+  },
+  {
+   "originUrl": "https://www.junioredition.com/en-kr/collections/4-years/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses?utm_source=chatgpt.com",
+   "originCode": "B226AC010",
+   "candidateUrl": "https://junioredition.com/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+    "description": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses. Relaxed fit tee in heather grey, featuring long sleeves, a round neck and a large Bobo Choses ghosts print across the front. Colour - Heather Grey. 100% Organic Cotton. Product code B226AC010 AW26 Made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Heather Grey\n소재: 100% Organic Cotton\n옵션 Size: 2-3 Years, 4-5 Years, 6-7 Years, 8-9 Years, 10-11 Years, 12-13 Years\n원문 설명: \"Booty Ghosts Long Sleeve T-Shirt by Bobo Choses. Relaxed fit tee in heather grey, featuring long sleeves, a round neck and a large Bobo Choses ghosts print across the front. Colour - Heather Grey. 100% Organic Cotton. Product code B226AC010 AW26 Made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "Heather Grey",
+    "material": "100% Organic Cotton"
+   },
+   "candidate": {
+    "title": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+    "description": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses. Relaxed fit tee in heather grey, featuring long sleeves, a round neck and a large Bobo Choses ghosts print across the front. Colour - Heather Grey. 100% Organic Cotton. Product code B226AC010 AW26 Made in Portugal."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac017-booo-bo-choses-t-shirt",
+   "originCode": "B226AC017",
+   "candidateUrl": "https://kidbizkid.com/products/hugo-boss-baby-boys-double-b-graphic-t-shirt",
+   "candidateDomain": "kidbizkid.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Booo Bo Choses T-shirt",
+    "description": "Off-white t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Off-white\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Off-white t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "Off-white",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Hugo Boss Baby Boys Double B Graphic T-Shirt",
+    "description": "BOSS baby boys white short-sleeved t-shirt. Fancy illustration on the front. Woven logo label on the side. Snap closure on the shoulder. Regular fit. 100% Cotton."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac017-booo-bo-choses-t-shirt",
+   "originCode": "B226AC017",
+   "candidateUrl": "https://nickis.com/products/bobo-choses-t-shirt-cremeweiss-3006678709",
+   "candidateDomain": "nickis.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Booo Bo Choses T-shirt",
+    "description": "Off-white t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Off-white\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Off-white t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "Off-white",
+    "material": ""
+   },
+   "candidate": {
+    "title": "T-Shirt Cremeweiß",
+    "description": "Dieses Bobo Choses Tank Top aus der Iconic Collection überzeugt mit seinem minimalistischen Design in sanftem Ivory-Ton und auffälligem Statement-Print auf der Vorderseite. Gefertigt aus einer nachhaltigen Mischung aus 80 % Bio-Baumwolle und 20 % recycelter Baumwolle, bietet es ein weiches und atmungsaktives Tragegefühl. Der ärmellose Schnitt und die bequeme Passform sorgen für hohen Komfort und Bewegungsfreiheit im Alltag. Ein stilvolles und umweltbewusstes Basic für warme Tage und lässige Looks."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac017-booo-bo-choses-t-shirt",
+   "originCode": "B226AC017",
+   "candidateUrl": "https://petitemaisonkids.com/products/charlie-white-mandarin-collar-shirt",
+   "candidateDomain": "petitemaisonkids.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Booo Bo Choses T-shirt",
+    "description": "Off-white t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Off-white\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Off-white t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "Off-white",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Charlie White Mandarin Collar Shirt",
+    "description": "Introducing the Charlie White Mandarin Collar Shirt. With its sleek mandarin collar and gold hardware buttons, this shirt offers a sophisticated look for any occasion. Made with high-quality materials, it provides both comfort and style. Elevate your wardrobe with this timeless piece. Front buttons closure Fit is true to size 100% Polyester Made in Turkey White mandarin collar top with gold hardware buttons Care Instructions : Machine wash in cold water, delicate cycle. Hang to dry. Iron recommended."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac017-booo-bo-choses-t-shirt",
+   "originCode": "B226AC017",
+   "candidateUrl": "https://villagekids.co.uk/products/white-stripe-graphic-t-shirt",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Booo Bo Choses T-shirt",
+    "description": "Off-white t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Off-white\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Off-white t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "Off-white",
+    "material": ""
+   },
+   "candidate": {
+    "title": "White Stripe Graphic T-Shirt",
+    "description": null
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac029-softpaw-monster-sweatshirt",
+   "originCode": "B226AC029",
+   "candidateUrl": "https://designerkidswear.com/products/michael-kors-kids-girls-sweater-pink-r15223-44v",
+   "candidateDomain": "designerkidswear.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Softpaw Monster sweatshirt",
+    "description": "Pink sweatshirt. Organic Cotton 66%, Recycled Polyester 17%, Cotton 17%. Loose fit. Responsibly made in Spain.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Pink\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Pink sweatshirt. Organic Cotton 66%, Recycled Polyester 17%, Cotton 17%. Loose fit. Responsibly made in Spain.\"",
+    "brand": "Bobo Choses",
+    "color": "Pink",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Girls Pink Knit Sweater",
+    "description": "Michael Kors soft knit pink sweater with all-over signature silver MK logo detailing. Slim fit Pink contrast trim 62% Viscose 34% Polyester 4% Metalized fiber Imported"
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac033-bobo-choses-pop-sweatshirt",
+   "originCode": "B226AC033",
+   "candidateUrl": "https://designerkidswear.com/products/fendi-baby-boys-sweatshirt-blue-buh088-8ra-f19j4",
+   "candidateDomain": "designerkidswear.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Bobo Choses Pop sweatshirt",
+    "description": "Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Midnight blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain.\"",
+    "brand": "Bobo Choses",
+    "color": "Midnight blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Baby Boys Blue Cotton Bear Sweatshirt",
+    "description": "Expertly crafted from soft, high-quality cotton, this Fendi kids baby boy's sweatshirt is a stylish and comfortable choice for your little one. Featuring a classic white contrast trim and signature teddy bear Zucca print on the chest, this sweatshirt offers both fashion and functionality. 93% Cotton 7% Elastane Made in Portugal"
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac033-bobo-choses-pop-sweatshirt",
+   "originCode": "B226AC033",
+   "candidateUrl": "https://designerkidswear.com/products/stone-island-junior-kids-boys-sweatshirt-blue-6100001-s0a20-v004b",
+   "candidateDomain": "designerkidswear.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "origin": {
+    "title": "Bobo Choses Pop sweatshirt",
+    "description": "Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Midnight blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain.\"",
+    "brand": "Bobo Choses",
+    "color": "Midnight blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Boys Blue Cotton Sweatshirt",
+    "description": "Crafted from soft cotton, this boys blue sweatshirt by Stone Island Junior is a cozy and stylish addition to any young boy's wardrobe. The sweatshirt features the brand's signature logo patch on the sleeve, adding a touch of sophistication to an everyday essential. Perfect for keeping your little one warm and fashionable. Mini-me inspired 100% Cotton Made in Tunisia"
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac033-bobo-choses-pop-sweatshirt",
+   "originCode": "B226AC033",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "candidateDomain": "folkberlin.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "origin": {
+    "title": "Bobo Choses Pop sweatshirt",
+    "description": "Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Midnight blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain.\"",
+    "brand": "Bobo Choses",
+    "color": "Midnight blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+    "description": "Baby Sweater Suit ''Blue Moon'' Organic Cotton This versatile and warming suit has a round neckline and press studs on the front for easy putting on. It features a kangaroo pocket on the front and rich rib details on the neck and cuffs. Made of the softest 100% organic cotton with some elastane. The Gray Label logo embroidery is embroidered on the chest. Made in Portugal. Good to Know Material: 100% organic cotton with elastane Super soft Features kangeroo pocket on the front Rich rib details on the neck and cuffs Machine wash at 30 degrees Colour: Blue Moon Made in Portugal About the Brand Gray Label is a minimalistic and organic essentials brand for children aged 0-12 years. Founded by Emily Gray in 2011. Gray Label is committed to minimising its impact on the environment by producing high-quality items that last for multiple lifecycles."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac033-bobo-choses-pop-sweatshirt",
+   "originCode": "B226AC033",
+   "candidateUrl": "https://junioredition.com/products/bobo-choses-pop-sweatshirt-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "SAME",
+   "origin": {
+    "title": "Bobo Choses Pop sweatshirt",
+    "description": "Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Midnight blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain.\"",
+    "brand": "Bobo Choses",
+    "color": "Midnight blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Bobo Choses Pop Sweatshirt by Bobo Choses",
+    "description": "Bigfoot By BC Sweatshirt by Bobo Choses. Midnight blue sweatshirt in a relaxed fit featuring ribbed cuffs, bottom and neck and a Bobo Choses print in white across the chest. Perfect for keeping cosy and stylish during the seasonal transition. Colour - Midnight Blue. 66% Organic Cotton 22% Recycled Cotton 12% Cotton. Product code B226AC033 AW26 Made in Spain."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac033-bobo-choses-pop-sweatshirt",
+   "originCode": "B226AC033",
+   "candidateUrl": "https://kidbizkid.com/products/hugo-boss-navy-zip-sweatshirt",
+   "candidateDomain": "kidbizkid.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "origin": {
+    "title": "Bobo Choses Pop sweatshirt",
+    "description": "Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Midnight blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain.\"",
+    "brand": "Bobo Choses",
+    "color": "Midnight blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Hugo Boss Navy Zip Sweatshirt",
+    "description": "BOSS navy polytricot cardigan with contrast piping at chest. Tone-on-tone embroidered BOSS logos at chest and back. Side zipped pockets. Woven label on side. 100% polyester."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac033-bobo-choses-pop-sweatshirt",
+   "originCode": "B226AC033",
+   "candidateUrl": "https://kidbizkid.com/products/lacoste-navy-sweatshirt",
+   "candidateDomain": "kidbizkid.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Bobo Choses Pop sweatshirt",
+    "description": "Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Midnight blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain.\"",
+    "brand": "Bobo Choses",
+    "color": "Midnight blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Lacoste Navy Sweatshirt",
+    "description": "Timeless Lacoste comfort in sleek navy. This classic zip-up sweatshirt features the iconic crocodile logo embroidered on the chest—a signature touch that pairs effortlessly with any casual outfit. Crafted for everyday wear, it delivers the quality and style Lacoste is known for."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac033-bobo-choses-pop-sweatshirt",
+   "originCode": "B226AC033",
+   "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+   "candidateDomain": "petitemaisonkids.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "origin": {
+    "title": "Bobo Choses Pop sweatshirt",
+    "description": "Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Midnight blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain.\"",
+    "brand": "Bobo Choses",
+    "color": "Midnight blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers",
+    "description": "Indulge her in a little luxury with our Maya Blue Cotton Sweater Top. Made from soft, premium cotton with a touch of stretch, this top pairs everyday comfort with sophisticated style. The rich blue color is reminiscent of a clear sky, and handmade flowers add a sweet, special finish. Style it with the matching pieces from our Maya Collection for a coordinated lounge set, or pair it with her favorite bottoms for an easy, elegant outfit. Available in sizes 6 months to 12 years. Soft 95% Cotton, 5% Elastane Handmade Flowers Made to Match our Maya Collection Made in Turkey Care Instructions: Hand wash or machine wash in cold water, delicate cycle. Hang to dry."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac033-bobo-choses-pop-sweatshirt",
+   "originCode": "B226AC033",
+   "candidateUrl": "https://shoppiccoliandco.com/products/jude-navy-baby-boy-anchor-sweater",
+   "candidateDomain": "shoppiccoliandco.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "origin": {
+    "title": "Bobo Choses Pop sweatshirt",
+    "description": "Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Midnight blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain.\"",
+    "brand": "Bobo Choses",
+    "color": "Midnight blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Jude Navy Baby Boy Anchor Sweater",
+    "description": "Meet the Jude Navy Baby Boy Anchor Sweater—a tiny piece of nautical charm designed to elevate everyday outfits. This striped knitted sweater pairs deep navy with crisp stripes and a playful anchor motif, giving your little one a classic, sea-breeze-ready look from sunlit mornings to breezy evenings. What makes this sweater stand out Striped knitted design with a distinctive anchor motif adds instant personality to any outfit. Made in Spain —crafted with care and attention to detail that reflects timeless European knitwear traditions. Navy colorway coordinates effortlessly with rompers, shorts, jeans, or over lightweight layers for year-round style. Ideal for summer adventures —a comfortable, breathable layer that works for seaside strolls, family outings, and playful days outdoors. This sweater isn’t just about looks. It’s about practicality and a touch of adventure—a go-to piece for parents who want a versatile, easy-to-wear layer that frames those memorable summer moments. The anchor motif is a subtle nod to nautical adventures, making it perfect for beach trips, photoshoots, or anytime your little sailor is ready to explore. Who this is for Parents seeking a stylish, age-appropriate knit that feels special without being fussy. Babies who benefit from a flexible, comfortable layer that can be dressed up or down. Gift-givers looking for a Spain-made garment with a timeless, family-friendly design. Practical use ideas Layer over a bodysuit for a polished seaside ensemble during summer outings. Pair with light denim or neutral shorts for quick, put-together outfits on busy days. Bring along on vacations to maintain a cohesive wardrobe that photographs beautifully in natural light. With its thoughtful design and Spanish craftsmanship, the Jude Navy Baby Boy Anchor Sweater offers a reliable, stylish option that grows with your little one’s summertime adventures. Elevate the daily wardrobe with a touch of nautical charm—the kind of piece that becomes a family favorite in minutes."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac033-bobo-choses-pop-sweatshirt",
+   "originCode": "B226AC033",
+   "candidateUrl": "https://tiptoeboutique.com/products/b226ac033-midnight-blue",
+   "candidateDomain": "tiptoeboutique.com",
+   "baselineSystemVerdict": "SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Bobo Choses Pop sweatshirt",
+    "description": "Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Midnight blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain.\"",
+    "brand": "Bobo Choses",
+    "color": "Midnight blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Bobo Choses Midnight Blue Pop Long Sleeve Sweatshirt",
+    "description": "Pop Long Sleeve Sweatshirt"
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac036-mush-monster-duo-sweatshirt",
+   "originCode": "B226AC036",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "candidateDomain": "folkberlin.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Mush Monster Duo sweatshirt",
+    "description": "Light heather grey sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Light heather grey sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+    "description": "Baby Sweater Suit ''Blue Moon'' Organic Cotton This versatile and warming suit has a round neckline and press studs on the front for easy putting on. It features a kangaroo pocket on the front and rich rib details on the neck and cuffs. Made of the softest 100% organic cotton with some elastane. The Gray Label logo embroidery is embroidered on the chest. Made in Portugal. Good to Know Material: 100% organic cotton with elastane Super soft Features kangeroo pocket on the front Rich rib details on the neck and cuffs Machine wash at 30 degrees Colour: Blue Moon Made in Portugal About the Brand Gray Label is a minimalistic and organic essentials brand for children aged 0-12 years. Founded by Emily Gray in 2011. Gray Label is committed to minimising its impact on the environment by producing high-quality items that last for multiple lifecycles."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac036-mush-monster-duo-sweatshirt",
+   "originCode": "B226AC036",
+   "candidateUrl": "https://junioredition.com/products/mush-monster-duo-baby-sweatshirt-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Mush Monster Duo sweatshirt",
+    "description": "Light heather grey sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Light heather grey sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Mush Monster Duo Baby Sweatshirt by Bobo Choses",
+    "description": "Mush Monster Duo Baby Sweatshirt by Bobo Choses. Cosy and fun blue sweatshirt with a playful mush monster duo print in yellow, blue and red. Designed with long sleeves, dropped shoulders, a loose fit and shoulder snap fastening. Colour - Blue. 66% Organic Cotton 17% Recycled Cotton 17% Cotton. Product code B226AB059 AW26 Made in Spain."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac036-mush-monster-duo-sweatshirt",
+   "originCode": "B226AC036",
+   "candidateUrl": "https://www.beaumonde.co.kr/goods/goods_view.php?goodsno=1000014013",
+   "candidateDomain": null,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "origin": {
+    "title": "Mush Monster Duo sweatshirt",
+    "description": "Light heather grey sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Light heather grey sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "",
+    "material": ""
+   },
+   "candidate": {
+    "title": "결과",
+    "description": null
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac036-mush-monster-duo-sweatshirt",
+   "originCode": "B226AC036",
+   "candidateUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362797&type=x&current_category=058",
+   "candidateDomain": null,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "origin": {
+    "title": "Mush Monster Duo sweatshirt",
+    "description": "Light heather grey sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Light heather grey sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "",
+    "material": ""
+   },
+   "candidate": {
+    "title": "[[보보쇼즈] Mush Monster Duo sweatshirt #226AC036]",
+    "description": "[[보보쇼즈] Mush Monster Duo sweatshirt #226AC036]"
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac038-hidden-monster-sweatshirt",
+   "originCode": "B226AC038",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "candidateDomain": "folkberlin.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Hidden Monster sweatshirt",
+    "description": "Blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.\"",
+    "brand": "Bobo Choses",
+    "color": "Blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+    "description": "Baby Sweater Suit ''Blue Moon'' Organic Cotton This versatile and warming suit has a round neckline and press studs on the front for easy putting on. It features a kangaroo pocket on the front and rich rib details on the neck and cuffs. Made of the softest 100% organic cotton with some elastane. The Gray Label logo embroidery is embroidered on the chest. Made in Portugal. Good to Know Material: 100% organic cotton with elastane Super soft Features kangeroo pocket on the front Rich rib details on the neck and cuffs Machine wash at 30 degrees Colour: Blue Moon Made in Portugal About the Brand Gray Label is a minimalistic and organic essentials brand for children aged 0-12 years. Founded by Emily Gray in 2011. Gray Label is committed to minimising its impact on the environment by producing high-quality items that last for multiple lifecycles."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac038-hidden-monster-sweatshirt",
+   "originCode": "B226AC038",
+   "candidateUrl": "https://junioredition.com/products/hidden-monster-sweatshirt-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Hidden Monster sweatshirt",
+    "description": "Blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.\"",
+    "brand": "Bobo Choses",
+    "color": "Blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Hidden Monster Sweatshirt by Bobo Choses",
+    "description": "Hidden Monster Sweatshirt by Bobo Choses. Washed blue sweatshirt in a relaxed fit featuring ribbed cuffs, bottom and neck. Featuring a fun print across the chest of a monster hiding behind a lamp, the perfect playful layer. Colour - Blue. 66% Organic Cotton 17% Recycled Cotton 17% Cotton. Product code B226AC038 AW26 Made in Spain."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac038-hidden-monster-sweatshirt",
+   "originCode": "B226AC038",
+   "candidateUrl": "https://kidbizkid.com/products/fendi-blue-ff-sweater",
+   "candidateDomain": "kidbizkid.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Hidden Monster sweatshirt",
+    "description": "Blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.\"",
+    "brand": "Bobo Choses",
+    "color": "Blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Fendi Blue FF Sweater",
+    "description": "Fendi baby blue sweater with white allover FF print. Ribbed collar, sleeve cuffs, and bottom."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac038-hidden-monster-sweatshirt",
+   "originCode": "B226AC038",
+   "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+   "candidateDomain": "petitemaisonkids.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Hidden Monster sweatshirt",
+    "description": "Blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.\"",
+    "brand": "Bobo Choses",
+    "color": "Blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers",
+    "description": "Indulge her in a little luxury with our Maya Blue Cotton Sweater Top. Made from soft, premium cotton with a touch of stretch, this top pairs everyday comfort with sophisticated style. The rich blue color is reminiscent of a clear sky, and handmade flowers add a sweet, special finish. Style it with the matching pieces from our Maya Collection for a coordinated lounge set, or pair it with her favorite bottoms for an easy, elegant outfit. Available in sizes 6 months to 12 years. Soft 95% Cotton, 5% Elastane Handmade Flowers Made to Match our Maya Collection Made in Turkey Care Instructions: Hand wash or machine wash in cold water, delicate cycle. Hang to dry."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.co.jp/products/b226ac041-beast-tag-polo-sweatshirt",
+   "originCode": "B226AC041",
+   "candidateUrl": "https://designerkidswear.com/products/ea7-emporio-armani-kids-boys-polo-navy-7b000023-af1290-ub102",
+   "candidateDomain": "designerkidswear.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Beast Tag polo sweatshirt",
+    "description": "Light blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.",
+    "descriptionKo": "Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%",
+    "brand": "BOBO CHOSES ",
+    "color": "Light blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Boys Navy Cotton Logo Polo",
+    "description": "Introducing the boys navy polo from EA7 Emporio Armani kids. Made with soft cotton and featuring a sleek navy design, this polo also includes white contrast trimming on the collar and the signature EA7 logo on the chest. Stay stylish and comfortable with this high-quality polo. Mini-me inspired 100% Cotton Imported"
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.co.jp/products/b226ac041-beast-tag-polo-sweatshirt",
+   "originCode": "B226AC041",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "candidateDomain": "folkberlin.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Beast Tag polo sweatshirt",
+    "description": "Light blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.",
+    "descriptionKo": "Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%",
+    "brand": "BOBO CHOSES ",
+    "color": "Light blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+    "description": "Baby Sweater Suit ''Blue Moon'' Organic Cotton This versatile and warming suit has a round neckline and press studs on the front for easy putting on. It features a kangaroo pocket on the front and rich rib details on the neck and cuffs. Made of the softest 100% organic cotton with some elastane. The Gray Label logo embroidery is embroidered on the chest. Made in Portugal. Good to Know Material: 100% organic cotton with elastane Super soft Features kangeroo pocket on the front Rich rib details on the neck and cuffs Machine wash at 30 degrees Colour: Blue Moon Made in Portugal About the Brand Gray Label is a minimalistic and organic essentials brand for children aged 0-12 years. Founded by Emily Gray in 2011. Gray Label is committed to minimising its impact on the environment by producing high-quality items that last for multiple lifecycles."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.co.jp/products/b226ac041-beast-tag-polo-sweatshirt",
+   "originCode": "B226AC041",
+   "candidateUrl": "https://kidbizkid.com/products/fendi-blue-ff-sweater",
+   "candidateDomain": "kidbizkid.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Beast Tag polo sweatshirt",
+    "description": "Light blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.",
+    "descriptionKo": "Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%",
+    "brand": "BOBO CHOSES ",
+    "color": "Light blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Fendi Blue FF Sweater",
+    "description": "Fendi baby blue sweater with white allover FF print. Ribbed collar, sleeve cuffs, and bottom."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.co.jp/products/b226ac041-beast-tag-polo-sweatshirt",
+   "originCode": "B226AC041",
+   "candidateUrl": "https://villagekids.co.uk/products/navy-logo-rugby-sweatshirt",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Beast Tag polo sweatshirt",
+    "description": "Light blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.",
+    "descriptionKo": "Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%",
+    "brand": "BOBO CHOSES ",
+    "color": "Light blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Navy Logo Rugby Sweatshirt",
+    "description": null
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac043-mystery-bc-half-zipped-sweatshirt",
+   "originCode": "B226AC043",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "candidateDomain": "folkberlin.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Mystery BC half zipped sweatshirt",
+    "description": "Navy blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Navy blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Navy blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.\"",
+    "brand": "Bobo Choses",
+    "color": "Navy blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+    "description": "Baby Sweater Suit ''Blue Moon'' Organic Cotton This versatile and warming suit has a round neckline and press studs on the front for easy putting on. It features a kangaroo pocket on the front and rich rib details on the neck and cuffs. Made of the softest 100% organic cotton with some elastane. The Gray Label logo embroidery is embroidered on the chest. Made in Portugal. Good to Know Material: 100% organic cotton with elastane Super soft Features kangeroo pocket on the front Rich rib details on the neck and cuffs Machine wash at 30 degrees Colour: Blue Moon Made in Portugal About the Brand Gray Label is a minimalistic and organic essentials brand for children aged 0-12 years. Founded by Emily Gray in 2011. Gray Label is committed to minimising its impact on the environment by producing high-quality items that last for multiple lifecycles."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac043-mystery-bc-half-zipped-sweatshirt",
+   "originCode": "B226AC043",
+   "candidateUrl": "https://kidbizkid.com/products/stone-island-blue-sweatshirt",
+   "candidateDomain": "kidbizkid.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Mystery BC half zipped sweatshirt",
+    "description": "Navy blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Navy blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Navy blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.\"",
+    "brand": "Bobo Choses",
+    "color": "Navy blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Stone Island Baby Blue Sweatshirt",
+    "description": "Stone Island baby blue sweatshirt. Zip-up Stone Island logo patch on arm. Two front pouch pockets 100% Cotton."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac043-mystery-bc-half-zipped-sweatshirt",
+   "originCode": "B226AC043",
+   "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+   "candidateDomain": "petitemaisonkids.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Mystery BC half zipped sweatshirt",
+    "description": "Navy blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Navy blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Navy blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.\"",
+    "brand": "Bobo Choses",
+    "color": "Navy blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers",
+    "description": "Indulge her in a little luxury with our Maya Blue Cotton Sweater Top. Made from soft, premium cotton with a touch of stretch, this top pairs everyday comfort with sophisticated style. The rich blue color is reminiscent of a clear sky, and handmade flowers add a sweet, special finish. Style it with the matching pieces from our Maya Collection for a coordinated lounge set, or pair it with her favorite bottoms for an easy, elegant outfit. Available in sizes 6 months to 12 years. Soft 95% Cotton, 5% Elastane Handmade Flowers Made to Match our Maya Collection Made in Turkey Care Instructions: Hand wash or machine wash in cold water, delicate cycle. Hang to dry."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac043-mystery-bc-half-zipped-sweatshirt",
+   "originCode": "B226AC043",
+   "candidateUrl": "https://shoppiccoliandco.com/products/blue-bears-knitted-sweater",
+   "candidateDomain": "shoppiccoliandco.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Mystery BC half zipped sweatshirt",
+    "description": "Navy blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Navy blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Navy blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.\"",
+    "brand": "Bobo Choses",
+    "color": "Navy blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Blue Bears Knitted Sweater",
+    "description": "A cozy knitted sweater in soft blue and beige tones, featuring a playful bear motif woven across the front. The classic Fair Isle-inspired pattern and warm neutral palette create an easy everyday layer for cooler days, family outings and coordinated sibling looks. Made in Spain Care: Hand wash cold. Lay flat to dry. Do not tumble dry. Iron on low if needed."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac043-mystery-bc-half-zipped-sweatshirt",
+   "originCode": "B226AC043",
+   "candidateUrl": "https://villagekids.co.uk/products/blue-half-zip-sweatshirt",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Mystery BC half zipped sweatshirt",
+    "description": "Navy blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Navy blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Navy blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain.\"",
+    "brand": "Bobo Choses",
+    "color": "Navy blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Blue Half Zip Sweatshirt",
+    "description": null
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac073-taxi-saurus-tag-denim-pants",
+   "originCode": "B226AC073",
+   "candidateUrl": "https://designerkidswear.com/products/versace-kids-baby-boys-denim-blue-1009197-1a08511-1d200",
+   "candidateDomain": "designerkidswear.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Taxi Saurus Tag denim pants",
+    "description": "Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 바지\n색상: Midnight blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "Midnight blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Baby Boys Blue Denim",
+    "description": "Versace soft cotton blue wash denim with signature greek key elastic waist trimming. 95% cotton 5% Elastane Made in Italy"
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac073-taxi-saurus-tag-denim-pants",
+   "originCode": "B226AC073",
+   "candidateUrl": "https://folkberlin.com/products/gingham-woven-trousers",
+   "candidateDomain": "folkberlin.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Taxi Saurus Tag denim pants",
+    "description": "Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 바지\n색상: Midnight blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "Midnight blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Gingham Woven Trousers, Super Soft , 116 - 122 / 6 - 7 Years",
+    "description": "Gingham Woven Trousers, Super Soft 116-122 / 6-7 Years Mini Rodini w oven trousers made from soft TENCEL™ Lyocell. D esigned for a relaxed fit with elastic waist and cuffs. Part of Mini Rodini's SS25 Copenhagen collection. Good to Know Material: 100% organic cotton Tapered fit Hidden drawstrings in waist Dog embroidery Two front pockets Elastic waist Product number: 2523016113 TENCEL™ Lyocell is a 100 % biodegradable fibre made of certified wood from spruce and beech. It is manufactured in a unique closed-loop system, where no chemicals are leaked into nature. Lyocell production requires much less use of water and land area compared to cotton and viscose. Besides being a pioneer in the textile industry, lyocell is a durable, yet soft material with a silky feel.\" About the Brand Mini Rodini is a Swedish children's wear brand that was founded in 2006 by illustrator Cassandra Rhodin as a tribute to all children, their imagination and sense that everything is possible. This garment is produced in a factory that is part of Mini Rodini’s living wage project. Instead of paying the workers just the minimum, which is almost impossible to live on, we pay a wage that is high enough to maintain a normal standard of living."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac073-taxi-saurus-tag-denim-pants",
+   "originCode": "B226AC073",
+   "candidateUrl": "https://junioredition.com/products/taxi-saurus-tag-denim-pants-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Taxi Saurus Tag denim pants",
+    "description": "Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 바지\n색상: Midnight blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "Midnight blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Taxi Saurus Tag Denim Pants by Bobo Choses",
+    "description": "Taxi Saurus Tag Denim Pants by Bobo Choses. Midnight blue denim trousers designed with an elasticated waistband, tapered legs and front pockets. Colour - Midnight Blue. 100% Organic Cotton. Product code B226AC073 AW26 Made in Portugal."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac073-taxi-saurus-tag-denim-pants",
+   "originCode": "B226AC073",
+   "candidateUrl": "https://kidbizkid.com/products/diesel-viker-jeans",
+   "candidateDomain": "kidbizkid.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Taxi Saurus Tag denim pants",
+    "description": "Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 바지\n색상: Midnight blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "Midnight blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Diesel Viker Jeans",
+    "description": "Upgrade your denim game with Diesel Viker Jeans! These dark jeans feature a classic 5-pocket design, perfect for any occasion."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac073-taxi-saurus-tag-denim-pants",
+   "originCode": "B226AC073",
+   "candidateUrl": "https://nickis.com/products/polo-ralph-lauren-jeans-blau-3402271700",
+   "candidateDomain": "nickis.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Taxi Saurus Tag denim pants",
+    "description": "Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 바지\n색상: Midnight blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "Midnight blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Jeans Blau",
+    "description": "Ralph Lauren Sullivan Jeans - Dunkelblaue Jeans mit schönen Washeffekten aus leichtem Stretch-Denim für hohen Tragekomfort. Inspiriert von der klassischen Sullivan Slim Jeans für Herren, überzeugt dieses Modell mit schlanker Passform und angenehmem Sitz – ideal für den ganzen Tag. Ein zeitloses Denim-Essential von Polo Ralph Lauren."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac073-taxi-saurus-tag-denim-pants",
+   "originCode": "B226AC073",
+   "candidateUrl": "https://petitemaisonkids.com/products/sparkle-blue-denim-jeans",
+   "candidateDomain": "petitemaisonkids.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Taxi Saurus Tag denim pants",
+    "description": "Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 바지\n색상: Midnight blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "Midnight blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Sparkle Blue Denim Jeans",
+    "description": "Light blue denim jeans designed for girls with a trendy wide-leg silhouette and sparkling embellishments. The distressed detailing adds playful character while the comfortable fit makes them perfect for everyday wear or special occasions. Crafted from a soft cotton-polyester blend with a zipper closure and adjustable waist for a secure fit. Pairs beautifully with our Sparkle Jean Jacket to create a coordinated look. 90% Cotton, 10% Polyester Imported Unlined Zipper closure and adjustable waist Wide leg fit Made to match our Sparkle Jean Jacket Care Instructions : Hand wash in cold water with mild detergent. Hang to dry."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac073-taxi-saurus-tag-denim-pants",
+   "originCode": "B226AC073",
+   "candidateUrl": "https://villagekids.co.uk/products/denim-blue-jeans",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Taxi Saurus Tag denim pants",
+    "description": "Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 바지\n색상: Midnight blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "Midnight blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Denim Blue Jeans",
+    "description": null
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac073-taxi-saurus-tag-denim-pants",
+   "originCode": "B226AC073",
+   "candidateUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362810&type=x&current_category=058",
+   "candidateDomain": null,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "origin": {
+    "title": "Taxi Saurus Tag denim pants",
+    "description": "Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 바지\n색상: Midnight blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "Midnight blue",
+    "material": ""
+   },
+   "candidate": {
+    "title": "[[보보쇼즈] Taxi Saurus Tag denim pants #226AC073]",
+    "description": "[[보보쇼즈] Taxi Saurus Tag denim pants #226AC073]"
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac110-bobo-choses-embossed-t-shirt",
+   "originCode": "B226AC110",
+   "candidateUrl": "https://designerkidswear.com/products/dolce-gabbana-kids-boys-dg-t-shirt-white-l4jthvg7nvc-s9000",
+   "candidateDomain": "designerkidswear.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "origin": {
+    "title": "Bobo Choses Embossed T-shirt",
+    "description": "Multicolor t-shirt. Cotton 100%. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Multicolor t-shirt. Cotton 100%. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Boys Embossed DG Logo T-Shirt",
+    "description": "This Dolce & Gabbana kids white embossed DG logo t-shirt is made of soft cotton and features a signature Maiolica print design. Comfort, style, and luxury are combined in this high-quality t-shirt, perfect for any young fashionista. Mini-me inspired 100% Cotton Made in Italy"
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac110-bobo-choses-embossed-t-shirt",
+   "originCode": "B226AC110",
+   "candidateUrl": "https://junioredition.com/products/bobo-choses-embossed-t-shirt-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "SIMILAR",
+   "origin": {
+    "title": "Bobo Choses Embossed T-shirt",
+    "description": "Multicolor t-shirt. Cotton 100%. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Multicolor t-shirt. Cotton 100%. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Bobo Choses Embossed T-Shirt by Bobo Choses",
+    "description": "Bobo Choses Embossed T-Shirt by Bobo Choses. Loose fit striped tee in green and purple featuring short sleeves and a ribbed neckline. Finished with a Bobo Choses design across the chest in white. Colour - Multicolour. 100% Cotton. Product code B226AC111 AW26 Made in Portugal."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac110-bobo-choses-embossed-t-shirt",
+   "originCode": "B226AC110",
+   "candidateUrl": "https://kidbizkid.com/products/marc-jacobs-black-t-shirt",
+   "candidateDomain": "kidbizkid.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "origin": {
+    "title": "Bobo Choses Embossed T-shirt",
+    "description": "Multicolor t-shirt. Cotton 100%. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Multicolor t-shirt. Cotton 100%. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Marc Jacobs Black T-Shirt",
+    "description": "Marc Jacobs black tee-shirt. Embossed MARC JACOBS logo on front. 100% Cotton."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac110-bobo-choses-embossed-t-shirt",
+   "originCode": "B226AC110",
+   "candidateUrl": "https://villagekids.co.uk/products/white-multi-sequin-logo-crop-t-shirt",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "origin": {
+    "title": "Bobo Choses Embossed T-shirt",
+    "description": "Multicolor t-shirt. Cotton 100%. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Multicolor t-shirt. Cotton 100%. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "",
+    "material": ""
+   },
+   "candidate": {
+    "title": "White Multi Sequin Logo Crop T-Shirt",
+    "description": null
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac170-lake-monster-sweatshirt",
+   "originCode": "B226AC170",
+   "candidateUrl": "https://nickis.com/products/levis-sweatshirt-rot-7401897725",
+   "candidateDomain": "nickis.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "origin": {
+    "title": "Lake Monster sweatshirt",
+    "description": "Red sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Responsibly made in Spain.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Red\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Red sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Responsibly made in Spain.\"",
+    "brand": "Bobo Choses",
+    "color": "Red",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Sweatshirt Rot",
+    "description": "Die LVG Meet and Greet Half Zip in Mars Red bringt einen sportlichen, halbverschlossenen Sweatshirt-Schnitt in ein kräftiges Rot, das jedem Herbst-Outfit einen frischen Farbakzent verleiht. Die weiche Fleece-Qualität aus 60% Baumwolle und 40% Polyester sorgt für kuscheligen Tragekomfort und zuverlässige Wärme an kühleren Tagen. Statt eines durchgehenden Reißverschlusses schließt ein halblanger Zip am Kragen, der sich individuell öffnen oder schließen lässt – praktisch für wechselnde Temperaturen im Laufe des Tages. Der klassische Rippstrickkragen erinnert an sportliche Pullover-Modelle, während der gerade geschnittene Body genug Bewegungsfreiheit für den Alltag bietet. Elastische Bündchen an Ärmeln und Saum runden den sportlichen Look ab. Das kräftige Rot lässt sich hervorragend mit klassischem Blue-Denim oder neutralen Cremetönen kombinieren. Ein vielseitiges, farbenfrohes Basic für Mädchen, das Funktionalität mit einem sportlich-femininen Auftritt verbindet."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac170-lake-monster-sweatshirt",
+   "originCode": "B226AC170",
+   "candidateUrl": "https://shoppiccoliandco.com/products/rudolph-knitted-sweater",
+   "candidateDomain": "shoppiccoliandco.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "origin": {
+    "title": "Lake Monster sweatshirt",
+    "description": "Red sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Responsibly made in Spain.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Red\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Red sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Responsibly made in Spain.\"",
+    "brand": "Bobo Choses",
+    "color": "Red",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Rudolph Knitted Sweater",
+    "description": "A festive knitted sweater featuring a playful Rudolph the Red-Nosed Reindeer motif across the chest. The soft wool-blend knit and classic neutral palette create a cozy, cheerful layer for Christmas celebrations and winter days. Made in Spain Material: 80% Wool / 20% Polyamide Care: Hand wash cold. Lay flat to dry. Important notice: This sweater is part of our Christmas collection and, to preserve its special quality, items in this section are non-returnable. Please consider this when planning your holiday wardrobe."
+   }
+  },
+  {
+   "originUrl": "https://bobochoses.com/en-kr/products/b226tc175-dog-sweatshirt",
+   "originCode": "B226TC175",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweater-suit-biscuit-organic-cotton",
+   "candidateDomain": "folkberlin.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Dog sweatshirt",
+    "description": "Light yellow sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Light yellow\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Light yellow sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.\"",
+    "brand": "Bobo Choses",
+    "color": "Light yellow",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Baby Sweater Suit ''Biscuit'' Organic Cotton",
+    "description": "Baby Sweater Suit ''Biscuit'' Organic Cotton This versatile and warming suit has a round neckline and press studs on the front for easy putting on. It features a kangaroo pocket on the front and rich rib details on the neck and cuffs. Made of the softest 100% organic cotton with some elastane. The Gray Label logo embroidery is embroidered on the chest. Made in Portugal. Good to Know Material: 100% organic cotton with elastane Super soft Features kangeroo pocket on the front Rich rib details on the neck and cuffs Machine wash at 30 degrees Colour: Biscuit Made in Portugal About the Brand Gray Label is a minimalistic and organic essentials brand for children aged 0-12 years. Founded by Emily Gray in 2011. Gray Label is committed to minimising its impact on the environment by producing high-quality items that last for multiple lifecycles."
+   }
+  },
+  {
+   "originUrl": "https://www.junioredition.com/en-kr/collections/wynken/products/double-deerstalker-cap-in-blue-soft-tan-by-wynken",
+   "originCode": "WK21A165",
+   "candidateUrl": "https://junioredition.com/products/double-deerstalker-cap-in-blue-soft-tan-by-wynken",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Double Deerstalker Cap in Blue / Soft Tan by Wynken",
+    "description": "Double Deerstalker Cap by Wynken. The Double Deerstalker is a two-in-one cap, featuring an outer cap in ultramarine blue 100% nylon with subtle tone-on-tone “wynken” embroidery, and an inner cap in soft tan faux fur with a cotton lining. Each piece can be worn separately or snapped together with press studs, making this two-in-one hat both practical and versatile. Lightweight and cosy, this faux fur and nylon cap is easy to style on its own or layered for added warmth. A tactile, playful accessory that adds texture, sophistication and a creative twist to your everyday look. Colour - Blue / Soft Tan. Outer: 100% Nylon. Inner: 100% Polyester. Lining: 100% Cotton. Made in China. Product Code WK21A165 AW26",
+    "descriptionKo": "브랜드: Wynken\n상품 종류: 모자\n색상: Blue / Soft Tan\n소재: 100% Polyester\nSize: Kid's Hat (2-6 Years), Kid's Hat (6 -12 Years)\n",
+    "brand": "Wynken",
+    "color": "Blue / Soft Tan",
+    "material": "100% Polyester"
+   },
+   "candidate": {
+    "title": "Double Deerstalker Cap in Blue / Soft Tan by Wynken",
+    "description": "Double Deerstalker Cap by Wynken. The Double Deerstalker is a two-in-one cap, featuring an outer cap in ultramarine blue 100% nylon with subtle tone-on-tone “wynken” embroidery, and an inner cap in soft tan faux fur with a cotton lining. Each piece can be worn separately or snapped together with press studs, making this two-in-one hat both practical and versatile. Lightweight and cosy, this faux fur and nylon cap is easy to style on its own or layered for added warmth. A tactile, playful accessory that adds texture, sophistication and a creative twist to your everyday look. Colour - Blue / Soft Tan. Outer: 100% Nylon. Inner: 100% Polyester. Lining: 100% Cotton. Made in China. Product Code WK21A165 AW26"
+   }
+  },
+  {
+   "originUrl": "https://www.junioredition.com/collections/wynken/products/mixed-media-jacket-in-ecru-mix-by-wynken",
+   "originCode": "WK21W97",
+   "candidateUrl": "https://junioredition.com/products/mixed-media-jacket-in-blue-mix-by-wynken",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Mixed Media Jacket in Ecru Mix by Wynken",
+    "description": "Mixed Media Jacket by Wynken. This mixed media jacket is perfect for colder days, combining warmth with playful style. The ecru faux fur exterior adds texture and character, while the Wynken stitching in a painter’s palette shape gives a subtle, creative detail. A collar keeps little ones extra cosy, and pockets are perfect for keeping hands warm. Soft, comfortable, and easy to layer, this teddy fleece jacket balances practicality, style, and character, making it a versatile choice for chilly days and playful adventures. Colour - Ecru Mix. Shell: 100% Polyester. Panel: 100% Nylon. Made in China. Product Code WK21W97 AW26",
+    "descriptionKo": "",
+    "brand": "Wynken",
+    "color": "Ecru Mix",
+    "material": "100% Polyester"
+   },
+   "candidate": {
+    "title": "Mixed Media Jacket in Blue Mix by Wynken",
+    "description": "Mixed Media Jacket by Wynken. This mixed media jacket is perfect for colder days, combining warmth with playful style. The blue faux fur exterior adds texture and character, while the Wynken stitching in a painter’s palette shape gives a subtle, creative detail. A collar keeps little ones extra cosy, and pockets are perfect for keeping hands warm. Soft, comfortable, and easy to layer, this fleece jacket balances practicality, style, and character, making it a versatile choice for chilly days and playful adventures. Colour - Blue Mix. Shell: 100% Polyester. Panel: 100% Nylon. Made in China. Product Code WK21W97 AW26"
+   }
+  },
+  {
+   "originUrl": "https://www.junioredition.com/collections/wynken/products/mixed-media-jacket-in-ecru-mix-by-wynken",
+   "originCode": "WK21W97",
+   "candidateUrl": "https://nickis.com/products/wynken-jacke-mixed-media-mehrfarbig-7400851022",
+   "candidateDomain": "nickis.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Mixed Media Jacket in Ecru Mix by Wynken",
+    "description": "Mixed Media Jacket by Wynken. This mixed media jacket is perfect for colder days, combining warmth with playful style. The ecru faux fur exterior adds texture and character, while the Wynken stitching in a painter’s palette shape gives a subtle, creative detail. A collar keeps little ones extra cosy, and pockets are perfect for keeping hands warm. Soft, comfortable, and easy to layer, this teddy fleece jacket balances practicality, style, and character, making it a versatile choice for chilly days and playful adventures. Colour - Ecru Mix. Shell: 100% Polyester. Panel: 100% Nylon. Made in China. Product Code WK21W97 AW26",
+    "descriptionKo": "",
+    "brand": "Wynken",
+    "color": "Ecru Mix",
+    "material": "100% Polyester"
+   },
+   "candidate": {
+    "title": "Jacke Mixed Media Mehrfarbig",
+    "description": "Diese Mixed-Media-Jacke ist der perfekte Begleiter für kalte Tage und verbindet wärmenden Komfort mit einem verspielten Stilmix. Das cremefarbene Kunstfell-Obermaterial mit Colour-Block-Ärmeln in Rot und Blau sorgt für Textur und Charakter, während die Wynken-Stickerei in Form einer Malpalette einen kreativen Akzent setzt. Ein Kragen hält zusätzlich warm, Taschen sorgen für kuschelig warme Hände – weich, bequem und ideal zum Layern. Das Obermaterial besteht zu 100% aus Polyester, ergänzt durch Einsätze aus 100% Nylon an den Colour-Block-Ärmeln. Über einem Pullover oder dicken Longsleeve getragen, hält die Jacke auch an kalten Tagen zuverlässig warm. Die Wynken-Stickerei in Form einer Malpalette ist das kreative Detail, das dieses Modell von einer gewöhnlichen Kunstfelljacke unterscheidet."
+   }
+  },
+  {
+   "originUrl": "https://www.junioredition.com/collections/wynken/products/mixed-media-jacket-in-ecru-mix-by-wynken",
+   "originCode": "WK21W97",
+   "candidateUrl": "https://villagekids.co.uk/products/black-puffer-coat-4",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Mixed Media Jacket in Ecru Mix by Wynken",
+    "description": "Mixed Media Jacket by Wynken. This mixed media jacket is perfect for colder days, combining warmth with playful style. The ecru faux fur exterior adds texture and character, while the Wynken stitching in a painter’s palette shape gives a subtle, creative detail. A collar keeps little ones extra cosy, and pockets are perfect for keeping hands warm. Soft, comfortable, and easy to layer, this teddy fleece jacket balances practicality, style, and character, making it a versatile choice for chilly days and playful adventures. Colour - Ecru Mix. Shell: 100% Polyester. Panel: 100% Nylon. Made in China. Product Code WK21W97 AW26",
+    "descriptionKo": "",
+    "brand": "Wynken",
+    "color": "Ecru Mix",
+    "material": "100% Polyester"
+   },
+   "candidate": {
+    "title": "Black Puffer Coat",
+    "description": null
+   }
+  },
+  {
+   "originUrl": "https://www.junioredition.com/collections/bonjour/products/handsmock-dress-in-little-bouquet-by-bonjour",
+   "originCode": null,
+   "candidateUrl": "https://designerkidswear.com/products/givenchy-baby-girls-dress-pink-h31301-46g",
+   "candidateDomain": "designerkidswear.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Handsmock Dress in Little Bouquet by Bonjour",
+    "description": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful floral fabric with removable crochet collar. Colour - Little Bouquet. 100% Cotton. Size Guide: 2 Years: Length 56cm, Chest 30cm, Sleeve Length 32cm. 4 Years: Length 60cm, Chest 31cm, Sleeve Length 34cm. 6 Years: Length 64cm, Chest 32cm, Sleeve Length 36cm. 8 Years: Length 68cm, Chest 31cm, Sleeve Length 34cm. 10 Years: Length 72cm, Chest 34cm, Sleeve Length 40cm. 12 Years: Length 76cm, Chest 35cm, Sleeve Length 42cm. Product Code BJ21_AW26",
+    "descriptionKo": "Colour - Little Bouquet.\n\n100% Cotton.\n\nSize Guide:\n\n2 Years: Length 56cm, Chest 30cm, Sleeve Length 32cm.\n\n4 Years: Length 60cm, Chest 31cm, Sleeve Length 34cm.\n\n6 Years: Length 64cm, Chest 32cm, Sleeve Length 36cm.\n\n8 Years: Length 68cm, Chest 31cm, Sleeve Length 34cm.\n\n10 Years: Length 72cm, Chest 34cm, Sleeve Length 40cm.\n\n12 Years: Length 76cm, Chest 35cm, Sleeve Length 42cm.",
+    "brand": "Bonjour",
+    "color": "Little Bouquet",
+    "material": "100% Cotton"
+   },
+   "candidate": {
+    "title": "Baby Girls Pink Piqué Cotton Polo Dress",
+    "description": "Elevate her wardrobe with this exquisite Givenchy baby girls pink cotton piqué polo dress, a timeless piece that seamlessly blends sophistication with playful elegance. Crafted from premium cotton piqué knit, this short-sleeve dress features refined details including delicate embellishments on the collar and sleeve cuffs, paired with subtle tone-on-tone button accents along the front. Perfect for special occasions or everyday luxury, this dress combines impeccable tailoring with the comfort she deserves. 100% Cotton Made in Tunisia"
+   }
+  },
+  {
+   "originUrl": "https://www.junioredition.com/collections/true-artist/products/reversible-jacket-n-03-in-otter-brown-by-true-artist",
+   "originCode": null,
+   "candidateUrl": "https://designerkidswear.com/products/moncler-kids-enfant-baby-k2f-jacket-brown-1a00024-597z8-246",
+   "candidateDomain": "designerkidswear.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Reversible Jacket nº03 in Otter Brown by True Artist",
+    "description": "Reversible Jacket nº03 by True Artist. Reversible Jacket nº03 in Otter Brown is made of 100% polyamide in one face and 100% polyester polar fleece on the other face. This reversible style features different details and colours on both sides: on one face it has two patch pockets, True Artists' logo printed at the back and the bird logo embroidered on the chest. On the polar fleece side it has a patch pocket with the logo and contrast colour details. It is designed with spread collar, front zipper fastening, dropped shoulders and has a relaxed fit. Colour - Otter Brown. 100% Polyester 100% Polyamide. T226MA044 AW26 Made in China.",
+    "descriptionKo": "브랜드: True Artist\n상품 종류: 아우터\n색상: Otter Brown\n소재: 100% polyamide\n옵션 Size: 4-5 Years, 6-7 Years, 8-9 Years, 10-11 Years, 12-13 Years\n원문 설명: \"Reversible Jacket nº03 by True Artist. Reversible Jacket nº03 in Otter Brown is made of 100% polyamide in one face and 100% polyester polar fleece on the other face. This reversible style features different details and colours on both sides: on one face it has two patch pockets, True Artists' logo printed at the back and the bird logo embroidered on the chest. On the polar fleece side it has a patch pocket with the logo and contrast colour details. It is designed with spread collar, front zipper fastening, dropped shoulders and has a relaxed fit. Colour - Otter Brown. 100% Polyester 100% Polyamide. T226MA044 AW26 Made in China.\"",
+    "brand": "True Artist",
+    "color": "Otter Brown",
+    "material": "100% polyamide"
+   },
+   "candidate": {
+    "title": "Baby Brown K2F Down Jacket",
+    "description": "A versatile design that transitions effortlessly from the playground to more special occasions, the baby Moncler Enfant K2 down jacket is crafted from nylon laqué. The puffer coat features a detachable synthetic material trim along the hood, providing an extra cozy touch. Crafted from nylon laqué Nylon lining Down-filled Stand collar Detachable hood with detachable synthetic material trim Zip closure Side pockets Sleeve pocket with snap button closure Elastic cuffs 100% Polyamide 90% Down, 10% Feather Made in Moldova"
+   }
+  },
+  {
+   "originUrl": "https://www.smallable.com/en/product/reversible-mushroom-jacket-recycled-fiber-blue-bobo-choses-430611?algsearch=30c39962e4b80e9917116e04b6471ae2",
+   "originCode": null,
+   "candidateUrl": "https://designerkidswear.com/products/mackage-kids-jesse-blue-jesse-bl",
+   "candidateDomain": "designerkidswear.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+    "description": "  SIZE AND FIT    Relaxed fit    COMPOSITION    100% Recycled Polyamide    Find out more    Wash Cold-Gentle  Made in China  ",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 아우터\n색상: Blue\n소재: 100% Recycled Polyamide\n옵션 사이즈: 12 months, 18 months, 24 months\n원문 설명: \"SIZE AND FIT    Relaxed fit    COMPOSITION    100% Recycled Polyamide    Find out more    Wash Cold-Gentle  Made in China\"",
+    "brand": "Bobo Choses",
+    "color": "Blue",
+    "material": "100% Recycled Polyamide"
+   },
+   "candidate": {
+    "title": "Blue Jesse Jacket",
+    "description": "JESSE by MACKAGE kids is a cozy down bomber coat with a fitted silhouette and zip closure. Featuring MACKAGE’s signature sleeve logo and ribbed storm cuffs, JESSE is designed to protect your little one against the cold weather. Fleece-lined zip pockets and a water-repellent, windproof yet breathable design ensure comfort despite the chill. Ribbed storm cuffs 100% Nylon 90% Duck down 10% Feathers Imported"
+   }
+  },
+  {
+   "originUrl": "https://www.smallable.com/en/product/reversible-mushroom-jacket-recycled-fiber-blue-bobo-choses-430611?algsearch=30c39962e4b80e9917116e04b6471ae2",
+   "originCode": null,
+   "candidateUrl": "https://folkberlin.com/products/color-block-jacket-pastel-blue-mellow-yellow",
+   "candidateDomain": "folkberlin.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+    "description": "  SIZE AND FIT    Relaxed fit    COMPOSITION    100% Recycled Polyamide    Find out more    Wash Cold-Gentle  Made in China  ",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 아우터\n색상: Blue\n소재: 100% Recycled Polyamide\n옵션 사이즈: 12 months, 18 months, 24 months\n원문 설명: \"SIZE AND FIT    Relaxed fit    COMPOSITION    100% Recycled Polyamide    Find out more    Wash Cold-Gentle  Made in China\"",
+    "brand": "Bobo Choses",
+    "color": "Blue",
+    "material": "100% Recycled Polyamide"
+   },
+   "candidate": {
+    "title": "Color Block Jacket, Pastel Blue / Mellow Yellow",
+    "description": "Color Block Jacket, Pastel Blue / Mellow Yellow Tiny Cottons color block jacket in a mix of pastel blue and mellow yellow. Good to Know Material: 100% organic cotton Color block jacket Colours: Pastel blue / mellow yellow Product code: SS25-250 Care Instructions: machine wash cold, do not bleach, do not tumble dry, warm iron on reverse side, do not dry clean, wash with similar colors About the Brand Tinycottons was founded in 2012 in Barcelona, Spain. They specialise in a range of super-soft baby and kids' clothes using pima cotton (silky-soft cotton with a very high thread count – perfect next to little ones' skin), woven cotton and denim."
+   }
+  },
+  {
+   "originUrl": "https://main-story.com/products/bubble-sweatshirt-grey-melange-1?srsltid=AYCX9vJugDIA1cXJ1iOHFtxJpDob_yD88Nv5ovEy22z5tohMimgsiKVv",
+   "originCode": null,
+   "candidateUrl": "https://folkberlin.com/products/baby-ribbed-booties-grey-melange-organic-cotton",
+   "candidateDomain": "folkberlin.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Bubble Sweatshirt - Grey Melange",
+    "description": "Our Grey Melange oversized Bubble Sweatshirt is made from soft organic cotton jersey fleece, with a relaxed, wide fit and dropped shoulders that combines comfort and a laid-back look. Garment-dyed for extra softness, it delivers a gentle, cosy feel against the skin. Main Story Start Date Print on the chest Embroidered Logo 100% Organic Cotton Responsibly Made in Portugal",
+    "descriptionKo": "브랜드: Main Story\n상품 종류: 티셔츠\n색상: Our Grey\n소재: 100% Organic Cotton\n옵션 Size: 2, 4, 6, 8, 10, 12, 14, 16\n원문 설명: \"Our Grey Melange oversized Bubble Sweatshirt is made from soft organic cotton jersey fleece, with a relaxed, wide fit and dropped shoulders that combines comfort and a laid-back look. Garment-dyed for extra softness, it delivers a gentle, cosy feel against the skin. Main Story Start Date Print on the chest Embroidered Logo 100% Organic Cotton Responsibly Made in Portugal\"",
+    "brand": "Main Story",
+    "color": "Our Grey",
+    "material": "100% Organic Cotton"
+   },
+   "candidate": {
+    "title": "Baby Ribbed Booties ''Grey Melange'' Organic Cotton",
+    "description": "Baby Ribbed Booties ''Grey Melange'' Organic Cotton Baby booties in shape of a sock. They are made from Gray Label's super soft organic cotton and a little elastane fleece for a comfy fit. They have a rib knitted double layered folded cuff and a herringbone lace to tighten. The Gray Label logo is stitched on the sole of the right bootie. Made from organic cotton, in Portugal. Good to Know Material: 100% organic cotton Super soft and comfortable Colour: Grey melange Made in Portugal About the Brand Gray Label is a minimalistic and organic essentials brand for children aged 0-12 years. Founded by Emily Gray in 2011. Gray Label is committed to minimising its impact on the environment by producing high-quality items that last for multiple lifecycles."
+   }
+  },
+  {
+   "originUrl": "https://www.smallable.com/en/product/bobo-choses-organic-cotton-t-shirt-ecru-bobo-choses-430700",
+   "originCode": null,
+   "candidateUrl": "https://folkberlin.com/products/kim-shirt-organic-cotton-sleet-check",
+   "candidateDomain": "folkberlin.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Bobo Choses Organic Cotton T-shirt | Ecru",
+    "description": "  COMPOSITION    100% Organic Cotton    Find out more    Wash Cold-30°  Made in Portugal  ",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n소재: 100% Organic Cotton\n옵션 사이즈: 2/3 years, 4/5 years, 6/7 years, 8/9 years, 10/11 years, 12/13 years\n원문 설명: \"COMPOSITION    100% Organic Cotton    Find out more    Wash Cold-30°  Made in Portugal\"",
+    "brand": "Bobo Choses",
+    "color": "",
+    "material": "100% Organic Cotton"
+   },
+   "candidate": {
+    "title": "Kim Shirt Organic Cotton ''Sleet Check''",
+    "description": "Kim Shirt Organic Cottons ''Sleet Check'' Soft short sleeved seersucker shirt made in 100 percent organic cotton designed with buttons and a classic collar. Good to Know Material: 100 % Organic Cotton seersucker Classic collar Washing at 30 degrees C Style: ''Konges Sloejd Kim Shirt Sleet Check'' About the Brand Konges Sløjd is a creative brand that salutes the wild, varied and perfectly imperfect life with children. Their aim is to make thoughtful and quality conscious designs using our unique signature prints and colour palette, whilst dropping in an imaginative humorous aesthetics. Konges Sløjd aims to blaze a trail for garments, toys and interior produced in a way that is kinder to the environment and made to last. Everything is crafted to survive snuggly newborns, adventurous toddlers or curious children and still be passed on - not only to siblings but to future generations."
+   }
+  },
+  {
+   "originUrl": "https://main-story.com/products/bubble-sweatshirt-grey-melange-1?srsltid=AYCX9vLRcFH3qL2naCiXoh8nj6QNTCU9F5GfFps0GRjAO4z0Oea6LCtL",
+   "originCode": null,
+   "candidateUrl": "https://folkberlin.com/products/baby-ribbed-booties-grey-melange-organic-cotton",
+   "candidateDomain": "folkberlin.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Bubble Sweatshirt - Grey Melange",
+    "description": "Our Grey Melange oversized Bubble Sweatshirt is made from soft organic cotton jersey fleece, with a relaxed, wide fit and dropped shoulders that combines comfort and a laid-back look. Garment-dyed for extra softness, it delivers a gentle, cosy feel against the skin. Main Story Start Date Print on the chest Embroidered Logo 100% Organic Cotton Responsibly Made in Portugal",
+    "descriptionKo": "브랜드: Main Story\n상품 종류: 티셔츠\n색상: Our Grey\n소재: 100% Organic Cotton\n옵션 Size: 2, 4, 6, 8, 10, 12, 14, 16\n원문 설명: \"Our Grey Melange oversized Bubble Sweatshirt is made from soft organic cotton jersey fleece, with a relaxed, wide fit and dropped shoulders that combines comfort and a laid-back look. Garment-dyed for extra softness, it delivers a gentle, cosy feel against the skin. Main Story Start Date Print on the chest Embroidered Logo 100% Organic Cotton Responsibly Made in Portugal\"",
+    "brand": "Main Story",
+    "color": "Our Grey",
+    "material": "100% Organic Cotton"
+   },
+   "candidate": {
+    "title": "Baby Ribbed Booties ''Grey Melange'' Organic Cotton",
+    "description": "Baby Ribbed Booties ''Grey Melange'' Organic Cotton Baby booties in shape of a sock. They are made from Gray Label's super soft organic cotton and a little elastane fleece for a comfy fit. They have a rib knitted double layered folded cuff and a herringbone lace to tighten. The Gray Label logo is stitched on the sole of the right bootie. Made from organic cotton, in Portugal. Good to Know Material: 100% organic cotton Super soft and comfortable Colour: Grey melange Made in Portugal About the Brand Gray Label is a minimalistic and organic essentials brand for children aged 0-12 years. Founded by Emily Gray in 2011. Gray Label is committed to minimising its impact on the environment by producing high-quality items that last for multiple lifecycles."
+   }
+  },
+  {
+   "originUrl": "https://www.smallable.com/en/product/reversible-mushroom-jacket-recycled-fiber-blue-bobo-choses-430611?algsearch=30c39962e4b80e9917116e04b6471ae2",
+   "originCode": null,
+   "candidateUrl": "https://junioredition.com/products/faux-fur-reversible-jacket-in-blue-ode-to-rose-by-wynken",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+    "description": "  SIZE AND FIT    Relaxed fit    COMPOSITION    100% Recycled Polyamide    Find out more    Wash Cold-Gentle  Made in China  ",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 아우터\n색상: Blue\n소재: 100% Recycled Polyamide\n옵션 사이즈: 12 months, 18 months, 24 months\n원문 설명: \"SIZE AND FIT    Relaxed fit    COMPOSITION    100% Recycled Polyamide    Find out more    Wash Cold-Gentle  Made in China\"",
+    "brand": "Bobo Choses",
+    "color": "Blue",
+    "material": "100% Recycled Polyamide"
+   },
+   "candidate": {
+    "title": "Faux Fur Reversible Jacket in Blue / Ode To Rose by Wynken",
+    "description": "Faux Fur Reversible Jacket by Wynken. This reversible jacket can be worn two ways, offering versatile style for everyday wear. One side features supremely soft, rose-coloured, teddy fur with green cord pockets for a warm, cosy feel, while the reverse is made from a blue nylon with teddy-fur pockets and a contrasting green cord trim. Lightly padded for added comfort, it’s designed to keep little ones warm and protected in changing weather. This fleece jacket is a fun, two-in-one favourite for those who like to switch up their look. Colour - Blue / Ode To Rose. Shell: 100% Nylon. Faux Fur Lining: 100% Polyester. Cord Trim: 90% Cotton 10% Viscose. Made in China. Product Code WK21W112 AW26"
+   }
+  },
+  {
+   "originUrl": "https://www.smallable.com/en/product/bobo-choses-organic-cotton-t-shirt-ecru-bobo-choses-430700",
+   "originCode": null,
+   "candidateUrl": "https://junioredition.com/products/everyday-ghosts-all-over-baby-t-shirt-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Bobo Choses Organic Cotton T-shirt | Ecru",
+    "description": "  COMPOSITION    100% Organic Cotton    Find out more    Wash Cold-30°  Made in Portugal  ",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n소재: 100% Organic Cotton\n옵션 사이즈: 2/3 years, 4/5 years, 6/7 years, 8/9 years, 10/11 years, 12/13 years\n원문 설명: \"COMPOSITION    100% Organic Cotton    Find out more    Wash Cold-30°  Made in Portugal\"",
+    "brand": "Bobo Choses",
+    "color": "",
+    "material": "100% Organic Cotton"
+   },
+   "candidate": {
+    "title": "Everyday Ghosts All Over Baby T-Shirt by Bobo Choses",
+    "description": "Everyday Ghosts All Over Baby T-Shirt by Bobo Choses. Off white tee featuring a fun everyday ghosts all over print. Designed with long sleeves, a loose fit and a round neck. Colour - Off White. 100% Organic Cotton. Product code B226AB039 AW26 Made in Spain."
+   }
+  },
+  {
+   "originUrl": "https://www.junioredition.com/collections/bonjour/products/tunique-with-hair-clip-in-little-bouquet-by-bonjour",
+   "originCode": null,
+   "candidateUrl": "https://junioredition.com/products/tunique-with-hair-clip-in-garden-flowers-print-by-bonjour",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Tunique With Hair Clip in Little Bouquet by Bonjour",
+    "description": "Tunique with hair clip by Bonjour. Pretty burgundy blouse which can be worn as a dress. Beautiful hand smocked navy collar tied with a red bow, elasticated puff sleeves and Bonjour's signature smocking. Complete with matching hair bow clip. Colour - Little Bouquet. 100% Cotton. Size Guide: 2 Years: Length 52cm, Chest 30cm, Sleeve Length 32cm. 4 Years: Length 56cm, Chest 31cm, Sleeve Length 34cm. 6 Years: Length 60cm, Chest 32cm, Sleeve Length 36cm. 8 Years: Length 64cm, Chest 33cm, Sleeve Length 38cm. 10 Years: Length 68cm, Chest 34cm, Sleeve Length 40cm. 12 Years: Length 72cm, Chest 35cm, Sleeve Length 42cm. Made in India. Product Code BJ20_AW26",
+    "descriptionKo": "브랜드: Bonjour\n상품 종류: 셔츠\n색상: Little Bouquet\n소재: 100% Cotton\n옵션 Size: 2 Years, 4 Years, 6 Years, 8 Years, 10 Years, 12 Years\n원문 설명: \"Tunique with hair clip by Bonjour. Pretty burgundy blouse which can be worn as a dress. Beautiful hand smocked navy collar tied with a red bow, elasticated puff sleeves and Bonjour's signature smocking. Complete with matching hair bow clip. Colour - Little Bouquet. 100% Cotton. Size Guide: 2 Years: Length 52cm, Chest 30cm, Sleeve Length 32cm. 4 Years: Length 56cm, Chest 31cm, Sleeve Length 34cm. 6 Years: Length 60cm, Chest 32cm, Sleeve Length 36cm. 8 Years: Length 64cm, Chest 33cm, Sleeve Length 38cm. 10 Years: Length 68cm, Chest 34cm, Sleeve Length 40cm. 12 Years: Length 72cm, Chest 35cm, Sleeve Length 42cm. Made in India. Product Code BJ20_AW26\"",
+    "brand": "Bonjour",
+    "color": "Little Bouquet",
+    "material": "100% Cotton"
+   },
+   "candidate": {
+    "title": "Tunique With Hair Clip in Garden Flowers Print by Bonjour - Last Ones In Stock - 8-12 Years",
+    "description": "Tunique with hair clip by Bonjour. Pretty floral print collared top that can be worn as a dress with matching hair bow clip. This tunique features Bonjour's signature smocking across the front and on the collar, finished with pretty embroidered flowers and a contrast red bow. Colour - Garden Flowers Print. 100% Cotton. Size Guide: 2 Years - Length 52cm. 4 Years - Length 55cm. 6 Years - Length 58cm. 8 Years - Length 61cm. 10 Years - Length 64cm. 12 Years - Length 67cm. Made in India. Product Code BJ11-SS26"
+   }
+  },
+  {
+   "originUrl": "https://www.junioredition.com/collections/true-artist/products/reversible-jacket-n-03-in-otter-brown-by-true-artist",
+   "originCode": null,
+   "candidateUrl": "https://junioredition.com/products/pixel-abduction-all-over-reversible-jacket-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Reversible Jacket nº03 in Otter Brown by True Artist",
+    "description": "Reversible Jacket nº03 by True Artist. Reversible Jacket nº03 in Otter Brown is made of 100% polyamide in one face and 100% polyester polar fleece on the other face. This reversible style features different details and colours on both sides: on one face it has two patch pockets, True Artists' logo printed at the back and the bird logo embroidered on the chest. On the polar fleece side it has a patch pocket with the logo and contrast colour details. It is designed with spread collar, front zipper fastening, dropped shoulders and has a relaxed fit. Colour - Otter Brown. 100% Polyester 100% Polyamide. T226MA044 AW26 Made in China.",
+    "descriptionKo": "브랜드: True Artist\n상품 종류: 아우터\n색상: Otter Brown\n소재: 100% polyamide\n옵션 Size: 4-5 Years, 6-7 Years, 8-9 Years, 10-11 Years, 12-13 Years\n원문 설명: \"Reversible Jacket nº03 by True Artist. Reversible Jacket nº03 in Otter Brown is made of 100% polyamide in one face and 100% polyester polar fleece on the other face. This reversible style features different details and colours on both sides: on one face it has two patch pockets, True Artists' logo printed at the back and the bird logo embroidered on the chest. On the polar fleece side it has a patch pocket with the logo and contrast colour details. It is designed with spread collar, front zipper fastening, dropped shoulders and has a relaxed fit. Colour - Otter Brown. 100% Polyester 100% Polyamide. T226MA044 AW26 Made in China.\"",
+    "brand": "True Artist",
+    "color": "Otter Brown",
+    "material": "100% polyamide"
+   },
+   "candidate": {
+    "title": "Pixel Abduction All Over Reversible Jacket by Bobo Choses",
+    "description": "Pixel Abduction All Over Reversible Jacket by Bobo Choses. A warm and stylish collared fleece jacket with an all over space ship abduction design in brown and yellow. A fun and versatile winter essential. Colour - Brown. 100% Recycled Polyester 100% Recycled Polyamide lining. Product code B226AC098 AW26 Made in China."
+   }
+  },
+  {
+   "originUrl": "https://main-story.com/products/bubble-sweatshirt-grey-melange-1?srsltid=AYCX9vJugDIA1cXJ1iOHFtxJpDob_yD88Nv5ovEy22z5tohMimgsiKVv",
+   "originCode": null,
+   "candidateUrl": "https://junioredition.com/products/bubble-sweatshirt-in-grey-melange-by-main-story",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Bubble Sweatshirt - Grey Melange",
+    "description": "Our Grey Melange oversized Bubble Sweatshirt is made from soft organic cotton jersey fleece, with a relaxed, wide fit and dropped shoulders that combines comfort and a laid-back look. Garment-dyed for extra softness, it delivers a gentle, cosy feel against the skin. Main Story Start Date Print on the chest Embroidered Logo 100% Organic Cotton Responsibly Made in Portugal",
+    "descriptionKo": "브랜드: Main Story\n상품 종류: 티셔츠\n색상: Our Grey\n소재: 100% Organic Cotton\n옵션 Size: 2, 4, 6, 8, 10, 12, 14, 16\n원문 설명: \"Our Grey Melange oversized Bubble Sweatshirt is made from soft organic cotton jersey fleece, with a relaxed, wide fit and dropped shoulders that combines comfort and a laid-back look. Garment-dyed for extra softness, it delivers a gentle, cosy feel against the skin. Main Story Start Date Print on the chest Embroidered Logo 100% Organic Cotton Responsibly Made in Portugal\"",
+    "brand": "Main Story",
+    "color": "Our Grey",
+    "material": "100% Organic Cotton"
+   },
+   "candidate": {
+    "title": "Bubble Sweatshirt in Grey Melange by Main Story",
+    "description": "Bubble Sweatshirt by Main Story. A relaxed fit sweatshirt with dropped shoulders and a large Main Story print across the chest, finished with ribbed cuffs, hem and neckline. Colour - Grey Melange. 100% Organic Cotton. From Main Story AW26 Collection. Product code AW26MS185 Made in Portugal."
+   }
+  },
+  {
+   "originUrl": "https://www.wynken.co.uk/products/mixed-media-jacket-ecru-mix?_pos=1&_sid=323acca5d&_ss=r",
+   "originCode": null,
+   "candidateUrl": "https://junioredition.com/products/mixed-media-jacket-in-ecru-mix-by-wynken",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Mixed Media Jacket - Ecru Mix",
+    "description": "This mixed media jacket is perfect for colder days, combining warmth with playful style. The ecru faux fur exterior adds texture and character, while the Wynken stitching in a painter’s palette shape gives a subtle, creative detail. A collar keeps little ones extra cosy, and pockets are perfect for keeping hands warm. Soft, comfortable, and easy to layer, this mixed media jacket balances practicality, style, and character, making it a versatile choice for chilly days and playful adventures.",
+    "descriptionKo": "Shell: 100% Polyester. Panel: 100% Nylon",
+    "brand": "Wynken",
+    "color": "",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Mixed Media Jacket in Ecru Mix by Wynken",
+    "description": "Mixed Media Jacket by Wynken. This mixed media jacket is perfect for colder days, combining warmth with playful style. The ecru faux fur exterior adds texture and character, while the Wynken stitching in a painter’s palette shape gives a subtle, creative detail. A collar keeps little ones extra cosy, and pockets are perfect for keeping hands warm. Soft, comfortable, and easy to layer, this teddy fleece jacket balances practicality, style, and character, making it a versatile choice for chilly days and playful adventures. Colour - Ecru Mix. Shell: 100% Polyester. Panel: 100% Nylon. Made in China. Product Code WK21W97 AW26"
+   }
+  },
+  {
+   "originUrl": "https://main-story.com/products/bubble-sweatshirt-grey-melange-1?srsltid=AYCX9vLRcFH3qL2naCiXoh8nj6QNTCU9F5GfFps0GRjAO4z0Oea6LCtL",
+   "originCode": null,
+   "candidateUrl": "https://junioredition.com/products/bubble-sweatshirt-in-grey-melange-by-main-story",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Bubble Sweatshirt - Grey Melange",
+    "description": "Our Grey Melange oversized Bubble Sweatshirt is made from soft organic cotton jersey fleece, with a relaxed, wide fit and dropped shoulders that combines comfort and a laid-back look. Garment-dyed for extra softness, it delivers a gentle, cosy feel against the skin. Main Story Start Date Print on the chest Embroidered Logo 100% Organic Cotton Responsibly Made in Portugal",
+    "descriptionKo": "브랜드: Main Story\n상품 종류: 티셔츠\n색상: Our Grey\n소재: 100% Organic Cotton\n옵션 Size: 2, 4, 6, 8, 10, 12, 14, 16\n원문 설명: \"Our Grey Melange oversized Bubble Sweatshirt is made from soft organic cotton jersey fleece, with a relaxed, wide fit and dropped shoulders that combines comfort and a laid-back look. Garment-dyed for extra softness, it delivers a gentle, cosy feel against the skin. Main Story Start Date Print on the chest Embroidered Logo 100% Organic Cotton Responsibly Made in Portugal\"",
+    "brand": "Main Story",
+    "color": "Our Grey",
+    "material": "100% Organic Cotton"
+   },
+   "candidate": {
+    "title": "Bubble Sweatshirt in Grey Melange by Main Story",
+    "description": "Bubble Sweatshirt by Main Story. A relaxed fit sweatshirt with dropped shoulders and a large Main Story print across the chest, finished with ribbed cuffs, hem and neckline. Colour - Grey Melange. 100% Organic Cotton. From Main Story AW26 Collection. Product code AW26MS185 Made in Portugal."
+   }
+  },
+  {
+   "originUrl": "https://www.junioredition.com/collections/bonjour/products/handsmock-dress-in-burgundy-cashmere-print-by-bonjour",
+   "originCode": null,
+   "candidateUrl": "https://junioredition.com/products/handsmock-apron-dress-in-natural-by-bonjour",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+    "description": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful floral fabric with removable crochet collar. Colour - Burgundy Cashmere. 100% Cotton. Size Guide: 2 Years: Length 56cm, Chest 30cm, Sleeve Length 32cm. 4 Years: Length 60cm, Chest 31cm, Sleeve Length 34cm. 6 Years: Length 64cm, Chest 32cm, Sleeve Length 36cm. 8 Years: Length 68cm, Chest 31cm, Sleeve Length 34cm. 10 Years: Length 72cm, Chest 34cm, Sleeve Length 40cm. 12 Years: Length 76cm, Chest 35cm, Sleeve Length 42cm. Product Code BJ44_AW26",
+    "descriptionKo": "브랜드: Bonjour\n상품 종류: 원피스\n색상: Burgundy Cashmere\n소재: 100% Cotton\n옵션 Size: 2 Years, 4 Years, 6 Years, 8 Years, 10 Years, 12 Years\n원문 설명: \"Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful floral fabric with removable crochet collar. Colour - Burgundy Cashmere. 100% Cotton. Size Guide: 2 Years: Length 56cm, Chest 30cm, Sleeve Length 32cm. 4 Years: Length 60cm, Chest 31cm, Sleeve Length 34cm. 6 Years: Length 64cm, Chest 32cm, Sleeve Length 36cm. 8 Years: Length 68cm, Chest 31cm, Sleeve Length 34cm. 10 Years: Length 72cm, Chest 34cm, Sleeve Length 40cm. 12 Years: Length 76cm, Chest 35cm, Sleeve Length 42cm. Product Code BJ44_AW26\"",
+    "brand": "Bonjour",
+    "color": "Burgundy Cashmere",
+    "material": "100% Cotton"
+   },
+   "candidate": {
+    "title": "Handsmock Apron Dress in Natural by Bonjour - Last Ones In Stock - 2-8 Years",
+    "description": "Handsmock apron dress by Bonjour. Pretty natural cotton dress featuring Bonjour's signature smocking in burgundy and ivory and a frilled edge peter pan collar finished with two embroidered flowers and adjustable tie waist. Colour - Natural. 100% Cotton. Size Guide: 2 Years - Length 56cm. 4 Years - Length 60cm. 6 Years - Length 64cm. 8 Years - Length 68cm. 10 Years - Length 72cm. 12 Years - Length 76cm. Made in India. Product Code BJ35-SS26"
+   }
+  },
+  {
+   "originUrl": "https://www.junioredition.com/collections/bonjour/products/handsmock-dress-in-little-bouquet-by-bonjour",
+   "originCode": null,
+   "candidateUrl": "https://junioredition.com/products/exclusive-handsmock-dress-in-pink-tapestry-by-bonjour",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Handsmock Dress in Little Bouquet by Bonjour",
+    "description": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful floral fabric with removable crochet collar. Colour - Little Bouquet. 100% Cotton. Size Guide: 2 Years: Length 56cm, Chest 30cm, Sleeve Length 32cm. 4 Years: Length 60cm, Chest 31cm, Sleeve Length 34cm. 6 Years: Length 64cm, Chest 32cm, Sleeve Length 36cm. 8 Years: Length 68cm, Chest 31cm, Sleeve Length 34cm. 10 Years: Length 72cm, Chest 34cm, Sleeve Length 40cm. 12 Years: Length 76cm, Chest 35cm, Sleeve Length 42cm. Product Code BJ21_AW26",
+    "descriptionKo": "Colour - Little Bouquet.\n\n100% Cotton.\n\nSize Guide:\n\n2 Years: Length 56cm, Chest 30cm, Sleeve Length 32cm.\n\n4 Years: Length 60cm, Chest 31cm, Sleeve Length 34cm.\n\n6 Years: Length 64cm, Chest 32cm, Sleeve Length 36cm.\n\n8 Years: Length 68cm, Chest 31cm, Sleeve Length 34cm.\n\n10 Years: Length 72cm, Chest 34cm, Sleeve Length 40cm.\n\n12 Years: Length 76cm, Chest 35cm, Sleeve Length 42cm.",
+    "brand": "Bonjour",
+    "color": "Little Bouquet",
+    "material": "100% Cotton"
+   },
+   "candidate": {
+    "title": "Handsmock Dress in Pink Tapestry by Bonjour - Last Ones In Stock - 6-12 Years",
+    "description": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful pink tapestry fabric, with pink smocking and embroidered flowers. Colour - Pink Tapestry. 100% Cotton. Size Guide (all measurements are approximate and offered as a guide only.): 2 Years - Chest 30cm, Hips 56cm. 4 Years - Chest 31cm, Hips 60cm. 6 Years - Chest 32cm, Hips 64cm. 8 Years - Chest 33cm, Hips 68cm. 10 Years - Chest 34cm, Hips 72cm. 12 Years - Chest 35cm, Hips 76cm. Product Code BJ87_AW25"
+   }
+  },
+  {
+   "originUrl": "https://www.wynken.co.uk/products/mixed-media-jacket-ecru-mix?_pos=1&_sid=323acca5d&_ss=r",
+   "originCode": null,
+   "candidateUrl": "https://kidbizkid.com/products/patachou-ecru-tweed-coat",
+   "candidateDomain": "kidbizkid.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Mixed Media Jacket - Ecru Mix",
+    "description": "This mixed media jacket is perfect for colder days, combining warmth with playful style. The ecru faux fur exterior adds texture and character, while the Wynken stitching in a painter’s palette shape gives a subtle, creative detail. A collar keeps little ones extra cosy, and pockets are perfect for keeping hands warm. Soft, comfortable, and easy to layer, this mixed media jacket balances practicality, style, and character, making it a versatile choice for chilly days and playful adventures.",
+    "descriptionKo": "Shell: 100% Polyester. Panel: 100% Nylon",
+    "brand": "Wynken",
+    "color": "",
+    "material": ""
+   },
+   "candidate": {
+    "title": "Patachou Ecru Tweed Coat",
+    "description": "This elegant ecru tweed coat features a charming scalloped collar and matching scalloped pocket details, both trimmed with soft, fluffy accents. The coat has long sleeves and a button-up front, creating a sophisticated and warm outerwear piece."
+   }
+  },
+  {
+   "originUrl": "https://www.smallable.com/en/product/reversible-mushroom-jacket-recycled-fiber-blue-bobo-choses-430611?algsearch=30c39962e4b80e9917116e04b6471ae2",
+   "originCode": null,
+   "candidateUrl": "https://kidbizkid.com/products/mackage-jesse-blue-jacket",
+   "candidateDomain": "kidbizkid.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+    "description": "  SIZE AND FIT    Relaxed fit    COMPOSITION    100% Recycled Polyamide    Find out more    Wash Cold-Gentle  Made in China  ",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 아우터\n색상: Blue\n소재: 100% Recycled Polyamide\n옵션 사이즈: 12 months, 18 months, 24 months\n원문 설명: \"SIZE AND FIT    Relaxed fit    COMPOSITION    100% Recycled Polyamide    Find out more    Wash Cold-Gentle  Made in China\"",
+    "brand": "Bobo Choses",
+    "color": "Blue",
+    "material": "100% Recycled Polyamide"
+   },
+   "candidate": {
+    "title": "Mackage Jesse Blue Jacket",
+    "description": "Mackage JESSE is a light recycled nano down jacket for boys with a removable hood. Made from a water resistant and repellant lustrous nylon shell, the insulated pockets and elastic storm visor offer warmth and comfort against cold and wind. The contrast lining, logo patch, and streamlined channel tiers deliver modern multifunction and superior protection. 800 fill power. Deep Cold: -15°C. Storm visor with elastic trim. Insulated zip waist pockets. Ribbed hem and cuffs. Contrast lining. Logo patch on left sleeve. Machine washable. Relaxed fit."
+   }
+  },
+  {
+   "originUrl": "https://www.junioredition.com/collections/bonjour/products/handsmock-dress-in-little-bouquet-by-bonjour",
+   "originCode": null,
+   "candidateUrl": "https://kidbizkid.com/products/givenchy-lilac-dress",
+   "candidateDomain": "kidbizkid.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Handsmock Dress in Little Bouquet by Bonjour",
+    "description": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful floral fabric with removable crochet collar. Colour - Little Bouquet. 100% Cotton. Size Guide: 2 Years: Length 56cm, Chest 30cm, Sleeve Length 32cm. 4 Years: Length 60cm, Chest 31cm, Sleeve Length 34cm. 6 Years: Length 64cm, Chest 32cm, Sleeve Length 36cm. 8 Years: Length 68cm, Chest 31cm, Sleeve Length 34cm. 10 Years: Length 72cm, Chest 34cm, Sleeve Length 40cm. 12 Years: Length 76cm, Chest 35cm, Sleeve Length 42cm. Product Code BJ21_AW26",
+    "descriptionKo": "Colour - Little Bouquet.\n\n100% Cotton.\n\nSize Guide:\n\n2 Years: Length 56cm, Chest 30cm, Sleeve Length 32cm.\n\n4 Years: Length 60cm, Chest 31cm, Sleeve Length 34cm.\n\n6 Years: Length 64cm, Chest 32cm, Sleeve Length 36cm.\n\n8 Years: Length 68cm, Chest 31cm, Sleeve Length 34cm.\n\n10 Years: Length 72cm, Chest 34cm, Sleeve Length 40cm.\n\n12 Years: Length 76cm, Chest 35cm, Sleeve Length 42cm.",
+    "brand": "Bonjour",
+    "color": "Little Bouquet",
+    "material": "100% Cotton"
+   },
+   "candidate": {
+    "title": "Givenchy Lilac Dress",
+    "description": "Givenchy purple interlock dress. With Givenchy lace bands details. 100% Cotton."
+   }
+  },
+  {
+   "originUrl": "https://www.junioredition.com/collections/true-artist/products/reversible-jacket-n-03-in-otter-brown-by-true-artist",
+   "originCode": null,
+   "candidateUrl": "https://kidbizkid.com/products/billieblush-reversible-leopard-jacket",
+   "candidateDomain": "kidbizkid.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Reversible Jacket nº03 in Otter Brown by True Artist",
+    "description": "Reversible Jacket nº03 by True Artist. Reversible Jacket nº03 in Otter Brown is made of 100% polyamide in one face and 100% polyester polar fleece on the other face. This reversible style features different details and colours on both sides: on one face it has two patch pockets, True Artists' logo printed at the back and the bird logo embroidered on the chest. On the polar fleece side it has a patch pocket with the logo and contrast colour details. It is designed with spread collar, front zipper fastening, dropped shoulders and has a relaxed fit. Colour - Otter Brown. 100% Polyester 100% Polyamide. T226MA044 AW26 Made in China.",
+    "descriptionKo": "브랜드: True Artist\n상품 종류: 아우터\n색상: Otter Brown\n소재: 100% polyamide\n옵션 Size: 4-5 Years, 6-7 Years, 8-9 Years, 10-11 Years, 12-13 Years\n원문 설명: \"Reversible Jacket nº03 by True Artist. Reversible Jacket nº03 in Otter Brown is made of 100% polyamide in one face and 100% polyester polar fleece on the other face. This reversible style features different details and colours on both sides: on one face it has two patch pockets, True Artists' logo printed at the back and the bird logo embroidered on the chest. On the polar fleece side it has a patch pocket with the logo and contrast colour details. It is designed with spread collar, front zipper fastening, dropped shoulders and has a relaxed fit. Colour - Otter Brown. 100% Polyester 100% Polyamide. T226MA044 AW26 Made in China.\"",
+    "brand": "True Artist",
+    "color": "Otter Brown",
+    "material": "100% polyamide"
+   },
+   "candidate": {
+    "title": "Billieblush Reversible Leopard Jacket",
+    "description": "Billieblush reversible puffer jacket. 1 side with allover leopard, 1 side in faux shearling. 2 side pockets. With glittered rib on cuffs. Zip fastening on the front. 100% Polyester."
+   }
+  },
+  {
+   "originUrl": "https://www.smallable.com/en/product/reversible-mushroom-jacket-recycled-fiber-blue-bobo-choses-430611?algsearch=30c39962e4b80e9917116e04b6471ae2",
+   "originCode": null,
+   "candidateUrl": "https://nickis.com/products/colmar-daunenjacke-reversible-quilted-marineblau-7404628282",
+   "candidateDomain": "nickis.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+    "description": "  SIZE AND FIT    Relaxed fit    COMPOSITION    100% Recycled Polyamide    Find out more    Wash Cold-Gentle  Made in China  ",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 아우터\n색상: Blue\n소재: 100% Recycled Polyamide\n옵션 사이즈: 12 months, 18 months, 24 months\n원문 설명: \"SIZE AND FIT    Relaxed fit    COMPOSITION    100% Recycled Polyamide    Find out more    Wash Cold-Gentle  Made in China\"",
+    "brand": "Bobo Choses",
+    "color": "Blue",
+    "material": "100% Recycled Polyamide"
+   },
+   "candidate": {
+    "title": "Daunenjacke Reversible Quilted Marineblau",
+    "description": "Diese wendbare Colmar Steppjacke mit Kapuze in der Farbe Navy Blue-Dark Blue ist zwei Jacken in einer und passt sich so jedem Anlass an. Die nicht abnehmbare Kapuze und das weiche Obermaterial aus 100% recyceltem Polyamid überzeugen mit ihrem leicht knittrigen Griff und der strahlenden Farbwiedergabe für einen modernen, sportlichen Look. Eine wasserabweisende Ausrüstung mit geringer Umweltbelastung schützt zuverlässig vor Nässe. Auf der einen Seite ist die Jacke breit und regelmäßig gesteppt, während die andere Seite völlig glatt und in einer kontrastierenden Farbe gehalten ist – so lässt sich der Look je nach Lust und Laune wechseln. Gepolstert ist die Jacke mit einer natürlichen Daunenfüllung aus 90% Daunen und 10% Federn, was für angenehme Wärme bei geringem Gewicht sorgt. Praktische, bequeme Seitentaschen bieten zusätzlichen Stauraum, und ein Kantenschutz am Bein sorgt für zusätzliche Strapazierfähigkeit. Ein durchgehender seitlicher Reißverschluss mit personalisiertem Zipper sorgt für einfaches An- und Ausziehen. Der Colmar-Patch am linken Ärmel sowie der \"C\"-Patch auf der rechten Rückseite verleihen der Jacke eine unverwechselbare, markentypische Note."
+   }
+  },
+  {
+   "originUrl": "https://www.junioredition.com/collections/bonjour/products/tunique-with-hair-clip-in-little-bouquet-by-bonjour",
+   "originCode": null,
+   "candidateUrl": "https://petitemaisonkids.com/products/azalea-pink-flower-hair-clip",
+   "candidateDomain": "petitemaisonkids.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Tunique With Hair Clip in Little Bouquet by Bonjour",
+    "description": "Tunique with hair clip by Bonjour. Pretty burgundy blouse which can be worn as a dress. Beautiful hand smocked navy collar tied with a red bow, elasticated puff sleeves and Bonjour's signature smocking. Complete with matching hair bow clip. Colour - Little Bouquet. 100% Cotton. Size Guide: 2 Years: Length 52cm, Chest 30cm, Sleeve Length 32cm. 4 Years: Length 56cm, Chest 31cm, Sleeve Length 34cm. 6 Years: Length 60cm, Chest 32cm, Sleeve Length 36cm. 8 Years: Length 64cm, Chest 33cm, Sleeve Length 38cm. 10 Years: Length 68cm, Chest 34cm, Sleeve Length 40cm. 12 Years: Length 72cm, Chest 35cm, Sleeve Length 42cm. Made in India. Product Code BJ20_AW26",
+    "descriptionKo": "브랜드: Bonjour\n상품 종류: 셔츠\n색상: Little Bouquet\n소재: 100% Cotton\n옵션 Size: 2 Years, 4 Years, 6 Years, 8 Years, 10 Years, 12 Years\n원문 설명: \"Tunique with hair clip by Bonjour. Pretty burgundy blouse which can be worn as a dress. Beautiful hand smocked navy collar tied with a red bow, elasticated puff sleeves and Bonjour's signature smocking. Complete with matching hair bow clip. Colour - Little Bouquet. 100% Cotton. Size Guide: 2 Years: Length 52cm, Chest 30cm, Sleeve Length 32cm. 4 Years: Length 56cm, Chest 31cm, Sleeve Length 34cm. 6 Years: Length 60cm, Chest 32cm, Sleeve Length 36cm. 8 Years: Length 64cm, Chest 33cm, Sleeve Length 38cm. 10 Years: Length 68cm, Chest 34cm, Sleeve Length 40cm. 12 Years: Length 72cm, Chest 35cm, Sleeve Length 42cm. Made in India. Product Code BJ20_AW26\"",
+    "brand": "Bonjour",
+    "color": "Little Bouquet",
+    "material": "100% Cotton"
+   },
+   "candidate": {
+    "title": "Azalea Pink Flower Hair Clip",
+    "description": "Add the perfect finishing touch to your little one’s look with the Azalea Pink Flower Hair Clip. Featuring delicate pink petals and sparkling clear rhinestone tassels, this bow beautifully complements the Azalea Dress. It’s a charming accessory that adds elegance and sparkle, making any outfit feel extra special. Made in Turkey Measures about 3\" Comfortable hair clasp Suitable for 6 Months and older Care Instructions : Spot clean only"
+   }
+  },
+  {
+   "originUrl": "https://www.junioredition.com/collections/bonjour/products/handsmock-dress-in-burgundy-cashmere-print-by-bonjour",
+   "originCode": null,
+   "candidateUrl": "https://petitemaisonkids.com/products/georgina-tartan-print-dress-with-red-bow",
+   "candidateDomain": "petitemaisonkids.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+    "description": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful floral fabric with removable crochet collar. Colour - Burgundy Cashmere. 100% Cotton. Size Guide: 2 Years: Length 56cm, Chest 30cm, Sleeve Length 32cm. 4 Years: Length 60cm, Chest 31cm, Sleeve Length 34cm. 6 Years: Length 64cm, Chest 32cm, Sleeve Length 36cm. 8 Years: Length 68cm, Chest 31cm, Sleeve Length 34cm. 10 Years: Length 72cm, Chest 34cm, Sleeve Length 40cm. 12 Years: Length 76cm, Chest 35cm, Sleeve Length 42cm. Product Code BJ44_AW26",
+    "descriptionKo": "브랜드: Bonjour\n상품 종류: 원피스\n색상: Burgundy Cashmere\n소재: 100% Cotton\n옵션 Size: 2 Years, 4 Years, 6 Years, 8 Years, 10 Years, 12 Years\n원문 설명: \"Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful floral fabric with removable crochet collar. Colour - Burgundy Cashmere. 100% Cotton. Size Guide: 2 Years: Length 56cm, Chest 30cm, Sleeve Length 32cm. 4 Years: Length 60cm, Chest 31cm, Sleeve Length 34cm. 6 Years: Length 64cm, Chest 32cm, Sleeve Length 36cm. 8 Years: Length 68cm, Chest 31cm, Sleeve Length 34cm. 10 Years: Length 72cm, Chest 34cm, Sleeve Length 40cm. 12 Years: Length 76cm, Chest 35cm, Sleeve Length 42cm. Product Code BJ44_AW26\"",
+    "brand": "Bonjour",
+    "color": "Burgundy Cashmere",
+    "material": "100% Cotton"
+   },
+   "candidate": {
+    "title": "Georgina Tartan Print Dress with Red Bow",
+    "description": "Elevate your style with our Georgina Tartan Print Dress, featuring a striking pussy cat bow and bold tartan design. The statement collar and red piping add a touch of sophistication to this timeless piece. Perfect for any occasion, this dress will make you stand out in a crowd. Front button closure Knee length Fit is true to size 67% Polyester, 33% Viscose Fully lined 100% Cotton Made in Turkey Grey and blue print tartan Matching sibling baby and boy outfit available Care Instructions : Hand wash in cold water with mild detergent or dry clean. Hang to dry. Iron recommended."
+   }
+  },
+  {
+   "originUrl": "https://www.junioredition.com/collections/bonjour/products/handsmock-dress-in-burgundy-cashmere-print-by-bonjour",
+   "originCode": null,
+   "candidateUrl": "https://shoppiccoliandco.com/products/preorder-beatrice-burgundy-handsmocked-girl-sleeves-dress-ships-end-of-october",
+   "candidateDomain": "shoppiccoliandco.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+    "description": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful floral fabric with removable crochet collar. Colour - Burgundy Cashmere. 100% Cotton. Size Guide: 2 Years: Length 56cm, Chest 30cm, Sleeve Length 32cm. 4 Years: Length 60cm, Chest 31cm, Sleeve Length 34cm. 6 Years: Length 64cm, Chest 32cm, Sleeve Length 36cm. 8 Years: Length 68cm, Chest 31cm, Sleeve Length 34cm. 10 Years: Length 72cm, Chest 34cm, Sleeve Length 40cm. 12 Years: Length 76cm, Chest 35cm, Sleeve Length 42cm. Product Code BJ44_AW26",
+    "descriptionKo": "브랜드: Bonjour\n상품 종류: 원피스\n색상: Burgundy Cashmere\n소재: 100% Cotton\n옵션 Size: 2 Years, 4 Years, 6 Years, 8 Years, 10 Years, 12 Years\n원문 설명: \"Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful floral fabric with removable crochet collar. Colour - Burgundy Cashmere. 100% Cotton. Size Guide: 2 Years: Length 56cm, Chest 30cm, Sleeve Length 32cm. 4 Years: Length 60cm, Chest 31cm, Sleeve Length 34cm. 6 Years: Length 64cm, Chest 32cm, Sleeve Length 36cm. 8 Years: Length 68cm, Chest 31cm, Sleeve Length 34cm. 10 Years: Length 72cm, Chest 34cm, Sleeve Length 40cm. 12 Years: Length 76cm, Chest 35cm, Sleeve Length 42cm. Product Code BJ44_AW26\"",
+    "brand": "Bonjour",
+    "color": "Burgundy Cashmere",
+    "material": "100% Cotton"
+   },
+   "candidate": {
+    "title": "Beatrice Burgundy Handsmocked Girl Sleeves Dress",
+    "description": "A classic burgundy girl dress featuring delicate handsmocking across the bodice and a crisp white ruffled collar. The rich burgundy tone, softly gathered skirt and traditional detailing create an elegant, timeless silhouette. Made in Mexico Care: Hand wash cold. Lay flat to dry. Steam preferred. Preorder — Ships end of October Important notice: This item is a preorder and is non-returnable. Please consider this before placing your order."
+   }
+  },
+  {
+   "originUrl": "https://www.junioredition.com/collections/bonjour/products/handsmock-dress-in-burgundy-cashmere-print-by-bonjour",
+   "originCode": null,
+   "candidateUrl": "https://villagekids.co.uk/products/lemon-print-dress",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+    "description": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful floral fabric with removable crochet collar. Colour - Burgundy Cashmere. 100% Cotton. Size Guide: 2 Years: Length 56cm, Chest 30cm, Sleeve Length 32cm. 4 Years: Length 60cm, Chest 31cm, Sleeve Length 34cm. 6 Years: Length 64cm, Chest 32cm, Sleeve Length 36cm. 8 Years: Length 68cm, Chest 31cm, Sleeve Length 34cm. 10 Years: Length 72cm, Chest 34cm, Sleeve Length 40cm. 12 Years: Length 76cm, Chest 35cm, Sleeve Length 42cm. Product Code BJ44_AW26",
+    "descriptionKo": "브랜드: Bonjour\n상품 종류: 원피스\n색상: Burgundy Cashmere\n소재: 100% Cotton\n옵션 Size: 2 Years, 4 Years, 6 Years, 8 Years, 10 Years, 12 Years\n원문 설명: \"Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful floral fabric with removable crochet collar. Colour - Burgundy Cashmere. 100% Cotton. Size Guide: 2 Years: Length 56cm, Chest 30cm, Sleeve Length 32cm. 4 Years: Length 60cm, Chest 31cm, Sleeve Length 34cm. 6 Years: Length 64cm, Chest 32cm, Sleeve Length 36cm. 8 Years: Length 68cm, Chest 31cm, Sleeve Length 34cm. 10 Years: Length 72cm, Chest 34cm, Sleeve Length 40cm. 12 Years: Length 76cm, Chest 35cm, Sleeve Length 42cm. Product Code BJ44_AW26\"",
+    "brand": "Bonjour",
+    "color": "Burgundy Cashmere",
+    "material": "100% Cotton"
+   },
+   "candidate": {
+    "title": "Lemon Print Dress",
+    "description": "This dress by Guess has a lemon design all over in Broderie Anglaise. It has a frilled off the shoulder design. 100% Cotton Machine Wash 30*C A1812-J2GK19"
+   }
+  },
+  {
+   "originUrl": "https://www.smallable.com/en/product/bobo-choses-organic-cotton-t-shirt-ecru-bobo-choses-430700",
+   "originCode": null,
+   "candidateUrl": "https://villagekids.co.uk/products/blue-t-shirt",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Bobo Choses Organic Cotton T-shirt | Ecru",
+    "description": "  COMPOSITION    100% Organic Cotton    Find out more    Wash Cold-30°  Made in Portugal  ",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n소재: 100% Organic Cotton\n옵션 사이즈: 2/3 years, 4/5 years, 6/7 years, 8/9 years, 10/11 years, 12/13 years\n원문 설명: \"COMPOSITION    100% Organic Cotton    Find out more    Wash Cold-30°  Made in Portugal\"",
+    "brand": "Bobo Choses",
+    "color": "",
+    "material": "100% Organic Cotton"
+   },
+   "candidate": {
+    "title": "Blue T-Shirt",
+    "description": "This girls cropped t-shirt has a pink Guess logo printed on the front. 100% Organic Cotton Machine Wash 30*C A1812-J2RI31-G747"
+   }
+  },
+  {
+   "originUrl": "https://www.junioredition.com/collections/bonjour/products/handsmock-dress-in-little-bouquet-by-bonjour",
+   "originCode": null,
+   "candidateUrl": "https://villagekids.co.uk/products/copy-of-coral-pink-broderie-anglaise-dress",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Handsmock Dress in Little Bouquet by Bonjour",
+    "description": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful floral fabric with removable crochet collar. Colour - Little Bouquet. 100% Cotton. Size Guide: 2 Years: Length 56cm, Chest 30cm, Sleeve Length 32cm. 4 Years: Length 60cm, Chest 31cm, Sleeve Length 34cm. 6 Years: Length 64cm, Chest 32cm, Sleeve Length 36cm. 8 Years: Length 68cm, Chest 31cm, Sleeve Length 34cm. 10 Years: Length 72cm, Chest 34cm, Sleeve Length 40cm. 12 Years: Length 76cm, Chest 35cm, Sleeve Length 42cm. Product Code BJ21_AW26",
+    "descriptionKo": "Colour - Little Bouquet.\n\n100% Cotton.\n\nSize Guide:\n\n2 Years: Length 56cm, Chest 30cm, Sleeve Length 32cm.\n\n4 Years: Length 60cm, Chest 31cm, Sleeve Length 34cm.\n\n6 Years: Length 64cm, Chest 32cm, Sleeve Length 36cm.\n\n8 Years: Length 68cm, Chest 31cm, Sleeve Length 34cm.\n\n10 Years: Length 72cm, Chest 34cm, Sleeve Length 40cm.\n\n12 Years: Length 76cm, Chest 35cm, Sleeve Length 42cm.",
+    "brand": "Bonjour",
+    "color": "Little Bouquet",
+    "material": "100% Cotton"
+   },
+   "candidate": {
+    "title": "White Broderie Anglaise Dress",
+    "description": "Broderie Anglaise White dress by Guess with capped sleeves and zip fastening at back 100% Cotton Machine Wash 30*c A2012-K3GK10WFBC0-G011"
+   }
+  },
+  {
+   "originUrl": "https://www.smallable.com/en/product/reversible-mushroom-jacket-recycled-fiber-blue-bobo-choses-430611?algsearch=30c39962e4b80e9917116e04b6471ae2",
+   "originCode": null,
+   "candidateUrl": "https://villagekids.co.uk/products/blue-knitted-jacket",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "origin": {
+    "title": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+    "description": "  SIZE AND FIT    Relaxed fit    COMPOSITION    100% Recycled Polyamide    Find out more    Wash Cold-Gentle  Made in China  ",
+    "descriptionKo": "브랜드: Bobo Choses\n상품 종류: 아우터\n색상: Blue\n소재: 100% Recycled Polyamide\n옵션 사이즈: 12 months, 18 months, 24 months\n원문 설명: \"SIZE AND FIT    Relaxed fit    COMPOSITION    100% Recycled Polyamide    Find out more    Wash Cold-Gentle  Made in China\"",
+    "brand": "Bobo Choses",
+    "color": "Blue",
+    "material": "100% Recycled Polyamide"
+   },
+   "candidate": {
+    "title": "Blue Knitted Jacket",
+    "description": "Pale blue jacket for babies by Paz Rodriguez. This warm and cosy textured knit jacket is fully lined in soft velour and padded for extra warmth. There is a sweet collar and front button fastenings with the signature pearlised logo badge at the hem. 100% Wool Lining - 80% Cotton, 20% Polyester E24-113918-20"
+   }
+  }
+ ]
+}
