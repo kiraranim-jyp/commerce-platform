@@ -45,10 +45,22 @@
 
 ---
 
-## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-07 · 상세설명 비교 완료)
+## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-07 · CEO 검토 화면 확장)
 
 ```
-🔵 HEAD **`24847b93` → 이 세션 커밋** · git clean · 운영 코드 **0** · DB **0** · GT **0**
+🔵 HEAD **`a52f4994` → 이 세션 커밋** · git clean · 운영 코드 **0** · DB **0** · GT **0**
+   회귀 **10,274 passed / 0 failed** · typecheck **0** · build **exit 0**
+
+🟡🟡 **CEO Action — 화면 1회**: `docs/ceo-evidence-review.html` 을 브라우저로 열고
+   11쌍을 SAME / SIMILAR / DIFFERENT / UNDECIDED 로 판단 → **JSON 내보내기** 로 전달.
+   🟢 필드 전수 목록 `docs/CEO-EVIDENCE-REVIEW-FIELDS.md` · 생성기
+      `ceo-evidence-review-build.test.ts`(`CEO_EVIDENCE_REVIEW=1` · **네트워크 0**)
+   🔴 **대상은 11쌍이다**(지시서의 「6쌍」을 정정) · 원본 **6**(S1~S6)에 후보 11이 붙는다
+   🔴 재생성 전 `ceo-evidence-review-dump.mjs`(DB 읽기 전용) 를 먼저 돌린다
+   🔴🔴 **`docs/core-desc-evidence-review.html` 을 덮어쓰지 않는다** —
+      후보 상세설명의 **유일한 저장 출처** 다(fixture 의 `facts.description` 은 **0/11**)
+   🟢 화면 실측 — 원본 설명문 11/11 · 후보 10/11 · 원본 이미지 11/11 · 후보 9/11 ·
+      `candidate_reviews` 2/11(verdict 1) · 운영 판정 재현 11/11 · 비교 항목 25 · CEO 축 10
 
 🟢🟢 **상세설명 비교 트랙은 «끝났다»** — 전문 `docs/MI-DESC-COMPARE-REPORT.md`(10절) ·
    쌍별 표 `docs/MI-DESC-COMPARE-PAIRS.md`(109쌍 전수). 🔴 **재조사 금지.**

@@ -1,7 +1,24 @@
 # CTO 인수인계 — 다음 세션이 **이 파일 하나만** 읽는다
 
 > 🔴 프로젝트 전체를 다시 조사하지 않는다. 좌표는 `docs/START-HERE.md` **§NEXT SESSION** 과 이 파일뿐이다.
-> 기준 HEAD `24847b93`(+ 이 세션 커밋) · 작업트리 clean · 운영 코드 **0** · DB **0** · GT **0**.
+> 기준 HEAD `a52f4994`(+ 이 세션 커밋) · 작업트리 clean · 운영 코드 **0** · DB **0** · GT **0**.
+
+---
+
+## 0-A. 🟡 **먼저 — CEO 화면 1회 대기**: `docs/ceo-evidence-review.html`
+
+```
+11쌍을 SAME / SIMILAR / DIFFERENT / UNDECIDED 로 판단 → **JSON 내보내기** 로 전달.
+🟢 필드 전수 목록      docs/CEO-EVIDENCE-REVIEW-FIELDS.md (canonicalProduct 42 · ProductFacts 17 · DB 19)
+🟢 생성기             ceo-evidence-review-build.test.ts (`CEO_EVIDENCE_REVIEW=1` · **네트워크 0**)
+🟢 DB 덤프(선행)       packages/database/scripts/ceo-evidence-review-dump.mjs (읽기 전용)
+🔴 **대상은 11쌍** 이다 — 지시서의 「6쌍」을 정정했다(원본 6 = S1~S6 에 후보 11)
+🔴🔴 **`docs/core-desc-evidence-review.html` 을 덮어쓰지 않는다** — 후보 상세설명의
+   **유일한 저장 출처** 다. fixture 의 `facts.description`·`facts.evidence` 는 **0/11** 이다
+🔴 그래서 **추가 크롤링 0** 으로 설명문을 보여줄 수 있었다(그 산출물에서 읽는다)
+실측 — 원본 설명문 11/11 · 후보 10/11 · 원본 이미지 11/11 · 후보 9/11 ·
+       candidate_reviews 2/11(verdict 1) · 운영 판정 재현 11/11
+```
 
 ---
 

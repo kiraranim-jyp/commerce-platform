@@ -200,6 +200,14 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
   skipped.push({ file: "query-adopt-01-production.json", why: "🟢 채택 Query E2E Production 실측 · 라벨 **없음**" });
   skipped.push({ file: "rc-01-input-url.json", why: "🟢 입력 URL A/B 추출 비교 · 라벨 **없음**" });
   /**
+   * 🔵 CEO-EVIDENCE-REVIEW(2026-11-07) — **`candidate_reviews` 읽기 전용 덤프**(11쌍 URL · 3행).
+   * 🔴 분모에 넣지 않는다 — `dsp-01-reviewed-same.json` 과 **같은 이유**(이중 집계).
+   *    라벨 원본은 운영 DB 이고 이 파일은 **검토 화면 표시 전용** 고정본이다.
+   * 🟢 여기 적는 이유는 이 계약이 **전수 분류** 를 요구하기 때문이다 —
+   *    실제로 그 FAIL 이 이 파일을 잡았다(가드가 일했다 · 느슨하게 하지 않았다).
+   */
+  skipped.push({ file: "ceo-evidence-review-db.json", why: "🔴 `candidate_reviews` 읽기 전용 덤프 — **이중 집계 방지** · 화면 표시 전용" });
+  /**
    * 🔵 SPRINT5-BRAND-GT(2026-11-03) — **운영 `candidate_reviews` 의 사람 판정 행 전수 사본.**
    * 🔴 그래서 **분모에 넣지 않는다** — `dsp-01-reviewed-same.json` 과 **같은 이유**(이중 집계).
    *    그 라벨의 원본은 운영 DB 이고, 이 파일은 BRAND_MISMATCH 반사실 전용 고정본이다.
