@@ -45,11 +45,24 @@
 
 ---
 
-## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-07 · CEO 검토 화면 확장)
+## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-07 · Main Story 제외 배포)
 
 ```
-🔵 HEAD **`a52f4994` → 이 세션 커밋** · git clean · 운영 코드 **0** · DB **0** · GT **0**
-   회귀 **10,274 passed / 0 failed** · typecheck **0** · build **exit 0**
+🔵 HEAD **`21d4a5fa`** · git clean · 0/0 · Production **200** (`/today` 307 · `/api/*` 401 = 정상)
+   회귀 **10,290 passed / 0 failed** · typecheck **0** · build **exit 0**
+
+🟢🟢 **Main Story 한정 취급 제외 — 구현·배포 «완료»**(CEO 결정 2026-11-07 · CPO 승인 §1~§3)
+   ① `runDomesticPriceCheck` 진입점 — 원상품 brand 가 Main Story 면 **검색 전** 종료(HTTP 0)
+   ② `judgeDomesticCandidate` — 자기참조 제외 **옆** 에서 후보 제외(생산자 여섯을 덮는 유일 choke point)
+   ③ 화면 — 서버 문구를 **접힘 밖** 에 렌더(`brand-excluded-notice` · 「후보 없음」과 다른 칸)
+   🟢 술어는 **선언된 brand 칸의 정규화 완전 일치** 다 ⟹ Story · Story Loris · Storybook ·
+      Main Storybook · Mainstory Kids **전부 안전**. 🔴 한계 — 「Main Story Kids」는 안 걸린다
+   🟢 다른 브랜드 영향 **0**(계약) · alias 등록부 **불변** · `SAME05_BASELINE` **불변**(계약)
+   🟢 전수 영향 범위 **33쌍 중 6**(검토 5 + `S4-1` human UNCERTAIN) — 다시 재지 않는다
+   🟢 계약 **16** · 음성대조 **M1~M5 전부 FAIL → 복구** · 변이 잔재 0
+
+🔴🔴 **다음 한 수 = CPO §5 「404 상태 분리·재분류」 조사** — 🔴 **미착수** ·
+   전역 404 필터는 **승인되지 않았다**. 항목·현황은 `docs/CTO-HANDOVER-NEXT.md` §0 하나다.
 
 🟡🟡 **CEO Action — 화면 1회**: `docs/ceo-evidence-review.html` 을 브라우저로 열고
    11쌍을 SAME / SIMILAR / DIFFERENT / UNDECIDED 로 판단 → **JSON 내보내기** 로 전달.

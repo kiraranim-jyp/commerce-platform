@@ -5,7 +5,33 @@
 
 ---
 
-## 0-A. 🟡 **먼저 — CEO 화면 1회 대기**: `docs/ceo-evidence-review.html`
+## 0. 🟡 **다음 한 수 — CPO §5 「404 상태 분리·재분류」 조사 (미착수)**
+
+```
+🟢 Main Story 한정 제외는 **배포 완료** 다(`21d4a5fa` · Production 200) — 재구현 금지.
+🔴 남은 것은 CPO §5 **조사만** 이다. 전역 404 필터 적용은 **승인되지 않았다**.
+
+조사 항목(CPO 가 정한 순서 그대로)
+  ① HTTP 404 · 410(명확한 미존재)을 403 · timeout · 연결 실패와 **분리**할 방안
+     🔴 지금은 `factsFromProductUrl` 이 `!response.ok` 를 **전부 `UNREACHABLE`** 로 뭉갠다
+        (WU-105 실측: `skroutz.ro` 는 **403** 인데 UNREACHABLE 이다)
+     🔴 상태코드를 **보존하지 않는다** ⟹ `ProductUrlFactsResult` 계약 변경이 선행이다
+  ② 기존 `UNREACHABLE` **15건** 재분류(WU-076 분모 N=90: OK 66 · UNREACHABLE 15 ·
+     REDIRECTED_AWAY 8 · NO_FACTS 1) — 🔴 상태코드가 없어 **재프로브가 필요**하다
+  ③ 정상 상품 **오제외율** 측정  ④ 검색 경로별 검사 비용·누락 위험
+  ⑤ 결과를 **CPO 에 다시 보고** 하고 전역 적용 여부를 받는다
+
+🔴 생산자별 현황(실측 · 다시 조사하지 않는다)
+  🟢 404 이미 제외 + 사유 기록 — `url-candidate-pool`(factsFromProductUrl 4회) · `ai-answer-pool`
+  🔴 reachability 검사 **없음** — `overseas-auto-pool` · `web-search-pool` ·
+     `domestic-listing-pool` · 등록부 검색(`comparison-search/index.ts`)
+  🔴 넣으면 **후보당 HTTP +1** 이다(WU-088/089 가 측정한 비용 축)
+🟢 「접근 불가를 DIFFERENT 로 처리하지 않는다」는 **현재도 충족** 이다(drop 이고 verdict 가 아니다)
+```
+
+---
+
+## 0-A. 🟡 [대기] **CEO 화면 1회**: `docs/ceo-evidence-review.html`
 
 ```
 11쌍을 SAME / SIMILAR / DIFFERENT / UNDECIDED 로 판단 → **JSON 내보내기** 로 전달.
