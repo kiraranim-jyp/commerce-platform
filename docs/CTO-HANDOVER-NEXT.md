@@ -5,6 +5,42 @@
 
 ---
 
+## 0-X. 🟡🟡 **CEO 판단 재사용 — 다음 세션이 «바로» 할 수 있는 것은 ④ 하나다**
+
+🔵 감사 `docs/CEO-JUDGMENT-REUSE-AUDIT.md` · 설계 `docs/CEO-JUDGMENT-REUSE-DESIGN.md`(8절) ·
+이관 명세 `docs/CEO-GT-IMPORT-SPEC.md`. 🔴 **재조사 금지.**
+
+```
+🟢 **끝난 것** — ① `083_ceo_judgments.sql` **작성**(🔴 적용 0) · C42/C50 **별도 CEO GT**
+   (`__tests__/ceo-gt-latest.ts`) · 계약 **16** · 변이 **M1~M4 FAIL→복구** · 이관 **명세**
+
+🔴🔴 **CPO ②(신규 쓰기 경로)는 «구현 불가» 다 — 쓸 표가 없다**
+   `083` 이 **적용 보류** 이고 `ceo_judgments`·`ceo_judgment_axes` 가 DB 에 **없다**(실측 0행).
+   ⟹ 지금 구현하면 **배포 즉시 런타임 오류** 다(WU-130 이 기록한 그 모양).
+   🔵 **선행조건은 하나** — `083` 적용 승인. 그 전에는 설계(§4-2·§6-2)까지가 전부다.
+
+🟡🟡 **다음 세션이 바로 할 것 = CPO ④ 「과거 DIFFERENT 표시 UI」**(083 과 무관)
+   🟢 읽을 데이터가 **이미 있다** — `candidate_reviews` 사람 판단 **38행**
+      (SAME 22 · DIFFERENT 15 · SIMILAR 1 · 🟢 `villagekids…pale-blue-3d-logo` **충돌 1건**)
+   🟢 표시 자리도 있다 — 📚 「이전에 확인한 후보」 구역(WU-131) ·
+      조회 owner `listCandidateReviews`(🟢 `human_verdict` 로 거르지 않는다)
+   🔵 설계 좌표 = `CEO-JUDGMENT-REUSE-DESIGN.md` **§3-2 · §3-3**
+      키 `reviewKey(candidate_url)`(**저장과 같은 정규화기**) ·
+      산출 `priorHumanReview { verdict · reviewedAt · source · noteExists · conflict }` ·
+      `conflict` = 같은 키에 **서로 다른 verdict 가 둘 이상**(🟢 실측 1건이 그 모양)
+   🔴🔴 **금지(CPO 불승인)** — 검색 후보 자동 제외 · 판정 자동 차단 · 가격비교 차단 ·
+      과거를 최신으로 덮어쓰기 · 과거를 현재 판단처럼 표시 · 「제외됨/차단」 어휘
+   🔴 **C06 이 필수 회귀 사례** 다 — 과거 DIFFERENT → 최신 SAME 이력이 보이고,
+      과거 DIFFERENT 때문에 **현재 SAME 후보가 사라지지 않아야** 한다(계약 D-1b 가 그 축을 잠근다)
+   🔴 화면 축은 **마운트 DOM** 으로만 완료 선언한다(Render PASS ≠ 소스 PASS)
+
+🔴 **CPO 결정 대기 셋**(`CEO-GT-IMPORT-SPEC.md` §6) — ⒜ 그룹 메모 처리(`raw_note` 비우기
+   ↔ 복제 + 표시 칸) ⒝ 이전 판단 적재(11→13행) ⒞ 🔴 **밀린 migration 둘**
+   (`078`·`081` 산출물이 DB 에 없다 · 운영 소비처 0 · **083 을 먼저 적용해도 되는가**)
+```
+
+---
+
 ## 0-Y. 🔵🔵 **전략 기준선이 재정렬됐다 — 다음 한 수는 「국내 가격 매칭 정확도」다**
 
 🔴 **좌표는 `docs/START-HERE.md` §0-STRATEGY 하나다**(CPO 확정 2026-11-07 · 우선순위 9 + 실행 순서 7).

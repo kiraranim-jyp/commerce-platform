@@ -180,6 +180,61 @@
 🟢 예상 변경 — 운영 **2 파일 · 약 +25줄** · 계약 **A1~A5 · B1~B3 · C1~C2** · 변이 **M1~M4**
 ```
 
+### 🟡🟡 **0-CEO-LOOP. CEO 판단 재사용 — 감사 완료 · 설계안 제출 · CPO 승인 대기**(2026-11-07)
+
+🔵 감사 `docs/CEO-JUDGMENT-REUSE-AUDIT.md` · 설계 `docs/CEO-JUDGMENT-REUSE-DESIGN.md`(8절).
+🔴 **설계·조사·Shadow 만** — 운영 판정 0 · 자동 차단 0 · GT 원본 0 · **migration 0** · DB 쓰기 0.
+
+```
+🟢🟢 **CPO 진단을 둘 정정했다**(CPO 가 수락) —
+   ① CEO 판단 재사용은 **0 이 아니다** — `SAME` 이 **두 경로** 에서 쓰인다:
+      `listReviewedSameUrls`→`__reviewed_same__`(**발견**) · `listSnapshotVerifiedSameKeys`(**가격 자격**)
+      🔴 DIFFERENT/SIMILAR/UNDECIDED 재사용은 **전건 0** 이고 그것은 **CPO 가 명시한 금지** 다
+   ② `ceoAxes` 는 비었지만(**0/11**) `ceoNote` 에 축 근거가 **10/11** 에 있다 ⟹
+      「근거가 없다」가 아니라 **「구조화되지 않았다」** 다 · 🔴 단 고유 note 는 **5개**(그룹별)
+
+🟢 **①(C42·C50 별도 CEO GT) 구현 완료** — `__tests__/ceo-gt-latest.ts` · 계약 **14 passed** ·
+   변이 **M1~M4 전부 FAIL → 복구**(최신으로 접기 · ceoAxes 추론 · 그룹 분배 · C50 분모 포함)
+   🔴 `SAME05_BASELINE` **불변**(A-1) · `wu-059` 원본 **불변**(A-2) · `CEO_RELABEL` 에 C06 만(A-3)
+   🟢 충돌 **정확히 둘** — `C50 DIFFERENT→UNDECIDED` · `C42 SAME→DIFFERENT`(prior 와 latest **둘 다** 보존)
+
+🔴🔴 **DB 실측이 설계를 바꾼 사실 셋**
+   ⒜ **`human_note` 가 DB 에 전건 0** — CEO 산문 근거는 **fixture 에만** 있다
+      ⟹ 「원문 메모를 항상 보존」이 **지금 성립하지 않는다**(쓰는 경로가 없다)
+   ⒝ **같은 URL 에 사람 판단이 이미 충돌** 한다(`villagekids…pale-blue-3d-logo` → `DIFFERENT | SAME`)
+      🔴 그런데 `candidate_reviews` 에 **버전·이력 칸이 0** 이다 ⟹ 덮어쓰면 뒤집힘이 안 보인다
+   ⒞ 같은 URL 에 행이 **최대 39** 다(부분 유니크 둘) ⟹ 🔴 **FK 를 `candidate_reviews.id` 로 걸면
+      한 판단이 흩어진다** ⟹ 새 표는 **URL 키로 조회만** 잇는다(FK 없음)
+
+🟡 ERD 제출 — `ceo_judgments`(version · supersedes_id · raw_note) + `ceo_judgment_axes`
+   (축별 **행** 이라 0축도 저장 가능 · 🟢 **행 없음=미입력 / state=UNKNOWN=확인 불가** 로 구분)
+   🔴 migration 번호는 **083** 이고 **파일을 만들지 않았다**(승인 전 생성은 밀린 migration 이 된다)
+🟡 입력 UX — 🔴 실측 **전체 판정 11/11 vs 축 라디오 0/110** ⟹ 「라디오를 더 잘 만든다」가 답이 아니다.
+   제안: 필수는 전체 판정 하나 · **판단을 가른 축만** 골라서 구조화 · 원문 메모 **항상** 보존
+🟢🟢 **CPO 판정 내려왔다 — 넷 다 결정됐다**(2026-11-07):
+   ① migration `083` **작성 승인 / 적용 보류** ② 쓰기 경로 **설계·구현 승인** ·
+   11쌍 적재는 **명세 선행** ③ S1-6 은 **`decision_context`**(🔴 새 축 금지) ·
+   ④ 과거 DIFFERENT **표시 전용 승인**(🔴 자동 차단·검색 제외 **불승인**)
+
+🟢 **집행 완료** — `083_ceo_judgments.sql` **작성**(적용 0) ·
+   이관 명세 `docs/CEO-GT-IMPORT-SPEC.md` · 계약 **16 passed**(변이 M1~M4 FAIL→복구)
+   🟢 충돌 검사 실측 — 표·인덱스 이름 **충돌 0**
+🔴🔴 **그 검사가 밀린 migration 둘을 찾았다** — `078`(commerce_egress_events) ·
+   `081`(candidate_reviews.analysis_state) 산출물이 **DB 에 없다**.
+   🟢 운영 코드 소비처 **0** 이라 런타임 결함은 아니다 · 🔴 **083 을 먼저 적용해도
+   되는지 CPO 판정 필요**
+🔴🔴 **CPO ②(쓰기 경로)는 «지금 구현할 수 없다»** — `083` 미적용이라 **쓸 표가 없다**
+   ⟹ 설계까지만 했다(구현 0). 선행조건은 **083 적용 승인 하나** 다
+🟡 **CPO ④(표시 UI)는 083 과 무관하고 바로 구현 가능** — 읽는 것이 기존
+   `candidate_reviews`(사람 판단 **38행** · `villagekids` 충돌 1건 포함) ·
+   🔵 좌표는 `CEO-JUDGMENT-REUSE-DESIGN.md` **§3-2**(조인 키·산출 모양·금지) ·
+   🔴 용량 판단(§4-C)으로 **다음 세션** 에 넘긴다 — **재조사 0 으로 들어간다**
+🔴 남은 CPO 결정 **셋**(`CEO-GT-IMPORT-SPEC.md` §6) — 그룹 메모 처리 ·
+   이전 판단 적재 여부 · 밀린 migration 둘
+```
+
+---
+
 ### 🔵 **다음 한 수 = 실행 순서 2 「국내 가격 매칭 정확도」 — 착수 좌표 «확인 완료»**
 
 🔵 좌표 전문 `docs/NEXT-WU-DOMESTIC-MATCH-ACCURACY-COORDS.md`. 🔴 **재조사 금지 · 측정 0.**

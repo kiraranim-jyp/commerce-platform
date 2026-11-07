@@ -120,6 +120,19 @@ owner   `summarizeCandidateOverseasPrices`
 🔴 이 교차표는 **운영 정책을 바꾸기 위한 근거** 이지 두 축을 **하나의 점수로 만들기 위한 것이 아니다.**
 ```
 
+### 🟡 **확인 항목 추가 — 「CEO 판단 활용 여부」**(CPO 2026-11-07)
+
+```
+🟢 측정은 `docs/CEO-JUDGMENT-REUSE-AUDIT.md` **§3 표** 를 그대로 쓴다(재조사 0):
+   ① `listReviewedSameUrls` → `__reviewed_same__`        **발견** 축 · `SAME` 만
+   ② `listSnapshotVerifiedSameKeys`                       **가격 자격** 축 · `SAME` 만
+   🔴 DIFFERENT / SIMILAR / UNDECIDED 재사용 **전건 0**(CPO 명시 금지)
+🔴 그래서 이 WU 에서 **그 금지를 열지 않는다** — 과거 DIFFERENT 표시 배선은
+   별도 승인 사안이다(`docs/CEO-JUDGMENT-REUSE-DESIGN.md` §3 · §8-④).
+🟡 최신 CEO 라벨은 **별도 버전** 에서 읽는다 — `__tests__/ceo-gt-latest.ts`
+   (🔴 `SAME05_BASELINE` 과 **합치지 않는다** · C50 은 **확정 분모 제외**).
+```
+
 ### 🔵 완료 보고 **9항**(CPO 고정)
 ```
 1 축 A 기준선과 측정 결과        2 축 B 기준선과 측정 결과
