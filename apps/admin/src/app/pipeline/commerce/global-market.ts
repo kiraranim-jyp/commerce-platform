@@ -236,9 +236,82 @@ export interface GlobalMarketRow {
   compact: string;
 }
 
+/**
+ * ══════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 **통화 기준 문구**(CPO 승인 2026-11-07 · PHASE 2)
+ * ══════════════════════════════════════════════════════════════════════════════
+ *
+ * ── 왜 이 줄이 필요한가 ─────────────────────────────────────────────────────
+ * 어떤 판매처는 **시장이 달라도 같은 통화로만** 금액을 돌려준다. 그러면 이 카드의
+ * 🇯🇵 줄이 `€54` 가 되는데, 그것은 **사실** 이지만 셀러는 「일본 시장 가격」으로 읽는다.
+ *
+ * 🔴🔴 그 판매처에서 **현지 통화를 «요청해» 받는 것은 해결이 아니다** — 실측으로
+ *    그 값이 **사이트 자체 환율로 환산된 값** 임이 확정됐다(PHASE 2-B · 국가 × 통화
+ *    격자에서 `JPY/EUR` 편차 **0.006%** · 단일 환율이 격자 전부를 설명한다).
+ *    저장·표시하면 `GLOBAL-SOURCE-PRICE-POLICY-FINAL` 이 금지한 「환율로 현지 통화를
+ *    만들어 내기」와 **같은 산술** 이 된다. 전문 `docs/PHASE2-SMALLABLE-LOCAL-CURRENCY-VERDICT.md`.
+ * 🟢 그래서 **값을 바꾸지 않고 「그 값이 무엇인지」만 한 줄로 말한다.**
+ *
+ * ── 🔴 왜 «조건부» 인가 — 무조건 붙이면 거짓이 된다 ─────────────────────────
+ * 같은 카드가 **현지 통화를 말하는 판매처** 에도 쓰인다(운영 DB 실측):
+ * ```
+ *   louisemisha.com   en-jp JPY · en-au AUD · en-ca CAD · en-gb GBP · en-us USD  (6통화)
+ *   bobochoses.com    en-us USD                                                  (2통화)
+ * ```
+ * 거기에 「현지통화 가격이 아닙니다」가 뜨면 **사실과 반대** 다.
+ *
+ * ── 조건은 «관측 데이터» 에서만 나온다 ──────────────────────────────────────
+ * 🔴 판매처명·호스트 목록·등록부를 **쓰지 않는다**(CPO 명시 · `§F` 하드코딩 금지와
+ *    Main Story WU 의 교훈). 🔴 그래서 이 문구는 **특정 판매처를 지목하지 않는
+ *    일반 설명** 이고, 다른 판매처에 같은 데이터 모양이 생기면 **같은 조건으로 발화** 한다.
+ *
+ * ── 🔴 이 줄이 «말하지 않는» 것 ─────────────────────────────────────────────
+ *  · **「배송 가능하다」** — 배송 가능 여부는 확인되지 않았다(배송 가능 국가 가드는
+ *    아직 없다 · `docs/BACKLOG-SMALLABLE-P1.md` BL-2). 그래서 「배송국가별 가격」이
+ *    아니라 **「배송국가를 지정해 조회한 가격」** 이다 — **우리가 한 행위** 만 말한다.
+ *  · **「사이트가 환산한다」** — 그것은 한 판매처에서만 측정된 사실이다.
+ */
+const CURRENCY_NOTE_SUFFIX = "배송국가를 지정해 조회한 가격입니다(현지통화 가격이 아닙니다)";
+
+/**
+ * 조건 셋을 **모두** 넘겨야 문구가 선다. 하나라도 못 넘으면 `null` 이다 —
+ * 「모르면 말하지 않는다」가 이 파일의 규칙이고, 여기서도 같다.
+ *
+ * 🔴 **금액이 있는 관측만** 본다. 문구가 「가격 기준 통화」를 말하므로 그 통화는
+ *    화면에 실제로 선 금액들의 통화여야 한다(`—` 줄의 통화를 근거로 삼지 않는다).
+ */
+function buildCurrencyNote(observations: MarketObservationInput[]): string | null {
+  const priced = observations.filter((o) => o.priceAmount != null && Number.isFinite(o.priceAmount));
+  const currencies = new Set<string>();
+  for (const o of priced) {
+    const code = o.currency.trim().toUpperCase();
+    // 🔴 통화를 읽지 못한 관측이 섞여 있으면 **판정하지 않는다**(CPO: 불완전 시 미표시).
+    if (!code) return null;
+    currencies.add(code);
+  }
+  // 통화가 둘 이상이면 이 판매처는 시장별 통화를 말한다 ⟹ 문구를 붙이면 거짓이다.
+  if (currencies.size !== 1) return null;
+  /**
+   * 🔴 시장 **지역** 이 둘 이상이어야 한다. 한 줄로는 「통화가 시장을 따라가는가」를
+   *    말할 수 없다. 🔴 `en-int`(국제 공용)는 지역이 **없다** — `parseMarketRegion` 이
+   *    이미 null 을 주므로 여기서 따로 걸러내지 않는다(그 판별의 owner 는 하나다).
+   */
+  const regions = new Set(
+    priced.map((o) => parseMarketRegion(o.marketCode)).filter((r): r is string => r !== null),
+  );
+  if (regions.size < 2) return null;
+  return `가격 기준 통화 ${[...currencies][0]!} · ${CURRENCY_NOTE_SUFFIX}`;
+}
+
 export interface GlobalMarketCard {
   title: string;
   rows: GlobalMarketRow[];
+  /**
+   * 🔵 줄 목록 **위** 에 서는 한 줄. 조건을 못 넘으면 `null` 이고 화면에 아무것도 서지 않는다.
+   * 🔴 컴포넌트가 이 문자열을 조립하지 않는다 — 이 파일이 소유한다(같은 사실이 화면마다
+   *    다른 문장으로 뜨는 것을 막는 이 파일의 기존 규칙 그대로다).
+   */
+  currencyNote: string | null;
   /**
    * 관측된 시장이 하나도 없을 때. 판단 실패가 아니다 — 흔적이 없는 것이다.
    *
@@ -307,6 +380,9 @@ export function buildGlobalMarketCard(
   return {
     title: PRICE_SECTION_TITLE.SELLER_GLOBAL_MARKET,
     rows,
+    // 🔴 `rows` 가 아니라 **관측** 에서 만든다 — `GlobalMarketRow` 에는 통화 칸이 없다
+    //    (그 칸을 더하면 줄이 통화를 다시 포맷하기 시작한다).
+    currencyNote: buildCurrencyNote(input.observations),
     empty:
       rows.length > 0
         ? null

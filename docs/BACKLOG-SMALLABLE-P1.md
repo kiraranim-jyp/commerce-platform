@@ -34,8 +34,26 @@
 ### 🟢 그래서 남는 것
 ```
 🔴 **작업 없음.** 추정·환산·대체를 할 이유가 애초에 없었다(값이 있다).
-🟢 **교훈만 남는다** — 「price_observations 를 URL 축으로 세면 원가 행이 조용히 빠진다.
-   원가 행은 `source_product_url` 이 null 일 수 있으므로 **`snapshot_id` 축으로 센다**.」
+```
+
+### 🔴🔴 **남겨야 하는 교훈**(CPO 가 문장으로 지정했다 — 그대로 적는다)
+
+> `price_observations` 의 **원본가격 행** 을 `source_product_url` 만으로 집계하면
+> **`source_product_url = NULL` 인 행이 누락될 수 있다.** 앞으로는
+> **`snapshot_id` · observation type · source provenance 를 «함께» 확인** 해야 한다.
+
+```
+실제 적용 — 이 세 축을 같이 본다:
+  `snapshot_id`         원상품 축(URL 이 없어도 행이 붙는다)
+  observation type      `source`(SELLER_ORIGIN / DOMESTIC_SHOP / NAVER_SHOPPING)
+  source provenance     `source_label`(**ORIGIN_FX** / KR_MARKET / **MARKET_PROBE**)
+🟢 이번 건에서 그 셋을 같이 보자 답이 한 줄에 나왔다 —
+   `(원본) · ORIGIN_FX · EUR · n 63 · with_url 0`
+🔴 그리고 그 구분은 **의미가 다르다** — `MARKET_PROBE` 는 **원가가 아니다**
+   (`run-price-check.ts:128` · 원가/마진/CASE 판정이 그 행을 원가로 읽지 않게 하는 표식).
+```
+
+```
 🔴 그리고 CPO 처리 기준은 **그대로 유효** 하다(다른 판매처에서 진짜 부재가 나올 때를 위해):
    현재가를 정가로 **복사하지 않는다** — 할인 없는 상품에 **가짜 할인** 이 생긴다
    (`smallable-market-probe.ts:294-297` 이 `regularPrice: null` 로 둔 이유).

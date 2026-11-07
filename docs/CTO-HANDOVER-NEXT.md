@@ -20,9 +20,24 @@
    🔴 PHASE 1 의 「① market_country 채우기」는 **효과 0 · 의미 충돌** 로 정정(구현 0)
    🟢 계약 **10** + 변이 **M1~M3 전부 FAIL → 바이트 복구** · 운영 diff **0**
 
-🔵 **다음 = 실행 순서 2 「국내 가격 매칭 정확도」**
-   SAME / PRESUMED_SAME / SIMILAR / DIFFERENT 구분 + **가격비교 적격성** 검증.
-   🔴🔴 **threshold 완화 금지**(CPO 명시). 🟢 기준선은 아래 §0-Z 를 그대로 쓴다.
+🟢🟢 **글로벌 시장 카드 통화 문구 — CPO 승인 · 구현 완료**(운영 2파일)
+   「가격 기준 통화 **{관측 통화}** · 배송국가를 지정해 조회한 가격입니다(현지통화 가격이 아닙니다)」
+   발화 = 지역 ≥2 **AND** 통화 1종 **AND** 통화 완전 · 🟢 운영 8곳 중 **Smallable 하나**
+   계약 **24**(순수 14 · 마운트 DOM 6 · 운영 데이터 4) · 변이 **M1~M4 전부 FAIL → 복구**
+   🔴 호스트 목록·등록부·하드코딩 **0** · 🔴 **CEO 확인 1회로만** 닫힌다
+   전문 `docs/WORKORDER-GLOBAL-MARKET-CURRENCY-NOTE.md`(머리에 집행 결과)
+🟢 **BL-1 종결** — 「원본가격 행 부재」가 **내 측정 오류**(URL 축). `snapshot_id` 축으로
+   `ORIGIN_FX` **63행 실재** · `source_product_url` 전건 null(설계대로) ⟹ P1 아님.
+   🔴 CPO 지정 교훈 — `snapshot_id` · `source` · `source_label` 을 **함께** 본다.
+🔴 **BL-2(배송 가능 국가 가드) P1 유지 · 미착수** — `docs/BACKLOG-SMALLABLE-P1.md`
+
+🔵 **다음 = 실행 순서 2 「국내 가격 매칭 정확도」(CPO 착수 승인 · 구조 고정)**
+   🔵 좌표 `docs/NEXT-WU-DOMESTIC-MATCH-ACCURACY-COORDS.md` §5 가 **CPO 고정 구조** 다 —
+      축 A(STEP 6 33/22쌍 · verdict 다섯 보존 · Main Story 전후 둘 다) ·
+      축 B(STAGE 7-2 12/18 · 5조건 순서 보존 · FIT/S1-4 반례 회귀) ·
+      결합(**독립 분모 유지 · 공통 ID 만 교차표 · 합산 금지**) · 완료 보고 **9항**
+   🔴🔴 **threshold 완화 금지 · 보류 승격 운영 반영 금지 · Shadow↔운영 분리**(CPO)
+   🔴 **이 WU 는 측정이다** — 수정은 블로커 확인 + CPO 범위 개방 뒤에만
 ```
 
 ---

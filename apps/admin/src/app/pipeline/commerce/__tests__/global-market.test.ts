@@ -188,12 +188,32 @@ describe("카드에서 지운 것들은 되살아날 자리가 없다", () => {
     expect(Object.keys(observation).sort()).toEqual(["currency", "marketCode", "priceAmount", "priceKrw"]);
   });
 
+  /**
+   * 🔴🔴 **2026-11-07 — 이 단언이 내 변경을 잡았고, 풀지 않고 «강화» 했다.**
+   *
+   * CPO 가 **통화 기준 문구 한 줄** 을 승인했다(`currencyNote`) ⟹ 카드 칸이 **4개** 가 됐다.
+   * 🔴 그런데 이 테스트의 의도는 「카드 수준 설명 줄을 **되살리지 말라**」(2026-09-13
+   *    `GLOBAL-SOURCE-PRICE-POLICY-FINAL` 이 `note`·`invariant` 를 지운 그 결정)이고,
+   *    내 문구는 **정확히 그 가족** 이다. 두 결정이 부딪히는 자리라 **새 결정이 이기되
+   *    옛 결정이 막으려던 것은 그대로 막는다**:
+   * ```
+   * 🟢 옛 결정이 지운 칸(`note`·`invariant`·`disclaimer`)은 **여전히 없다**
+   * 🟢 새 줄은 **조건부** 다 — 통화가 여러 종이면 `null`(무조건 서는 설명문이 아니다)
+   * 🟢 칸 수는 **정확히 4** — 다섯 번째 설명 칸이 생기면 여기서 걸린다
+   * ```
+   */
   it("카드에는 하단 disclaimer도 🟢 불변식 한 줄도 없다", () => {
-    expect(Object.keys(CARD).sort()).toEqual(["empty", "rows", "title"]);
+    expect(Object.keys(CARD).sort()).toEqual(["currencyNote", "empty", "rows", "title"]);
+    // 🔴 옛 결정이 지운 칸들이 되살아나지 않았다(이 테스트의 원래 의도).
+    for (const deleted of ["note", "invariant", "disclaimer", "footnote"]) {
+      expect(Object.keys(CARD)).not.toContain(deleted);
+    }
     const shown = JSON.stringify(CARD);
     for (const gone of ["동일 상품", "동일상품", "판매자 직접 관측", "원화 환산", "비교상품 가격이 아닙니다"]) {
       expect(shown).not.toContain(gone);
     }
+    // 🔴🔴 **무조건 서는 설명문이 아니다** — 통화가 여러 종인 판매처에서는 `null` 이다.
+    expect(buildGlobalMarketCard({ observations: MIXED_CURRENCY }).currencyNote).toBeNull();
   });
 
   it("제목은 CEO가 확정한 글자다", () => {
@@ -234,8 +254,20 @@ describe("판매자 글로벌 시장 가격은 국내 비교상품과 절대 섞
     expect(JSON.stringify(CARD)).not.toContain(PRICE_MEANING_LABEL.DOMESTIC_COMPARABLE_PRICE);
   });
 
+  /**
+   * 🔴 2026-11-07 — 칸이 넷이 됐다(`currencyNote`). 🟢 그런데 이 테스트의 의도는
+   *    **「집계 숫자를 만들지 말라」** 이고 키 집합은 그것의 **프록시** 였다 ⟹
+   *    프록시를 고치면서 **실제 성질을 직접 단언** 한다(이 저장소의 「동어반복 금지」).
+   */
   it("시장끼리 평균·최저를 내지 않는다 — 아홉 번째 가격을 만들지 않는다", () => {
-    expect(Object.keys(CARD).sort()).toEqual(["empty", "rows", "title"]);
+    expect(Object.keys(CARD).sort()).toEqual(["currencyNote", "empty", "rows", "title"]);
+    // 🔴 집계 칸이 **이름으로도** 없다.
+    for (const key of Object.keys(CARD)) expect(key).not.toMatch(/average|avg|lowest|highest|total|sum|mean/i);
+    // 🔴 그리고 카드 전체에 **줄이 아닌 금액** 이 없다 — 숫자 칸은 줄 안에만 있다.
+    const { rows: _rows, ...withoutRows } = CARD;
+    expect(JSON.stringify(withoutRows)).not.toMatch(/\d[\d,]*\.?\d*\s*원|₩\s*\d/);
+    // 🟢 새 문구는 **금액을 말하지 않는다**(통화 코드만 말한다).
+    expect(CARD.currencyNote).not.toMatch(/\d/);
   });
 });
 

@@ -1686,7 +1686,15 @@ function GlobalMarketHint({
  * MI-FINAL-UX-3 — 자기 테두리를 버렸다. 팝오버가 이미 상자라서, 상자 안의
  * 상자가 되면 한 사실에 테두리가 둘이 된다.
  */
-function GlobalMarketCardView({ card }: { card: GlobalMarketCard }) {
+/**
+ * 🔴 **export 한 이유는 하나다 — 마운트 DOM 으로 완료 선언하기 위해서다**(헌장 §5).
+ *    `MiPanelView` 전체를 마운트하려면 운영 `PriceHistoryResponse` 전체가 필요하고,
+ *    그 fixture 를 **칸을 추측해 지어내다 두 번 터진 기록** 이 있다
+ *    (`e2e-close-01-render-owner.test.ts` §「이 파일이 하지 못한 것」).
+ * 🟢 그래서 **사본을 만들지 않고 이 컴포넌트를 그대로 마운트** 한다.
+ * 🔴 운영 호출부는 **여전히 이 파일 안 하나** 다(`GlobalMarketHint` 의 팝오버).
+ */
+export function GlobalMarketCardView({ card }: { card: GlobalMarketCard }) {
   return (
     <div>
       {card.rows.length === 0 ? (
@@ -1699,11 +1707,25 @@ function GlobalMarketCardView({ card }: { card: GlobalMarketCard }) {
            나라 줄 목록뿐이다. 줄 아래에 있던 🟢 불변식 한 줄과 ※ disclaimer
            한 줄을 지웠다: 둘 다 "이 값이 무엇이 아닌지"를 설명하는 문장이었고,
            네 줄짜리 표 밑에 두 문단이 붙으면 설명이 표보다 길어진다. */
-        <ul className="space-y-0.5">
-          {card.rows.map((row) => (
-            <GlobalMarketRowView key={row.marketCode} row={row} />
-          ))}
-        </ul>
+        <>
+          {/* 🔵 통화 기준 문구(CPO 승인 2026-11-07). 🔴 **줄 목록보다 앞** 에 선다 —
+              셀러가 €54 를 먼저 읽고 「일본 시장 가격」으로 해석한 뒤에 설명이 오면
+              늦다. 🔴 문자열은 global-market.ts 가 소유한다(여기서 조립하지 않는다) ·
+              조건을 못 넘으면 null 이라 **아무것도 서지 않는다**. */}
+          {card.currencyNote && (
+            <p
+              data-testid="global-market-currency-note"
+              className="mb-1 text-[10px] leading-snug text-text-tertiary"
+            >
+              {card.currencyNote}
+            </p>
+          )}
+          <ul className="space-y-0.5">
+            {card.rows.map((row) => (
+              <GlobalMarketRowView key={row.marketCode} row={row} />
+            ))}
+          </ul>
+        </>
       )}
     </div>
   );
