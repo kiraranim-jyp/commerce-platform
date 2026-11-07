@@ -80,9 +80,23 @@
 🟡 백로그 유지(현재 P0 제외) — 등록가격 · 010 migration.
 ```
 
-### 🟢🟢 **0-PHASE2. 실행 순서 1 종료 — `a0b3c08` 은 「하면 안 되는 일」이었다**
+### 🟢🟢 **0-PHASE2. 실행 순서 1 — `a0b3c08` = 🟢🟢 CLOSED**(CPO 승인 2026-11-07)
 
 🔵 전문 `docs/PHASE2-SMALLABLE-LOCAL-CURRENCY-VERDICT.md`(10절). 🔴 **재조사 금지 · 운영 변경 0.**
+
+```
+🟢🟢 **CPO 최종 판정 — `a0b3c08` CLOSED.** 「미완료 구현이 아니라, Smallable 에서는
+   현지통화 관측이 **구조적으로 불가능** 하고 다른 판매처에서는 **이미 작동한다** 는
+   사실을 확인한 작업」(CPO 문장).
+🔴🔴 **다시 열지 않는다** — 아래가 전부 CPO 확정이다:
+   Smallable 현지통화 구현 **중단 확정** · `market_country` 의미 변경 **금지** ·
+   §F 금지 해제 **불승인** · 운영 코드 변경 **0 유지** · 조사·계약·검증 결과 **보존** ·
+   문서 삭제/기존 완료 기록 수정 **없음**
+🟢 계약 10건이 그 CLOSED 를 **기계로 지킨다**
+   (`packages/crawler/src/__tests__/phase2-market-currency-is-not-site-fx.test.ts`)
+🟡 후속 **둘** — ⒜ 글로벌 시장 카드 문구(작업지시서 **제출 완료 · CPO 승인 대기** ·
+   `docs/WORKORDER-GLOBAL-MARKET-CURRENCY-NOTE.md`) ⒝ 백로그(`docs/BACKLOG-SMALLABLE-P1.md`)
+```
 
 ```
 🔵 **CPO 질문의 답 — 아니다. JP 조회 결과는 JPY 가 아니다**
@@ -111,20 +125,65 @@
 🔴 전수검토 10축 전부 기록(⑨ 「§F 를 연다」도 **금지로 적었다** — 🔴 열어도 효과가 없다)
 🔴 내 1차 하니스 판정이 **틀렸다** — 편차 임계값 0.5% 가 USD 를 「시장별 독립」으로 오판했다
    (정수 반올림 잡음). 🟢 **단일 환율 구간 교집합** 으로 고치고 그 오판을 **계약 C-2 로 남겼다**
-🟡 CPO 판정 셋 — ① a0b3c08 CLOSED 여부(🟡 권고: 닫는다) ② 카드가 「EUR 기준 · 배송국가별」
-   이라고 말할 것인가(🔴 UI 라 CTO 가 안 했다) ③ 백로그 둘 등록(Smallable 원본가 행 부재 ·
-   배송 가능 국가 가드 부재)
+🟢 CPO 판정 셋 **전부 내려왔다** — ① **CLOSED 승인** ② **문구 정책 승인**(🔴 단 작업지시서
+   승인 전 운영 코드 변경 금지) ③ **백로그 등록**(🟢 그중 BL-1 은 **등록 즉시 닫혔다** —
+   「원본가 행 부재」가 **내 측정 오류** 였다: `snapshot_id` 축으로 세니 `ORIGIN_FX` **63행 실재** ·
+   `source_product_url` 이 **전건 null** 이라 URL 축 질의가 못 센 것이다 · 🟢 그것이 설계대로다)
 ```
 
-### 🔵 **다음 한 수 = 실행 순서 2 「국내 가격 매칭 정확도」**
+### 🟡 **0-WORKORDER. 글로벌 시장 카드 문구 — 작업지시서 «제출 완료 · CPO 승인 대기»**
+
+🔵 전문 `docs/WORKORDER-GLOBAL-MARKET-CURRENCY-NOTE.md`. 🔴 **승인 전 운영 코드 변경 금지**(CPO).
 
 ```
-SAME / PRESUMED_SAME / SIMILAR / DIFFERENT 구분 + **가격비교 적격성** 검증.
-🔴🔴 **매칭 수를 늘리기 위한 threshold 완화는 금지** 다(CPO 명시 · 원칙 ⒝).
-🟢 출발점이 이미 있다 — 아래 §0-STEP6 의 기준선(33쌍/22쌍 TP·FP·FN·TN)과
-   `docs/MI-REEVAL-STEP6-HOLD-AND-COLOR.md` §A. 🔴 **그 조사를 다시 하지 않는다.**
-🔴 STEP 6 은 **폐기되지 않았다** — 「국내 동일상품 매칭 정확도 개선의 **후속 검증 항목**」이고
-   `B-shadow-v2` 는 v1 과 **분리 보존** 이며 **운영 반영은 별도 승인 전까지 금지** 다.
+🟢 데이터 흐름·표시 위치 **확인 완료** — `data.sellerGlobalMarkets` →
+   `buildGlobalMarketCard`(Panel:3469) → `GlobalMarketHint`(본문 한 줄 `ⓘ 글로벌 시장 가격 ▸`)
+   → **팝오버** → `GlobalMarketCardView` → `GlobalMarketRowView`(`🇫🇷 프랑스 €75.00 ≈ ₩116,742`)
+🔴🔴 **CPO 권장 문구에서 둘을 바꿔 올렸다**(승인 요청 2건):
+   ⒜ 「Smallable」·「€81.00」 줄 **제외** — 카드 입력이 `observations` **4칸뿐** 이고
+      판매처명·대표금액 칸이 **없다**. 그 입력을 뚫는 것은 최소 UI 가 아니고
+      `global-market.ts` 가 **의도적으로 막아 둔 자리** 다(원가·국내 비교상품 재유입 경로)
+   ⒝ 「배송국가별 가격」 → **「배송국가를 지정해 조회한 가격」** — CPO 원칙
+      「배송 가능 여부가 검증되지 않았다면 배송 가능하다고 표현하지 않는다」 준수 ·
+      🔴 **BL-2(배송 가능 국가 가드 부재)가 아직 열려 있다** ⟹ 우리는 JP 배송을 **모른다**
+🔴🔴 **무조건 표시는 거짓이 된다** — 같은 카드가 **현지통화를 말하는 판매처** 가 실재한다
+   (`louisemisha.com` en-jp **JPY** 6통화 · `bobochoses.com` en-us **USD** · junioredition 3통화)
+🟢 그래서 **발화 조건을 관측 데이터에서 유도** 했다 — 「시장 **지역** ≥2 인데 **통화가 1종**」
+   (지역은 카드가 이미 쓰는 `parseMarketRegion` · `en-int` 는 지역 아님) ·
+   🟢 운영 DB 전수 검증 — 판매처 **8곳 중 Smallable 하나에만** 걸린다 ·
+   🟢 **호스트 목록 0 · 등록부 0 · 하드코딩 0**(§F 준수 · Main Story 교훈)
+🟢 예상 변경 — 운영 **2 파일 · 약 +25줄** · 계약 **A1~A5 · B1~B3 · C1~C2** · 변이 **M1~M4**
+```
+
+### 🔵 **다음 한 수 = 실행 순서 2 「국내 가격 매칭 정확도」 — 착수 좌표 «확인 완료»**
+
+🔵 좌표 전문 `docs/NEXT-WU-DOMESTIC-MATCH-ACCURACY-COORDS.md`. 🔴 **재조사 금지 · 측정 0.**
+
+```
+🔴🔴 **두 축을 하나로 보고하면 틀린다 — owner·분모가 다르다**
+   축 A 판정 구분    `compareCrossSellerProducts`(cross-seller.ts) · 기준선 **STEP 6**
+   축 B 가격 적격성  `summarizeCandidateOverseasPrices`(candidate-market.ts) ·
+                    기준선 **STAGE 7-2 — 33쌍 금액 자격 12/18(66.7%)**
+   🟢 **둘 다 기준선이 이미 있다 ⟹ 재측정이 아니라 «확장» 이다**
+🔴🔴🔴 **용어 함정 — 시스템에 `DIFFERENT` verdict 가 «없다»**
+   실제 타입은 `SAME | PRESUMED_SAME | SIMILAR | UNKNOWN | CONFLICT`(cross-seller.ts:77) ·
+   `DIFFERENT` 는 **사람 GT 어휘** 다 ⟹ 🔴 「SIMILAR = DIFFERENT」로 매핑하지 않는다
+   (SIMILAR 중 사람 SAME 이 실재한다 · STEP 6 FN 12 에 SIMILAR 3)
+🟢 **적격성은 5조건이고 «순서가 의미» 다**(candidate-market.ts)
+   ① :418 tier EXCLUDED ② :430 verdict ∉ {SAME, PRESUMED_SAME} ③ :444 blockers ∩
+   {BRAND_MISMATCH · NO_TITLE_OVERLAP · SAME_SELLER_DISTINCT_LISTING} ④ :448 금액 없음
+   ⑤ :462 priceStatus ≠ VERIFIED_CURRENT
+   🔴 ③ 집합을 넓히는 안은 **이미 반사실로 시험됐고 현재 집합이 이겼다**(:287-295) —
+      전체 `hasObservedDifference` 는 **사람 SAME 1건을 잃는다**(FIT · S1-4) · 다시 열지 않는다
+   🔴 `null` 은 막지 않는다 · `BRAND_UNCONFIRMED` 는 ③에 **없다**(그 사유 4건이 사람 SAME)
+   🔴🔴 그 집합·순서 변경은 **제품 정책** 이다(:265·:307 명시)
+🟡 새로 할 일 후보 **둘**(🔴 CTO 가 고르지 않았다 · 둘 다 **측정** 이고 구현 아님) —
+   ⒜ 축 A·B 를 **같은 분모로 조인**(「verdict 는 맞았는데 금액에서 빠진」 수를 분리) ·
+   ⒝ **국내 축 분모를 따로 찍는다**(위 둘은 **해외 후보 중심** 이다)
+🔴 금지 — threshold 완화 · 보류 승격 운영 반영 · Shadow 를 운영 성과로 보고 ·
+   두 축 합산 · GT 덮어쓰기 · 5조건 임의 변경 · 8축 재개방
+🔴 STEP 6 은 **폐기되지 않았다** — 「매칭 정확도 개선의 **후속 검증 항목**」이고
+   `B-shadow-v2` 는 v1 과 **분리 보존** · **운영 반영은 별도 승인 전까지 금지**
 🟡 CEO Evidence Review 11쌍은 **CEO 판단 대기 상태 유지**.
 ```
 
