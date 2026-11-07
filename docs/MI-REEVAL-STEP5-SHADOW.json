@@ -1,0 +1,4560 @@
+{
+ "note": "🔴 Shadow 평가 전용 · 운영 반영 0 · 점수·확률·가중치 0 · A/B/C 합산 금지",
+ "guardrail": {
+  "withMainStory": {
+   "baseline": {
+    "denom": 27,
+    "tp": 6,
+    "fp": 1,
+    "fn": 12,
+    "tn": 8
+   },
+   "shadow": {
+    "V1": {
+     "denom": 27,
+     "tp": 13,
+     "fp": 5,
+     "fn": 5,
+     "tn": 4
+    },
+    "V2": {
+     "denom": 27,
+     "tp": 10,
+     "fp": 4,
+     "fn": 8,
+     "tn": 5
+    }
+   }
+  },
+  "excludingMainStory": {
+   "baseline": {
+    "denom": 22,
+    "tp": 5,
+    "fp": 1,
+    "fn": 12,
+    "tn": 4
+   },
+   "shadow": {
+    "V1": {
+     "denom": 22,
+     "tp": 12,
+     "fp": 1,
+     "fn": 5,
+     "tn": 4
+    },
+    "V2": {
+     "denom": 22,
+     "tp": 9,
+     "fp": 0,
+     "fn": 8,
+     "tn": 5
+    }
+   }
+  },
+  "ceoBaseline": {
+   "denom": 10,
+   "tp": 2,
+   "fp": 2,
+   "fn": 1,
+   "tn": 5
+  },
+  "ceoShadow": {
+   "V1": {
+    "denom": 10,
+    "tp": 3,
+    "fp": 6,
+    "fn": 0,
+    "tn": 1
+   },
+   "V2": {
+    "denom": 10,
+    "tp": 3,
+    "fp": 5,
+    "fn": 0,
+    "tn": 2
+   }
+  },
+  "mainStoryPairs": [
+   "C22",
+   "C19",
+   "C20",
+   "C42",
+   "C25",
+   "S4-1"
+  ]
+ },
+ "groups": {
+  "A": 33,
+  "B": 109,
+  "C": 11,
+  "note": "🔴 A∩C = 11 · A∩B = 0 — 합산하지 않는다"
+ },
+ "aGroupConstraint": {
+  "candidateDescription": 0,
+  "originDescription": 0,
+  "of": 33
+ },
+ "verdictCrossTab": {
+  "PRESUMED_SAME": {
+   "SAME": 8,
+   "DIFFERENT": 5
+  },
+  "SIMILAR": {
+   "DIFFERENT": 1,
+   "SAME": 3
+  },
+  "SAME": {
+   "SAME": 6,
+   "DIFFERENT": 1
+  },
+  "CONFLICT": {
+   "DIFFERENT": 1,
+   "SAME": 1
+  },
+  "UNKNOWN": {
+   "UNCERTAIN": 6,
+   "DIFFERENT": 1
+  }
+ },
+ "change": {
+  "recoveredMissedSame": [
+   "C27",
+   "C11",
+   "C48",
+   "C14",
+   "C37",
+   "S1-1",
+   "S1-4"
+  ],
+  "lostCorrectSame": [],
+  "newFalseSame": [
+   "C22",
+   "C19",
+   "C20",
+   "C25"
+  ],
+  "filteredFalseSame": []
+ },
+ "unverifiedSynonyms": [
+  {
+   "axis": "COLOR",
+   "candidateDomain": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac036-mush-monster-duo-sweatshirt",
+   "status": "OBSERVED/UNVERIFIED",
+   "synonymOff": {
+    "status": "MISMATCH",
+    "why": "양쪽 모두 있으나 겹치는 값이 없다 — 원본 grey ↔ 후보 blue/red",
+    "onlyOrigin": [
+     "grey"
+    ],
+    "onlyCandidate": [
+     "blue",
+     "red"
+    ]
+   },
+   "synonymOn": {
+    "status": "MATCH",
+    "why": "의미가 같은 키워드 grey · 🟡 같은 축에 다른 값도 있다(옵션 가능)",
+    "matched": [
+     "grey"
+    ],
+    "onlyOrigin": [],
+    "onlyCandidate": [
+     "blue",
+     "red",
+     "brown"
+    ]
+   },
+   "originKeywords": [
+    {
+     "axis": "COLOR",
+     "raw": "grey",
+     "keyword": "grey",
+     "normalized": "grey",
+     "basis": "NORMALIZED",
+     "where": "DESCRIPTION",
+     "offset": 14,
+     "context": "Light heather grey sweatshirt. Organic Cotton 100%. Lo"
+    }
+   ],
+   "candidateKeywords": [
+    {
+     "axis": "COLOR",
+     "raw": "Blue",
+     "keyword": "blue",
+     "normalized": "blue",
+     "basis": "NORMALIZED",
+     "where": "TITLE",
+     "offset": 20,
+     "context": "Baby Sweater Suit ''Blue Moon'' Organic Cotton"
+    },
+    {
+     "axis": "COLOR",
+     "raw": "Gray",
+     "keyword": "gray",
+     "normalized": "grey",
+     "basis": "OBSERVED",
+     "where": "DESCRIPTION",
+     "offset": 301,
+     "context": "anic cotton with some elastane. The Gray Label logo embroidery is embroidere"
+    },
+    {
+     "axis": "COLOR",
+     "raw": "red",
+     "keyword": "red",
+     "normalized": "red",
+     "basis": "NORMALIZED",
+     "where": "DESCRIPTION",
+     "offset": 339,
+     "context": "ay Label logo embroidery is embroidered on the chest. Made in Portugal. Goo"
+    },
+    {
+     "axis": "COLOR",
+     "raw": "tan",
+     "keyword": "tan",
+     "normalized": "brown",
+     "basis": "OBSERVED",
+     "where": "DESCRIPTION",
+     "offset": 291,
+     "context": "t 100% organic cotton with some elastane. The Gray Label logo embroidery is"
+    }
+   ],
+   "originStructuredValue": "",
+   "question": "두 표현이 같은 속성을 뜻하는가 · 서로 다른 옵션(색상/소재)을 가리킬 가능성은 없는가"
+  },
+  {
+   "axis": "MATERIAL",
+   "candidateDomain": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/moncler-kids-enfant-baby-k2f-jacket-brown-1a00024-597z8-246",
+   "originUrl": "https://www.junioredition.com/collections/true-artist/products/reversible-jacket-n-03-in-otter-brown-by-true-artist",
+   "status": "OBSERVED/UNVERIFIED",
+   "synonymOff": {
+    "status": "MISMATCH",
+    "why": "양쪽 모두 있으나 겹치는 값이 없다 — 원본 polyester ↔ 후보 nylon",
+    "onlyOrigin": [
+     "polyester"
+    ],
+    "onlyCandidate": [
+     "nylon"
+    ]
+   },
+   "synonymOn": {
+    "status": "MATCH",
+    "why": "의미가 같은 키워드 nylon · 🟡 같은 축에 다른 값도 있다(옵션 가능)",
+    "matched": [
+     "nylon"
+    ],
+    "onlyOrigin": [
+     "polyester"
+    ],
+    "onlyCandidate": []
+   },
+   "originKeywords": [
+    {
+     "axis": "MATERIAL",
+     "raw": "polyester",
+     "keyword": "polyester",
+     "normalized": "polyester",
+     "basis": "NORMALIZED",
+     "where": "DESCRIPTION",
+     "offset": 124,
+     "context": "100% polyamide in one face and 100% polyester polar fleece on the other face. Thi"
+    },
+    {
+     "axis": "MATERIAL",
+     "raw": "polyamide",
+     "keyword": "polyamide",
+     "normalized": "nylon",
+     "basis": "OBSERVED",
+     "where": "STRUCTURED",
+     "offset": 5,
+     "context": "100% polyamide"
+    }
+   ],
+   "candidateKeywords": [
+    {
+     "axis": "MATERIAL",
+     "raw": "nylon",
+     "keyword": "nylon",
+     "normalized": "nylon",
+     "basis": "NORMALIZED",
+     "where": "DESCRIPTION",
+     "offset": 151,
+     "context": "fant K2 down jacket is crafted from nylon laqué. The puffer coat features a d"
+    }
+   ],
+   "originStructuredValue": "100% polyamide",
+   "question": "두 표현이 같은 속성을 뜻하는가 · 서로 다른 옵션(색상/소재)을 가리킬 가능성은 없는가"
+  }
+ ],
+ "pairsA": [
+  {
+   "pairId": "C27",
+   "domain": "beaumonde.co.kr",
+   "originUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+   "candidateUrl": "https://www.beaumonde.co.kr/goods/goods_view.php?goodsNo=1000014021",
+   "priorGt": "SAME",
+   "ceoLatest": "SAME",
+   "baselineReproduced": "PRESUMED_SAME",
+   "shadowV1": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "shadowV2": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "MATCH",
+     "matched": [
+      "bobochoses"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 bobochoses"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "MATCH",
+     "matched": [
+      "b226ac010"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 b226ac010"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "matched": [
+      "tshirt"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 tshirt"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "booty",
+      "ghosts"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 booty/ghosts"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "grey"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "cotton"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "MATCH",
+     "matched": [
+      "long_sleeve"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 long_sleeve"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [
+      "kids"
+     ],
+     "why": "한쪽에만 있다(원본 0 · 후보 1) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "C50",
+   "domain": "tinyapple.net",
+   "originUrl": "https://bobochoses.co.jp/products/b226ac117-b-c-embossed-tracksuit-jacket",
+   "candidateUrl": "https://www.tinyapple.net/products/bobo-choses-bobo-choses-modern-tracksuit-jacket-multicolor",
+   "priorGt": "DIFFERENT",
+   "ceoLatest": "UNDECIDED",
+   "baselineReproduced": "PRESUMED_SAME",
+   "shadowV1": {
+    "verdict": "UNDECIDED",
+    "why": "핵심 식별(브랜드·품번)을 확정하지 못했다 — 증거 부족"
+   },
+   "shadowV2": {
+    "verdict": "UNDECIDED",
+    "why": "핵심 식별(브랜드·품번)을 확정하지 못했다 — 증거 부족"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "UNDECIDED",
+    "why": "핵심 식별(브랜드·품번)을 확정하지 못했다 — 증거 부족"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [
+      "bobochoses"
+     ],
+     "why": "한쪽에만 있다(원본 0 · 후보 1) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "b226ac117"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "matched": [
+      "jacket"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 jacket"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "tracksuit"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [
+      "modern",
+      "multicolor"
+     ],
+     "why": "의미가 같은 키워드 tracksuit · 🟡 같은 축에 다른 값도 있다(옵션 가능)"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "embossed"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "blue"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "MATCH",
+     "matched": [
+      "polyester",
+      "nylon"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 polyester/nylon"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "C51",
+   "domain": "ladida.com",
+   "originUrl": "https://bobochoses.co.jp/products/b226ac117-b-c-embossed-tracksuit-jacket",
+   "candidateUrl": "https://www.ladida.com/products/bobo-choses-multicolor-bc-color-block-tracksuit-jacket",
+   "priorGt": "DIFFERENT",
+   "ceoLatest": null,
+   "baselineReproduced": "PRESUMED_SAME",
+   "shadowV1": {
+    "verdict": "UNDECIDED",
+    "why": "핵심 식별(브랜드·품번)을 확정하지 못했다 — 증거 부족"
+   },
+   "shadowV2": {
+    "verdict": "UNDECIDED",
+    "why": "핵심 식별(브랜드·품번)을 확정하지 못했다 — 증거 부족"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "UNDECIDED",
+    "why": "핵심 식별(브랜드·품번)을 확정하지 못했다 — 증거 부족"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [
+      "bobochoses"
+     ],
+     "why": "한쪽에만 있다(원본 0 · 후보 1) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "b226ac117"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "matched": [
+      "jacket"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 jacket"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "tracksuit"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [
+      "multicolor",
+      "bc",
+      "block"
+     ],
+     "why": "의미가 같은 키워드 tracksuit · 🟡 같은 축에 다른 값도 있다(옵션 가능)"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "embossed"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "blue"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "polyester",
+      "nylon"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 2 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "C22",
+   "domain": "donokids.com",
+   "originUrl": "https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story?_pos=1&_sid=a0738e824&_ss=r",
+   "candidateUrl": "https://www.donokids.com/m/product.html?branduid=3362912",
+   "priorGt": "DIFFERENT",
+   "ceoLatest": "DIFFERENT",
+   "baselineReproduced": "SIMILAR",
+   "shadowV1": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "shadowV2": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "mainstory"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "MATCH",
+     "matched": [
+      "aw26ms185"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 aw26ms185"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "matched": [
+      "tshirt",
+      "sweatshirt"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 tshirt/sweatshirt"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "bubble"
+     ],
+     "onlyOrigin": [
+      "main",
+      "story"
+     ],
+     "onlyCandidate": [
+      "메인스토리",
+      "conker"
+     ],
+     "why": "의미가 같은 키워드 bubble · 🟡 같은 축에 다른 값도 있다(옵션 가능)"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [
+      "stripe"
+     ],
+     "why": "한쪽에만 있다(원본 0 · 후보 1) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "grey"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "cotton"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "C11",
+   "domain": "bobochoses.co.jp",
+   "originUrl": "https://www.junioredition.com/en-kr/products/curious-turnip-all-over-swim-cap-by-bobo-choses",
+   "candidateUrl": "https://bobochoses.co.jp/ja/products/b126ai018-curious-turnip-all-over-swim-cap",
+   "priorGt": "SAME",
+   "ceoLatest": null,
+   "baselineReproduced": "PRESUMED_SAME",
+   "shadowV1": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "shadowV2": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "bobochoses"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "MATCH",
+     "matched": [
+      "b126ai018"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 b126ai018"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "matched": [
+      "cap"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 cap"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "curious",
+      "turnip",
+      "swim"
+     ],
+     "onlyOrigin": [
+      "last",
+      "one",
+      "stock",
+      "years"
+     ],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 curious/turnip/swim · 🟡 같은 축에 다른 값도 있다(옵션 가능)"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "MATCH",
+     "matched": [
+      "allover"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 allover"
+    },
+    {
+     "axis": "COLOR",
+     "status": "MATCH",
+     "matched": [
+      "green"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 green"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "MATCH",
+     "matched": [
+      "polyester",
+      "elastane"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 polyester/elastane"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "C48",
+   "domain": "bobochoses.com",
+   "originUrl": "https://bobochoses.co.jp/products/b226ac117-b-c-embossed-tracksuit-jacket",
+   "candidateUrl": "https://bobochoses.com/products/b226ac117-b-c-embossed-tracksuit-jacket",
+   "priorGt": "SAME",
+   "ceoLatest": null,
+   "baselineReproduced": "PRESUMED_SAME",
+   "shadowV1": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "shadowV2": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [
+      "bobochoses"
+     ],
+     "why": "한쪽에만 있다(원본 0 · 후보 1) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "MATCH",
+     "matched": [
+      "b226ac117"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 b226ac117"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "matched": [
+      "jacket"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 jacket"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "tracksuit"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 tracksuit"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "MATCH",
+     "matched": [
+      "embossed"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 embossed"
+    },
+    {
+     "axis": "COLOR",
+     "status": "MATCH",
+     "matched": [
+      "blue"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 blue"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "MATCH",
+     "matched": [
+      "polyester",
+      "nylon"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 polyester/nylon"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "C05",
+   "domain": "tinyapple.net",
+   "originUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "candidateUrl": "https://www.tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+   "priorGt": "SAME",
+   "ceoLatest": "SAME",
+   "baselineReproduced": "SAME",
+   "shadowV1": {
+    "verdict": "SAME",
+    "why": "품번 없이 브랜드·상품명·상품종류가 모두 일치한다"
+   },
+   "shadowV2": {
+    "verdict": "SAME",
+    "why": "품번 없이 브랜드·상품명·상품종류가 모두 일치한다 · 색상도 일치"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "SAME",
+    "why": "품번 없이 브랜드·상품명·상품종류가 모두 일치한다"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "MATCH",
+     "matched": [
+      "bobochoses"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 bobochoses"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "b226ac009"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "matched": [
+      "tshirt"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 tshirt"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "hug",
+      "hairy",
+      "monster"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 hug/hairy/monster"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "MATCH",
+     "matched": [
+      "blue"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 blue"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "MATCH",
+     "matched": [
+      "cotton"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 cotton"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "C06",
+   "domain": "global.trenbe.com",
+   "originUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "candidateUrl": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+   "priorGt": "SAME",
+   "ceoLatest": "SAME",
+   "baselineReproduced": "SAME",
+   "shadowV1": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "shadowV2": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "MATCH",
+     "matched": [
+      "bobochoses"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 bobochoses"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "MATCH",
+     "matched": [
+      "b226ac009"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 b226ac009"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "matched": [
+      "tshirt"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 tshirt"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "hug",
+      "hairy",
+      "monster"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [
+      "451",
+      "160484657"
+     ],
+     "why": "의미가 같은 키워드 hug/hairy/monster · 🟡 같은 축에 다른 값도 있다(옵션 가능)"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "MATCH",
+     "matched": [
+      "blue"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 blue"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "cotton"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [
+      "long_sleeve"
+     ],
+     "why": "한쪽에만 있다(원본 0 · 후보 1) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [
+      "kids"
+     ],
+     "why": "한쪽에만 있다(원본 0 · 후보 1) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "C19",
+   "domain": "junioredition.com",
+   "originUrl": "https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story?_pos=1&_sid=a0738e824&_ss=r",
+   "candidateUrl": "https://www.junioredition.com/products/bubble-sweatshirt-in-conker-stripe-by-main-story",
+   "priorGt": "DIFFERENT",
+   "ceoLatest": "DIFFERENT",
+   "baselineReproduced": "PRESUMED_SAME",
+   "shadowV1": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "shadowV2": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "MATCH",
+     "matched": [
+      "mainstory"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 mainstory"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "MATCH",
+     "matched": [
+      "aw26ms185"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 aw26ms185"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "matched": [
+      "tshirt",
+      "sweatshirt"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 tshirt/sweatshirt"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "bubble",
+      "main",
+      "story"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [
+      "conker"
+     ],
+     "why": "의미가 같은 키워드 bubble/main/story · 🟡 같은 축에 다른 값도 있다(옵션 가능)"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [
+      "stripe"
+     ],
+     "why": "한쪽에만 있다(원본 0 · 후보 1) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "grey"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "MATCH",
+     "matched": [
+      "cotton"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 cotton"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "C20",
+   "domain": "junioredition.com",
+   "originUrl": "https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story?_pos=1&_sid=a0738e824&_ss=r",
+   "candidateUrl": "https://www.junioredition.com/products/bubble-sweatshirt-in-graystone-by-main-story",
+   "priorGt": "DIFFERENT",
+   "ceoLatest": "DIFFERENT",
+   "baselineReproduced": "PRESUMED_SAME",
+   "shadowV1": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "shadowV2": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "MATCH",
+     "matched": [
+      "mainstory"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 mainstory"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "MATCH",
+     "matched": [
+      "aw26ms185"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 aw26ms185"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "matched": [
+      "tshirt",
+      "sweatshirt"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 tshirt/sweatshirt"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "bubble",
+      "main",
+      "story"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [
+      "graystone"
+     ],
+     "why": "의미가 같은 키워드 bubble/main/story · 🟡 같은 축에 다른 값도 있다(옵션 가능)"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "MATCH",
+     "matched": [
+      "grey"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 grey"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "MATCH",
+     "matched": [
+      "cotton"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 cotton"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "C42",
+   "domain": "main-story.com",
+   "originUrl": "https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story?_pos=1&_sid=a0738e824&_ss=r",
+   "candidateUrl": "https://main-story.com/products/bubble-sweatshirt-grey-melange-1",
+   "priorGt": "SAME",
+   "ceoLatest": "DIFFERENT",
+   "baselineReproduced": "SAME",
+   "shadowV1": {
+    "verdict": "SAME",
+    "why": "품번 없이 브랜드·상품명·상품종류가 모두 일치한다"
+   },
+   "shadowV2": {
+    "verdict": "SAME",
+    "why": "품번 없이 브랜드·상품명·상품종류가 모두 일치한다 · 색상도 일치"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "SAME",
+    "why": "품번 없이 브랜드·상품명·상품종류가 모두 일치한다"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "MATCH",
+     "matched": [
+      "mainstory"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 mainstory"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "aw26ms185"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "matched": [
+      "tshirt",
+      "sweatshirt"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 tshirt/sweatshirt"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "bubble"
+     ],
+     "onlyOrigin": [
+      "main",
+      "story"
+     ],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 bubble · 🟡 같은 축에 다른 값도 있다(옵션 가능)"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "MATCH",
+     "matched": [
+      "grey"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 grey"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "MATCH",
+     "matched": [
+      "cotton"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 cotton"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "C25",
+   "domain": "main-story.com",
+   "originUrl": "https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story?_pos=1&_sid=a0738e824&_ss=r",
+   "candidateUrl": "https://main-story.com/collections/shop/products/bubble-sweatshirt-graystone",
+   "priorGt": "DIFFERENT",
+   "ceoLatest": "DIFFERENT",
+   "baselineReproduced": "PRESUMED_SAME",
+   "shadowV1": {
+    "verdict": "SAME",
+    "why": "품번 없이 브랜드·상품명·상품종류가 모두 일치한다"
+   },
+   "shadowV2": {
+    "verdict": "SAME",
+    "why": "품번 없이 브랜드·상품명·상품종류가 모두 일치한다 · 색상도 일치"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "SAME",
+    "why": "품번 없이 브랜드·상품명·상품종류가 모두 일치한다"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "MATCH",
+     "matched": [
+      "mainstory"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 mainstory"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "aw26ms185"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "matched": [
+      "tshirt",
+      "sweatshirt"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 tshirt/sweatshirt"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "bubble"
+     ],
+     "onlyOrigin": [
+      "main",
+      "story"
+     ],
+     "onlyCandidate": [
+      "graystone"
+     ],
+     "why": "의미가 같은 키워드 bubble · 🟡 같은 축에 다른 값도 있다(옵션 가능)"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "MATCH",
+     "matched": [
+      "grey"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 grey"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "MATCH",
+     "matched": [
+      "cotton"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 cotton"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "C14",
+   "domain": "kihanan.com",
+   "originUrl": "https://bobochoses.co.jp/products/b226ac117-b-c-embossed-tracksuit-jacket",
+   "candidateUrl": "https://kihanan.com/products/drop2-2026aw-bobochoses-b-c-embossed-tracksuit-jacket-b226ac117",
+   "priorGt": "SAME",
+   "ceoLatest": null,
+   "baselineReproduced": "PRESUMED_SAME",
+   "shadowV1": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "shadowV2": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [
+      "bobochosesボボショーズ"
+     ],
+     "why": "한쪽에만 있다(원본 0 · 후보 1) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "MATCH",
+     "matched": [
+      "b226ac117"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 b226ac117"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "matched": [
+      "jacket"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 jacket"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "tracksuit"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [
+      "drop2",
+      "2026aw",
+      "bobochoses"
+     ],
+     "why": "의미가 같은 키워드 tracksuit · 🟡 같은 축에 다른 값도 있다(옵션 가능)"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "MATCH",
+     "matched": [
+      "embossed"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 embossed"
+    },
+    {
+     "axis": "COLOR",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "blue"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "polyester",
+      "nylon"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 2 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "C37",
+   "domain": "bobochoses.co.jp",
+   "originUrl": "https://www.junioredition.com/en-kr/products/curious-turnip-all-over-swim-cap-by-bobo-choses",
+   "candidateUrl": "https://bobochoses.co.jp/products/b126ai018-curious-turnip-all-over-swim-cap",
+   "priorGt": "SAME",
+   "ceoLatest": null,
+   "baselineReproduced": "PRESUMED_SAME",
+   "shadowV1": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "shadowV2": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "SAME",
+    "why": "제조사 품번이 일치하고 충돌 축이 없다"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "bobochoses"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "MATCH",
+     "matched": [
+      "b126ai018"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 b126ai018"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "matched": [
+      "cap"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 cap"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "curious",
+      "turnip",
+      "swim"
+     ],
+     "onlyOrigin": [
+      "last",
+      "one",
+      "stock",
+      "years"
+     ],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 curious/turnip/swim · 🟡 같은 축에 다른 값도 있다(옵션 가능)"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "MATCH",
+     "matched": [
+      "allover"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 allover"
+    },
+    {
+     "axis": "COLOR",
+     "status": "MATCH",
+     "matched": [
+      "green"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 green"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "MATCH",
+     "matched": [
+      "polyester",
+      "elastane"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 polyester/elastane"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "S1-1",
+   "domain": "www.rboutique.com",
+   "originUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+   "candidateUrl": "https://www.rboutique.com/en-us/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
+   "priorGt": "SAME",
+   "ceoLatest": null,
+   "baselineReproduced": "SIMILAR",
+   "shadowV1": {
+    "verdict": "SAME",
+    "why": "품번 없이 브랜드·상품명·상품종류가 모두 일치한다"
+   },
+   "shadowV2": {
+    "verdict": "SIMILAR",
+    "why": "브랜드+상품명+종류 일치 · 🔴 색상 미확인이라 SAME 으로 확정하지 않는다"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "SAME",
+    "why": "품번 없이 브랜드·상품명·상품종류가 모두 일치한다"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "MATCH",
+     "matched": [
+      "bobochoses"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 bobochoses"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "b226ac010"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "matched": [
+      "tshirt"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 tshirt"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "booty",
+      "ghosts"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [
+      "ndash",
+      "rboutique"
+     ],
+     "why": "의미가 같은 키워드 booty/ghosts · 🟡 같은 축에 다른 값도 있다(옵션 가능)"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "grey"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "MATCH",
+     "matched": [
+      "cotton"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 cotton"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "long_sleeve"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "S1-2",
+   "domain": "www.eraldo.com",
+   "originUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+   "candidateUrl": "https://www.eraldo.com/en-us/products/bobo-choses-booty-ghosts-t-shirt-340496",
+   "priorGt": "SAME",
+   "ceoLatest": null,
+   "baselineReproduced": "SAME",
+   "shadowV1": {
+    "verdict": "SAME",
+    "why": "품번 없이 브랜드·상품명·상품종류가 모두 일치한다"
+   },
+   "shadowV2": {
+    "verdict": "SAME",
+    "why": "품번 없이 브랜드·상품명·상품종류가 모두 일치한다 · 색상도 일치"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "SAME",
+    "why": "품번 없이 브랜드·상품명·상품종류가 모두 일치한다"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "MATCH",
+     "matched": [
+      "bobochoses"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 bobochoses"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "b226ac010"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "matched": [
+      "tshirt"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 tshirt"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "booty"
+     ],
+     "onlyOrigin": [
+      "ghosts"
+     ],
+     "onlyCandidate": [
+      "ghost"
+     ],
+     "why": "의미가 같은 키워드 booty · 🟡 같은 축에 다른 값도 있다(옵션 가능)"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [
+      "print"
+     ],
+     "why": "한쪽에만 있다(원본 0 · 후보 1) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "MATCH",
+     "matched": [
+      "grey"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 grey"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "cotton"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "MATCH",
+     "matched": [
+      "long_sleeve"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 long_sleeve"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "S1-3",
+   "domain": "cissywears.com",
+   "originUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+   "candidateUrl": "https://cissywears.com/en-us/products/bobo-choses-booty-ghosts-t-shirt",
+   "priorGt": "SAME",
+   "ceoLatest": null,
+   "baselineReproduced": "SAME",
+   "shadowV1": {
+    "verdict": "SAME",
+    "why": "품번 없이 브랜드·상품명·상품종류가 모두 일치한다"
+   },
+   "shadowV2": {
+    "verdict": "SIMILAR",
+    "why": "브랜드+상품명+종류 일치 · 🔴 색상 미확인이라 SAME 으로 확정하지 않는다"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "SAME",
+    "why": "품번 없이 브랜드·상품명·상품종류가 모두 일치한다"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "MATCH",
+     "matched": [
+      "bobochoses"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 bobochoses"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "b226ac010"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "matched": [
+      "tshirt"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 tshirt"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "booty",
+      "ghosts"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 booty/ghosts"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "grey"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "cotton"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "long_sleeve"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "S1-4",
+   "domain": "kolkid.ca",
+   "originUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+   "candidateUrl": "https://kolkid.ca/products/bobo-choses-booty-ghosts-t-shirt",
+   "priorGt": "SAME",
+   "ceoLatest": null,
+   "baselineReproduced": "PRESUMED_SAME",
+   "shadowV1": {
+    "verdict": "SAME",
+    "why": "품번 없이 브랜드·상품명·상품종류가 모두 일치한다"
+   },
+   "shadowV2": {
+    "verdict": "SAME",
+    "why": "품번 없이 브랜드·상품명·상품종류가 모두 일치한다 · 색상도 일치"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "SAME",
+    "why": "품번 없이 브랜드·상품명·상품종류가 모두 일치한다"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "MATCH",
+     "matched": [
+      "bobochoses"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 bobochoses"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "b226ac010"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "matched": [
+      "tshirt"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 tshirt"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "booty",
+      "ghosts"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 booty/ghosts"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "MATCH",
+     "matched": [
+      "grey"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 grey"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "MATCH",
+     "matched": [
+      "cotton"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 cotton"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "long_sleeve"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "S1-5",
+   "domain": "www.junioredition.com",
+   "originUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+   "candidateUrl": "https://www.junioredition.com/en-kr/products/booty-ghosts-t-shirt-by-bobo-choses",
+   "priorGt": "DIFFERENT",
+   "ceoLatest": "DIFFERENT",
+   "baselineReproduced": "CONFLICT",
+   "shadowV1": {
+    "verdict": "SIMILAR",
+    "why": "품번이 다르지만 상품 종류가 같다 — 유사상품(🔴 품번 불일치만으로 다름 단정 금지)"
+   },
+   "shadowV2": {
+    "verdict": "SIMILAR",
+    "why": "품번이 다르지만 상품 종류가 같다 — 유사상품(🔴 품번 불일치만으로 다름 단정 금지)"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "SIMILAR",
+    "why": "품번이 다르지만 상품 종류가 같다 — 유사상품(🔴 품번 불일치만으로 다름 단정 금지)"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "MATCH",
+     "matched": [
+      "bobochoses"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 bobochoses"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "MISMATCH",
+     "matched": [],
+     "onlyOrigin": [
+      "b226ac010"
+     ],
+     "onlyCandidate": [
+      "b226ac141"
+     ],
+     "why": "양쪽 모두 있으나 겹치는 값이 없다 — 원본 b226ac010 ↔ 후보 b226ac141"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "matched": [
+      "tshirt"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 tshirt"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "booty",
+      "ghosts"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 booty/ghosts"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "MISMATCH",
+     "matched": [],
+     "onlyOrigin": [
+      "grey"
+     ],
+     "onlyCandidate": [
+      "blue"
+     ],
+     "why": "양쪽 모두 있으나 겹치는 값이 없다 — 원본 grey ↔ 후보 blue"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "MATCH",
+     "matched": [
+      "cotton"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 cotton"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "long_sleeve"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "S1-6",
+   "domain": "www.tinyapple.net",
+   "originUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+   "candidateUrl": "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt",
+   "priorGt": "DIFFERENT",
+   "ceoLatest": "DIFFERENT",
+   "baselineReproduced": "SAME",
+   "shadowV1": {
+    "verdict": "SAME",
+    "why": "품번 없이 브랜드·상품명·상품종류가 모두 일치한다"
+   },
+   "shadowV2": {
+    "verdict": "SIMILAR",
+    "why": "브랜드+상품명+종류 일치 · 🔴 색상 미확인이라 SAME 으로 확정하지 않는다"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "SAME",
+    "why": "품번 없이 브랜드·상품명·상품종류가 모두 일치한다"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "MATCH",
+     "matched": [
+      "bobochoses"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 bobochoses"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "b226ac010"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "matched": [
+      "tshirt"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 tshirt"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "booty",
+      "ghosts"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 booty/ghosts"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "grey"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "MATCH",
+     "matched": [
+      "cotton"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 cotton"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "long_sleeve"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "S1-7",
+   "domain": "bobochoses.com",
+   "originUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+   "candidateUrl": "https://bobochoses.com/products/b226ab046-booty-ghosts-t-shirt",
+   "priorGt": "SAME",
+   "ceoLatest": null,
+   "baselineReproduced": "CONFLICT",
+   "shadowV1": {
+    "verdict": "SIMILAR",
+    "why": "품번이 다르지만 상품 종류가 같다 — 유사상품(🔴 품번 불일치만으로 다름 단정 금지)"
+   },
+   "shadowV2": {
+    "verdict": "SIMILAR",
+    "why": "품번이 다르지만 상품 종류가 같다 — 유사상품(🔴 품번 불일치만으로 다름 단정 금지)"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "SIMILAR",
+    "why": "품번이 다르지만 상품 종류가 같다 — 유사상품(🔴 품번 불일치만으로 다름 단정 금지)"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "MATCH",
+     "matched": [
+      "bobochoses"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 bobochoses"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "MISMATCH",
+     "matched": [],
+     "onlyOrigin": [
+      "b226ac010"
+     ],
+     "onlyCandidate": [
+      "b226ab046"
+     ],
+     "why": "양쪽 모두 있으나 겹치는 값이 없다 — 원본 b226ac010 ↔ 후보 b226ab046"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "matched": [
+      "tshirt"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 tshirt"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "booty",
+      "ghosts"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 booty/ghosts"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "MATCH",
+     "matched": [
+      "grey"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 grey"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "MATCH",
+     "matched": [
+      "cotton"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 cotton"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "long_sleeve"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "S2-1",
+   "domain": "www.stockmann.ee",
+   "originUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "candidateUrl": "https://www.stockmann.ee/et-ee/bobo-choses-trikoosark-hug-monster/18119748633-1.html",
+   "priorGt": "SAME",
+   "ceoLatest": null,
+   "baselineReproduced": "SIMILAR",
+   "shadowV1": {
+    "verdict": "SIMILAR",
+    "why": "브랜드는 같고 상품명·종류 중 하나만 일치한다 — 유사상품"
+   },
+   "shadowV2": {
+    "verdict": "SIMILAR",
+    "why": "브랜드는 같고 상품명·종류 중 하나만 일치한다 — 유사상품"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "SIMILAR",
+    "why": "브랜드는 같고 상품명·종류 중 하나만 일치한다 — 유사상품"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "MATCH",
+     "matched": [
+      "bobochoses"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 bobochoses"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "b226ac009"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "tshirt"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "hug",
+      "monster"
+     ],
+     "onlyOrigin": [
+      "hairy"
+     ],
+     "onlyCandidate": [
+      "trikoos",
+      "auml",
+      "rk",
+      "stockmann"
+     ],
+     "why": "의미가 같은 키워드 hug/monster · 🟡 같은 축에 다른 값도 있다(옵션 가능)"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "blue"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "cotton"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "S2-2",
+   "domain": "www.thefrontshop.com",
+   "originUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "candidateUrl": "https://www.thefrontshop.com/products/hug-hairy-monster-t-shirt",
+   "priorGt": "SAME",
+   "ceoLatest": null,
+   "baselineReproduced": "SAME",
+   "shadowV1": {
+    "verdict": "SAME",
+    "why": "품번 없이 브랜드·상품명·상품종류가 모두 일치한다"
+   },
+   "shadowV2": {
+    "verdict": "SIMILAR",
+    "why": "브랜드+상품명+종류 일치 · 🔴 색상 미확인이라 SAME 으로 확정하지 않는다"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "SAME",
+    "why": "품번 없이 브랜드·상품명·상품종류가 모두 일치한다"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "MATCH",
+     "matched": [
+      "bobochoses"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 bobochoses"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "b226ac009"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "matched": [
+      "tshirt"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 tshirt"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "hug",
+      "hairy",
+      "monster"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 hug/hairy/monster"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "blue"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "MATCH",
+     "matched": [
+      "cotton"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 cotton"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "S2-3",
+   "domain": "bobochoses.com",
+   "originUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "candidateUrl": "https://bobochoses.com/products/b226ab040-hug-hairy-monster-t-shirt",
+   "priorGt": "SAME",
+   "ceoLatest": null,
+   "baselineReproduced": "PRESUMED_SAME",
+   "shadowV1": {
+    "verdict": "SIMILAR",
+    "why": "품번이 다르지만 상품 종류가 같다 — 유사상품(🔴 품번 불일치만으로 다름 단정 금지)"
+   },
+   "shadowV2": {
+    "verdict": "SIMILAR",
+    "why": "품번이 다르지만 상품 종류가 같다 — 유사상품(🔴 품번 불일치만으로 다름 단정 금지)"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "SIMILAR",
+    "why": "품번이 다르지만 상품 종류가 같다 — 유사상품(🔴 품번 불일치만으로 다름 단정 금지)"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "MATCH",
+     "matched": [
+      "bobochoses"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 bobochoses"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "MISMATCH",
+     "matched": [],
+     "onlyOrigin": [
+      "b226ac009"
+     ],
+     "onlyCandidate": [
+      "b226ab040"
+     ],
+     "why": "양쪽 모두 있으나 겹치는 값이 없다 — 원본 b226ac009 ↔ 후보 b226ab040"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "matched": [
+      "tshirt"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 tshirt"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "hug",
+      "hairy",
+      "monster"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 hug/hairy/monster"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "MATCH",
+     "matched": [
+      "blue"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 blue"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "MATCH",
+     "matched": [
+      "cotton"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 cotton"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "S2-4",
+   "domain": "kids21.com",
+   "originUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "candidateUrl": "https://kids21.com/products/700005621lbl",
+   "priorGt": "SAME",
+   "ceoLatest": null,
+   "baselineReproduced": "PRESUMED_SAME",
+   "shadowV1": {
+    "verdict": "SIMILAR",
+    "why": "품번이 다르지만 상품 종류가 같다 — 유사상품(🔴 품번 불일치만으로 다름 단정 금지)"
+   },
+   "shadowV2": {
+    "verdict": "SIMILAR",
+    "why": "품번이 다르지만 상품 종류가 같다 — 유사상품(🔴 품번 불일치만으로 다름 단정 금지)"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "SIMILAR",
+    "why": "품번이 다르지만 상품 종류가 같다 — 유사상품(🔴 품번 불일치만으로 다름 단정 금지)"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "MATCH",
+     "matched": [
+      "bobochoses"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 bobochoses"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "MISMATCH",
+     "matched": [],
+     "onlyOrigin": [
+      "b226ac009"
+     ],
+     "onlyCandidate": [
+      "700005621lbl"
+     ],
+     "why": "양쪽 모두 있으나 겹치는 값이 없다 — 원본 b226ac009 ↔ 후보 700005621lbl"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "matched": [
+      "tshirt"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 tshirt"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "hug",
+      "hairy",
+      "monster"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 hug/hairy/monster"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "blue"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "MATCH",
+     "matched": [
+      "cotton"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 cotton"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "S3-1",
+   "domain": "www.stadtlandkind.ch",
+   "originUrl": "https://www.junioredition.com/en-kr/products/curious-turnip-all-over-swim-cap-by-bobo-choses",
+   "candidateUrl": "https://www.stadtlandkind.ch/en/products/uv-sun-hat-curious-turnip-green",
+   "priorGt": "SAME",
+   "ceoLatest": null,
+   "baselineReproduced": "SIMILAR",
+   "shadowV1": {
+    "verdict": "SIMILAR",
+    "why": "브랜드는 같고 상품명·종류 중 하나만 일치한다 — 유사상품"
+   },
+   "shadowV2": {
+    "verdict": "SIMILAR",
+    "why": "브랜드는 같고 상품명·종류 중 하나만 일치한다 — 유사상품"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "SIMILAR",
+    "why": "브랜드는 같고 상품명·종류 중 하나만 일치한다 — 유사상품"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "MATCH",
+     "matched": [
+      "bobochoses"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 bobochoses"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "b126ai018"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "cap"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "curious",
+      "turnip"
+     ],
+     "onlyOrigin": [
+      "swim",
+      "last",
+      "one",
+      "stock",
+      "years"
+     ],
+     "onlyCandidate": [
+      "uv",
+      "sonnenhut"
+     ],
+     "why": "의미가 같은 키워드 curious/turnip · 🟡 같은 축에 다른 값도 있다(옵션 가능)"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "allover"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "MATCH",
+     "matched": [
+      "green"
+     ],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 green"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "polyester",
+      "elastane"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 2 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "S3-2",
+   "domain": "kids21.com",
+   "originUrl": "https://www.junioredition.com/en-kr/products/curious-turnip-all-over-swim-cap-by-bobo-choses",
+   "candidateUrl": "https://kids21.com/products/700002005grn",
+   "priorGt": "UNCERTAIN",
+   "ceoLatest": null,
+   "baselineReproduced": "UNKNOWN",
+   "shadowV1": {
+    "verdict": "DIFFERENT",
+    "why": "브랜드가 불일치한다(핵심 식별 충돌)"
+   },
+   "shadowV2": {
+    "verdict": "DIFFERENT",
+    "why": "브랜드가 불일치한다(핵심 식별 충돌)"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "DIFFERENT",
+    "why": "브랜드가 불일치한다(핵심 식별 충돌)"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "MISMATCH",
+     "matched": [],
+     "onlyOrigin": [
+      "bobochoses"
+     ],
+     "onlyCandidate": [
+      "kids21"
+     ],
+     "why": "양쪽 모두 있으나 겹치는 값이 없다 — 원본 bobochoses ↔ 후보 kids21"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "b126ai018"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "cap"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MISMATCH",
+     "matched": [],
+     "onlyOrigin": [
+      "curious",
+      "turnip",
+      "swim",
+      "last",
+      "one",
+      "stock",
+      "years"
+     ],
+     "onlyCandidate": [
+      "kids21",
+      "singapore"
+     ],
+     "why": "양쪽 모두 있으나 겹치는 값이 없다 — 원본 curious/turnip/swim/last/one/stock/years ↔ 후보 kids21/singapore"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "allover"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "green"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "polyester",
+      "elastane"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 2 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [
+      "kids"
+     ],
+     "why": "한쪽에만 있다(원본 0 · 후보 1) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "S4-1",
+   "domain": "main-story.com",
+   "originUrl": "https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story?_pos=1&_sid=a0738e824&_ss=r",
+   "candidateUrl": "https://main-story.com/products/bubble-sweatshirt-grey-melange",
+   "priorGt": "UNCERTAIN",
+   "ceoLatest": null,
+   "baselineReproduced": "UNKNOWN",
+   "shadowV1": {
+    "verdict": "UNDECIDED",
+    "why": "핵심 식별(브랜드·품번)을 확정하지 못했다 — 증거 부족"
+   },
+   "shadowV2": {
+    "verdict": "UNDECIDED",
+    "why": "핵심 식별(브랜드·품번)을 확정하지 못했다 — 증거 부족"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "UNDECIDED",
+    "why": "핵심 식별(브랜드·품번)을 확정하지 못했다 — 증거 부족"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "mainstory"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "aw26ms185"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "tshirt",
+      "sweatshirt"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 2 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MATCH",
+     "matched": [
+      "main",
+      "story"
+     ],
+     "onlyOrigin": [
+      "bubble"
+     ],
+     "onlyCandidate": [],
+     "why": "의미가 같은 키워드 main/story · 🟡 같은 축에 다른 값도 있다(옵션 가능)"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "grey"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "cotton"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "S5-1",
+   "domain": "www.thefrontshop.com",
+   "originUrl": "https://www.junioredition.com/en-kr/products/lulu-t-bar-shoes-in-vernice-nero-by-pepe",
+   "candidateUrl": "https://www.thefrontshop.com/products/pepe-style-1195-vernice-fard",
+   "priorGt": "UNCERTAIN",
+   "ceoLatest": null,
+   "baselineReproduced": "UNKNOWN",
+   "shadowV1": {
+    "verdict": "UNDECIDED",
+    "why": "핵심 식별(브랜드·품번)을 확정하지 못했다 — 증거 부족"
+   },
+   "shadowV2": {
+    "verdict": "UNDECIDED",
+    "why": "핵심 식별(브랜드·품번)을 확정하지 못했다 — 증거 부족"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "UNDECIDED",
+    "why": "핵심 식별(브랜드·품번)을 확정하지 못했다 — 증거 부족"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "pèpè",
+      "pèpèshoes"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 2 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "01195vernicenero"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MISMATCH",
+     "matched": [],
+     "onlyOrigin": [
+      "lulu",
+      "bar",
+      "shoes",
+      "vernice",
+      "nero",
+      "last",
+      "ones",
+      "stock",
+      "28",
+      "29",
+      "eur"
+     ],
+     "onlyCandidate": [
+      "더프론트샵"
+     ],
+     "why": "양쪽 모두 있으나 겹치는 값이 없다 — 원본 lulu/bar/shoes/vernice/nero/last/ones/stock/28/29/eur ↔ 후보 더프론트샵"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "S6-1",
+   "domain": "kids21.com",
+   "originUrl": "https://bobochoses.co.jp/products/b226ac117-b-c-embossed-tracksuit-jacket",
+   "candidateUrl": "https://kids21.com/products/700002037mlt",
+   "priorGt": "UNCERTAIN",
+   "ceoLatest": null,
+   "baselineReproduced": "UNKNOWN",
+   "shadowV1": {
+    "verdict": "UNDECIDED",
+    "why": "핵심 식별(브랜드·품번)을 확정하지 못했다 — 증거 부족"
+   },
+   "shadowV2": {
+    "verdict": "UNDECIDED",
+    "why": "핵심 식별(브랜드·품번)을 확정하지 못했다 — 증거 부족"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "UNDECIDED",
+    "why": "핵심 식별(브랜드·품번)을 확정하지 못했다 — 증거 부족"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [
+      "kids21"
+     ],
+     "why": "한쪽에만 있다(원본 0 · 후보 1) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "b226ac117"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "jacket"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MISMATCH",
+     "matched": [],
+     "onlyOrigin": [
+      "tracksuit"
+     ],
+     "onlyCandidate": [
+      "kids21",
+      "singapore"
+     ],
+     "why": "양쪽 모두 있으나 겹치는 값이 없다 — 원본 tracksuit ↔ 후보 kids21/singapore"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "embossed"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "blue"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "polyester",
+      "nylon"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 2 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [
+      "kids"
+     ],
+     "why": "한쪽에만 있다(원본 0 · 후보 1) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "S6-2",
+   "domain": "global.trenbe.com",
+   "originUrl": "https://bobochoses.co.jp/products/b226ac117-b-c-embossed-tracksuit-jacket",
+   "candidateUrl": "https://global.trenbe.com/products/bobo-choses-modern-tracksuit-jacket-for-kids-160301440-p",
+   "priorGt": "UNCERTAIN",
+   "ceoLatest": null,
+   "baselineReproduced": "UNKNOWN",
+   "shadowV1": {
+    "verdict": "UNDECIDED",
+    "why": "핵심 식별(브랜드·품번)을 확정하지 못했다 — 증거 부족"
+   },
+   "shadowV2": {
+    "verdict": "UNDECIDED",
+    "why": "핵심 식별(브랜드·품번)을 확정하지 못했다 — 증거 부족"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "UNDECIDED",
+    "why": "핵심 식별(브랜드·품번)을 확정하지 못했다 — 증거 부족"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "b226ac117"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "jacket"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MISMATCH",
+     "matched": [],
+     "onlyOrigin": [
+      "tracksuit"
+     ],
+     "onlyCandidate": [
+      "trenbe",
+      "trusted",
+      "luxury",
+      "worldwide",
+      "value"
+     ],
+     "why": "양쪽 모두 있으나 겹치는 값이 없다 — 원본 tracksuit ↔ 후보 trenbe/trusted/luxury/worldwide/value"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "embossed"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "blue"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "polyester",
+      "nylon"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 2 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "S6-3",
+   "domain": "global.trenbe.com",
+   "originUrl": "https://bobochoses.co.jp/products/b226ac117-b-c-embossed-tracksuit-jacket",
+   "candidateUrl": "https://global.trenbe.com/products/bobo-choses-kids-jacket-modern-tracksuit-159406743-p",
+   "priorGt": "UNCERTAIN",
+   "ceoLatest": null,
+   "baselineReproduced": "UNKNOWN",
+   "shadowV1": {
+    "verdict": "UNDECIDED",
+    "why": "핵심 식별(브랜드·품번)을 확정하지 못했다 — 증거 부족"
+   },
+   "shadowV2": {
+    "verdict": "UNDECIDED",
+    "why": "핵심 식별(브랜드·품번)을 확정하지 못했다 — 증거 부족"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "UNDECIDED",
+    "why": "핵심 식별(브랜드·품번)을 확정하지 못했다 — 증거 부족"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "b226ac117"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "jacket"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MISMATCH",
+     "matched": [],
+     "onlyOrigin": [
+      "tracksuit"
+     ],
+     "onlyCandidate": [
+      "trenbe",
+      "trusted",
+      "luxury",
+      "worldwide",
+      "value"
+     ],
+     "why": "양쪽 모두 있으나 겹치는 값이 없다 — 원본 tracksuit ↔ 후보 trenbe/trusted/luxury/worldwide/value"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "embossed"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "blue"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "polyester",
+      "nylon"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 2 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  },
+  {
+   "pairId": "S6-4",
+   "domain": "www.wconcept.co.kr",
+   "originUrl": "https://bobochoses.co.jp/products/b226ac117-b-c-embossed-tracksuit-jacket",
+   "candidateUrl": "https://www.wconcept.co.kr/Product/306219521",
+   "priorGt": "DIFFERENT",
+   "ceoLatest": null,
+   "baselineReproduced": "UNKNOWN",
+   "shadowV1": {
+    "verdict": "UNDECIDED",
+    "why": "핵심 식별(브랜드·품번)을 확정하지 못했다 — 증거 부족"
+   },
+   "shadowV2": {
+    "verdict": "UNDECIDED",
+    "why": "핵심 식별(브랜드·품번)을 확정하지 못했다 — 증거 부족"
+   },
+   "shadowV1SynonymOff": {
+    "verdict": "UNDECIDED",
+    "why": "핵심 식별(브랜드·품번)을 확정하지 못했다 — 증거 부족"
+   },
+   "axes": [
+    {
+     "axis": "BRAND",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "MODEL_CODE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "b226ac117"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "jacket"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "DESIGN",
+     "status": "MISMATCH",
+     "matched": [],
+     "onlyOrigin": [
+      "tracksuit"
+     ],
+     "onlyCandidate": [
+      "concept"
+     ],
+     "why": "양쪽 모두 있으나 겹치는 값이 없다 — 원본 tracksuit ↔ 후보 concept"
+    },
+    {
+     "axis": "PRINT_PATTERN",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "embossed"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "COLOR",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "blue"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 1 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "MATERIAL",
+     "status": "UNKNOWN",
+     "matched": [],
+     "onlyOrigin": [
+      "polyester",
+      "nylon"
+     ],
+     "onlyCandidate": [],
+     "why": "한쪽에만 있다(원본 2 · 후보 0) — 🔴 불일치로 적지 않는다"
+    },
+    {
+     "axis": "SLEEVE_FORM",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "FIT",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "AUDIENCE",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    },
+    {
+     "axis": "SIZE_OPTION",
+     "status": "NOT_APPLICABLE",
+     "matched": [],
+     "onlyOrigin": [],
+     "onlyCandidate": [],
+     "why": "양쪽 원문에 그 속성 키워드가 없다"
+    }
+   ]
+  }
+ ]
+}
