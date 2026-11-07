@@ -1,0 +1,2186 @@
+{
+ "source": "desc-compare.json",
+ "note": "🔴 식별자·판정 요약만 · 설명문 원문은 옮기지 않았다",
+ "pairs": [
+  {
+   "originCode": "B226AB097",
+   "originUrl": "https://bobochoses.com/products/b226ab097-stamp-bloom-all-over-reversible-anorak",
+   "candidateUrl": "https://junioredition.com/products/stamp-bloom-all-over-reversible-jacket-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "CONFLICT",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "MISMATCH",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Stamp Bloom all over reversible anorak",
+   "candidateTitle": "Stamp Bloom All Over Reversible Jacket by Bobo Choses"
+  },
+  {
+   "originCode": "B226AB097",
+   "originUrl": "https://bobochoses.com/products/b226ab097-stamp-bloom-all-over-reversible-anorak",
+   "candidateUrl": "https://nickis.com/products/colmar-daunenjacke-reversible-quilted-marineblau-7404628282",
+   "candidateDomain": "nickis.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Stamp Bloom all over reversible anorak",
+   "candidateTitle": "Daunenjacke Reversible Quilted Marineblau"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateUrl": "https://biskuit.kr/product/%eb%b3%b4%eb%b3%b4%ec%87%bc%ec%a6%88-%ed%97%88%ea%b7%b8-%ed%97%a4%ec%96%b4%eb%a6%ac-%eb%aa%ac%ec%8a%a4%ed%84%b0-%ed%8b%b0%ec%85%94%ec%b8%a0-b226ac009/8891/category/367/display/1/",
+   "candidateDomain": "biskuit.kr",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "hasOriginDescription": false,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "",
+   "candidateTitle": "[보보쇼즈] 허그 헤어리 몬스터 티셔츠 B226AC009 - 비스킷"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateUrl": "https://bobochoses.com/products/b226ab040-hug-hairy-monster-t-shirt",
+   "candidateDomain": "bobochoses.com",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "hasOriginDescription": false,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "MISMATCH",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "",
+   "candidateTitle": "Hug Hairy Monster T-shirt"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateUrl": "https://bornyesterdaykids.com/products/bobo-choses-baby-hug-hairy-monster-l-s-t-shirt-booo-bo-choses-tag-denim-pants-set-light-blue-red",
+   "candidateDomain": "bornyesterdaykids.com",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "hasOriginDescription": false,
+   "hasCandidateDescription": false,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "",
+   "candidateTitle": "Bobo Choses Baby Hug Hairy Monster l/s T-shirt & Booo Bo Choses Denim Pants Set ~ Light Blue/Red"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateUrl": "https://cemarose.ca/products/bobo-choses-kids-booty-ghosts-sweatshirt-light-blue-c7907",
+   "candidateDomain": "cemarose.ca",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "hasOriginDescription": false,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "MISMATCH",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "",
+   "candidateTitle": "Bobo Choses-Kids Booty Ghosts Sweatshirt Light Blue"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateUrl": "https://cissywears.com/products/bobo-choses-babyhug-hairy-monster-t-shirt",
+   "candidateDomain": "cissywears.com",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "hasOriginDescription": false,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "",
+   "candidateTitle": "Bobo Choses Baby Hug Hairy Monster T-Shirt"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateUrl": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+   "candidateDomain": "global.trenbe.com",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "hasOriginDescription": false,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "",
+   "candidateTitle": "Bobo Choses Kids Hug Hairy Monster Long Sleeve T-Shirt (Light Blue) B226AC009 451 160484657 [P]"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac009-hug-hairy-monster-t-shirt",
+   "candidateUrl": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+   "candidateDomain": "global.trenbe.com",
+   "baselineSystemVerdict": "SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Hug Hairy Monster T-shirt",
+   "candidateTitle": "Bobo Choses Kids Hug Hairy Monster Long Sleeve T-Shirt (Light Blue) B226AC009 451 160484657 [P]"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": "https://bobochoses.com/ko-kr/products/b226ac009-hug-hairy-monster-t-shirt",
+   "candidateUrl": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "SAME",
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Hug Hairy Monster T-shirt",
+   "candidateTitle": "Hug Hairy Monster T-Shirt by Bobo Choses"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac009-hug-hairy-monster-t-shirt",
+   "candidateUrl": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Hug Hairy Monster T-shirt",
+   "candidateTitle": "Hug Hairy Monster T-Shirt by Bobo Choses"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateUrl": "https://www.junioredition.com/products/hug-hairy-monster-baby-t-shirt-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "hasOriginDescription": false,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "MISMATCH",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "",
+   "candidateTitle": "Hug Hairy Monster Baby T-Shirt by Bobo Choses"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "SAME",
+   "humanGt": "SAME",
+   "hasOriginDescription": false,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "",
+   "candidateTitle": "Hug Hairy Monster T-Shirt by Bobo Choses"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateUrl": "https://kids21.com/products/700005621lbl",
+   "candidateDomain": "kids21.com",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "hasOriginDescription": false,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "",
+   "candidateTitle": "Bobo Choses Hug Hairy Monster T-shirt"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateUrl": "https://m.luxboy.com/product/a14338197cb8698cd92c86431cce8d05",
+   "candidateDomain": "m.luxboy.com",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "DIFFERENT",
+   "hasOriginDescription": false,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "",
+   "candidateTitle": "보보쇼즈(BOBO CHOSES) 키즈 긴팔티셔츠 B226AC009 | SINCE 2002 No.1 명품쇼핑, 럭스보이"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac009-hug-hairy-monster-t-shirt",
+   "candidateUrl": "https://miniboutique.co.kr/product/bobo-chosest-shirt-b226ac009/28043/",
+   "candidateDomain": "miniboutique.co.kr",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Hug Hairy Monster T-shirt",
+   "candidateTitle": "[BOBO CHOSES]T-Shirt - B226AC009 - 미니부띠끄 miniboutique"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateUrl": "https://www.parkette.ca/products/hug-hairy-monster-sweatshirt",
+   "candidateDomain": "parkette.ca",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "DIFFERENT",
+   "hasOriginDescription": false,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "",
+   "candidateTitle": "Hug Hairy Monster Sweatshirt"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateUrl": "https://scoutandcokids.com/collections/bobo-choses/products/bobo-choses-hug-hairy-monster-t-shirt",
+   "candidateDomain": "scoutandcokids.com",
+   "baselineSystemVerdict": "SAME",
+   "humanGt": "SAME",
+   "hasOriginDescription": false,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "",
+   "candidateTitle": "Bobo Choses - Hug Hairy Monster T-shirt"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateUrl": "https://www.stockmann.ee/et-ee/bobo-choses-trikoosark-hug-monster/18119748633-1.html",
+   "candidateDomain": "stockmann.ee",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "hasOriginDescription": false,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "",
+   "candidateTitle": "BOBO CHOSES Trikoos&auml;rk Hug Monster | Stockmann"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateUrl": "https://www.thefrontshop.com/products/hug-hairy-monster-t-shirt",
+   "candidateDomain": "thefrontshop.com",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "hasOriginDescription": false,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "",
+   "candidateTitle": "Bobo Choses - Hug Hairy Monster T-Shirt"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateUrl": "https://www.tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+   "candidateDomain": "tinyapple.net",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "hasOriginDescription": false,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "",
+   "candidateTitle": "Bobo Choses Hug Hairy Monster T-shirt, Light Blue"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateUrl": "https://www.tinyapple.net/en-kr/products/bobo-choses-bobo-choses-pop-t-shirt-blue",
+   "candidateDomain": "tinyapple.net",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "hasOriginDescription": false,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "MISMATCH",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "",
+   "candidateTitle": "Bobo Choses Bobo Choses Pop T-shirt, Blue"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateUrl": "https://www.tinyapple.net/en-kr/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+   "candidateDomain": "tinyapple.net",
+   "baselineSystemVerdict": "SAME",
+   "humanGt": "SAME",
+   "hasOriginDescription": false,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "",
+   "candidateTitle": "Bobo Choses Hug Hairy Monster T-shirt, Light Blue"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac009-hug-hairy-monster-t-shirt",
+   "candidateUrl": "https://villagekids.co.uk/products/pale-blue-3d-logo-t-shirt",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": false,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Hug Hairy Monster T-shirt",
+   "candidateTitle": "Pale Blue 3D Logo T-Shirt"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": "https://bobochoses.com/ko-kr/products/b226ac009-hug-hairy-monster-t-shirt",
+   "candidateUrl": "https://villagekids.co.uk/products/pale-blue-3d-logo-t-shirt",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "hasOriginDescription": true,
+   "hasCandidateDescription": false,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Hug Hairy Monster T-shirt",
+   "candidateTitle": "Pale Blue 3D Logo T-Shirt"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac009-hug-hairy-monster-t-shirt",
+   "candidateUrl": "https://villagekids.co.uk/products/blue-tie-dye-polo-bear-t-shirt",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": false,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Hug Hairy Monster T-shirt",
+   "candidateTitle": "Blue Tie-Dye Polo Bear T-Shirt"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": "https://bobochoses.com/ko-kr/products/b226ac009-hug-hairy-monster-t-shirt",
+   "candidateUrl": "https://www.junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "candidateDomain": null,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Hug Hairy Monster T-shirt",
+   "candidateTitle": "Hug Hairy Monster T-Shirt by Bobo Choses"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": "https://bobochoses.com/ko-kr/products/b226ac009-hug-hairy-monster-t-shirt",
+   "candidateUrl": "https://scoutandcokids.com/products/bobo-choses-hug-hairy-monster-t-shirt",
+   "candidateDomain": null,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Hug Hairy Monster T-shirt",
+   "candidateTitle": "Bobo Choses - Hug Hairy Monster T-shirt"
+  },
+  {
+   "originCode": "B226AC010",
+   "originUrl": "https://www.junioredition.com/en-kr/collections/4-years/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses?utm_source=chatgpt.com",
+   "candidateUrl": "https://junioredition.com/products/booty-ghosts-t-shirt-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "CONFLICT",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "MISMATCH",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "MISMATCH",
+    "COLOR": "MISMATCH",
+    "MATERIAL": "MATCH"
+   },
+   "originTitle": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+   "candidateTitle": "Booty Ghosts T-Shirt by Bobo Choses"
+  },
+  {
+   "originCode": "B226AC010",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac010-booty-ghosts-t-shirt",
+   "candidateUrl": "https://junioredition.com/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Booty Ghosts T-shirt",
+   "candidateTitle": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses"
+  },
+  {
+   "originCode": "B226AC010",
+   "originUrl": "https://www.junioredition.com/en-kr/collections/4-years/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses?utm_source=chatgpt.com",
+   "candidateUrl": "https://junioredition.com/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "MATCH"
+   },
+   "originTitle": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+   "candidateTitle": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses"
+  },
+  {
+   "originCode": "B226AC017",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac017-booo-bo-choses-t-shirt",
+   "candidateUrl": "https://kidbizkid.com/products/hugo-boss-baby-boys-double-b-graphic-t-shirt",
+   "candidateDomain": "kidbizkid.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Booo Bo Choses T-shirt",
+   "candidateTitle": "Hugo Boss Baby Boys Double B Graphic T-Shirt"
+  },
+  {
+   "originCode": "B226AC017",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac017-booo-bo-choses-t-shirt",
+   "candidateUrl": "https://nickis.com/products/bobo-choses-t-shirt-cremeweiss-3006678709",
+   "candidateDomain": "nickis.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Booo Bo Choses T-shirt",
+   "candidateTitle": "T-Shirt Cremeweiß"
+  },
+  {
+   "originCode": "B226AC017",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac017-booo-bo-choses-t-shirt",
+   "candidateUrl": "https://petitemaisonkids.com/products/charlie-white-mandarin-collar-shirt",
+   "candidateDomain": "petitemaisonkids.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Booo Bo Choses T-shirt",
+   "candidateTitle": "Charlie White Mandarin Collar Shirt"
+  },
+  {
+   "originCode": "B226AC017",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac017-booo-bo-choses-t-shirt",
+   "candidateUrl": "https://villagekids.co.uk/products/white-stripe-graphic-t-shirt",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": false,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Booo Bo Choses T-shirt",
+   "candidateTitle": "White Stripe Graphic T-Shirt"
+  },
+  {
+   "originCode": "B226AC029",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac029-softpaw-monster-sweatshirt",
+   "candidateUrl": "https://designerkidswear.com/products/michael-kors-kids-girls-sweater-pink-r15223-44v",
+   "candidateDomain": "designerkidswear.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Softpaw Monster sweatshirt",
+   "candidateTitle": "Girls Pink Knit Sweater"
+  },
+  {
+   "originCode": "B226AC033",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac033-bobo-choses-pop-sweatshirt",
+   "candidateUrl": "https://designerkidswear.com/products/fendi-baby-boys-sweatshirt-blue-buh088-8ra-f19j4",
+   "candidateDomain": "designerkidswear.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Bobo Choses Pop sweatshirt",
+   "candidateTitle": "Baby Boys Blue Cotton Bear Sweatshirt"
+  },
+  {
+   "originCode": "B226AC033",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac033-bobo-choses-pop-sweatshirt",
+   "candidateUrl": "https://designerkidswear.com/products/stone-island-junior-kids-boys-sweatshirt-blue-6100001-s0a20-v004b",
+   "candidateDomain": "designerkidswear.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Bobo Choses Pop sweatshirt",
+   "candidateTitle": "Boys Blue Cotton Sweatshirt"
+  },
+  {
+   "originCode": "B226AC033",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac033-bobo-choses-pop-sweatshirt",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "candidateDomain": "folkberlin.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Bobo Choses Pop sweatshirt",
+   "candidateTitle": "Baby Sweater Suit ''Blue Moon'' Organic Cotton"
+  },
+  {
+   "originCode": "B226AC033",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac033-bobo-choses-pop-sweatshirt",
+   "candidateUrl": "https://junioredition.com/products/bobo-choses-pop-sweatshirt-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "SAME",
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Bobo Choses Pop sweatshirt",
+   "candidateTitle": "Bobo Choses Pop Sweatshirt by Bobo Choses"
+  },
+  {
+   "originCode": "B226AC033",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac033-bobo-choses-pop-sweatshirt",
+   "candidateUrl": "https://kidbizkid.com/products/hugo-boss-navy-zip-sweatshirt",
+   "candidateDomain": "kidbizkid.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MISMATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Bobo Choses Pop sweatshirt",
+   "candidateTitle": "Hugo Boss Navy Zip Sweatshirt"
+  },
+  {
+   "originCode": "B226AC033",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac033-bobo-choses-pop-sweatshirt",
+   "candidateUrl": "https://kidbizkid.com/products/lacoste-navy-sweatshirt",
+   "candidateDomain": "kidbizkid.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MISMATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Bobo Choses Pop sweatshirt",
+   "candidateTitle": "Lacoste Navy Sweatshirt"
+  },
+  {
+   "originCode": "B226AC033",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac033-bobo-choses-pop-sweatshirt",
+   "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+   "candidateDomain": "petitemaisonkids.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Bobo Choses Pop sweatshirt",
+   "candidateTitle": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers"
+  },
+  {
+   "originCode": "B226AC033",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac033-bobo-choses-pop-sweatshirt",
+   "candidateUrl": "https://shoppiccoliandco.com/products/jude-navy-baby-boy-anchor-sweater",
+   "candidateDomain": "shoppiccoliandco.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "MISMATCH",
+    "COLOR": "MISMATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Bobo Choses Pop sweatshirt",
+   "candidateTitle": "Jude Navy Baby Boy Anchor Sweater"
+  },
+  {
+   "originCode": "B226AC033",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac033-bobo-choses-pop-sweatshirt",
+   "candidateUrl": "https://tiptoeboutique.com/products/b226ac033-midnight-blue",
+   "candidateDomain": "tiptoeboutique.com",
+   "baselineSystemVerdict": "SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Bobo Choses Pop sweatshirt",
+   "candidateTitle": "Bobo Choses Midnight Blue Pop Long Sleeve Sweatshirt"
+  },
+  {
+   "originCode": "B226AC036",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac036-mush-monster-duo-sweatshirt",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "candidateDomain": "folkberlin.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Mush Monster Duo sweatshirt",
+   "candidateTitle": "Baby Sweater Suit ''Blue Moon'' Organic Cotton"
+  },
+  {
+   "originCode": "B226AC036",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac036-mush-monster-duo-sweatshirt",
+   "candidateUrl": "https://junioredition.com/products/mush-monster-duo-baby-sweatshirt-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "MISMATCH",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Mush Monster Duo sweatshirt",
+   "candidateTitle": "Mush Monster Duo Baby Sweatshirt by Bobo Choses"
+  },
+  {
+   "originCode": "B226AC036",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac036-mush-monster-duo-sweatshirt",
+   "candidateUrl": "https://www.beaumonde.co.kr/goods/goods_view.php?goodsno=1000014013",
+   "candidateDomain": null,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "hasOriginDescription": true,
+   "hasCandidateDescription": false,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Mush Monster Duo sweatshirt",
+   "candidateTitle": "결과"
+  },
+  {
+   "originCode": "B226AC036",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac036-mush-monster-duo-sweatshirt",
+   "candidateUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362797&type=x&current_category=058",
+   "candidateDomain": null,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Mush Monster Duo sweatshirt",
+   "candidateTitle": "[[보보쇼즈] Mush Monster Duo sweatshirt #226AC036]"
+  },
+  {
+   "originCode": "B226AC038",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac038-hidden-monster-sweatshirt",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "candidateDomain": "folkberlin.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Hidden Monster sweatshirt",
+   "candidateTitle": "Baby Sweater Suit ''Blue Moon'' Organic Cotton"
+  },
+  {
+   "originCode": "B226AC038",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac038-hidden-monster-sweatshirt",
+   "candidateUrl": "https://junioredition.com/products/hidden-monster-sweatshirt-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Hidden Monster sweatshirt",
+   "candidateTitle": "Hidden Monster Sweatshirt by Bobo Choses"
+  },
+  {
+   "originCode": "B226AC038",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac038-hidden-monster-sweatshirt",
+   "candidateUrl": "https://kidbizkid.com/products/fendi-blue-ff-sweater",
+   "candidateDomain": "kidbizkid.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Hidden Monster sweatshirt",
+   "candidateTitle": "Fendi Blue FF Sweater"
+  },
+  {
+   "originCode": "B226AC038",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac038-hidden-monster-sweatshirt",
+   "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+   "candidateDomain": "petitemaisonkids.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Hidden Monster sweatshirt",
+   "candidateTitle": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers"
+  },
+  {
+   "originCode": "B226AC041",
+   "originUrl": "https://bobochoses.co.jp/products/b226ac041-beast-tag-polo-sweatshirt",
+   "candidateUrl": "https://designerkidswear.com/products/ea7-emporio-armani-kids-boys-polo-navy-7b000023-af1290-ub102",
+   "candidateDomain": "designerkidswear.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "MISMATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Beast Tag polo sweatshirt",
+   "candidateTitle": "Boys Navy Cotton Logo Polo"
+  },
+  {
+   "originCode": "B226AC041",
+   "originUrl": "https://bobochoses.co.jp/products/b226ac041-beast-tag-polo-sweatshirt",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "candidateDomain": "folkberlin.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Beast Tag polo sweatshirt",
+   "candidateTitle": "Baby Sweater Suit ''Blue Moon'' Organic Cotton"
+  },
+  {
+   "originCode": "B226AC041",
+   "originUrl": "https://bobochoses.co.jp/products/b226ac041-beast-tag-polo-sweatshirt",
+   "candidateUrl": "https://kidbizkid.com/products/fendi-blue-ff-sweater",
+   "candidateDomain": "kidbizkid.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Beast Tag polo sweatshirt",
+   "candidateTitle": "Fendi Blue FF Sweater"
+  },
+  {
+   "originCode": "B226AC041",
+   "originUrl": "https://bobochoses.co.jp/products/b226ac041-beast-tag-polo-sweatshirt",
+   "candidateUrl": "https://villagekids.co.uk/products/navy-logo-rugby-sweatshirt",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": false,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MISMATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Beast Tag polo sweatshirt",
+   "candidateTitle": "Navy Logo Rugby Sweatshirt"
+  },
+  {
+   "originCode": "B226AC043",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac043-mystery-bc-half-zipped-sweatshirt",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "candidateDomain": "folkberlin.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Mystery BC half zipped sweatshirt",
+   "candidateTitle": "Baby Sweater Suit ''Blue Moon'' Organic Cotton"
+  },
+  {
+   "originCode": "B226AC043",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac043-mystery-bc-half-zipped-sweatshirt",
+   "candidateUrl": "https://kidbizkid.com/products/stone-island-blue-sweatshirt",
+   "candidateDomain": "kidbizkid.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Mystery BC half zipped sweatshirt",
+   "candidateTitle": "Stone Island Baby Blue Sweatshirt"
+  },
+  {
+   "originCode": "B226AC043",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac043-mystery-bc-half-zipped-sweatshirt",
+   "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+   "candidateDomain": "petitemaisonkids.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Mystery BC half zipped sweatshirt",
+   "candidateTitle": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers"
+  },
+  {
+   "originCode": "B226AC043",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac043-mystery-bc-half-zipped-sweatshirt",
+   "candidateUrl": "https://shoppiccoliandco.com/products/blue-bears-knitted-sweater",
+   "candidateDomain": "shoppiccoliandco.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Mystery BC half zipped sweatshirt",
+   "candidateTitle": "Blue Bears Knitted Sweater"
+  },
+  {
+   "originCode": "B226AC043",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac043-mystery-bc-half-zipped-sweatshirt",
+   "candidateUrl": "https://villagekids.co.uk/products/blue-half-zip-sweatshirt",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": false,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Mystery BC half zipped sweatshirt",
+   "candidateTitle": "Blue Half Zip Sweatshirt"
+  },
+  {
+   "originCode": "B226AC073",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac073-taxi-saurus-tag-denim-pants",
+   "candidateUrl": "https://designerkidswear.com/products/versace-kids-baby-boys-denim-blue-1009197-1a08511-1d200",
+   "candidateDomain": "designerkidswear.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Taxi Saurus Tag denim pants",
+   "candidateTitle": "Baby Boys Blue Denim"
+  },
+  {
+   "originCode": "B226AC073",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac073-taxi-saurus-tag-denim-pants",
+   "candidateUrl": "https://folkberlin.com/products/gingham-woven-trousers",
+   "candidateDomain": "folkberlin.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Taxi Saurus Tag denim pants",
+   "candidateTitle": "Gingham Woven Trousers, Super Soft , 116 - 122 / 6 - 7 Years"
+  },
+  {
+   "originCode": "B226AC073",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac073-taxi-saurus-tag-denim-pants",
+   "candidateUrl": "https://junioredition.com/products/taxi-saurus-tag-denim-pants-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Taxi Saurus Tag denim pants",
+   "candidateTitle": "Taxi Saurus Tag Denim Pants by Bobo Choses"
+  },
+  {
+   "originCode": "B226AC073",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac073-taxi-saurus-tag-denim-pants",
+   "candidateUrl": "https://kidbizkid.com/products/diesel-viker-jeans",
+   "candidateDomain": "kidbizkid.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Taxi Saurus Tag denim pants",
+   "candidateTitle": "Diesel Viker Jeans"
+  },
+  {
+   "originCode": "B226AC073",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac073-taxi-saurus-tag-denim-pants",
+   "candidateUrl": "https://nickis.com/products/polo-ralph-lauren-jeans-blau-3402271700",
+   "candidateDomain": "nickis.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Taxi Saurus Tag denim pants",
+   "candidateTitle": "Jeans Blau"
+  },
+  {
+   "originCode": "B226AC073",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac073-taxi-saurus-tag-denim-pants",
+   "candidateUrl": "https://petitemaisonkids.com/products/sparkle-blue-denim-jeans",
+   "candidateDomain": "petitemaisonkids.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Taxi Saurus Tag denim pants",
+   "candidateTitle": "Sparkle Blue Denim Jeans"
+  },
+  {
+   "originCode": "B226AC073",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac073-taxi-saurus-tag-denim-pants",
+   "candidateUrl": "https://villagekids.co.uk/products/denim-blue-jeans",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": false,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Taxi Saurus Tag denim pants",
+   "candidateTitle": "Denim Blue Jeans"
+  },
+  {
+   "originCode": "B226AC073",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac073-taxi-saurus-tag-denim-pants",
+   "candidateUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362810&type=x&current_category=058",
+   "candidateDomain": null,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "humanGt": "SAME",
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Taxi Saurus Tag denim pants",
+   "candidateTitle": "[[보보쇼즈] Taxi Saurus Tag denim pants #226AC073]"
+  },
+  {
+   "originCode": "B226AC110",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac110-bobo-choses-embossed-t-shirt",
+   "candidateUrl": "https://designerkidswear.com/products/dolce-gabbana-kids-boys-dg-t-shirt-white-l4jthvg7nvc-s9000",
+   "candidateDomain": "designerkidswear.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Bobo Choses Embossed T-shirt",
+   "candidateTitle": "Boys Embossed DG Logo T-Shirt"
+  },
+  {
+   "originCode": "B226AC110",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac110-bobo-choses-embossed-t-shirt",
+   "candidateUrl": "https://junioredition.com/products/bobo-choses-embossed-t-shirt-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "SIMILAR",
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "MISMATCH",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Bobo Choses Embossed T-shirt",
+   "candidateTitle": "Bobo Choses Embossed T-Shirt by Bobo Choses"
+  },
+  {
+   "originCode": "B226AC110",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac110-bobo-choses-embossed-t-shirt",
+   "candidateUrl": "https://kidbizkid.com/products/marc-jacobs-black-t-shirt",
+   "candidateDomain": "kidbizkid.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Bobo Choses Embossed T-shirt",
+   "candidateTitle": "Marc Jacobs Black T-Shirt"
+  },
+  {
+   "originCode": "B226AC110",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac110-bobo-choses-embossed-t-shirt",
+   "candidateUrl": "https://villagekids.co.uk/products/white-multi-sequin-logo-crop-t-shirt",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "hasOriginDescription": true,
+   "hasCandidateDescription": false,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Bobo Choses Embossed T-shirt",
+   "candidateTitle": "White Multi Sequin Logo Crop T-Shirt"
+  },
+  {
+   "originCode": "B226AC170",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac170-lake-monster-sweatshirt",
+   "candidateUrl": "https://nickis.com/products/levis-sweatshirt-rot-7401897725",
+   "candidateDomain": "nickis.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Lake Monster sweatshirt",
+   "candidateTitle": "Sweatshirt Rot"
+  },
+  {
+   "originCode": "B226AC170",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac170-lake-monster-sweatshirt",
+   "candidateUrl": "https://shoppiccoliandco.com/products/rudolph-knitted-sweater",
+   "candidateDomain": "shoppiccoliandco.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": "DIFFERENT",
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Lake Monster sweatshirt",
+   "candidateTitle": "Rudolph Knitted Sweater"
+  },
+  {
+   "originCode": "B226TC175",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226tc175-dog-sweatshirt",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweater-suit-biscuit-organic-cotton",
+   "candidateDomain": "folkberlin.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Dog sweatshirt",
+   "candidateTitle": "Baby Sweater Suit ''Biscuit'' Organic Cotton"
+  },
+  {
+   "originCode": "WK21A165",
+   "originUrl": "https://www.junioredition.com/en-kr/collections/wynken/products/double-deerstalker-cap-in-blue-soft-tan-by-wynken",
+   "candidateUrl": "https://junioredition.com/products/double-deerstalker-cap-in-blue-soft-tan-by-wynken",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Double Deerstalker Cap in Blue / Soft Tan by Wynken",
+   "candidateTitle": "Double Deerstalker Cap in Blue / Soft Tan by Wynken"
+  },
+  {
+   "originCode": "WK21W97",
+   "originUrl": "https://www.junioredition.com/collections/wynken/products/mixed-media-jacket-in-ecru-mix-by-wynken",
+   "candidateUrl": "https://junioredition.com/products/mixed-media-jacket-in-blue-mix-by-wynken",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MISMATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Mixed Media Jacket in Ecru Mix by Wynken",
+   "candidateTitle": "Mixed Media Jacket in Blue Mix by Wynken"
+  },
+  {
+   "originCode": "WK21W97",
+   "originUrl": "https://www.junioredition.com/collections/wynken/products/mixed-media-jacket-in-ecru-mix-by-wynken",
+   "candidateUrl": "https://nickis.com/products/wynken-jacke-mixed-media-mehrfarbig-7400851022",
+   "candidateDomain": "nickis.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Mixed Media Jacket in Ecru Mix by Wynken",
+   "candidateTitle": "Jacke Mixed Media Mehrfarbig"
+  },
+  {
+   "originCode": "WK21W97",
+   "originUrl": "https://www.junioredition.com/collections/wynken/products/mixed-media-jacket-in-ecru-mix-by-wynken",
+   "candidateUrl": "https://villagekids.co.uk/products/black-puffer-coat-4",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": false,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "MISMATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Mixed Media Jacket in Ecru Mix by Wynken",
+   "candidateTitle": "Black Puffer Coat"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://www.junioredition.com/collections/bonjour/products/handsmock-dress-in-little-bouquet-by-bonjour",
+   "candidateUrl": "https://designerkidswear.com/products/givenchy-baby-girls-dress-pink-h31301-46g",
+   "candidateDomain": "designerkidswear.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "MATCH"
+   },
+   "originTitle": "Handsmock Dress in Little Bouquet by Bonjour",
+   "candidateTitle": "Baby Girls Pink Piqué Cotton Polo Dress"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://www.junioredition.com/collections/true-artist/products/reversible-jacket-n-03-in-otter-brown-by-true-artist",
+   "candidateUrl": "https://designerkidswear.com/products/moncler-kids-enfant-baby-k2f-jacket-brown-1a00024-597z8-246",
+   "candidateDomain": "designerkidswear.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "MATCH"
+   },
+   "originTitle": "Reversible Jacket nº03 in Otter Brown by True Artist",
+   "candidateTitle": "Baby Brown K2F Down Jacket"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://www.smallable.com/en/product/reversible-mushroom-jacket-recycled-fiber-blue-bobo-choses-430611?algsearch=30c39962e4b80e9917116e04b6471ae2",
+   "candidateUrl": "https://designerkidswear.com/products/mackage-kids-jesse-blue-jesse-bl",
+   "candidateDomain": "designerkidswear.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "MATCH"
+   },
+   "originTitle": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+   "candidateTitle": "Blue Jesse Jacket"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://www.smallable.com/en/product/reversible-mushroom-jacket-recycled-fiber-blue-bobo-choses-430611?algsearch=30c39962e4b80e9917116e04b6471ae2",
+   "candidateUrl": "https://folkberlin.com/products/color-block-jacket-pastel-blue-mellow-yellow",
+   "candidateDomain": "folkberlin.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "MISMATCH"
+   },
+   "originTitle": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+   "candidateTitle": "Color Block Jacket, Pastel Blue / Mellow Yellow"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://main-story.com/products/bubble-sweatshirt-grey-melange-1?srsltid=AYCX9vJugDIA1cXJ1iOHFtxJpDob_yD88Nv5ovEy22z5tohMimgsiKVv",
+   "candidateUrl": "https://folkberlin.com/products/baby-ribbed-booties-grey-melange-organic-cotton",
+   "candidateDomain": "folkberlin.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Bubble Sweatshirt - Grey Melange",
+   "candidateTitle": "Baby Ribbed Booties ''Grey Melange'' Organic Cotton"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://www.smallable.com/en/product/bobo-choses-organic-cotton-t-shirt-ecru-bobo-choses-430700",
+   "candidateUrl": "https://folkberlin.com/products/kim-shirt-organic-cotton-sleet-check",
+   "candidateDomain": "folkberlin.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "MATCH"
+   },
+   "originTitle": "Bobo Choses Organic Cotton T-shirt | Ecru",
+   "candidateTitle": "Kim Shirt Organic Cotton ''Sleet Check''"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://main-story.com/products/bubble-sweatshirt-grey-melange-1?srsltid=AYCX9vLRcFH3qL2naCiXoh8nj6QNTCU9F5GfFps0GRjAO4z0Oea6LCtL",
+   "candidateUrl": "https://folkberlin.com/products/baby-ribbed-booties-grey-melange-organic-cotton",
+   "candidateDomain": "folkberlin.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Bubble Sweatshirt - Grey Melange",
+   "candidateTitle": "Baby Ribbed Booties ''Grey Melange'' Organic Cotton"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://www.smallable.com/en/product/reversible-mushroom-jacket-recycled-fiber-blue-bobo-choses-430611?algsearch=30c39962e4b80e9917116e04b6471ae2",
+   "candidateUrl": "https://junioredition.com/products/faux-fur-reversible-jacket-in-blue-ode-to-rose-by-wynken",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+   "candidateTitle": "Faux Fur Reversible Jacket in Blue / Ode To Rose by Wynken"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://www.smallable.com/en/product/bobo-choses-organic-cotton-t-shirt-ecru-bobo-choses-430700",
+   "candidateUrl": "https://junioredition.com/products/everyday-ghosts-all-over-baby-t-shirt-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "MATCH"
+   },
+   "originTitle": "Bobo Choses Organic Cotton T-shirt | Ecru",
+   "candidateTitle": "Everyday Ghosts All Over Baby T-Shirt by Bobo Choses"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://www.junioredition.com/collections/bonjour/products/tunique-with-hair-clip-in-little-bouquet-by-bonjour",
+   "candidateUrl": "https://junioredition.com/products/tunique-with-hair-clip-in-garden-flowers-print-by-bonjour",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "MATCH"
+   },
+   "originTitle": "Tunique With Hair Clip in Little Bouquet by Bonjour",
+   "candidateTitle": "Tunique With Hair Clip in Garden Flowers Print by Bonjour - Last Ones In Stock - 8-12 Years"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://www.junioredition.com/collections/true-artist/products/reversible-jacket-n-03-in-otter-brown-by-true-artist",
+   "candidateUrl": "https://junioredition.com/products/pixel-abduction-all-over-reversible-jacket-by-bobo-choses",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Reversible Jacket nº03 in Otter Brown by True Artist",
+   "candidateTitle": "Pixel Abduction All Over Reversible Jacket by Bobo Choses"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://main-story.com/products/bubble-sweatshirt-grey-melange-1?srsltid=AYCX9vJugDIA1cXJ1iOHFtxJpDob_yD88Nv5ovEy22z5tohMimgsiKVv",
+   "candidateUrl": "https://junioredition.com/products/bubble-sweatshirt-in-grey-melange-by-main-story",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "MATCH"
+   },
+   "originTitle": "Bubble Sweatshirt - Grey Melange",
+   "candidateTitle": "Bubble Sweatshirt in Grey Melange by Main Story"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://www.wynken.co.uk/products/mixed-media-jacket-ecru-mix?_pos=1&_sid=323acca5d&_ss=r",
+   "candidateUrl": "https://junioredition.com/products/mixed-media-jacket-in-ecru-mix-by-wynken",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Mixed Media Jacket - Ecru Mix",
+   "candidateTitle": "Mixed Media Jacket in Ecru Mix by Wynken"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://main-story.com/products/bubble-sweatshirt-grey-melange-1?srsltid=AYCX9vLRcFH3qL2naCiXoh8nj6QNTCU9F5GfFps0GRjAO4z0Oea6LCtL",
+   "candidateUrl": "https://junioredition.com/products/bubble-sweatshirt-in-grey-melange-by-main-story",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "MATCH"
+   },
+   "originTitle": "Bubble Sweatshirt - Grey Melange",
+   "candidateTitle": "Bubble Sweatshirt in Grey Melange by Main Story"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://www.junioredition.com/collections/bonjour/products/handsmock-dress-in-burgundy-cashmere-print-by-bonjour",
+   "candidateUrl": "https://junioredition.com/products/handsmock-apron-dress-in-natural-by-bonjour",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "MATCH"
+   },
+   "originTitle": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+   "candidateTitle": "Handsmock Apron Dress in Natural by Bonjour - Last Ones In Stock - 2-8 Years"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://www.junioredition.com/collections/bonjour/products/handsmock-dress-in-little-bouquet-by-bonjour",
+   "candidateUrl": "https://junioredition.com/products/exclusive-handsmock-dress-in-pink-tapestry-by-bonjour",
+   "candidateDomain": "junioredition.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "MATCH"
+   },
+   "originTitle": "Handsmock Dress in Little Bouquet by Bonjour",
+   "candidateTitle": "Handsmock Dress in Pink Tapestry by Bonjour - Last Ones In Stock - 6-12 Years"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://www.wynken.co.uk/products/mixed-media-jacket-ecru-mix?_pos=1&_sid=323acca5d&_ss=r",
+   "candidateUrl": "https://kidbizkid.com/products/patachou-ecru-tweed-coat",
+   "candidateDomain": "kidbizkid.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Mixed Media Jacket - Ecru Mix",
+   "candidateTitle": "Patachou Ecru Tweed Coat"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://www.smallable.com/en/product/reversible-mushroom-jacket-recycled-fiber-blue-bobo-choses-430611?algsearch=30c39962e4b80e9917116e04b6471ae2",
+   "candidateUrl": "https://kidbizkid.com/products/mackage-jesse-blue-jacket",
+   "candidateDomain": "kidbizkid.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "MATCH"
+   },
+   "originTitle": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+   "candidateTitle": "Mackage Jesse Blue Jacket"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://www.junioredition.com/collections/bonjour/products/handsmock-dress-in-little-bouquet-by-bonjour",
+   "candidateUrl": "https://kidbizkid.com/products/givenchy-lilac-dress",
+   "candidateDomain": "kidbizkid.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "MATCH"
+   },
+   "originTitle": "Handsmock Dress in Little Bouquet by Bonjour",
+   "candidateTitle": "Givenchy Lilac Dress"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://www.junioredition.com/collections/true-artist/products/reversible-jacket-n-03-in-otter-brown-by-true-artist",
+   "candidateUrl": "https://kidbizkid.com/products/billieblush-reversible-leopard-jacket",
+   "candidateDomain": "kidbizkid.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "MISMATCH"
+   },
+   "originTitle": "Reversible Jacket nº03 in Otter Brown by True Artist",
+   "candidateTitle": "Billieblush Reversible Leopard Jacket"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://www.smallable.com/en/product/reversible-mushroom-jacket-recycled-fiber-blue-bobo-choses-430611?algsearch=30c39962e4b80e9917116e04b6471ae2",
+   "candidateUrl": "https://nickis.com/products/colmar-daunenjacke-reversible-quilted-marineblau-7404628282",
+   "candidateDomain": "nickis.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "UNKNOWN",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+   "candidateTitle": "Daunenjacke Reversible Quilted Marineblau"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://www.junioredition.com/collections/bonjour/products/tunique-with-hair-clip-in-little-bouquet-by-bonjour",
+   "candidateUrl": "https://petitemaisonkids.com/products/azalea-pink-flower-hair-clip",
+   "candidateDomain": "petitemaisonkids.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Tunique With Hair Clip in Little Bouquet by Bonjour",
+   "candidateTitle": "Azalea Pink Flower Hair Clip"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://www.junioredition.com/collections/bonjour/products/handsmock-dress-in-burgundy-cashmere-print-by-bonjour",
+   "candidateUrl": "https://petitemaisonkids.com/products/georgina-tartan-print-dress-with-red-bow",
+   "candidateDomain": "petitemaisonkids.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+   "candidateTitle": "Georgina Tartan Print Dress with Red Bow"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://www.junioredition.com/collections/bonjour/products/handsmock-dress-in-burgundy-cashmere-print-by-bonjour",
+   "candidateUrl": "https://shoppiccoliandco.com/products/preorder-beatrice-burgundy-handsmocked-girl-sleeves-dress-ships-end-of-october",
+   "candidateDomain": "shoppiccoliandco.com",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN"
+   },
+   "originTitle": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+   "candidateTitle": "Beatrice Burgundy Handsmocked Girl Sleeves Dress"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://www.junioredition.com/collections/bonjour/products/handsmock-dress-in-burgundy-cashmere-print-by-bonjour",
+   "candidateUrl": "https://villagekids.co.uk/products/lemon-print-dress",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "MATCH"
+   },
+   "originTitle": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+   "candidateTitle": "Lemon Print Dress"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://www.smallable.com/en/product/bobo-choses-organic-cotton-t-shirt-ecru-bobo-choses-430700",
+   "candidateUrl": "https://villagekids.co.uk/products/blue-t-shirt",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MISMATCH",
+    "MATERIAL": "MATCH"
+   },
+   "originTitle": "Bobo Choses Organic Cotton T-shirt | Ecru",
+   "candidateTitle": "Blue T-Shirt"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://www.junioredition.com/collections/bonjour/products/handsmock-dress-in-little-bouquet-by-bonjour",
+   "candidateUrl": "https://villagekids.co.uk/products/copy-of-coral-pink-broderie-anglaise-dress",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "MISMATCH",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "MATCH"
+   },
+   "originTitle": "Handsmock Dress in Little Bouquet by Bonjour",
+   "candidateTitle": "White Broderie Anglaise Dress"
+  },
+  {
+   "originCode": null,
+   "originUrl": "https://www.smallable.com/en/product/reversible-mushroom-jacket-recycled-fiber-blue-bobo-choses-430611?algsearch=30c39962e4b80e9917116e04b6471ae2",
+   "candidateUrl": "https://villagekids.co.uk/products/blue-knitted-jacket",
+   "candidateDomain": "villagekids.co.uk",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "humanGt": null,
+   "hasOriginDescription": true,
+   "hasCandidateDescription": true,
+   "axisStatus": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_NAME": "UNKNOWN",
+    "FORM_DESIGN": "MATCH",
+    "COLOR": "MATCH",
+    "MATERIAL": "MISMATCH"
+   },
+   "originTitle": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+   "candidateTitle": "Blue Knitted Jacket"
+  }
+ ]
+}

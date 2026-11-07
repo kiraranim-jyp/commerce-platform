@@ -216,6 +216,15 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
    */
   skipped.push({ file: "ceo-evidence-review-gt.json", why: "🔴 wu-059/wu-068 과 **같은 쌍** 의 재판정 — 이중 집계 방지 · 🔴 C42 뒤집힘은 **CPO 승인 전 미적용**" });
   /**
+   * 🔵 MI-REEVAL STEP 1(2026-11-07) — **전수 조사 입력을 영속화한 읽기 전용 덤프 둘.**
+   * 🔴 **분모에 넣지 않는다** — ⒜ `db-human` 은 운영 `candidate_reviews` 사본이고
+   *    ⒝ `desc-pairs` 는 상세설명 비교 산출의 **식별자 요약** 이다. 둘 다 여기서 세면
+   *    `dsp-01-reviewed-same.json` 과 **같은 이중 집계** 가 된다.
+   * 🟢 그 둘의 분모는 `mi-reeval-01-inventory.test.ts` 가 **따로** 센다(출처를 가른 채로).
+   */
+  skipped.push({ file: "mi-reeval-01-db-human.json", why: "🔴 `candidate_reviews` 사람 판정 38행 사본 — **이중 집계 방지**" });
+  skipped.push({ file: "mi-reeval-01-desc-pairs.json", why: "🔴 상세설명 비교 109쌍의 **식별자 요약** — 이중 집계 방지" });
+  /**
    * 🔵 SPRINT5-BRAND-GT(2026-11-03) — **운영 `candidate_reviews` 의 사람 판정 행 전수 사본.**
    * 🔴 그래서 **분모에 넣지 않는다** — `dsp-01-reviewed-same.json` 과 **같은 이유**(이중 집계).
    *    그 라벨의 원본은 운영 DB 이고, 이 파일은 BRAND_MISMATCH 반사실 전용 고정본이다.
