@@ -95,7 +95,7 @@
 🟢 계약 10건이 그 CLOSED 를 **기계로 지킨다**
    (`packages/crawler/src/__tests__/phase2-market-currency-is-not-site-fx.test.ts`)
 🟡 후속 **둘** — ⒜ 글로벌 시장 카드 문구(작업지시서 **제출 완료 · CPO 승인 대기** ·
-   `docs/WORKORDER-GLOBAL-MARKET-CURRENCY-NOTE.md`) ⒝ 백로그(`docs/BACKLOG-SMALLABLE-P1.md`)
+   `docs/WORKORDER-GLOBAL-MARKET-CURRENCY-NOTE.md`) ⒝ 백로그(`docs/BACKLOG-P1.md`)
 ```
 
 ```
@@ -229,8 +229,29 @@
    `candidate_reviews`(사람 판단 **38행** · `villagekids` 충돌 1건 포함) ·
    🔵 좌표는 `CEO-JUDGMENT-REUSE-DESIGN.md` **§3-2**(조인 키·산출 모양·금지) ·
    🔴 용량 판단(§4-C)으로 **다음 세션** 에 넘긴다 — **재조사 0 으로 들어간다**
-🔴 남은 CPO 결정 **셋**(`CEO-GT-IMPORT-SPEC.md` §6) — 그룹 메모 처리 ·
-   이전 판단 적재 여부 · 밀린 migration 둘
+🟢🟢 **CPO 가 그 셋을 이미 결정했다 — 다시 질문으로 올리지 않는다**(CPO 명시 2026-11-07):
+   ⒜ 그룹 메모 = **`raw_note` 비우고 `review_key` 로 그룹 식별**(개별 쌍 복제 금지 · 083 변경 0)
+      🔴 단 **개별 메모가 확인되는 2건(C27·C50)만** `raw_note` 에 기록한다
+   ⒝ 과거 판단 = **`WU-059` 를 version 1 로 보존 · 최신을 후속 버전** (**13행** 계획 유지)
+      🔴 **선행 확인 1건** — `WU-059` 출처가 **실제 사람 판단** 인지 확인한다
+         (자동 판정값을 사람 판단으로 이관하면 안 된다 · CPO 명시) · 🔴 **미확인**
+   ⒞ 밀린 migration = 🟢 **없다**(내 보고가 틀렸다 · 078·081 전부 실재)
+🔴🔴 **보안 결함을 하나 찾아 고쳤다**(CPO 수정 방향 승인) — `grant select` 두 줄만 적었는데
+   실효 권한은 `anon` 에 **TRUNCATE 포함 14건** 이었다(Supabase **DEFAULT PRIVILEGES** 가 자동 부여) ·
+   🔴 **RLS 는 TRUNCATE 를 막지 못한다** ⟹ 두 표 한정 `revoke` 넷으로 **anon 0 · authenticated SELECT 1**
+   🔴 그 구멍은 계약 **D-2** 의 한계다 ⟹ 🔵 **BL-3 로 분리**(CPO: 083 에 끼워넣지 않는다)
+🟢🟢🟢 **`083` DB 적용 «완료» — 2026-11-07**(CPO 승인 · 🔴 **다시 적용하지 않는다**)
+   표 **2** · RLS **true×2** · 정책 **0**(기본 거부) · `anon` **0건** · `authenticated` **SELECT 만** ·
+   `service_role` bypassrls=true(서버 전용 · owner `supabase-admin.ts` 하나) · 클라이언트 접근 **0**
+   🔴 승인 범위 밖 불변 실측 — `candidate_reviews` 칸 24 · 행 200 · 사람 판단 38 ·
+      `ceo_judgments` **0행**(GT_IMPORT 적재 0) · `pg_default_acl` 24(전역 변경 0)
+   🟡 **미확인 셋**(쓰기 경로가 없어서) — version 2 공존 · `state` CHECK 거부 · 축 0행 저장
+🔵🔵 **다음 한 수 둘 — 서로 독립이고 CPO 가 순서를 지정한다**
+   ⒜ **쓰기 경로 구현**(CPO ② · 🟢 **이제 막힌 것이 없다** — 표가 생겼다) ·
+      🟢 그때 위 「미확인 셋」을 같이 확인한다
+   ⒝ **과거 DIFFERENT 표시 UI**(🔴 CPO: 083 과 **묶지 말고 독립** 진행) ·
+      좌표 `CEO-JUDGMENT-REUSE-DESIGN.md` §3-2 · **C06 필수 회귀**
+   🔴 `GT_IMPORT` **13행** 적재는 **별도 승인** 대상(명세는 `CEO-GT-IMPORT-SPEC.md`)
 ```
 
 ---
