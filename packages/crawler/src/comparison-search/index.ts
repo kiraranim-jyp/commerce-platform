@@ -108,6 +108,19 @@ export type { ProductMatchTruth } from "./product-identity";
  * 순수 판정. host 동일만으로는 제외하지 않는다(같은 브랜드 도메인의 다른 상품은
  * 정상 후보다). 점수/판정 로직은 전혀 건드리지 않는다. */
 export { canonicalListingKey, canonicalizeProductUrl, identifyingParams, isSameListingReference, isSelfReferenceCandidate, productHandle } from "./self-reference";
+/**
+ * 🔵 **취급 제외 브랜드**(CEO 결정 2026-11-07 · CPO 승인 §1~§3).
+ * 🔴 **판정이 아니다** — 비교 «전» 에 그 브랜드를 다루지 않는다는 사업 결정이다.
+ *    그래서 `brand-alias.ts`(브랜드를 **찾는** 등록부)와 **다른 파일** 에 있다.
+ */
+export {
+  EXCLUDED_BRAND_HOSTS,
+  EXCLUDED_BRAND_LABEL,
+  EXCLUDED_BRAND_NAMES,
+  EXCLUDED_BRAND_NOTICE,
+  isExcludedCandidate,
+  isExcludedOriginBrand,
+} from "./excluded-brands";
 /** 🔴 WU-017 — AI 답변 텍스트에서 **URL 만** 꺼낸다. AI 의 「동일상품」 주장은 Evidence 가
  *    아니고, 판정은 기존 체인(factsFromProductUrl → … → MI)이 **페이지를 열어** 한다. */
 export {

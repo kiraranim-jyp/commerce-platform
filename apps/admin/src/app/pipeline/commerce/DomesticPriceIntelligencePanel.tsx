@@ -2218,6 +2218,14 @@ export function DomesticPriceIntelligencePanel({
 
   /** 🔴 제외된 URL 을 **조용히 버리지 않는다** — 서버가 낸 이유를 그대로 한 줄로 적는다. */
   const [urlCandidateNotice, setUrlCandidateNotice] = useState<string | null>(null);
+  /**
+   * 🔵🔵 **취급 제외 브랜드 안내**(CEO 결정 2026-11-07 · CPO §3).
+   *
+   * 🔴 `urlCandidateNotice` 에 **합치지 않는다** — 그 칸은 「URL 후보 풀이 무엇을 버렸나」이고
+   *    이것은 「**검색을 시작하지 않았다**」다. 합치면 다음 사람이 둘을 같은 말로 읽는다.
+   * 🔴 그리고 「후보를 찾지 못했습니다」로 **적지 않는다** — 찾지 못한 것이 아니라 찾지 않았다.
+   */
+  const [brandExcludedNotice, setBrandExcludedNotice] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
   const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null);
@@ -2468,6 +2476,11 @@ export function DomesticPriceIntelligencePanel({
             webSearchEvidence?: GeminiTransientRow[] | null;
             /** 🔵 DIP-01 — ⑧ 게이트가 버린 후보(표시 전용 · MI 입력 아님). */
             weakCandidateEvidence?: GeminiTransientRow[] | null;
+            /**
+             * 🔵 **취급 제외 브랜드라 검색을 시작하지 않았다**(CEO 결정 2026-11-07).
+             * 🔴 「후보 0」이 아니다 — `notice` 문구의 owner 는 **서버** 다(사본 금지).
+             */
+            brandExcluded?: { brand: string; notice: string } | null;
             urlCandidateMetrics?: {
               suppliedUrls: number;
               acceptedUrls: number;
@@ -2494,6 +2507,8 @@ export function DomesticPriceIntelligencePanel({
         /** 🔵 DIP-01 UI — 「🔄 다시 분석」 경로에도 같은 줄이 필요하다(두 소비처). */
         setWeakCandidateEvidence(json.domesticShop?.weakCandidateEvidence ?? null);
         setUrlCandidateNotice(describeUrlCandidateMetrics(json.domesticShop?.urlCandidateMetrics ?? null));
+        /** 🔵 서버가 「취급 제외라 시작하지 않았다」를 돌려주면 **그 문구를 그대로** 쓴다(사본 0). */
+        setBrandExcludedNotice(json.domesticShop?.brandExcluded?.notice ?? null);
         setOverseasReference(json.overseasReference ?? null);
         setDomesticReference(json.domesticReference ?? null);
       }
@@ -2605,6 +2620,7 @@ export function DomesticPriceIntelligencePanel({
       onRequestPriceReview={onRequestPriceReview}
       rechecking={rechecking}
       recheckResult={recheckResult}
+      brandExcludedNotice={brandExcludedNotice}
       geminiEvidence={geminiEvidence}
       candidateUrlsText={candidateUrlsText}
       onCandidateUrlsChange={setCandidateUrlsText}
@@ -3057,6 +3073,7 @@ export function MiPanelView({
   onRequestPriceReview,
   rechecking = false,
   recheckResult = null,
+  brandExcludedNotice = null,
   geminiEvidence = null,
   candidateUrlsText = "",
   onCandidateUrlsChange,
@@ -3177,6 +3194,11 @@ export function MiPanelView({
    */
   domesticReference?: OverseasPriceSummary | null;
   recheckResult?: RecheckResult | null;
+  /**
+   * 🔵 **취급 제외 브랜드 안내**(CPO §3) — 🔴 「후보 없음」과 **다른 칸** 이다.
+   * 🔴 문구를 여기서 만들지 않는다 — 서버가 `EXCLUDED_BRAND_NOTICE` 를 그대로 실어 보낸다.
+   */
+  brandExcludedNotice?: string | null;
   onRecheck?: () => void;
   confirmingId?: string | null;
   onConfirmSameProduct?: (id: string) => void;
@@ -4236,6 +4258,24 @@ export function MiPanelView({
               </p>
             )}
           </div>
+        )}
+        {/*
+          ══════════════════════════════════════════════════════════════════════
+          🔵🔵🔵 **취급 제외 브랜드 — 접힘 «밖» 에 선다**(CEO 결정 2026-11-07 · CPO §3)
+          ══════════════════════════════════════════════════════════════════════
+          🔴 접힘 «안» 에 두면 셀러가 펼치지 않는 한 **「아무 일도 없었다」로 보인다** —
+             그러면 이 안내를 붙인 이유가 사라진다(WU-029 가 같은 이유로 결과를 꺼냈다).
+          🔴 그리고 「후보를 찾지 못했습니다」·「검색 결과 없음」·「상품 매칭 실패」와
+             **같은 말로 적지 않는다** — 검색을 **시도하지 않았다**(CPO 가 문구를 고정했다).
+          🟢 문구의 owner 는 `EXCLUDED_BRAND_NOTICE` 하나이고 서버가 그대로 실어 보낸다.
+        */}
+        {brandExcludedNotice && (
+          <p
+            data-testid="brand-excluded-notice"
+            className="mt-2 rounded-md border border-border-subtle bg-surface-subtle px-3 py-2 text-[12px] text-text-secondary"
+          >
+            {brandExcludedNotice}
+          </p>
         )}
         {/*
           ══════════════════════════════════════════════════════════════════════

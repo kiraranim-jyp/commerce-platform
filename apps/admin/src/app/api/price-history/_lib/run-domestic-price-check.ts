@@ -7,6 +7,11 @@ import {
   fetchDomesticModelCode,
   isColorUnverified,
   isSelfReferenceCandidate,
+  /** 🔵 취급 제외 브랜드(CEO 결정 2026-11-07) — 🔴 **판정이 아니라 사업 결정** 이다. */
+  isExcludedCandidate,
+  isExcludedOriginBrand,
+  EXCLUDED_BRAND_LABEL,
+  EXCLUDED_BRAND_NOTICE,
   refreshDomesticProductPrice,
   searchDomesticShops,
   withConfidence,
@@ -425,6 +430,15 @@ export interface DomesticPriceCheckResult {
   linksCreatedOrUpdated: number;
   pricesRecorded: number;
   sourceErrors: string[];
+  /**
+   * 🔵🔵 **취급 제외 브랜드라 «검색을 시도하지 않았다»**(CEO 결정 2026-11-07 · CPO §1①).
+   *
+   * 🔴 `null`/생략 = 정상 경로 · 값 있음 = **그 브랜드라서 조기 종료했다**.
+   * 🔴🔴 그래서 화면은 이것을 「후보를 찾지 못했습니다」로 적으면 **안 된다** —
+   *    찾지 못한 것이 아니라 **찾지 않았다**(CPO §3 이 문구를 고정했다).
+   * 🔴 optional 이다 — 기존 호출부에 breaking change 가 없다.
+   */
+  brandExcluded?: { brand: string; notice: string } | null;
   /** 🔴 MI-GEMINI-005 §10 — flag OFF 면 `null` 이다(「0 회」가 아니라 「안 돌았다」). */
   geminiMetrics?: GeminiPoolMetrics | null;
   /**
@@ -968,12 +982,14 @@ export function isBatchSurveyTarget(
  */
 /** 🔴 유니온 반환에 타입을 «명시» 한다 — 추론에 맡겼다가 판별자가 죽은 전례가 있다. */
 export type DomesticJudgement =
-  | { kind: "NO_CANDIDATES"; selfReferenceExcluded: number }
+  | { kind: "NO_CANDIDATES"; selfReferenceExcluded: number; brandExcluded: number }
   | {
       kind: "DROPPED";
       /** 🔴 어느 게이트에서 떨어졌는가. 「후보가 없다」와 섞지 않는다. */
       gate: "EVIDENCE_NOT_WORTHWHILE" | "NOT_MATCHED";
       selfReferenceExcluded: number;
+      /** 🔵 취급 제외 브랜드라 **판정 전에 빠진** 후보 수(CPO §1②). 🔴 게이트 탈락이 아니다. */
+      brandExcluded: number;
       candidateCount: number;
       observed: {
         candidate: ComparisonCandidate;
@@ -985,6 +1001,8 @@ export type DomesticJudgement =
   | {
       kind: "JUDGED";
       selfReferenceExcluded: number;
+      /** 🔵 취급 제외 브랜드라 **판정 전에 빠진** 후보 수(CPO §1②). 🔴 게이트 탈락이 아니다. */
+      brandExcluded: number;
       candidateCount: number;
       best: ComparisonCandidate;
       modelCodeEvidence: ModelEvidenceResult;
@@ -1012,9 +1030,26 @@ export interface JudgeDomesticInput {
 }
 
 export async function judgeDomesticCandidate(input: JudgeDomesticInput): Promise<DomesticJudgement> {
-  const candidates = input.candidates.filter((c) => !isSelfReferenceCandidate(input.sourceUrl, c.url));
-  const selfReferenceExcluded = input.candidates.length - candidates.length;
-  if (candidates.length === 0) return { kind: "NO_CANDIDATES", selfReferenceExcluded };
+  const notSelf = input.candidates.filter((c) => !isSelfReferenceCandidate(input.sourceUrl, c.url));
+  const selfReferenceExcluded = input.candidates.length - notSelf.length;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵 **취급 제외 브랜드 후보를 «판정 전» 에 뺀다**(CEO 결정 2026-11-07 · CPO §1②)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 **왜 여기인가** — 이 함수는 `run-domestic-price-check` 에서 **한 곳에서만** 불린다.
+   *    그래서 생산자가 여섯이어도(등록부 · URL 풀 · AI 답변 · 웹검색 · 국내목록 ·
+   *    해외자동) **모든 후보가 반드시 이 줄을 지난다** — 유일한 choke point 다.
+   * 🔴 **자기참조 제외와 같은 모양** 이다 — 「선택에 들어가는 목록에서만」 뺀다.
+   *    점수(`scoreCandidateMatch`)도 선택 규칙도 게이트도 **건드리지 않는다**.
+   * 🔴 그래서 다른 브랜드 후보의 순서 · confidence · 판정은 **전과 완전히 같다**.
+   */
+  const candidates = notSelf.filter((c) => !isExcludedCandidate({ brand: c.brand, url: c.url }));
+  const brandExcluded = notSelf.length - candidates.length;
+  if (brandExcluded > 0) {
+    console.log(`[BRAND-EXCLUDED] candidates dropped before judging (${input.domain}): ${brandExcluded}건`);
+  }
+  if (candidates.length === 0) return { kind: "NO_CANDIDATES", selfReferenceExcluded, brandExcluded };
 
   const worthwhile = isEvidenceEvaluationWorthwhile(candidates, input.foreignModelCode, input.domain);
   const top = candidates[0]!;
@@ -1023,6 +1058,7 @@ export async function judgeDomesticCandidate(input: JudgeDomesticInput): Promise
       kind: "DROPPED",
       gate: "EVIDENCE_NOT_WORTHWHILE",
       selfReferenceExcluded,
+      brandExcluded,
       candidateCount: candidates.length,
       observed: { candidate: top, modelCodeEvidence: null, initialMatchType: null, orderedRank: null },
     };
@@ -1056,6 +1092,7 @@ export async function judgeDomesticCandidate(input: JudgeDomesticInput): Promise
       kind: "DROPPED",
       gate: "NOT_MATCHED",
       selfReferenceExcluded,
+      brandExcluded,
       candidateCount: candidates.length,
       observed: { candidate: best, modelCodeEvidence, initialMatchType, orderedRank: skippedConflictCount },
     };
@@ -1095,6 +1132,7 @@ export async function judgeDomesticCandidate(input: JudgeDomesticInput): Promise
   return {
     kind: "JUDGED",
     selfReferenceExcluded,
+    brandExcluded,
     candidateCount: candidates.length,
     best,
     modelCodeEvidence,
@@ -1117,6 +1155,30 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
   // 카운터 하나만 잰다(판정 로직에는 관여하지 않음). P-28(2026-09-03)에서
   // foretforet.com 하드코딩을 걷어내고 도메인 무관 카운터로 일반화했다.
   let domesticModelCodeFetchCount = 0;
+
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 **취급 제외 브랜드 — 검색 «전» 에 끝낸다**(CEO 결정 2026-11-07 · CPO §1①)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 **왜 후보 제외만으로는 안 되는가** — 실측(CEO Evidence Review 11쌍)에서
+   *    Main Story 5쌍의 **원상품 brand 가 5/5 Main Story** 였다. 후보만 빼면 그 상품은
+   *    검색을 끝까지 돌리고 후보가 0 이 되어 **「후보를 찾지 못했습니다」로 보인다** —
+   *    즉 **정상 공급 실패와 취급 제외가 구별되지 않는다**(CPO 가 지적한 그 자리).
+   * 🟢 그래서 여기서 끊는다. **외부 HTTP 0 · 검색 0 · 판정 0 · DB 쓰기 0.**
+   * 🔴 **이것은 판정 완화도 강화도 아니다** — matcher 입력에 **닿지 않는다**.
+   * 🔴 `skipIfCheckedToday` 조기 종료와 **같은 반환 모양** 이다(새 계약 0).
+   */
+  if (isExcludedOriginBrand(input.dna.brand.value)) {
+    console.log(`[BRAND-EXCLUDED] origin brand=${input.dna.brand.value} — 검색/판정을 시작하지 않았다`);
+    return {
+      linksCreatedOrUpdated: 0,
+      pricesRecorded: 0,
+      sourceErrors: [],
+      domesticModelCodeFetchCount: 0,
+      brandExcluded: { brand: EXCLUDED_BRAND_LABEL, notice: EXCLUDED_BRAND_NOTICE },
+    };
+  }
 
   const alreadyChecked = input.skipIfCheckedToday
     ? await hasObservationToday(input.snapshotId, "DOMESTIC_SHOP")
