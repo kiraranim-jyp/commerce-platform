@@ -136,10 +136,21 @@ describe("② 🔴 EXACT 있음 — 예전과 «한 글자도» 다르지 않다
     expect(caseC.verdict.code).toBe("HOLD");
     expect(caseC.facing.code).toBe("NOT_RECOMMENDED");
 
-    /* CASE B — 손실은 아니지만 목표마진 미달. REVIEW_PRICE 로 내린다. */
+    /**
+     * 🔵🔵🔵 **MI-SELLER-POLICY-A(CEO 승인 2026-11-08) — CASE B 의 강등 «칸» 이 바뀌었다.**
+     * ```
+     * 전   CASE B → 🟡 REVIEW_PRICE → CONDITIONAL   「손실 없이 판매 가능」
+     * 후   CASE B → 🔴 **HOLD** → **NOT_RECOMMENDED** 「목표마진 달성 불가」
+     * ```
+     * 🔴 **이 파일의 명제는 그대로다** — 「최저가 기준 CASE 가 여전히 최종을 **강등** 한다」.
+     *    바뀐 것은 **얼마나 내리는가** 이고, 그것이 CEO 가 승인한 제품 정책이다.
+     * 🟢 CASE C 는 **한 글자도 바뀌지 않았다**(바로 위 단언이 그것을 지킨다).
+     */
     const caseB = finalVerdict(s, "EXACT", "B", { domesticSellerCount: 2, domesticLowestPriceKrw: 150_000 });
-    expect(caseB.verdict.code).toBe("REVIEW_PRICE");
-    expect(caseB.facing.code).toBe("CONDITIONAL");
+    expect(caseB.verdict.code).toBe("HOLD");
+    expect(caseB.facing.code).toBe("NOT_RECOMMENDED");
+    /** 🔴 「조건부」로 되돌아가면 FAIL 한다. */
+    expect(caseB.facing.title).not.toContain("조건부");
   });
 });
 

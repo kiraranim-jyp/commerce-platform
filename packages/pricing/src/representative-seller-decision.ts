@@ -159,18 +159,53 @@ function applyMarketCaseGuard(verdict: RepresentativeVerdict, input: Representat
     };
   }
 
-  // CASE B — 손해는 아니지만 목표마진에는 못 미친다. 시장가를 그대로
-  // 권장가로 쓰고(P-26 정책 변경), 실제 계산된 마진율을 그대로 알린다.
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MI-SELLER-POLICY-A — **목표마진 미달이면 «판매 비추천» 이다**(CEO 승인 2026-11-08)
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 **정책이 바뀐 자리다. 문자열 교체가 아니라 제품 정책 변경이다.**
+   * ```
+   * 전   CASE B → REVIEW_PRICE → **CONDITIONAL**(조건부 판매)
+   *      근거: 「손실 없이 판매 가능」 — 즉 **손실 여부** 만으로 판매 가능성을 판단했다
+   * 후   CASE B → **HOLD** → **NOT_RECOMMENDED**(판매 비추천)
+   *      근거: 「현재 시장가격으로는 **목표마진을 달성할 수 없다**」
+   * ```
+   * 🔴 CEO: 「손실이 없더라도 목표마진을 달성할 수 없다면 판매를 추천하지 않는다」.
+   *
+   * 🔴🔴 **`VERDICT_COPY.HOLD.description` 을 그대로 쓰지 않는다.** 그 문장은
+   *    「예상 수익이 **마이너스**입니다」인데 CASE B 는 **손실이 아니다**(C 가 손실이다).
+   *    그대로 쓰면 **화면이 거짓말한다** ⟹ 🟢 B 전용 설명으로 **덮어쓴다**
+   *    (`REVIEW_MATCH` 가 `description` 을 덮는 것과 **같은 선례** 다).
+   * 🔴 바뀌지 않는 것 — `targetPrice`·`landedCost`·`netProfitAt` **공식 0** ·
+   *    CASE **A · C · D 판정 0** · 추천 판매가격 **A(원가 역산)의 계산·표시·적용 경로 0**.
+   * 🔴 **추천가를 시장 최저가로 낮춰 표시하지 않는다**(CEO 명시 금지).
+   */
   const marketPriceText = input.domesticLowestPriceKrw != null ? `₩${input.domesticLowestPriceKrw.toLocaleString()}` : "국내 시장가";
   const marginText =
     input.recommendation?.estimatedMarginPercent != null ? ` — 예상 마진 약 ${input.recommendation.estimatedMarginPercent}%` : "";
-  const gapReason = `국내 최저가 ${marketPriceText} 기준으로는 목표마진에 못 미치지만 손실 없이 판매 가능합니다${marginText}`;
+  const gapReason = `${MARGIN_SHORTFALL_REASON_PREFIX} ${marketPriceText}${marginText}`;
   return {
-    ...VERDICT_COPY.REVIEW_PRICE,
-    code: "REVIEW_PRICE",
+    ...VERDICT_COPY.HOLD,
+    /** 🔴 손실 문장을 쓰지 않는다 — B 는 손실이 아니라 **목표마진 미달** 이다. */
+    description: MARGIN_SHORTFALL_DESCRIPTION,
+    code: "HOLD",
     reasons: [...verdict.reasons, gapReason],
   };
 }
+
+/** 🔴 정책 A 의 어휘 owner — 화면·계약이 **이 상수** 를 쓴다(사본 0 · 문구 드리프트 0). */
+export const MARGIN_SHORTFALL_DESCRIPTION =
+  "현재 시장가격으로는 목표마진을 달성하기 어렵습니다. 손실은 나지 않지만 목표 수익성에 미치지 못해 판매를 추천하지 않습니다.";
+export const MARGIN_SHORTFALL_REASON_PREFIX = "현재 시장가격으로는 목표마진을 달성하기 어렵습니다 — 국내 최저가";
+
+/**
+ * 🔴🔴 **MI-SELLER-POLICY-A — 여기 있던 CASE B 의 `REVIEW_PRICE` 반환을 «지웠다».**
+ *    남겨 두면 다음 사람이 그 분기를 **되살릴 자리** 가 된다(WU-141-R3 가
+ *    「계산해 두고 아무도 읽지 않는 자리」를 지운 것과 같은 이유).
+ * 🟢 `REVIEW_PRICE` 코드 자체는 **살아 있다** — `deriveBaseVerdict` 의
+ *    `ADJUST`/`RED` 경로가 쓴다(그 경로의 의미는 바뀌지 않았다).
+ */
 
 export function deriveRepresentativeSellerVerdict(input: RepresentativeVerdictInput): RepresentativeVerdict {
   return applyMarketCaseGuard(deriveBaseVerdict(input), input);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   deriveRepresentativeSellerVerdict,
+  MARGIN_SHORTFALL_DESCRIPTION,
   toSellerFacingVerdict,
   type RepresentativeVerdictInput,
 } from "../representative-seller-decision";
@@ -454,7 +455,22 @@ describe("P-26: marketCase(A/B/C/D)를 그대로 신뢰해서 대표 판단을 �
     expect(result.icon).toBe("🟢");
   });
 
-  it("marketCase B(실측 PèPè) → 🟡 REVIEW_PRICE, 이유에 실제 계산된 마진율이 나온다(하드코딩 아님)", () => {
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MI-SELLER-POLICY-A — **CASE B 가 「조건부」에서 「판매 비추천」이 됐다**
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 **CEO 승인 정책 변경**(2026-11-08) — 「손실이 없더라도 **목표마진을 달성할 수
+   *    없다면** 판매를 추천하지 않는다」. 이력을 전부 남긴다:
+   * ```
+   * P-26        CASE B → 🟡 REVIEW_PRICE → CONDITIONAL  「손실 없이 판매 가능」
+   * POLICY-A    CASE B → 🔴 **HOLD** → **NOT_RECOMMENDED** 「목표마진 달성 불가」
+   * ```
+   * 🔴 **손실 어휘를 쓰지 않는다** — B 는 손실이 아니다(C 가 손실이다).
+   *    그래서 `VERDICT_COPY.HOLD.description`(「예상 수익이 마이너스」)을 **덮어쓴다**.
+   * 🔴 공식(`targetPrice`·`landedCost`·`netProfitAt`)과 CASE **A·C·D 는 불변** 이다.
+   */
+  it("marketCase B → 🔴 HOLD(판매 비추천) · 목표마진 미달을 말하고 «손실» 이라 하지 않는다", () => {
     const result = deriveRepresentativeSellerVerdict({
       ...base,
       marketCase: "B",
@@ -462,9 +478,35 @@ describe("P-26: marketCase(A/B/C/D)를 그대로 신뢰해서 대표 판단을 �
       domesticLowestPriceKrw: 258000,
       landedCostKrw: 242400,
     });
-    expect(result.code).toBe("REVIEW_PRICE");
-    expect(result.icon).toBe("🟡");
+    expect(result.code).toBe("HOLD");
+    expect(result.icon).toBe("🔴");
+    /** 🟢 실제 계산된 값이 그대로 온다(하드코딩 아님). */
     expect(result.reasons.some((r) => r.includes("258,000") && r.includes("6"))).toBe(true);
+    /** 🔴 목표마진 미달을 **말한다**. */
+    expect(result.reasons.some((r) => r.includes("목표마진"))).toBe(true);
+    /**
+     * 🔴🔴 **거짓말 금지** — B 는 손실이 아니므로 「손해」·「마이너스」를 쓰면 안 된다.
+     *    `VERDICT_COPY.HOLD` 를 그대로 쓰면 이 단언이 FAIL 한다(그래서 덮어썼다).
+     */
+    expect(`${result.description} ${result.reasons.join(" ")}`).not.toMatch(/손해|마이너스/);
+    expect(result.description).toBe(MARGIN_SHORTFALL_DESCRIPTION);
+  });
+
+  /**
+   * 🔴🔴 **되살아남 방지(CPO 명시)** — `B → REVIEW_PRICE → CONDITIONAL` 경로가
+   *    다시 생기면 이 단언이 FAIL 한다. 셀러가 보는 최종 문자열까지 같이 본다.
+   */
+  it("🔴🔴 CASE B 가 다시 «조건부 판매» 로 내려가지 않는다(최종 셀러 문구까지)", () => {
+    const result = deriveRepresentativeSellerVerdict({
+      ...base,
+      marketCase: "B",
+      recommendation: { recommendedPrice: 258000, estimatedMarginPercent: 6.0 },
+      domesticLowestPriceKrw: 258000,
+      landedCostKrw: 242400,
+    });
+    expect(result.code).not.toBe("REVIEW_PRICE");
+    expect(toSellerFacingVerdict(result).code).toBe("NOT_RECOMMENDED");
+    expect(toSellerFacingVerdict(result).title).not.toContain("조건부");
   });
 
   it("marketCase C → 🔴 HOLD, 이유에 시장가/착지원가와 '손해'라는 사실이 명시된다", () => {
@@ -506,7 +548,12 @@ describe("P-26: marketCase(A/B/C/D)를 그대로 신뢰해서 대표 판단을 �
     expect(result.code).toBe("MARKET_OPPORTUNITY");
   });
 
-  it("Priority 1(unifiedDecision 경로, 판매가 확정) READY도 같은 가드가 적용된다 — marketCase B면 🟡로 낮춘다", () => {
+  /**
+   * 🔵 MI-SELLER-POLICY-A — **같은 가드가 여전히 적용된다. 내려가는 «칸» 만 바뀌었다.**
+   * 🔴 전: 🟡 REVIEW_PRICE  →  후: 🔴 **HOLD**(판매 비추천) · 명제는 그대로다
+   *    (판매가가 확정된 경로에서도 CASE B 가드를 **건너뛰지 않는다**).
+   */
+  it("Priority 1(unifiedDecision 경로, 판매가 확정) READY도 같은 가드가 적용된다 — marketCase B면 🔴로 낮춘다", () => {
     const result = deriveRepresentativeSellerVerdict({
       unifiedDecision: { verdict: "MAINTAIN", dataCompleteness: "COMPLETE", marginPercent: { value: 15, status: "estimated" }, missingComponents: [] },
       sellability: { level: "RED", estimatedMarginPercent: -1, reason: "..." },
@@ -518,8 +565,9 @@ describe("P-26: marketCase(A/B/C/D)를 그대로 신뢰해서 대표 판단을 �
       domesticLowestPriceKrw: 258000,
       landedCostKrw: 242400,
     });
-    expect(result.code).toBe("REVIEW_PRICE");
-    expect(result.icon).toBe("🟡");
+    expect(result.code).toBe("HOLD");
+    expect(result.icon).toBe("🔴");
+    expect(toSellerFacingVerdict(result).code).toBe("NOT_RECOMMENDED");
   });
 });
 
