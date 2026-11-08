@@ -21,6 +21,8 @@ import { describe, expect, it } from "vitest";
  */
 
 const LIB = path.join(__dirname, "..");
+/** 🔵 리포 루트 — `__tests__` 에서 8단 위다(Q-4b 가 owner 파일을 읽는다). */
+const REPO = path.join(__dirname, "..", "..", "..", "..", "..", "..", "..", "..");
 const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ \t]*\/\/.*$/gm, "");
 const RUNNER = strip(readFileSync(path.join(LIB, "run-domestic-price-check.ts"), "utf8"));
 const HARNESS = strip(readFileSync(path.join(__dirname, "sprint2-e2e-live.test.ts"), "utf8"));
@@ -47,9 +49,45 @@ describe("SPRINT2-QUERY-PARITY", () => {
     expect(HARNESS).toContain("const searchTerm = searchTerms[0] ?? searchTitle");
   });
 
-  it("Q-4 🔴 `facts` owner 가 같다 — `productFactsFromIdentityDna`", () => {
-    expect(RUNNER).toContain("facts: productFactsFromIdentityDna(input.dna)");
-    expect(HARNESS).toContain("facts: productFactsFromIdentityDna(dna as never)");
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * Q-4 🔴 `facts` owner 가 같다 — 🔵 **COMMON-EVIDENCE-1 에서 «강화» 됐다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 **원래 이 단언이 막던 것**: MI-L1 이 운영 호출부만 `attachProductEvidence(...)` 로
+   *    감싸서 **하니스는 evidence 없는 facts** 를 쓰게 됐다 ⟹ 같은 원상품인데 facts 가
+   *    갈렸다 ⟹ 이 계약이 **FAIL 로 잡았다**(정당한 FAIL · A6 로 철회했다).
+   *
+   * 🟢 **COMMON-EVIDENCE-1 이 원인을 고쳤다** — 합성을 **owner 안** 으로 옮겼다:
+   * ```
+   * origin-facts.ts  originFactsFromIdentityDna(dna)
+   *                    = attachProductEvidence(productFactsFromIdentityDna(dna))
+   * ⟹ 운영과 하니스가 **같은 함수 하나** 를 부른다 ⟹ 갈릴 구조가 **없다**
+   * ```
+   * 🔴 **느슨하게 하지 않았다** — 같은 owner 를 양쪽에서 단언하고 **추가로**
+   *    「어느 쪽도 `attachProductEvidence` 를 직접 부르지 않는다」를 단언한다
+   *    (직접 부르기 시작하면 그것이 다시 호출부 합성이고 같은 갈림이 생긴다).
+   */
+  it("Q-4 🔴 `facts` owner 가 같다 — `originFactsFromIdentityDna`(합성이 owner 안에 있다)", () => {
+    expect(RUNNER).toContain("facts: originFactsFromIdentityDna(input.dna)");
+    expect(HARNESS).toContain("facts: originFactsFromIdentityDna(dna as never)");
+    /** 🔴 호출부 합성 금지 — 양쪽 어디에도 **직접 합성** 이 없어야 한다. */
+    expect(RUNNER, "🔴 러너가 호출부에서 직접 합성했다").not.toContain("attachProductEvidence(");
+    expect(HARNESS, "🔴 하니스가 호출부에서 직접 합성했다").not.toContain("attachProductEvidence(");
+    /** 🔴 그리고 **날것 owner 를 직접 쓰지 않는다**(그러면 evidence 가 빠진다). */
+    expect(RUNNER).not.toContain("facts: productFactsFromIdentityDna(");
+    expect(HARNESS).not.toContain("facts: productFactsFromIdentityDna(");
+  });
+
+  /**
+   * Q-4b 🔵 **COMMON-EVIDENCE-1 신설** — 합성이 **owner 파일 안에 실제로** 있다.
+   * 🔴 이름만 바꾸고 합성을 빠뜨리면 원상품 evidence 가 **조용히 0** 이 된다.
+   */
+  it("Q-4b 🔴 owner 가 두 단계를 **실제로 합성** 한다", () => {
+    const owner = strip(
+      readFileSync(path.join(REPO, "packages/crawler/src/comparison-search/origin-facts.ts"), "utf8"),
+    );
+    expect(owner).toContain("attachProductEvidence(productFactsFromIdentityDna(dna))");
   });
 
   it("Q-5 🔴 `query` 칸 집합이 **일곱으로 같다** — 하나라도 빠지면 발견량이 달라진다", () => {

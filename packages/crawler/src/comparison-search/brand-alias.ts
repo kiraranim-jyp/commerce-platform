@@ -106,3 +106,77 @@ export function lookupBrandByAliasInTitle(title: string | null | undefined): str
   }
   return undefined;
 }
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵 BRAND-1 — **등록부 표기 «전부» 와 그 위치를 돌려준다**(관찰 전용)
+ * ════════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 **왜 새 함수인가** — `lookupBrandByAliasInTitle` 은 **첫 하나** 만 돌려준다.
+ *    그래서 「한 설명에 여러 브랜드가 등장」(CPO 구분 사례)을 **표현할 수 없다**.
+ * 🟢 그 함수는 **한 글자도 바꾸지 않았다** — 소비처가 `brandFromHtml`(= `facts.brand`)
+ *    이므로 동작을 건드리면 **확정 브랜드가 움직인다**(BRAND-1 금지).
+ * 🟢 등록부(`BRAND_ALIASES`)·경계 규칙(`WORDISH_RE`)·정규화(`normalizeBrand`)를
+ *    **그대로 재사용** 한다 — 🔴 **alias 추가 0 · 새 사전 0 · 음역 추론 0**.
+ */
+export interface BrandAliasMention {
+  /** 등록부의 정규 브랜드 문자열(`CanonicalProduct.brand.value` 그대로). */
+  brand: string;
+  /** 본문에 실제로 적혀 있던 표기. 🔴 한글 alias **또는** 정규 브랜드 문자열이다. */
+  matched: string;
+  /** 🔵 어느 칸이 적중했는가 — 보고에서 둘을 **합치지 않기** 위해 남긴다. */
+  via: "ALIAS" | "BRAND";
+  /** 본문 내 위치(문맥 창을 뜨는 데 쓴다). */
+  index: number;
+}
+
+/**
+ * 🔴🔴 **등록부의 «두 칸» 을 다 본다 — 그래야 국내/해외가 같은 규칙이 된다.**
+ * ```
+ * 🔴 `alias` 만 보면  한글 설명(「보보쇼즈」) ✅ / 라틴 설명(「Bobo Choses」) ❌
+ *    ⟹ 같은 함수인데 **시장별로 다르게 동작** 한다(CPO A 「국내·해외 구분 없는 동일 추출 경로」 위반)
+ * 🟢 그래서 `brand` 칸(= `CanonicalProduct.brand.value` 원문)도 같이 찾는다.
+ * 🔴 **새 표기를 더한 것이 아니다** — 등록부에 **이미 있던 칸** 이고 alias 추가는 **0** 이다.
+ * 🔴 경계 규칙(`WORDISH_RE`)은 **그대로** 적용한다.
+ * ```
+ */
+export function findBrandAliasMentions(text: string | null | undefined): BrandAliasMention[] {
+  if (!text) return [];
+  const haystack = text.normalize("NFKC");
+  const out: BrandAliasMention[] = [];
+  const scan = (brand: string, needle: string, via: BrandAliasMention["via"]): void => {
+    if (!needle) return;
+    /** 🔴 라틴 표기는 대소문자가 섞여 들어온다(「BOBO CHOSES」) ⟹ 소문자로 맞춰 찾는다. */
+    const hay = haystack.toLowerCase();
+    const want = needle.toLowerCase();
+    let from = 0;
+    for (;;) {
+      const at = hay.indexOf(want, from);
+      if (at < 0) break;
+      const before = at > 0 ? haystack[at - 1] : "";
+      const after = haystack[at + needle.length] ?? "";
+      /** 🔴 경계 규칙은 위 함수와 **같다** — 「보보쇼즈풍」을 브랜드로 읽지 않는다. */
+      if (!WORDISH_RE.test(before) && !WORDISH_RE.test(after)) {
+        out.push({ brand, matched: haystack.slice(at, at + needle.length), via, index: at });
+      }
+      from = at + needle.length;
+    }
+  };
+  for (const { brand, alias } of ALIAS_ENTRIES) {
+    scan(brand, alias, "ALIAS");
+    scan(brand, brand, "BRAND");
+  }
+  return out.sort((a, b) => a.index - b.index);
+}
+
+/**
+ * 🔵 BRAND-1 — 이 문자열이 **등록부가 «제품 브랜드» 로 아는 이름인가**.
+ *
+ * 🔴 이것은 「샵 이름 목록」이 **아니다**(그 목록은 §12-0 이 금지한 Registry 다).
+ *    등록부는 **제품 브랜드** 쪽만 알고, 모르는 이름에 대해서는 **아무 말도 하지 않는다**
+ *    ⟹ `false` 를 「샵 이름이다」로 읽으면 **틀린다**(WU-080 §7 D).
+ */
+export function isKnownProductBrand(brand: string | null | undefined): boolean {
+  if (!brand) return false;
+  return ALIAS_BY_NORMALIZED_BRAND.has(normalizeBrand(brand));
+}

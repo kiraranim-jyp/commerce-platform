@@ -16,6 +16,11 @@ import type { MatchTruth } from "@commerce/crawler/src/comparison-search/match-t
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 /** 🔴 WU-022 — transient 후보 구역. 저장되지 않는 값만 다루는 **표시 전용** 컴포넌트다. */
 /** 🔴 WU-030 — 결론을 한 덩어리로 모으는 요약 블록(표시 전용 · 계산 0). */
+/**
+ * 🔵🔵 IDENTITY-EVIDENCE-API-UI-1 — 원본 ↔ 후보 **근거 대조** 화면.
+ * 🔴 표시 전용이다 — 판정/가격/집계 어휘를 이 경로에 넣지 않는다.
+ */
+import { IdentityEvidencePanel, type IdentityEvidencePayload } from "./IdentityEvidencePanel";
 import { ProductJudgementSummary } from "./ProductJudgementSummary";
 /**
  * 🔴🔴 WU-132 ③ — **`OverseasReferencePrice` 를 이 패널이 더 이상 그리지 않는다.**
@@ -2063,6 +2068,12 @@ export function DomesticPriceIntelligencePanel({
    */
   const [weakCandidateEvidence, setWeakCandidateEvidence] = useState<GeminiTransientRow[] | null>(null);
   /**
+   * 🔵🔵 IDENTITY-EVIDENCE-API-UI-1 — `/check` 응답의 **근거 대조**.
+   * 🔴 `null`(경로 미실행) 과 `{candidates:[]}`(돌았는데 대조 0) 을 **가른다** —
+   *    그래서 `GeminiTransientRow[]` 류가 아니라 **객체 그대로** 들고 있는다.
+   */
+  const [identityEvidence, setIdentityEvidence] = useState<IdentityEvidencePayload | null>(null);
+  /**
    * 🔴🔴 WU-049 — **해외 참고가격.** MI 가 이미 계산한 집계를 받는다.
    *    🟢 이 값은 **이번 확인에만** 산다 — GET 경로는 transient 를 넘기지 않아
    *       항상 비어 있다(설계). 그래서 상태로 들고 다른 값을 덮어쓰지 않는다.
@@ -2087,6 +2098,8 @@ export function DomesticPriceIntelligencePanel({
     const j = autoCheckResult as {
       overseasReference?: OverseasPriceSummary | null;
       domesticReference?: OverseasPriceSummary | null;
+      /** 🔵 IDENTITY-EVIDENCE-API-UI-1 — **최상위 칸** 이다(`domesticShop` 안이 아니다). */
+      identityEvidence?: IdentityEvidencePayload | null;
       domesticShop?: {
         geminiEvidence?: GeminiTransientRow[] | null;
         urlCandidateEvidence?: GeminiTransientRow[] | null;
@@ -2114,6 +2127,11 @@ export function DomesticPriceIntelligencePanel({
     setWebSearchEvidence(j.domesticShop?.webSearchEvidence ?? null);
     /** 🔵 DIP-01 — ⑧ 게이트가 버린 후보. 🔴 **여기 한 자리에만** 넣는다. */
     setWeakCandidateEvidence(j.domesticShop?.weakCandidateEvidence ?? null);
+    /**
+     * 🔵 IDENTITY-EVIDENCE-API-UI-1 — 🔴 `?? null` 이 **경로 미실행** 을 그대로 보존한다
+     *    (빈 배열로 바꾸지 않는다 — 그러면 「대조 대상 0」과 구분이 사라진다).
+     */
+    setIdentityEvidence(j.identityEvidence ?? null);
   }, [autoCheckResult]);
   /**
    * ══════════════════════════════════════════════════════════════════════════
@@ -2498,6 +2516,7 @@ export function DomesticPriceIntelligencePanel({
             webSearchEvidence?: GeminiTransientRow[] | null;
             /** 🔵 DIP-01 — ⑧ 게이트가 버린 후보(표시 전용 · MI 입력 아님). */
             weakCandidateEvidence?: GeminiTransientRow[] | null;
+            /* 🔴 이 경로의 `identityEvidence` 는 **최상위** 다 — 아래 json 타입에 따로 선언한다. */
             /**
              * 🔵 **취급 제외 브랜드라 검색을 시작하지 않았다**(CEO 결정 2026-11-07).
              * 🔴 「후보 0」이 아니다 — `notice` 문구의 owner 는 **서버** 다(사본 금지).
@@ -2528,6 +2547,8 @@ export function DomesticPriceIntelligencePanel({
         setWebSearchEvidence(json.domesticShop?.webSearchEvidence ?? null);
         /** 🔵 DIP-01 UI — 「🔄 다시 분석」 경로에도 같은 줄이 필요하다(두 소비처). */
         setWeakCandidateEvidence(json.domesticShop?.weakCandidateEvidence ?? null);
+        /** 🔵 IDENTITY-EVIDENCE-API-UI-1 — **「🔄 다시 분석」 경로에도 같은 줄** 이 필요하다. */
+        setIdentityEvidence((json as { identityEvidence?: IdentityEvidencePayload | null }).identityEvidence ?? null);
         setUrlCandidateNotice(describeUrlCandidateMetrics(json.domesticShop?.urlCandidateMetrics ?? null));
         /** 🔵 서버가 「취급 제외라 시작하지 않았다」를 돌려주면 **그 문구를 그대로** 쓴다(사본 0). */
         setBrandExcludedNotice(json.domesticShop?.brandExcluded?.notice ?? null);
@@ -2655,6 +2676,8 @@ export function DomesticPriceIntelligencePanel({
       webSearchEvidence={webSearchEvidence}
       /** 🔵 DIP-01 — 표시 전용 배열. 🔴 `miJudgement`·요약·가격 축에는 넘기지 않는다. */
       weakCandidateEvidence={weakCandidateEvidence}
+      /** 🔵 IDENTITY-EVIDENCE-API-UI-1 — 표시 전용. 🔴 `miJudgement`·요약·가격 축에 넘기지 않는다. */
+      identityEvidence={identityEvidence}
       /** 🔴 WU-132 ④ — 검토 구역의 원본 ↔ 후보 육안 비교용. 판정에 들어가지 않는다. */
       originImageUrl={originImageUrl}
       originTitle={originTitle}
@@ -3112,6 +3135,8 @@ export function MiPanelView({
   webSearchEvidence = null,
   /** 🔵 DIP-01 — ⑧ 게이트가 버린 후보(표시 전용). */
   weakCandidateEvidence = null,
+  /** 🔵 IDENTITY-EVIDENCE-API-UI-1 — 표시 전용. 🔴 `null` = 그 경로가 돌지 않았다. */
+  identityEvidence = null,
   /** 🔴 WU-132 ④ — 검토 구역의 원본 ↔ 후보 육안 비교용. 판정에 들어가지 않는다. */
   originImageUrl = null,
   originTitle = null,
@@ -3194,6 +3219,11 @@ export function MiPanelView({
    *    넣지 않는다(요약은 「판정된 후보」의 수다).
    */
   weakCandidateEvidence?: GeminiTransientRow[] | null;
+  /**
+   * 🔵🔵 IDENTITY-EVIDENCE-API-UI-1 — 원본 ↔ 후보 **근거 대조**(표시 전용).
+   * 🔴 `null` = 그 경로가 돌지 않았다 · `{candidates:[]}` = 돌았는데 대조 0.
+   */
+  identityEvidence?: IdentityEvidencePayload | null;
   /**
    * 🔴 WU-132 ④ — 원상품 대표 이미지/제목(육안 비교용).
    *    🔴 판정·가격·집계·등록 payload 에 **들어가지 않는다** — 그리는 데만 쓴다.
@@ -4315,6 +4345,8 @@ export function MiPanelView({
              기본 화면은 한 픽셀도 바뀌지 않는다(그 성질은 컴포넌트가 보장한다).
         */}
         <TransientCandidateSections web={geminiEvidence} supplied={urlCandidateEvidence} overseasAuto={overseasAutoEvidence} reviewedSame={reviewedSameEvidence} domesticListing={domesticListingEvidence} webSearch={webSearchEvidence} weak={weakCandidateEvidence} notice={urlCandidateNotice} overseasReference={overseasReference} domesticReference={domesticReference} domesticReview={domesticReview} onDomesticReview={handleDomesticReview} reviewSaveState={reviewSaveState} reviewHistory={reviewHistory} originImageUrl={originImageUrl} originTitle={originTitle} />
+        {/* 🔵🔵 IDENTITY-EVIDENCE-API-UI-1 — 근거 대조는 후보 구역 «뒤» 에 둔다(후보 목록 계약 불변). */}
+        <IdentityEvidencePanel identityEvidence={identityEvidence} />
       </div>
     </CollapsibleSection>
   );

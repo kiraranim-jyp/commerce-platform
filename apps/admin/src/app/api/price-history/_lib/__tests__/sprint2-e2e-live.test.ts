@@ -90,9 +90,8 @@ describe("SPRINT 2 E2E — URL → 국내외 후보 → 판정 → 가격", () =
         samples: Sample[];
       };
 
-      const { universalExtract, lookupBrandAlias } = await import("@commerce/crawler");
-      const { buildProductIdentityDna, buildCrossSellerSearchQueries, productFactsFromIdentityDna } =
-        await import("@commerce/shared");
+      const { universalExtract, lookupBrandAlias, originFactsFromIdentityDna } = await import("@commerce/crawler");
+      const { buildProductIdentityDna, buildCrossSellerSearchQueries } = await import("@commerce/shared");
       const { buildCanonicalProduct } = await import("../../../pipeline/canonical-product");
       const { collectOverseasAutoPool } = await import("../overseas-auto-pool");
       const { collectDomesticListingUrls, isListingHopTarget, MAX_LISTING_HOP_SITES } = await import(
@@ -169,7 +168,7 @@ describe("SPRINT 2 E2E — URL → 국내외 후보 → 판정 → 가격", () =
           sku,
           searchTerm,
           searchTerms,
-          facts: productFactsFromIdentityDna(dna as never),
+          facts: originFactsFromIdentityDna(dna as never),
         };
 
         /* ── ② 🌎 해외 발견 — 운영 pool · listShops 주입 ─────────────────── */

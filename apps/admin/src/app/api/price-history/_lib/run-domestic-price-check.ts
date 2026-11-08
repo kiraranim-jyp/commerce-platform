@@ -7,6 +7,14 @@ import {
   fetchDomesticModelCode,
   isColorUnverified,
   isSelfReferenceCandidate,
+  /**
+   * 🔵🔵 COMMON-EVIDENCE-1 — 원상품 facts 의 **단일 owner**.
+   * 🔴 `productFactsFromIdentityDna` + `attachProductEvidence` 합성이 **그 함수 안** 에 있다
+   *    ⟹ 운영과 하니스가 갈릴 수 없다(Q-4 가 보던 그 갈림을 구조적으로 없앴다).
+   */
+  originFactsFromIdentityDna,
+  summarizeIdentityEvidence,
+  type IdentityEvidenceSummary,
   /** 🔵 취급 제외 브랜드(CEO 결정 2026-11-07) — 🔴 **판정이 아니라 사업 결정** 이다. */
   isExcludedCandidate,
   isExcludedOriginBrand,
@@ -507,6 +515,26 @@ export interface DomesticPriceCheckResult {
    * 🔴 `null` = 그 경로가 돌지 않았다(호출부가 안 켰다) · `[]` = 돌았는데 후보가 0.
    */
   webSearchEvidence?: GeminiTransientEvidence[] | null;
+  /**
+   * 🔵🔵 **IDENTITY-EVIDENCE-API-UI-1 — 응답 계약 ⒜**(CPO 승인 2026-11-08).
+   *
+   * 원상품 ↔ 후보의 **정체성 증거 대조**(축별 상태 · 원문 · 정규화 · 출처 · 충돌 근거).
+   * 🔴 **읽기 전용 표시 데이터** 다:
+   * ```
+   * ❌ 집계 입력      `computeMarketIntelligence` 에 넘기지 않는다
+   * ❌ Matcher 근거   계약 P2 유지(비교 함수는 evidence 를 읽지 않는다)
+   * ❌ 가격/추천/SAME 판정과 혼합     ❌ DB/workspace schema
+   * 🟢 후보 하나당 한 줄이고 `candidateUrl` 이 **연결 키** 다(여러 후보가 섞이지 않는다)
+   * ```
+   */
+  identityEvidence?: {
+    candidates: {
+      candidateUrl: string;
+      domain: string;
+      axes: IdentityEvidenceSummary["axes"];
+      supply: IdentityEvidenceSummary["supply"];
+    }[];
+  } | null;
   /**
    * 🔵🔵 DIP-01 — **⑧ 게이트가 버린 후보**(표시 전용 · 타입이 좁다).
    *
@@ -1330,7 +1358,27 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     sku,
     searchTerm,
     searchTerms,
-    facts: productFactsFromIdentityDna(input.dna),
+    /**
+     * ══════════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 **COMMON-EVIDENCE-1 — 원상품 Evidence 비대칭을 «owner 단일화» 로 해소했다**
+     * ══════════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 **A6 에서 철회했던 이유를 «고쳐서» 복구했다 — 호출만 되살린 것이 아니다.**
+     * ```
+     * A6 의 원인  Evidence 합성이 **owner 가 아니라 «호출부» 에 있었다** ⟹
+     *             운영 3곳만 감싸고 하니스는 안 감싸서 **같은 원상품인데 facts 가 갈렸다**
+     *             ⟹ `SPRINT2-QUERY-PARITY` **Q-4** 가 그 갈림을 FAIL 로 잡았다(정당한 FAIL)
+     * 🟢 해결     `originFactsFromIdentityDna`(crawler/origin-facts.ts) **하나** 를 만들고
+     *             **운영과 하니스가 그 함수를 함께** 부른다 ⟹ 갈릴 구조가 **사라졌다**
+     * 🔴 Q-4 는 **완화하지 않았다** — 같은 owner 를 양쪽에서 단언하도록 **강화** 했다
+     *             (+ 어느 쪽도 `attachProductEvidence` 를 **직접 부르지 않는다**)
+     * 🔴 A3-a(`attachProductEvidence` 를 shared 로 이전)는 **하지 않았다** —
+     *             `packages/shared` 의 dependencies 가 `{}` 라 순환이 되고, 등록부
+     *             소유 계층 이동을 동반한다(CPO 보류 유지). 🟢 합성은 **crawler** 에 뒀다.
+     * ```
+     * 🔴 **Matcher 는 여전히 evidence 를 읽지 않는다**(계약 P2) — 공급이 판정을 바꾸지 않는다.
+     */
+    facts: originFactsFromIdentityDna(input.dna),
   };
   const toRef = (s: (typeof allSources)[number]) => ({
     id: s.id,
@@ -1673,6 +1721,19 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
   let webSearchUrlMetrics: UrlCandidatePoolMetrics | null = null;
   let webSearchPriceEnrichCalls = 0;
   const webSearchEvidence: GeminiTransientEvidence[] = [];
+  /**
+   * 🔵🔵🔵 **IDENTITY-EVIDENCE-API-UI-1** — 원상품 ↔ 후보 **정체성 증거 대조**(읽기 전용).
+   *
+   * 🔴 **집계 입력이 아니다.** `transientEvidenceSink`(= 가격 축 적재 입력)와 **다른 배열** 이고
+   *    `computeMarketIntelligence` 에 **넘기지 않는다** ⟹ 가격/판정 오염 경로가 **없다**.
+   * 🔴 후보 하나당 한 줄이고 `candidateUrl` 로 **연결이 명확** 하다(CPO 계약 경계 6).
+   */
+  const identityEvidenceRows: {
+    candidateUrl: string;
+    domain: string;
+    axes: ReturnType<typeof summarizeIdentityEvidence>["axes"];
+    supply: ReturnType<typeof summarizeIdentityEvidence>["supply"];
+  }[] = [];
   /**
    * 🔵 DIP-01 — ⑧ 게이트가 버린 후보. 🔴 위 여섯과 **다른 타입** 이고(좁다) MI 입력에
    *    **합치지 않는다**. 출처는 행마다 `source` 로 들고 다닌다(배열을 가르지 않는 이유 —
@@ -2167,6 +2228,17 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
                 : evidenceSource === "WEB_SEARCH"
                   ? webSearchEvidence
                   : geminiEvidence;
+      /**
+       * 🔵 IDENTITY-EVIDENCE-API-UI-1 — 판정이 고른 **그 후보** 와 원상품을 대조한다.
+       * 🔴 새 계산/네트워크 0 — 두 facts 의 `evidence` 칸을 **읽을** 뿐이다.
+       */
+      if (best.facts) {
+        identityEvidenceRows.push({
+          candidateUrl: best.url,
+          domain: result.domain,
+          ...summarizeIdentityEvidence(query.facts, best.facts),
+        });
+      }
       transientEvidenceSink.push({
         source: evidenceSource,
         domain: result.domain,
@@ -2470,6 +2542,13 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     domesticListingPriceEnrichCalls,
     /** 🔴 SP-07 — 같은 원칙. 호출부가 안 켰으면 `null`(「후보 0」이 아니다). */
     webSearchEvidence: webSearchMetrics === null ? null : webSearchEvidence,
+    /**
+     * 🔵🔵 **IDENTITY-EVIDENCE-API-UI-1 — 응답 계약 ⒜**(CPO 승인 2026-11-08).
+     * 🔴 **읽기 전용 표시 데이터** 다 — DB/schema 변경 0 · 기존 칸 삭제·의미 변경 0 ·
+     *    가격/추천/SAME 판정과 **섞지 않는다** · Matcher 근거로 쓰지 않는다.
+     * 🔴 후보가 하나도 판정되지 않았으면 `[]` 다(「증거 없음」이 아니라 「대조 대상 없음」).
+     */
+    identityEvidence: { candidates: identityEvidenceRows },
     /**
      * 🔵 DIP-01 — ⑧ 게이트가 버린 후보. 🔴 `[]` 는 「버려진 후보가 없다」이고
      *    「경로가 안 돌았다」가 아니다 — 이 배열은 **항상** 돈다(모든 생산자 공통 경로).

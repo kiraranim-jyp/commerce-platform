@@ -635,5 +635,26 @@ export async function POST(request: Request) {
      *    이 칸은 「이번 확인으로 들어온 국내 가격」만 담는 **참고 축** 이다.
      */
     domesticReference: intelligence?.candidateDomesticPrice ?? null,
+    /**
+     * ══════════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 **IDENTITY-EVIDENCE-API-UI-1 — 응답 계약 ⒜**(CPO 승인 2026-11-08)
+     * ══════════════════════════════════════════════════════════════════════════
+     *
+     * 원상품 ↔ 후보의 **정체성 증거 대조**를 화면이 읽을 수 있게 최상위로 올린다.
+     *
+     * 🔴 **읽기 전용 표시 데이터** 다 — CPO 계약 경계 6항을 그대로 지킨다:
+     * ```
+     * ① API 응답에만 추가      DB/workspace schema 변경 **0**
+     * ② 기존 칸               삭제·의미 변경 **0**(위 칸들은 한 글자도 안 바뀐다)
+     * ③ 중복 복제 금지         `ComparisonCandidate.facts` 를 통째로 베끼지 않는다 —
+     *                         **축별 상태 + 그 축의 값/출처/충돌 근거** 만 담는다
+     * ④ 가격/추천/SAME 과 혼합  **0**(이 칸에 금액·tier·verdict 가 없다)
+     * ⑤ Matcher 근거 아님      계약 P2 유지(비교 함수는 evidence 를 읽지 않는다)
+     * ⑥ 연결 명확             후보 한 줄 = `candidateUrl` 하나(여러 후보가 섞이지 않는다)
+     * ```
+     * 🔴 `null` = **그 경로가 돌지 않았다**(국내 확인을 안 했다) ·
+     *    `{candidates: []}` = **돌았는데 대조 대상이 0** 이다. 둘을 섞지 않는다.
+     */
+    identityEvidence: domesticShop?.identityEvidence ?? null,
   });
 }

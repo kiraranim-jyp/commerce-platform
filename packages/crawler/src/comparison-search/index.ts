@@ -52,6 +52,18 @@ export { searchLittleluna } from "./littleluna";
 export { factsFromProductUrl } from "./product-url-facts";
 export type { ProductUrlFactsResult, ProductUrlFactsStatus } from "./product-url-facts";
 /**
+ * 🔵🔵 COMMON-EVIDENCE-1 — **원상품 facts 의 단일 owner**.
+ * 🔴 운영과 하니스가 **같은 함수 하나** 를 부르게 해서 `SPRINT2-QUERY-PARITY` Q-4 가
+ *    막는 「facts 가 갈리는 거짓 측정」을 **구조적으로** 없앤다(`origin-facts.ts` 머리 주석).
+ */
+export { originFactsFromIdentityDna } from "./origin-facts";
+/**
+ * 🔵🔵 COMMON-EVIDENCE-1 — 원본 ↔ 후보 **증거 대조 요약**(관찰 전용 · 네 상태).
+ * 🔴 Matcher 입력이 아니다(계약 P2 유지).
+ */
+export { summarizeIdentityEvidence, IDENTITY_EVIDENCE_STATES } from "./identity-evidence-summary";
+export type { EvidenceState, AxisEvidenceSummary, IdentityEvidenceSummary } from "./identity-evidence-summary";
+/**
  * 🔴 CORE-2R-4 STEP 2 — 브랜드 **한글 표기 등록부**(실측 전용 · 브랜드당 1개).
  *    🔴 새 사전이 아니다 — `brand-alias.ts` 가 이미 소유하고 국내 검색이 쓰는 값이다.
  */
