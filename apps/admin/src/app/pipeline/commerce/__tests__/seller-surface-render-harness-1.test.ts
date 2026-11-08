@@ -153,7 +153,13 @@ describe("SELLER-SURFACE-RENDER-HARNESS-1 — 셀러 화면이 실제로 서는�
     expect(conclusion, "결론 영역이 서지 않았다").not.toBeNull();
     expect(grid).not.toBeNull();
 
-    expect(blockOrder(container)).toEqual(["SUMMARY", "CONCLUSION", "GRID"]);
+    /**
+     * 🔵 **단계 표시가 맨 앞에 추가됐다**(`SELLER-UX-IMPLEMENTATION-1` 보완) — 운영
+     *    `CommerceWorkspace:3565` 와 같은 자리다. 🔴 WU-140-R1 이 「결론은 `WorkflowPanel`
+     *    **보다 뒤**」로 못박았으므로 이 순서가 그 계약과 **일치** 한다:
+     *    내비게이션(단계) → 판단(요약) → 근거(결론) → 격자.
+     */
+    expect(blockOrder(container)).toEqual(["WORKFLOW", "SUMMARY", "CONCLUSION", "GRID"]);
   });
 
   it("B. 패널 자신은 셀러 화면에 «없다» — HIDDEN 게이트가 운영과 같이 작동한다", async () => {
@@ -210,7 +216,8 @@ describe("SELLER-SURFACE-RENDER-HARNESS-1 — 셀러 화면이 실제로 서는�
     const { summary, conclusion } = surfaceRegions(container);
     expect(summary).toBeNull();
     expect(conclusion).toBeNull();
-    expect(blockOrder(container)).toEqual(["GRID"]);
+    /** 🔴 단계 표시는 **내비게이션** 이라 커머스 탭에서도 선다(판단 블록만 사라진다). */
+    expect(blockOrder(container)).toEqual(["WORKFLOW", "GRID"]);
   });
 
   it("F. 로딩(자동 1회차 응답 전) 상태를 따로 본다 — 「없다」로 말하지 않는다", async () => {
@@ -454,6 +461,45 @@ describe("MI-INVESTIGATION-STATE-UX-2 — 조사 상태·가격 표시", () => {
         );
         expect(copy.action, `🔴 ${code} 에 다음 행동이 없다`).toBeTruthy();
       }
+    });
+  }
+
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 **workflow 단계 메시지 «런타임» 검증**(CPO 추가 지시 2026-11-09)
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 CPO: 「M14 **소스 앵커** PASS 를 workflow **런타임 출력** PASS 로 확대 해석하지
+   *    않는다」. 맞다 — 그 하니스는 `WorkflowPanel` 을 **마운트하지 않았다.**
+   * 🟢 이제 그 경로가 **실제로 연결돼 있다**:
+   * ```
+   * Panel onMarketSignalChange → marketSignal → resolveWorkflow({market})
+   *   → step.summary 「분석 완료 · {verdictLabel}」 → **WorkflowPanel**(화면 최상단)
+   * ```
+   * 🔴🔴 **기대값을 resolver 에서 가져오지 않는다**(CPO 금지) — 확정된 셀러 문구를
+   *    **글자로** 적는다. 그래서 분리를 되돌리면 이 단언이 **반드시** FAIL 한다.
+   */
+  const WORKFLOW_EXPECTED: { code: string; facing: string; literal: string }[] = [
+    { code: "MARKET_OPPORTUNITY", facing: "CONDITIONAL", literal: "국내 판매 사례 확인 필요" },
+    { code: "REVIEW_PRICE", facing: "CONDITIONAL", literal: "판매가격 조정 필요" },
+    { code: "NEEDS_INFO", facing: "CONDITIONAL", literal: "원가 정보 필요" },
+    { code: "HOLD", facing: "NOT_RECOMMENDED", literal: "판매 비추천" },
+  ];
+
+  for (const { code, facing, literal } of WORKFLOW_EXPECTED) {
+    it(`🔵 workflow 단계 메시지 — ${code} → 「${literal}」(런타임 · 문구 독립 단언)`, async () => {
+      stubFetch(withVerdict(productionData(), facing as never, code as never));
+      await mount();
+      const workflowPanel = container.querySelector<HTMLElement>(
+        '[data-testid="seller-surface-workflow"]',
+      );
+      expect(workflowPanel, "🔴 단계 표시가 서지 않았다(배선 끊김)").not.toBeNull();
+      const text = wholeText(workflowPanel!);
+
+      /** 🔴 **글자로** 단언한다 — resolver 를 호출하지 않는다(동어반복 금지 · CPO). */
+      expect(text, `🔴 단계 메시지가 「${literal}」를 말하지 않는다`).toContain(literal);
+      /** 🔴🔴 그리고 **과거 문구가 남아 있지 않다** — 이것이 CPO 가 걱정한 바로 그 경로다. */
+      expect(text, "🔴 단계 메시지가 아직 「조건부 판매」를 말한다").not.toContain("조건부 판매");
     });
   }
 

@@ -12,7 +12,9 @@ import type { JudgementSummaryInput } from "../judgement-summary";
 import { MarketPriceComparison } from "../MarketPriceComparison";
 import { ActionCenter } from "../ActionCenter";
 import { resolveStageFocus } from "../stage-focus";
-import { resolveWorkflow } from "../workflow";
+import { MARKET_SIGNAL_NOT_STARTED, resolveWorkflow } from "../workflow";
+/** 🔵 SELLER-UX-IMPLEMENTATION-1 보완 — 단계 메시지의 **실제 렌더 owner**. */
+import { WorkflowPanel } from "../WorkflowPanel";
 import type { RegistrationChannel } from "../registration-channels";
 import { makeProduct, PROFIT, RATES, ROUNDING_UNIT } from "./product-tab-composition";
 
@@ -135,6 +137,11 @@ function SellerSurface(options: SellerSurfaceOptions): ReactElement {
     snapshotId: string | null;
     code: SellVerdictRepresentativeCode | null;
   } | null>(null);
+  /**
+   * 🔵 SELLER-UX-IMPLEMENTATION-1 보완 — **단계 표시의 입력.** 운영과 같은 자리·같은
+   *    초기값(`CommerceWorkspace:785`)이고 **패널이 보고하는 값** 을 들고만 있는다.
+   */
+  const [marketSignal, setMarketSignal] = useState(MARKET_SIGNAL_NOT_STARTED);
 
   const sellVerdict =
     reportedSellVerdict && reportedSellVerdict.snapshotId === snapshotId ? reportedSellVerdict.verdict : null;
@@ -164,19 +171,16 @@ function SellerSurface(options: SellerSurfaceOptions): ReactElement {
 
   const workflow = resolveWorkflow({
     collection: { running: false, percent: 100, productReady: true, imageCount: 6, failedImageCount: 0 },
-    market: {
-      notStarted: false,
-      priceProbeDone: true,
-      domesticProbeDone: options.marketDone !== false,
-      domesticDataFound: options.domesticDataFound ?? false,
-      demandProbeDone: true,
-      demandDataFound: false,
-      profitabilityDone: true,
-      profitabilityFound: true,
-      verdictKnown: true,
-      verdictLabel: "조건부 판매",
-      loadFailed: false,
-    },
+    /**
+     * 🔴🔴 **손으로 적은 `verdictLabel: "조건부 판매"` 를 지웠다.**
+     *
+     * 🔴 그 fixture 가 이 하니스를 **운영과 갈라 놓고 있었다** — 운영에서 이 값은
+     *    **패널이 `onMarketSignalChange` 로 보고** 하고(`resolveSellVerdictCopy` 통과)
+     *    `WorkflowPanel` 의 단계 메시지가 된다. 손으로 적으면 「문구가 바뀌었는지」를
+     *    **영원히 측정할 수 없다**(CPO 가 지적한 그 구멍).
+     * 🟢 그래서 **패널이 보고한 값 그대로** 넘긴다(운영 `CommerceWorkspace` 와 같은 모양).
+     */
+    market: marketSignal,
     prepare: {
       productInfoOk: true,
       productInfoMissing: null,
@@ -224,7 +228,29 @@ function SellerSurface(options: SellerSurfaceOptions): ReactElement {
       setReportedRepVerdict((prev) =>
         prev && prev.snapshotId === snapshotId && prev.code === code ? prev : { snapshotId, code },
       ),
-    onMarketSignalChange: noop,
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 SELLER-UX-IMPLEMENTATION-1 보완 — **단계 메시지도 셀러가 보는 경로다**
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 CPO 지적(2026-11-09) — 「M14 **소스 앵커** PASS 를 workflow **런타임 출력** PASS 로
+     *    확대 해석하지 않는다」. 맞다. 이 하니스는 그 경로를 **마운트하지 않았다**:
+     * ```
+     * Panel `onMarketSignalChange`(= marketSignal.verdictLabel)
+     *   → CommerceWorkspace state → `resolveWorkflow({market: signal})`
+     *   → step.summary 「분석 완료 · {verdictLabel}」
+     *   → **`WorkflowPanel`**(화면 «최상단» 단계 표시)
+     * ```
+     * 🟢 그래서 **그 배선을 운영과 같은 모양으로** 연결했다 — 이제 네 상태의 단계 메시지를
+     *    **실제 렌더 결과** 로 볼 수 있다(기대값은 테스트가 **글자로** 단언한다).
+     * 🔴 패널이 보고하는 값을 **여기서 만들지 않는다**(운영 규약 그대로 · 재계산 0).
+     */
+    onMarketSignalChange: (signal) =>
+      setMarketSignal((prev) =>
+        (Object.keys(signal) as (keyof typeof signal)[]).every((k) => prev[k] === signal[k])
+          ? prev
+          : signal,
+      ),
     onRequestPriceReview: noop,
     profitability: PROFIT,
     autoChecking: options.autoChecking ?? false,
@@ -268,6 +294,16 @@ function SellerSurface(options: SellerSurfaceOptions): ReactElement {
   return createElement(
     "div",
     { "data-testid": "seller-surface-root" },
+    /**
+     * 🔵🔵 **단계 표시는 화면 «최상단» 이다**(운영 `CommerceWorkspace:3565` 와 같은 자리).
+     * 🔴 WU-140-R1 이 「결론은 WorkflowPanel **보다 뒤**」로 못박았으므로 순서가 이것이다 —
+     *    내비게이션(단계) → 판단(요약) → 근거(결론) → 격자.
+     */
+    createElement(
+      "div",
+      { "data-testid": "seller-surface-workflow", key: "workflow" },
+      createElement(WorkflowPanel, { workflow, variant: "compact" as const, currentTarget: null }),
+    ),
     workSurface !== "CHANNEL" && judgementSummary
       ? createElement(
           "div",
@@ -373,8 +409,10 @@ export function blockOrder(container: HTMLElement): string[] {
   const root = container.querySelector('[data-testid="seller-surface-root"]');
   if (!root) return [];
   return [...root.children].map((el) =>
-    el.getAttribute("data-testid") === "seller-judgement-summary-slot"
-      ? "SUMMARY"
+    el.getAttribute("data-testid") === "seller-surface-workflow"
+      ? "WORKFLOW"
+      : el.getAttribute("data-testid") === "seller-judgement-summary-slot"
+        ? "SUMMARY"
       : el.id === PRICE_COMPARISON_ANCHOR_ID
         ? "CONCLUSION"
         : el.getAttribute("data-testid") === "seller-surface-grid"
