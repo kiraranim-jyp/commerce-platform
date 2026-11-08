@@ -269,10 +269,21 @@ describe("SJS §3 — 배치: 요약이 화면의 «첫 판단 블록» 이다",
   const summarySlot = () => WS.indexOf('data-testid="seller-judgement-summary-slot"');
   const cardSlot = () => WS.indexOf('data-testid="seller-candidates-slot"');
 
-  it("③-a 🔴🔴 요약이 **후보 카드보다 먼저** 온다(결론 → 탐색)", () => {
+  /**
+   * 🔵🔵🔵 **SELLER-DECISION-UI-1 ⒜ 로 이 명제가 바뀌었다 — 이력을 남긴다.**
+   * ```
+   * STEP 2               요약 → **후보 카드** → 결론 영역   (요약이 카드보다 먼저)
+   * SELLER-DECISION-UI-1 요약 → **결론 영역**              (🔴 카드가 화면에서 빠졌다)
+   * ```
+   * 🔴 그래서 「카드보다 먼저」는 **비교 대상이 사라져** 성립하지 않는다. 남는 명제는
+   *    **「요약이 셀러 화면의 첫 판단 블록이다」** 이고, 그것을 ③-b(결론 영역·격자보다 앞) ·
+   *    ③-c(내비게이션보다 뒤)가 **좌표로** 잠근다.
+   * 🔴 여기서는 **카드가 실제로 빠졌다** 는 것을 같이 센다 — 되살아나면 요약 바로 아래에
+   *    탐색 블록이 다시 서고, CEO 가 「별로」라 한 그 화면으로 되돌아간다.
+   */
+  it("③-a 🔴🔴 요약이 **첫 판단 블록** 이고 후보 카드는 화면에 **없다**", () => {
     expect(summarySlot()).toBeGreaterThan(-1);
-    expect(cardSlot()).toBeGreaterThan(-1);
-    expect(summarySlot()).toBeLessThan(cardSlot());
+    expect(cardSlot(), "🔴 소싱 후보 카드가 되살아났다(CEO 제거 지시)").toBe(-1);
   });
 
   it("③-b 🔴🔴 **격자 «밖»** 이다 — 「기둥 안 맨 위」는 「화면 맨 위」가 아니다(WU-140-R1)", () => {
@@ -293,8 +304,12 @@ describe("SJS §3 — 배치: 요약이 화면의 «첫 판단 블록» 이다",
     expect(summarySlot()).toBeGreaterThan(wf);
   });
 
-  it("③-d 🔴 후보 카드와 **같은 게이트** 를 쓴다(커머스 탭에 판단 블록 0)", () => {
-    const slice = WS.slice(summarySlot() - 220, cardSlot());
+  it("③-d 🔴 결론 영역과 **같은 게이트** 를 쓴다(커머스 탭에 판단 블록 0)", () => {
+    /**
+     * 🔴 좌표가 바뀌었다 — 전에는 「요약 ~ 카드 슬롯」 구간을 봤는데 카드가 빠졌다.
+     *    🟢 이제 **요약 슬롯 «직전»** 구간을 본다(게이트는 그 줄에 있다).
+     */
+    const slice = WS.slice(summarySlot() - 220, summarySlot());
     expect(slice).toContain('workSurface !== "CHANNEL"');
   });
 });

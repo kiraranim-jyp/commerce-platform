@@ -81,8 +81,12 @@ import type { MarketComparisonInput, PriceLevel, SellerFinalVerdict } from "./co
  *    `unified-price-comparison` 을 **대체** 한다(영역을 둘 두지 않는다).
  */
 import { MarketPriceComparison } from "./commerce/MarketPriceComparison";
-/** 🔵 SELLER-COMPARISON-UI-1 — 셀러용 소싱 후보 카드(국내·해외 **동일 템플릿**). */
-import { SellerCandidateCards } from "./commerce/SellerCandidateCards";
+/**
+ * 🔵🔵 SELLER-DECISION-UI-1 ⒜ — `SellerCandidateCards` **import 를 뺐다**(셀러 노출 제거).
+ * 🔴 **컴포넌트 파일은 지우지 않았다** — WU-091 네 조건과 국내/해외 동일 템플릿 계약이
+ *    그 파일에 들어 있고, 그 계약은 `seller-candidate-cards-1` 이 **직접 마운트해** 지킨다.
+ * 🔴 후보 데이터(`marketComparison.rows`)는 **그대로** 아래 결론 영역이 쓴다(배선 삭제 0).
+ */
 /**
  * 🔵🔵 SELLER-COMPARISON-UI-1 STEP 2 잔여 — **상품 판단 요약의 유일한 렌더 주인.**
  * 🔴 값을 만들지 않는다 — 패널이 올려보낸 입력을 그대로 그린다(재계산 0).
@@ -3710,11 +3714,28 @@ export function CommerceWorkspace({
           <ProductJudgementSummary {...judgementSummary} />
         </div>
       )}
-      {workSurface !== "CHANNEL" && (
-        <div data-testid="seller-candidates-slot" className="mb-3">
-          <SellerCandidateCards rows={marketComparison?.rows ?? null} />
-        </div>
-      )}
+      {/**
+        * ══════════════════════════════════════════════════════════════════════
+        * 🔵🔵🔵 SELLER-DECISION-UI-1 ⒜ — **셀러용 소싱 후보 카드를 화면에서 «뺐다»**
+        * ══════════════════════════════════════════════════════════════════════
+        *
+        * 🔴 CEO 실화면 확인(2026-11-08): 「이번에 추가한 소싱 후보 리스트는 별로야 제거하자」.
+        *    ⟹ CPO 확정 — **이번에 추가한 최상단 노출 영역만** 제거한다.
+        *
+        * 🔴🔴 **제거의 범위를 좁혀 적는다 — 이것이 다음 사람이 틀리기 쉬운 자리다**:
+        * ```
+        * 뺀 것    이 자리의 `<SellerCandidateCards>` 렌더 **하나**(= 셀러 노출)
+        * 🔴 남는 것
+        *   · `SellerCandidateCards.tsx` 컴포넌트 **파일과 그 계약**(WU-091 네 조건 ·
+        *     국내/해외 동일 템플릿 · 환산 0) — 지우면 그 안전 규약이 같이 사라진다
+        *   · `marketComparison.rows` **데이터 배선** — 바로 아래 결론 영역이 **그대로 쓴다**
+        *   · 기존 `mi-candidate-list` 후보 목록 · `CandidateSelect` ·
+        *     `CandidateNoteChoices` · `candidate_reviews` 저장 경로 (CPO 보존 필수)
+        *   · 출처 **일곱 축** 배선(`wu-130 F-3`)
+        * ```
+        * 🔴 그래서 셀러가 후보를 보는 자리는 **결론 영역 안 하나** 가 됐다(중복 0).
+        * 🔴 `seller-judgement-summary-slot` 은 **그대로** 다 — 결론은 계속 맨 위에 선다.
+        */}
       {workSurface !== "CHANNEL" && (
         <div id={PRICE_COMPARISON_ANCHOR_ID} className="scroll-mt-4">
           <MarketPriceComparison

@@ -228,26 +228,46 @@ describe("SELLER-SOURCING §4 — 배치와 보존", () => {
   const strip = (s: string) => s.replace(/\{\/\*[\s\S]*?\*\/\}/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
   const WS = strip(readFileSync(path.join(REPO, "apps/admin/src/app/pipeline/CommerceWorkspace.tsx"), "utf8"));
 
-  it("④-a 🔴🔴 **격자 «밖»** 에 있고 결론 영역보다 **앞** 에 선다", () => {
-    const slot = WS.indexOf('data-testid="seller-candidates-slot"');
-    const anchor = WS.indexOf("id={PRICE_COMPARISON_ANCHOR_ID}");
-    const grid = WS.indexOf("order-2 lg:order-1");
-    expect(slot).toBeGreaterThan(-1);
-    /** 🔴 결론 영역(격자 밖 최상단)보다 **먼저** 온다. */
-    expect(slot).toBeLessThan(anchor);
-    /** 🔴🔴 그리고 **격자보다 먼저** 온다 — WU-140-R1 의 그 교훈(기둥 안 ≠ 화면 맨 위). */
-    if (grid > -1) expect(slot).toBeLessThan(grid);
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 SELLER-DECISION-UI-1 ⒜ — **이 계약이 «양방향» 으로 뒤집혔다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 CEO 실화면 확인: 「이번에 추가한 소싱 후보 리스트는 별로야 제거하자」 ⟹ CPO 확정.
+   * 🔴 이력을 전부 남긴다:
+   * ```
+   * STEP 1+2            슬롯이 격자 밖 최상단에 **있다**(④-a/b/c 가 그것을 잠갔다)
+   * SELLER-DECISION-UI-1  🔴 셀러 화면에서 **없다** ⟹ ④-a 가 「제거」를 잠근다
+   * ```
+   * 🔴🔴 **그런데 「제거」와 「삭제」는 다른 말이다.** 그래서 이 describe 는 이제
+   *    **두 명제를 같이** 들고 간다 — 하나만 두면 다음 사람이 반대쪽으로 넘어간다:
+   * ```
+   * ④-a  셀러 화면에 **렌더되지 않는다**        ← 되살리면 FAIL
+   * ④-b  컴포넌트와 그 안전 계약은 **살아 있다** ← 파일/조건을 지우면 FAIL
+   * ④-c  후보 **데이터 배선** 은 살아 있다      ← 결론 영역이 그대로 쓴다
+   * ```
+   */
+  it("④-a 🔴🔴 셀러 화면에서 **제거** 됐다(렌더 0 · import 0)", () => {
+    expect(WS).not.toContain('data-testid="seller-candidates-slot"');
+    expect(WS).not.toContain("<SellerCandidateCards");
+    expect(WS, "🔴 import 가 남으면 다음 사람이 다시 꽂는다").not.toContain(
+      'from "./commerce/SellerCandidateCards"',
+    );
   });
 
-  it("④-b 🔴 단계 표시/탭을 **위로 올리지 않았다**(내비게이션 불변)", () => {
-    /** 🔴 그 슬롯이 `WorkflowPanel`/탭 줄보다 **뒤** 에 있어야 한다. */
-    const slot = WS.indexOf('data-testid="seller-candidates-slot"');
-    const wf = WS.indexOf("WorkflowPanel");
-    if (wf > -1) expect(slot).toBeGreaterThan(wf);
+  it("④-b 🔴🔴 **삭제가 아니다** — 컴포넌트와 WU-091 안전 계약이 살아 있다", () => {
+    const src = strip(readFileSync(path.join(REPO, "apps/admin/src/app/pipeline/commerce/SellerCandidateCards.tsx"), "utf8"));
+    expect(src).toContain("export function SellerCandidateCards");
+    /** 🔴 WU-091 네 조건의 문구 owner 재사용이 그대로 있어야 한다(사본 0). */
+    for (const k of ["OTHER_CANDIDATES_NOTICE", "NO_CANDIDATE_AT_ALL", "NO_SAME_BUT_CANDIDATES"]) {
+      expect(src, `🔴 ${k} 가 사라졌다 — 안전 계약이 같이 죽는다`).toContain(k);
+    }
   });
 
-  it("④-c 🔴 새 호출/state/판정을 만들지 않았다 — **이미 있는 rows** 를 쓴다", () => {
-    expect(WS).toContain("<SellerCandidateCards rows={marketComparison?.rows ?? null} />");
+  it("④-c 🔴🔴 **후보 데이터 배선은 살아 있다** — 결론 영역이 그대로 쓴다", () => {
+    expect(WS, "🔴 rows 공급이 끊기면 후보가 화면에서 통째로 사라진다").toContain(
+      "rows={marketComparison?.rows ?? null}",
+    );
     const src = strip(readFileSync(path.join(REPO, "apps/admin/src/app/pipeline/commerce/SellerCandidateCards.tsx"), "utf8"));
     for (const banned of ["fetch(", "useEffect", "/api/", "SAME_MIN_AXES", "threshold", "priceTierFromLink"]) {
       expect(src, `🔴 ${banned} 가 있다`).not.toContain(banned);
