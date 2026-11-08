@@ -10,7 +10,7 @@ import {
   type JudgementSummarySource,
 } from "../DomesticPriceIntelligencePanel";
 import { ProductJudgementSummary } from "../ProductJudgementSummary";
-import { JUDGEMENT_SUMMARY_TITLE } from "../judgement-summary";
+import { buildJudgementSummary, JUDGEMENT_SUMMARY_TITLE } from "../judgement-summary";
 import type { GeminiTransientRow } from "../GeminiTransientCandidates";
 
 /**
@@ -265,6 +265,101 @@ describe("SJS §2 — 마운트 DOM: 조립 결과가 실제로 화면이 된다
   });
 });
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 SJS §5 — SELLER-DECISION-UI-1 ⒝ **「팔지 말지 · 얼마에」가 헤드라인이다**
+ * ════════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 CEO: 「하단의 모든 내용을 요약해서 **팔지말지, 가격은 어떻게 되는지** 가 보여야 해」.
+ * 🔴🔴 가격 owner 는 **`recommendedPriceKrw`** 다 — `recommendation.recommendedPrice` 가
+ *    **아니다**(그 값은 화면의 추천 판매가로 표시되지 않는다 · 실측 확정).
+ */
+describe("SJS §5 — ⒝ 헤드라인과 가격 안전 계약", () => {
+  const headlineInput = (over: Partial<Parameters<typeof ProductJudgementSummary>[0]> = {}) =>
+    ({
+      ...buildJudgementSummaryInput({ data: WITH_DATA, ...EMPTY_SOURCES })!,
+      ...over,
+    }) as Parameters<typeof ProductJudgementSummary>[0];
+
+  const renderHeadline = async (over: Parameters<typeof headlineInput>[0] = {}) => {
+    await act(async () => root.render(createElement(ProductJudgementSummary, headlineInput(over))));
+    return container;
+  };
+
+  it("⑤-a 🟢 판매 판단과 추천 판매가격이 **헤드라인** 에 선다", async () => {
+    const c = await renderHeadline({ recommendedPriceKrw: 89_000 });
+    expect(c.querySelector('[data-testid="judgement-summary-headline"]')).not.toBeNull();
+    expect(c.querySelector('[data-testid="judgement-summary-verdict"]')?.textContent).toBe(
+      FINAL_VERDICT_COPY.RECOMMENDED.title,
+    );
+    const price = c.querySelector('[data-testid="judgement-summary-recommended-price"]');
+    expect(price?.textContent ?? "").toContain("89,000");
+  });
+
+  /** 🔴 **부정 ③** — 추천가가 없으면 후보 가격으로 **대체하지 않는다**(C-2-c). */
+  it("⑤-b 🔴 추천가격이 없으면 **금액 자리를 비운다**(후보 가격 폴백 0)", async () => {
+    const c = await renderHeadline({
+      recommendedPriceKrw: null,
+      transient: [{ sourceLabel: "직접 입력", rows: [row({ priceAmount: 117000, priceCurrency: "KRW" })] }],
+    });
+    expect(c.querySelector('[data-testid="judgement-summary-recommended-price"]')).toBeNull();
+    expect(c.textContent ?? "").not.toContain("117,000");
+  });
+
+  /** 🔴 **부정 ④** — 요약 rows 에는 금액이 **한 글자도** 없다(C-2-a). */
+  it("⑤-c 🔴 rows 에 금액이 **0** 이다 — 금액은 헤드라인 하나뿐", async () => {
+    const c = await renderHeadline({ recommendedPriceKrw: 89_000 });
+    const rowsText = [...c.querySelectorAll("dl dd")].map((n) => n.textContent ?? "").join(" ");
+    expect(rowsText).not.toMatch(/\d{1,3},\d{3}|₩|KRW|GBP|EUR|USD|€|\$|£/);
+  });
+
+  it("⑤-d 🔴 유효하지 않은 값은 **금액으로 만들지 않는다**", async () => {
+    for (const bad of [Number.NaN, Number.POSITIVE_INFINITY]) {
+      const c = await renderHeadline({ recommendedPriceKrw: bad });
+      expect(c.querySelector('[data-testid="judgement-summary-recommended-price"]')).toBeNull();
+    }
+  });
+
+  it("⑤-e 🟢 네 줄 구성이다 — 판매 판단 · 국내 가격 분석 · 해외 가격 분석 · 핵심 판단 이유", () => {
+    const rows = buildJudgementSummary({
+      ...buildJudgementSummaryInput({ data: WITH_DATA, ...EMPTY_SOURCES })!,
+      decisionReason: "국내 동일상품 근거가 확인되었습니다",
+    });
+    const labels = rows.map((r) => r.label);
+    expect(labels).toContain("판매 판단");
+    expect(labels).toContain("핵심 판단 이유");
+    /** 🔴 옛 라벨은 **사라졌다**(의도된 변경 · 계약도 같이 갱신됐다). */
+    expect(labels).not.toContain("시장 판단");
+  });
+
+  /** 🔴 **부정 ①** — 이유 문장에 금액이 섞이면 그 줄을 **쓰지 않는다**. */
+  it("⑤-f 🔴 이유 문장에 금액이 있으면 **그 줄을 만들지 않는다**", () => {
+    const rows = buildJudgementSummary({
+      ...buildJudgementSummaryInput({ data: WITH_DATA, ...EMPTY_SOURCES })!,
+      decisionReason: "국내 최저가가 ₩88,000 입니다",
+    });
+    expect(rows.map((r) => r.label)).not.toContain("핵심 판단 이유");
+  });
+
+  /** 🔴 **부정 ②·⑤** — 가격 owner 와 조립 owner 가 **각각 하나** 다. */
+  it("⑤-g 🔴🔴 가격 owner 는 판매 가격 설정과 **같은 변수** 이고 조립 owner 는 하나다", () => {
+    expect(WS).toContain(
+      "<ProductJudgementSummary {...judgementSummary} recommendedPriceKrw={recommendedPriceKrw} />",
+    );
+    /** 🔴 요약이 `recommendation.recommendedPrice`(= marketPriceKrw)를 받으면 안 된다. */
+    expect(WS).not.toContain("recommendedPriceKrw={marketComparison");
+    /**
+     * 🔴 Workspace 가 가격을 **다시 만들지 않는다**.
+     * 🔴🔴 **기준선으로 고정한다** — 주석을 벗긴 실제 호출은 **2** 이고 **둘 다 기존 것** 이다
+     *    (`recommendedPriceKrw` · 최종가 계산). ⒝ 가 더한 호출은 **0** 이다.
+     *    🔴 숫자를 올리려면 「왜 세 번째 계산이 필요한가」를 먼저 설명해야 한다.
+     */
+    expect((WS.match(/resolveListingPrice\(/g) ?? []).length).toBe(2);
+    /** 🔴 조립 owner 중복 금지 — 요약 조립 함수는 패널에 **하나** 다. */
+    expect((PANEL.match(/export function buildJudgementSummaryInput\(/g) ?? []).length).toBe(1);
+  });
+});
+
 describe("SJS §3 — 배치: 요약이 화면의 «첫 판단 블록» 이다", () => {
   const summarySlot = () => WS.indexOf('data-testid="seller-judgement-summary-slot"');
   const cardSlot = () => WS.indexOf('data-testid="seller-candidates-slot"');
@@ -322,7 +417,10 @@ describe("SJS §4 — 렌더 주인은 하나, 재계산은 0", () => {
   });
 
   it("④-b 🔴🔴 Workspace 가 요약을 **다시 계산하지 않는다**", () => {
-    expect(WS).toContain("<ProductJudgementSummary {...judgementSummary} />");
+    /** 🔵 ⒝ — 렌더 줄에 **가격 prop 하나** 가 더해졌다(값은 Workspace 의 기존 변수). */
+    expect(WS).toContain(
+      "<ProductJudgementSummary {...judgementSummary} recommendedPriceKrw={recommendedPriceKrw} />",
+    );
     /** 🔴 `null` 이면 **아무것도 그리지 않는다** — 「분석 없음」을 빈 블록으로 만들지 않는다. */
     expect(WS).toContain('workSurface !== "CHANNEL" && judgementSummary &&');
     for (const banned of [

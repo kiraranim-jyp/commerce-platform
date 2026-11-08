@@ -1927,6 +1927,12 @@ export function buildJudgementSummaryInput(input: {
   });
   return {
     verdictLabel: hasAnyData ? FINAL_VERDICT_COPY[sellerDecision.finalVerdict].title : null,
+    /**
+     * 🔵 SELLER-DECISION-UI-1 ⒝ — 「핵심 판단 이유」. **기존 MI 산출을 그대로 옮긴다.**
+     * 🔴 문장을 만들지 않는다 · 🔴 `recommendedPriceKrw` 는 여기로 오지 않는다
+     *    (그 값의 owner 는 `CommerceWorkspace` 이고 요약에는 **렌더 prop** 으로 들어간다).
+     */
+    decisionReason: hasAnyData ? (sellerDecision.reasons?.[0] ?? null) : null,
     domestic: buildDomesticMarketEvidence({
       context: marketContext,
       basis: domesticMarketSplit.basis,

@@ -3711,7 +3711,17 @@ export function CommerceWorkspace({
         */}
       {workSurface !== "CHANNEL" && judgementSummary && (
         <div data-testid="seller-judgement-summary-slot" className="mb-3">
-          <ProductJudgementSummary {...judgementSummary} />
+          {/**
+            * 🔴🔴 SELLER-DECISION-UI-1 ⒝ — **추천 판매가격은 «여기서» 들어간다.**
+            *
+            * 🔴 `recommendedPriceKrw` 는 바로 아래 `MarketPriceComparison` 에 넘기는
+            *    **같은 변수** 다(동일 식별자 · 재계산 0). 그래서 요약의 금액과 「추천 판매가」
+            *    표시, 그리고 「적용」 버튼이 넣는 값이 **구조적으로** 같다.
+            * 🔴 `recommendation.recommendedPrice`(= `marketComparison.marketPriceKrw`)를
+            *    **쓰지 않는다** — 그 값은 화면의 추천 판매가가 **아니다**(실측 확정).
+            * 🔴 나머지 칸은 패널 콜백 그대로다 — 이 자리는 **재계산하지 않는다**.
+            */}
+          <ProductJudgementSummary {...judgementSummary} recommendedPriceKrw={recommendedPriceKrw} />
         </div>
       )}
       {/**

@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -336,8 +338,24 @@ describe("C-1 seller-facing 가격 숫자의 owner 는 「📊 시장 판매 판
 
 describe("C-2 ProductJudgementSummary 는 가격 owner 가 아니다", () => {
   /**
-   * 🔴🔴 **가장 강하게 잠그는 자리다.** 이 블록은 패널의 첫 번째 자식이라 셀러가
-   *    **가장 먼저** 읽는다 ⟹ 여기 숫자가 ④ 와 다르면 그 즉시 신뢰가 깨진다.
+   * 🔴🔴 **가장 강하게 잠그는 자리다.** 이 블록은 셀러가 **가장 먼저** 읽는다 ⟹
+   *    여기 숫자가 ④ 와 다르면 그 즉시 신뢰가 깨진다.
+   *
+   * ════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 SELLER-DECISION-UI-1 ⒝ — **「금액 금지」가 「추천가 하나만」으로 «강화» 됐다**
+   * ════════════════════════════════════════════════════════════════════════
+   * 🔴 CPO 확정(2026-11-08) — 헤드라인에 **추천 판매가격 하나** 를 표시한다.
+   * 🔴🔴 **안전 목적은 한 글자도 약해지지 않는다.** 원래 금지의 이유가 「요약이 ④ 와
+   *    **다른** 숫자를 말하면 안 된다」였으므로 규칙은 이렇게 **좁아진다**:
+   * ```
+   * C-2-a  rows 에는 여전히 **금액 0**                  (변경 없음)
+   * C-2-b  마운트 DOM 에 **추천 판매가격 하나만**        (강화)
+   * C-2-c  일시 후보 가격 **폴백 금지**                  (그대로)
+   * C-2-d  🟢 **신설** — 그 값은 Workspace 가 `MarketPriceComparison` 에 넘기는
+   *        **같은 변수**(`recommendedPriceKrw`)다 ⟹ 동일성이 «구조적» 이다
+   * ```
+   * 🔴 owner 가 **정정** 됐다 — `recommendation.recommendedPrice` 는 화면의 추천 판매가가
+   *    **아니다**(별도 prop `marketPriceKrw` 로 흐르고 표시되지 않는다 · 실측 확정).
    */
   it("C-2-a 세 출처의 금액이 전부 들어와도 줄을 만들지 않는다", () => {
     const rows = buildJudgementSummary({
@@ -351,11 +369,39 @@ describe("C-2 ProductJudgementSummary 는 가격 owner 가 아니다", () => {
         /\d{1,3},\d{3}|₩|KRW|GBP|EUR|USD|€|\$|£/,
       );
     }
-    /** 🟢 판정·등급·근거 두께는 **남는다**(전략 Gate ①). 가격만 빠진다. */
-    expect(rows.map((r) => r.label)).toContain("시장 판단");
+    /**
+     * 🟢 판정·등급·근거 두께는 **남는다**(전략 Gate ①). 가격만 빠진다.
+     * 🔵 ⒝ 에서 라벨이 「시장 판단」 → **「판매 판단」** 으로 바뀌었다(CEO 어휘).
+     *    🔴 명제는 그대로다 — **판정 줄이 존재한다**.
+     */
+    expect(rows.map((r) => r.label)).toContain("판매 판단");
     expect(rows.map((r) => r.label)).not.toContain("비교 가격");
     expect(rows.map((r) => r.label)).not.toContain("해외 시장");
     expect(rows.map((r) => r.label)).not.toContain("가격 상태");
+  });
+
+  /**
+   * 🔵🔵 **신설 C-2-d — 요약의 금액은 «판매 가격 설정과 같은 변수» 다.**
+   *
+   * 🔴 이것이 ⒝ 에서 금액을 허용하면서도 C-2 의 안전 목적을 지키는 **유일한 근거** 다.
+   *    두 자리가 **같은 식별자** 를 받으므로 숫자가 갈라질 구조가 없다.
+   * 🔴 그리고 **잘못된 owner 를 쓰면 FAIL** 한다 — `marketComparison.marketPriceKrw`
+   *    (= `recommendation.recommendedPrice`)는 화면의 추천 판매가가 **아니다**.
+   */
+  it("C-2-d 🔴🔴 요약과 판매 가격 설정이 **같은 변수** 를 받는다(동일성이 구조적이다)", () => {
+    const WS = readFileSync(
+      join(__dirname, "..", "..", "CommerceWorkspace.tsx"),
+      "utf8",
+    ).replace(/\{\/\*[\s\S]*?\*\/\}/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
+    /** 🟢 요약이 받는 값 */
+    expect(WS).toContain("<ProductJudgementSummary {...judgementSummary} recommendedPriceKrw={recommendedPriceKrw} />");
+    /** 🟢 「추천 판매가」 표시 + 「적용」 버튼이 받는 값 — **같은 식별자** */
+    expect(WS).toContain("recommendedPriceKrw={recommendedPriceKrw}");
+    /** 🔴 요약에 **틀린 owner** 를 넣지 않았다. */
+    expect(
+      WS,
+      "🔴 요약이 marketPriceKrw(=recommendation.recommendedPrice)를 받으면 화면의 추천가와 달라진다",
+    ).not.toContain("<ProductJudgementSummary {...judgementSummary} recommendedPriceKrw={marketComparison");
   });
 
   it("C-2-b 마운트 DOM 에도 없다 — 뷰가 prop 을 직접 읽어 찍는 길까지 막는다", () => {
@@ -374,6 +420,37 @@ describe("C-2 ProductJudgementSummary 는 가격 owner 가 아니다", () => {
     expect(html).not.toContain("150,000");
     expect(html).not.toContain("GBP 37 ~ 58");
     expect(html).not.toContain("판매판정 미반영");
+    /**
+     * 🔵 ⒝ — 추천 판매가격을 **주지 않았으므로** 금액 자리도 **비어 있다**.
+     * 🔴 이것이 「추천가가 없으면 만들지 않는다」(폴백 금지)의 마운트 DOM 증거다 —
+     *    세 출처의 금액이 전부 들어와 있는데도 숫자가 **하나도** 서지 않는다.
+     */
+    expect(html).not.toContain('data-testid="judgement-summary-recommended-price"');
+  });
+
+  /**
+   * 🔵🔵 ⒝ — **추천 판매가격을 주면 «그 하나만» 선다.**
+   * 🔴 같은 입력에 세 출처 금액이 전부 들어 있는데도 다른 금액은 서지 않는다.
+   */
+  it("C-2-b2 🔴 추천 판매가격 하나만 DOM 에 선다(다른 금액 0)", () => {
+    act(() =>
+      root.render(
+        createElement(ProductJudgementSummary, {
+          verdictLabel: "판매 추천",
+          domestic: marketSummary({ figure: "₩150,000", hasEvidence: true }),
+          overseas: marketSummary({ title: "🌎 해외 시장", figure: "GBP 37 ~ 58" }),
+          transient: [{ sourceLabel: "직접 입력", rows: [sameRow({ priceAmount: 117000, priceCurrency: "KRW" })] }],
+          recommendedPriceKrw: 89000,
+        } as never),
+      ),
+    );
+    const html = container.innerHTML;
+    expect(html).toContain('data-testid="judgement-summary-recommended-price"');
+    expect(html).toContain("89,000");
+    /** 🔴 다른 출처의 금액은 **하나도** 서지 않는다. */
+    for (const banned of ["150,000", "GBP 37 ~ 58", "117,000"]) {
+      expect(html, `🔴 ${banned} 가 요약에 들어왔다 — 금액 owner 가 둘이 된다`).not.toContain(banned);
+    }
   });
 
   it("C-2-c 제거한 «폴백 경로» 가 되살아나지 않는다", () => {

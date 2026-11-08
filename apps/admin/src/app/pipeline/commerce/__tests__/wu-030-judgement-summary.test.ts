@@ -88,9 +88,19 @@ describe("A. CPO 가 지정한 네 질문", () => {
       overseas: null,
       transient: [{ sourceLabel: "직접 입력", rows: [DONOKIDS] }],
     });
-    expect(find(rows, "시장 판단")?.value).toBe("조건부 판매");
-    expect(find(rows, "동일상품")?.value).toContain("동일상품 추정");
-    expect(find(rows, "비교 근거")?.value).toBe("직접 입력 1건");
+    /**
+     * 🔵🔵 SELLER-DECISION-UI-1 ⒝ — **라벨이 바뀌고 두 줄이 한 줄로 합쳐졌다**(CEO 어휘).
+     * ```
+     * 시장 판단            → **판매 판단**
+     * 동일상품 + 비교 근거  → **국내 가격 분석**(등급이 있으면 등급 · 없으면 근거 두께)
+     * ```
+     * 🔴 명제는 그대로다 — ⒜ 판정이 선다 ⒝ 국내 근거가 선다 ⒞ **가격 줄은 서지 않는다**.
+     */
+    expect(find(rows, "판매 판단")?.value).toBe("조건부 판매");
+    /** 🔴 저장 근거(`domestic`)가 없으므로 **일시 후보의 등급** 이 그 자리를 채운다. */
+    expect(find(rows, "국내 가격 분석")?.value).toContain("동일상품 추정");
+    /** 🔴 옛 라벨은 **사라졌다** — 되살아나면 요약이 같은 말을 두 줄로 한다. */
+    for (const old of ["시장 판단", "동일상품", "비교 근거"]) expect(find(rows, old)).toBeNull();
 
     /** 🔴 D — 후보에 가격이 **있어도**(117,000 KRW) 요약은 가격 줄을 만들지 않는다. */
     expect(DONOKIDS.priceAmount).toBe(117000);
@@ -115,7 +125,13 @@ describe("A. CPO 가 지정한 네 질문", () => {
         { sourceLabel: "웹 검색", rows: [{ ...DONOKIDS, domain: "x.com", discoveredUrl: "https://x.com/products/1" }] },
       ],
     });
-    expect(find(rows, "비교 근거")?.value).toBe("직접 입력 1건 · 웹 검색 1건");
+    /**
+     * 🔵🔵 ⒝ — 그 줄의 라벨이 **「국내 가격 분석」** 이 됐다(두 줄을 합쳤다).
+     * 🔴🔴 **이 단언이 내 1차 구현을 FAIL 로 잡았다** — 등급으로 «대체» 했더니
+     *    출처 건수가 사라졌다. 🟢 그래서 구현을 **등급 · 출처 건수를 잇도록** 고쳤다.
+     * 🔴 명제는 그대로다 — **출처를 요약에서도 잃지 않는다**.
+     */
+    expect(find(rows, "국내 가격 분석")?.value).toContain("직접 입력 1건 · 웹 검색 1건");
   });
 });
 
@@ -144,9 +160,11 @@ describe("B. 값은 전부 다른 owner 에서 그대로 온다", () => {
       overseas: null,
       transient: [{ sourceLabel: "직접 입력", rows: [DONOKIDS] }],
     });
-    /** 🟢 그대로 오는 것 — 새로 매기지 않는다. */
-    expect(find(rows, "동일상품")?.value).toBe("🟢 동일상품");
-    expect(find(rows, "비교 근거")?.value).toBe("비교상품 3곳");
+    /**
+     * 🟢 그대로 오는 것 — 새로 매기지 않는다.
+     * 🔵 ⒝ — 등급과 근거 두께가 **「국내 가격 분석」 한 줄** 로 합쳐졌다(값은 그대로다).
+     */
+    expect(find(rows, "국내 가격 분석")?.value).toBe("🟢 동일상품 · 비교상품 3곳");
     /** 🔴 오지 않는 것 — 금액과 그 기준 문장 둘 다. */
     expect(find(rows, "비교 가격")).toBeNull();
     expect(find(rows, "가격 상태")).toBeNull();
@@ -162,20 +180,32 @@ describe("B. 값은 전부 다른 owner 에서 그대로 온다", () => {
     expect(find(rows, "해외 시장")).toBeNull();
     expect(rows.some((r) => `${r.value} ${r.note ?? ""}`.includes("EUR 75 ~ 120"))).toBe(false);
     /**
-     * 🔴🔴 **그리고 해외 입력만으로는 줄이 하나도 늘지 않는다** — 「시장 판단: 확인 중」
-     *    한 줄뿐이다. 이것이 「요약 카드는 ② 의 owner 가 아니다」의 가장 강한 형태다.
+     * 🔵🔵 **SELLER-DECISION-UI-1 ⒝ 에서 이 명제가 좁아졌다 — 이력을 남긴다.**
+     * ```
+     * ⒝ 는 「해외 가격 분석」 줄을 **신설** 했다 — 🔴 그러나 그 줄은 **등급·근거 두께**
+     * 로만 선다. 이 입력에는 **금액(`figure`)밖에 없다** ⟹ 🟢 **줄이 서지 않는다.**
+     * ```
+     * 🔴🔴 **내 1차 단언이 틀렸고 구현이 맞았다** — 「해외 줄이 선다」로 적었다가 FAIL.
+     *    🟢 오히려 이것이 **더 강한 증거** 다: 해외 입력이 **금액뿐이면 줄 자체를 안 만든다**.
+     * 🟢 그래서 라벨 구성 **과** 금액 0 을 같이 센다(약화 0).
      */
-    expect(rows.map((r) => r.label)).toEqual(["시장 판단"]);
+    expect(rows.map((r) => r.label)).toEqual(["판매 판단"]);
+    for (const r of rows) {
+      expect(`${r.value} ${r.note ?? ""}`, `${r.label} 에 금액이 있다`).not.toMatch(
+        /\d{1,3},\d{3}|₩|KRW|GBP|EUR|USD|€|\$|£/,
+      );
+    }
   });
 });
 
 /* ══════════════ C. 🔴 모르는 것은 줄을 만들지 않는다 ══════════════ */
 
 describe("C. 빈 값을 지어내지 않는다", () => {
-  it("근거가 하나도 없으면 「시장 판단: 확인 중」 한 줄뿐이다", () => {
+  it("근거가 하나도 없으면 「판매 판단: 확인 중」 한 줄뿐이다", () => {
     const rows = buildJudgementSummary(EMPTY);
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ label: "시장 판단", value: "확인 중" });
+    /** 🔵 ⒝ — 라벨이 「시장 판단」 → **「판매 판단」**(CEO 어휘). 명제는 그대로다. */
+    expect(rows[0]).toMatchObject({ label: "판매 판단", value: "확인 중" });
     expect(rows[0].note).toContain("아직");
   });
 
@@ -186,9 +216,13 @@ describe("C. 빈 값을 지어내지 않는다", () => {
     });
     expect(find(rows, "비교 가격")).toBeNull();
     expect(find(rows, "가격 상태")).toBeNull();
-    /** 🟢 그래도 판정과 근거 건수는 말한다 — 아는 것까지 숨기지 않는다. */
-    expect(find(rows, "동일상품")?.value).toContain("동일상품 추정");
-    expect(find(rows, "비교 근거")?.value).toBe("직접 입력 1건");
+    /**
+     * 🟢 그래도 판정과 근거 건수는 말한다 — 아는 것까지 숨기지 않는다.
+     * 🔵 ⒝ — 등급과 출처 건수가 **「국내 가격 분석」 한 줄** 에 같이 선다(둘 다 보존).
+     */
+    const domestic = find(rows, "국내 가격 분석")?.value ?? "";
+    expect(domestic).toContain("동일상품 추정");
+    expect(domestic).toContain("직접 입력 1건");
   });
 
   it("🔴 0원·「-」 같은 가짜 값이 들어가지 않는다", () => {

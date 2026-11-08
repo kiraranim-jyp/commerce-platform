@@ -423,13 +423,30 @@ describe("D. 배선 다섯 자리 + 앵커 복구", () => {
   it("D-6 🟢 A 의 owner 가 그대로다 — `resolveListingPrice` 한 번", () => {
     expect(WORKSPACE).toContain("priceOverrideKrw: null,");
     /**
-     * 🟢🟢 **확정 카드와 결론 영역이 «같은 변수» 를 받는다** — 그래서 두 화면이
-     *    서로 다른 권장가를 말할 경로가 **구조적으로** 없다.
-     * 🔴 셋이 되면(또는 하나가 자기 계산을 갖게 되면) 이 숫자가 흔들린다.
+     * 🟢🟢 **A 를 받는 모든 자리가 «같은 변수» 를 받는다** — 그래서 화면들이 서로 다른
+     *    권장가를 말할 경로가 **구조적으로** 없다.
+     *
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 SELLER-DECISION-UI-1 ⒝ — **소비처가 2 → 3 이 됐다**(의도된 확장)
+     * ══════════════════════════════════════════════════════════════════════
+     * ```
+     * 전   확정 카드 · 결론 영역                 = 2
+     * 후   + **상품 판단 요약 헤드라인**          = 3
+     * ```
+     * 🔴🔴 **이 계약이 지키던 성질은 「개수 2」가 아니라 「전부 같은 변수」 다.**
+     *    원래 주석의 「셋이 되면 흔들린다」는 **셋째가 자기 계산을 갖는 경우** 를
+     *    걱정한 것이고, ⒝ 는 **같은 식별자를 그대로** 받는다.
+     * 🟢 그래서 숫자 프록시를 **성질 단언으로 바꿔 강화** 했다 — 이제
+     *    「A 를 받는 자리 중 **다른 값** 을 받는 곳이 하나라도 있으면 FAIL」이다.
+     *    🔴 그것이 「요약이 `marketPriceKrw`(= `recommendation.recommendedPrice`)를
+     *       받는」 실패 모양을 **직접** 잡는다(그 값은 화면의 추천가가 아니다).
      */
+    const sameVar = (WORKSPACE.match(/recommendedPriceKrw=\{recommendedPriceKrw\}/g) ?? []).length;
+    const anyConsumer = (WORKSPACE.match(/recommendedPriceKrw=\{/g) ?? []).length;
+    expect(sameVar, "🔴 A 를 받는 자리가 셋이 아니다(확정 카드 · 결론 영역 · 요약 헤드라인)").toBe(3);
     expect(
-      (WORKSPACE.match(/recommendedPriceKrw=\{recommendedPriceKrw\}/g) ?? []).length,
-      "🔴 A 를 받는 자리가 둘이 아니다(확정 카드 · 결론 영역)",
-    ).toBe(2);
+      anyConsumer,
+      "🔴🔴 A 를 받는 자리 중 **다른 값** 을 받는 곳이 있다 — 두 화면이 다른 권장가를 말한다",
+    ).toBe(sameVar);
   });
 });

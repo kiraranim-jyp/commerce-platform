@@ -1,7 +1,9 @@
 import type { JSX } from "react";
+import { formatKrw } from "@commerce/pricing";
 import {
   buildJudgementSummary,
   JUDGEMENT_SUMMARY_HINT,
+  JUDGEMENT_SUMMARY_PRICE_LABEL,
   JUDGEMENT_SUMMARY_TITLE,
   type JudgementSummaryInput,
 } from "./judgement-summary";
@@ -24,6 +26,12 @@ export function ProductJudgementSummary(props: JudgementSummaryInput): JSX.Eleme
   const rows = buildJudgementSummary(props);
   if (rows.length === 0) return null;
 
+  /** 🔴 숫자가 아니거나 유한하지 않으면 **금액을 만들지 않는다**(지어내기 0). */
+  const price =
+    typeof props.recommendedPriceKrw === "number" && Number.isFinite(props.recommendedPriceKrw)
+      ? props.recommendedPriceKrw
+      : null;
+
   return (
     <section
       data-testid="judgement-summary"
@@ -31,6 +39,38 @@ export function ProductJudgementSummary(props: JudgementSummaryInput): JSX.Eleme
     >
       <p className="text-[11px] font-semibold text-text-primary">{JUDGEMENT_SUMMARY_TITLE}</p>
       <p className="mt-0.5 text-[11px] text-text-tertiary">{JUDGEMENT_SUMMARY_HINT}</p>
+
+      {/**
+        * ════════════════════════════════════════════════════════════════════
+        * 🔵🔵🔵 SELLER-DECISION-UI-1 ⒝ — **헤드라인: 팔지 말지 · 얼마에**(CEO 확인)
+        * ════════════════════════════════════════════════════════════════════
+        *
+        * 🔴🔴 **요약에서 금액을 말하는 «유일한» 자리다.** 아래 rows 에는 금액이 0 이다.
+        * 🔴 값은 `recommendedPriceKrw` **그대로** — `MarketPriceComparison` 의
+        *    「추천 판매가」와 「적용」 버튼이 쓰는 **같은 변수** 다 ⟹ 두 숫자가 갈라질
+        *    구조가 **없다**(WU-141-R3 C-2 의 안전 목적을 그대로 지킨다).
+        * 🔴 **없으면 만들지 않는다** — 후보/집계 가격으로 대체하지 않고 자리를 비운다.
+        * 🔴 `formatKrw` 를 직접 구현하지 않는다(`@commerce/pricing` owner 재사용 · 사본 0).
+        */}
+      <div
+        data-testid="judgement-summary-headline"
+        className="mt-2 flex flex-wrap items-baseline justify-between gap-x-3"
+      >
+        <span data-testid="judgement-summary-verdict" className="text-sm font-bold text-text-primary">
+          {props.verdictLabel ?? "확인 중"}
+        </span>
+        {price != null && (
+          <span className="text-right">
+            <span
+              data-testid="judgement-summary-recommended-price"
+              className="text-lg font-semibold tabular-nums text-text-primary"
+            >
+              {formatKrw(price)}
+            </span>
+            <span className="ml-1 text-[11px] text-text-tertiary">{JUDGEMENT_SUMMARY_PRICE_LABEL}</span>
+          </span>
+        )}
+      </div>
       <dl className="mt-2 space-y-1">
         {rows.map((row) => (
           <div key={row.label} className="flex items-baseline justify-between gap-3">
