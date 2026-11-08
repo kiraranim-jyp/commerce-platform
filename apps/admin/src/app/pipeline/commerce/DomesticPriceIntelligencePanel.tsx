@@ -2723,6 +2723,25 @@ export function isSuppliedUrlInputVisible(): boolean {
 }
 
 /**
+ * ════════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 SELLER-COMPARISON-UI-1 ① — **근거 대조는 «셀러 화면» 에서 내린다**(CPO 확정 2026-11-08)
+ * ════════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 CPO: 「동일상품 근거 확인 → **셀러 화면에서 제거하고 내부 검토 기능으로 유지**」.
+ *    셀러에게 필요한 것은 **사진 · 가격 · URL** 이고 축별 근거는 **내부 판단 영역** 이다.
+ *
+ * 🔴🔴 **기능을 지운 것이 아니다** — `IdentityEvidencePanel` · 요약기 ·
+ *    `/check` 의 `identityEvidence` 응답 · 배선 **전부 살아 있다**.
+ *    `NEXT_PUBLIC_MI_IDENTITY_EVIDENCE_UI=true` 로 빌드하면 **그대로 돌아온다**(내부 검토용).
+ * 🟢 **상수가 아니라 함수** 다 — `isSuppliedUrlInputVisible` 과 **같은 이유** 로,
+ *    하니스가 「켜면 배선이 그대로 산다」를 **실제 마운트로** 증명할 수 있어야 한다.
+ * 🔴 판정·가격·집계와 **무관** 하다 — 이 술어는 **렌더 여부 하나만** 정한다.
+ */
+export function isIdentityEvidenceVisibleToSeller(): boolean {
+  return process.env.NEXT_PUBLIC_MI_IDENTITY_EVIDENCE_UI === "true";
+}
+
+/**
  * 🔴🔴🔴 WU-132 ③ — **WU-130 ④ 의 `unified-price-comparison` 은 «제거» 됐다.**
  *
  * 왜 — 그 영역이 MI 패널 **안** 에 있고 「📊 시장 가격 비교」가 **밖** 에 따로 있어서
@@ -4346,7 +4365,8 @@ export function MiPanelView({
         */}
         <TransientCandidateSections web={geminiEvidence} supplied={urlCandidateEvidence} overseasAuto={overseasAutoEvidence} reviewedSame={reviewedSameEvidence} domesticListing={domesticListingEvidence} webSearch={webSearchEvidence} weak={weakCandidateEvidence} notice={urlCandidateNotice} overseasReference={overseasReference} domesticReference={domesticReference} domesticReview={domesticReview} onDomesticReview={handleDomesticReview} reviewSaveState={reviewSaveState} reviewHistory={reviewHistory} originImageUrl={originImageUrl} originTitle={originTitle} />
         {/* 🔵🔵 IDENTITY-EVIDENCE-API-UI-1 — 근거 대조는 후보 구역 «뒤» 에 둔다(후보 목록 계약 불변). */}
-        <IdentityEvidencePanel identityEvidence={identityEvidence} />
+        {/* 🔴 SELLER-COMPARISON-UI-1 ① — 기본 **숨김**. 🟢 flag 로 내부 검토에서 그대로 돌아온다. */}
+        {isIdentityEvidenceVisibleToSeller() ? <IdentityEvidencePanel identityEvidence={identityEvidence} /> : null}
       </div>
     </CollapsibleSection>
   );

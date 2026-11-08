@@ -298,6 +298,47 @@ describe("IDENTITY-EVIDENCE-UI-1 §4 — 배선", () => {
     expect(PANEL).toContain("<IdentityEvidencePanel identityEvidence={identityEvidence} />");
   });
 
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * ④-d 🔵🔵 **SELLER-COMPARISON-UI-1 ① — 셀러 화면에서는 «숨긴다»**(CPO 확정 2026-11-08)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 CPO: 「동일상품 근거 확인 → **셀러 화면에서 제거하고 내부 검토 기능으로 유지**」.
+   * 🔴🔴 **「삭제」가 아니라 「숨김」 이다** — 아래 단언이 그 둘을 **갈라서** 잠근다:
+   * ```
+   * ⒜ 기본값이 **숨김** 이다            (셀러가 보지 않는다)
+   * ⒝ 배선·컴포넌트·응답 칸은 **살아 있다**(위 ④-a/④-b 가 그대로 통과한다)
+   * ⒞ flag 로 **그대로 돌아온다**        (내부 검토용 · `isSuppliedUrlInputVisible` 선례)
+   * ```
+   * 🔴 그래서 「셀러 화면에 없다」를 「기능이 없다」로 읽으면 **틀린다**.
+   */
+  it("④-d 🔵 셀러 화면 기본값은 **숨김** 이고 flag 로 되돌아온다(삭제가 아니다)", async () => {
+    const { isIdentityEvidenceVisibleToSeller } = await import("../DomesticPriceIntelligencePanel");
+    /** 🔴 기본 **false** — 환경변수가 없으면 셀러에게 보이지 않는다. */
+    expect(isIdentityEvidenceVisibleToSeller()).toBe(false);
+    /** 🔴 **상수가 아니라 함수** 다 — 켠 상태를 하니스가 증명할 수 있어야 한다. */
+    const prev = process.env.NEXT_PUBLIC_MI_IDENTITY_EVIDENCE_UI;
+    process.env.NEXT_PUBLIC_MI_IDENTITY_EVIDENCE_UI = "true";
+    expect(isIdentityEvidenceVisibleToSeller()).toBe(true);
+    if (prev === undefined) delete process.env.NEXT_PUBLIC_MI_IDENTITY_EVIDENCE_UI;
+    else process.env.NEXT_PUBLIC_MI_IDENTITY_EVIDENCE_UI = prev;
+    /** 🟢 렌더가 **그 술어 뒤** 에 있다(상수 비교가 아니라 호출이어야 한다). */
+    expect(PANEL).toContain("isIdentityEvidenceVisibleToSeller() ?");
+  });
+
+  it("④-e 🔴🔴 **기능을 지우지 않았다** — 컴포넌트·응답 칸·요약기가 그대로 있다", () => {
+    /** 🟢 컴포넌트는 그대로 마운트된다(위 §1~§3 21건이 그 증거다). */
+    expect(PANEL).toContain("IdentityEvidencePanel");
+    /** 🟢 두 경로의 set 도 그대로 — 데이터는 계속 흐른다. */
+    expect(PANEL).toContain("setIdentityEvidence(j.identityEvidence ?? null)");
+    /** 🔴 API 응답 칸을 지우지 않았다. */
+    const route = readFileSync(
+      path.join(REPO, "apps/admin/src/app/api/price-history/check/route.ts"),
+      "utf8",
+    );
+    expect(route).toContain("identityEvidence: domesticShop?.identityEvidence ?? null");
+  });
+
   it("④-c 🔴🔴 **표시 전용** 이다 — 판정/집계 인자에 넘기지 않는다", () => {
     expect(PANEL).not.toMatch(/miJudgement[^\n]*identityEvidence/);
     expect(PANEL).not.toMatch(/computeMarketIntelligence\([^)]*identityEvidence/);
