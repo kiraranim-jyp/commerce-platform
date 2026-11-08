@@ -81,6 +81,8 @@ import type { MarketComparisonInput, PriceLevel, SellerFinalVerdict } from "./co
  *    `unified-price-comparison` 을 **대체** 한다(영역을 둘 두지 않는다).
  */
 import { MarketPriceComparison } from "./commerce/MarketPriceComparison";
+/** 🔵 SELLER-COMPARISON-UI-1 — 셀러용 소싱 후보 카드(국내·해외 **동일 템플릿**). */
+import { SellerCandidateCards } from "./commerce/SellerCandidateCards";
 import { resolveSellVerdict, type ScopedSellVerdict } from "./commerce/sell-verdict-scope";
 import { applyChannelNoticeOverride, type ChannelNoticeOverrideEdit } from "@commerce/listing";
 import { ActionCenter, type ChecklistItem } from "./commerce/ActionCenter";
@@ -3661,6 +3663,20 @@ export function CommerceWorkspace({
        * 🟢 그래서 **보호의 «원래 축» 인 탭** 으로 직접 적는다(`surface === "CHANNEL"` 은
        *    `stage-focus.ts` 가 `mi = HIDDEN` 을 정하는 그 조건 자체다 — 같은 규칙이다).
        */}
+      {/**
+        * 🔵🔵🔵 SELLER-COMPARISON-UI-1 STEP 2 — **셀러 소싱 후보를 «격자 밖 최상단» 에**
+        *
+        * 🔴 WU-140-R1 교훈 — 「기둥 안 맨 위」는 「화면 맨 위」가 **아니다**(격자 order).
+        *    🟢 그래서 **격자 밖** 인 이 자리에 둔다 — 결론 영역과 같은 층이고 그 **위** 에 선다.
+        * 🔴 단계 표시/탭 **위로는 올리지 않았다** — 그것은 내비게이션이다(WU-140-R1).
+        * 🔴 게이트를 **그대로 공유** 한다 — 커머스 탭 맨 위에 후보가 서지 않게 하는 조건이다.
+        * 🔴 데이터는 **이미 이 자리에 있는 값**(marketComparison.rows) — 새 호출/state/판정 **0**.
+        */}
+      {workSurface !== "CHANNEL" && (
+        <div data-testid="seller-candidates-slot" className="mb-3">
+          <SellerCandidateCards rows={marketComparison?.rows ?? null} />
+        </div>
+      )}
       {workSurface !== "CHANNEL" && (
         <div id={PRICE_COMPARISON_ANCHOR_ID} className="scroll-mt-4">
           <MarketPriceComparison
