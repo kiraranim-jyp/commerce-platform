@@ -175,3 +175,62 @@ export function marketPriceBasisLine(input: {
   }
   return `${head} — ${RECOMMENDED_PRICE_LABEL}과 같습니다.`;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   🔵🔵🔵 MI-PRICE-BASIS-DISPLAY-1 — **A 와 B 는 «전제» 가 다르다**(CPO 2026-11-08)
+   ═══════════════════════════════════════════════════════════════════════════
+   🔴🔴 CPO 가 고정한 세 의미 — 이 셋을 **합치지 않는다**:
+   ```
+   추천 판매가격 A   원가 기반으로 **목표마진을 달성하는** 판매가격
+   시장가격 B        실제 시장에서 **관측된** 가격 근거
+   판단              **B 가 목표마진 조건을 충족하는가**
+   ```
+   🔴 「두 가격이 다르다는 이유로 어느 한쪽을 임의 수정하지 않는다」(CPO 명시).
+   🔴 **새 판정 owner 를 만들지 않았다** — 판단은 위 `marketPriceBasisLine` 이 이미
+      쓰는 **그 비교**(`marketPriceKrw` ↔ `recommendedPriceKrw`)에서 나온다.
+      A 는 「목표마진을 반영한 가격」이므로 **B < A 면 목표마진 미달** 이 산술적으로 참이다.
+   🔴 `recommendedPriceKrw` 유지 · 시장가격 산출 공식 유지 · CASE A/B/C/D 유지 ·
+      정책 A 유지 · 국내 EXACT 자격 유지 · GET 집계 owner 유지 · 원본 통화 유지.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/** 🔴 A 의 **전제**. 금액이 아니라 「그 숫자가 무엇인가」를 말한다. */
+export const PRICE_BASIS_A_NOTE = `${RECOMMENDED_PRICE_LABEL} — 원가에 목표마진을 더한 가격입니다`;
+/** 🔴 B 의 **전제**. 「시장 평균/적정가」로 적지 않는다(관측값이다 · WU-146 어휘 계약). */
+export const PRICE_BASIS_B_LABEL = "국내 시장 참고가격";
+export const PRICE_BASIS_B_NOTE = `${PRICE_BASIS_B_LABEL} — 국내에서 실제로 확인된 가격입니다`;
+/**
+ * 🔴 1차에 서는 **기준 라벨**. 🔴 **금액을 품지 않는다** — 계약 셋이 B 금액 노출을 막는다
+ *    (`UX-04-c` · `core-next-step4 B-6` · `C-4` · 전부 CPO 확정 WU 산출).
+ *    🟡 금액을 열려면 그 셋을 같이 개정해야 하고 그것은 **CPO 판정 사안** 이다.
+ */
+export const PRICE_BASIS_B_BASIS_LABEL = `${PRICE_BASIS_B_LABEL} 기준`;
+
+/**
+ * 🔴 **판단 한 줄.** B 가 목표마진을 충족하는지만 말한다.
+ *    🔴 「팔지 마세요」·「추천」으로 적지 않는다 — 판매 판정의 owner 는 `FINAL_VERDICT_COPY`
+ *       이고 그 문구는 **상단 요약과 Action Center** 가 말한다(결론 영역은 근거다).
+ *    🔴 둘 중 하나가 없으면 **null** — 없는 데이터로 판단을 지어내지 않는다.
+ */
+export function priceBasisVerdictLine(input: {
+  recommendedPriceKrw?: number | null;
+  marketPriceKrw?: number | null;
+}): string | null {
+  const { recommendedPriceKrw, marketPriceKrw } = input;
+  if (recommendedPriceKrw == null) return null;
+  /**
+   * 🔴🔴 **B 가 없으면 「판단 불가」를 말한다 — 빈 자리를 두지 않는다.**
+   *
+   * 🔴 이 자리를 처음 구현했을 때 `marketPriceKrw == null` 이면 **줄 자체를 만들지
+   *    않았다.** 그런데 판정 머리말을 뺀 자리가 바로 여기라서, **B 가 없는 CASE D**
+   *    (가장 흔한 상태)에서 결론 영역의 첫 줄이 **통째로 비었다**(계약 둘이 잡았다).
+   * 🟢 CPO 판단 원칙 ⒟ — 「근거 없는 판정 금지 · 데이터 없으면 **UNKNOWN / 데이터 없음**」.
+   *    🔴 「달성 가능」으로도 「어렵다」로도 적지 않는다 — **모른다** 가 정확한 상태다.
+   */
+  if (marketPriceKrw == null) {
+    return "국내 시장가격이 확인되지 않아 목표마진 달성 여부를 판단할 수 없습니다.";
+  }
+  if (marketPriceKrw < recommendedPriceKrw) {
+    return "현재 시장가격으로는 목표마진 달성이 어렵습니다.";
+  }
+  return "현재 시장가격으로도 목표마진을 달성할 수 있습니다.";
+}

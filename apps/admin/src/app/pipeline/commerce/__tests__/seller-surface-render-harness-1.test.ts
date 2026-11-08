@@ -45,7 +45,12 @@ import {
 import {
   APPLY_RECOMMENDED_PRICE_LABEL,
   APPLY_SUPPRESSED_BY_VERDICT_NOTE,
+  /** 🔵 MI-PRICE-BASIS-DISPLAY-1 — A/B 전제와 1차 기준 라벨. */
+  PRICE_BASIS_A_NOTE,
+  PRICE_BASIS_B_BASIS_LABEL,
+  PRICE_BASIS_B_NOTE,
   PRICE_CALCULATION_LINK_TEXT,
+  priceBasisVerdictLine,
   SELL_VERDICT_HEADING,
 } from "../recommended-price-copy";
 
@@ -341,14 +346,56 @@ describe("MI-INVESTIGATION-STATE-UX-2 — 조사 상태·가격 표시", () => {
     expect(AREA_SRC).toMatch(/investigation\s*=\s*"READY"/);
   });
 
-  it("🔴 ② 는 구현하지 않았다 — 결론 영역의 판정 줄이 **그대로** 있다(CORE-UX-SELLER-01)", async () => {
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🟢🟢 **⒝ 가 승인됐고 이 단언이 «뒤집혔다»**(CPO 2026-11-08)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 직전 커밋(`deec1d41`)에서 이 자리는 「판정 줄이 **그대로** 있다」였다. CPO 가
+   *    ⒝ 를 승인했고 **그 단언이 FAIL 로 뒤집히는 것이 변경의 증거** 였다(앵커 규약).
+   * 🟢 이제 **반대 방향** 을 잠근다 — 결론 영역엔 **없고**, 요약과 Action Center 엔 **있다**.
+   */
+  it("⒝ 판정은 결론 영역에 **없고** 요약·ActionCenter 에 **있다**(위치 셋 → 둘)", async () => {
     stubFetch(productionData());
     await mount();
+    const { summary, conclusion, right } = surfaceRegions(container);
+    const data = productionData();
+    const title = resolveSellVerdictCopy(
+      data.sellerDecision!.finalVerdict,
+      data.representativeVerdict!.code,
+    )!.title;
+
+    /** 🔴 결론 영역 — 판정 머리말·문구가 **없다**(중복 제거). */
+    expect(firstScreenText(conclusion!), "🔴 결론 영역에 판정 머리말이 되돌아왔다").not.toContain(
+      SELL_VERDICT_HEADING,
+    );
+    /** 🟢 그 자리에 **가격 근거** 가 선다 — 빈 자리를 두지 않았다. */
+    expect(firstScreenText(conclusion!)).toContain(PRICE_BASIS_B_BASIS_LABEL);
+    /** 🟢🟢 남은 **두 자리** 는 그대로 말한다(일관성 계약 유지). */
+    expect(firstScreenText(summary!), "🔴 요약이 판정을 잃었다").toContain(title);
+    expect(firstScreenText(right!), "🔴 ActionCenter 가 판정을 잃었다").toContain(title);
+  });
+
+  it("MI-PRICE-BASIS-DISPLAY-1 — A/B 의 **전제** 가 글로 적혀 있다(금액은 A 하나뿐)", async () => {
+    stubFetch(withDomesticComparable());
+    await mount();
+    const whole = wholeText(container);
+    /** 🟢 전제 두 줄(상세) — A 는 원가+목표마진 · B 는 관측값. */
+    expect(whole).toContain(PRICE_BASIS_A_NOTE);
+    expect(whole).toContain(PRICE_BASIS_B_NOTE);
     /**
-     * 🔴 이 단언은 「개선 안 함」을 **의도로 고정** 한다. CPO 가 ② 를 승인하면 이것이
-     *    FAIL 로 뒤집히고 **그것이 그 변경의 증거** 다(이 저장소의 앵커 규약).
+     * 🔴 **판단 한 줄** 이 목표마진 충족 여부를 말한다.
+     * 🔴 문구를 **owner 에서 읽는다** — 1차에 정규식 `목표마진 (…)` 으로 적었다가
+     *    조사(「목표마진**을**」) 때문에 **내 단언이 틀렸다**(코드는 맞았다 · 이 트랙 함정 ⑥).
      */
-    expect(firstScreenText(surfaceRegions(container).conclusion!)).toContain(SELL_VERDICT_HEADING);
+    const expected = priceBasisVerdictLine({ recommendedPriceKrw: 115200, marketPriceKrw: 115200 })!;
+    expect(whole).toContain(expected);
+    expect(expected, "🔴 판단 문구가 목표마진을 말하지 않는다").toContain("목표마진");
+    /**
+     * 🔴🔴 **B 금액은 화면에 없다** — 계약 셋(`UX-04-c` · `core-next-step4 B-6`·`C-4`)이
+     *    막는다. 🟡 CPO 예시는 B 금액을 포함했으나 **CTO 가 임의로 열지 않았다**(판정 사안).
+     */
+    expect(PRICE_BASIS_B_BASIS_LABEL, "🔴 기준 라벨에 금액이 들어갔다").not.toMatch(/[₩0-9]/);
   });
 });
 

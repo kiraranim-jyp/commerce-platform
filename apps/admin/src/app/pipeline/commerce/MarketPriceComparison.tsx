@@ -160,6 +160,11 @@ import {
   APPLY_RECOMMENDED_PRICE_LABEL,
   /** 🔵 MI-INVESTIGATION-STATE-UX-2 ③ — CTA 를 내린 «이유» 를 말하는 문구. */
   APPLY_SUPPRESSED_BY_VERDICT_NOTE,
+  /** 🔵 MI-PRICE-BASIS-DISPLAY-1 — A/B 의 **전제** 와 판단 한 줄(어휘 owner 는 그 파일). */
+  PRICE_BASIS_A_NOTE,
+  PRICE_BASIS_B_BASIS_LABEL,
+  PRICE_BASIS_B_NOTE,
+  priceBasisVerdictLine,
   /** 🔵 R2 STEP 7 — 최종 선택 가격의 **글자**(값 owner 는 `priceOverrideKrw` 하나다). */
   FINAL_PRICE_LABEL,
   FINAL_PRICE_NONE_TEXT,
@@ -169,7 +174,8 @@ import {
   EDIT_FINAL_PRICE_LINK_TEXT,
   PRICE_CALCULATION_LINK_TEXT,
   RECOMMENDED_PRICE_LABEL,
-  SELL_VERDICT_HEADING,
+  /* 🔴 `SELL_VERDICT_HEADING` import 를 **뺐다** — CPO 결정 ⒝ 로 이 영역이 판정
+     머리말을 쓰지 않는다. 🟢 상수 자체는 그대로 있고 요약·Action Center 가 쓴다. */
   /** 🔵 CLOSE-3 §0 — 후보 카드 «안» 의 환산 어휘(집계 영역엔 쓰지 않는다). */
   CANDIDATE_PRICE_KRW_PREFIX,
   CANDIDATE_PRICE_KRW_UNAVAILABLE,
@@ -425,6 +431,11 @@ export function MarketPriceComparison({
    * 🔵 CORE-NEXT STEP 4 — **B 근거 한 줄**(상세에서만 선다).
    * 🔴 금액 **0** · 계산 **0** — 서버가 낸 마진율과 A 와의 대소 비교뿐이다.
    */
+  /**
+   * 🔵 MI-PRICE-BASIS-DISPLAY-1 — **판단 한 줄.** 🔴 새 산식 0 — `B ↔ A` 비교 하나다.
+   *    🔴 둘 중 하나라도 없으면 `null` 이고 그러면 그 줄을 **만들지 않는다**.
+   */
+  const priceBasisVerdict = priceBasisVerdictLine({ recommendedPriceKrw, marketPriceKrw });
   const marketBasis = marketPriceBasisLine({
     marketPriceKrw,
     marketPriceMarginPercent,
@@ -576,29 +587,61 @@ export function MarketPriceComparison({
       ) : null}
 
       {/**
+       * 🔴 [기록] 여기 있던 `CORE-UX-SELLER-01 ①`(「팔아도 되는가가 첫 줄이다」) 블록은
+       *    **CPO 결정 ⒝(2026-11-08)로 제거됐다.** 🟢 그 정책이 폐기된 것이 아니다 —
+       *    판매 판단은 **이 영역 위의 상단 요약** 과 **Action Center** 가 계속 말한다.
+       *    🔴 「결론은 하나, 표현 위치는 둘」로 바뀌었다(전에는 셋이었다).
+       */}
+      {/**
        * ══════════════════════════════════════════════════════════════════════
-       * 🔵🔵🔵 CORE-UX-SELLER-01 ① — **「팔아도 되는가」가 첫 줄이다**(CPO 2026-10-26)
+       * 🔵🔵🔵 MI-PRICE-BASIS-DISPLAY-1 + ⒝ — **판정 반복 대신 «가격 근거» 다**
        * ══════════════════════════════════════════════════════════════════════
        *
-       * 🔴🔴 **이 영역은 판정하지 않는다.** `FINAL_VERDICT_COPY` 에서 이미 고른 문구
-       *    객체를 prop 으로 받아 **그리기만** 한다 ⟹ 오른쪽 Action Center(CW:4418)와
-       *    **같은 식·같은 owner** 다(「결론은 하나, 표현 위치는 둘」).
-       * 🔴 머리말은 `SELL_VERDICT_HEADING`(「판매 판단」)이고 **`MARKET_RESULT_HEADING`
-       *    (「💡 판매 판단」)이 아니다** — 후자는 결론 «문장» 블록의 제목이고 상세에
-       *    남아 있어야 한다(계약 core-2v:232 · wu-146:222 가 그것을 문다).
-       * 🔴 verdict 가 없으면 **줄을 만들지 않는다**(「판단 보류」를 지어내지 않는다).
+       * 🔴🔴 **CPO 결정 ⒝(2026-11-08) — 결론 영역에서만 판정 문구를 뺀다.**
+       * ```
+       * 상단 요약        판매 판단   ← 🟢 **유지**(최종 판정의 대표 위치)
+       * Action Center   판매 판단   ← 🟢 **유지**(실행 가능한 다음 행동과 나란히 · P-32)
+       * 이 영역          판매 판단   ← 🔴 **제거**(여기는 근거의 자리다)
+       * ```
+       * 🔴 **일관성 계약은 그대로다** — `sellVerdictCopy` prop 은 **살아 있고**
+       *    `resolveSellVerdictCopy` 하나에서 온다. 바뀐 것은 **이 영역이 그것을 «머리말로»
+       *    되풀이하지 않는다** 는 것뿐이고, 그 값은 여기서 **③ 비추천 CTA 게이트** 가 쓴다.
+       * 🔴 1차 화면 «전체» 순서는 유지된다(CPO 명시) — 판매 판단은 이 영역 **위** 의
+       *    요약 블록이 말하므로 「① 판단 → ② 권장가 A → ③ 근거」가 화면에서 그대로 성립한다.
+       *
+       * 🔵 그 자리에 **가격 전제의 판단 한 줄** 이 선다(CPO `MI-PRICE-BASIS-DISPLAY-1`):
+       * ```
+       * 기준 라벨   국내 시장 참고가격 기준          ← B 가 **관측값** 이라는 사실
+       * 판단        현재 시장가격으로는 목표마진 달성이 어렵습니다
+       * (A 는 아래 「권장 판매가격 ₩…」 줄이 말한다 — **원가 + 목표마진**)
+       * ```
+       * 🔴 **새 판정 owner 0** — 판단은 `priceBasisVerdictLine` 이 `B ↔ A` 비교로 낸다
+       *    (A 가 「목표마진 반영가」이므로 `B < A` = 목표마진 미달이 **산술적으로** 참이다).
+       * 🔴 두 금액을 **합치거나 어느 한쪽을 고치지 않는다**(CPO 명시) · 환산 0 · 집계 0.
+       *
+       * 🔴🔴 **B 의 «금액» 은 적지 않는다 — 계약 셋이 그것을 막는다.**
+       * ```
+       * UX-04-c                 1차 `₩` 는 **A 줄 하나뿐**
+       * core-next-step4 B-6     「시장 금액에는 ₩ 가 없다」
+       * core-next-step4 C-4     상세에서도 「금액은 A 자리 하나」
+       * ```
+       *    🔴 그 셋은 **CPO 확정 WU 둘** 에서 나왔고 이유도 적혀 있다 — 「둘을 나란히
+       *       두면 셀러가 **어느 쪽에 팔아야 하나** 를 다시 고른다」(CPO FAIL 조건).
+       *    🟡 CPO 의 `MI-PRICE-BASIS-DISPLAY-1` 예시는 B 금액(₩88,000)을 포함했다 ⟹
+       *       **긴장이 있고 CTO 가 임의로 열지 않았다**(§4-B D). 금액을 열려면 그 셋을
+       *       같이 개정해야 하므로 **CPO 판정 사안** 으로 올렸다.
+       * 🔴 B 가 없으면 **줄을 만들지 않는다** — 없는 가격으로 판단을 지어내지 않는다.
        */}
-      {sellVerdictCopy && (
+      {priceBasisVerdict && (
         <div
-          data-testid="market-sell-verdict"
+          data-testid="market-price-basis"
           className="mt-2 flex flex-wrap items-baseline justify-between gap-x-2"
         >
-          <span className="text-[11px] text-text-secondary">{SELL_VERDICT_HEADING}</span>
-          <span
-            data-testid="market-sell-verdict-title"
-            className="text-sm font-semibold text-text-primary"
-          >
-            {sellVerdictCopy.icon} {sellVerdictCopy.title}
+          <span data-testid="market-price-basis-b" className="text-[11px] text-text-secondary">
+            {PRICE_BASIS_B_BASIS_LABEL}
+          </span>
+          <span data-testid="market-price-basis-verdict" className="text-[11px] text-text-primary">
+            {priceBasisVerdict}
           </span>
         </div>
       )}
@@ -959,6 +1002,26 @@ export function MarketPriceComparison({
          *    「어느 쪽에 팔아야 하나」를 다시 고른다 = CPO FAIL 조건).
          * 🔴 **금액을 적지 않는다**(금액 owner 는 시장 블록) · **계산 0**.
          */}
+        {/**
+         * 🔵🔵🔵 MI-PRICE-BASIS-DISPLAY-1 — **전제를 글로 적는다**(상세 쪽).
+         *
+         * 🔴 1차는 「B 금액 + 판단」 한 줄이고, **왜 두 숫자가 다른가** 는 여기서 말한다.
+         *    🔴 두 전제를 **합치지 않는다** — A 는 원가+목표마진, B 는 관측값이다.
+         * 🔴 금액을 **다시 적지 않는다**(1차와 시장 블록이 금액 owner) · 계산 0 · 환산 0.
+         */}
+        {/** 🔴 B 의 전제는 **B 가 있을 때만** 적는다 — 없는 가격을 설명하지 않는다. */}
+        {priceBasisVerdict && (
+          <>
+            <p data-testid="market-price-basis-a-note" className="mt-2 text-[11px] text-text-tertiary">
+              {PRICE_BASIS_A_NOTE}
+            </p>
+            {marketPriceKrw != null && (
+              <p data-testid="market-price-basis-b-note" className="text-[11px] text-text-tertiary">
+                {PRICE_BASIS_B_NOTE}
+              </p>
+            )}
+          </>
+        )}
         {marketBasis && (
           <p data-testid="market-price-basis-line" className="mt-2 text-[11px] text-text-tertiary">
             {marketBasis}

@@ -36,6 +36,8 @@ import { FINAL_VERDICT_COPY, type SellerFinalVerdict } from "../DomesticPriceInt
 import { MARKET_RESULT_HEADING } from "../mi-same-candidates";
 import {
   APPLY_RECOMMENDED_PRICE_LABEL,
+  /** 🔵 CPO ⒝ — 판정 머리말이 빠진 자리에 선 **가격 근거** 라벨. */
+  PRICE_BASIS_B_BASIS_LABEL,
   PRICE_CALCULATION_LINK_TEXT,
   RECOMMENDED_PRICE_LABEL,
   SELL_VERDICT_HEADING,
@@ -160,10 +162,23 @@ describe("UX-01 — ① 판매판단 → ② 소싱가격 → ③ 후보 → ④
    *    어디서 → 그래서 얼마에 팔까」 다. 추천가를 소싱가 **앞** 에 두면 근거를 읽기 전에
    *    결론 숫자가 먼저 와서 「왜 그 가격인가」가 묻힌다.
    */
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 **CPO 결정 ⒝(2026-11-08) — 이 영역에서 판정 머리말이 «빠졌다»**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 CPO: 「결론 영역은 판정을 반복하는 대신 **국내외 가격 분석을 뒷받침하는 영역** 으로
+   *    역할을 바꾼다」. 🟢 **정책이 폐기된 것이 아니다** — 판매 판단은 이 영역 **위** 의
+   *    상단 요약과 Action Center 가 계속 말한다(「결론은 하나, 표현 위치는 **둘**」).
+   * 🟢 그 자리에 **가격 근거 한 줄**(`market-price-basis`)이 섰다 —
+   *    「국내 시장 참고가격 기준 · 목표마진 달성 가능/어려움」(`MI-PRICE-BASIS-DISPLAY-1`).
+   * 🔴🔴 **약화가 아니다** — 항목 수(여섯)와 **엄격한 전순서** 가 그대로이고, 아래
+   *    `UX-01-b` 가 「이 영역에 판정 머리말이 **없다**」를 **양방향으로** 단언한다.
+   */
   it("UX-01-a 🟢🟢 여섯이 **이 순서로** 선다", () => {
     mount();
     const ids = [
-      "market-sell-verdict",
+      "market-price-basis",
       "market-blocks",
       "mi-same-domestic",
       "market-recommended-price",
@@ -177,11 +192,24 @@ describe("UX-01 — ① 판매판단 → ② 소싱가격 → ③ 후보 → ④
     }
   });
 
-  it("UX-01-b 🔴 **판매판단이 근거보다 먼저** 다(셀러의 첫 질문이 「팔아도 되나」다)", () => {
+  it("UX-01-b 🔴🔴 이 영역은 판정을 **되풀이하지 않는다**(CPO ⒝) — 그러나 prop 은 살아 있다", () => {
     mount();
-    const [verdict, blocks] = docOrder(["market-sell-verdict", "market-blocks"]);
-    expect(verdict).toBeGreaterThanOrEqual(0);
-    expect(blocks, "🔴 근거가 판단보다 먼저 왔다").toBeGreaterThan(verdict!);
+    /** 🔴 판정 머리말·제목이 **이 영역에 없다**(중복 제거의 직접 단언). */
+    expect(q("market-sell-verdict"), "🔴 결론 영역에 판정 줄이 되돌아왔다").toBeNull();
+    expect(q("market-sell-verdict-title")).toBeNull();
+    expect(firstScreen(), "🔴 판정 머리말이 이 영역에 남아 있다").not.toContain(SELL_VERDICT_HEADING);
+    /**
+     * 🔴🔴 **그 자리는 비어 있지 않다** — 가격 근거가 선다(「판정을 뺐다」와
+     *    「빈 자리를 뒀다」는 다른 것이다 · `wu-058` 의 그 교훈).
+     */
+    const [basis, blocks] = docOrder(["market-price-basis", "market-blocks"]);
+    expect(basis, "🔴 가격 근거 줄이 서지 않았다").toBeGreaterThanOrEqual(0);
+    expect(blocks, "🔴 근거 블록이 가격 근거 줄보다 먼저 왔다").toBeGreaterThan(basis!);
+    /**
+     * 🔴🔴 **일관성 계약은 유지된다** — `sellVerdictCopy` prop 은 **그대로 흐른다**
+     *    (③ 비추천 CTA 게이트가 그 값을 쓴다). 끊으면 그 게이트가 죽는다.
+     */
+    expect(AREA).toContain("sellVerdictCopy?.tone !== \"STOP\"");
   });
 
   it("UX-01-c 🔴 **ⓘ 는 근거 «뒤»** 다 — 근거를 읽기 전에 계산식으로 빠지지 않는다", () => {
@@ -194,7 +222,11 @@ describe("UX-01 — ① 판매판단 → ② 소싱가격 → ③ 후보 → ④
     mount();
     const first = firstScreen();
     for (const s of [
-      SELL_VERDICT_HEADING,
+      /**
+       * 🔵 CPO ⒝ — `SELL_VERDICT_HEADING` 이 **빠지고** 가격 근거 라벨이 들어왔다.
+       *    🔴 항목 수는 넷 그대로다(1차에서 사라진 것이 없다는 뜻이다).
+       */
+      PRICE_BASIS_B_BASIS_LABEL,
       RECOMMENDED_PRICE_LABEL,
       APPLY_RECOMMENDED_PRICE_LABEL,
       PRICE_CALCULATION_LINK_TEXT,
@@ -207,18 +239,31 @@ describe("UX-01 — ① 판매판단 → ② 소싱가격 → ③ 후보 → ④
 /* ══════════════════ UX-02 — verdict owner 는 하나다 ══════════════════ */
 
 describe("UX-02 — 판매판단 owner 하나(좌우가 갈릴 경로가 없다)", () => {
-  it("UX-02-a 🟢🟢 세 verdict **전부** `FINAL_VERDICT_COPY` 글자를 그대로 쓴다", () => {
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 **CPO ⒝ — 표현 위치가 셋에서 «둘» 로 줄었다**(2026-11-08)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 전: 요약 · 이 영역 · Action Center **셋** 이 같은 글자를 썼다.
+   *    후: **요약 · Action Center 둘** 이 쓰고 **이 영역은 쓰지 않는다**.
+   * 🟢🟢 **「일관성」 계약은 유지된다**(CPO 명시) — 그 둘이 **같은 resolver 하나** 에서
+   *    오고, 이 영역도 **같은 객체를 계속 받는다**(③ CTA 게이트가 쓴다). 즉 갈릴 경로는
+   *    여전히 **없다**. 바뀐 것은 **이 영역이 그것을 머리말로 되풀이하지 않는다** 뿐이다.
+   * 🔴 그래서 이 단언을 **owner 축으로 옮겼다** — 화면 수를 세는 대신
+   *    「Workspace 가 **한 함수** 로 두 자리를 채운다」를 본다(아래 `UX-02-b` 와 한 쌍).
+   */
+  it("UX-02-a 🟢🟢 판정 문구 owner 는 **하나** 다 — 두 자리가 같은 resolver 를 쓴다", () => {
+    /** 🔴 요약(`ProductJudgementSummary` 입력)과 Action Center 가 **같은 함수** 를 쓴다. */
+    const calls = WORKSPACE.match(/resolveSellVerdictCopy\(/g) ?? [];
+    expect(calls.length, "🔴 resolver 호출이 둘이 아니다(자리가 늘거나 줄었다)").toBeGreaterThanOrEqual(2);
+    /** 🔴 그리고 **이 영역은 그 문구를 머리말로 쓰지 않는다**(⒝ 의 핵심). */
+    expect(AREA, "🔴 결론 영역이 판정 머리말을 다시 쓴다").not.toContain("SELL_VERDICT_HEADING}");
+    /**
+     * 🔴🔴 **맵과 갈라지지 않는다** — 세 verdict 의 글자는 `FINAL_VERDICT_COPY` 가
+     *    소유하고 이 영역이 **사본을 만들지 않는다**(리터럴 0).
+     */
     for (const v of ["RECOMMENDED", "CONDITIONAL", "NOT_RECOMMENDED"] as SellerFinalVerdict[]) {
-      act(() => root.unmount());
-      container.remove();
-      container = document.createElement("div");
-      document.body.appendChild(container);
-      root = createRoot(container);
-      mount({ sellVerdictCopy: FINAL_VERDICT_COPY[v] });
-      const txt = (q("market-sell-verdict-title")?.textContent ?? "").replace(/\s+/g, " ").trim();
-      expect(txt, `🔴 ${v} 문구가 맵과 다르다`).toBe(
-        `${FINAL_VERDICT_COPY[v].icon} ${FINAL_VERDICT_COPY[v].title}`,
-      );
+      expect(AREA, `🔴 ${v} 문구 사본이 이 영역에 생겼다`).not.toContain(FINAL_VERDICT_COPY[v].title);
     }
   });
 

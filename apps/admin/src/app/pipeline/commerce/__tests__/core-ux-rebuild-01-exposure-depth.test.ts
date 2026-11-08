@@ -254,8 +254,14 @@ describe("UXR-O ⒞ 우선순위 — 판단 → 소싱가격 → 후보 → 추�
       onOpenPriceCalculation: () => {},
     });
     try {
+      /**
+       * 🔵🔵🔵 **CPO 결정 ⒝(2026-11-08)** — `market-sell-verdict` 가 이 영역에서 빠졌고
+       *    그 자리에 **가격 근거 한 줄**(`market-price-basis`)이 섰다.
+       * 🟢 판매 판단은 **상단 요약 · Action Center** 가 계속 말한다(위치가 셋 → 둘).
+       * 🔴 항목 수(여덟)와 **엄격한 전순서** 는 그대로다 — 약화가 아니다.
+       */
       const ids = [
-        "market-sell-verdict",
+        "market-price-basis",
         "market-blocks",
         "mi-same-domestic",
         "mi-same-overseas",
