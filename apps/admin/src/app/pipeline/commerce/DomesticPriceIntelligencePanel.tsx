@@ -1887,6 +1887,21 @@ export interface MarketComparisonInput {
    */
   marketPriceKrw: number | null;
   marketPriceMarginPercent: number | null;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MI-INVESTIGATION-STATE-UX-2 ④ — **조사 «상태» 를 같이 올려보낸다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 기준선 덤프가 잡은 사실 — 조사가 **돌고 있는 동안** 결론 영역이
+   *    「후보 조회 결과가 아직 없습니다」를 말했다(= 「없다」고 단정). 그 영역은
+   *    `rows`(결과)만 받고 **진행/실패 여부를 알 길이 없었다.**
+   * 🟢 그래서 칸 하나를 더한다. 🔴 **새 state·새 계산 0** — 이 패널이 이미 들고 있는
+   *    `autoChecking`(prop) · `loading`(state) · `data === null`(기존 `loadFailed`
+   *    술어와 **같은 식** · :2664)에서 **파생** 한다.
+   * 🔴🔴 **가격 집계 owner 가 아니다** — 금액/건수를 한 글자도 바꾸지 않는다
+   *    (CPO 범위 제한: GET 집계 owner 유지 · POST transient 승격 금지).
+   */
+  investigation: "INVESTIGATING" | "READY" | "FAILED";
 }
 
 /**
@@ -2418,8 +2433,19 @@ export function DomesticPriceIntelligencePanel({
       onRecheck: stableRecheck,
       /** 🔴 진행 상태는 **값** 이라 deps 에 들어간다(두 번만 바뀐다 — 시작·종료). */
       rechecking,
+      /**
+       * 🔵🔵🔵 MI-INVESTIGATION-STATE-UX-2 ④ — **기존 술어를 그대로 쓴다**(새 계산 0).
+       *
+       * 🔴 `loadFailed`(:2664)가 쓰는 식과 **같다** — `!loading && !autoChecking &&
+       *    data === null`. 거기서 한 글자도 바꾸지 않았고, 그 값을 **다시 쓰기만** 한다.
+       * 🔴 순서가 중요하다 — 진행 중이면 **실패로 적지 않는다**(아직 모른다).
+       */
+      investigation:
+        autoChecking || loading ? "INVESTIGATING" : data === null ? "FAILED" : "READY",
     };
   }, [
+    autoChecking,
+    loading,
     stableRecheck,
     rechecking,
     geminiEvidence,
@@ -2442,6 +2468,12 @@ export function DomesticPriceIntelligencePanel({
      *    재진입 화면이 **전과 똑같이 빈 채로 남는다**(이 파일이 네 번 밟은 그 함정).
      */
     data?.savedCandidateRows,
+    /**
+     * 🔵 MI-INVESTIGATION-STATE-UX-2 ④ — 🔴 **`data` 를 통째로 넣지 않는다.**
+     *    그러면 memo 가 응답마다 깨져 위 effect 가 매번 보고한다. 🟢 쓰는 것은
+     *    **「응답이 없다」는 불리언 하나** 이므로 그 조각만 넣는다(이 파일의 deps 규약 그대로).
+     */
+    data === null,
   ]);
   const onMarketComparisonChangeRef = useRef(onMarketComparisonChange);
   onMarketComparisonChangeRef.current = onMarketComparisonChange;

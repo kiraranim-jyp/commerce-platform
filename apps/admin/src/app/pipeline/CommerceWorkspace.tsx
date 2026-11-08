@@ -3794,6 +3794,16 @@ export function CommerceWorkspace({
             domesticReference={marketComparison?.domesticReference ?? null}
             overseasReference={marketComparison?.overseasReference ?? null}
             /**
+             * 🔵🔵🔵 MI-INVESTIGATION-STATE-UX-2 ④ — **조사 상태를 그대로 내려보낸다.**
+             *
+             * 🔴 폴백이 `"INVESTIGATING"` 인 이유 — 패널이 **아직 보고하지 않은** 첫
+             *    프레임이다(`marketComparison === null`). 그때 `"READY"` 로 두면 화면이
+             *    **「결과가 없다」고 단정** 하는데, 실제로는 그 패널이 GET 을 막 띄운
+             *    상태다(= 이 WU 가 고치려는 바로 그 거짓말).
+             * 🔴 이 파일은 값을 **만들지 않는다** — 들고만 있는다(기존 규약 그대로).
+             */
+            investigation={marketComparison?.investigation ?? "INVESTIGATING"}
+            /**
              * 🔴 CORE-2S §5-⑤ — 「🧾 현재 판단」이 **원가가 비었다** 는 사실만 말한다.
              *    🔴 이 영역에서 계산하지 않는다(추천가·마진·예상수익 **0** · §3 금지축).
              */

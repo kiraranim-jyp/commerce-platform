@@ -292,6 +292,11 @@ function SellerSurface(options: SellerSurfaceOptions): ReactElement {
             marketPriceMarginPercent: marketComparison?.marketPriceMarginPercent ?? null,
             onOpenPriceCalculation: noop,
             sellVerdictCopy: resolveSellVerdictCopy(sellVerdict ?? null, representativeCode),
+            /**
+             * 🔵 MI-INVESTIGATION-STATE-UX-2 ④ — 운영과 **같은 폴백** 이다
+             *    (`marketComparison === null` = 패널이 아직 보고하지 않은 첫 프레임).
+             */
+            investigation: marketComparison?.investigation ?? "INVESTIGATING",
             onApplyRecommendedPrice: recommendedPriceKrw != null ? noop : undefined,
             finalPriceKrw: product.priceOverrideKrw?.value ?? null,
             onConfirmPriceKrw: noop,

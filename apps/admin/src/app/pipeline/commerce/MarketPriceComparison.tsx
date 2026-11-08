@@ -121,6 +121,9 @@ import {
   MARKET_RECHECK_BUTTON,
   MARKET_RECHECK_EMPTY,
   MARKET_RECHECK_BUSY,
+  /** 🔵 MI-INVESTIGATION-STATE-UX-2 ④ — 조사 중 · 실패 문구(어휘 owner 는 같은 파일). */
+  MARKET_RECHECK_INVESTIGATING,
+  MARKET_RECHECK_FAILED,
   MI_PRESUMED_SCOPE,
   /** 🔴 WU-146 ② — **상태별 결론.** 한 문장 안내문이 아니다(가격 0 / SAME 0 / 국내 0 을 가른다). */
   marketDecisionLines,
@@ -155,6 +158,8 @@ import {
    */
   marketPriceBasisLine,
   APPLY_RECOMMENDED_PRICE_LABEL,
+  /** 🔵 MI-INVESTIGATION-STATE-UX-2 ③ — CTA 를 내린 «이유» 를 말하는 문구. */
+  APPLY_SUPPRESSED_BY_VERDICT_NOTE,
   /** 🔵 R2 STEP 7 — 최종 선택 가격의 **글자**(값 owner 는 `priceOverrideKrw` 하나다). */
   FINAL_PRICE_LABEL,
   FINAL_PRICE_NONE_TEXT,
@@ -294,6 +299,16 @@ export interface MarketPriceComparisonProps {
    */
   sellVerdictCopy?: { icon: string; title: string; tone: "GOOD" | "CAUTION" | "STOP" } | null;
   /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MI-INVESTIGATION-STATE-UX-2 ④ — **조사 «상태»**(결과와 다른 축이다)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 전까지 이 영역은 `rows`(결과)만 받아서 「진행 중」과 「결과 없음」을 **구별할 수
+   *    없었다** ⟹ 조사 중에도 「후보 조회 결과가 아직 없습니다」를 말했다(기준선 덤프).
+   * 🔴 기본값 `"READY"` — 넘기지 않는 기존 호출부·계약은 **한 글자도 바뀌지 않는다**.
+   */
+  investigation?: "INVESTIGATING" | "READY" | "FAILED";
+  /**
    * 🔵🔵🔵 CORE-UX-SELLER-01 ② — **A 를 실제 판매가격으로 확정하는 CTA.**
    *
    * 🔴 **이 영역은 가격을 만들지 않는다** — `CommerceWorkspace` 가
@@ -344,6 +359,8 @@ export function MarketPriceComparison({
   marketPriceMarginPercent,
   onOpenPriceCalculation,
   sellVerdictCopy,
+  /** 🔵 MI-INVESTIGATION-STATE-UX-2 ④ — 기본 `"READY"`(기존 호출부 동작 불변). */
+  investigation = "READY",
   onApplyRecommendedPrice,
   finalPriceKrw = null,
   onConfirmPriceKrw,
@@ -527,8 +544,33 @@ export function MarketPriceComparison({
            *    「결과가 있는데 진행 중」 가지는 **도달 불가** 가 됐다 ⟹ 지웠다(죽은 분기 0).
            *    🔴 문구 상수는 **둘 다 그대로** 쓴다(어휘 owner 변경 0).
            */}
+          {/**
+           * ══════════════════════════════════════════════════════════════════
+           * 🔵🔵🔵 MI-INVESTIGATION-STATE-UX-2 ④ — **네 상태를 갈라서 말한다**
+           * ══════════════════════════════════════════════════════════════════
+           *
+           * 🔴 기준선 덤프가 잡은 거짓말 — 조사가 **돌고 있는 동안에도** 이 줄이
+           *    「후보 조회 결과가 아직 없습니다」였다(= 「없다」고 단정).
+           * ```
+           * 조사 중   autoChecking || loading   → MARKET_RECHECK_INVESTIGATING
+           * 재조회 중  rechecking(셀러가 눌렀다)  → MARKET_RECHECK_BUSY   ← 기존
+           * 실패      응답이 없다               → MARKET_RECHECK_FAILED
+           * 미조회    그 외                    → MARKET_RECHECK_EMPTY   ← 의미 축소
+           * 결과 있음  (이 블록이 애초에 서지 않는다 · `!checkRan` 조건)
+           * ```
+           * 🔴 **순서가 정책이다** — 진행 중이면 **실패로 적지 않는다**(아직 모른다).
+           * 🔴 이 블록의 **렌더 조건(`canRecheck && !checkRan`)은 바꾸지 않았다** —
+           *    R2 STEP 4(「결과가 있으면 CTA 를 그리지 않는다」)가 CPO 결정이다.
+           *    ⟹ 바뀐 것은 **어느 문장을 고르는가** 하나다(새 블록 0 · 줄 수 불변).
+           */}
           <span data-testid="market-recheck-note" className="text-[11px] text-text-tertiary">
-            {rechecking ? MARKET_RECHECK_BUSY : MARKET_RECHECK_EMPTY}
+            {investigation === "INVESTIGATING"
+              ? MARKET_RECHECK_INVESTIGATING
+              : rechecking
+                ? MARKET_RECHECK_BUSY
+                : investigation === "FAILED"
+                  ? MARKET_RECHECK_FAILED
+                  : MARKET_RECHECK_EMPTY}
           </span>
         </div>
       ) : null}
@@ -759,8 +801,23 @@ export function MarketPriceComparison({
                * 🔴 **금액을 문구에 담지 않는다**(1차 `₩ 1개` 계약) · 핸들러가 없으면
                *    **버튼을 그리지 않는다**(갈 곳 없는 버튼 금지).
                */}
+              {/**
+               * ══════════════════════════════════════════════════════════════
+               * 🔵🔵🔵 MI-INVESTIGATION-STATE-UX-2 ③ — **비추천이면 CTA 를 «권하지» 않는다**
+               * ══════════════════════════════════════════════════════════════
+               *
+               * 🔴 CASE B 기준선 — 「🔴 판매 비추천」 바로 아래에 「이 가격으로 설정」이
+               *    **기본 행동** 으로 서 있었다. 🟢 CPO 확정으로 그 **행동만** 내린다.
+               * 🔴 **세 번째 조건** 일 뿐이다 — 기존 둘(`onApplyRecommendedPrice` 없음 ·
+               *    A 없음 → CTA 없음 · `UX-03-b/c`)을 **한 글자도 바꾸지 않았다**.
+               *    그래서 기존 계약(기본 fixture = `CONDITIONAL`)은 전부 그대로 통과한다.
+               * 🔴 `tone` 으로 가른다 — **이 영역이 판정하지 않는다**(`UX-02-c` 유지).
+               *    `STOP` 은 `FINAL_VERDICT_COPY.NOT_RECOMMENDED` 의 tone 이고,
+               *    그 매핑의 owner 는 패널이다(여기서 verdict 를 해석하지 않는다).
+               * 🔴 **가격 편집 길은 남긴다** — 바로 아래 「가격 수정 →」 · ⓘ · A 숫자 전부 유지.
+               */}
               <div className="mt-1 flex flex-wrap items-center gap-2">
-                {onApplyRecommendedPrice && (
+                {onApplyRecommendedPrice && sellVerdictCopy?.tone !== "STOP" && (
                   <button
                     type="button"
                     data-testid="market-apply-recommended-price"
@@ -769,6 +826,18 @@ export function MarketPriceComparison({
                   >
                     {APPLY_RECOMMENDED_PRICE_LABEL}
                   </button>
+                )}
+                {/**
+                 * 🔴 **버튼을 조용히 없애지 않는다** — 없어진 이유를 같은 자리에서 말한다.
+                 *    🔴 조건이 CTA 의 **부정과 정확히 맞물린다**(둘이 같이 서거나 같이 빈다).
+                 */}
+                {onApplyRecommendedPrice && sellVerdictCopy?.tone === "STOP" && (
+                  <span
+                    data-testid="market-apply-suppressed-note"
+                    className="text-[11px] text-text-tertiary"
+                  >
+                    {APPLY_SUPPRESSED_BY_VERDICT_NOTE}
+                  </span>
                 )}
                 {/**
                  * ══════════════════════════════════════════════════════════════

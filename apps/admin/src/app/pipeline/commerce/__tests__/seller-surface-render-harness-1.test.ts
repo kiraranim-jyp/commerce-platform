@@ -18,6 +18,8 @@
  * ⚠️ **REVIEW_MATCH 가 아니면 resolver 가 발화하지 않는다** 는 것도 단언
  * ```
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -33,6 +35,26 @@ import {
 import { productionData, withDomesticComparable } from "./product-tab-composition";
 import type { PriceHistoryResponse } from "../DomesticPriceIntelligencePanel";
 import { NEEDS_MATCH_VERDICT_COPY, resolveSellVerdictCopy } from "../DomesticPriceIntelligencePanel";
+/** 🔵 MI-INVESTIGATION-STATE-UX-2 — 🔴 **문구를 테스트가 다시 적지 않는다**(owner 에서 읽는다). */
+import {
+  CANDIDATE_LIST_EMPTY_NOTE,
+  MARKET_RECHECK_EMPTY,
+  MARKET_RECHECK_FAILED,
+  MARKET_RECHECK_INVESTIGATING,
+} from "../mi-same-candidates";
+import {
+  APPLY_RECOMMENDED_PRICE_LABEL,
+  APPLY_SUPPRESSED_BY_VERDICT_NOTE,
+  PRICE_CALCULATION_LINK_TEXT,
+  SELL_VERDICT_HEADING,
+} from "../recommended-price-copy";
+
+/** 🔴 **주석을 벗긴다** — 이 저장소에서 여덟 번 걸린 함정이다(헌장 §5). */
+const COMMERCE = join(__dirname, "..");
+const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/.*$/gm, " ");
+const PANEL_SRC = strip(readFileSync(join(COMMERCE, "DomesticPriceIntelligencePanel.tsx"), "utf8"));
+const WORKSPACE_SRC = strip(readFileSync(join(COMMERCE, "..", "CommerceWorkspace.tsx"), "utf8"));
+const AREA_SRC = strip(readFileSync(join(COMMERCE, "MarketPriceComparison.tsx"), "utf8"));
 
 let container: HTMLDivElement;
 let root: Root;
@@ -218,6 +240,115 @@ describe("SELLER-SURFACE-RENDER-HARNESS-1 — 셀러 화면이 실제로 서는�
     expect(text).toContain("동일상품 확인 0곳");
     /** 🔴 그리고 「시장 평균/적정가」류 어휘를 만들지 않는다(WU-146 계약과 같은 축). */
     expect(text).not.toContain("시장 평균가");
+  });
+});
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 MI-INVESTIGATION-STATE-UX-2 — **같은 하니스로 「후」 를 잠근다**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 이 블록이 기준선 덤프가 잡은 거짓말 넷 중 **셋** 을 계약으로 바꾼다.
+ *    🔴 ②(판정 중복 제거)는 **구현하지 않았다** — `CORE-UX-SELLER-01`(CPO 2026-10-26 ·
+ *       2026-11-02)이 「1차 첫 줄 = 판매판단」을 **정책으로** 못박고 있어 CPO 판정 사안이다.
+ */
+describe("MI-INVESTIGATION-STATE-UX-2 — 조사 상태·가격 표시", () => {
+  it("④-a 조사 중에는 «조사 중» 이라 말한다 — 「결과가 없다」로 단정하지 않는다", async () => {
+    stubFetch(productionData());
+    await mount({ autoChecking: true });
+    const first = firstScreenText(container);
+    expect(first).toContain(MARKET_RECHECK_INVESTIGATING);
+    /** 🔴 이것이 이 WU 의 핵심 — 조사 중에 「없다」를 말하면 안 된다. */
+    expect(first).not.toContain(MARKET_RECHECK_EMPTY);
+  });
+
+  it("④-b 응답이 없으면 «마치지 못했다» 다 — 「결과 없음」과 가른다", async () => {
+    stubFetch(null);
+    await mount();
+    const first = firstScreenText(container);
+    expect(first).toContain(MARKET_RECHECK_FAILED);
+    expect(first).not.toContain(MARKET_RECHECK_EMPTY);
+    expect(first).not.toContain(MARKET_RECHECK_INVESTIGATING);
+  });
+
+  it("④-c 조사가 끝났고 후보가 없으면 «미조회» 문구다 — 세 상태가 서로 배타다", async () => {
+    stubFetch(productionData());
+    await mount();
+    const first = firstScreenText(container);
+    expect(first).toContain(MARKET_RECHECK_EMPTY);
+    expect(first).not.toContain(MARKET_RECHECK_INVESTIGATING);
+    expect(first).not.toContain(MARKET_RECHECK_FAILED);
+  });
+
+  it("③-a 판매 비추천이면 「이 가격으로 설정」이 **없고** 이유를 말한다", async () => {
+    stubFetch(withVerdict(productionData(), "NOT_RECOMMENDED", "REVIEW_PRICE"));
+    await mount();
+    const first = firstScreenText(container);
+    expect(first, "🔴 비추천인데 적용 CTA 가 남아 있다").not.toContain(APPLY_RECOMMENDED_PRICE_LABEL);
+    expect(first, "🔴 버튼을 조용히 없앴다(이유를 말하지 않는다)").toContain(APPLY_SUPPRESSED_BY_VERDICT_NOTE);
+  });
+
+  it("③-b 🔴 **음성 축** — 비추천이 아니면 CTA 가 그대로 선다(기존 동작 불변)", async () => {
+    stubFetch(withVerdict(productionData(), "CONDITIONAL", "REVIEW_PRICE"));
+    await mount();
+    const first = firstScreenText(container);
+    expect(first).toContain(APPLY_RECOMMENDED_PRICE_LABEL);
+    expect(first).not.toContain(APPLY_SUPPRESSED_BY_VERDICT_NOTE);
+  });
+
+  it("③-c 비추천에서도 **가격 계산과 편집 길은 남는다**(기능을 지우지 않았다)", async () => {
+    stubFetch(withVerdict(productionData(), "NOT_RECOMMENDED", "REVIEW_PRICE"));
+    await mount();
+    const first = firstScreenText(container);
+    /** 🔴 A 숫자 · ⓘ · 「가격 수정」 셋 다 남아야 한다 — CPO 「편집 기능 삭제 금지」. */
+    expect(first).toContain("₩115,200");
+    expect(first).toContain(PRICE_CALCULATION_LINK_TEXT);
+    expect(first).toContain("가격 수정");
+  });
+
+  it("①  1차 빈 문장이 **세는 기준** 을 말한다 — 요약의 「비교 판매처」와 다른 축이다", async () => {
+    stubFetch(withDomesticComparable());
+    await mount();
+    const first = firstScreenText(container);
+    expect(first).toContain(CANDIDATE_LIST_EMPTY_NOTE);
+    /** 🔴 그 문장이 범위를 밝힌다(「이번 조사」 + 「세는 기준이 다르다」). */
+    expect(CANDIDATE_LIST_EMPTY_NOTE).toContain("이번 조사");
+    expect(CANDIDATE_LIST_EMPTY_NOTE).toContain("세는 기준");
+    /** 🔴 「동일상품이 없다」로 단정하지 않는다(부재 ≠ 미발견). */
+    expect(CANDIDATE_LIST_EMPTY_NOTE).not.toContain("동일상품이 없");
+  });
+
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴 **배선 축** — 이 하니스는 `CommerceWorkspace` 를 마운트하지 않는다.
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 그래서 **운영 배선을 끊어도 위 행동 계약은 전부 통과한다**(WU-110 교훈의 반복).
+   *    `MarketComparisonInput` 주석이 적어 둔 **다섯 자리**(타입 · useMemo · deps ·
+   *    Workspace 전달 · 영역 prop) 중 하나만 빠져도 **조용히** 사라진다.
+   * 🟢 그래서 소스 앵커로 그 자리를 못박는다 — 🔴 **주석을 벗기고** 본다(헌장 §5).
+   */
+  it("🔴 배선 — 다섯 자리가 전부 이어져 있다(하나만 빠져도 조용히 사라진다)", () => {
+    /** ① 타입 */
+    expect(PANEL_SRC).toContain('investigation: "INVESTIGATING" | "READY" | "FAILED"');
+    /** ② producer — 기존 `loadFailed` 술어를 그대로 쓴다(새 계산 0) */
+    expect(PANEL_SRC).toMatch(/investigation:\s*autoChecking \|\| loading \? "INVESTIGATING"/);
+    /** ③ deps — 빠지면 첫 응답 뒤 값이 갱신되지 않는다(이 파일이 네 번 밟은 함정) */
+    expect(PANEL_SRC).toContain("data === null,");
+    /** ④ Workspace 전달 — 폴백이 `INVESTIGATING` 이어야 첫 프레임이 거짓말하지 않는다 */
+    expect(WORKSPACE_SRC).toContain('investigation={marketComparison?.investigation ?? "INVESTIGATING"}');
+    /** ⑤ 영역 prop */
+    expect(AREA_SRC).toMatch(/investigation\s*=\s*"READY"/);
+  });
+
+  it("🔴 ② 는 구현하지 않았다 — 결론 영역의 판정 줄이 **그대로** 있다(CORE-UX-SELLER-01)", async () => {
+    stubFetch(productionData());
+    await mount();
+    /**
+     * 🔴 이 단언은 「개선 안 함」을 **의도로 고정** 한다. CPO 가 ② 를 승인하면 이것이
+     *    FAIL 로 뒤집히고 **그것이 그 변경의 증거** 다(이 저장소의 앵커 규약).
+     */
+    expect(firstScreenText(surfaceRegions(container).conclusion!)).toContain(SELL_VERDICT_HEADING);
   });
 });
 
