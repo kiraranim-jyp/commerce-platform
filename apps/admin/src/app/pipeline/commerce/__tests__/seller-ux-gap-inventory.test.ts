@@ -13,6 +13,8 @@
  * 🟢 하니스는 **새로 만들지 않는다** — `seller-surface-composition`(31c77058)을 그대로 쓴다.
  *    🔴 그래야 「CTO 검토 화면」이 아니라 **운영이 조립하는 그 트리** 를 보는 것이 된다.
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -233,19 +235,90 @@ describe("SELLER-UX-GAP-INVESTIGATION-1 — ③④ 「조건부 판매」의 own
     console.log(rows.join("\n"));
 
     /**
-     * 🔴🔴 **관측 단언** — 「조건부 판매」로 보이는 코드가 **둘 이상** 이다.
-     *    (이것이 CEO 화면이 그대로였던 구조적 이유다 · 🔴 고치지 않는다)
+     * ══════════════════════════════════════════════════════════════════════
+     * 🟢🟢 **이 단언이 «뒤집혔다»** — `SELLER-UX-IMPLEMENTATION-1`(CPO 승인 2026-11-09)
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 조사 시점(`3c7fa173`)에는 「조건부 판매」로 보이는 코드가 **셋** 이었고 이 자리는
+     *    `toBeGreaterThan(1)` 로 **그 결함을 고정** 했다. CPO 가 분리를 승인했으므로
+     *    **그 단언이 FAIL 로 뒤집히는 것이 수정의 증거** 다(이 저장소 앵커 규약).
+     * 🟢 이제 **반대 방향** 을 잠근다 — 여섯 코드가 **서로 다른 문구** 를 갖는다.
      */
-    const conditional = CODES.filter((code) => {
+    const titles = CODES.map((code) => {
       const facing =
         code === "READY" ? "RECOMMENDED" : code === "HOLD" ? "NOT_RECOMMENDED" : "CONDITIONAL";
-      return resolveSellVerdictCopy(facing as never, code as never)!.title === "조건부 판매";
+      return resolveSellVerdictCopy(facing as never, code as never)!.title;
     });
-    expect(conditional.length, "🔴 조건부 판매로 보이는 코드 수").toBeGreaterThan(1);
+    /** 🔴 「조건부 판매」가 **어느 코드에도** 남지 않았다(그것이 덮던 셋이 갈렸다). */
+    expect(titles, "🔴 「조건부 판매」가 되돌아왔다").not.toContain(
+      FINAL_VERDICT_COPY.CONDITIONAL.title,
+    );
+    /** 🔴 그리고 **여섯이 전부 다른 말** 이다(둘이 같아지면 다시 덮는 것이다). */
+    expect(new Set(titles).size, `🔴 문구가 겹친다: ${titles.join(" · ")}`).toBe(CODES.length);
+    /**
+     * 🔴🔴 **행동 지시가 있어야 하는 넷** 과 **없어야 하는 둘** 을 갈라서 단언한다.
+     *    `READY`(추천)·`HOLD`(비추천)는 **결론** 이라 행동 지시가 아니다(CPO 범위).
+     */
+    for (const code of CODES) {
+      const facing =
+        code === "READY" ? "RECOMMENDED" : code === "HOLD" ? "NOT_RECOMMENDED" : "CONDITIONAL";
+      const copy = resolveSellVerdictCopy(facing as never, code as never)!;
+      if (code === "READY" || code === "HOLD") {
+        expect(copy.action ?? null, `🔴 ${code} 에 행동 지시가 생겼다`).toBeNull();
+      } else {
+        expect(copy.action, `🔴 ${code} 에 다음 행동이 없다`).toBeTruthy();
+      }
+    }
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔴🔴 **불변식 — 분리는 `CONDITIONAL` 코드에만 적용된다**(tone 이 갈라지면 CTA 가 깨진다)
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 왜 필요한가 — 비추천 CTA 게이트(`③`)는 `sellVerdictCopy.tone === "STOP"` 을 본다.
+     *    만약 `REPRESENTATIVE_DISPLAY` 에 **facing 이 RECOMMENDED/NOT_RECOMMENDED 인 코드**
+     *    가 들어가면 tone 이 `CAUTION` 으로 덮여 **그 게이트가 조용히 죽는다.**
+     * 🟢 실제로 이 WU 에서 그 모양을 봤다 — 거짓 fixture(`NOT_RECOMMENDED + REVIEW_PRICE`)가
+     *    STOP 게이트를 통과시켰다. 🟢 운영에선 불가능한 조합이지만 **계약으로 잠근다.**
+     */
+    for (const code of CODES) {
+      const facing =
+        code === "READY" ? "RECOMMENDED" : code === "HOLD" ? "NOT_RECOMMENDED" : "CONDITIONAL";
+      const copy = resolveSellVerdictCopy(facing as never, code as never)!;
+      if (facing === "CONDITIONAL") {
+        expect(copy.tone, `🔴 ${code} 의 tone 이 CAUTION 이 아니다`).toBe("CAUTION");
+      } else {
+        /** 🔴 분리 대상이 아니면 `FINAL_VERDICT_COPY` 가 **그대로** 이긴다(tone 보존). */
+        expect(copy, `🔴 ${code} 가 분리 맵에 들어갔다(tone 이 덮인다)`).toEqual(
+          FINAL_VERDICT_COPY[facing as "RECOMMENDED" | "NOT_RECOMMENDED"],
+        );
+      }
+    }
     // eslint-disable-next-line no-console
-    console.log(`\n  🔴 「조건부 판매」로 보이는 code: ${conditional.join(" · ")} (${conditional.length}개)`);
-    /** 🟢 그리고 `REVIEW_MATCH` 만 다른 문구를 갖는다(MI-REVIEW-MATCH-DISPLAY-1 의 범위). */
-    expect(conditional).not.toContain("REVIEW_MATCH");
+    console.log(`\n  🟢 여섯 코드가 서로 다른 문구를 갖는다: ${titles.join(" · ")}`);
+  });
+
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴 **다섯 번째 consumer 는 «소스 축» 으로만 지킬 수 있다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 조사가 찾은 자리 — `Panel` 의 `marketSignal.verdictLabel` 은 `workflow.ts:494·506`
+   *    으로 가서 **단계 메시지**(「분석 완료 · {label}」)가 된다. 🔴 이 하니스는 `StageBody`
+   *    를 마운트하지 않으므로 **그 우회를 행동으로 잡을 수 없다**(WU-110 교훈의 반복).
+   * 🟢 그래서 **주석을 벗긴 소스** 로 못박는다 — `FINAL_VERDICT_COPY` 를 **직접** 읽어
+   *    `verdictLabel` 을 만들면 FAIL 한다.
+   */
+  it("🔴 배선 — 다섯 번째 consumer 가 공통 resolver 를 쓴다(우회 금지)", () => {
+    const src = readFileSync(
+      join(__dirname, "..", "DomesticPriceIntelligencePanel.tsx"),
+      "utf8",
+    ).replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/.*$/gm, " ");
+    /** 🟢 resolver 를 통과한다. */
+    expect(src).toMatch(/verdictLabel:\s*\n?\s*resolveSellVerdictCopy\(/);
+    /** 🔴 그리고 **직접 읽는 모양이 없다**(그것이 조사가 찾은 그 우회다). */
+    expect(src, "🔴 verdictLabel 이 FINAL_VERDICT_COPY 를 직접 읽는다").not.toMatch(
+      /verdictLabel:\s*verdict\s*\?\s*FINAL_VERDICT_COPY/,
+    );
   });
 
   it("덤프 — 「판매 추천」이 되는 유일한 조건", async () => {

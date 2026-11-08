@@ -86,6 +86,8 @@ import {
   /** 🔵 STEP 6 §4-A — 화면에서 **뺐다**(반복 설명). 🔴 어휘 상수는 남아 있다. */
   CANDIDATE_GROUP_NOTE,
   CANDIDATE_LIST_EMPTY_NOTE,
+  /** 🔵 SELLER-UX-IMPLEMENTATION-1 ④ — 분모 설명을 1차에서 내린 자리의 토글 라벨. */
+  CANDIDATE_LIST_EMPTY_WHY_SUMMARY,
   /**
    * 🔵🔵 U5 — **가격 3상태.** 🔴 owner 는 `isPriceConfirmed` 하나이고
    *    `priceState` 는 그것을 UI 상태로 바꾸는 **어댑터** 다(새 판정 0).
@@ -435,7 +437,16 @@ export function MarketPriceComparison({
    * 🔵 MI-PRICE-BASIS-DISPLAY-1 — **판단 한 줄.** 🔴 새 산식 0 — `B ↔ A` 비교 하나다.
    *    🔴 둘 중 하나라도 없으면 `null` 이고 그러면 그 줄을 **만들지 않는다**.
    */
-  const priceBasisVerdict = priceBasisVerdictLine({ recommendedPriceKrw, marketPriceKrw });
+  const priceBasisVerdict = priceBasisVerdictLine({
+    recommendedPriceKrw,
+    marketPriceKrw,
+    /**
+     * 🔴 **표시 게이트용 불리언 하나** 다 — 「후보 중에 가격이 하나라도 있는가」.
+     *    🔴 집계가 아니다(금액·건수·통화를 만들지 않는다 · CPO: POST 승격 금지).
+     *    🟢 금액의 owner 는 여전히 🇰🇷/🌎 블록의 `buildPriceGuide` 하나다.
+     */
+    hasCandidatePrice: (rows ?? []).some((r) => r.priceAmount != null),
+  });
   const marketBasis = marketPriceBasisLine({
     marketPriceKrw,
     marketPriceMarginPercent,
@@ -2501,10 +2512,28 @@ function MarketColumn({
           <p data-testid="mi-candidate-empty" className="text-[11px] text-text-tertiary">
             {CANDIDATE_LIST_EMPTY[market]}
           </p>
-          {/** 🔴 「조회하지 않았다」로 읽히지 않게 **왜** 없는지를 적는다(WU-130 ②). */}
-          <p data-testid="mi-candidate-empty-note" className="text-[11px] text-text-tertiary">
-            {CANDIDATE_LIST_EMPTY_NOTE}
-          </p>
+          {/**
+           * ══════════════════════════════════════════════════════════════════
+           * 🔵🔵🔵 SELLER-UX-IMPLEMENTATION-1 ④ — **분모 설명을 1차에서 내린다**
+           * ══════════════════════════════════════════════════════════════════
+           *
+           * 🔴 조사 실측 — 이 문장은 🇰🇷/🌎 **두 블록에서 글자가 완전히 같고** 각 45자라
+           *    둘이 **90자 = CASE D 1차의 23%** 를 썼다. CPO: 「분모 설명을 첫 화면에
+           *    여러 번 보여주지 않는다 · **상세는 삭제하지 않고 열어볼 수 있게 보존**」.
+           * 🟢 그래서 **지우지 않고 `<details>` 안으로** 넣었다 — 셀러가 「왜 0인가」를
+           *    물을 때 그 자리에서 열린다(정보 손실 **0**).
+           * 🔴 **1차 요약 문장(`mi-candidate-empty`)은 그대로 둔다** — 「후보가 없다」는
+           *    사실 자체는 판단 재료다. 내린 것은 **우리 내부 분모 사정** 뿐이다.
+           * 🔴 testid 를 **바꾸지 않았다** — 기존 계약이 이 이름으로 그 문장을 찾는다.
+           */}
+          <details data-testid="mi-candidate-empty-why">
+            <summary className="cursor-pointer text-[11px] text-text-tertiary">
+              {CANDIDATE_LIST_EMPTY_WHY_SUMMARY}
+            </summary>
+            <p data-testid="mi-candidate-empty-note" className="text-[11px] text-text-tertiary">
+              {CANDIDATE_LIST_EMPTY_NOTE}
+            </p>
+          </details>
         </>
       )}
     </div>

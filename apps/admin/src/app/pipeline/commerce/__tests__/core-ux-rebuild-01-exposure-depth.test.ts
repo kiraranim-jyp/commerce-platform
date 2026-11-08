@@ -260,8 +260,17 @@ describe("UXR-O ⒞ 우선순위 — 판단 → 소싱가격 → 후보 → 추�
        * 🟢 판매 판단은 **상단 요약 · Action Center** 가 계속 말한다(위치가 셋 → 둘).
        * 🔴 항목 수(여덟)와 **엄격한 전순서** 는 그대로다 — 약화가 아니다.
        */
+      /**
+       * 🔵🔵 **`market-price-basis` 를 이 목록에서 «뺐다»** — `SELLER-UX-IMPLEMENTATION-1` ⒜.
+       *
+       * 🔴 그 줄은 **조건부로 선다** — CPO 승인(⒜)대로 「서버 B 도 없고 후보 가격도 없을
+       *    때만」 판단 불가 문구를 세우므로, **이 fixture(후보에 가격 있음 · B null)에서는
+       *    의도대로 서지 않는다.** ⟹ 엄격 전순서 목록에 두면 **정상 동작이 FAIL** 한다.
+       * 🟢 그 줄의 유무는 **상태별로** `seller-surface-render-harness-1` 이 양방향 단언한다
+       *    (⒜ 모순 해소 · ④ 분모 설명 · 상태별 문구/행동 일치).
+       * 🔴 순서 단언은 약화되지 않았다 — 「근거(`market-blocks`) → … → ⓘ → 상세」가 그대로다.
+       */
       const ids = [
-        "market-price-basis",
         "market-blocks",
         "mi-same-domestic",
         "mi-same-overseas",

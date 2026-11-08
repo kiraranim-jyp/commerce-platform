@@ -38,6 +38,7 @@ import { NEEDS_MATCH_VERDICT_COPY, resolveSellVerdictCopy } from "../DomesticPri
 /** 🔵 MI-INVESTIGATION-STATE-UX-2 — 🔴 **문구를 테스트가 다시 적지 않는다**(owner 에서 읽는다). */
 import {
   CANDIDATE_LIST_EMPTY_NOTE,
+  CANDIDATE_LIST_EMPTY_WHY_SUMMARY,
   MARKET_RECHECK_EMPTY,
   MARKET_RECHECK_FAILED,
   MARKET_RECHECK_INVESTIGATING,
@@ -286,7 +287,15 @@ describe("MI-INVESTIGATION-STATE-UX-2 — 조사 상태·가격 표시", () => {
   });
 
   it("③-a 판매 비추천이면 「이 가격으로 설정」이 **없고** 이유를 말한다", async () => {
-    stubFetch(withVerdict(productionData(), "NOT_RECOMMENDED", "REVIEW_PRICE"));
+    /**
+     * 🔴🔴 **fixture 를 고쳤다 — 원래 조합이 운영에 존재할 수 없었다.**
+     *    `NOT_RECOMMENDED + REVIEW_PRICE` 로 적어 뒀는데 `SELLER_FACING_MAP[REVIEW_PRICE]`
+     *    는 **CONDITIONAL** 이다 ⟹ 그 조합은 서버가 만들지 못한다. 🟢 `NOT_RECOMMENDED` 의
+     *    유일한 출처는 **`HOLD`** 다(정책 A 가 CASE B/C 를 HOLD 로 보낸다).
+     * 🔴 `SELLER-UX-IMPLEMENTATION-1` 의 분리가 그 거짓 조합을 **드러냈다** —
+     *    REVIEW_PRICE 가 이제 `CAUTION` 문구를 갖기 때문이다(STOP 게이트가 안 걸린다).
+     */
+    stubFetch(withVerdict(productionData(), "NOT_RECOMMENDED", "HOLD"));
     await mount();
     const first = firstScreenText(container);
     expect(first, "🔴 비추천인데 적용 CTA 가 남아 있다").not.toContain(APPLY_RECOMMENDED_PRICE_LABEL);
@@ -302,7 +311,15 @@ describe("MI-INVESTIGATION-STATE-UX-2 — 조사 상태·가격 표시", () => {
   });
 
   it("③-c 비추천에서도 **가격 계산과 편집 길은 남는다**(기능을 지우지 않았다)", async () => {
-    stubFetch(withVerdict(productionData(), "NOT_RECOMMENDED", "REVIEW_PRICE"));
+    /**
+     * 🔴🔴 **fixture 를 고쳤다 — 원래 조합이 운영에 존재할 수 없었다.**
+     *    `NOT_RECOMMENDED + REVIEW_PRICE` 로 적어 뒀는데 `SELLER_FACING_MAP[REVIEW_PRICE]`
+     *    는 **CONDITIONAL** 이다 ⟹ 그 조합은 서버가 만들지 못한다. 🟢 `NOT_RECOMMENDED` 의
+     *    유일한 출처는 **`HOLD`** 다(정책 A 가 CASE B/C 를 HOLD 로 보낸다).
+     * 🔴 `SELLER-UX-IMPLEMENTATION-1` 의 분리가 그 거짓 조합을 **드러냈다** —
+     *    REVIEW_PRICE 가 이제 `CAUTION` 문구를 갖기 때문이다(STOP 게이트가 안 걸린다).
+     */
+    stubFetch(withVerdict(productionData(), "NOT_RECOMMENDED", "HOLD"));
     await mount();
     const first = firstScreenText(container);
     /** 🔴 A 숫자 · ⓘ · 「가격 수정」 셋 다 남아야 한다 — CPO 「편집 기능 삭제 금지」. */
@@ -314,8 +331,17 @@ describe("MI-INVESTIGATION-STATE-UX-2 — 조사 상태·가격 표시", () => {
   it("①  1차 빈 문장이 **세는 기준** 을 말한다 — 요약의 「비교 판매처」와 다른 축이다", async () => {
     stubFetch(withDomesticComparable());
     await mount();
-    const first = firstScreenText(container);
+    /**
+     * 🔵🔵 **단언이 «층» 을 옮겼다** — `SELLER-UX-IMPLEMENTATION-1` ④(CPO 승인)가 이 문장을
+     *    **1차에서 접힘으로** 내렸다(같은 글자가 🇰🇷/🌎 두 번 서서 90자 = 1차의 23%였다).
+     * 🟢 그래서 「1차에 있다」 대신 **「DOM 에 보존돼 있다」** 를 본다 — 1차 부재는
+     *    위 `④ 분모 설명은 1차에서 내려갔고…` 가 **양방향으로** 단언한다.
+     */
+    const first = wholeText(container);
     expect(first).toContain(CANDIDATE_LIST_EMPTY_NOTE);
+    expect(first, "🔴 「왜 없나요?」 토글이 사라졌다(열 수단 없음)").toContain(
+      CANDIDATE_LIST_EMPTY_WHY_SUMMARY,
+    );
     /** 🔴 그 문장이 범위를 밝힌다(「이번 조사」 + 「세는 기준이 다르다」). */
     expect(CANDIDATE_LIST_EMPTY_NOTE).toContain("이번 조사");
     expect(CANDIDATE_LIST_EMPTY_NOTE).toContain("세는 기준");
@@ -374,6 +400,111 @@ describe("MI-INVESTIGATION-STATE-UX-2 — 조사 상태·가격 표시", () => {
     /** 🟢🟢 남은 **두 자리** 는 그대로 말한다(일관성 계약 유지). */
     expect(firstScreenText(summary!), "🔴 요약이 판정을 잃었다").toContain(title);
     expect(firstScreenText(right!), "🔴 ActionCenter 가 판정을 잃었다").toContain(title);
+  });
+
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 SELLER-UX-IMPLEMENTATION-1 — **상태별 문구 ↔ 다음 행동이 일치한다**
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 CPO 완료 기준 ⑥⑦ — 「CASE A/B/C/D · REVIEW_MATCH · 로딩 · 후보 있음/없음 전부
+   *    검증」 + 「각 상태에서 **판정 문구와 CTA 가 실제로 일치** 하는지」.
+   * 🔴 문구를 테스트가 다시 적지 않는다 — **owner(`resolveSellVerdictCopy`)에서 읽는다**.
+   */
+  const SPLIT: { code: string; facing: string }[] = [
+    { code: "MARKET_OPPORTUNITY", facing: "CONDITIONAL" },
+    { code: "REVIEW_PRICE", facing: "CONDITIONAL" },
+    { code: "NEEDS_INFO", facing: "CONDITIONAL" },
+    { code: "REVIEW_MATCH", facing: "CONDITIONAL" },
+    { code: "READY", facing: "RECOMMENDED" },
+    { code: "HOLD", facing: "NOT_RECOMMENDED" },
+  ];
+
+  for (const { code, facing } of SPLIT) {
+    it(`⒝ ${code} — 요약·ActionCenter 가 **같은 문구** 를 말하고 행동이 일치한다`, async () => {
+      stubFetch(withVerdict(productionData(), facing as never, code as never));
+      await mount();
+      const { summary, right, conclusion } = surfaceRegions(container);
+      const copy = resolveSellVerdictCopy(facing as never, code as never)!;
+
+      /** 🟢 두 자리가 같은 문구(일관성 계약 · 위치 셋 → 둘). */
+      expect(firstScreenText(summary!), `🔴 요약 문구 불일치: ${code}`).toContain(copy.title);
+      expect(firstScreenText(right!), `🔴 ActionCenter 문구 불일치: ${code}`).toContain(copy.title);
+      /** 🔴 결론 영역은 판정을 되풀이하지 않는다(CPO ⒝). */
+      expect(firstScreenText(conclusion!)).not.toContain(SELL_VERDICT_HEADING);
+      /**
+       * 🔴🔴 **행동 ↔ 문구 일치** — 행동이 있으면 ActionCenter 가 그것을 말하고,
+       *    없으면(`READY`/`HOLD`) **기존 안내문** 이 그대로 선다(지어내지 않는다).
+       */
+      const aside = firstScreenText(right!);
+      if (copy.action) expect(aside, `🔴 ${code} 의 다음 행동이 화면에 없다`).toContain(copy.action);
+      else expect(aside).toContain("근거 보기");
+
+      /**
+       * 🔴🔴 **동어반복을 깬다.** 위 단언은 기대값을 **같은 resolver** 에서 읽으므로
+       *    분리를 되돌려도 「조건부 판매 == 조건부 판매」로 **통과한다**(M10 이 그것을
+       *    실제로 보여줬다 · 메모 `source-guard-must-lock-the-predicate`).
+       * 🟢 그래서 **확정 어휘를 글자로** 단언한다 — 세 분리 코드는 「조건부 판매」가
+       *    **아니어야** 하고 **행동 지시를 가져야** 한다.
+       */
+      if (code === "MARKET_OPPORTUNITY" || code === "REVIEW_PRICE" || code === "NEEDS_INFO") {
+        expect(copy.title, `🔴 ${code} 가 「조건부 판매」로 되돌아갔다`).not.toBe("조건부 판매");
+        expect(firstScreenText(summary!), `🔴 요약이 「조건부 판매」로 되돌아갔다`).not.toContain(
+          "조건부 판매",
+        );
+        expect(copy.action, `🔴 ${code} 에 다음 행동이 없다`).toBeTruthy();
+      }
+    });
+  }
+
+  it("⒜ 후보에 가격이 있으면 「판단할 수 없습니다」를 **말하지 않는다**(1차 모순 해소)", async () => {
+    const row = (over: Record<string, unknown>) =>
+      ({
+        source: "OVERSEAS_AUTO",
+        domain: "a.example",
+        title: "Terry Bermuda Shorts",
+        imageUrl: null,
+        soldOut: false,
+        discoveredUrl: "https://a.example/p/1",
+        matchTruth: "EXACT_IDENTIFIER",
+        priceTier: "EXACT",
+        crossSellerVerdict: "SAME",
+        confidence: 1,
+        matchReasons: [],
+        crossSellerBlockers: [],
+        crossSellerConflicts: [],
+        priceAmount: 88000,
+        priceCurrency: "KRW",
+        priceStatus: "VERIFIED_CURRENT",
+        market: "KR",
+        basis: "TLD",
+        ...over,
+      }) as never;
+    const data = productionData() as PriceHistoryResponse & { savedCandidateRows?: unknown };
+    data.savedCandidateRows = [row({})];
+    stubFetch(data);
+    await mount();
+    const first = firstScreenText(surfaceRegions(container).conclusion!);
+    /** 🔴 모순 문장이 사라졌다 — 같은 1차가 금액을 보여주면서 「확인되지 않아」라 말하지 않는다. */
+    expect(first, "🔴 1차 모순이 되돌아왔다").not.toContain("확인되지 않아");
+    /** 🟢 그런데 **가격 근거는 남아 있다**(문장을 지운 것이 아니라 모순만 없앴다). */
+    expect(first).toContain("88000");
+  });
+
+  it("④ 분모 설명은 1차에서 **내려갔고 지워지지 않았다**(접힘에 보존)", async () => {
+    stubFetch(productionData());
+    await mount();
+    const conclusion = surfaceRegions(container).conclusion!;
+    /** 🔴 1차에 **없다** — 같은 글자가 두 번 서던 90자다. */
+    expect(firstScreenText(conclusion), "🔴 분모 설명이 1차로 되돌아왔다").not.toContain(
+      CANDIDATE_LIST_EMPTY_NOTE,
+    );
+    /** 🟢 그러나 **DOM 에는 있다** — 셀러가 「왜 없나요?」를 열면 그대로 읽는다. */
+    expect(wholeText(conclusion), "🔴 분모 설명이 삭제됐다(보존 위반)").toContain(
+      CANDIDATE_LIST_EMPTY_NOTE,
+    );
+    /** 🔴 1차 요약 문장(「후보가 없습니다」)은 **그대로 남는다** — 그것은 판단 재료다. */
+    expect(firstScreenText(conclusion)).toContain("국내 소싱 후보가 없습니다");
   });
 
   it("MI-PRICE-BASIS-DISPLAY-1 — A/B 의 **전제** 가 글로 적혀 있다(금액은 A 하나뿐)", async () => {

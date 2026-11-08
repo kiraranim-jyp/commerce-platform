@@ -214,6 +214,24 @@ export const PRICE_BASIS_B_BASIS_LABEL = `${PRICE_BASIS_B_LABEL} 기준`;
 export function priceBasisVerdictLine(input: {
   recommendedPriceKrw?: number | null;
   marketPriceKrw?: number | null;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 SELLER-UX-IMPLEMENTATION-1 ⒜ — **후보에 가격이 있으면 「판단 불가」를 말하지 않는다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 조사가 찾은 **1차 모순**(`SELLER-UX-GAP-INVESTIGATION-1` §2-⒝) — 같은 1차에:
+   * ```
+   * 「국내 시장가격이 **확인되지 않아** 목표마진 달성 여부를 판단할 수 없습니다」
+   * 「🇰🇷 국내 동일상품 **확인 가격 KRW 88,000**」      ← 바로 아래 줄
+   * ```
+   *    앞 문장은 **B**(서버 `domesticCompetition` 산출), 뒤 문장은
+   *    `buildPriceGuide(POST transient rows)` 를 본다 ⟹ 후보가 transient 로만 오면
+   *    **B 가 null 로 남아** 화면이 스스로 모순된다. 🔴 `40bb52c7` 이 만든 자리다.
+   * 🟢 CPO 승인 **최소 수정** — 「B 도 없고 **rows 도 비어 있을 때만**」 그 문구를 세운다.
+   * 🔴🔴 **POST 를 GET 집계 owner 로 승격하는 것이 아니다**(CPO 명시) — 이 값은
+   *    **표시 게이트용 불리언 하나** 이고 금액·건수·집계에 **들어가지 않는다**.
+   */
+  hasCandidatePrice?: boolean;
 }): string | null {
   const { recommendedPriceKrw, marketPriceKrw } = input;
   if (recommendedPriceKrw == null) return null;
@@ -227,6 +245,12 @@ export function priceBasisVerdictLine(input: {
    *    🔴 「달성 가능」으로도 「어렵다」로도 적지 않는다 — **모른다** 가 정확한 상태다.
    */
   if (marketPriceKrw == null) {
+    /**
+     * 🔴 **후보에 가격이 있으면 그 줄을 만들지 않는다**(CPO 승인 ⒜). 「없다」고 말하면
+     *    바로 아래 블록이 보여주는 금액과 **같은 화면에서 모순** 된다.
+     * 🟢 그 상태의 가격 근거는 🇰🇷/🌎 블록이 **이미** 말한다(새 문장 0).
+     */
+    if (input.hasCandidatePrice) return null;
     return "국내 시장가격이 확인되지 않아 목표마진 달성 여부를 판단할 수 없습니다.";
   }
   if (marketPriceKrw < recommendedPriceKrw) {

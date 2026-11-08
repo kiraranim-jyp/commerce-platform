@@ -414,6 +414,11 @@ export const CANDIDATE_LIST_EMPTY: Record<"KR" | "OVERSEAS", string> = {
  */
 export const CANDIDATE_LIST_EMPTY_NOTE =
   "이번 조사에서 수집한 후보 중에는 같은 상품으로 판단할 수 있는 판매처가 없습니다 — 요약의 「비교 판매처」와 세는 기준이 다릅니다.";
+/**
+ * 🔵 SELLER-UX-IMPLEMENTATION-1 ④ — 위 문장을 **1차에서 내리면서** 그 자리에 남는 토글 라벨.
+ * 🔴 「왜」를 묻는 셀러만 열게 한다 — 문장을 **지운 것이 아니다**(CPO 「상세 보존」).
+ */
+export const CANDIDATE_LIST_EMPTY_WHY_SUMMARY = "▸ 왜 없나요?";
 
 /** 🔴 `MatchDisplayTier` 와 글자가 같은 값만 등급으로 받는다 — 모르는 값은 지어내지 않는다. */
 export const DISPLAYABLE_TIERS = [

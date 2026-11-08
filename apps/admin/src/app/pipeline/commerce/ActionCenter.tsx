@@ -61,8 +61,15 @@ export function ActionCenter({
   onGoToChannel,
   channelActionMode = "REGISTER",
 }: {
-  /** 서버가 낸 판매 판단 3단계. 아직 분석 중이거나 근거가 없으면 null. */
-  verdict: { icon: string; title: string; tone: "GOOD" | "CAUTION" | "STOP" } | null;
+  /**
+   * 서버가 낸 판매 판단 3단계. 아직 분석 중이거나 근거가 없으면 null.
+   *
+   * 🔵 SELLER-UX-IMPLEMENTATION-1 — `action` 칸이 늘었다(**optional** · 기존 호출부 불변).
+   *    🔴 owner 는 `resolveSellVerdictCopy` 하나이고 이 컴포넌트는 **그리기만** 한다.
+   */
+  verdict:
+    | { icon: string; title: string; tone: "GOOD" | "CAUTION" | "STOP"; action?: string | null }
+    | null;
   /** 분석이 아직 끝나지 않았는가. null verdict를 "나쁨"으로 읽지 않게 구분한다. */
   verdictPending: boolean;
   /**
@@ -139,9 +146,20 @@ export function ActionCenter({
         </button>
         {/* P2-4 — 10px은 실제 화면에서 읽히지 않는다. 판단의 기준을 말하는
             문장이라 지울 수 없고, 지울 수 없으면 읽히게 둬야 한다(text-xs). */}
-        <p className="mt-0.5 text-xs text-text-secondary">
+        {/**
+         * ══════════════════════════════════════════════════════════════════
+         * 🔵🔵🔵 SELLER-UX-IMPLEMENTATION-1 ② — **이 기둥은 «다음 행동» 의 자리다**
+         * ══════════════════════════════════════════════════════════════════
+         *
+         * 🔴 CPO: 「Action Center = **실행 가능한 다음 행동**」. 그런데 이 줄은 판정과
+         *    무관하게 늘 「🇰🇷 대한민국 시장 기준 · 근거 보기 →」였다 — **안내문** 이다.
+         * 🟢 판정이 **행동을 들고 있으면**(`verdict.action`) 그것을 말한다. 🔴 없으면
+         *    (`READY`/`HOLD` = 결론이라 행동 지시가 아니다) **기존 문장 그대로** 다.
+         * 🔴 새 판정·새 문구 **0** — `resolveSellVerdictCopy` 가 준 값을 그리기만 한다.
+         */}
+        <p data-testid="action-center-next-step" className="mt-0.5 text-xs text-text-secondary">
           {verdict
-            ? "🇰🇷 대한민국 시장 기준 · 근거 보기 →"
+            ? (verdict.action ?? "🇰🇷 대한민국 시장 기준 · 근거 보기 →")
             : verdictPending
               ? "한국 시장 가격을 조회하고 있습니다"
               : "가격 근거가 아직 없어 판단을 세우지 못했습니다"}

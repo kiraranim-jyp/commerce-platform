@@ -58,9 +58,35 @@ describe("RMD §1 — 4상태 표시", () => {
     expect(copy?.tone).toBe("CAUTION");
   });
 
-  it("①-e 🔴 REVIEW_MATCH **외** 의 CONDITIONAL 은 기존 문구 그대로다", () => {
-    for (const code of ["REVIEW_PRICE", "NEEDS_INFO", "MARKET_OPPORTUNITY"] as const) {
-      expect(resolveSellVerdictCopy("CONDITIONAL", code)?.title, code).toBe(FINAL_VERDICT_COPY.CONDITIONAL.title);
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * 🟢🟢 **이 단언이 «뒤집혔다»** — `SELLER-UX-IMPLEMENTATION-1`(CPO 승인 2026-11-09)
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 이 WU(`MI-REVIEW-MATCH-DISPLAY-1`)는 **`REVIEW_MATCH` 하나만** 갈랐고 이 자리는
+   *    「나머지 셋은 **기존 문구 그대로**」를 의도로 고정했다.
+   * 🔴🔴 조사(`SELLER-UX-GAP-INVESTIGATION-1` §3·§4)가 **그것이 CEO FAIL 의 원인** 임을
+   *    밝혔다 — 그 셋은 **요구 행동이 서로 다른데**(시세 직접 확인 / 가격 조정 / 원가 입력)
+   *    같은 「조건부 판매」로 보였다 ⟹ CPO 가 **분리를 승인** 했다.
+   * 🟢 그래서 **반대 방향** 을 잠근다. 🔴 그리고 **tone 은 전부 `CAUTION` 그대로** 다
+   *    (색·위계 불변 · 내부 `SELLER_FACING_MAP` 은 **한 글자도 안 바뀌었다**).
+   */
+  it("①-e 🟢🟢 CONDITIONAL 세 코드가 **서로 다른 문구** 다(「조건부 판매」가 셋을 덮지 않는다)", () => {
+    const codes = ["REVIEW_PRICE", "NEEDS_INFO", "MARKET_OPPORTUNITY"] as const;
+    const titles = codes.map((code) => resolveSellVerdictCopy("CONDITIONAL", code)!.title);
+    /** 🔴 하나라도 「조건부 판매」로 되돌아가면 FAIL. */
+    for (const [i, title] of titles.entries()) {
+      expect(title, codes[i]).not.toBe(FINAL_VERDICT_COPY.CONDITIONAL.title);
+    }
+    /** 🔴 셋이 서로 겹치지 않는다(둘이 같아지면 다시 덮는 것이다). */
+    expect(new Set(titles).size, `🔴 문구가 겹친다: ${titles.join(" · ")}`).toBe(codes.length);
+    /** 🔴 **다음 행동이 있다** — 그것이 이 분리의 목적이다(「다음에 무엇을 하는가」). */
+    for (const code of codes) {
+      expect(resolveSellVerdictCopy("CONDITIONAL", code)!.action, code).toBeTruthy();
+    }
+    /** 🔴 위계는 바뀌지 않았다 — tone 전부 `CAUTION`. */
+    for (const code of codes) {
+      expect(resolveSellVerdictCopy("CONDITIONAL", code)!.tone, code).toBe("CAUTION");
     }
   });
 

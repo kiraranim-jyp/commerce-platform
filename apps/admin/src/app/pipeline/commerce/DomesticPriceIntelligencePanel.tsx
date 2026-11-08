@@ -943,19 +943,83 @@ export const FINAL_VERDICT_COPY: Record<
 /** 🔵 표시 분기 재료의 타입 — Workspace 가 state 로 들고 있으려면 **내보내야** 한다. */
 export type SellVerdictRepresentativeCode = RepresentativeVerdict["code"];
 
-export const NEEDS_MATCH_VERDICT_COPY: { icon: string; title: string; tone: "GOOD" | "CAUTION" | "STOP" } = {
+export interface SellVerdictDisplay {
+  icon: string;
+  title: string;
+  tone: "GOOD" | "CAUTION" | "STOP";
+  /**
+   * 🔵🔵🔵 SELLER-UX-IMPLEMENTATION-1 — **셀러가 «다음에» 할 일.**
+   *
+   * 🔴 `null` 인 경우가 정상이다 — `READY`(추천) · `HOLD`(비추천)는 **행동 지시가 아니라
+   *    결론** 이다. 없는 행동을 지어내지 않는다.
+   */
+  action?: string | null;
+}
+
+export const NEEDS_MATCH_VERDICT_COPY: SellVerdictDisplay = {
   icon: "🟡",
   title: "동일상품 확인 필요",
   tone: "CAUTION",
+  action: "국내 동일상품을 직접 확인하세요",
+};
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 SELLER-UX-IMPLEMENTATION-1 — **「조건부 판매」가 덮던 셋을 가른다**(CPO 승인 2026-11-09)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **조사가 찾은 사실**(`docs/SELLER-UX-GAP-INVESTIGATION-1.md` §3) —
+ *    `SELLER_FACING_MAP` 이 representative **6코드를 3코드로** 압축하는데 그중
+ *    **셋이 같은 「조건부 판매」** 로 나왔다. 그런데 셋은 **요구 행동이 서로 다르다**:
+ * ```
+ * MARKET_OPPORTUNITY  국내 판매 사례를 못 찾았다        → 시장가격 **직접 확인**
+ * REVIEW_PRICE        마진 미달이나 조정으로 회복 가능   → **가격 조정**
+ * NEEDS_INFO          원가 자체를 모른다               → **원가 입력**
+ * ```
+ * ⟹ 🔴 한 라벨로 묶으면 「다음에 무엇을 하면 되는가」가 **구조적으로 답되지 않는다.**
+ *
+ * 🔴🔴 **표시 전용이다 — 내부를 한 글자도 바꾸지 않았다**(CPO 동결):
+ *    `SELLER_FACING_MAP` · 내부 verdict 의미 · `READY` 조건 · 국내 EXACT 자격 ·
+ *    `PRESUMED_SAME` 승격 · matcher/threshold/GT · CASE A/B/C/D · 가격 계산 **전부 0**.
+ * 🟢 그래서 분기 키는 **representative code** 다(이미 응답에 있는 값 · 새 판정 0).
+ * 🔴 `READY`·`HOLD` 는 **넣지 않는다** — 그 둘은 `FINAL_VERDICT_COPY` 가 그대로 말한다
+ *    (「판매 추천」·「판매 비추천」 유지 · CPO 명시).
+ */
+const REPRESENTATIVE_DISPLAY: Partial<Record<RepresentativeVerdict["code"], SellVerdictDisplay>> = {
+  REVIEW_MATCH: NEEDS_MATCH_VERDICT_COPY,
+  MARKET_OPPORTUNITY: {
+    icon: "🟡",
+    title: "국내 판매 사례 확인 필요",
+    tone: "CAUTION",
+    action: "국내 시장가격을 직접 확인하세요",
+  },
+  REVIEW_PRICE: {
+    icon: "🟡",
+    title: "판매가격 조정 필요",
+    tone: "CAUTION",
+    action: "판매가격을 조정하세요",
+  },
+  NEEDS_INFO: {
+    icon: "🟡",
+    title: "원가 정보 필요",
+    tone: "CAUTION",
+    action: "상품 원가와 비용을 입력하세요",
+  },
 };
 
 export function resolveSellVerdictCopy(
   finalVerdict: SellerFinalVerdict | null,
   representativeCode: RepresentativeVerdict["code"] | null,
-): { icon: string; title: string; tone: "GOOD" | "CAUTION" | "STOP" } | null {
+): SellVerdictDisplay | null {
   if (finalVerdict == null) return null;
-  /** 🔴 동일상품이 **검증되지 않은** 상태 — 판매 가능/불가를 말할 근거 자체가 없다. */
-  if (representativeCode === "REVIEW_MATCH") return NEEDS_MATCH_VERDICT_COPY;
+  /**
+   * 🔴 **representative 가 더 구체적이면 그것을 쓴다.** 네 코드가 여기 산다 —
+   *    `REVIEW_MATCH`(동일상품 미검증) · `MARKET_OPPORTUNITY` · `REVIEW_PRICE` · `NEEDS_INFO`.
+   * 🔴 `finalVerdict` 를 **덮어쓰는 것이 아니다** — 같은 상태를 **더 정확한 말** 로 적는다
+   *    (tone 은 전부 `CAUTION` 이라 색/위계가 바뀌지 않는다).
+   */
+  const byCode = representativeCode ? REPRESENTATIVE_DISPLAY[representativeCode] : undefined;
+  if (byCode) return byCode;
   return FINAL_VERDICT_COPY[finalVerdict];
 }
 
@@ -2689,8 +2753,22 @@ export function DomesticPriceIntelligencePanel({
       profitabilityDone: analysisDone,
       profitabilityFound: data?.recommendation?.estimatedMarginPercent != null,
       verdictKnown: verdict != null,
-      // 서버의 SELLER_FACING_COPY와 같은 문구를 쓴다 — UI에서 이름을 다시 짓지 않는다.
-      verdictLabel: verdict ? FINAL_VERDICT_COPY[verdict].title : null,
+      /**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔵🔵🔵 SELLER-UX-IMPLEMENTATION-1 ① — **다섯 번째 consumer 가 resolver 를 «우회» 했다**
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * 🔴🔴 조사(`SELLER-UX-GAP-INVESTIGATION-1` §3)가 찾은 자리다. 이 값은
+       *    `workflow.ts:494·506` 으로 가서 **단계 메시지**(「분석 완료 · {verdictLabel}」)가
+       *    된다 — 즉 **셀러가 보는 다섯 번째 판정 표시** 다.
+       * 🔴 그런데 `FINAL_VERDICT_COPY[verdict]` 를 **직접** 읽어서
+       *    `resolveSellVerdictCopy` 의 분기를 **건너뛰었다** ⟹ 요약·Action Center 가
+       *    「원가 정보 필요」라고 말해도 **이 줄만 「조건부 판매」** 로 남는다.
+       *    🔴 CEO 가 「문구가 그대로다」라고 본 이유 중 하나가 이것이다.
+       * 🟢 그래서 **공통 owner 하나** 로 돌린다(새 문구 0 · 새 판정 0).
+       */
+      verdictLabel:
+        resolveSellVerdictCopy(verdict, data?.representativeVerdict?.code ?? null)?.title ?? null,
       // 요청이 전부 끝났는데 응답이 없는 경우에만 "못 불러왔다"이다.
       // 로딩 중의 null을 실패로 읽으면 화면이 매번 실패부터 보여준다.
       loadFailed: !loading && !autoChecking && data === null,
