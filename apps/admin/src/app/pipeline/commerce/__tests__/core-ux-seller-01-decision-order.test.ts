@@ -223,10 +223,21 @@ describe("UX-02 — 판매판단 owner 하나(좌우가 갈릴 경로가 없다)
   });
 
   it("UX-02-b 🔴🔴 Workspace 가 **좌우에 같은 식** 을 넘긴다", () => {
-    const expr = "sellVerdict ? FINAL_VERDICT_COPY[sellVerdict] : null";
-    /** 🔴 왼쪽(이번 WU) · 오른쪽(ActionCenter) **둘 다** 그 식이어야 한다. */
+    /**
+     * 🔵🔵🔵 **MI-REVIEW-MATCH-DISPLAY-1 — 그 「같은 식」이 resolver 로 바뀌었다.**
+     * ```
+     * 전   sellVerdict ? FINAL_VERDICT_COPY[sellVerdict] : null
+     * 후   **resolveSellVerdictCopy(sellVerdict, representativeCode)**
+     * ```
+     * 🔴 **이 계약의 명제는 그대로다** — 「좌우가 **같은 식**」. 바뀐 것은 식의 내용이고,
+     *    보는 화면이 **셋** 으로 늘었다(요약 헤드라인 포함 · `mi-review-match-display-1` 이 셋을 본다).
+     * 🟢 여기서는 **좌우 동일성** 을 계속 지키고, 옛 직통 경로가 되살아나면 **FAIL** 한다.
+     */
+    const expr = "resolveSellVerdictCopy(sellVerdict, representativeCode)";
     expect(WORKSPACE, "🔴 왼쪽 배선이 사라졌다").toContain(`sellVerdictCopy={${expr}}`);
     expect(WORKSPACE, "🔴 오른쪽 Action Center 배선이 사라졌다").toContain(`verdict={${expr}}`);
+    /** 🔴 옛 식이 한 곳이라도 남으면 좌우가 **다른 말** 을 한다. */
+    expect(WORKSPACE, "🔴 옛 직통 경로가 되살아났다").not.toContain("FINAL_VERDICT_COPY[sellVerdict]");
   });
 
   it("UX-02-c 🔴🔴 이 영역은 **판정하지 않는다**(verdict 계산 어휘 0)", () => {

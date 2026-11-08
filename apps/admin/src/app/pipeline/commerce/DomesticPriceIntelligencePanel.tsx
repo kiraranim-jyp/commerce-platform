@@ -914,6 +914,51 @@ export const FINAL_VERDICT_COPY: Record<
   NOT_RECOMMENDED: { icon: "🔴", title: "판매 비추천", tone: "STOP" },
 };
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 MI-REVIEW-MATCH-DISPLAY-1 — **「판단 불가」를 「조건부 판매」로 말하지 않는다**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 CEO 화면 FAIL 의 실체 — 두 문장이 **동시에** 떠 있었다:
+ * ```
+ * 판매 판단   조건부 판매                       ← 팔아도 된다는 인상
+ * 판단 이유   국내 동일상품 가격 근거가 없어 수익성을 판단할 수 없습니다
+ * ```
+ * 🔴 그 「조건부 판매」는 **정책 A(CASE B)가 아니라** `REVIEW_MATCH`(동일상품 **미검증**)
+ *    에서 온다 — `SELLER_FACING_MAP[REVIEW_MATCH] = "CONDITIONAL"` 이고, 그 압축에서
+ *    **「검증되지 않았다」는 사실이 사라진다**.
+ *
+ * 🟢 그래서 **코드는 그대로 두고 «표시» 만** 가른다(CPO 승인 ⑵ · 표시 전용):
+ * ```
+ * REVIEW_MATCH → 🟡 **동일상품 확인 필요**
+ * 그 외         → FINAL_VERDICT_COPY 그대로 (A 추천 · B·C 비추천)
+ * ```
+ * 🔴 **바꾸지 않는 것** — `SellerFacingVerdictCode` 타입 · `SELLER_FACING_MAP` ·
+ *    `finalVerdict` · `CONDITIONAL` 내부 코드 · API 응답 구조 · representative 계산.
+ * 🔴 **판단 불가를 「판매 비추천」으로 위장하지 않는다** — 그 둘은 다른 상태다:
+ *    비추천 = 확인된 근거상 목표마진 불가 / 확인 필요 = 근거가 부족해 판단 자체가 불가.
+ * 🔴 세 화면(요약 헤드라인 · 📊 시장 판매 판단 · Action Center)이 **이 함수 하나** 를 쓴다 —
+ *    하나만 바꾸면 화면끼리 다른 말을 한다(계약이 그것을 FAIL 로 잡는다).
+ */
+/** 🔵 표시 분기 재료의 타입 — Workspace 가 state 로 들고 있으려면 **내보내야** 한다. */
+export type SellVerdictRepresentativeCode = RepresentativeVerdict["code"];
+
+export const NEEDS_MATCH_VERDICT_COPY: { icon: string; title: string; tone: "GOOD" | "CAUTION" | "STOP" } = {
+  icon: "🟡",
+  title: "동일상품 확인 필요",
+  tone: "CAUTION",
+};
+
+export function resolveSellVerdictCopy(
+  finalVerdict: SellerFinalVerdict | null,
+  representativeCode: RepresentativeVerdict["code"] | null,
+): { icon: string; title: string; tone: "GOOD" | "CAUTION" | "STOP" } | null {
+  if (finalVerdict == null) return null;
+  /** 🔴 동일상품이 **검증되지 않은** 상태 — 판매 가능/불가를 말할 근거 자체가 없다. */
+  if (representativeCode === "REVIEW_MATCH") return NEEDS_MATCH_VERDICT_COPY;
+  return FINAL_VERDICT_COPY[finalVerdict];
+}
+
 
 // MI-CONFIDENCE-2 — 셀러 화면에서 "신호 신뢰도 ●●○" 노출을 없애면서 이 배지
 // 맵의 참조가 사라졌다. 미사용 상수를 남기면 다음 사람이 "어디서 쓰이나"를
@@ -1899,7 +1944,13 @@ export interface MarketComparisonInput {
  */
 export type JudgementSummarySource = Pick<
   PriceHistoryResponse,
-  "cost" | "currentPrice" | "domesticCompetition" | "domesticMarketSplit" | "sellerDecision"
+  | "cost"
+  | "currentPrice"
+  | "domesticCompetition"
+  | "domesticMarketSplit"
+  | "sellerDecision"
+  /** 🔵 MI-REVIEW-MATCH-DISPLAY-1 — 표시 분기 재료. 🔴 판정 계산에는 쓰지 않는다. */
+  | "representativeVerdict"
 >;
 
 export function buildJudgementSummaryInput(input: {
@@ -1914,7 +1965,7 @@ export function buildJudgementSummaryInput(input: {
 }): JudgementSummaryInput | null {
   const { data } = input;
   if (!data) return null;
-  const { cost, currentPrice, domesticCompetition, domesticMarketSplit, sellerDecision } = data;
+  const { cost, currentPrice, domesticCompetition, domesticMarketSplit, sellerDecision, representativeVerdict } = data;
   /** 🔴 `MiPanelView` 의 `hasAnyData` 와 **같은 식** 이다 — 조건을 늘리지 않는다. */
   const hasAnyData =
     domesticCompetition.tier !== "NONE" || currentPrice.sellingPriceKrw != null || cost != null;
@@ -1926,7 +1977,13 @@ export function buildJudgementSummaryInput(input: {
     domesticUnresolved: domesticCompetition.priceMarketBasis === "UNRESOLVED",
   });
   return {
-    verdictLabel: hasAnyData ? FINAL_VERDICT_COPY[sellerDecision.finalVerdict].title : null,
+    /**
+     * 🔵 MI-REVIEW-MATCH-DISPLAY-1 — 요약 헤드라인도 **같은 resolver** 를 쓴다.
+     * 🔴 세 화면이 한 함수를 쓰지 않으면 화면끼리 다른 판단을 말한다(계약이 FAIL 로 잡는다).
+     */
+    verdictLabel: hasAnyData
+      ? (resolveSellVerdictCopy(sellerDecision.finalVerdict, representativeVerdict?.code ?? null)?.title ?? null)
+      : null,
     /**
      * 🔵 SELLER-DECISION-UI-1 ⒝ — 「핵심 판단 이유」. **기존 MI 산출을 그대로 옮긴다.**
      * 🔴 문장을 만들지 않는다 · 🔴 `recommendedPriceKrw` 는 여기로 오지 않는다
@@ -1956,6 +2013,8 @@ export function DomesticPriceIntelligencePanel({
   snapshotOriginPrice = null,
   onPriceLevelChange,
   onSellerVerdictChange,
+  /** 🔵 MI-REVIEW-MATCH-DISPLAY-1 — 표시 분기 재료(배선 1개). */
+  onRepresentativeVerdictChange,
   onMarketSignalChange,
   onRequestPriceReview,
   autoChecking,
@@ -1997,6 +2056,11 @@ export function DomesticPriceIntelligencePanel({
    * 이 값과 등록 준비 상태를 한 화면에 나란히 놓기 위해 쓴다. 두 값을 합쳐
    * 새 판정을 만들지는 않는다(registration-readiness-outcome.ts 참고). */
   onSellerVerdictChange?: (verdict: SellerDecisionInfo["finalVerdict"] | null) => void;
+  /**
+   * 🔵 MI-REVIEW-MATCH-DISPLAY-1 — **표시 분기 재료 하나**(배선 1개 · CPO 승인).
+   * 🔴 위 콜백과 **같은 effect · 같은 패턴** 이다. 내부 판정값은 한 글자도 바뀌지 않는다.
+   */
+  onRepresentativeVerdictChange?: (code: RepresentativeVerdict["code"] | null) => void;
   /** N-4.08 STEP6-4와 같은 패턴(onReadinessChange) — 이 패널이 계산한 값을
    * CommerceWorkspace가 탭 배지/상태 요약에 캐싱해서 쓸 수 있게 보고한다. */
   onPriceLevelChange?: (level: PriceLevel) => void;
@@ -2553,6 +2617,13 @@ export function DomesticPriceIntelligencePanel({
     // 같은 패턴). 여기서 새 판정을 만들지 않고 서버가 이미 낸
     // sellerDecision.finalVerdict를 그대로 보고만 한다.
     onSellerVerdictChange?.(data?.sellerDecision?.finalVerdict ?? null);
+    /**
+     * 🔵 MI-REVIEW-MATCH-DISPLAY-1 — **배선 1개**(CPO 승인). 바로 윗줄과 **같은 패턴** 이다.
+     * 🔴 새 판정을 만들지 않는다 — 서버가 이미 낸 `representativeVerdict.code` 를 **그대로** 보고한다.
+     * 🔴 `MarketComparisonInput` 에 **합치지 않는다**(채널 분리 · CPO ⒜ 에서 확정).
+     * 🔴 이 값은 **표시 분기에만** 쓰인다 — 판정·가격·집계에 들어가지 않는다.
+     */
+    onRepresentativeVerdictChange?.(data?.representativeVerdict?.code ?? null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, data]);
 

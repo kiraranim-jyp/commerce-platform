@@ -61,7 +61,15 @@ const competition = (over: Partial<JudgementSummarySource["domesticCompetition"]
     ...over,
   }) as JudgementSummarySource["domesticCompetition"];
 
+/**
+ * 🔵 MI-REVIEW-MATCH-DISPLAY-1 — `representativeVerdict` 가 **표시 분기 재료** 로 들어왔다.
+ * 🔴 기본값은 `READY` 다(= 분기하지 않는 상태) — 그래야 기존 단언이 **그 분기와 무관하게** 산다.
+ */
+const representative = (code: string): JudgementSummarySource["representativeVerdict"] =>
+  ({ code, icon: "🟢", title: "", description: "", reasons: [] }) as JudgementSummarySource["representativeVerdict"];
+
 const source = (over: Partial<JudgementSummarySource> = {}): JudgementSummarySource => ({
+  representativeVerdict: representative("READY"),
   cost: null,
   currentPrice: { sellingPriceKrw: null, costPriceKrw: null, costBasis: null },
   domesticCompetition: competition(),

@@ -74,8 +74,15 @@ import {
   MarketIntelligenceSkeleton,
   PRICE_CALCULATION_ANCHOR_ID,
   PRICE_COMPARISON_ANCHOR_ID,
+  /** 🔵 MI-REVIEW-MATCH-DISPLAY-1 — 세 화면이 **이 함수 하나** 로 판정 문구를 만든다. */
+  resolveSellVerdictCopy,
 } from "./commerce/DomesticPriceIntelligencePanel";
-import type { MarketComparisonInput, PriceLevel, SellerFinalVerdict } from "./commerce/DomesticPriceIntelligencePanel";
+import type {
+  MarketComparisonInput,
+  PriceLevel,
+  SellerFinalVerdict,
+  SellVerdictRepresentativeCode,
+} from "./commerce/DomesticPriceIntelligencePanel";
 /**
  * 🔴🔴 WU-132 ①②③ — 화면에 **하나뿐인** 동일상품 가격 비교 영역. MI 패널 안의
  *    `unified-price-comparison` 을 **대체** 한다(영역을 둘 두지 않는다).
@@ -737,6 +744,27 @@ export function CommerceWorkspace({
      🔴 탭 간 sticky 는 그대로다 — 탭 이동은 snapshotId 를 바꾸지 않는다. */
   const [reportedSellVerdict, setReportedSellVerdict] = useState<ScopedSellVerdict | null>(null);
   const { verdict: sellVerdict, reported: verdictReported } = resolveSellVerdict(reportedSellVerdict, snapshotId);
+  /**
+   * 🔵🔵 MI-REVIEW-MATCH-DISPLAY-1 — **표시 분기 재료**(배선 1개 · CPO 승인).
+   *
+   * 🔴 `sellVerdict` 와 **같은 scope 규약** 을 쓴다 — 보고 시점의 `snapshotId` 를 같이 새기고
+   *    상품이 바뀌면 **이전 상품 값을 쓰지 않는다**(잔상 방지 · `resolveSellVerdict` 와 같은 이유).
+   * 🔴 이 값은 **표시에만** 쓴다 — 판정·가격·집계·등록 payload 에 들어가지 않는다.
+   */
+  const [reportedRepVerdict, setReportedRepVerdict] = useState<{
+    snapshotId: string | null;
+    code: SellVerdictRepresentativeCode | null;
+  } | null>(null);
+  const representativeCode =
+    reportedRepVerdict && reportedRepVerdict.snapshotId === (snapshotId ?? null) ? reportedRepVerdict.code : null;
+  function handleRepresentativeVerdictChange(code: SellVerdictRepresentativeCode | null) {
+    setReportedRepVerdict((prev) =>
+      prev && prev.snapshotId === (snapshotId ?? null) && prev.code === code
+        ? prev
+        : { snapshotId: snapshotId ?? null, code },
+    );
+  }
+
   function handleSellerVerdictChange(verdict: SellerFinalVerdict | null) {
     /* 보고 «시점의» snapshotId 를 같이 새긴다 — 나중에 그 상품이 맞는지 볼 수 있게. */
     setReportedSellVerdict((prev) =>
@@ -3805,7 +3833,7 @@ export function CommerceWorkspace({
              * 🔴 **왼쪽을 추가했다고 오른쪽을 지우지 않았다** — 오른쪽은 다른 탭/작업
              *    흐름에서도 판매판단을 들고 있어야 한다(변이 M6 가 그것을 문다).
              */
-            sellVerdictCopy={sellVerdict ? FINAL_VERDICT_COPY[sellVerdict] : null}
+            sellVerdictCopy={resolveSellVerdictCopy(sellVerdict, representativeCode)}
             /**
              * 🔵🔵 CORE-UX-SELLER-01 ② — **A 를 실제 판매가격으로 확정하는 CTA.**
              *
@@ -3935,6 +3963,8 @@ export function CommerceWorkspace({
               }
               onPriceLevelChange={handlePriceLevelChange}
               onSellerVerdictChange={handleSellerVerdictChange}
+              /** 🔵 MI-REVIEW-MATCH-DISPLAY-1 — 표시 분기 재료(배선 1개 · 같은 패턴). */
+              onRepresentativeVerdictChange={handleRepresentativeVerdictChange}
               onMarketSignalChange={handleMarketSignalChange}
               onRequestPriceReview={handleRequestPriceReview}
               /* MI-FINAL-UX-3 — 수익성 요약 세 줄의 값. 상세 계산과 같은 함수의
@@ -4570,7 +4600,7 @@ export function CommerceWorkspace({
           {!channelOwnsPillar && (
           <ActionCenter
             channelActionMode={workflow.currentStepKey === "COMMERCE_REGISTERING" ? "REGISTER" : "CHECK"}
-            verdict={sellVerdict ? FINAL_VERDICT_COPY[sellVerdict] : null}
+            verdict={resolveSellVerdictCopy(sellVerdict, representativeCode)}
             verdictPending={!verdictReported}
             verdictMode={stageFocus.actionCenter.verdict}
             checklist={actionChecklist}
