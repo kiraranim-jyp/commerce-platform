@@ -397,8 +397,34 @@ describe("D. 🔴 화면(마운트 DOM)", () => {
     expect(PANEL).not.toContain("evidence={reviewedSame}");
   });
 
+  /**
+   * 🔵🔵 SELLER-COMPARISON-UI-1 STEP 2 — **조립 자리가 함수로 옮겨졌다**(의도된 변경).
+   *
+   * 🔴 전에는 `MiPanelView` 의 **인라인 객체 리터럴** 이었고 그 패널은 운영에서
+   *    `presentation="HIDDEN"` 이라 **마운트되지 않았다**(= 죽은 렌더).
+   * 🟢 이제 `buildJudgementSummaryInput`(바깥 패널이 호출)이 조립하므로 인자 참조가
+   *    `input.` 접두를 갖는다. 🔴 **명제는 그대로** 다 — 「요약이 자동검색 후보를 센다」.
+   * 🟢 그리고 **강화** 했다 — 출처 **여섯 전부** 를 세고, 그 조립이 **함수 안** 에 있는지
+   *    (= owner 가 하나인지) 같이 단언한다. 하나라도 빠지면 요약이 「후보 없음」인데
+   *    아래 카드엔 행이 서는 그 모순으로 되돌아간다.
+   */
   it("D-5 🔴 요약이 자동검색 후보를 **센다** — 요약과 본문이 다른 말을 하지 않는다", () => {
-    expect(PANEL).toContain('{ sourceLabel: "해외 자동검색", rows: overseasAutoEvidence ?? [] }');
+    expect(PANEL).toContain('{ sourceLabel: "해외 자동검색", rows: input.overseasAutoEvidence ?? [] }');
+    for (const [label, field] of [
+      ["직접 입력", "urlCandidateEvidence"],
+      ["웹 검색", "geminiEvidence"],
+      ["해외 자동검색", "overseasAutoEvidence"],
+      ["이전 확인 후보", "reviewedSameEvidence"],
+      ["국내 목록 탐색", "domesticListingEvidence"],
+      ["AI 검색", "webSearchEvidence"],
+    ] as const) {
+      expect(PANEL, `🔴 요약이 출처 「${label}」를 세지 않는다`).toContain(
+        `{ sourceLabel: "${label}", rows: input.${field} ?? [] }`,
+      );
+    }
+    /** 🔴 조립 owner 는 **함수 하나** 다 — 렌더 경로에 사본이 생기면 둘이 갈린다. */
+    expect(PANEL).toContain("export function buildJudgementSummaryInput(");
+    expect((PANEL.match(/sourceLabel: "해외 자동검색"/g) ?? []).length).toBe(1);
   });
 
   it("D-6 🔴 자동 1회차 응답에서 그 배열을 **읽는다** — 「다시 분석」을 누르기 전에도 보인다", () => {

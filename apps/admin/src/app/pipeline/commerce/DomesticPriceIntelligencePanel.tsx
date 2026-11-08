@@ -21,7 +21,14 @@ import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
  * 🔴 표시 전용이다 — 판정/가격/집계 어휘를 이 경로에 넣지 않는다.
  */
 import { IdentityEvidencePanel, type IdentityEvidencePayload } from "./IdentityEvidencePanel";
-import { ProductJudgementSummary } from "./ProductJudgementSummary";
+/**
+ * 🔵🔵 SELLER-COMPARISON-UI-1 STEP 2 — **이 패널은 요약을 더 이상 «그리지» 않는다.**
+ *
+ * 🔴 그려야 할 자리가 바뀌었다(격자 밖 최상단) — 그래서 `ProductJudgementSummary`
+ *    컴포넌트 import 가 사라지고 **입력 타입만** 남는다. 🟢 입력을 만드는 규칙은
+ *    `buildJudgementSummaryInput`(이 파일 · 아래)이 그대로 들고 있다.
+ */
+import type { JudgementSummaryInput } from "./judgement-summary";
 /**
  * 🔴🔴 WU-132 ③ — **`OverseasReferencePrice` 를 이 패널이 더 이상 그리지 않는다.**
  *    그 두 블록은 「📊 동일상품 가격 비교」(`MarketPriceComparison`)로 옮겨 갔다 —
@@ -1837,6 +1844,107 @@ export interface MarketComparisonInput {
   marketPriceMarginPercent: number | null;
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 SELLER-COMPARISON-UI-1 STEP 2 — **요약 입력 조립의 «단일 owner»**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **먼저 — 이 함수가 생긴 이유는 지시서 전제가 반증됐기 때문이다.**
+ *
+ * 작업지시서는 「요약이 아직 `MiPanelView` 안에서 그려지고 있어 후보 카드와 **중복
+ * 노출** 중이므로 위로 «옮긴다»」였다. 🔴 실측하니 그렇지 않았다:
+ * ```
+ * CommerceWorkspace    <DomesticPriceIntelligencePanel presentation="HIDDEN" …>  (전수 1곳)
+ * 이 파일              if (presentation === "HIDDEN") return null;   ← MiPanelView «앞»
+ *   ⟹ 🔴 `MiPanelView` 는 **운영에서 한 번도 마운트되지 않는다**
+ *   ⟹ 🔴 그 안의 `<ProductJudgementSummary>` 는 **죽은 렌더** 였다
+ * ```
+ * ⟹ 🔴🔴 **중복이 아니라 «부재» 였다.** 셀러는 상품 판단 요약을 **본 적이 없다**.
+ *    그래서 이 STEP 은 「이동」이 아니라 **「처음 연결」** 이다(보고서에 그대로 적는다).
+ *
+ * ── 🔴 그래서 지시서의 ⒜(「`MiPanelView` 에서 두 번째 콜백」)를 글자 그대로 둘 수 없다 ──
+ * 그 컴포넌트는 마운트되지 않으므로 **effect 가 영원히 발화하지 않는다.**
+ * 🟢 CPO 가 ⒜ 로 지키려던 것 셋은 그대로 지킨다:
+ * ```
+ * ① Workspace 에서 **재계산 0**            → 워크스페이스는 받은 객체를 **그리기만** 한다
+ * ② 요약 데이터 owner 를 **둘로 만들지 않는다** → 조립 규칙은 **이 함수 하나** 다
+ * ③ `MarketComparisonInput` 계약 **불변**   → 칸을 더하지 않고 **두 번째 콜백** 을 쓴다
+ * ```
+ * 🔴 바뀐 것은 **그 콜백을 «누가» 발화하는가** 하나다 — `MiPanelView`(죽은 컴포넌트)가
+ *    아니라 **바깥 패널**(`HIDDEN` 에서도 훅이 전부 도는 그 컴포넌트)이다. 🟢 그래서
+ *    첫 번째 콜백(`onMarketComparisonChange`)과 **같은 컴포넌트 · 같은 ref 패턴** 이 된다.
+ *
+ * ── 🟢 왜 바깥 패널이 이 값을 만들 수 있나 (실측) ───────────────────────────
+ * 이 조립이 쓰는 재료가 **전부 `data` 의 순수 파생 + 바깥 패널이 이미 가진 값** 이다:
+ * ```
+ * cost · currentPrice · domesticCompetition · domesticMarketSplit · sellerDecision  ← data
+ * hasAnyData        = 위 셋의 순수 식                      (MiPanelView:3452 와 **같은 식**)
+ * marketContext     = buildMarketContext(domesticMarketSplit/Competition)  ← 순수
+ * domesticEvidence  = buildDomesticMarketEvidence(marketContext, …)        ← 순수
+ * overseas · 출처 6배열  ← 바깥 패널이 이미 들고 MiPanelView 로 내려보내던 props/state
+ * ```
+ * 🔴 **그러므로 「Workspace 가 다시 계산한다」가 아니다** — 계산은 패널 쪽에 남고,
+ *    그 규칙이 **함수 하나** 로 모여 사본이 생길 자리가 없어졌다.
+ * 🔴 **새 판정값을 만들지 않는다** — 다른 owner 가 낸 문자열을 고르는 것뿐이다
+ *    (`judgement-summary.ts` 머리 주석의 그 규칙 그대로).
+ * 🔴 `data` 가 없으면 **`null`** 이다 — 「아직 분석이 없다」를 빈 요약으로 지어내지 않는다.
+ * 🔴 출처 **여섯** 을 전부 센다. 하나라도 빠지면 요약이 「후보 없음」이라 말하는데
+ *    아래 카드에는 행이 서는 모순이 생긴다(이 저장소가 E2E-04 에서 실제로 밟은 함정).
+ */
+/**
+ * 🔴 **읽는 칸을 타입에 적는다.** `PriceHistoryResponse` 전체를 받으면 ⒜ 이 함수가 무엇에
+ *    의존하는지 타입이 말하지 못하고 ⒝ 하니스가 거대 fixture 를 만들다가 `as never` 로
+ *    타입을 가리게 된다(WU-092 가 그렇게 「A_DISCOVERY」라는 거짓 결론을 냈다).
+ * 🟢 `Pick` 이라 **칸 이름과 타입은 응답 계약에서 그대로** 온다(사본 0).
+ */
+export type JudgementSummarySource = Pick<
+  PriceHistoryResponse,
+  "cost" | "currentPrice" | "domesticCompetition" | "domesticMarketSplit" | "sellerDecision"
+>;
+
+export function buildJudgementSummaryInput(input: {
+  data: JudgementSummarySource | null;
+  overseasMarketEvidence: MarketEvidenceSummary | null;
+  urlCandidateEvidence: GeminiTransientRow[] | null;
+  geminiEvidence: GeminiTransientRow[] | null;
+  overseasAutoEvidence: GeminiTransientRow[] | null;
+  reviewedSameEvidence: GeminiTransientRow[] | null;
+  domesticListingEvidence: GeminiTransientRow[] | null;
+  webSearchEvidence: GeminiTransientRow[] | null;
+}): JudgementSummaryInput | null {
+  const { data } = input;
+  if (!data) return null;
+  const { cost, currentPrice, domesticCompetition, domesticMarketSplit, sellerDecision } = data;
+  /** 🔴 `MiPanelView` 의 `hasAnyData` 와 **같은 식** 이다 — 조건을 늘리지 않는다. */
+  const hasAnyData =
+    domesticCompetition.tier !== "NONE" || currentPrice.sellingPriceKrw != null || cost != null;
+  const marketContext = buildMarketContext({
+    domesticBasis: domesticMarketSplit.basis,
+    domesticAveragePriceKrw: domesticCompetition.averagePriceKrw,
+    domesticLowestPriceKrw: domesticCompetition.lowestPriceKrw,
+    domesticSellerCount: domesticCompetition.sellerCount,
+    domesticUnresolved: domesticCompetition.priceMarketBasis === "UNRESOLVED",
+  });
+  return {
+    verdictLabel: hasAnyData ? FINAL_VERDICT_COPY[sellerDecision.finalVerdict].title : null,
+    domestic: buildDomesticMarketEvidence({
+      context: marketContext,
+      basis: domesticMarketSplit.basis,
+      exactSellerCount: domesticMarketSplit.exact.sellerCount,
+      comparisonSellerCount: domesticMarketSplit.comparison.sellerCount,
+    }),
+    overseas: input.overseasMarketEvidence ?? null,
+    transient: [
+      { sourceLabel: "직접 입력", rows: input.urlCandidateEvidence ?? [] },
+      { sourceLabel: "웹 검색", rows: input.geminiEvidence ?? [] },
+      { sourceLabel: "해외 자동검색", rows: input.overseasAutoEvidence ?? [] },
+      { sourceLabel: "이전 확인 후보", rows: input.reviewedSameEvidence ?? [] },
+      { sourceLabel: "국내 목록 탐색", rows: input.domesticListingEvidence ?? [] },
+      { sourceLabel: "AI 검색", rows: input.webSearchEvidence ?? [] },
+    ],
+  };
+}
+
 export function DomesticPriceIntelligencePanel({
   snapshotId,
   snapshotOriginPrice = null,
@@ -1857,6 +1965,11 @@ export function DomesticPriceIntelligencePanel({
   openPriceDetailRequest = 0,
   /** 🔴 WU-132 ① — MI 산출을 「📊 시장 가격 비교」 영역으로 올려보낸다. */
   onMarketComparisonChange,
+  /**
+   * 🔵🔵 SELLER-COMPARISON-UI-1 STEP 2 — **두 번째 콜백**(상품 판단 요약).
+   * 🔴 위 콜백과 **합치지 않는다** — `MarketComparisonInput` 계약은 불변이다(CPO ⒜).
+   */
+  onJudgementSummaryChange,
   /** 🔴 WU-132 ④ — 검토 구역의 원본 ↔ 후보 육안 비교용. */
   originImageUrl = null,
   originTitle = null,
@@ -1987,6 +2100,16 @@ export function DomesticPriceIntelligencePanel({
    * 🟢 방향은 `ComparisonShopSearch.onEvidenceChange` 와 **같다** — 새 패턴이 아니다.
    */
   onMarketComparisonChange?: (input: MarketComparisonInput) => void;
+  /**
+   * 🔵🔵🔵 SELLER-COMPARISON-UI-1 STEP 2 — **상품 판단 요약을 올려보내는 두 번째 채널.**
+   *
+   * 🔴 왜 **두 번째** 인가 — 위 `onMarketComparisonChange` 의 payload 에 칸을 더하면
+   *    「후보/가격」과 「결론 요약」이 **한 객체의 수명을 공유** 하게 되고, 한쪽 deps 가
+   *    바뀔 때 다른 쪽도 같이 재보고된다. CPO 가 ⒜(두 채널)로 확정한 이유가 그것이다.
+   * 🔴 `null` 은 **「아직 분석 결과가 없다」** 다 — 받는 쪽은 **아무것도 그리지 않는다**.
+   * 🔴 값을 **가공하지 않는다** — `buildJudgementSummaryInput` 산출을 그대로 올린다.
+   */
+  onJudgementSummaryChange?: (input: JudgementSummaryInput | null) => void;
   /**
    * 🔴 WU-132 ④ — 원상품 대표 이미지/제목. 검토 구역이 「원본 ↔ 후보」 사진을
    *    나란히 그리는 데만 쓴다. 🔴 판정·가격·집계에 들어가지 않는다.
@@ -2255,6 +2378,49 @@ export function DomesticPriceIntelligencePanel({
   useEffect(() => {
     onMarketComparisonChangeRef.current?.(marketComparisonInput);
   }, [marketComparisonInput]);
+
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 SELLER-COMPARISON-UI-1 STEP 2 — **상품 판단 요약을 «같은 사이클» 로 올린다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 조립은 `buildJudgementSummaryInput`(이 파일 · 모듈 최상위) 하나가 한다 —
+   *    여기서 칸을 고르거나 숫자를 만들지 않는다(사본 0).
+   * 🔴🔴 **deps 를 바로 위 memo 와 «같은 축» 으로 맞춘다.** CPO 가 명시한 추가 잠금이
+   *    이것이다 — 두 콜백이 각각 발화하는 것만으로는 부족하고, **같은 분석 사이클에서
+   *    요약과 후보가 서로 다른 시점 값으로 섞이지 않아야** 한다. 출처 여섯 배열이
+   *    두 memo 의 deps 에 **둘 다** 들어가므로, 한 출처가 도착하면 **둘이 함께** 갱신된다.
+   * 🔴 그래서 출처를 늘릴 때 **deps 두 곳을 같이** 고친다(이 파일이 네 번 밟은 함정).
+   * 🟢 `useMemo` → `useEffect` → ref 는 위 콜백과 **같은 패턴** 이다(새 패턴 0).
+   */
+  const judgementSummaryInput = useMemo(
+    () =>
+      buildJudgementSummaryInput({
+        data: data ?? null,
+        overseasMarketEvidence,
+        urlCandidateEvidence,
+        geminiEvidence,
+        overseasAutoEvidence,
+        reviewedSameEvidence,
+        domesticListingEvidence,
+        webSearchEvidence,
+      }),
+    [
+      data,
+      overseasMarketEvidence,
+      urlCandidateEvidence,
+      geminiEvidence,
+      overseasAutoEvidence,
+      reviewedSameEvidence,
+      domesticListingEvidence,
+      webSearchEvidence,
+    ],
+  );
+  const onJudgementSummaryChangeRef = useRef(onJudgementSummaryChange);
+  onJudgementSummaryChangeRef.current = onJudgementSummaryChange;
+  useEffect(() => {
+    onJudgementSummaryChangeRef.current?.(judgementSummaryInput);
+  }, [judgementSummaryInput]);
 
   /** 🔴 제외된 URL 을 **조용히 버리지 않는다** — 서버가 낸 이유를 그대로 한 줄로 적는다. */
   const [urlCandidateNotice, setUrlCandidateNotice] = useState<string | null>(null);
@@ -3790,40 +3956,28 @@ export function MiPanelView({
   }
 
   /**
-   * 🔴🔴 WU-030(CPO 승인, 2026-10-16) — **결론을 한 덩어리로 먼저 말한다.**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 SELLER-COMPARISON-UI-1 STEP 2 — **요약은 이 컴포넌트가 그리지 않는다**
+   * ══════════════════════════════════════════════════════════════════════════
    *
-   * 결론(①팔아도 되는가 ②동일상품인가 ③어디가 얼마인가)은 전에도 상단에 있었지만
-   * **서로 떨어져 있어서** 셀러가 읽어 내려가며 스스로 조합해야 했다.
-   * 🟢 새 판정값을 만들지 않는다 — 이미 다른 owner 가 낸 문자열을 모을 뿐이다.
-   * 🔴 아래 상세는 **한 줄도 사라지지 않는다**(§3).
+   * 🟢 WU-030 이 세운 「결론을 한 덩어리로 먼저 말한다」는 **그대로 유효** 하다.
+   *    바뀐 것은 **그 덩어리가 서는 자리** 다 — 「먼저」가 되려면 격자 «밖» 최상단이어야
+   *    하고(WU-140-R1 — 「기둥 안 맨 위」 ≠ 「화면 맨 위」), 그 자리의 주인은
+   *    `CommerceWorkspace` 다.
    *
-   * 🔴 **입력 조립을 `return` «앞» 에서 한다** — 본문 줄 수 상한(≤155)은 그대로 두고
-   *    본문에는 한 줄만 세우기 위해서다. CPO 가 상한 재조정을 승인했지만, 올리지
-   *    않고도 되면 올리지 않는다(계약은 적게 흔들수록 좋다).
+   * 🔴🔴 **조립 로직은 지우지 않았다 — 함수로 «옮겼다»**:
+   *    `buildJudgementSummaryInput`(이 파일 모듈 최상위). 🟢 그 함수가 쓰는 식은
+   *    여기 있던 것과 **글자 그대로 같다**(`hasAnyData` · `domesticEvidence` · 출처 여섯).
+   * 🔴🔴 그리고 **읽히지 않는 지역 변수를 남기지 않았다.** WU-141-R3 이 적어 둔 이유가
+   *    그것이다 — 「집계를 계산해 두고 아무도 읽지 않는」 자리는 **두 번째 owner 가
+   *    다시 꽂히는 자리** 다. 🟢 owner 는 이제 **함수 하나** 이고 렌더 주인은 **한 곳** 이다.
+   * 🔴 그래서 `<ProductJudgementSummary>` 는 이 트리에 **없다**(아래 상세는 한 줄도
+   *    사라지지 않았다 — 요약 «한 블록» 만 자리를 옮겼다).
    */
-  const judgementSummaryInput = {
-    verdictLabel: hasAnyData ? FINAL_VERDICT_COPY[sellerDecision.finalVerdict].title : null,
-    domestic: domesticEvidence,
-    overseas: overseasMarketEvidence ?? null,
-    transient: [
-      { sourceLabel: "직접 입력", rows: urlCandidateEvidence ?? [] },
-      { sourceLabel: "웹 검색", rows: geminiEvidence ?? [] },
-      /** 🔴 WU-130 — 자동검색 후보도 요약에 **센다**. 빠뜨리면 요약이 「후보 없음」인데
-       *  아래에는 행이 서는 모순이 생긴다(이 저장소에서 반복된 그 버그). */
-      { sourceLabel: "해외 자동검색", rows: overseasAutoEvidence ?? [] },
-      /** 🔴 WU-132 — 재투입 후보도 **센다**(같은 이유 — 요약과 아래 행이 어긋나면 안 된다). */
-      { sourceLabel: "이전 확인 후보", rows: reviewedSameEvidence ?? [] },
-      /** 🔴🔴 E2E-04 — 같은 이유로 **센다**. 이 둘이 빠져 있어서 요약이 국내 후보를
-       *  「없음」으로 말하면서 가격 집계에는 들어가는 모순이 실제로 났다. */
-      { sourceLabel: "국내 목록 탐색", rows: domesticListingEvidence ?? [] },
-      { sourceLabel: "AI 검색", rows: webSearchEvidence ?? [] },
-    ],
-  };
 
   return (
     <CollapsibleSection title="Market Intelligence" defaultOpen>
       <div className="space-y-2 text-xs">
-        <ProductJudgementSummary {...judgementSummaryInput} />
         {/* UX 2.2 — 요약에서 [판단 상세보기]로 펼친 경우에만 되돌아갈 길을 둔다.
             ②가 현재 단계일 때는 이 버튼이 없다 — 그때 MI는 접을 수 있는 곁가지가
             아니라 그 단계에서 해야 할 일 자체다. */}

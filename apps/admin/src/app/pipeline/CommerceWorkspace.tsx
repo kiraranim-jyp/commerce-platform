@@ -83,6 +83,12 @@ import type { MarketComparisonInput, PriceLevel, SellerFinalVerdict } from "./co
 import { MarketPriceComparison } from "./commerce/MarketPriceComparison";
 /** 🔵 SELLER-COMPARISON-UI-1 — 셀러용 소싱 후보 카드(국내·해외 **동일 템플릿**). */
 import { SellerCandidateCards } from "./commerce/SellerCandidateCards";
+/**
+ * 🔵🔵 SELLER-COMPARISON-UI-1 STEP 2 잔여 — **상품 판단 요약의 유일한 렌더 주인.**
+ * 🔴 값을 만들지 않는다 — 패널이 올려보낸 입력을 그대로 그린다(재계산 0).
+ */
+import { ProductJudgementSummary } from "./commerce/ProductJudgementSummary";
+import type { JudgementSummaryInput } from "./commerce/judgement-summary";
 import { resolveSellVerdict, type ScopedSellVerdict } from "./commerce/sell-verdict-scope";
 import { applyChannelNoticeOverride, type ChannelNoticeOverrideEdit } from "@commerce/listing";
 import { ActionCenter, type ChecklistItem } from "./commerce/ActionCenter";
@@ -825,6 +831,17 @@ export function CommerceWorkspace({
    *    두면 화면과 집계가 언젠가 다른 말을 한다.
    */
   const [marketComparison, setMarketComparison] = useState<MarketComparisonInput | null>(null);
+  /**
+   * 🔵🔵🔵 SELLER-COMPARISON-UI-1 STEP 2 잔여 — **상품 판단 요약(두 번째 채널).**
+   *
+   * 🔴 `marketComparison` 에 **합치지 않는다**(CPO ⒜) — 「후보/가격」과 「결론 요약」은
+   *    서로 다른 수명이고, 한 객체로 묶으면 한쪽 deps 가 바뀔 때 다른 쪽도 재보고된다.
+   * 🔴🔴 **여기서 다시 계산하지 않는다.** 조립 owner 는 패널의
+   *    `buildJudgementSummaryInput` 하나이고 이 state 는 **그 산출을 들고 있을 뿐** 이다.
+   *    (사본을 만들면 요약과 상세가 갈라진다 — 이 저장소가 반복해서 막아 온 그 사고다.)
+   * 🔴 `null` = 「아직 분석 결과가 없다」 ⟹ 그 자리는 **아무것도 그리지 않는다**.
+   */
+  const [judgementSummary, setJudgementSummary] = useState<JudgementSummaryInput | null>(null);
   /**
    * 🔴🔴 WU-149 STEP 1 — **여기 있던 넷을 지웠다**: `domesticEvidenceOpen` ·
    * `overseasEvidenceOpen` · `marketEvidenceRequest` · `openMarketEvidence()`.
@@ -3672,6 +3689,27 @@ export function CommerceWorkspace({
         * 🔴 게이트를 **그대로 공유** 한다 — 커머스 탭 맨 위에 후보가 서지 않게 하는 조건이다.
         * 🔴 데이터는 **이미 이 자리에 있는 값**(marketComparison.rows) — 새 호출/state/판정 **0**.
         */}
+      {/**
+        * 🔵🔵🔵 SELLER-COMPARISON-UI-1 STEP 2 잔여 — **추천 요약이 화면의 첫 판단 블록이다**
+        *
+        * 🔴🔴 **지시서 전제를 정정한다** — 「요약이 패널 안에서 그려져 후보 카드와 중복」이
+        *    아니었다. 운영에서 그 패널은 `presentation="HIDDEN"` 이라 `MiPanelView` 가
+        *    **마운트되지 않고**, 그 안의 `<ProductJudgementSummary>` 는 **죽은 렌더** 였다.
+        *    ⟹ 🔴 셀러는 상품 판단 요약을 **본 적이 없다.** 이것은 「이동」이 아니라
+        *       **「처음 연결」** 이다(`buildJudgementSummaryInput` 머리 주석에 근거).
+        * 🔴 그래서 **렌더 주인이 여기 하나** 다 — 패널 쪽 렌더는 제거됐다(중복 0).
+        * 🔴 **재계산 0** — 조립은 패널의 `buildJudgementSummaryInput` 이 하고 이 자리는
+        *    받은 객체를 **그리기만** 한다(CPO ⒜ 의 핵심 제약).
+        * 🔴 `null` 이면 **아무것도 그리지 않는다** — 빈 요약을 지어내지 않는다.
+        * 🔴 순서는 **요약 → 후보 카드** 다(결론이 탐색보다 먼저 · 격자 «밖»).
+        * 🔴 게이트(`workSurface !== "CHANNEL"`)를 후보 카드와 **그대로 공유** 한다 —
+        *    커머스 탭 맨 위에 판단 블록이 서지 않게 하는 그 조건이다.
+        */}
+      {workSurface !== "CHANNEL" && judgementSummary && (
+        <div data-testid="seller-judgement-summary-slot" className="mb-3">
+          <ProductJudgementSummary {...judgementSummary} />
+        </div>
+      )}
       {workSurface !== "CHANNEL" && (
         <div data-testid="seller-candidates-slot" className="mb-3">
           <SellerCandidateCards rows={marketComparison?.rows ?? null} />
@@ -3936,6 +3974,16 @@ export function CommerceWorkspace({
                * 🔴 이 파일은 값을 **만들지 않는다** — 들고만 있는다(그 규약과 동일).
                */
               onMarketComparisonChange={setMarketComparison}
+              /**
+               * 🔵🔵🔵 SELLER-COMPARISON-UI-1 STEP 2 잔여 — **두 번째 채널(상품 판단 요약).**
+               *
+               * 🔴 위 콜백과 **나란히** 둔다 — 같은 컴포넌트가 같은 사이클에 둘을 보고하므로
+               *    요약과 후보가 서로 다른 시점 값으로 섞이지 않는다(CPO 추가 잠금).
+               * 🔴 `setState` 를 **그대로** 넘긴다 — 참조가 고정돼 있고, 패널이 ref 로 잡으므로
+               *    보고가 무한히 돌지 않는다(`onMarketComparisonChange` 와 같은 규약).
+               * 🔴 이 파일은 값을 **만들지 않는다** — 들고만 있는다.
+               */
+              onJudgementSummaryChange={setJudgementSummary}
               /**
                * 🔴 WU-132 ④ — 후보 검토 구역의 **원본 ↔ 후보** 육안 비교용. 아래 두
                *    가격비교 패널에 넘기는 그 값과 **같은 값** 이다(두 화면이 서로 다른
