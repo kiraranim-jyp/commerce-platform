@@ -71,11 +71,36 @@ describe("STAGE2 — D1 긍정 근거 복구", () => {
     expect(candidateEvidenceLines({} as never)).toEqual([]);
   });
 
+  /**
+   * 🔵🔵 **JUDGEMENT-DEDUP-1 — ⚠ 줄은 «지워지지» 않았고 «옮겨졌다».**
+   *
+   * 🔴 전 단언은 `data-testid="mi-candidate-warning"`(접힘 **안**)을 찾았다.
+   *    그 자리는 **중복** 이어서 제거됐고, 같은 문장이 **접힘 밖 「우리 판단」**
+   *    (`mi-candidate-judgement-basis`)에 **그대로** 선다.
+   * 🔴 **약화 0 — 양방향으로 잠근다**: ⒜ 생산자 호출과 접힘 밖 좌표가 **살아 있다**
+   *    ⒝ 접힘 안 좌표가 **되살아나면 FAIL**(그것이 이 WU 가 고친 중복이다)
+   *    ⒞ 소스 순서로 **밖이 먼저** 다.
+   * 🟢 이 파일은 머리에서 **주석을 벗긴다**(`strip`) — 주석 문구로 통과하지 않는다.
+   */
   it("D1-5 🔴 카드가 그 줄을 **실제로 그린다**(배선)", () => {
     expect(CARD).toContain("candidateEvidenceLines(row).map");
     expect(CARD).toContain('data-testid="mi-candidate-evidence-line"');
-    /** 🔴 기존 ⚠ 줄을 **지우지 않았다**. */
-    expect(CARD).toContain('data-testid="mi-candidate-warning"');
+    /** 🔴 ⒜ ⚠ 줄의 **생산자 호출과 새 좌표가 살아 있다**(지우지 않았다). */
+    expect(CARD, "🔴 ⚠ 줄 생산자 호출이 사라졌다 — 정보 손실이다").toContain(
+      "candidateWarningLines(row).map",
+    );
+    expect(CARD, "🔴 ⚠ 줄의 접힘 밖 좌표가 없다").toContain(
+      'data-testid="mi-candidate-judgement-basis"',
+    );
+    /** 🔴 ⒝ 접힘 **안** 좌표가 되살아나면 **중복** 이다. */
+    expect(CARD, "🔴 접힘 안 경고가 되살아났다 — 같은 문장이 두 번 선다").not.toContain(
+      'data-testid="mi-candidate-warning"',
+    );
+    /** 🔴 ⒞ **밖이 먼저** — 접힘보다 앞에서 그린다. */
+    expect(
+      CARD.indexOf("candidateWarningLines(row).map"),
+      "🔴 ⚠ 줄이 접힘 뒤에서 그려진다 — 1차 노출이 아니다",
+    ).toBeLessThan(CARD.indexOf('data-testid="mi-candidate-evidence"'));
   });
 
   it("D1-6 🔴 재판정하지 않는다 — leaf 에 판정/점수 어휘가 없다", () => {

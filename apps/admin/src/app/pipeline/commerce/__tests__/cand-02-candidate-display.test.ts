@@ -793,19 +793,45 @@ describe("UX-REFINE-02 — Seller Decision Card", () => {
     }
   });
 
-  /** 🔴🔴 R2-03 — blocker/conflict 가 있는 행은 「확인 필요」를 **말한다**. */
+  /**
+   * 🔴🔴 R2-03 — blocker/conflict 가 있는 행은 「확인 필요」를 **말한다**.
+   *
+   * 🔵🔵 **JUDGEMENT-DEDUP-1 — 좌표가 옮겨졌다(뜻은 그대로다).**
+   * 🔴 그 줄의 owner 가 **접힘 안**(`mi-candidate-warning`) → **접힘 밖 「우리 판단」**
+   *    (`mi-candidate-judgement-basis`)으로 바뀌었다.
+   * 🔴 **약화 0 — 강화했다.** 「말한다」에 **「밖에 하나 · 안에 0」** 을 더한다
+   *    (그것이 이 WU 가 고친 중복의 반대 조건이다).
+   */
   it("R2-03 blocker/conflict 가 있는 행이 확인 필요사항을 표시한다", () => {
     const { doc, cleanup } = mount(allRows());
     try {
       const rows = Array.from(doc.querySelectorAll('[data-testid="mi-candidate-row"]'));
-      const withWarn = rows.filter((r) => r.querySelector('[data-testid="mi-candidate-warning"]'));
+      const withWarn = rows.filter((r) =>
+        r.querySelector('[data-testid="mi-candidate-judgement-basis"]'),
+      );
       expect(withWarn.length, "경고가 붙은 행 0 — 측정불가").toBeGreaterThan(0);
       for (const r of withWarn) {
-        const t = r.querySelector('[data-testid="mi-candidate-warning"]')!.textContent ?? "";
+        const basis = r.querySelector('[data-testid="mi-candidate-judgement-basis"]')!;
+        const t = basis.textContent ?? "";
         expect(t).toContain("⚠ 확인 필요:");
         /** 🔴 영문 내부 토큰이 그대로 나가지 않는다(`blocker-text.ts` 가 owner). */
         expect(t).not.toContain("MODEL_CODE");
         expect(t).not.toContain("BRAND_");
+        /**
+         * 🔴 **밖에 하나** — 「근거 확인」 접힘 «안» 이 아니다(1차에서 보여야 한다).
+         * 🔴🔴 `closest("details")` 로 보면 안 된다 — 카드 목록이 **조상 details** 라
+         *    항상 걸린다. 묻는 것은 **「근거 확인 접힘 안인가」** 하나다.
+         */
+        expect(
+          basis.closest('[data-testid="mi-candidate-evidence"]'),
+          "🔴 확인 필요 줄이 접힘 안으로 들어갔다 — 1차에서 안 보인다",
+        ).toBeNull();
+        expect(r.querySelectorAll('[data-testid="mi-candidate-judgement-basis"]')).toHaveLength(1);
+        /** 🔴 **안에 0** — 접힘 안에 같은 줄을 또 적으면 중복이 되살아난다. */
+        expect(
+          r.querySelectorAll('[data-testid="mi-candidate-warning"]'),
+          "🔴 접힘 안에 경고가 서면 밖의 줄과 중복된다",
+        ).toHaveLength(0);
       }
       console.log(`[R2-03] 경고 표시 ${withWarn.length}건 / 전체 ${rows.length}건`);
     } finally {
@@ -817,13 +843,25 @@ describe("UX-REFINE-02 — Seller Decision Card", () => {
    * 🔴 R2-04 — 없는 blocker 를 **만들어 적지 않는다**.
    * 🔴 「확인 필요」 자체를 금지어로 쓰지 않는다 — P3 의 **「가격 확인 필요」가 정당하게**
    *    그 글자를 쓴다(그걸 금지하면 내 단언이 거짓 FAIL 을 낸다).
+   *
+   * 🔵🔵 **JUDGEMENT-DEDUP-1 — 좌표가 옮겨졌다.** 🔴🔴 그리고 이 자리가
+   *    **조용히 거짓이 될 자리였다** — `mi-candidate-warning` 이 사라지자 그 필터가
+   *    **모든 행** 을 「경고 없는 행」으로 분류했고, 그래서 **경고가 정당하게 있는 행의
+   *    `⚠`** 를 금지어로 잡아 FAIL 했다(= 제품 결함이 아니라 분모 오류).
+   * 🟢 owner 인 **접힘 밖 판단 근거** 로 분모를 다시 세운다. 금지어 목록은 **불변**.
    */
   it("R2-04 blocker 가 없는 행에는 경고 줄이 서지 않는다", () => {
     const { doc, cleanup } = mount(allRows());
     try {
       const rows = Array.from(doc.querySelectorAll('[data-testid="mi-candidate-row"]'));
-      const clean = rows.filter((r) => !r.querySelector('[data-testid="mi-candidate-warning"]'));
+      const clean = rows.filter(
+        (r) => !r.querySelector('[data-testid="mi-candidate-judgement-basis"]'),
+      );
       expect(clean.length, "경고 없는 행 0 — 측정불가").toBeGreaterThan(0);
+      /** 🔴 분모가 **전체** 가 되면 이 단언은 아무것도 못 본다(위 사고의 재발 방지). */
+      expect(clean.length, "🔴 모든 행이 「경고 없음」이면 필터가 죽은 것이다").toBeLessThan(
+        rows.length,
+      );
       for (const r of clean) {
         const t = r.textContent ?? "";
         for (const banned of ["모든 정보 일치", "검증 완료", "완벽한 동일상품", "⚠"]) {
@@ -890,9 +928,18 @@ describe("UX-REFINE-02 — Seller Decision Card", () => {
       expect(
         (rows[0]!.querySelector('[data-testid="mi-candidate-group"]')?.textContent ?? "").trim(),
       ).toBe("우리 판단: 🟡 품번 충돌 · 참고");
-      const warn = rows[0]!.querySelector('[data-testid="mi-candidate-warning"]');
+      /**
+       * 🔵 **JUDGEMENT-DEDUP-1 — 좌표 이동.** 확인사항의 owner 는 **접힘 밖
+       *    「우리 판단」** 이다. 🔴 「말한다」는 요구는 **그대로** 이고, 그 줄이
+       *    1차 노출에 있다는 것까지 **더** 본다(약화 0).
+       */
+      const warn = rows[0]!.querySelector('[data-testid="mi-candidate-judgement-basis"]');
       expect(warn, "품번 충돌 카드가 확인 필요사항을 말하지 않는다").not.toBeNull();
       expect(warn!.textContent ?? "").toContain("품번 충돌");
+      expect(
+        warn!.closest('[data-testid="mi-candidate-evidence"]'),
+        "🔴 품번 충돌 확인사항이 접힘 안으로 들어갔다",
+      ).toBeNull();
     } finally {
       cleanup();
     }
@@ -956,8 +1003,18 @@ describe("UX-REFINE-02 — Seller Decision Card", () => {
         expect(at("mi-candidate-seller")).toBeLessThan(judge);
         /** 🔴 등급은 **그 영역 뒤** 다(= 영역 안) — 기본 5칸으로 되돌아가면 FAIL. */
         expect(at("mi-candidate-group")).toBeGreaterThan(judge);
-        if (at("mi-candidate-warning") >= 0) {
-          expect(at("mi-candidate-seller")).toBeLessThan(at("mi-candidate-warning"));
+        /**
+         * 🔵 **JUDGEMENT-DEDUP-1 — 좌표 이동.** 확인 필요 줄이 **접힘 밖 「우리 판단」**
+         *    으로 올라왔다 ⟹ 순서 축의 끝점이 `mi-candidate-judgement-basis` 다.
+         * 🔴 **약화 0** — 「판매처 뒤」를 그대로 요구하고, 그 줄이 **등급 뒤**
+         *    (= 「우리 판단」 영역 «안») 인지까지 새로 본다.
+         */
+        const basis = at("mi-candidate-judgement-basis");
+        if (basis >= 0) {
+          expect(at("mi-candidate-seller")).toBeLessThan(basis);
+          expect(at("mi-candidate-group"), "🔴 근거가 등급보다 앞서면 영역 밖이다").toBeLessThan(
+            basis,
+          );
           withWarn += 1;
         }
       }

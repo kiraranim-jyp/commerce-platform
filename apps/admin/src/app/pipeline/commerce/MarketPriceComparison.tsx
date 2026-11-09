@@ -2515,15 +2515,25 @@ function MarketColumn({
                           >
                             {CANDIDATE_JUDGEMENT_PREFIX} {CANDIDATE_GROUP_LABEL[group]}
                           </p>
+                          {/**
+                            * 🔵🔵🔵 JUDGEMENT-DEDUP-1 ② — **핵심 근거는 «한 번» 만 적는다.**
+                            *
+                            * 🔴 1차 구현이 경고 줄을 **전부** 여기 적고 접힘 안에서도 **또**
+                            *    적어서 같은 문장이 화면에 **두 번** 섰다(CTO 자가 발견 · CPO 승인).
+                            * 🟢 역할을 가른다 — **밖 = 「확인 필요」 · 안 = 긍정 상세 근거**.
+                            * 🟢 생산자 `candidateWarningLines` 는 **언제나 최대 한 줄** 이다
+                            *    (사유를 `·` 로 **합쳐서** 돌려준다) ⟹ 여기서 자를 것이 없다.
+                            * 🔴 **문장을 새로 만들지 않는다**(사본 0) — 접두사만 붙인다.
+                            */}
                           {candidateWarningLines(row).map((line) => (
-                            <p
-                              key={line}
-                              data-testid="mi-candidate-judgement-basis"
-                              className="text-[11px] text-text-tertiary"
-                            >
-                              {CANDIDATE_JUDGEMENT_BASIS_PREFIX} {line}
-                            </p>
-                          ))}
+                              <p
+                                key={line}
+                                data-testid="mi-candidate-judgement-basis"
+                                className="text-[11px] text-text-tertiary"
+                              >
+                                {CANDIDATE_JUDGEMENT_BASIS_PREFIX} {line}
+                              </p>
+                            ))}
                           {/**
                             * 🔵 ⑦⒝ — **사람 판정은 «보존하고 표시만» 한다.**
                             * 🔴 선택 버튼은 제거됐다 — 이 줄은 **이미 저장된** 값을 읽을 뿐이고
@@ -2602,9 +2612,22 @@ function MarketColumn({
                             {CANDIDATE_PRICE_USE_LABEL[candidatePriceUse(row)]}
                           </p>
                         ) : null}
-                        {candidateWarningLines(row).length > 0 ||
-                        candidateEvidenceLines(row).length > 0 ||
-                        Boolean(reviewApi?.review[row.discoveredUrl]) ? (
+                        {/**
+                          * 🔵🔵🔵 JUDGEMENT-DEDUP-1 ③ — **접힘 안은 「상세 근거」 전용이다.**
+                          *
+                          * 🔴🔴 **내 1차 수정이 틀렸고 계약이 잡았다.** 「핵심 1줄 + 상세
+                          *    N줄」로 나누려고 `.slice(1)` 을 썼는데, 생산자
+                          *    `candidateWarningLines` 는 **언제나 최대 «한 줄»** 을 낸다
+                          *    (모든 사유를 `·` 로 **합쳐서** 돌려준다) ⟹ 그 분기는
+                          *    **영원히 비는 죽은 코드** 였다.
+                          * 🟢 그래서 역할을 **정직하게** 가른다 —
+                          *    **접힘 밖 = 확인 필요(그 한 줄)** · **접힘 안 = 긍정 상세 근거**.
+                          *    ⟹ 같은 문장이 두 영역에 설 **경로 자체가 없다**(중복 0).
+                          * 🔴 **정보 손실 0** — 그 한 줄은 밖에서 **그대로** 읽힌다.
+                          * 🔴 사람 판정 표시도 접힘 밖 「우리 판단」으로 갔으므로 이 조건에서
+                          *    **뺀다** — 남겨 두면 **빈 접힘** 이 선다.
+                          */}
+                        {candidateEvidenceLines(row).length > 0 ? (
                           <details data-testid="mi-candidate-evidence" className="mt-1">
                             <summary className="cursor-pointer text-[11px] text-text-tertiary">
                               ▸ {CANDIDATE_EVIDENCE_FOLD_LABEL}
@@ -2618,15 +2641,15 @@ function MarketColumn({
                                 {line}
                               </p>
                             ))}
-                            {candidateWarningLines(row).map((line) => (
-                              <p
-                                key={line}
-                                data-testid="mi-candidate-warning"
-                                className="text-[11px] text-warning"
-                              >
-                                {line}
-                              </p>
-                            ))}
+                            {/**
+                              * 🔵🔵 JUDGEMENT-DEDUP-1 ③ — **「확인 필요」 줄은 여기 없다.**
+                              *
+                              * 🔴 그 줄은 **접힘 밖 「우리 판단」** 이 소유한다(역할 분리).
+                              *    여기 다시 적으면 **같은 문장이 두 번** 선다 — 그것이
+                              *    이 WU 가 고친 결함이다(CTO 자가 발견 · CPO 승인).
+                              * 🟢 **지운 것은 중복뿐이다** — 그 문장은 밖에서 그대로 읽힌다.
+                              * 🔴 되살리려면 **밖의 줄을 같이 없애야** 한다(둘 다 두지 않는다).
+                              */}
                             {/**
                               * 🔵🔵 D2(STAGE 2-R) — **「내 판단」은 여기 산다**(CPO 확정 구조).
                               * 🔴 결론 영역이 **아니다** — 근거 상세 영역 안이다

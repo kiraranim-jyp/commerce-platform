@@ -332,28 +332,73 @@ describe("UXR-S ⒟ 대칭 — 두 칸의 testid 척추가 **순서까지** 같�
 /* ═══════════════════ 카드 안쪽 — 근거는 접힘으로 ═══════════════════ */
 
 describe("UXR-C 카드 — **근거는 카드 안의 접힘** 이다(기본 화면에서 제거)", () => {
-  it("UXR-C-1 🔴 경고 줄은 `mi-candidate-evidence` **안** 에만 있다", () => {
+  /**
+   * 🔵🔵🔵 **JUDGEMENT-DEDUP-1 — 이 계약의 «배치 축» 이 CPO 결정으로 뒤집혔다.**
+   *
+   * 🔴 전: 「경고 줄은 접힘 **안** 에만 있다」(내부 판정 문구를 1차에서 치운다)
+   * 🟢 후: **접힘 밖 = 「확인 필요」 한 줄** · **접힘 안 = 긍정 상세 근거**
+   *    (CPO 확정 설계 — 셀러가 카드를 열지 않고도 확인할 것을 알아야 한다)
+   *
+   * 🔴🔴 **그래서 「약화」가 아니다 — 위험 축을 갈라서 지킨다.**
+   *    이 계약이 실제로 막던 위험은 **배치** 가 아니라
+   *    **「내부 토큰(BRAND_MISMATCH 등)이 셀러에게 노출되는 것」** 이다.
+   *    🟢 그 축은 **그대로 두고 더 세게** 본다(토큰 전수 + 영문 대문자 식별자).
+   *    🟢 배치 축은 **「밖에 하나 · 안에 0」** 으로 **방향만** 바꾼다.
+   */
+  it("UXR-C-1 🔴 경고 줄은 접힘 **밖에 하나** · 접힘 **안에 0** 이고 내부 토큰을 노출하지 않는다", () => {
     const m = mount({ rows: bothMarkets() });
     try {
-      const warns = [...m.host.querySelectorAll('[data-testid="mi-candidate-warning"]')];
-      expect(warns.length, "🔴 경고 줄이 하나도 없다(분모 0)").toBeGreaterThan(0);
-      for (const w of warns) {
+      const cards = [...m.host.querySelectorAll('[data-testid="mi-candidate-row"]')];
+      const warned = cards.filter((c) =>
+        c.querySelector('[data-testid="mi-candidate-judgement-basis"]'),
+      );
+      expect(warned.length, "🔴 경고 줄이 하나도 없다(분모 0)").toBeGreaterThan(0);
+      for (const c of warned) {
+        const basis = c.querySelector('[data-testid="mi-candidate-judgement-basis"]')!;
+        /** 🔴 **밖에 하나** — 1차 노출이고 정확히 한 줄이다. */
+        expect(c.querySelectorAll('[data-testid="mi-candidate-judgement-basis"]')).toHaveLength(1);
         expect(
-          w.closest('[data-testid="mi-candidate-evidence"]'),
-          "🔴 내부 판정 문구가 카드 기본 화면에 노출돼 있다",
-        ).not.toBeNull();
+          basis.closest('[data-testid="mi-candidate-evidence"]'),
+          "🔴 확인 필요 줄이 접힘 안으로 들어갔다",
+        ).toBeNull();
+        /** 🔴 **안에 0** — 같은 줄을 접힘 안에 또 적으면 중복이다(이 WU 가 고친 결함). */
+        expect(
+          c.querySelectorAll('[data-testid="mi-candidate-warning"]'),
+          "🔴 접힘 안에 경고가 서면 밖의 줄과 중복된다",
+        ).toHaveLength(0);
+        /**
+         * 🔴🔴 **진짜 위험 축 — 내부 토큰 노출 금지**(owner `blocker-text.ts`).
+         * 🟢 전 계약보다 **강하다** — 토큰 이름을 열거하지 않고
+         *    **대문자_스네이크 식별자 모양 자체** 를 금지한다.
+         */
+        const t = basis.textContent ?? "";
+        expect(t, "🔴 내부 토큰이 셀러에게 노출됐다").not.toMatch(/[A-Z]{2,}_[A-Z_]+/);
+        for (const token of ["BRAND_", "MODEL_CODE", "MATERIAL", "AUDIENCE", "COLOR_VARIANT"]) {
+          expect(t, `🔴 내부 토큰 노출: ${token}`).not.toContain(token);
+        }
       }
     } finally {
       m.cleanup();
     }
   });
 
+  /**
+   * 🔵🔵 **JUDGEMENT-DEDUP-1 — 접힘의 «조건» 이 바뀌었다(필터를 같이 옮긴다).**
+   *
+   * 🔴🔴 **이 계약은 조용히 무의미해질 자리였다** — `mi-candidate-warning` 이 사라지자
+   *    그 필터가 **모든 카드** 를 고르고도 **FAIL 하지 않았다**(표본에 상세 근거가
+   *    없어서 우연히 통과). 🔴 그대로 두면 다음 사람이 「지켜지고 있다」고 읽는다.
+   * 🟢 접힘은 이제 **상세 근거가 있을 때만** 선다 ⟹ 분모를
+   *    **`mi-candidate-evidence-line` 부재** 로 다시 세운다. 「빈 틀 금지」는 **그대로**.
+   */
   it("UXR-C-2 🔴 확인할 것이 **없는** 카드에는 그 접힘이 **서지 않는다**(빈 틀 금지)", () => {
     const m = mount({ rows: bothMarkets() });
     try {
       const cards = [...m.host.querySelectorAll('[data-testid="mi-candidate-row"]')];
-      const clean = cards.filter((c) => !c.querySelector('[data-testid="mi-candidate-warning"]'));
-      expect(clean.length, "🔴 경고 없는 카드가 표본에 없다(분모 0)").toBeGreaterThan(0);
+      const clean = cards.filter(
+        (c) => !c.querySelector('[data-testid="mi-candidate-evidence-line"]'),
+      );
+      expect(clean.length, "🔴 상세 근거 없는 카드가 표본에 없다(분모 0)").toBeGreaterThan(0);
       for (const c of clean) {
         expect(
           c.querySelector('[data-testid="mi-candidate-evidence"]'),

@@ -278,3 +278,173 @@ describe("V. 🔵 ②⑤⑦ — 기본 5칸 · 등급 이동 · 선택 UI 제거
     expect(new Set(rows.map(shape)).size, "🔴 행마다 구조가 다르면 통일이 깨진 것이다").toBe(1);
   });
 });
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 SOURCING-CANDIDATE-**JUDGEMENT-DEDUP-1** — 접힘 안팎의 «역할» 을 가른다
+ * ════════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 CTO 자가 발견 · CPO 승인 — 같은 문장이 **두 번** 섰다:
+ * ```
+ * 접힘 밖  「판단 근거: ⚠ 확인 필요: 브랜드 미확인」
+ * 접힘 안  「⚠ 확인 필요: 브랜드 미확인」            ← 같은 줄
+ * ```
+ * 🟢 **단순 삭제가 아니다**(CPO 조건) — 역할을 가른다:
+ *    **밖 = 등급 + 핵심 근거 «하나»** · **안 = 상세(둘째 줄부터 + 긍정 근거)**.
+ * 🔴 모든 줄은 여전히 화면에 **한 번씩** 선다(정보 손실 0).
+ */
+describe("W. 🔵 판단 근거 중복 제거 — 접힘 «안팎» 둘 다 본다", () => {
+  /** 🔴 경고가 **둘 이상** 인 후보 — 그래야 「핵심 1 + 상세 N」이 측정된다. */
+  const TWO_WARNINGS = [
+    {
+      domain: "donokids.com",
+      discoveredUrl: "https://donokids.com/p/w",
+      title: "허그 헤어리 몬스터 티셔츠",
+      market: "KR",
+      priceAmount: 88_000,
+      priceCurrency: "KRW",
+      priceStatus: "VERIFIED_CURRENT",
+      crossSellerVerdict: "PRESUMED_SAME",
+      matchTruth: "TEXT_CONFIRMED",
+      priceTier: "COMPARISON",
+      crossSellerBlockers: ["BRAND_UNCONFIRMED", "MATERIAL"],
+      /** 🔴 **분모 조건** — 긍정 근거가 없으면 접힘이 서지 않아 중복을 측정할 수 없다
+       *    (변이 D1 이 그 이유로 «통과» 했다 — 계약이 아무것도 못 보고 있었다). */
+      matchReasons: ["근거: 핵심 상품명 monster", "근거: 상품군 TOP↔TOP"],
+      source: "DOMESTIC_LISTING",
+    },
+    {
+      domain: "junioredition.com",
+      discoveredUrl: "https://junioredition.com/p/w",
+      title: "Hug Hairy Monster T-Shirt",
+      market: "OVERSEAS",
+      priceAmount: 37,
+      priceCurrency: "GBP",
+      priceStatus: "VERIFIED_CURRENT",
+      crossSellerVerdict: "PRESUMED_SAME",
+      matchTruth: "TEXT_CONFIRMED",
+      priceTier: "COMPARISON",
+      crossSellerBlockers: ["BRAND_UNCONFIRMED", "MATERIAL"],
+      matchReasons: ["근거: 핵심 상품명 monster", "근거: 상품군 TOP↔TOP"],
+      source: "OVERSEAS_AUTO",
+    },
+  ];
+
+  async function mountWarnings(): Promise<void> {
+    stubFetch(productionData());
+    await act(async () => {
+      root.render(
+        sellerSurfaceElement({
+          marketDone: true,
+          autoCheckResult: { domesticShop: { domesticListingEvidence: TWO_WARNINGS } },
+        }),
+      );
+    });
+    for (let i = 0; i < 5; i += 1) {
+      await act(async () => {
+        await Promise.resolve();
+      });
+    }
+  }
+
+  /** 🟢 한 행의 텍스트를 **접힘 상태 그대로** / **펼친 뒤** 두 번 읽는다. */
+  function readRow(row: Element): { folded: string; opened: string } {
+    const folded = (row.textContent ?? "").replace(/\s+/g, " ");
+    for (const d of Array.from(row.querySelectorAll("details"))) {
+      (d as HTMLDetailsElement).open = true;
+    }
+    return { folded, opened: (row.textContent ?? "").replace(/\s+/g, " ") };
+  }
+
+  it("W-1 🔴🔴 **같은 근거 문장이 두 번 서지 않는다**(국내·해외 각각)", async () => {
+    await mountWarnings();
+    const rows = Array.from(container.querySelectorAll('[data-testid="mi-candidate-row"]'));
+    expect(rows.length, "🔴 분모 0 이면 아무것도 못 본다").toBeGreaterThanOrEqual(2);
+    for (const row of rows) {
+      const basis = row.querySelector('[data-testid="mi-candidate-judgement-basis"]');
+      expect(basis, "🔴 접힘 밖에 핵심 근거가 없다").not.toBeNull();
+      /** 🔴 **접두사를 벗긴** 핵심 문장이 펼친 뒤에도 **한 번만** 나와야 한다. */
+      const core = (basis!.textContent ?? "").replace("판단 근거:", "").trim();
+      expect(core.length).toBeGreaterThan(0);
+      const { opened } = readRow(row);
+      const occurrences = opened.split(core.replace(/\s+/g, " ")).length - 1;
+      expect(
+        occurrences,
+        `🔴 '${core}' 가 ${occurrences}번 나온다 — 접힘 안팎 중복이다`,
+      ).toBe(1);
+    }
+  });
+
+  it("W-2 🟢 **핵심은 밖에 하나 · 상세는 안에** — 역할이 갈린다", async () => {
+    await mountWarnings();
+    const row = container.querySelector('[data-testid="mi-candidate-row"]')!;
+    /** 🔴 접힘 밖 핵심은 **정확히 1줄** 이다(전부 쏟지 않는다). */
+    expect(row.querySelectorAll('[data-testid="mi-candidate-judgement-basis"]')).toHaveLength(1);
+    /**
+     * 🔴🔴 **내 1차 전제가 틀렸고 이 계약이 그것을 잡았다.**
+     *    「핵심 1줄 + 상세 N줄」로 나눌 수 있다고 봤는데, 생산자는 **언제나 최대 한 줄**
+     *    을 낸다(사유를 `·` 로 합친다) ⟹ 「확인 필요」는 **밖에만** 산다.
+     * 🟢 그래서 접힘 안의 경고는 **0 이어야 맞다**(중복이 구조적으로 불가능).
+     */
+    expect(
+      row.querySelectorAll('[data-testid="mi-candidate-warning"]'),
+      "🔴 접힘 안에 경고가 서면 밖의 줄과 중복된다",
+    ).toHaveLength(0);
+    /**
+     * 🔴 핵심은 **「근거 확인」 접힘 밖** 이다(안으로 들어가면 1차에서 안 보인다).
+     * 🔴🔴 `closest("details")` 로 보면 안 된다 — 카드 목록(`mi-candidate-list`)이
+     *    **조상 details** 라서 항상 걸린다(내 1차 단언이 그래서 틀렸다).
+     *    🟢 묻는 것은 **「근거 확인 접힘 안에 있는가」** 하나다.
+     */
+    expect(
+      row
+        .querySelector('[data-testid="mi-candidate-judgement-basis"]')!
+        .closest('[data-testid="mi-candidate-evidence"]'),
+      "🔴 핵심 근거가 「근거 확인」 접힘 안으로 들어갔다",
+    ).toBeNull();
+  });
+
+  it("W-3 🔴 **정보 손실 0** — 모든 줄이 화면에 한 번씩 선다", async () => {
+    await mountWarnings();
+    const row = container.querySelector('[data-testid="mi-candidate-row"]')!;
+    const { opened } = readRow(row);
+    /**
+     * 🟢 **정보 손실 0** — 입력한 사유 **둘 다** 그 한 줄 안에 들어 있다
+     *    (생산자가 `·` 로 합친다) ⟹ 「삭제로 중복을 없앴다」가 아니다.
+     */
+    expect(opened).toContain("판단 근거:");
+    const basis = row.querySelector('[data-testid="mi-candidate-judgement-basis"]')!.textContent ?? "";
+    expect(basis, "🔴 사유 하나가 사라졌다").toContain("브랜드");
+    expect(basis, "🔴 둘째 사유가 사라졌다 — 그것이 정보 손실이다").toContain("소재");
+  });
+
+  it("W-4 🔴 상세가 **없으면 접힘을 만들지 않는다**(빈 틀 금지)", async () => {
+    /** 🟢 경고가 하나뿐인 후보 — 핵심만 밖에 서고 접힘은 **서지 않아야** 한다. */
+    stubFetch(productionData());
+    await act(async () => {
+      root.render(
+        sellerSurfaceElement({
+          marketDone: true,
+          autoCheckResult: {
+            domesticShop: {
+              domesticListingEvidence: [
+                { ...TWO_WARNINGS[0], crossSellerBlockers: ["BRAND_UNCONFIRMED"], matchReasons: [] },
+              ],
+            },
+          },
+        }),
+      );
+    });
+    for (let i = 0; i < 5; i += 1) {
+      await act(async () => {
+        await Promise.resolve();
+      });
+    }
+    const row = container.querySelector('[data-testid="mi-candidate-row"]')!;
+    expect(row.querySelectorAll('[data-testid="mi-candidate-judgement-basis"]')).toHaveLength(1);
+    expect(
+      row.querySelector('[data-testid="mi-candidate-evidence"]'),
+      "🔴 상세가 없는데 접힘이 서면 셀러가 열어 보고 빈 것을 본다",
+    ).toBeNull();
+  });
+});
