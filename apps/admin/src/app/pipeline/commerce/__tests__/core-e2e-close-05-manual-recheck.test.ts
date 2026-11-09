@@ -172,9 +172,16 @@ describe("CORE-E2E-CLOSE-05 — 수동 재분석", () => {
      *    선택 UI 는 **후보 행 수와 같아야 한다**.
      * 🟢 그래서 상수 2 가 아니라 **행 수에서 파생** 시킨다 — 둘이 갈라지면 FAIL 한다.
      */
-    expect(host.querySelectorAll('[data-testid="mi-candidate-select"]').length).toBe(
+    /**
+     * 🔵🔵 **UNIFIED-UX-1 ⑦ 에서 대상이 바뀌었다 — 뜻은 그대로다.**
+     *    지키던 것은 「후보 행과 1:1 이고 중복 surface 가 없다」였고, 선택 UI 가
+     *    제거되면서 그 1:1 의 대상이 **「우리 판단」 영역** 이 됐다(CPO 승인 ⒝).
+     * 🔴 그리고 선택 UI 가 **0** 임을 새로 단언한다(되살아나면 FAIL).
+     */
+    expect(host.querySelectorAll('[data-testid="mi-candidate-judgement"]').length).toBe(
       host.querySelectorAll('[data-testid="mi-candidate-row"]').length,
     );
+    expect(host.querySelectorAll('[data-testid="mi-candidate-select"]')).toHaveLength(0);
     /**
      * ════════════════════════════════════════════════════════════════════════
      * 🔵🔵🔵 UI/UX FINAL SPRINT R2 STEP 4 — **이 단언이 «뒤집혔다». 의도된 변경이다**
@@ -196,19 +203,39 @@ describe("CORE-E2E-CLOSE-05 — 수동 재분석", () => {
     expect(host.querySelectorAll('[data-testid="mi-candidate-row"]').length).toBe(2);
   });
 
-  /** 🟢 R-7 — 선택이 **기존** `candidate-reviews` POST 를 쓴다(복제 0). */
-  it("R-7 선택 → 기존 저장 경로", async () => {
+  /**
+   * 🔵🔵🔵 **UNIFIED-UX-1 ⑦ 에서 이 계약이 «뒤집혔다». 의도된 변경이고 이유를 적는다.**
+   *
+   * 🔴 전 계약: 「선택 버튼을 누르면 기존 `candidate-reviews` POST 가 **1회** 나간다」.
+   *    그 계약이 지키던 것은 **「저장 경로를 복제하지 않았다」** 였다.
+   * 🔴🔴 CPO 결정(⒝ · 2026-11-09) — **선택 UI 를 제거** 한다(셀러에게 고르라고 하지
+   *    않는다). ⟹ 그 **클릭 경로가 더는 존재하지 않는다.**
+   * 🟢 그래서 단언을 **「경로가 보존됐다」** 로 옮긴다 — 저장 **API·훅·DB 는 그대로** 이고
+   *    (CPO 「기존 API·DB 보존」) 끊긴 것은 **새 입력** 하나다.
+   * 🔴🔴 **그 대가를 계약이 직접 적는다** — 화면이 POST 를 **유발할 수 없다** ⟹
+   *    **GT 신규 누적 중단**(CPO 인정). 「계속 누적된다」로 읽히지 않게 못박는다.
+   */
+  it("R-7 🔴 선택 UI 는 없고 저장 «경로» 는 보존된다(GT 신규 누적 중단)", async () => {
     const host = mount({ rows: [PRESUMED], snapshotId: "s1", onRecheck: () => {} });
-    const btn = host.querySelector(
-      '[data-testid="mi-candidate-row"] [data-testid="mi-select-same"]',
-    ) as HTMLButtonElement;
+    /** 🔴 클릭할 버튼이 **없다**. */
+    expect(host.querySelector('[data-testid="mi-select-same"]')).toBeNull();
     calls = [];
     await act(async () => {
-      btn.click();
+      await Promise.resolve();
     });
-    const posts = calls.filter((c) => c.init?.method === "POST");
-    expect(posts).toHaveLength(1);
-    expect(posts[0]!.url).toBe("/api/price-history/s1/candidate-reviews");
+    /** 🔴🔴 그래서 화면이 POST 를 **유발하지 못한다** = 새 사람 판정 입력 0. */
+    expect(
+      calls.filter(
+        (c) => c.init?.method === "POST" && String(c.url).includes("candidate-reviews"),
+      ),
+      "🔴 화면에서 새 판정이 저장되면 ⑦ 이 안 된 것이다",
+    ).toHaveLength(0);
+    /**
+     * 🟢 그러나 **경로 자체는 살아 있다** — 훅과 엔드포인트가 그대로다(복제 0 · 삭제 0).
+     *    🔴 이 줄이 깨지면 「데이터·API 보존」(CPO 조건)이 무너진 것이다.
+     */
+    expect(MPC_CODE).toContain("useCandidateReview(snapshotId)");
+    expect(MPC_CODE).toContain("reviewApi");
   });
 
   /** 🔴🔴 D-1 — **`/check` 구현을 복제하지 않았다**(CPO §3 금지). */

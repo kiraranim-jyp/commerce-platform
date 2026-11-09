@@ -228,9 +228,25 @@ describe("PP — AB046 참고 후보(품번만 충돌)", () => {
       const rows = Array.from(host.querySelectorAll('[data-testid="mi-candidate-row"]'));
       expect(rows).toHaveLength(1);
       expect(rows[0]!.getAttribute("data-group")).toBe("POSSIBLE");
-      expect((rows[0]!.querySelector('[data-testid="mi-candidate-group"]')?.textContent ?? "").trim()).toBe(
-        "🟡 품번 충돌 · 참고",
-      );
+      /**
+       * 🔵🔵 **UNIFIED-UX-1 ② 에서 갱신했다 — 약화가 아니라 «강화» 다.**
+       *
+       * 🔴 전에는 `toBe("🟡 품번 충돌 · 참고")` 하나였다. 등급이 **「우리 판단」 영역**
+       *    으로 옮겨지며 앞에 `우리 판단:` 접두사가 붙는다(CPO 확정 구조).
+       * 🟢 그래서 **등급 «그리고» 접두사 «그리고» 그 영역 안에 있는가** 를 본다 ⟹
+       *    셋 중 하나라도 무너지면 FAIL 한다(전 단언은 뒤의 둘을 **못 봤다**).
+       */
+      const gradeText = (
+        rows[0]!.querySelector('[data-testid="mi-candidate-group"]')?.textContent ?? ""
+      ).trim();
+      expect(gradeText).toContain("🟡 품번 충돌 · 참고");
+      expect(gradeText).toContain("우리 판단:");
+      expect(
+        rows[0]!.querySelector(
+          '[data-testid="mi-candidate-judgement"] [data-testid="mi-candidate-group"]',
+        ),
+        "🔴 등급이 「우리 판단」 영역 밖으로 나가면 ②가 깨진 것이다",
+      ).not.toBeNull();
       /** 🔴 가격 영역(`mi-same-row`)에는 **서지 않는다**. */
       expect(host.querySelector('[data-testid="mi-same-row"]')).toBeNull();
     } finally {

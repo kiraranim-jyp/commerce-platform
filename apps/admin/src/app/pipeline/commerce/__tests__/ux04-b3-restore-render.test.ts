@@ -352,12 +352,27 @@ describe("UX-FINAL-01 ⒝ 🔵 가격이 카드에서 **가장 큰 글자** 다 
     expect(card.slice(Math.max(0, priceIdx - 220), priceIdx)).toContain("font-bold");
   });
 
-  it("⒝-3 🔴🔴 **DOM 순서는 바뀌지 않았다** — 등급이 가격보다 **앞** 이다(R2-08 유지)", () => {
-    /** 🔴 CPO 확정: 「1순위 = 시각 비중」이고 **DOM 순서가 아니다**. */
+  /**
+   * 🔵🔵🔵 **UNIFIED-UX-1 ② 에서 이 순서가 «뒤집혔다». 의도된 변경이다.**
+   *
+   * 🔴 전 계약: 「등급이 가격보다 **앞**」(R2-08). 그때 등급은 **기본 카드** 의 한 칸이었다.
+   * 🔴🔴 CPO 확정(2026-11-09) — 기본 카드는 **이미지·상품명·사이트명·링크·가격** 다섯 칸
+   *    이고 **등급은 「우리 판단」 영역으로 이동** 한다 ⟹ 등급이 가격 **뒤** 로 간다.
+   * 🟢 **R2-08 이 지키던 뜻은 그대로다** — 「1순위 = **시각 비중**, DOM 순서가 아니다」.
+   *    가격이 가장 큰 글자라는 것은 ⒝-1 이 계속 단언한다.
+   * 🔴 **약화가 아니다** — 순서만 뒤집은 것이 아니라 **등급이 「우리 판단」 영역 «안»**
+   *    에 있는지까지 본다(기본 5칸으로 되돌아가면 FAIL).
+   */
+  it("⒝-3 🔴🔴 등급이 가격 **뒤** 이고 「우리 판단」 영역 안에 있다(② 확정 구조)", () => {
     const group = card.indexOf('data-testid="mi-candidate-group"');
     const price = card.indexOf('data-testid="mi-candidate-price"');
+    const judgement = card.indexOf('data-testid="mi-candidate-judgement"');
     expect(group).toBeGreaterThan(0);
-    expect(group).toBeLessThan(price);
+    expect(judgement).toBeGreaterThan(0);
+    /** 🔴 기본 다섯 칸(가격 포함)이 먼저, 그 뒤가 「우리 판단」이다. */
+    expect(judgement).toBeGreaterThan(price);
+    /** 🔴 등급은 그 영역 **안** 이다(영역 시작 뒤). */
+    expect(group).toBeGreaterThan(judgement);
   });
 
   it("⒝-4 🔴 가격 **글자 자체** 는 안 바뀌었다 — 환산·기호 추가가 0 이다", () => {
@@ -446,6 +461,18 @@ describe("UX-FINAL-01 ⒞ 🔵 국내/해외 DOM 구조·타이포가 **같다**
       "mi-candidate-warning",
       "mi-candidate-price-krw",
       "mi-candidate-price-krw-unavailable",
+      /**
+       * 🔵 **UNIFIED-UX-1 ②⑤⑦ — 데이터 의존 줄 셋을 분모에 더한다.**
+       *
+       * 🔴 셋 다 **「있을 때만」** 선다 — 판단 근거는 경고가 없으면 0, 참고가격 사용
+       *    여부는 가격이 없거나 미확인이면 0, 사람 판정은 저장분이 있을 때만 선다.
+       * 🟢 **구조 척추는 그대로다** — 「우리 판단」 영역(`mi-candidate-judgement`)과
+       *    등급(`mi-candidate-group`)은 **항상** 서므로 spine 에 남아 비교된다
+       *    ⟹ 시장별 구조 분기 금지는 **약화되지 않는다**.
+       */
+      "mi-candidate-judgement-basis",
+      "mi-candidate-human-verdict",
+      "mi-candidate-price-use",
     ]);
     const a = shape(kr);
     const b = shape(os);

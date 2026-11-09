@@ -85,6 +85,10 @@ import {
    */
   candidatePriceUse,
   CANDIDATE_PRICE_USE_LABEL,
+  /** 🔵 UNIFIED-UX-1 ②⑥⑦ — 「우리 판단」 영역 어휘(어휘 owner 는 이 모듈 하나). */
+  CANDIDATE_JUDGEMENT_PREFIX,
+  CANDIDATE_JUDGEMENT_BASIS_PREFIX,
+  HUMAN_VERDICT_REFERENCE_PREFIX,
   CANDIDATE_LIST_HEADING,
   CANDIDATE_GROUP_LABEL,
   CANDIDATE_LIST_EMPTY,
@@ -2396,12 +2400,15 @@ function MarketColumn({
                           *    **행의 라벨을 대체하지 않는다** — 행은 혼자서도 자기 등급을 말해야 한다.
                           * 🟢 헤더가 이미 크게 말하므로 여기서는 **작고 조용하게** 둔다(중복 소음 최소화).
                           */}
-                        <p
-                          data-testid="mi-candidate-group"
-                          className="text-[10px] text-text-tertiary"
-                        >
-                          {CANDIDATE_GROUP_LABEL[group]}
-                        </p>
+                        {/**
+                          * 🔵🔵🔵 UNIFIED-UX-1 ② — **등급은 여기서 «나갔다». 삭제가 아니다.**
+                          *
+                          * 🔴 CPO 확정 — 기본 카드는 **다섯 칸**(이미지·상품명·사이트명·
+                          *    링크·가격)이고 **등급은 「우리 판단」 영역** 으로 옮긴다.
+                          * 🟢 testid(`mi-candidate-group`)·어휘(`CANDIDATE_GROUP_LABEL`)는
+                          *    **그대로** 다 — 아래 `mi-candidate-judgement` 안에 산다
+                          *    ⟹ WU-091 「행마다 판정 라벨」이 **깨지지 않는다**.
+                          */}
                         {/**
                           * 🔵🔵🔵 U5 — **가격 3상태.** 🔴 2분법으로 두면 「금액 있음 + 검증 전」이
                           *    확정가와 **똑같이** 보이고 셀러가 그 숫자로 판매가를 정한다.
@@ -2486,6 +2493,53 @@ function MarketColumn({
                         >
                           {row.domain}
                         </p>
+                        {/**
+                          * ══════════════════════════════════════════════════════
+                          * 🔵🔵🔵 UNIFIED-UX-1 ②⑥ — **「우리 판단」 영역**(기본 5칸과 분리)
+                          * ══════════════════════════════════════════════════════
+                          *
+                          * 🔴 CPO 확정 구조 — 기본 카드는 **이미지·상품명·사이트명·링크·
+                          *    가격** 다섯 칸이고, **우리 판단과 그 근거는 «여기»** 에 모은다.
+                          * 🟢 등급은 **위에서 내려온 그 라벨** 이다(삭제 0 · 어휘 0 · testid 0).
+                          * 🔴 **내부 토큰을 적지 않는다** — 근거는 `candidateWarningLines`
+                          *    (사람의 말)만 쓰고 `BRAND_MISMATCH` 같은 코드는 노출 0 이다.
+                          * 🔴 **셀러에게 고르라고 하지 않는다**(⑦) — 이 영역은 **읽기 전용** 이다.
+                          */}
+                        <div
+                          data-testid="mi-candidate-judgement"
+                          className="mt-1 border-t border-border/40 pt-1"
+                        >
+                          <p
+                            data-testid="mi-candidate-group"
+                            className="text-[11px] text-text-secondary"
+                          >
+                            {CANDIDATE_JUDGEMENT_PREFIX} {CANDIDATE_GROUP_LABEL[group]}
+                          </p>
+                          {candidateWarningLines(row).map((line) => (
+                            <p
+                              key={line}
+                              data-testid="mi-candidate-judgement-basis"
+                              className="text-[11px] text-text-tertiary"
+                            >
+                              {CANDIDATE_JUDGEMENT_BASIS_PREFIX} {line}
+                            </p>
+                          ))}
+                          {/**
+                            * 🔵 ⑦⒝ — **사람 판정은 «보존하고 표시만» 한다.**
+                            * 🔴 선택 버튼은 제거됐다 — 이 줄은 **이미 저장된** 값을 읽을 뿐이고
+                            *    `onReview` 를 부르지 않는다(새 입력 경로 0).
+                            * 🔴🔴 그래서 **GT 신규 누적은 중단** 이다 — 그 사실을 숨기지 않는다.
+                            */}
+                          {reviewApi?.review[row.discoveredUrl] ? (
+                            <p
+                              data-testid="mi-candidate-human-verdict"
+                              className="text-[11px] text-text-tertiary"
+                            >
+                              {HUMAN_VERDICT_REFERENCE_PREFIX}{" "}
+                              {HUMAN_REVIEW_BUTTON[reviewApi.review[row.discoveredUrl]!]}
+                            </p>
+                          ) : null}
+                        </div>
                         {/**
                           * 🔵🔵🔵 CANDIDATE-UX-REFINE-02 ④ — **「확인 필요」만 적는다.**
                           *
@@ -2579,7 +2633,11 @@ function MarketColumn({
                               *    (`core-2s D-3` 「결론 영역에 입력칸·요청 없다」를 지킨다).
                               * 🔴 **선택** 이다 — 자유 입력칸을 만들지 않는다.
                               */}
-                            <CandidateNoteChoices row={row} api={reviewApi} />
+                            {/**
+                              * 🔵 UNIFIED-UX-1 ⑦⒝ — **사유 «선택» UI 를 제거했다**(CPO 승인).
+                              * 🔴 저장된 값은 「우리 판단」 영역이 **읽기 전용** 으로 보여준다.
+                              * 🔴 데이터·API·DB 는 **그대로** 다 — 끊긴 것은 **새 입력** 뿐이다.
+                              */}
                           </details>
                         ) : null}
                         {/**
@@ -2640,7 +2698,15 @@ function MarketColumn({
                             })()
                           : null}
                         <div className="mt-1 flex items-center justify-between gap-2">
-                          <CandidateSelect row={row} api={reviewApi} />
+                          {/**
+                            * 🔵🔵 UNIFIED-UX-1 ⑦ — **동일상품 «선택» 버튼 넷을 제거했다**(CPO 승인 ⒝).
+                            * 🔴 CEO 가 원한 것은 셀러가 후보를 하나씩 고르는 화면이 «아니라»
+                            *    시스템이 내린 판단과 근거를 보여주는 화면이다.
+                            * 🟢 기존 human_verdict **39건은 보존** 되고 「우리 판단」 영역에
+                            *    참고로 표시된다 · `useCandidateReview`·POST·DB **변경 0**.
+                            * 🔴🔴 그 대가 — **새 사람 판정 입력이 끊긴다 ⟹ GT 신규 누적 중단**
+                            *    (CPO 인정 · 「계속 누적된다」로 보고하지 않는다).
+                            */}
                           <a
                             href={row.discoveredUrl}
                             target="_blank"

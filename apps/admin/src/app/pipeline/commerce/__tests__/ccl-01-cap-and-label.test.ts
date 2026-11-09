@@ -178,7 +178,17 @@ describe("CCL-01 ③ 화면 — 마운트 DOM", () => {
     const { labels, groups, cleanup } = mountLabels(rows);
     try {
       expect(groups).toEqual(["LIKELY", "PRESUMED", "POSSIBLE"]);
-      expect(labels).toEqual(["🟢 동일상품 가능성 높음", "🟡 동일상품 추정", "🟡 품번 충돌 · 참고"]);
+      /**
+       * 🔵🔵 **UNIFIED-UX-1 ② — 등급 앞에 `우리 판단:` 접두사가 붙었다**(CPO 확정 구조).
+       * 🔴 등급 **어휘 자체는 한 글자도 바뀌지 않았다** — 바뀐 것은 **자리**(기본 5칸 →
+       *    「우리 판단」 영역)와 그 자리를 말해 주는 접두사 하나다.
+       * 🟢 여전히 `toEqual` 전체 비교다(약화 0) — 접두사까지 포함해 **더 많이** 본다.
+       */
+      expect(labels).toEqual([
+        "우리 판단: 🟢 동일상품 가능성 높음",
+        "우리 판단: 🟡 동일상품 추정",
+        "우리 판단: 🟡 품번 충돌 · 참고",
+      ]);
       /** 🔴 세 줄이 **서로 다른 말** 이어야 한다(화면에서도). */
       expect(new Set(labels).size).toBe(3);
     } finally {

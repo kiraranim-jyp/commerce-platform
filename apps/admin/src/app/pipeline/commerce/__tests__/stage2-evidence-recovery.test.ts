@@ -196,11 +196,29 @@ describe("STAGE2-R — D2 「내 판단」은 글쓰기가 아니라 선택이�
     expect(CARD).not.toMatch(/<textarea\b/);
   });
 
-  it("D2-3 🔴 「내 판단」은 **근거 확인 접힘 «안»** 에 있다(결론 영역 아님)", () => {
-    const at = CARD.indexOf('data-testid="mi-candidate-evidence"');
-    const end = CARD.indexOf("</details>", at);
-    expect(at, "🔴 근거 접힘을 찾지 못했다").toBeGreaterThan(0);
-    expect(CARD.slice(at, end), "🔴 내 판단이 근거 접힘 밖에 있다").toContain("<CandidateNoteChoices");
+  /**
+   * 🔵🔵🔵 **UNIFIED-UX-1 ⑦ 에서 이 계약의 대상이 사라졌다 — 뜻을 옮긴다.**
+   *
+   * 🔴 전 계약: 「`<CandidateNoteChoices>`(내 판단 **선택**)가 근거 접힘 «안» 에 있다」.
+   *    그 계약이 지키던 것은 **「사람 판단이 «결론 영역» 으로 새어 나가지 않는다」** 였다.
+   * 🔴🔴 CPO 결정(⒝) — **선택 UI 자체를 제거** 한다 ⟹ 그 컴포넌트가 더는 렌더되지 않는다.
+   * 🟢 그래서 그 뜻을 **지금 형태** 로 옮긴다 — 사람 판정은 **읽기 전용** 으로만 남고,
+   *    그 자리는 **후보 카드의 「우리 판단」 영역** 이지 **결론 영역이 아니다**.
+   * 🔴 **약화가 아니다** — ⒜ 선택 UI 부재 ⒝ 읽기 전용 표시의 위치 ⒞ 입력칸 0 을
+   *    **셋 다** 본다(전 단언은 ⒜⒞를 **못 봤다**).
+   */
+  it("D2-3 🔴 사람 판정은 **후보 카드의 「우리 판단」 안** 에만 있다(선택 UI 0)", () => {
+    /** ⒜ 선택·사유 UI 가 **렌더되지 않는다**. */
+    expect(CARD).not.toContain("<CandidateNoteChoices");
+    expect(CARD).not.toContain("<CandidateSelect");
+    /** ⒝ 읽기 전용 표시가 **「우리 판단」 영역 안** 에 있다(결론 영역이 아니다). */
+    const at = CARD.indexOf('data-testid="mi-candidate-judgement"');
+    expect(at, "🔴 「우리 판단」 영역을 찾지 못했다").toBeGreaterThan(0);
+    const end = CARD.indexOf("</div>", CARD.indexOf("mi-candidate-human-verdict", at));
+    expect(CARD.indexOf("mi-candidate-human-verdict", at)).toBeGreaterThan(at);
+    expect(end).toBeGreaterThan(at);
+    /** ⒞ 그리고 **입력칸은 여전히 0** 이다(D2-2 와 같은 금지). */
+    expect(CARD).not.toMatch(/<input\b/);
   });
 
   it("D2-4 🟢 사유는 **고정 선택지** 이고 내부 판정 토큰이 아니다", () => {

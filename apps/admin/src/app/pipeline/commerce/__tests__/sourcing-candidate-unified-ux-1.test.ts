@@ -204,3 +204,77 @@ describe("U. 🔵 후보 카드 — 같은 템플릿 · 참고가격 포함/제�
     expect(text, "🔴 제외된 후보가 사라지면 셀러가 분모를 못 센다").toContain("otherkids.kr");
   });
 });
+
+describe("V. 🔵 ②⑤⑦ — 기본 5칸 · 등급 이동 · 선택 UI 제거", () => {
+  it("V-1 🟢🟢 **동일상품 선택 UI 가 사라졌다**(⑦ · CPO 승인 ⒝)", async () => {
+    await mount();
+    expect(
+      container.querySelector('[data-testid="mi-candidate-select"]'),
+      "🔴 선택 버튼이 남아 있으면 셀러에게 또 고르라고 하는 화면이다",
+    ).toBeNull();
+    expect(container.querySelector('[data-testid="mi-candidate-note"]')).toBeNull();
+    expect(container.querySelectorAll('[data-testid^="mi-select-"]')).toHaveLength(0);
+  });
+
+  it("V-2 🔴 선택 UI 는 **마크업에서도** 호출되지 않는다(소스 축)", () => {
+    /** 🔴 컴포넌트 정의는 남겨도 된다 — **렌더 호출** 이 0 이어야 한다. */
+    expect(AREA_SRC).not.toContain("<CandidateSelect");
+    expect(AREA_SRC).not.toContain("<CandidateNoteChoices");
+  });
+
+  it("V-3 🟢🟢 **등급이 「우리 판단」 영역 안으로 옮겨졌다**(② · 삭제 아님)", async () => {
+    await mount();
+    const judgement = container.querySelector('[data-testid="mi-candidate-judgement"]');
+    expect(judgement, "🔴 영역이 없으면 등급이 갈 곳이 없다").not.toBeNull();
+    /** 🔴 등급 라벨이 **그 안에** 있다 — WU-091 「행마다 판정 라벨」이 깨지지 않는다. */
+    const grade = judgement!.querySelector('[data-testid="mi-candidate-group"]');
+    expect(grade, "🔴 등급이 사라지면 CPO 결정(유지)을 어긴 것이다").not.toBeNull();
+    expect(grade!.textContent).toContain("우리 판단:");
+  });
+
+  it("V-4 🔴 **기본 다섯 칸에 등급이 없다**(② 의 핵심)", async () => {
+    await mount();
+    const row = container.querySelector('[data-testid="mi-candidate-row"]')!;
+    const judgement = row.querySelector('[data-testid="mi-candidate-judgement"]')!;
+    /** 🟢 「우리 판단」 영역을 들어낸 나머지가 **기본 카드** 다. */
+    const basics = row.cloneNode(true) as HTMLElement;
+    basics.querySelector('[data-testid="mi-candidate-judgement"]')?.remove();
+    expect(
+      basics.querySelector('[data-testid="mi-candidate-group"]'),
+      "🔴 기본 칸에 등급이 남아 있으면 ②가 안 된 것이다",
+    ).toBeNull();
+    /** 🟢 다섯 칸은 **그대로 있다**(이미지·상품명·사이트명·링크·가격). */
+    expect(basics.querySelector('[data-testid="mi-candidate-seller"]')).not.toBeNull();
+    expect(basics.querySelector('[data-testid="mi-candidate-price"]')).not.toBeNull();
+    expect(basics.querySelector("a[href]"), "🔴 사이트 링크").not.toBeNull();
+    expect(judgement.textContent ?? "").toContain("우리 판단:");
+  });
+
+  it("V-5 🔴 **내부 토큰이 카드 어디에도 없다**(CPO 검수 항목)", async () => {
+    await mount();
+    const text = Array.from(container.querySelectorAll('[data-testid="mi-candidate-row"]'))
+      .map((r) => r.textContent ?? "")
+      .join("|");
+    for (const token of [
+      ...PRICE_DISQUALIFYING_BLOCKER_LIST,
+      "BRAND_UNCONFIRMED",
+      "PRESUMED_SAME",
+      "TEXT_CONFIRMED",
+      "COMPARISON",
+    ]) {
+      expect(text, `🔴 '${token}' 가 셀러 화면에 노출됐다`).not.toContain(token);
+    }
+  });
+
+  it("V-6 🟢 국내·해외가 **같은 구조** 로 선다(CPO 검수 ①의 런타임 축)", async () => {
+    await mount();
+    const rows = Array.from(container.querySelectorAll('[data-testid="mi-candidate-row"]'));
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+    /** 🔴 모든 행이 **같은 칸 집합** 을 갖는다 — 시장별로 다르면 템플릿이 갈린 것이다. */
+    const shape = (r: Element) =>
+      ["mi-candidate-seller", "mi-candidate-price", "mi-candidate-judgement"]
+        .map((t) => (r.querySelector(`[data-testid="${t}"]`) ? "1" : "0"))
+        .join("");
+    expect(new Set(rows.map(shape)).size, "🔴 행마다 구조가 다르면 통일이 깨진 것이다").toBe(1);
+  });
+});

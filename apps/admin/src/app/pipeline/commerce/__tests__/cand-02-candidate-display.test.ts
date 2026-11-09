@@ -256,7 +256,9 @@ describe("CAND-02 화면 축 — 다상품 마운트 DOM", () => {
           expect(price, `${p.sid} 가격 칸이 없다`).toBeTruthy();
           expect((price!.textContent ?? "").trim().length, `${p.sid} 가격 칸이 비었다`).toBeGreaterThan(0);
           /** 🔴 선택 UI 가 같이 서야 셀러가 «고를» 수 있다(CLOSE-04 와 같은 축). */
-          expect(li.querySelector('[data-testid="mi-candidate-select"]'), `${p.sid} 선택 UI 부재`).toBeTruthy();
+          /** 🔵 UNIFIED-UX-1 ⑦ — 선택 UI 는 제거됐다. 그 자리를 「우리 판단」이 대신한다. */
+          expect(li.querySelector('[data-testid="mi-candidate-judgement"]'), `${p.sid} 우리 판단 부재`).toBeTruthy();
+          expect(li.querySelector('[data-testid="mi-candidate-select"]')).toBeNull();
           checked += 1;
         }
       } finally {
@@ -572,7 +574,9 @@ describe("UX-REFINE 화면 계약 — 시장명 · 가격 3상태", () => {
       const rows = Array.from(doc.querySelectorAll('[data-testid="mi-candidate-row"]'));
       expect(rows.length).toBeGreaterThan(0);
       for (const r of rows) {
-        expect(r.querySelector('[data-testid="gt-review-buttons"], button'), "CandidateSelect 가 사라졌다").not.toBeNull();
+        /** 🔵 UNIFIED-UX-1 ⑦ — 「선택 UI 유지」를 「우리 판단 유지 + 선택 UI 0」으로 옮겼다. */
+        expect(r.querySelector('[data-testid="mi-candidate-judgement"]'), "「우리 판단」이 사라졌다").not.toBeNull();
+        expect(r.querySelector('[data-testid="mi-candidate-select"]')).toBeNull();
         /** 🔴 행마다 **판정 라벨** — WU-091 의 네 조건 중 하나(그룹 헤더가 대체하지 못한다). */
         expect(r.querySelector('[data-testid="mi-candidate-group"]')).not.toBeNull();
         /** 🔴 이미지 칸은 **없으면 「이미지 없음」을 적는다**(대체 사진 금지). */
@@ -777,7 +781,12 @@ describe("UX-REFINE-02 — Seller Decision Card", () => {
       expect(rows.length).toBeGreaterThan(0);
       for (const r of rows) {
         const g = (r.querySelector('[data-testid="mi-candidate-group"]')?.textContent ?? "").trim();
-        expect(["🟢 동일상품 가능성 높음", "🟡 동일상품 추정", "🟡 품번 충돌 · 참고"]).toContain(g);
+        /** 🔵 UNIFIED-UX-1 ② — 등급 앞에 `우리 판단:` 접두사가 붙었다(어휘 자체는 불변). */
+        expect([
+          "우리 판단: 🟢 동일상품 가능성 높음",
+          "우리 판단: 🟡 동일상품 추정",
+          "우리 판단: 🟡 품번 충돌 · 참고",
+        ]).toContain(g);
       }
     } finally {
       cleanup();
@@ -877,9 +886,10 @@ describe("UX-REFINE-02 — Seller Decision Card", () => {
       const rows = Array.from(doc.querySelectorAll('[data-testid="mi-candidate-row"]'));
       expect(rows, "POSSIBLE 분모 0 — 측정불가").toHaveLength(1);
       expect(rows[0]!.getAttribute("data-group")).toBe("POSSIBLE");
+      /** 🔵 UNIFIED-UX-1 ② — 등급 앞에 `우리 판단:` 접두사가 붙었다(어휘 자체는 불변). */
       expect(
         (rows[0]!.querySelector('[data-testid="mi-candidate-group"]')?.textContent ?? "").trim(),
-      ).toBe("🟡 품번 충돌 · 참고");
+      ).toBe("우리 판단: 🟡 품번 충돌 · 참고");
       const warn = rows[0]!.querySelector('[data-testid="mi-candidate-warning"]');
       expect(warn, "품번 충돌 카드가 확인 필요사항을 말하지 않는다").not.toBeNull();
       expect(warn!.textContent ?? "").toContain("품번 충돌");
@@ -888,15 +898,27 @@ describe("UX-REFINE-02 — Seller Decision Card", () => {
     }
   });
 
-  /** 🔴 R2-07 — 선택 기능 보존(카드 재구성에서 가장 쉽게 잃는 칸). */
-  it("R2-07 모든 카드에서 선택 UI 와 판매처 이동이 유지된다", () => {
+  /**
+   * 🔵🔵🔵 **UNIFIED-UX-1 ⑦ 에서 대상이 바뀌었다 — 뜻은 그대로다.**
+   *
+   * 🔴 전 계약: 「모든 카드에 **선택 UI** 와 판매처 이동이 있다」. 지키던 것은
+   *    **「카드 재구성에서 칸을 잃지 않는다」** 였다.
+   * 🔴🔴 CPO 결정(⒝) — 선택 UI 제거 ⟹ 그 자리를 **「우리 판단」 영역** 이 대신한다.
+   * 🟢 **판매처 이동 링크 단언은 한 글자도 안 바꿨다**(기본 5칸 중 하나).
+   * 🔴 그리고 선택 UI 가 **되살아나면 FAIL** 하는 단언을 **새로** 더했다(약화 0).
+   */
+  it("R2-07 모든 카드에서 「우리 판단」과 판매처 이동이 유지된다(선택 UI 0)", () => {
     const { doc, cleanup } = mount(allRows());
     try {
       const rows = Array.from(doc.querySelectorAll('[data-testid="mi-candidate-row"]'));
       expect(rows.length).toBeGreaterThan(0);
       for (const r of rows) {
-        expect(r.querySelector("button"), "CandidateSelect 가 사라졌다").not.toBeNull();
+        expect(
+          r.querySelector('[data-testid="mi-candidate-judgement"]'),
+          "「우리 판단」 영역이 사라졌다",
+        ).not.toBeNull();
         expect(r.querySelector("a[href]"), "판매처 이동 링크가 사라졌다").not.toBeNull();
+        expect(r.querySelector('[data-testid="mi-candidate-select"]')).toBeNull();
       }
     } finally {
       cleanup();
@@ -918,15 +940,24 @@ describe("UX-REFINE-02 — Seller Decision Card", () => {
          */
         const nodes = Array.from(r.querySelectorAll("[data-testid], button"));
         const at = (id: string) => nodes.findIndex((n) => n.getAttribute("data-testid") === id);
-        const btn = nodes.findIndex((n) => n.tagName === "BUTTON");
-        expect(btn, "선택 버튼을 찾지 못했다").toBeGreaterThanOrEqual(0);
-        expect(at("mi-candidate-group")).toBeGreaterThanOrEqual(0);
-        expect(at("mi-candidate-group")).toBeLessThan(at("mi-candidate-price"));
+        /**
+         * 🔵🔵🔵 **UNIFIED-UX-1 ② 에서 순서가 바뀌었다 — 뜻은 그대로다.**
+         *
+         * 🔴 전 순서: 등급 → 가격 → 판매처 → 확인필요 → **선택**.
+         *    지키던 것은 **「seller-first — 존재만 보면 뒤집혀도 통과하므로 «순서» 로 본다」** 다.
+         * 🔴🔴 CPO 확정 — 기본 카드는 **가격·판매처** 까지이고 **등급은 「우리 판단」 영역**
+         *    으로 내려간다. 선택은 **제거** 됐다(⒝).
+         * 🟢 그래서 끝점을 **선택 버튼 → 「우리 판단」 영역** 으로 바꾼다. 순서 축은 그대로다.
+         * 🔴 **약화 0** — 등급이 그 영역 «안» 인지까지 새로 본다.
+         */
+        const judge = at("mi-candidate-judgement");
+        expect(judge, "「우리 판단」 영역을 찾지 못했다").toBeGreaterThanOrEqual(0);
         expect(at("mi-candidate-price")).toBeLessThan(at("mi-candidate-seller"));
-        expect(at("mi-candidate-seller")).toBeLessThan(btn);
+        expect(at("mi-candidate-seller")).toBeLessThan(judge);
+        /** 🔴 등급은 **그 영역 뒤** 다(= 영역 안) — 기본 5칸으로 되돌아가면 FAIL. */
+        expect(at("mi-candidate-group")).toBeGreaterThan(judge);
         if (at("mi-candidate-warning") >= 0) {
           expect(at("mi-candidate-seller")).toBeLessThan(at("mi-candidate-warning"));
-          expect(at("mi-candidate-warning")).toBeLessThan(btn);
           withWarn += 1;
         }
       }

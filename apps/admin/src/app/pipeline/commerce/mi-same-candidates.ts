@@ -2251,3 +2251,15 @@ export const CANDIDATE_PRICE_USE_LABEL: Record<CandidatePriceUse, string | null>
   /** 🔴 `null` = **줄을 만들지 않는다**(없는 상태를 적지 않는다). */
   NOT_PRICED: null,
 };
+
+/**
+ * 🔵 UNIFIED-UX-1 ②⑥ — **「우리 판단」 영역의 어휘**(CPO 목업 그대로).
+ * 🔴 「추천/비추천」 어휘 **0** · 내부 토큰 **0** — 사실만 적는다.
+ */
+export const CANDIDATE_JUDGEMENT_PREFIX = "우리 판단:";
+export const CANDIDATE_JUDGEMENT_BASIS_PREFIX = "판단 근거:";
+/**
+ * 🔵 ⑦⒝ — 사람 판정은 **참고 표시** 다.
+ * 🔴 「확정」·「선택」 어휘를 쓰지 않는다 — 셀러에게 고르라고 하지 않기 때문이다.
+ */
+export const HUMAN_VERDICT_REFERENCE_PREFIX = "이전에 사람이 확인함:";

@@ -127,11 +127,25 @@ describe("SELLER-DECISION §19 — props → selector → DOM 후보 수", () =>
     expect(all).not.toContain("beaumonde.co.kr ₩");
   });
 
-  /** 🔴 UXR-SELLER-05 — 선택 행동이 후보마다 있다(최저가 하나로 대체하지 않는다). */
-  it("UXR-SELLER-05 🔴 후보마다 «선택» 이 있다", () => {
+  /**
+   * 🔵🔵🔵 **UNIFIED-UX-1 ⑦ 에서 «방향이 뒤집혔다» — 그 이유를 적는다.**
+   *
+   * 🔴 전 계약: 「후보마다 **선택** 이 있다」(`mi-candidate-select` > 0).
+   *    그 계약이 지키던 뜻은 **「최저가 하나로 후보를 대체하지 않는다」** 였다.
+   * 🔴🔴 CPO 결정(⒝ · 2026-11-09) — CEO 가 원한 것은 셀러가 후보를 **하나씩 고르는**
+   *    화면이 아니라 **시스템이 내린 판단과 근거** 를 보여주는 화면이다 ⟹ 선택 UI 제거.
+   * 🟢 **그래서 그 «뜻» 을 새 자리로 옮긴다** — 후보마다 **「우리 판단」 영역** 이 있어야
+   *    한다. 그것이 「후보를 최저가 하나로 뭉개지 않는다」의 지금 형태다.
+   * 🔴 **약화가 아니다** — 개수 조건을 `> 0` 에서 **후보 수와 1:1** 로 올렸고,
+   *    선택 UI 가 **되살아나면 FAIL** 하는 단언을 **새로** 더했다.
+   */
+  it("UXR-SELLER-05 🔴 후보마다 «우리 판단» 이 있다(선택 UI 는 제거됐다)", () => {
     mount({ recommendedPriceKrw: 92_000 });
-    const selects = container.querySelectorAll('[data-testid="mi-candidate-select"]');
-    expect(selects.length, "🔴 후보 선택 UI 가 하나도 없다").toBeGreaterThan(0);
+    const rows = container.querySelectorAll('[data-testid="mi-candidate-row"]');
+    const judgements = container.querySelectorAll('[data-testid="mi-candidate-judgement"]');
+    expect(rows.length, "🔴 후보가 0 이면 이 계약이 아무것도 못 본다").toBeGreaterThan(0);
+    expect(judgements.length, "🔴 후보 수와 1:1 이어야 한다 — 하나로 뭉개지 않는다").toBe(rows.length);
+    expect(container.querySelectorAll('[data-testid="mi-candidate-select"]')).toHaveLength(0);
   });
 
   /**

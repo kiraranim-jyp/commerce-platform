@@ -115,23 +115,39 @@ const MPC_CODE = code(MPC);
 const PANEL_CODE = code(PANEL);
 const WS_CODE = code(WS);
 
-describe("CORE-E2E-CLOSE-04 — 후보 선택 → 기존 저장 배선", () => {
-  /** 🟢 S-1 — **SAME 후보를 고를 수 있다**(CPO §8-1). */
-  it("S-1 SAME 후보에 선택 UI 가 선다", () => {
+/**
+ * ════════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 **UNIFIED-UX-1 ⑦ 에서 이 파일의 «주제가 뒤집혔다». 의도된 변경이다.**
+ * ════════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 전 주제: 「후보 **선택** → 기존 저장 배선」. 이 파일이 지키던 것은 셋이다 —
+ *    ⒜ SAME·PRESUMED 후보를 **고를 수 있다** ⒝ 그 선택이 **기존 POST** 를 쓴다(복제 0)
+ *    ⒞ `SIMILAR` 은 **고를 수 없다**.
+ * 🔴🔴 CPO 결정(⒝ · 2026-11-09) — **선택 UI 를 제거** 한다. CEO 가 원한 것은 셀러가
+ *    후보를 하나씩 고르는 화면이 아니라 **시스템 판단과 근거** 를 보여주는 화면이다.
+ * 🟢 그래서 ⒜⒝를 **「그 자리에 「우리 판단」이 선다」 + 「저장 경로는 보존됐다」** 로 옮긴다.
+ *    ⒞ 는 **그대로** 다(SIMILAR 은 행 자체가 서지 않는다 — 한 글자도 안 바꿨다).
+ * 🔴🔴 **그 대가를 파일이 직접 적는다** — 화면에서 POST 를 **유발할 수 없다** ⟹
+ *    **GT 신규 누적 중단**(CPO 인정). 「계속 누적된다」로 읽히지 않게 못박는다.
+ */
+describe("CORE-E2E-CLOSE-04 — 선택 UI 제거 · 저장 «경로» 보존", () => {
+  /** 🟢 S-1 — SAME 후보 자리에 **「우리 판단」** 이 선다(선택 UI 는 0). */
+  it("S-1 SAME 후보에 「우리 판단」이 서고 선택 UI 는 없다", () => {
     const host = mount(ROWS);
-    /** 🔵 UX-REFINE-04 A — SAME 행의 자리가 접힘 안으로 하나가 됐다(좌표만 이동). */
     const same = host.querySelector('[data-group="LIKELY"] [data-testid="mi-candidate-row"]');
     expect(same).not.toBeNull();
-    expect(same!.querySelector('[data-testid="mi-candidate-select"]')).not.toBeNull();
-    expect(same!.querySelector('[data-testid="mi-select-same"]')).not.toBeNull();
+    expect(same!.querySelector('[data-testid="mi-candidate-judgement"]')).not.toBeNull();
+    expect(same!.querySelector('[data-testid="mi-candidate-select"]')).toBeNull();
+    expect(same!.querySelector('[data-testid="mi-select-same"]')).toBeNull();
   });
 
-  /** 🟢 S-2 — **보류 후보도 고를 수 있다**(CPO §8-2 · §6 승격 아님). */
-  it("S-2 PRESUMED_SAME 후보에 선택 UI 가 선다", () => {
+  /** 🟢 S-2 — 보류 후보도 **같은 구조** 다(승격 아님 · 선택 UI 0). */
+  it("S-2 PRESUMED_SAME 후보도 「우리 판단」이 서고 선택 UI 는 없다", () => {
     const host = mount(ROWS);
     const presumed = host.querySelector('[data-testid="mi-candidate-row"]');
     expect(presumed).not.toBeNull();
-    expect(presumed!.querySelector('[data-testid="mi-candidate-select"]')).not.toBeNull();
+    expect(presumed!.querySelector('[data-testid="mi-candidate-judgement"]')).not.toBeNull();
+    expect(presumed!.querySelector('[data-testid="mi-candidate-select"]')).toBeNull();
   });
 
   /** 🔴 S-3 — **`SIMILAR` 은 고를 수 없다**(CPO §8-3). 행 자체가 서지 않는다. */
@@ -162,84 +178,37 @@ describe("CORE-E2E-CLOSE-04 — 후보 선택 → 기존 저장 배선", () => {
     for (const r of rows) expect(r.textContent ?? "").not.toContain("other.example");
   });
 
-  /** 🟢🟢 S-4 + S-5 — 클릭이 **기존 `candidate-reviews` POST** 를 부른다(§8-4·5). */
-  it("S-4·5 선택하면 기존 저장 경로로 POST 한다", async () => {
-    const host = mount(ROWS);
-    /**
-     * 🔴 **첫 행을 집지 않는다** — 리스트가 하나가 되어 맨 위가 SAME 행이다.
-     *    보류 후보의 저장을 재는 테스트이므로 **그 판매처 행** 을 지목한다.
-     */
-    const row = Array.from(
-      host.querySelectorAll('[data-testid="mi-candidate-row"]'),
-    ).find((n) => (n.textContent ?? "").includes("biskuit.kr"));
-    expect(row, "🔴 보류 후보 행이 리스트에 없다").toBeTruthy();
-    const btn = row!.querySelector(
-      '[data-testid="mi-select-same"]',
-    ) as HTMLButtonElement | null;
-    expect(btn).not.toBeNull();
-    calls = [];
-    await act(async () => {
-      btn!.click();
-    });
-    const posts = calls.filter((c) => c.init?.method === "POST");
-    expect(posts).toHaveLength(1);
-    /** 🔴 **기존** 주소다 — 새 API 를 만들지 않았다. */
-    expect(posts[0]!.url).toBe(`/api/price-history/${SNAPSHOT}/candidate-reviews`);
-    const body = JSON.parse(String(posts[0]!.init!.body)) as Record<string, unknown>;
-    /**
-     * 🔵🔵 D3(STAGE 2)로 **이 단언이 갱신됐다**(약화가 아니라 강화다).
-     *
-     * 🔴 왜 — 국내 후보는 `candidate_reviews` 에 seen 행이 없어(079 `source` CHECK)
-     *    사람이 누르면 **맨몸 행**(domain·market·title null)이 생겼고, 재진입에서
-     *    「어느 판매처의 무엇을 판단했는가」가 사라졌다(STAGE 1 실측 4건).
-     * 🟢 그래서 후보 **식별 맥락** 을 같이 보낸다. 🔴 주소·메서드·개수는 **그대로** 다.
-     */
-    expect(body.candidateUrl).toBe(KR_PRESUMED.discoveredUrl);
-    expect(body.humanVerdict).toBe("SAME");
-    const candidate = body.candidate as Record<string, unknown> | undefined;
-    expect(candidate, "🔴 맥락이 빠지면 맨몸 행이 다시 생긴다").toBeTruthy();
-    expect(candidate!.domain).toBe(KR_PRESUMED.domain);
-    expect(candidate!.market).toBe(KR_PRESUMED.market);
-    /**
-     * 🔴🔴 **판정 어휘는 보내지 않는다** — 선택 UI 가 판정/가격 등급을 들면 그 영역이
-     *    다시 「판정처럼」 읽힌다(계약 `D-4` · `wu-136 E-2` 가 그것을 막는다).
-     */
-    for (const banned of ["priceTier", "systemVerdict", "matchTruth", "blockers", "matchReasons"]) {
-      expect(candidate, `🔴 선택 UI 가 판정 어휘를 보낸다: ${banned}`).not.toHaveProperty(banned);
-    }
-  });
-
-  /** 🟢 S-6 — **「저장됐다」를 말한다**(§8-6 · WU-131 §8 「눌렀다」와 다른 사실). */
-  it("S-6 저장 상태가 화면에 선다", async () => {
-    const host = mount(ROWS);
-    const btn = host.querySelector(
-      '[data-group="LIKELY"] [data-testid="mi-candidate-row"] [data-testid="mi-select-same"]',
-    ) as HTMLButtonElement;
-    await act(async () => {
-      btn.click();
-    });
-    const save = host.querySelector('[data-testid="mi-select-save"]')?.textContent ?? "";
-    expect(save).toContain("저장");
-    /** 🟢 그리고 고른 것이 **눌린 상태** 로 남는다(재진입 시 보이는 그 성질). */
-    expect(btn.getAttribute("aria-pressed")).toBe("true");
-  });
-
   /**
-   * 🔴 S-7 — 식별자가 없으면 **저장했다고 말하지 않는다**(기존 규약).
-   *    🟢 그래도 선택 자체는 막지 않는다 — 화면 state 로 남는다.
+   * 🔵🔵🔵 **S-4·5·6·7 을 «하나» 로 합쳐 방향을 뒤집었다**(UNIFIED-UX-1 ⑦).
+   *
+   * 🔴 넷 다 **버튼 클릭** 으로 저장 경로를 증명하던 테스트다. 선택 UI 가 제거돼
+   *    그 클릭 자체가 **존재하지 않는다** ⟹ 같은 모양으로는 증명할 수 없다.
+   * 🟢 그래서 **지키던 뜻 둘** 을 그대로 옮긴다 —
+   *    ⒜ 화면이 **새 저장을 유발하지 못한다**(= 선택 UI 가 정말 사라졌다)
+   *    ⒝ 그럼에도 **저장 경로·데이터는 보존** 된다(CPO 「기존 API·DB 보존」).
+   * 🔴 **약화가 아니다** — 전에는 「POST 가 1회 난다」였고 지금은 「**0회** 난다」를
+   *    같은 강도로 단언한다. POST 가 되살아나면 FAIL 한다.
    */
-  it("S-7 snapshotId 가 없으면 POST 하지 않고 「저장됨」도 말하지 않는다", async () => {
-    const host = mount(ROWS, { snapshotId: null });
-    const btn = host.querySelector(
-      '[data-group="LIKELY"] [data-testid="mi-candidate-row"] [data-testid="mi-select-same"]',
-    ) as HTMLButtonElement;
+  it("S-4·5·6·7 🔴 화면은 새 판정을 저장하지 못한다 · 저장 «경로» 는 보존된다", async () => {
+    const host = mount(ROWS);
+    /** ⒜ 클릭할 버튼이 하나도 없다(네 상태 전부). */
+    for (const v of ["same", "similar", "different", "undecided"]) {
+      expect(host.querySelector(`[data-testid="mi-select-${v}"]`)).toBeNull();
+    }
+    expect(host.querySelector('[data-testid="mi-candidate-select"]')).toBeNull();
+    expect(host.querySelector('[data-testid="mi-candidate-note"]')).toBeNull();
     calls = [];
     await act(async () => {
-      btn.click();
+      await Promise.resolve();
     });
-    expect(calls.filter((c) => c.init?.method === "POST")).toHaveLength(0);
-    expect(host.querySelector('[data-testid="mi-select-save"]')).toBeNull();
-    expect(btn.getAttribute("aria-pressed")).toBe("true");
+    /** 🔴🔴 그래서 **POST 가 0회** 다 ⟹ GT 신규 누적 중단(CPO 인정). */
+    expect(
+      calls.filter((c) => c.init?.method === "POST"),
+      "🔴 화면이 새 판정을 저장하면 ⑦ 이 안 된 것이다",
+    ).toHaveLength(0);
+    /** 🟢 ⒝ 저장 구현은 **그대로 살아 있다**(아래 D-1 이 「한 곳뿐」까지 본다). */
+    expect(HOOK).toContain('method: "POST"');
+    expect(HOOK).toContain("candidate-reviews");
   });
 
   /** 🔴🔴 D-1 — **저장 구현은 하나** 다(§4 「POST 중복 구현 ❌」). */
