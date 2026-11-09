@@ -176,12 +176,18 @@ describe("CORE-E2E-CLOSE-05 — 수동 재분석", () => {
      * 🔵🔵 **UNIFIED-UX-1 ⑦ 에서 대상이 바뀌었다 — 뜻은 그대로다.**
      *    지키던 것은 「후보 행과 1:1 이고 중복 surface 가 없다」였고, 선택 UI 가
      *    제거되면서 그 1:1 의 대상이 **「우리 판단」 영역** 이 됐다(CPO 승인 ⒝).
-     * 🔴 그리고 선택 UI 가 **0** 임을 새로 단언한다(되살아나면 FAIL).
+     * 🔵🔵 **SOURCING-CARD-MINIMAL-1 — 그 1:1 대상이 다시 «등급 배지» 가 됐다**(결정 C).
+     *    🟢 **1:1 이라는 뜻은 불변** 이다 — 「하나로 뭉개지 않는다」가 이 단언의 핵심이다.
+     * 🔴 그리고 선택 UI·판단 영역이 **0** 임을 **둘 다** 단언한다(되살아나면 FAIL).
      */
-    expect(host.querySelectorAll('[data-testid="mi-candidate-judgement"]').length).toBe(
+    expect(host.querySelectorAll('[data-testid="mi-candidate-group"]').length).toBe(
       host.querySelectorAll('[data-testid="mi-candidate-row"]').length,
     );
     expect(host.querySelectorAll('[data-testid="mi-candidate-select"]')).toHaveLength(0);
+    expect(
+      host.querySelectorAll('[data-testid="mi-candidate-judgement"]'),
+      "🔴 「우리 판단」 영역이 되살아났다",
+    ).toHaveLength(0);
     /**
      * ════════════════════════════════════════════════════════════════════════
      * 🔵🔵🔵 UI/UX FINAL SPRINT R2 STEP 4 — **이 단언이 «뒤집혔다». 의도된 변경이다**

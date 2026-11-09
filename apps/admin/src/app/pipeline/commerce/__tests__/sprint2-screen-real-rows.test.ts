@@ -153,10 +153,26 @@ describe.runIf(READY)("SPRINT2-SCREEN — 운영 실제 행으로 화면 검증"
        *       그래서 `EVIDENCE_SUMMARY_LABEL` 을 **이 owner 로 모았다**(새 어휘 폐기).
        * 🟢 이제 두 상수가 **같은 글자** 라 어느 쪽으로 단언해도 같다 — owner 로 적는다.
        */
-      expect(m.text, `🔴 ${b.host} — Evidence 접힘이 없다`).toContain(CANDIDATE_EVIDENCE_FOLD_LABEL);
+      /**
+       * 🔵🔵🔵 **SOURCING-CARD-MINIMAL-1 — 이 축이 CPO 결정 C 로 «반전» 됐다.**
+       *
+       * 🔴 전: 「Evidence 접힘이 있다(「왜 같은 상품인가」를 열 수 있다)」
+       * 🟢 후: **셀러 화면에 그 접힘이 없다** — 내부 판단 근거를 보여주지 않는다.
+       * 🟢🟢 **이 케이스의 다른 축(판매처 도메인이 행마다 선다)은 그대로** 다 —
+       *    실데이터로 「행이 자기 출처를 말한다」를 계속 지킨다.
+       * 🟢 **두 표면의 어휘 일치 단언은 유지** 한다 — `GeminiTransientCandidates` 는
+       *    그 접힘을 **여전히 쓰므로** 상수가 갈라지면 FAIL 해야 한다.
+       * 🔴 **약화 0** — 「없다」를 **이 표면에서만** 단언하고, 내부 어휘 금지를 **더** 둔다.
+       */
+      expect(m.text, `🔴 ${b.host} — 근거 접힘이 셀러 화면에 되살아났다`).not.toContain(
+        CANDIDATE_EVIDENCE_FOLD_LABEL,
+      );
       expect(EVIDENCE_SUMMARY_LABEL, "🔴 두 표면의 근거 접힘 어휘가 갈라졌다").toBe(
         CANDIDATE_EVIDENCE_FOLD_LABEL,
       );
+      for (const banned of ["우리 판단", "판단 근거", "이전에 사람이 확인함"]) {
+        expect(m.text, `🔴 ${b.host} — 내부 판단 어휘 노출: ${banned}`).not.toContain(banned);
+      }
       m.cleanup();
     }
   });

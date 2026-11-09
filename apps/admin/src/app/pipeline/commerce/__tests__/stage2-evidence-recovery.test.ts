@@ -72,35 +72,52 @@ describe("STAGE2 — D1 긍정 근거 복구", () => {
   });
 
   /**
-   * 🔵🔵 **JUDGEMENT-DEDUP-1 — ⚠ 줄은 «지워지지» 않았고 «옮겨졌다».**
+   * 🔵🔵🔵 **SOURCING-CARD-MINIMAL-1 — 이 계약의 방향이 CPO 결정 C 로 «반전» 됐다.**
    *
-   * 🔴 전 단언은 `data-testid="mi-candidate-warning"`(접힘 **안**)을 찾았다.
-   *    그 자리는 **중복** 이어서 제거됐고, 같은 문장이 **접힘 밖 「우리 판단」**
-   *    (`mi-candidate-judgement-basis`)에 **그대로** 선다.
-   * 🔴 **약화 0 — 양방향으로 잠근다**: ⒜ 생산자 호출과 접힘 밖 좌표가 **살아 있다**
-   *    ⒝ 접힘 안 좌표가 **되살아나면 FAIL**(그것이 이 WU 가 고친 중복이다)
-   *    ⒞ 소스 순서로 **밖이 먼저** 다.
+   * 🔴 전: 「카드가 그 줄을 **실제로 그린다**(배선)」 — ⚠ 줄과 긍정 근거 줄 둘 다.
+   * 🟢 후: **셀러 카드는 그 줄을 그리지 않는다.** 내부 판단 설명은 셀러에게 보이지 않는다.
+   *
+   * 🔴🔴 **그래서 「D1 복구를 되돌렸다」가 아니다 — 지키는 축이 «데이터» 로 옮겨졌다.**
+   *    D1 이 복구한 것은 **생산자**(`candidateEvidenceLines`)이고 그것은 **leaf 에 그대로**
+   *    살아 있다(아래 D1-1~D1-4·D1-6 이 계속 그것을 단언한다).
+   *    끊긴 것은 **이 카드의 렌더 하나** 다.
+   * 🔴 **약화 0 — 양방향으로 잠근다**: ⒜ 셀러 카드에 네 좌표가 **전부 0**
+   *    ⒝ **생산자는 leaf 에 살아 있다**(지워지면 FAIL) ⒞ 금지 어휘가 카드에 **없다**.
    * 🟢 이 파일은 머리에서 **주석을 벗긴다**(`strip`) — 주석 문구로 통과하지 않는다.
    */
-  it("D1-5 🔴 카드가 그 줄을 **실제로 그린다**(배선)", () => {
-    expect(CARD).toContain("candidateEvidenceLines(row).map");
-    expect(CARD).toContain('data-testid="mi-candidate-evidence-line"');
-    /** 🔴 ⒜ ⚠ 줄의 **생산자 호출과 새 좌표가 살아 있다**(지우지 않았다). */
-    expect(CARD, "🔴 ⚠ 줄 생산자 호출이 사라졌다 — 정보 손실이다").toContain(
-      "candidateWarningLines(row).map",
+  it("D1-5 🔴 셀러 카드는 내부 판단 설명을 그리지 않는다(생산자는 살아 있다)", () => {
+    /** 🔴 ⒜ 카드에서 네 좌표가 전부 사라졌다. */
+    for (const id of [
+      "mi-candidate-evidence",
+      "mi-candidate-evidence-line",
+      "mi-candidate-judgement",
+      "mi-candidate-judgement-basis",
+      "mi-candidate-warning",
+      "mi-candidate-human-verdict",
+    ]) {
+      expect(CARD, `🔴 ${id} 가 셀러 카드에 되살아났다`).not.toContain(`data-testid="${id}"`);
+    }
+    /** 🔴 생산자 호출도 카드에 없다(렌더 경로 0). */
+    expect(CARD, "🔴 근거 생산자를 카드가 다시 부른다").not.toContain(
+      "candidateEvidenceLines(row)",
     );
-    expect(CARD, "🔴 ⚠ 줄의 접힘 밖 좌표가 없다").toContain(
-      'data-testid="mi-candidate-judgement-basis"',
+    expect(CARD, "🔴 경고 생산자를 카드가 다시 부른다").not.toContain(
+      "candidateWarningLines(row)",
     );
-    /** 🔴 ⒝ 접힘 **안** 좌표가 되살아나면 **중복** 이다. */
-    expect(CARD, "🔴 접힘 안 경고가 되살아났다 — 같은 문장이 두 번 선다").not.toContain(
-      'data-testid="mi-candidate-warning"',
+    /**
+     * 🔴🔴 ⒝ **생산자는 leaf 에 그대로 있다** — 「UI 에서 제거」가 「데이터 삭제」로
+     *    번지면 내부 분석·GT 가 같이 죽는다(CPO §4 보존 조건).
+     */
+    expect(LEAF, "🔴 긍정 근거 생산자가 삭제됐다 — CPO §4 위반이다").toContain(
+      "export function candidateEvidenceLines",
     );
-    /** 🔴 ⒞ **밖이 먼저** — 접힘보다 앞에서 그린다. */
-    expect(
-      CARD.indexOf("candidateWarningLines(row).map"),
-      "🔴 ⚠ 줄이 접힘 뒤에서 그려진다 — 1차 노출이 아니다",
-    ).toBeLessThan(CARD.indexOf('data-testid="mi-candidate-evidence"'));
+    expect(LEAF, "🔴 경고 생산자가 삭제됐다 — CPO §4 위반이다").toContain(
+      "export function candidateWarningLines",
+    );
+    /** 🔴 ⒞ 금지 어휘가 카드 렌더에 없다. */
+    for (const banned of ["CANDIDATE_JUDGEMENT_PREFIX", "CANDIDATE_JUDGEMENT_BASIS_PREFIX", "HUMAN_VERDICT_REFERENCE_PREFIX"]) {
+      expect(CARD, `🔴 ${banned} 를 카드가 다시 쓴다`).not.toContain(banned);
+    }
   });
 
   it("D1-6 🔴 재판정하지 않는다 — leaf 에 판정/점수 어휘가 없다", () => {
@@ -232,17 +249,37 @@ describe("STAGE2-R — D2 「내 판단」은 글쓰기가 아니라 선택이�
    * 🔴 **약화가 아니다** — ⒜ 선택 UI 부재 ⒝ 읽기 전용 표시의 위치 ⒞ 입력칸 0 을
    *    **셋 다** 본다(전 단언은 ⒜⒞를 **못 봤다**).
    */
-  it("D2-3 🔴 사람 판정은 **후보 카드의 「우리 판단」 안** 에만 있다(선택 UI 0)", () => {
-    /** ⒜ 선택·사유 UI 가 **렌더되지 않는다**. */
+  /**
+   * 🔵🔵🔵 **SOURCING-CARD-MINIMAL-1 — 사람 판정은 셀러 화면에서 «빠졌다»**(CPO 결정 D).
+   *
+   * 🔴 전: 「읽기 전용 표시가 **「우리 판단」 영역 안** 에 있다」
+   * 🟢 후: **셀러 카드에 표시가 없다** — 사람 판정은 **내부 검증 데이터** 다.
+   * 🔴🔴 **데이터·API·DB 는 변경 0** 이다(CPO §4·§5) — `useCandidateReview`(GET/POST) ·
+   *    `human_verdict` 기록 · `HUMAN_NOTE_OPTIONS` 어휘 전부 그대로다.
+   *    🟢 그 보존을 이 케이스가 **같이** 단언한다(지워지면 FAIL) ⟹ 약화가 아니다.
+   * 🔴 그리고 **입력칸 0** 이라는 원래 금지는 **그대로** 유지한다.
+   */
+  it("D2-3 🔴 사람 판정은 셀러 카드에 표시되지 않는다(데이터·저장 경로는 보존)", () => {
+    /** ⒜ 선택·사유 UI 가 **렌더되지 않는다**(기존 금지 유지). */
     expect(CARD).not.toContain("<CandidateNoteChoices");
     expect(CARD).not.toContain("<CandidateSelect");
-    /** ⒝ 읽기 전용 표시가 **「우리 판단」 영역 안** 에 있다(결론 영역이 아니다). */
-    const at = CARD.indexOf('data-testid="mi-candidate-judgement"');
-    expect(at, "🔴 「우리 판단」 영역을 찾지 못했다").toBeGreaterThan(0);
-    const end = CARD.indexOf("</div>", CARD.indexOf("mi-candidate-human-verdict", at));
-    expect(CARD.indexOf("mi-candidate-human-verdict", at)).toBeGreaterThan(at);
-    expect(end).toBeGreaterThan(at);
-    /** ⒞ 그리고 **입력칸은 여전히 0** 이다(D2-2 와 같은 금지). */
+    /** ⒝ 🔴 읽기 전용 표시도 **없다** — 좌표와 어휘 둘 다. */
+    expect(CARD, "🔴 사람 판정 표시가 셀러 카드에 되살아났다").not.toContain(
+      'data-testid="mi-candidate-human-verdict"',
+    );
+    expect(CARD, "🔴 사람 판정 어휘가 셀러 카드에 되살아났다").not.toContain(
+      "HUMAN_VERDICT_REFERENCE_PREFIX",
+    );
+    /**
+     * ⒞ 🟢 **저장·조회 경로는 살아 있다** — UI 제거가 데이터 제거로 번지지 않는다.
+     * 🔴 `reviewApi` prop 과 `useCandidateReview` 호출이 사라지면 FAIL 한다.
+     */
+    expect(CARD, "🔴 `useCandidateReview` 가 사라졌다 — 저장/조회 경로가 끊겼다").toContain(
+      "useCandidateReview",
+    );
+    expect(CARD, "🔴 `reviewApi` 배선이 사라졌다").toContain("reviewApi");
+    expect(LEAF, "🔴 사람 어휘 owner 가 삭제됐다").toContain("HUMAN_NOTE_OPTIONS");
+    /** ⒟ 그리고 **입력칸은 여전히 0** 이다(D2-2 와 같은 금지). */
     expect(CARD).not.toMatch(/<input\b/);
   });
 

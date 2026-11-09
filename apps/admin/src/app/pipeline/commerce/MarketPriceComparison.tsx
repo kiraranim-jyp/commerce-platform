@@ -85,10 +85,13 @@ import {
    */
   candidatePriceUse,
   CANDIDATE_PRICE_USE_LABEL,
-  /** 🔵 UNIFIED-UX-1 ②⑥⑦ — 「우리 판단」 영역 어휘(어휘 owner 는 이 모듈 하나). */
-  CANDIDATE_JUDGEMENT_PREFIX,
-  CANDIDATE_JUDGEMENT_BASIS_PREFIX,
-  HUMAN_VERDICT_REFERENCE_PREFIX,
+  /**
+   * 🔵🔵 SOURCING-CARD-MINIMAL-1 — **「우리 판단」 어휘 셋을 이 파일이 더는 쓰지 않는다.**
+   * 🔴 `CANDIDATE_JUDGEMENT_PREFIX`(「우리 판단:」) · `CANDIDATE_JUDGEMENT_BASIS_PREFIX`
+   *    (「판단 근거:」) · `HUMAN_VERDICT_REFERENCE_PREFIX`(「이전에 사람이 확인함:」)
+   * 🟢 **상수는 leaf 에 그대로 있다** — 지운 것은 **import 와 렌더** 뿐이다(CPO §4).
+   * 🔴 되살리려면 CPO 결정이 필요하다(§3 이 그 글자를 셀러 화면 금지어로 지정했다).
+   */
   CANDIDATE_LIST_HEADING,
   CANDIDATE_GROUP_LABEL,
   CANDIDATE_LIST_EMPTY,
@@ -110,10 +113,12 @@ import {
   CANDIDATE_GROUP_ORDER,
   CANDIDATE_IMAGE_NONE,
   CANDIDATE_LINK_TEXT,
-  /** 🔵 FINAL UX REBUILD — 카드 안 「근거」 접힘의 라벨(어휘 owner 는 그 파일 하나다). */
-  CANDIDATE_EVIDENCE_FOLD_LABEL,
-  /** 🔵 D1(STAGE 2) — 운영이 이미 저장한 **긍정 근거** 줄(복구 · 재판정 0). */
-  candidateEvidenceLines,
+  /**
+   * 🔵🔵 SOURCING-CARD-MINIMAL-1 — **근거 접힘이 제거되어 둘을 더는 쓰지 않는다.**
+   * 🔴 `CANDIDATE_EVIDENCE_FOLD_LABEL`(「근거 확인」) · `candidateEvidenceLines`
+   * 🟢 **leaf 의 상수·함수는 그대로다** — `GeminiTransientCandidates` 가 그 라벨을
+   *    여전히 쓰고(`EVIDENCE_SUMMARY_LABEL`), 생산자는 내부 분석·GT 가 계속 쓴다.
+   */
   /** 🔵 D2(STAGE 2-R) — 「내 판단」 어휘 owner. 🔴 내부 토큰이 아니라 **사람의 말** 이다. */
   HUMAN_NOTE_OPTIONS,
   HUMAN_NOTE_SECTION_LABEL,
@@ -126,8 +131,11 @@ import {
   /**
    * 🔵🔵 `-02` — 🔴 `candidateReasonLines`(matchReasons 통째 렌더)를 **대체** 한다.
    *    카드는 **확인할 것만** 말한다. `matchReasons` 는 데이터/게이트에 **그대로 남는다**.
+   *
+   * 🔵🔵 SOURCING-CARD-MINIMAL-1 — **`candidateWarningLines` import 를 뺐다.**
+   * 🔴 CPO 결정 C — 「확인 필요」 줄은 셀러 화면에 서지 않는다(내부 판단 설명).
+   * 🟢 **생산자는 leaf 에 그대로** 다 — 내부 분석·GT·계약이 계속 호출한다.
    */
-  candidateWarningLines,
   type CandidateListGroup,
   MI_PRESUMED_HEADING,
   MARKET_RECHECK_BUTTON,
@@ -2189,7 +2197,13 @@ function MarketColumn({
   presumed,
   /** 🔵 CANDIDATE-EVIDENCE-VISIBILITY-01 — 후보 리스트(유력 + 확장). */
   list,
-  reviewApi,
+  /**
+   * 🔵🔵 SOURCING-CARD-MINIMAL-1 — **`reviewApi` 를 구조분해에서 뺐다(타입에는 남는다).**
+   * 🔴 사람 판정 표시가 셀러 화면에서 제거되어 이 컴포넌트가 그 값을 **읽지 않는다**.
+   * 🟢 **prop·타입·호출부(:798·:832)·`useCandidateReview`(GET/POST)는 그대로** 다 —
+   *    그 fetch 를 단언하는 계약이 넷 있고 데이터 경로를 끊지 않는다(CPO §4·§5).
+   * 🔴 그래서 **삭제가 아니라 「읽지 않음」** 이다.
+   */
   reference,
   referenceProps,
   /**
@@ -2401,14 +2415,29 @@ function MarketColumn({
                           * 🟢 헤더가 이미 크게 말하므로 여기서는 **작고 조용하게** 둔다(중복 소음 최소화).
                           */}
                         {/**
-                          * 🔵🔵🔵 UNIFIED-UX-1 ② — **등급은 여기서 «나갔다». 삭제가 아니다.**
+                          * ══════════════════════════════════════════════════════════
+                          * 🔵🔵🔵 SOURCING-CARD-MINIMAL-1 ③ — **등급 배지가 «기본 영역» 으로 돌아왔다**
+                          * ══════════════════════════════════════════════════════════
                           *
-                          * 🔴 CPO 확정 — 기본 카드는 **다섯 칸**(이미지·상품명·사이트명·
-                          *    링크·가격)이고 **등급은 「우리 판단」 영역** 으로 옮긴다.
-                          * 🟢 testid(`mi-candidate-group`)·어휘(`CANDIDATE_GROUP_LABEL`)는
-                          *    **그대로** 다 — 아래 `mi-candidate-judgement` 안에 산다
-                          *    ⟹ WU-091 「행마다 판정 라벨」이 **깨지지 않는다**.
+                          * 🔴 CPO 결정 C — 별도 「우리 판단」 영역(`mi-candidate-judgement`)을
+                          *    **제거** 하고 **배지만** 기본 카드 정보로 올린다.
+                          *    ⟹ 셀러는 상품·가격·동일성·참고가격을 **한 카드에서 바로** 본다.
+                          * 🔴🔴 **접두사 `우리 판단:` 을 붙이지 않는다** — CPO §3 이 그 글자를
+                          *    셀러 화면 금지어로 지정했다. 🟢 어휘 owner(`CANDIDATE_GROUP_LABEL`)는
+                          *    **한 글자도 바꾸지 않았다**(CPO 결정 A — 3그룹·현행 문구 유지).
+                          * 🟢 testid(`mi-candidate-group`)는 **그대로** 다 ⟹ WU-091 의
+                          *    「행마다 판정 라벨」이 **깨지지 않는다**(배지가 사라지면 2026-09-19 사고).
+                          * 🔴 **승격·축소 0** — LIKELY/PRESUMED/POSSIBLE 세 군이 그대로 선다
+                          *    (`EXACT`·「동일상품 확정」 같은 새 tier/문구를 만들지 않았다).
+                          * 🔴 가격 **위** 에 둔다 — 등급을 모르고 금액부터 읽으면 추정 후보의
+                          *    가격을 확정가로 읽는다(UNIFIED-UX-1 이전의 원래 배치이기도 하다).
                           */}
+                        <p
+                          data-testid="mi-candidate-group"
+                          className="text-[11px] text-text-secondary"
+                        >
+                          {CANDIDATE_GROUP_LABEL[group]}
+                        </p>
                         {/**
                           * 🔵🔵🔵 U5 — **가격 3상태.** 🔴 2분법으로 두면 「금액 있음 + 검증 전」이
                           *    확정가와 **똑같이** 보이고 셀러가 그 숫자로 판매가를 정한다.
@@ -2494,62 +2523,26 @@ function MarketColumn({
                           {row.domain}
                         </p>
                         {/**
-                          * ══════════════════════════════════════════════════════
-                          * 🔵🔵🔵 UNIFIED-UX-1 ②⑥ — **「우리 판단」 영역**(기본 5칸과 분리)
-                          * ══════════════════════════════════════════════════════
+                          * ══════════════════════════════════════════════════════════
+                          * 🔵🔵🔵 SOURCING-CARD-MINIMAL-1 ④ — **「우리 판단」 영역이 «없다»**
+                          * ══════════════════════════════════════════════════════════
                           *
-                          * 🔴 CPO 확정 구조 — 기본 카드는 **이미지·상품명·사이트명·링크·
-                          *    가격** 다섯 칸이고, **우리 판단과 그 근거는 «여기»** 에 모은다.
-                          * 🟢 등급은 **위에서 내려온 그 라벨** 이다(삭제 0 · 어휘 0 · testid 0).
-                          * 🔴 **내부 토큰을 적지 않는다** — 근거는 `candidateWarningLines`
-                          *    (사람의 말)만 쓰고 `BRAND_MISMATCH` 같은 코드는 노출 0 이다.
-                          * 🔴 **셀러에게 고르라고 하지 않는다**(⑦) — 이 영역은 **읽기 전용** 이다.
+                          * 🔴 CPO 결정 C·D — 이 자리에 있던 **셋을 전부 셀러 화면에서 뺐다**:
+                          * ```
+                          * mi-candidate-judgement        별도 영역(div) — 제거
+                          * mi-candidate-judgement-basis  판단 근거 한 줄 — 제거
+                          * mi-candidate-human-verdict    사람 판정 표시 — 제거(내부 검증 데이터)
+                          * ```
+                          * 🟢 **등급 배지는 삭제가 아니라 «이동»** 이다 — 위 기본 정보 영역에 산다.
+                          * 🔴🔴 **내부 데이터는 한 줄도 지우지 않았다**(CPO §4) —
+                          *    `candidateWarningLines` · `candidateEvidenceLines` · `matchReasons` ·
+                          *    `crossSellerBlockers` · `human_verdict` · `useCandidateReview`(GET/POST)
+                          *    전부 **그대로** 다. 끊긴 것은 **이 카드의 렌더** 하나다.
+                          * 🔴 `reviewApi` prop 도 **타입에 남겨 둔다** — 호출부(:798·:832)와 데이터
+                          *    경로를 보존한다(그 fetch 를 단언하는 계약이 넷 있다).
+                          * 🔴 되살리려면 **CPO 결정이 필요하다** — 「셀러에게 내부 판단을 보여주지
+                          *    않는다」가 이 WU 의 합격 기준 자체다.
                           */}
-                        <div
-                          data-testid="mi-candidate-judgement"
-                          className="mt-1 border-t border-border/40 pt-1"
-                        >
-                          <p
-                            data-testid="mi-candidate-group"
-                            className="text-[11px] text-text-secondary"
-                          >
-                            {CANDIDATE_JUDGEMENT_PREFIX} {CANDIDATE_GROUP_LABEL[group]}
-                          </p>
-                          {/**
-                            * 🔵🔵🔵 JUDGEMENT-DEDUP-1 ② — **핵심 근거는 «한 번» 만 적는다.**
-                            *
-                            * 🔴 1차 구현이 경고 줄을 **전부** 여기 적고 접힘 안에서도 **또**
-                            *    적어서 같은 문장이 화면에 **두 번** 섰다(CTO 자가 발견 · CPO 승인).
-                            * 🟢 역할을 가른다 — **밖 = 「확인 필요」 · 안 = 긍정 상세 근거**.
-                            * 🟢 생산자 `candidateWarningLines` 는 **언제나 최대 한 줄** 이다
-                            *    (사유를 `·` 로 **합쳐서** 돌려준다) ⟹ 여기서 자를 것이 없다.
-                            * 🔴 **문장을 새로 만들지 않는다**(사본 0) — 접두사만 붙인다.
-                            */}
-                          {candidateWarningLines(row).map((line) => (
-                              <p
-                                key={line}
-                                data-testid="mi-candidate-judgement-basis"
-                                className="text-[11px] text-text-tertiary"
-                              >
-                                {CANDIDATE_JUDGEMENT_BASIS_PREFIX} {line}
-                              </p>
-                            ))}
-                          {/**
-                            * 🔵 ⑦⒝ — **사람 판정은 «보존하고 표시만» 한다.**
-                            * 🔴 선택 버튼은 제거됐다 — 이 줄은 **이미 저장된** 값을 읽을 뿐이고
-                            *    `onReview` 를 부르지 않는다(새 입력 경로 0).
-                            * 🔴🔴 그래서 **GT 신규 누적은 중단** 이다 — 그 사실을 숨기지 않는다.
-                            */}
-                          {reviewApi?.review[row.discoveredUrl] ? (
-                            <p
-                              data-testid="mi-candidate-human-verdict"
-                              className="text-[11px] text-text-tertiary"
-                            >
-                              {HUMAN_VERDICT_REFERENCE_PREFIX}{" "}
-                              {HUMAN_REVIEW_BUTTON[reviewApi.review[row.discoveredUrl]!]}
-                            </p>
-                          ) : null}
-                        </div>
                         {/**
                           * 🔵🔵🔵 CANDIDATE-UX-REFINE-02 ④ — **「확인 필요」만 적는다.**
                           *
@@ -2613,56 +2606,22 @@ function MarketColumn({
                           </p>
                         ) : null}
                         {/**
-                          * 🔵🔵🔵 JUDGEMENT-DEDUP-1 ③ — **접힘 안은 「상세 근거」 전용이다.**
+                          * ══════════════════════════════════════════════════════════
+                          * 🔵🔵🔵 SOURCING-CARD-MINIMAL-1 ⑤ — **상세 근거 접힘이 «없다»**
+                          * ══════════════════════════════════════════════════════════
                           *
-                          * 🔴🔴 **내 1차 수정이 틀렸고 계약이 잡았다.** 「핵심 1줄 + 상세
-                          *    N줄」로 나누려고 `.slice(1)` 을 썼는데, 생산자
-                          *    `candidateWarningLines` 는 **언제나 최대 «한 줄»** 을 낸다
-                          *    (모든 사유를 `·` 로 **합쳐서** 돌려준다) ⟹ 그 분기는
-                          *    **영원히 비는 죽은 코드** 였다.
-                          * 🟢 그래서 역할을 **정직하게** 가른다 —
-                          *    **접힘 밖 = 확인 필요(그 한 줄)** · **접힘 안 = 긍정 상세 근거**.
-                          *    ⟹ 같은 문장이 두 영역에 설 **경로 자체가 없다**(중복 0).
-                          * 🔴 **정보 손실 0** — 그 한 줄은 밖에서 **그대로** 읽힌다.
-                          * 🔴 사람 판정 표시도 접힘 밖 「우리 판단」으로 갔으므로 이 조건에서
-                          *    **뺀다** — 남겨 두면 **빈 접힘** 이 선다.
+                          * 🔴 CPO 결정 C — `mi-candidate-evidence` 접힘과 그 안의
+                          *    `mi-candidate-evidence-line` 을 **셀러 화면에서 제거** 했다.
+                          *    ⟹ 「판단 근거 펼쳐보기」 UI 가 **0** 이다(§8 계약).
+                          * 🔴🔴 **JUDGEMENT-DEDUP-1 을 되돌린 것이 아니다.** 그 WU 는 같은
+                          *    문장이 **두 곳** 에 서는 것을 고쳤고, 이번에는 CPO 가 **두 곳 모두**
+                          *    셀러에게 보여주지 않기로 결정했다 ⟹ 중복은 **여전히 0** 이다.
+                          * 🟢 생산자 `candidateEvidenceLines` 는 **그대로 살아 있다**(leaf 무변경) —
+                          *    내부 분석·GT·API 가 계속 쓴다. 끊긴 것은 **이 카드의 렌더** 하나다.
+                          * 🟢 `CANDIDATE_EVIDENCE_FOLD_LABEL` 상수도 **지우지 않았다** —
+                          *    다른 표면(`GeminiTransientCandidates`)이 그 값을 쓴다.
+                          * 🔴 셀러가 보는 것은 **상품 · 가격 · 동일성 배지 · 참고가격 상태** 넷이다.
                           */}
-                        {candidateEvidenceLines(row).length > 0 ? (
-                          <details data-testid="mi-candidate-evidence" className="mt-1">
-                            <summary className="cursor-pointer text-[11px] text-text-tertiary">
-                              ▸ {CANDIDATE_EVIDENCE_FOLD_LABEL}
-                            </summary>
-                            {candidateEvidenceLines(row).map((line) => (
-                              <p
-                                key={line}
-                                data-testid="mi-candidate-evidence-line"
-                                className="text-[11px] text-text-secondary"
-                              >
-                                {line}
-                              </p>
-                            ))}
-                            {/**
-                              * 🔵🔵 JUDGEMENT-DEDUP-1 ③ — **「확인 필요」 줄은 여기 없다.**
-                              *
-                              * 🔴 그 줄은 **접힘 밖 「우리 판단」** 이 소유한다(역할 분리).
-                              *    여기 다시 적으면 **같은 문장이 두 번** 선다 — 그것이
-                              *    이 WU 가 고친 결함이다(CTO 자가 발견 · CPO 승인).
-                              * 🟢 **지운 것은 중복뿐이다** — 그 문장은 밖에서 그대로 읽힌다.
-                              * 🔴 되살리려면 **밖의 줄을 같이 없애야** 한다(둘 다 두지 않는다).
-                              */}
-                            {/**
-                              * 🔵🔵 D2(STAGE 2-R) — **「내 판단」은 여기 산다**(CPO 확정 구조).
-                              * 🔴 결론 영역이 **아니다** — 근거 상세 영역 안이다
-                              *    (`core-2s D-3` 「결론 영역에 입력칸·요청 없다」를 지킨다).
-                              * 🔴 **선택** 이다 — 자유 입력칸을 만들지 않는다.
-                              */}
-                            {/**
-                              * 🔵 UNIFIED-UX-1 ⑦⒝ — **사유 «선택» UI 를 제거했다**(CPO 승인).
-                              * 🔴 저장된 값은 「우리 판단」 영역이 **읽기 전용** 으로 보여준다.
-                              * 🔴 데이터·API·DB 는 **그대로** 다 — 끊긴 것은 **새 입력** 뿐이다.
-                              */}
-                          </details>
-                        ) : null}
                         {/**
                           * 🔵 ⑤ — **선택과 이동을 같은 줄에** 둔다(CPO §4 목업).
                           * 🟢 선택은 **기존 저장 흐름** 이다(CLOSE-04 · 새 저장 로직 0 ·

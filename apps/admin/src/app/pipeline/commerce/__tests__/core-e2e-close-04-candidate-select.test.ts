@@ -131,22 +131,37 @@ const WS_CODE = code(WS);
  *    **GT 신규 누적 중단**(CPO 인정). 「계속 누적된다」로 읽히지 않게 못박는다.
  */
 describe("CORE-E2E-CLOSE-04 — 선택 UI 제거 · 저장 «경로» 보존", () => {
-  /** 🟢 S-1 — SAME 후보 자리에 **「우리 판단」** 이 선다(선택 UI 는 0). */
-  it("S-1 SAME 후보에 「우리 판단」이 서고 선택 UI 는 없다", () => {
+  /**
+   * 🟢 S-1 — SAME 후보 자리에 **등급 배지** 가 선다(선택 UI 는 0).
+   *
+   * 🔵🔵 **SOURCING-CARD-MINIMAL-1 — 「우리 판단」 영역 → 배지로 좌표 이동**(CPO 결정 C).
+   * 🟢 지키던 것은 그대로다 — 「선택 UI 없이도 **행이 자기 상태를 말한다**」.
+   * 🔴 **약화 0** — 영역이 **되살아나면 FAIL** 하는 단언을 **더** 둔다.
+   * 🟢 저장 **경로**(`useCandidateReview` GET/POST)는 이 파일의 다른 케이스가 지킨다.
+   */
+  it("S-1 SAME 후보에 등급 배지가 서고 선택 UI·판단 영역은 없다", () => {
     const host = mount(ROWS);
     const same = host.querySelector('[data-group="LIKELY"] [data-testid="mi-candidate-row"]');
     expect(same).not.toBeNull();
-    expect(same!.querySelector('[data-testid="mi-candidate-judgement"]')).not.toBeNull();
+    expect(same!.querySelector('[data-testid="mi-candidate-group"]')).not.toBeNull();
+    expect(
+      same!.querySelector('[data-testid="mi-candidate-judgement"]'),
+      "🔴 「우리 판단」 영역이 되살아났다",
+    ).toBeNull();
     expect(same!.querySelector('[data-testid="mi-candidate-select"]')).toBeNull();
     expect(same!.querySelector('[data-testid="mi-select-same"]')).toBeNull();
   });
 
   /** 🟢 S-2 — 보류 후보도 **같은 구조** 다(승격 아님 · 선택 UI 0). */
-  it("S-2 PRESUMED_SAME 후보도 「우리 판단」이 서고 선택 UI 는 없다", () => {
+  it("S-2 PRESUMED_SAME 후보도 등급 배지가 서고 선택 UI·판단 영역은 없다", () => {
     const host = mount(ROWS);
     const presumed = host.querySelector('[data-testid="mi-candidate-row"]');
     expect(presumed).not.toBeNull();
-    expect(presumed!.querySelector('[data-testid="mi-candidate-judgement"]')).not.toBeNull();
+    expect(presumed!.querySelector('[data-testid="mi-candidate-group"]')).not.toBeNull();
+    expect(
+      presumed!.querySelector('[data-testid="mi-candidate-judgement"]'),
+      "🔴 「우리 판단」 영역이 되살아났다",
+    ).toBeNull();
     expect(presumed!.querySelector('[data-testid="mi-candidate-select"]')).toBeNull();
   });
 

@@ -139,13 +139,22 @@ describe("SELLER-DECISION §19 — props → selector → DOM 후보 수", () =>
    * 🔴 **약화가 아니다** — 개수 조건을 `> 0` 에서 **후보 수와 1:1** 로 올렸고,
    *    선택 UI 가 **되살아나면 FAIL** 하는 단언을 **새로** 더했다.
    */
-  it("UXR-SELLER-05 🔴 후보마다 «우리 판단» 이 있다(선택 UI 는 제거됐다)", () => {
+  /**
+   * 🔵🔵 **SOURCING-CARD-MINIMAL-1 — 1:1 의 대상이 「우리 판단」 영역 → «등급 배지» 가 됐다.**
+   * 🟢 **지키는 뜻은 한 글자도 바뀌지 않았다** — 「후보를 최저가 하나로 뭉개지 않는다」.
+   * 🔴 CPO 결정 C 로 영역이 제거됐으므로 그 영역이 **되살아나면 FAIL** 을 **더** 둔다.
+   */
+  it("UXR-SELLER-05 🔴 후보마다 등급 배지가 있다(선택 UI·판단 영역 0)", () => {
     mount({ recommendedPriceKrw: 92_000 });
     const rows = container.querySelectorAll('[data-testid="mi-candidate-row"]');
-    const judgements = container.querySelectorAll('[data-testid="mi-candidate-judgement"]');
+    const badges = container.querySelectorAll('[data-testid="mi-candidate-group"]');
     expect(rows.length, "🔴 후보가 0 이면 이 계약이 아무것도 못 본다").toBeGreaterThan(0);
-    expect(judgements.length, "🔴 후보 수와 1:1 이어야 한다 — 하나로 뭉개지 않는다").toBe(rows.length);
+    expect(badges.length, "🔴 후보 수와 1:1 이어야 한다 — 하나로 뭉개지 않는다").toBe(rows.length);
     expect(container.querySelectorAll('[data-testid="mi-candidate-select"]')).toHaveLength(0);
+    expect(
+      container.querySelectorAll('[data-testid="mi-candidate-judgement"]'),
+      "🔴 「우리 판단」 영역이 되살아났다",
+    ).toHaveLength(0);
   });
 
   /**

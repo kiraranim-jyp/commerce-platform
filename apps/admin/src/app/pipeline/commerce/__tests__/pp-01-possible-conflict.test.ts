@@ -229,24 +229,23 @@ describe("PP — AB046 참고 후보(품번만 충돌)", () => {
       expect(rows).toHaveLength(1);
       expect(rows[0]!.getAttribute("data-group")).toBe("POSSIBLE");
       /**
-       * 🔵🔵 **UNIFIED-UX-1 ② 에서 갱신했다 — 약화가 아니라 «강화» 다.**
+       * 🔵🔵 **SOURCING-CARD-MINIMAL-1 — 배치가 CPO 결정 C 로 다시 바뀌었다.**
        *
-       * 🔴 전에는 `toBe("🟡 품번 충돌 · 참고")` 하나였다. 등급이 **「우리 판단」 영역**
-       *    으로 옮겨지며 앞에 `우리 판단:` 접두사가 붙는다(CPO 확정 구조).
-       * 🟢 그래서 **등급 «그리고» 접두사 «그리고» 그 영역 안에 있는가** 를 본다 ⟹
-       *    셋 중 하나라도 무너지면 FAIL 한다(전 단언은 뒤의 둘을 **못 봤다**).
+       * 🔴 전: 등급이 **「우리 판단」 영역 안** 이고 `우리 판단:` 접두사가 붙었다.
+       * 🟢 후: **영역은 제거** 되고 등급 배지가 **기본 정보** 에 선다(접두사 없음 · §3 금지어).
+       * 🟢🟢 **이 계약의 핵심(「AB046 이 「🟡 품번 충돌 · 참고」로 그려진다」)은 불변** 이다 —
+       *    CPO 결정 A·B 가 그 군과 어휘를 **그대로** 지켰다.
+       * 🔴 **약화 0** — 영역이 **되살아나면 FAIL** 하고 금지 어휘도 **같이** 막는다.
        */
       const gradeText = (
         rows[0]!.querySelector('[data-testid="mi-candidate-group"]')?.textContent ?? ""
       ).trim();
-      expect(gradeText).toContain("🟡 품번 충돌 · 참고");
-      expect(gradeText).toContain("우리 판단:");
+      expect(gradeText).toBe("🟡 품번 충돌 · 참고");
+      expect(gradeText, "🔴 셀러 화면에 「우리 판단」이 노출됐다").not.toContain("우리 판단");
       expect(
-        rows[0]!.querySelector(
-          '[data-testid="mi-candidate-judgement"] [data-testid="mi-candidate-group"]',
-        ),
-        "🔴 등급이 「우리 판단」 영역 밖으로 나가면 ②가 깨진 것이다",
-      ).not.toBeNull();
+        rows[0]!.querySelector('[data-testid="mi-candidate-judgement"]'),
+        "🔴 「우리 판단」 영역이 되살아났다",
+      ).toBeNull();
       /** 🔴 가격 영역(`mi-same-row`)에는 **서지 않는다**. */
       expect(host.querySelector('[data-testid="mi-same-row"]')).toBeNull();
     } finally {

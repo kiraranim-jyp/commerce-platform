@@ -222,32 +222,61 @@ describe("V. 🔵 ②⑤⑦ — 기본 5칸 · 등급 이동 · 선택 UI 제거
     expect(AREA_SRC).not.toContain("<CandidateNoteChoices");
   });
 
-  it("V-3 🟢🟢 **등급이 「우리 판단」 영역 안으로 옮겨졌다**(② · 삭제 아님)", async () => {
+  /**
+   * 🔵🔵🔵 **SOURCING-CARD-MINIMAL-1 — V-3/V-4 의 방향이 CPO 결정 C 로 «반전» 됐다.**
+   *
+   * 🔴 전: 「등급이 **「우리 판단」 영역 안** 으로 옮겨졌다」 + 「기본 칸에 등급이 **없다**」
+   * 🟢 후: **영역이 제거** 되고 **등급 배지가 기본 정보 안** 에 선다.
+   * 🟢🟢 **두 계약이 원래 지키던 것은 「등급이 사라지지 않는다」** 이고 그것은 **불변** 이다
+   *    (WU-091 「행마다 판정 라벨」 · 사라지면 후보가 「유력」으로 읽힌다).
+   * 🔴 **약화 0** — 영역이 되살아나면 FAIL · 접두사가 붙으면 FAIL 을 **둘 다** 둔다.
+   */
+  it("V-3 🟢🟢 **등급 배지가 기본 정보 안에 선다**(결정 C · 삭제 아님)", async () => {
     await mount();
-    const judgement = container.querySelector('[data-testid="mi-candidate-judgement"]');
-    expect(judgement, "🔴 영역이 없으면 등급이 갈 곳이 없다").not.toBeNull();
-    /** 🔴 등급 라벨이 **그 안에** 있다 — WU-091 「행마다 판정 라벨」이 깨지지 않는다. */
-    const grade = judgement!.querySelector('[data-testid="mi-candidate-group"]');
-    expect(grade, "🔴 등급이 사라지면 CPO 결정(유지)을 어긴 것이다").not.toBeNull();
-    expect(grade!.textContent).toContain("우리 판단:");
+    expect(
+      container.querySelector('[data-testid="mi-candidate-judgement"]'),
+      "🔴 「우리 판단」 영역이 되살아났다",
+    ).toBeNull();
+    const row = container.querySelector('[data-testid="mi-candidate-row"]')!;
+    const grade = row.querySelector('[data-testid="mi-candidate-group"]');
+    expect(grade, "🔴 등급이 사라지면 CPO 결정 A(유지)를 어긴 것이다").not.toBeNull();
+    /** 🔴 접두사 `우리 판단:` 은 §3 금지어다 — 어휘 자체는 결정 A 로 불변. */
+    expect(grade!.textContent ?? "", "🔴 금지 어휘가 배지에 붙었다").not.toContain("우리 판단");
+    expect(
+      ["🟢 동일상품 가능성 높음", "🟡 동일상품 추정", "🟡 품번 충돌 · 참고"],
+      "🔴 등급 어휘가 바뀌었다 — 결정 A 는 3그룹·현행 문구 유지다",
+    ).toContain((grade!.textContent ?? "").trim());
   });
 
-  it("V-4 🔴 **기본 다섯 칸에 등급이 없다**(② 의 핵심)", async () => {
+  it("V-4 🔴 **기본 칸이 상품·가격·판매처·배지·참고가격 뿐이다**(결정 C 의 핵심)", async () => {
     await mount();
     const row = container.querySelector('[data-testid="mi-candidate-row"]')!;
-    const judgement = row.querySelector('[data-testid="mi-candidate-judgement"]')!;
-    /** 🟢 「우리 판단」 영역을 들어낸 나머지가 **기본 카드** 다. */
-    const basics = row.cloneNode(true) as HTMLElement;
-    basics.querySelector('[data-testid="mi-candidate-judgement"]')?.remove();
-    expect(
-      basics.querySelector('[data-testid="mi-candidate-group"]'),
-      "🔴 기본 칸에 등급이 남아 있으면 ②가 안 된 것이다",
-    ).toBeNull();
-    /** 🟢 다섯 칸은 **그대로 있다**(이미지·상품명·사이트명·링크·가격). */
-    expect(basics.querySelector('[data-testid="mi-candidate-seller"]')).not.toBeNull();
-    expect(basics.querySelector('[data-testid="mi-candidate-price"]')).not.toBeNull();
-    expect(basics.querySelector("a[href]"), "🔴 사이트 링크").not.toBeNull();
-    expect(judgement.textContent ?? "").toContain("우리 판단:");
+    /** 🟢 셀러가 봐야 하는 것 — 전부 **있다**. */
+    for (const id of [
+      "mi-candidate-image",
+      "mi-candidate-price",
+      "mi-candidate-seller",
+      "mi-candidate-group",
+    ]) {
+      expect(row.querySelector(`[data-testid="${id}"]`), `🔴 ${id} 가 없다`).not.toBeNull();
+    }
+    expect(row.querySelector("a[href]"), "🔴 사이트 링크").not.toBeNull();
+    /** 🔴 내부 판단 영역·근거·사람 판정 — 전부 **없다**. */
+    for (const id of [
+      "mi-candidate-judgement",
+      "mi-candidate-judgement-basis",
+      "mi-candidate-warning",
+      "mi-candidate-evidence",
+      "mi-candidate-evidence-line",
+      "mi-candidate-human-verdict",
+    ]) {
+      expect(
+        row.querySelectorAll(`[data-testid="${id}"]`),
+        `🔴 ${id} 가 셀러 카드에 섰다`,
+      ).toHaveLength(0);
+    }
+    /** 🔴 「펼쳐보기」 UI 자체가 **0** 이다(§8 계약). */
+    expect(row.querySelectorAll("details"), "🔴 카드 안에 접힘이 생겼다").toHaveLength(0);
   });
 
   it("V-5 🔴 **내부 토큰이 카드 어디에도 없다**(CPO 검수 항목)", async () => {
@@ -281,62 +310,141 @@ describe("V. 🔵 ②⑤⑦ — 기본 5칸 · 등급 이동 · 선택 UI 제거
 
 /**
  * ════════════════════════════════════════════════════════════════════════════════
- * 🔵🔵🔵 SOURCING-CANDIDATE-**JUDGEMENT-DEDUP-1** — 접힘 안팎의 «역할» 을 가른다
+ * 🔵🔵🔵 SOURCING-**CARD-MINIMAL-1** — 셀러 카드는 «결과만» 말한다 (CPO 2026-11-09)
  * ════════════════════════════════════════════════════════════════════════════════
  *
- * 🔴 CTO 자가 발견 · CPO 승인 — 같은 문장이 **두 번** 섰다:
+ * 🔴🔴 **이 블록은 `JUDGEMENT-DEDUP-1` 의 W-1~W-4 를 «대체» 한다.** 그 넷은
+ *    「판단 근거가 접힘 안팎에 **중복되지 않는다**」를 지켰다. CPO 결정 C 로 그 줄이
+ *    **두 자리에서 모두** 사라졌으므로 **중복은 구조적으로 불가능** 해졌다
+ *    ⟹ 그 보장은 아래 W-4 가 **더 센 형태**(어디에도 없다)로 이어받는다.
+ *
+ * ── 🔵 CPO 결정 네 건 ────────────────────────────────────────────────────────
  * ```
- * 접힘 밖  「판단 근거: ⚠ 확인 필요: 브랜드 미확인」
- * 접힘 안  「⚠ 확인 필요: 브랜드 미확인」            ← 같은 줄
+ * A  동일성 3그룹 유지 — LIKELY / PRESUMED / POSSIBLE · 현행 문구 그대로
+ *    🔴 「동일상품 확정」·새 EXACT tier 를 만들지 않는다 · 승격/축소 0
+ * B  POSSIBLE 유지 — 화면에서 제거 금지(가격 관측 있는 CEO SAME 2건이 사라진다)
+ *    🔴 동일성 그룹과 참고가격 포함 여부를 **서로 종속시키지 않는다**
+ * C  「우리 판단」 영역·판단 근거·근거 접힘 제거 · 등급 배지는 기본 정보로 이동
+ * D  사람 판정 표시 제거(내부 검증 데이터) — 🔴 데이터·API·DB 는 변경 0
  * ```
- * 🟢 **단순 삭제가 아니다**(CPO 조건) — 역할을 가른다:
- *    **밖 = 등급 + 핵심 근거 «하나»** · **안 = 상세(둘째 줄부터 + 긍정 근거)**.
- * 🔴 모든 줄은 여전히 화면에 **한 번씩** 선다(정보 손실 0).
+ * 🔴 **셀러가 보는 것은 넷이다** — 상품(이미지·상품명) · 판매처 · 가격 · 상태 둘
+ *    (동일성 배지 · 참고가격 반영/제외).
  */
-describe("W. 🔵 판단 근거 중복 제거 — 접힘 «안팎» 둘 다 본다", () => {
-  /** 🔴 경고가 **둘 이상** 인 후보 — 그래야 「핵심 1 + 상세 N」이 측정된다. */
-  const TWO_WARNINGS = [
+describe("W. 🔵 SOURCING-CARD-MINIMAL-1 — 결과만 보여준다", () => {
+  /**
+   * 🔴 **3그룹 × 가격 3상태를 한 표본에** 담는다 — §8 이 그 둘을 **독립** 으로
+   *    검증하라고 요구한다. 🔴 국내·해외를 **대칭** 으로 둬서 템플릿 동일성도 같이 본다.
+   *
+   * 🟢 그룹 입구는 **운영 선택기 규칙** 그대로다(복제 계산 0):
+   *    LIKELY ← `SAME` · PRESUMED ← `PRESUMED_SAME` ·
+   *    POSSIBLE ← `CONFLICT` + `MODEL_CODE` 단독 + Evidence 있음.
+   * 🟢 가격 상태도 **운영 술어** 그대로다 — `NOT_PRICED`(금액 없음 또는 미검증) ·
+   *    `EXCLUDED_OBSERVED_DIFFERENCE`(`BRAND_MISMATCH`·`NO_TITLE_OVERLAP` 등) ·
+   *    그 외 `USED`.
+   */
+  const MATRIX = [
+    /** 🇰🇷 LIKELY · USED */
     {
-      domain: "donokids.com",
-      discoveredUrl: "https://donokids.com/p/w",
+      domain: "biskuit.kr",
+      discoveredUrl: "https://biskuit.kr/product/likely",
       title: "허그 헤어리 몬스터 티셔츠",
       market: "KR",
       priceAmount: 88_000,
       priceCurrency: "KRW",
       priceStatus: "VERIFIED_CURRENT",
+      crossSellerVerdict: "SAME",
+      matchTruth: "EXACT_IDENTIFIER",
+      priceTier: "EXACT",
+      crossSellerBlockers: [],
+      matchReasons: ["근거: 핵심 상품명 monster"],
+      source: "DOMESTIC_LISTING",
+    },
+    /** 🇰🇷 PRESUMED · EXCLUDED(상품 차이 확인됨) */
+    {
+      domain: "donokids.com",
+      discoveredUrl: "https://donokids.com/product/presumed",
+      title: "몬스터 반팔 티셔츠",
+      market: "KR",
+      priceAmount: 79_000,
+      priceCurrency: "KRW",
+      priceStatus: "VERIFIED_CURRENT",
       crossSellerVerdict: "PRESUMED_SAME",
       matchTruth: "TEXT_CONFIRMED",
       priceTier: "COMPARISON",
-      crossSellerBlockers: ["BRAND_UNCONFIRMED", "MATERIAL"],
-      /** 🔴 **분모 조건** — 긍정 근거가 없으면 접힘이 서지 않아 중복을 측정할 수 없다
-       *    (변이 D1 이 그 이유로 «통과» 했다 — 계약이 아무것도 못 보고 있었다). */
-      matchReasons: ["근거: 핵심 상품명 monster", "근거: 상품군 TOP↔TOP"],
+      crossSellerBlockers: ["BRAND_MISMATCH"],
+      matchReasons: ["근거: 상품군 TOP↔TOP"],
       source: "DOMESTIC_LISTING",
     },
+    /** 🇰🇷 POSSIBLE · NOT_PRICED(금액 없음) */
+    {
+      domain: "beaumonde.co.kr",
+      discoveredUrl: "https://beaumonde.co.kr/goods/possible",
+      title: "부티 고스트 티셔츠",
+      market: "KR",
+      priceAmount: null,
+      priceCurrency: null,
+      crossSellerVerdict: "CONFLICT",
+      crossSellerConflicts: ["MODEL_CODE"],
+      crossSellerBlockers: [],
+      matchReasons: ["근거: 브랜드 일치"],
+      source: "DOMESTIC_LISTING",
+    },
+    /** 🌎 LIKELY · USED (원본 통화) */
     {
       domain: "junioredition.com",
-      discoveredUrl: "https://junioredition.com/p/w",
+      discoveredUrl: "https://junioredition.com/products/likely",
       title: "Hug Hairy Monster T-Shirt",
       market: "OVERSEAS",
       priceAmount: 37,
       priceCurrency: "GBP",
       priceStatus: "VERIFIED_CURRENT",
+      crossSellerVerdict: "SAME",
+      matchTruth: "EXACT_IDENTIFIER",
+      priceTier: "EXACT",
+      crossSellerBlockers: [],
+      matchReasons: ["근거: 핵심 상품명 monster"],
+      source: "OVERSEAS_AUTO",
+    },
+    /** 🌎 PRESUMED · EXCLUDED */
+    {
+      domain: "tinyapple.net",
+      discoveredUrl: "https://tinyapple.net/products/presumed",
+      title: "Monster Short Sleeve Tee",
+      market: "OVERSEAS",
+      priceAmount: 58,
+      priceCurrency: "USD",
+      priceStatus: "VERIFIED_CURRENT",
       crossSellerVerdict: "PRESUMED_SAME",
       matchTruth: "TEXT_CONFIRMED",
       priceTier: "COMPARISON",
-      crossSellerBlockers: ["BRAND_UNCONFIRMED", "MATERIAL"],
-      matchReasons: ["근거: 핵심 상품명 monster", "근거: 상품군 TOP↔TOP"],
+      crossSellerBlockers: ["NO_TITLE_OVERLAP"],
+      matchReasons: ["근거: 색상 GREY"],
+      source: "OVERSEAS_AUTO",
+    },
+    /** 🌎 POSSIBLE · NOT_PRICED(가격 미검증) */
+    {
+      domain: "bobochoses.com",
+      discoveredUrl: "https://bobochoses.com/products/possible",
+      title: "Booty Ghosts T-shirt",
+      market: "OVERSEAS",
+      priceAmount: 35,
+      priceCurrency: "EUR",
+      priceStatus: "UNVERIFIED_SEARCH",
+      crossSellerVerdict: "CONFLICT",
+      crossSellerConflicts: ["MODEL_CODE"],
+      crossSellerBlockers: [],
+      matchReasons: ["근거: 브랜드 일치"],
       source: "OVERSEAS_AUTO",
     },
   ];
 
-  async function mountWarnings(): Promise<void> {
+  async function mountMatrix(): Promise<void> {
     stubFetch(productionData());
     await act(async () => {
       root.render(
         sellerSurfaceElement({
           marketDone: true,
-          autoCheckResult: { domesticShop: { domesticListingEvidence: TWO_WARNINGS } },
+          autoCheckResult: { domesticShop: { domesticListingEvidence: MATRIX } },
         }),
       );
     });
@@ -347,104 +455,166 @@ describe("W. 🔵 판단 근거 중복 제거 — 접힘 «안팎» 둘 다 본�
     }
   }
 
-  /** 🟢 한 행의 텍스트를 **접힘 상태 그대로** / **펼친 뒤** 두 번 읽는다. */
-  function readRow(row: Element): { folded: string; opened: string } {
-    const folded = (row.textContent ?? "").replace(/\s+/g, " ");
-    for (const d of Array.from(row.querySelectorAll("details"))) {
-      (d as HTMLDetailsElement).open = true;
-    }
-    return { folded, opened: (row.textContent ?? "").replace(/\s+/g, " ") };
-  }
+  const rowsOf = (): HTMLElement[] =>
+    Array.from(container.querySelectorAll('[data-testid="mi-candidate-row"]'));
 
-  it("W-1 🔴🔴 **같은 근거 문장이 두 번 서지 않는다**(국내·해외 각각)", async () => {
-    await mountWarnings();
-    const rows = Array.from(container.querySelectorAll('[data-testid="mi-candidate-row"]'));
-    expect(rows.length, "🔴 분모 0 이면 아무것도 못 본다").toBeGreaterThanOrEqual(2);
-    for (const row of rows) {
-      const basis = row.querySelector('[data-testid="mi-candidate-judgement-basis"]');
-      expect(basis, "🔴 접힘 밖에 핵심 근거가 없다").not.toBeNull();
-      /** 🔴 **접두사를 벗긴** 핵심 문장이 펼친 뒤에도 **한 번만** 나와야 한다. */
-      const core = (basis!.textContent ?? "").replace("판단 근거:", "").trim();
-      expect(core.length).toBeGreaterThan(0);
-      const { opened } = readRow(row);
-      const occurrences = opened.split(core.replace(/\s+/g, " ")).length - 1;
-      expect(
-        occurrences,
-        `🔴 '${core}' 가 ${occurrences}번 나온다 — 접힘 안팎 중복이다`,
-      ).toBe(1);
-    }
-  });
-
-  it("W-2 🟢 **핵심은 밖에 하나 · 상세는 안에** — 역할이 갈린다", async () => {
-    await mountWarnings();
-    const row = container.querySelector('[data-testid="mi-candidate-row"]')!;
-    /** 🔴 접힘 밖 핵심은 **정확히 1줄** 이다(전부 쏟지 않는다). */
-    expect(row.querySelectorAll('[data-testid="mi-candidate-judgement-basis"]')).toHaveLength(1);
-    /**
-     * 🔴🔴 **내 1차 전제가 틀렸고 이 계약이 그것을 잡았다.**
-     *    「핵심 1줄 + 상세 N줄」로 나눌 수 있다고 봤는데, 생산자는 **언제나 최대 한 줄**
-     *    을 낸다(사유를 `·` 로 합친다) ⟹ 「확인 필요」는 **밖에만** 산다.
-     * 🟢 그래서 접힘 안의 경고는 **0 이어야 맞다**(중복이 구조적으로 불가능).
-     */
-    expect(
-      row.querySelectorAll('[data-testid="mi-candidate-warning"]'),
-      "🔴 접힘 안에 경고가 서면 밖의 줄과 중복된다",
-    ).toHaveLength(0);
-    /**
-     * 🔴 핵심은 **「근거 확인」 접힘 밖** 이다(안으로 들어가면 1차에서 안 보인다).
-     * 🔴🔴 `closest("details")` 로 보면 안 된다 — 카드 목록(`mi-candidate-list`)이
-     *    **조상 details** 라서 항상 걸린다(내 1차 단언이 그래서 틀렸다).
-     *    🟢 묻는 것은 **「근거 확인 접힘 안에 있는가」** 하나다.
-     */
-    expect(
-      row
-        .querySelector('[data-testid="mi-candidate-judgement-basis"]')!
-        .closest('[data-testid="mi-candidate-evidence"]'),
-      "🔴 핵심 근거가 「근거 확인」 접힘 안으로 들어갔다",
-    ).toBeNull();
-  });
-
-  it("W-3 🔴 **정보 손실 0** — 모든 줄이 화면에 한 번씩 선다", async () => {
-    await mountWarnings();
-    const row = container.querySelector('[data-testid="mi-candidate-row"]')!;
-    const { opened } = readRow(row);
-    /**
-     * 🟢 **정보 손실 0** — 입력한 사유 **둘 다** 그 한 줄 안에 들어 있다
-     *    (생산자가 `·` 로 합친다) ⟹ 「삭제로 중복을 없앴다」가 아니다.
-     */
-    expect(opened).toContain("판단 근거:");
-    const basis = row.querySelector('[data-testid="mi-candidate-judgement-basis"]')!.textContent ?? "";
-    expect(basis, "🔴 사유 하나가 사라졌다").toContain("브랜드");
-    expect(basis, "🔴 둘째 사유가 사라졌다 — 그것이 정보 손실이다").toContain("소재");
-  });
-
-  it("W-4 🔴 상세가 **없으면 접힘을 만들지 않는다**(빈 틀 금지)", async () => {
-    /** 🟢 경고가 하나뿐인 후보 — 핵심만 밖에 서고 접힘은 **서지 않아야** 한다. */
-    stubFetch(productionData());
-    await act(async () => {
-      root.render(
-        sellerSurfaceElement({
-          marketDone: true,
-          autoCheckResult: {
-            domesticShop: {
-              domesticListingEvidence: [
-                { ...TWO_WARNINGS[0], crossSellerBlockers: ["BRAND_UNCONFIRMED"], matchReasons: [] },
-              ],
-            },
-          },
-        }),
+  /** 🟢 한 행의 **구조 척추** — testid 출현 순서(값이 아니라 «모양» 이다). */
+  const spineOf = (row: Element): string[] =>
+    Array.from(row.querySelectorAll("[data-testid]"))
+      .map((n) => n.getAttribute("data-testid") ?? "")
+      /** 🔴 데이터에 따라 서거나 마는 줄은 **구조 비교에서 뺀다**(없으면 거짓 불일치). */
+      .filter(
+        (id) =>
+          ![
+            "mi-candidate-price-use",
+            "mi-candidate-price-unverified",
+            "mi-candidate-price-krw",
+            "mi-candidate-price-krw-unavailable",
+            "mi-candidate-confirm-price",
+            "mi-candidate-confirm-unavailable",
+          ].includes(id),
       );
-    });
-    for (let i = 0; i < 5; i += 1) {
-      await act(async () => {
-        await Promise.resolve();
-      });
-    }
-    const row = container.querySelector('[data-testid="mi-candidate-row"]')!;
-    expect(row.querySelectorAll('[data-testid="mi-candidate-judgement-basis"]')).toHaveLength(1);
+
+  it("W-1 🔴🔴 **국내·해외 카드가 같은 구조로 그려진다**(별도 템플릿 금지)", async () => {
+    await mountMatrix();
+    const rows = rowsOf();
+    expect(rows.length, "🔴 분모 0 — 아무것도 못 본다").toBeGreaterThanOrEqual(4);
+    /** 🔴 시장은 **운영이 붙인 속성** 으로 가른다 — 글자 추측으로 가르지 않는다. */
+    const marketOf = (r: Element): string =>
+      MATRIX.find((m) => (r.textContent ?? "").includes(m.domain))?.market ?? "?";
+    const kr = rows.filter((r) => marketOf(r) === "KR");
+    const os = rows.filter((r) => marketOf(r) === "OVERSEAS");
+    expect(kr.length, "🔴 국내 행 0 — 분모 미달").toBeGreaterThan(0);
+    expect(os.length, "🔴 해외 행 0 — 분모 미달").toBeGreaterThan(0);
+    /** 🔴 **구조 척추가 한 종류** 여야 한다 — 국내/해외로 갈라지면 FAIL. */
+    const shapes = new Set(rows.map((r) => spineOf(r).join(">")));
     expect(
-      row.querySelector('[data-testid="mi-candidate-evidence"]'),
-      "🔴 상세가 없는데 접힘이 서면 셀러가 열어 보고 빈 것을 본다",
-    ).toBeNull();
+      shapes.size,
+      `🔴 카드 구조가 ${shapes.size} 종류다 — 국내·해외가 같은 템플릿이 아니다`,
+    ).toBe(1);
+    /** 🔴 그리고 그 척추에 **셀러가 봐야 하는 칸** 이 전부 있다. */
+    const spine = spineOf(rows[0]!);
+    for (const id of [
+      "mi-candidate-image",
+      "mi-candidate-group",
+      "mi-candidate-price",
+      "mi-candidate-seller",
+    ]) {
+      expect(spine, `🔴 ${id} 가 척추에 없다`).toContain(id);
+    }
+  });
+
+  it("W-2 🟢 **동일성 3그룹이 각각 현행 문구로 선다**(결정 A·B)", async () => {
+    await mountMatrix();
+    const byGroup = new Map<string, string>();
+    for (const r of rowsOf()) {
+      const g = r.getAttribute("data-group") ?? "";
+      const badge = (
+        r.querySelector('[data-testid="mi-candidate-group"]')?.textContent ?? ""
+      ).trim();
+      expect(badge, `🔴 ${g} 행에 배지가 없다`).not.toBe("");
+      byGroup.set(g, badge);
+    }
+    /** 🔴🔴 **세 군이 전부 화면에 선다** — POSSIBLE 이 빠지면 결정 B 위반이다. */
+    expect([...byGroup.keys()].sort(), "🔴 세 군이 모두 서야 한다").toEqual([
+      "LIKELY",
+      "POSSIBLE",
+      "PRESUMED",
+    ]);
+    /** 🟢 어휘는 **결정 A 로 불변** — 글자를 직접 적는다(상수 import 는 동어반복). */
+    expect(byGroup.get("LIKELY")).toBe("🟢 동일상품 가능성 높음");
+    expect(byGroup.get("PRESUMED")).toBe("🟡 동일상품 추정");
+    expect(byGroup.get("POSSIBLE")).toBe("🟡 품번 충돌 · 참고");
+    /** 🔴 「동일상품 확정」 같은 새 문구를 만들지 않았다. */
+    const all = [...byGroup.values()].join("|");
+    for (const banned of ["동일상품 확정", "확정됨", "EXACT", "우리 판단"]) {
+      expect(all, `🔴 새 어휘/금지 어휘: ${banned}`).not.toContain(banned);
+    }
+  });
+
+  it("W-3 🔴 **참고가격 상태는 동일성과 «독립» 이다**(결정 B)", async () => {
+    await mountMatrix();
+    const seen = new Map<string, string | null>();
+    for (const r of rowsOf()) {
+      const node = r.querySelector('[data-testid="mi-candidate-price-use"]');
+      seen.set(r.getAttribute("data-group") ?? "", node ? (node.textContent ?? "").trim() : null);
+      /** 🟢 상태 줄이 서면 **「반영」 또는 「제외」** 둘 중 하나다(제3의 문구 금지). */
+      if (node) {
+        const t = (node.textContent ?? "").trim();
+        expect(
+          t === "참고가격에 반영" || t === "참고가격 제외 — 상품 차이가 확인됨",
+          `🔴 참고가격 상태 문구가 바뀌었다: ${t}`,
+        ).toBe(true);
+        /** 🔴 내부 사유를 노출하지 않는다 — 「상품 차이가 확인됨」까지가 셀러의 말이다. */
+        expect(t, "🔴 내부 토큰이 참고가격 줄에 노출됐다").not.toMatch(/[A-Z]{2,}_[A-Z_]+/);
+      }
+    }
+    /**
+     * 🔴🔴 **독립성의 증거** — 같은 `PRESUMED` 군이 가격에서는 **제외** 되고,
+     *    `LIKELY` 는 **반영** 되고, `POSSIBLE` 은 금액을 몰라 **줄이 없다**.
+     *    ⟹ 등급이 가격 상태를 결정하지 않는다(종속되면 이 셋이 같아진다).
+     */
+    expect(seen.get("LIKELY"), "🔴 LIKELY 가 반영이 아니다").toBe("참고가격에 반영");
+    expect(seen.get("PRESUMED"), "🔴 PRESUMED 가 제외가 아니다").toBe(
+      "참고가격 제외 — 상품 차이가 확인됨",
+    );
+    /** 🔴 「모른다」면 **줄을 만들지 않는다**(없는 상태를 적지 않는다). */
+    expect(seen.get("POSSIBLE"), "🔴 가격을 모르는데 상태 문구를 적었다").toBeNull();
+    /** 🔴🔴 그리고 **제외된 후보도 목록에서 빠지지 않는다**(결정 B). */
+    expect(rowsOf().length, "🔴 제외 후보가 목록에서 사라졌다").toBeGreaterThanOrEqual(4);
+  });
+
+  it("W-4 🔴🔴 **내부 판단 정보가 셀러 화면에 하나도 없다**(결정 C·D)", async () => {
+    await mountMatrix();
+    const rows = rowsOf();
+    expect(rows.length).toBeGreaterThan(0);
+    for (const r of rows) {
+      /** 🔴 좌표 — 여섯 전부 0. */
+      for (const id of [
+        "mi-candidate-judgement",
+        "mi-candidate-judgement-basis",
+        "mi-candidate-warning",
+        "mi-candidate-evidence",
+        "mi-candidate-evidence-line",
+        "mi-candidate-human-verdict",
+      ]) {
+        expect(r.querySelectorAll(`[data-testid="${id}"]`), `🔴 ${id} 가 섰다`).toHaveLength(0);
+      }
+      /** 🔴 **펼쳐보기 UI 자체가 0** 이다 — 접으면 「나중에 보여주는 것」이 된다. */
+      expect(r.querySelectorAll("details"), "🔴 카드 안에 접힘이 생겼다").toHaveLength(0);
+      /**
+       * 🔴 글자로도 새지 않는다. 🟢 **중복 금지는 여기서 «더 센 형태» 로 이어받는다** —
+       *    DEDUP-1 은 「두 번 적지 않는다」였고 지금은 **「한 번도 적지 않는다」** 다.
+       */
+      const t = r.textContent ?? "";
+      expect(t, "🔴 내부 토큰이 노출됐다").not.toMatch(/[A-Z]{2,}_[A-Z_]+/);
+      for (const banned of [
+        "우리 판단",
+        "판단 근거",
+        "확인 필요:",
+        "브랜드 미확인",
+        "브랜드 불일치",
+        "근거 확인",
+        "이전에 사람이 확인함",
+        "상품명 일치",
+      ]) {
+        expect(t, `🔴 셀러 화면에 내부 판단 어휘: ${banned}`).not.toContain(banned);
+      }
+    }
+  });
+
+  it("W-5 🟢 **내부 데이터와 저장 경로는 보존된다**(결정 C·D 의 조건 · 소스 축)", () => {
+    /**
+     * 🔴🔴 UI 제거가 **데이터 제거로 번지면** 내부 분석·GT 가 같이 죽는다(CPO §4).
+     * 🟢 그래서 **배선이 살아 있다** 는 것을 소스에서 단언한다
+     *    (🔴 `AREA_SRC` 는 파일 머리에서 **주석을 벗긴** 값이다).
+     */
+    expect(AREA_SRC, "🔴 사람 판정 조회/저장 배선이 끊겼다").toContain("useCandidateReview");
+    expect(AREA_SRC, "🔴 reviewApi prop 배선이 끊겼다").toContain("reviewApi");
+    /** 🔴 그러나 **렌더 호출은 0** 이다 — 데이터는 흐르고 화면에는 안 선다. */
+    expect(AREA_SRC, "🔴 경고 줄을 카드가 다시 그린다").not.toContain("candidateWarningLines(row)");
+    expect(AREA_SRC, "🔴 근거 줄을 카드가 다시 그린다").not.toContain(
+      "candidateEvidenceLines(row)",
+    );
   });
 });

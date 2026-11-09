@@ -363,16 +363,27 @@ describe("UX-FINAL-01 ⒝ 🔵 가격이 카드에서 **가장 큰 글자** 다 
    * 🔴 **약화가 아니다** — 순서만 뒤집은 것이 아니라 **등급이 「우리 판단」 영역 «안»**
    *    에 있는지까지 본다(기본 5칸으로 되돌아가면 FAIL).
    */
-  it("⒝-3 🔴🔴 등급이 가격 **뒤** 이고 「우리 판단」 영역 안에 있다(② 확정 구조)", () => {
+  /**
+   * 🔵🔵🔵 **SOURCING-CARD-MINIMAL-1 — 순서가 다시 뒤집혔다(CPO 결정 C).**
+   *
+   * 🔴 「우리 판단」 영역이 **제거** 되고 **등급 배지가 기본 정보로 올라왔다**
+   *    ⟹ 등급이 가격 **앞** 이다(= UNIFIED-UX-1 이전의 배치로 돌아왔다).
+   * 🟢 **⒝-1 이 지키는 뜻은 그대로다** — 「1순위 = **시각 비중**」. 가격이 가장 큰
+   *    글자라는 단언은 그 케이스가 계속 들고 있다(이 케이스는 **순서** 만 본다).
+   * 🔴 **약화 0** — 영역이 **되살아나면 FAIL** 하는 단언을 **같이** 둔다.
+   */
+  it("⒝-3 🔴🔴 등급 배지가 가격 **앞** 이고 「우리 판단」 영역은 없다(결정 C 구조)", () => {
     const group = card.indexOf('data-testid="mi-candidate-group"');
     const price = card.indexOf('data-testid="mi-candidate-price"');
-    const judgement = card.indexOf('data-testid="mi-candidate-judgement"');
     expect(group).toBeGreaterThan(0);
-    expect(judgement).toBeGreaterThan(0);
-    /** 🔴 기본 다섯 칸(가격 포함)이 먼저, 그 뒤가 「우리 판단」이다. */
-    expect(judgement).toBeGreaterThan(price);
-    /** 🔴 등급은 그 영역 **안** 이다(영역 시작 뒤). */
-    expect(group).toBeGreaterThan(judgement);
+    expect(price).toBeGreaterThan(0);
+    /** 🔴 등급이 가격보다 **먼저** 다 — 금액을 먼저 읽고 등급을 모르면 추정가를 확정가로 읽는다. */
+    expect(group, "🔴 등급 배지가 가격 뒤에 있다").toBeLessThan(price);
+    /** 🔴 별도 판단 영역은 **없다**. */
+    expect(
+      card.indexOf('data-testid="mi-candidate-judgement"'),
+      "🔴 「우리 판단」 영역이 되살아났다",
+    ).toBe(-1);
   });
 
   it("⒝-4 🔴 가격 **글자 자체** 는 안 바뀌었다 — 환산·기호 추가가 0 이다", () => {
@@ -474,6 +485,15 @@ describe("UX-FINAL-01 ⒞ 🔵 국내/해외 DOM 구조·타이포가 **같다**
       "mi-candidate-human-verdict",
       "mi-candidate-price-use",
     ]);
+    /**
+     * 🔵🔵 **SOURCING-CARD-MINIMAL-1 — 위 집합의 넷은 이제 «어느 행에도» 서지 않는다**
+     *    (`mi-candidate-evidence` · `mi-candidate-warning` · `mi-candidate-judgement-basis` ·
+     *     `mi-candidate-human-verdict` — CPO 결정 C·D).
+     * 🟢 **목록에 남겨 둔다** — 지우면 그 줄이 되살아날 때 **구조 불일치로 오탐** 이 난다.
+     * 🟢 되살아나는 것을 막는 축은 **다른 계약 다섯** 이 들고 있다
+     *    (`stage2 D1-5` · `cand-02 R2-03/R2-04/R2-07` · `close-04/05` · `sprint3-p4`).
+     * 🟢 그리고 **구조 척추에는 `mi-candidate-group` 이 남아** 국내·해외 동일 구조를 지킨다.
+     */
     const a = shape(kr);
     const b = shape(os);
 
