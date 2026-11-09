@@ -10,6 +10,11 @@ import {
   computePriceChange,
   computePriceTrend,
   computePriceRecommendation,
+  /**
+   * 🔵 REFERENCE-PRICE-PROFITABILITY-AXIS-1 — **별도 축**(CPO 승인 2026-11-09).
+   * 🔴 바로 위 `computePriceRecommendation`(CASE A~D)과 **독립** 이다 — 서로의 입력이 아니다.
+   */
+  computeReferenceProfitability,
   computePriceAlertSignal,
   summarizeDomesticMarketSplit,
   groupMarketObservations,
@@ -1009,6 +1014,14 @@ export async function computeMarketIntelligence(
     })}`,
   );
 
+  /**
+   * 🔵 REFERENCE-PRICE-PROFITABILITY-AXIS-1 — 집계를 **한 번만** 부른다.
+   *    🔴 전에는 return 안에서 인라인으로 불렀는데, 새 축이 **같은 값** 을 읽어야 해서
+   *       두 번 부르면 「두 숫자가 갈릴 수 있는 구조」가 생긴다 ⟹ 변수 하나로 묶는다.
+   *    🟢 집계 **내용은 한 글자도 바뀌지 않았다**(같은 함수 · 같은 인자).
+   */
+  const domesticCandidatePriceSummary = summarizeCandidateOverseasPrices(domesticTransientRecords);
+
   return {
     snapshotId,
     product: { title: product.title.value, brand: product.brand.value, sourceUrl: product.sourceUrl },
@@ -1118,7 +1131,29 @@ export async function computeMarketIntelligence(
      *       권위값이고 GET 에서도 만들어진다. 이 칸은 **transient 만** 담는다.
      *    🔴 판매판정·국내 최저가 계산에 들어가지 않는다(읽는 쪽이 따로 있다).
      */
-    candidateDomesticPrice: summarizeCandidateOverseasPrices(domesticTransientRecords),
+    candidateDomesticPrice: domesticCandidatePriceSummary,
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 REFERENCE-PRICE-PROFITABILITY-AXIS-1 — **별도 축**(CPO 승인 2026-11-09)
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 🔴🔴 **기존 경로에 한 글자도 닿지 않는다** — 이 값은 **여기서 처음 만들어지고**
+     *    `computePriceRecommendation`(CASE A~D) · `computePriceDecision`(verdict) ·
+     *    `buildSellerDecision` · `representativeVerdict` 의 **입력이 아니다**.
+     *    ⟹ `marketCase` · `finalVerdict` · `recommendedPriceKrw` **변화 0**.
+     * 🟢 입력은 **전부 이미 계산된 값** 이다(새 집계·새 수집 **0**) — 참고가격은 바로 위
+     *    집계의 **KRW 최저**, 원가는 `cost.landedCostKrw`, 목표마진은
+     *    `breakdownInput.marginPercent`, 제외 수는 그 집계의 두 칸이다.
+     * 🔴 **KRW 로 좁혀서** 넘긴다 — 환산하지 않는다(WU-020 외화 보호 유지).
+     */
+    referenceProfitability: computeReferenceProfitability({
+      referencePriceKrw: domesticCandidatePriceSummary.byCurrency.KRW?.lowestAmount ?? null,
+      landedCostKrw: cost?.landedCostKrw ?? null,
+      targetMarginPercent: breakdownInput.marginPercent,
+      sellerCount: domesticCandidatePriceSummary.byCurrency.KRW?.count ?? 0,
+      excludedUnverified: domesticCandidatePriceSummary.unverifiedCount,
+      excludedObservedDifference: domesticCandidatePriceSummary.observedDifferenceCount,
+    }),
     /** 🔴 원본 목록도 같이 돌려준다 — 집계만 주면 「어느 후보였나」를 잃는다. */
     candidateOverseasEvidence: overseasEvidence,
   };

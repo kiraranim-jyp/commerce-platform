@@ -182,6 +182,15 @@ import {
   CANDIDATE_PRICE_KRW_PREFIX,
   CANDIDATE_PRICE_KRW_UNAVAILABLE,
   CONFIRM_PRICE_NO_RATE_NOTE,
+  /**
+   * 🔵 REFERENCE-PRICE-PROFITABILITY-AXIS-1 — 🔴 **어휘를 여기서 만들지 않는다.**
+   *    금지 어휘(추천/비추천/낮추/경쟁력)를 계약이 한 자리에서 물 수 있어야 한다.
+   */
+  REFERENCE_PROFITABILITY_TITLE,
+  REFERENCE_PROFITABILITY_BASIS_NOTE,
+  REFERENCE_PROFITABILITY_NOT_A_VERDICT_NOTE,
+  referenceProfitabilityBasisCount,
+  referenceProfitabilityTargetLine,
 } from "./recommended-price-copy";
 /** 🟢 `PriceEditor` 가 쓰는 **그 포맷터** 다 — 두 화면이 같은 숫자를 다르게 적지 않는다. */
 /**
@@ -193,7 +202,12 @@ import {
  * 🔴🔴 **허용 범위는 후보 카드 안뿐** — 집계/요약(`buildPriceGuide` ·
  *    `OverseasReferencePrice`)에는 이 값을 **넣지 않는다**(WU-148 의미 불변).
  */
-import { formatKrw, convertToKrwStrict } from "@commerce/pricing";
+import {
+  formatKrw,
+  convertToKrwStrict,
+  /** 🔵 REFERENCE-PRICE-PROFITABILITY-AXIS-1 — **타입만**(계산은 서버 owner 하나). */
+  type ReferenceProfitabilityResult,
+} from "@commerce/pricing";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -293,6 +307,22 @@ export interface MarketPriceComparisonProps {
   onOpenPriceCalculation?: () => void;
   /**
    * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 REFERENCE-PRICE-PROFITABILITY-AXIS-1 — **참고가격 기준 예상 수익성**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 **위 A/B 와 «세 번째 축» 이다** — 분모가 다르다:
+   * ```
+   * A 추천 판매가격   원가 + 목표마진           (`resolveListingPrice`)
+   * B 시장가격        국내 **EXACT** 최저가      (`computePriceRecommendation`)
+   * 🔵 이 축          수집된 **참고가격**(COMPARISON 포함) (`computeReferenceProfitability`)
+   * ```
+   * 🔴 그래서 **같은 줄·같은 블록에 적지 않는다**(CPO 경계 ③ · B 금액 비노출 동결 유지).
+   * 🟢 **서버가 이미 낸 값** 이다 — 이 컴포넌트는 계산하지 않는다(비율 사본 0).
+   * 🔴 `null` 이면 **영역을 그리지 않는다**(없는 수익성을 지어내지 않는다).
+   */
+  referenceProfitability?: ReferenceProfitabilityResult | null;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
    * 🔵🔵🔵 CORE-UX-SELLER-01 ① — **판매판단. 🔴 이 영역이 «판정하지 않는다».**
    * ══════════════════════════════════════════════════════════════════════════
    *
@@ -366,6 +396,8 @@ export function MarketPriceComparison({
   marketPriceKrw,
   marketPriceMarginPercent,
   onOpenPriceCalculation,
+  /** 🔵 REFERENCE-PRICE-PROFITABILITY-AXIS-1 — 🔴 **세 번째 축**(A/B 와 분모가 다르다). */
+  referenceProfitability,
   sellVerdictCopy,
   /** 🔵 MI-INVESTIGATION-STATE-UX-2 ④ — 기본 `"READY"`(기존 호출부 동작 불변). */
   investigation = "READY",
@@ -947,6 +979,91 @@ export function MarketPriceComparison({
         >
           {PRICE_CALCULATION_LINK_TEXT}
         </button>
+      )}
+
+      {/**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔵🔵🔵 REFERENCE-PRICE-PROFITABILITY-AXIS-1 — **참고가격 기준 예상 수익성**
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * 🔴🔴 **왜 이 영역이 생겼나** — 셀러 화면이 「동일상품 EXACT 가 아니다」는 이유로
+       *    **수익성을 아예 말하지 못했다**(`domesticBasis !== "EXACT"` → `marketCase D`).
+       *    그런데 화면에는 참고가격(예: 🇰🇷 ₩88,000)이 **이미 서 있었다** ⟹ 셀러는
+       *    「가격은 보이는데 팔아서 남는지는 모른다」는 상태였다.
+       * 🟢 CPO ③ — 「동일상품 검증은 가격정보를 **없애는 스위치가 아니라** 가격 근거의
+       *    **신뢰도를 설명하는 기준**」. 그래서 **별도 축** 으로 비율만 낸다.
+       *
+       * 🔴 **이 블록이 하지 않는 것**(계약이 전부 문다):
+       * ```
+       * ❌ 판매 추천/비추천 · 가격 인하 권고 · 「경쟁력」 판정 — 어휘 0
+       * ❌ A(추천 판매가격) · B(시장가격)와 같은 줄 — **분모가 다르다**
+       * ❌ 판매 판정(`sellVerdictCopy`)에 입력 — 서로의 입력이 아니다
+       * ❌ tier 승격 · 금액 재집계 · 환산
+       * ```
+       * 🔴 **테두리로 가른다** — 같은 1차에 있지만 **다른 상자** 여야 셀러가 축을 섞지
+       *    않는다(판정 영역은 요약·Action Center 이고 이 상자가 아니다).
+       * 🔴 비율이 없으면(`marginPercent == null`) **그리지 않는다** — 「0%」는 거짓이다.
+       */}
+      {referenceProfitability?.marginPercent != null && (
+        <div
+          data-testid="reference-profitability"
+          className="mt-3 rounded-lg border border-border-subtle bg-surface-subtle p-2"
+        >
+          <p
+            data-testid="reference-profitability-title"
+            className="text-[11px] font-semibold text-text-secondary"
+          >
+            {REFERENCE_PROFITABILITY_TITLE}
+          </p>
+          {/** 🔴 제목 **바로 밑** 에 전제를 둔다 — 이 줄이 확정 판단과 가르는 장치다. */}
+          <p
+            data-testid="reference-profitability-basis-note"
+            className="mt-0.5 text-[11px] text-text-tertiary"
+          >
+            {REFERENCE_PROFITABILITY_BASIS_NOTE}
+          </p>
+          <p
+            data-testid="reference-profitability-margin"
+            className="mt-1 text-[13px] font-semibold text-text-primary"
+          >
+            {/** 🔴 소수점을 만들지 않는다 — 참고 축에서 0.1% 는 **없는 정밀도** 다. */}
+            예상 마진 {Math.round(referenceProfitability.marginPercent)}%
+          </p>
+          {/** 🟢 분모를 같이 적는다 — 근거 수·제외 수 없이 비율만 주면 셀러가 과신한다. */}
+          <p
+            data-testid="reference-profitability-basis-count"
+            className="mt-0.5 text-[11px] text-text-tertiary"
+          >
+            {referenceProfitabilityBasisCount({
+              sellerCount: referenceProfitability.sellerCount,
+              excludedUnverified: referenceProfitability.excludedUnverified,
+              excludedObservedDifference: referenceProfitability.excludedObservedDifference,
+            })}
+          </p>
+          {/** 🔴 목표마진 비교는 **사실 한 줄** 이다(권고가 아니다) · 없으면 안 선다. */}
+          {(() => {
+            const line = referenceProfitabilityTargetLine({
+              meetsTargetMargin: referenceProfitability.meetsTargetMargin,
+              targetMarginPercent: referenceProfitability.targetMarginPercent,
+            });
+            if (line == null) return null;
+            return (
+              <p
+                data-testid="reference-profitability-target"
+                className="mt-0.5 text-[11px] text-text-secondary"
+              >
+                {line}
+              </p>
+            );
+          })()}
+          {/** 🔴 「판정이 아니다」를 **화면이 직접 말한다** — 주석으로만 두면 셀러가 모른다. */}
+          <p
+            data-testid="reference-profitability-not-a-verdict"
+            className="mt-0.5 text-[11px] text-text-tertiary"
+          >
+            {REFERENCE_PROFITABILITY_NOT_A_VERDICT_NOTE}
+          </p>
+        </div>
       )}
 
       {/**

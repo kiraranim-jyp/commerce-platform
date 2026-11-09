@@ -6,6 +6,8 @@ import {
   type PriceLevel,
   type UnifiedPriceDecision,
   type BuyerImportChargeEstimate,
+  /** 🔵 REFERENCE-PRICE-PROFITABILITY-AXIS-1 — **타입만** 가져온다(계산은 서버가 한다). */
+  type ReferenceProfitabilityResult,
 } from "@commerce/pricing";
 // P-9-A(대표님 지시, 2026-08-30) — @commerce/crawler 루트 배럴(index.ts)은
 // playwright-core/browser-launcher를 함께 export한다. 클라이언트 컴포넌트에서
@@ -858,6 +860,19 @@ export interface PriceHistoryResponse {
    * 🔴 구버전 응답에는 없다(optional) — 없으면 `null` 이고 전과 똑같이 동작한다.
    */
   savedCandidateRows?: GeminiTransientRow[] | null;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 REFERENCE-PRICE-PROFITABILITY-AXIS-1 — **참고가격 기준 예상 수익성**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 **판매 판정이 아니다.** 바로 위 `sellerDecision` 과 **다른 축** 이고 서로의
+   *    입력이 아니다 — 서버가 `computeReferenceProfitability()` 로 **따로** 낸다.
+   * 🟢 그래서 「동일상품 EXACT 가 아니면 수익성을 아예 말할 수 없다」가 **풀린다** —
+   *    `marketCase D` 에서도 **참고가격 기준** 으로는 비율을 낼 수 있다(CPO ③ 별도 축).
+   * 🔴 `marginPercent === null` 은 **측정불가** 다(「0%」가 아니다).
+   * 🔴 구버전 응답에는 없다(optional) — 없으면 그 영역이 **서지 않는다**.
+   */
+  referenceProfitability?: ReferenceProfitabilityResult | null;
 }
 
 interface DecisionFactor {
@@ -1966,6 +1981,19 @@ export interface MarketComparisonInput {
    *    (CPO 범위 제한: GET 집계 owner 유지 · POST transient 승격 금지).
    */
   investigation: "INVESTIGATING" | "READY" | "FAILED";
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 REFERENCE-PRICE-PROFITABILITY-AXIS-1 — **별도 축**(CPO 승인 2026-11-09)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🟢 **새 API·새 계산 0** — 서버가 이미 보낸 `data.referenceProfitability` 그대로다.
+   * 🔴🔴 **위 A/B 두 가격과 합치지 않는다** — A 는 원가 기준 추천가, B 는 국내 EXACT
+   *    기준 시장가격이고, 이것은 **참고가격(COMPARISON 포함) 기준** 이다. 셋은 분모가
+   *    다르므로 **같은 줄에 적지 않는다**(B 금액 비노출 동결도 그대로 유지한다).
+   * 🔴 `null` 은 「참고가격이나 원가가 없다」이고 **실패가 아니다** — 받는 쪽은 그때
+   *    **영역을 만들지 않는다**(없는 수익성을 지어내지 않는다).
+   */
+  referenceProfitability: ReferenceProfitabilityResult | null;
 }
 
 /**
@@ -2506,6 +2534,12 @@ export function DomesticPriceIntelligencePanel({
        */
       investigation:
         autoChecking || loading ? "INVESTIGATING" : data === null ? "FAILED" : "READY",
+      /**
+       * 🔵 REFERENCE-PRICE-PROFITABILITY-AXIS-1 — **그대로 올려보낸다**(가공 0).
+       * 🔴 여기서 비율을 다시 계산하지 않는다 — owner 는 서버의
+       *    `computeReferenceProfitability` 하나다(사본을 만들면 두 숫자가 갈린다).
+       */
+      referenceProfitability: data?.referenceProfitability ?? null,
     };
   }, [
     autoChecking,
@@ -2532,6 +2566,11 @@ export function DomesticPriceIntelligencePanel({
      *    재진입 화면이 **전과 똑같이 빈 채로 남는다**(이 파일이 네 번 밟은 그 함정).
      */
     data?.savedCandidateRows,
+    /**
+     * 🔵 REFERENCE-PRICE-PROFITABILITY-AXIS-1 — 🔴 **빠뜨리면 그 영역이 영원히 안 선다.**
+     *    GET 응답은 첫 렌더보다 늦게 온다(이 파일이 **다섯 번** 밟은 그 함정).
+     */
+    data?.referenceProfitability,
     /**
      * 🔵 MI-INVESTIGATION-STATE-UX-2 ④ — 🔴 **`data` 를 통째로 넣지 않는다.**
      *    그러면 memo 가 응답마다 깨져 위 effect 가 매번 보고한다. 🟢 쓰는 것은

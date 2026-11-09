@@ -204,7 +204,24 @@ describe("B. 배선", () => {
   });
 
   it("MI 가 국내 transient 집계를 낸다", () => {
-    expect(INTEL).toContain("candidateDomesticPrice: summarizeCandidateOverseasPrices(domesticTransientRecords)");
+    /**
+     * 🔵🔵 **REFERENCE-PRICE-PROFITABILITY-AXIS-1 에서 앵커를 갱신했다 — 강화 방향이다.**
+     *
+     * 🔴 전에는 `candidateDomesticPrice: summarizeCandidateOverseasPrices(domesticTransientRecords)`
+     *    라는 **인라인 호출 리터럴** 하나를 단언했다. 그 WU 가 **참고가격 기준 수익성**
+     *    축을 더하면서 같은 집계를 **두 번 부르지 않도록** 변수로 올렸다
+     *    (`domesticCandidatePriceSummary`).
+     * 🟢 그래서 단언을 쪼개 **더 세게** 만들었다 — ⒜ 그 집계를 **그 입력으로** 부른다
+     *    ⒝ 응답 칸이 **그 산출을 싣는다** ⒞ 🔴 **그 호출이 하나뿐이다**(새로 문다).
+     * 🔴 뜻은 바뀌지 않았다 — 「MI 가 국내 transient 집계를 **낸다**」 그대로다.
+     */
+    expect(INTEL).toContain("summarizeCandidateOverseasPrices(domesticTransientRecords)");
+    expect(INTEL).toContain("candidateDomesticPrice: domesticCandidatePriceSummary,");
+    /**
+     * 🔴🔴 **owner 가 하나임을 새로 문다**(전 단언이 못 보던 것) — 같은 집계를 두 번
+     *    부르면 참고가격과 화면 금액이 **갈릴 수 있는 구조** 가 된다.
+     */
+    expect(INTEL.split("summarizeCandidateOverseasPrices(domesticTransientRecords)").length - 1).toBe(1);
     /** 🔴 **같은 집계기** 를 쓴다 — 사본을 만들지 않았다. */
     expect(INTEL).toContain("candidateOverseasPrice: summarizeCandidateOverseasPrices(overseasEvidence)");
   });

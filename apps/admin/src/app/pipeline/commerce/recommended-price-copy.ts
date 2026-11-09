@@ -258,3 +258,62 @@ export function priceBasisVerdictLine(input: {
   }
   return "현재 시장가격으로도 목표마진을 달성할 수 있습니다.";
 }
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 REFERENCE-PRICE-PROFITABILITY-AXIS-1 — **참고가격 기준 예상 수익성** 어휘
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **이 영역은 판매 판정이 «아니다».** 그래서 어휘를 여기서 **따로** 소유한다 —
+ *    위 A/B 문구와 섞이면 셀러가 **셋을 같은 축으로 읽는다**(분모가 다르다).
+ * 🔴 금지 어휘(계약으로 문다): 「추천」·「비추천」·「낮추」·「경쟁력」·「적정가」.
+ *    근거는 `price-decision.ts:16-40` 의 CEO 명시 실측이다 — 같은 상품이 아닌 물건의
+ *    가격으로 **가격 인하를 권하면** 셀러가 **근거 없이 싸게 판다**(6건 중 4건 실측).
+ * 🟢 그러므로 이 영역이 낼 수 있는 것은 **비율 하나와 그 근거** 뿐이다.
+ */
+export const REFERENCE_PROFITABILITY_TITLE = "참고가격 기준 예상 수익성";
+
+/**
+ * 🔴🔴 **제목 바로 밑에 전제를 적는다.** 이 한 줄이 「동일상품 확정 수익성」과 이 영역을
+ *    가르는 **유일한** 장치다 — 빠지면 셀러가 확정 판단으로 읽는다(CPO 경계 ③).
+ */
+export const REFERENCE_PROFITABILITY_BASIS_NOTE =
+  "수집된 판매처 가격(참고가격) 기준입니다 — 동일상품으로 확정된 가격이 아닙니다.";
+
+/** 🔴 「판매 판단에 쓰이지 않는다」를 **화면이 직접 말한다**(CPO 경계 ①의 가시화). */
+export const REFERENCE_PROFITABILITY_NOT_A_VERDICT_NOTE =
+  "이 비율은 판매 여부 판단에 반영되지 않습니다.";
+
+/**
+ * 🔴 근거/제외를 **숫자로** 적는다 — 「N곳으로 계산」과 「M곳은 제외」를 같이 말하지
+ *    않으면 셀러가 **분모를 모른 채** 비율을 믿는다.
+ * 🔴 제외가 0 이면 그 절을 만들지 않는다(없는 제외를 적지 않는다).
+ */
+export function referenceProfitabilityBasisCount(input: {
+  sellerCount: number;
+  excludedUnverified: number;
+  excludedObservedDifference: number;
+}): string {
+  const head = `근거 ${input.sellerCount}곳`;
+  const parts: string[] = [];
+  if (input.excludedUnverified > 0) parts.push(`가격 미확인 ${input.excludedUnverified}곳`);
+  if (input.excludedObservedDifference > 0) {
+    parts.push(`관측 차이 ${input.excludedObservedDifference}곳`);
+  }
+  if (parts.length === 0) return head;
+  return `${head} · 제외 ${parts.join(" · ")}`;
+}
+
+/**
+ * 🟢 목표마진 충족 여부는 **사실 비교 한 줄** 이다(권고가 아니다).
+ * 🔴 `null` 이면 줄을 만들지 않는다 — 목표마진이 없으면 **비교할 대상이 없다**.
+ */
+export function referenceProfitabilityTargetLine(input: {
+  meetsTargetMargin: boolean | null;
+  targetMarginPercent: number | null;
+}): string | null {
+  if (input.meetsTargetMargin == null || input.targetMarginPercent == null) return null;
+  return input.meetsTargetMargin
+    ? `목표마진 ${input.targetMarginPercent}% 이상입니다.`
+    : `목표마진 ${input.targetMarginPercent}%에 미치지 못합니다.`;
+}

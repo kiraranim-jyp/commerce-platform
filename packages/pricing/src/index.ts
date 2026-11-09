@@ -8,6 +8,12 @@ export * from "./price-decision";
 export * from "./price-alert-signal";
 export * from "./landed-cost";
 export * from "./price-recommendation";
+/**
+ * 🔵 REFERENCE-PRICE-PROFITABILITY-AXIS-1 — **별도 축**(CPO 승인 2026-11-09).
+ * 🔴 기존 `price-recommendation`(CASE A~D) · `price-decision`(verdict) 과 **독립** 이다 —
+ *    그 둘의 입력이 되지 않는다(계약이 그 경계를 문다).
+ */
+export * from "./reference-profitability";
 export * from "./seller-action";
 export * from "./market-alert";
 export * from "./sellability";

@@ -3804,6 +3804,16 @@ export function CommerceWorkspace({
              */
             investigation={marketComparison?.investigation ?? "INVESTIGATING"}
             /**
+             * 🔵🔵🔵 REFERENCE-PRICE-PROFITABILITY-AXIS-1 — **그대로 내려보낸다**(가공 0).
+             *
+             * 🔴🔴 이 파일은 **A/B 와 합치지 않는다** — 바로 아래 `marketPriceKrw`(B)와
+             *    위의 `recommendedPriceKrw`(A)는 **다른 분모** 이고, 셋을 한 칸으로
+             *    묶으면 셀러가 같은 축으로 읽는다(CPO 경계 ③).
+             * 🔴 폴백은 `null` 이다 — 첫 프레임에서 **영역을 만들지 않는다**(조사 전에
+             *    수익성을 말하면 그것이 또 하나의 거짓말이다).
+             */
+            referenceProfitability={marketComparison?.referenceProfitability ?? null}
+            /**
              * 🔴 CORE-2S §5-⑤ — 「🧾 현재 판단」이 **원가가 비었다** 는 사실만 말한다.
              *    🔴 이 영역에서 계산하지 않는다(추천가·마진·예상수익 **0** · §3 금지축).
              */

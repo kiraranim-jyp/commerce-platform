@@ -100,8 +100,20 @@ function priceForMargin(costKrw: number, marginPercent: number): number {
 }
 
 /** 판매가 기준 마진율 — packages/pricing 전역에서 쓰는 공식과 동일
- * ((판매가-원가)/판매가*100, price-decision.ts와 동일 분모). */
-function marginPercentAt(priceKrw: number, costKrw: number): number {
+ * ((판매가-원가)/판매가*100, price-decision.ts와 동일 분모).
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 REFERENCE-PRICE-PROFITABILITY-AXIS-1 — **`export` 만 더했다**(CPO 승인 ②)
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **바뀐 것은 가시성 한 글자다.** 공식 · 반환값 · 호출부 · CASE A~D **전부 변경 0**.
+ * 🟢 왜 열었나 — 신규 「참고가격 기준 예상 마진율」 축이 **같은 공식** 을 써야 하는데
+ *    `packages/pricing` 전체에 **export 된 마진 함수가 0** 이었다(전수 grep).
+ *    🔴 CPO 가 「임의로 새 공식을 만들지 말라」 했으므로 **사본을 만들지 않고** 재사용한다 —
+ *       그것이 그 지시를 지키는 **유일한 길** 이다(설계 문서 §2).
+ * 🔴 **이 함수를 고치면 두 축이 같이 움직인다** — 고치기 전에 그 사실을 먼저 본다.
+ */
+export function marginPercentAt(priceKrw: number, costKrw: number): number {
   return Number((((priceKrw - costKrw) / priceKrw) * 100).toFixed(1));
 }
 

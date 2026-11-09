@@ -333,6 +333,12 @@ function SellerSurface(options: SellerSurfaceOptions): ReactElement {
              *    (`marketComparison === null` = 패널이 아직 보고하지 않은 첫 프레임).
              */
             investigation: marketComparison?.investigation ?? "INVESTIGATING",
+            /**
+             * 🔵 REFERENCE-PRICE-PROFITABILITY-AXIS-1 — 🔴 **운영과 같은 폴백**(`null`).
+             *    🔴 하니스가 값을 **지어내지 않는다** — 패널이 보고한 그대로 흐른다
+             *      (그래야 「영역이 선다」가 **배선의 증거** 가 된다 · WU-110 교훈).
+             */
+            referenceProfitability: marketComparison?.referenceProfitability ?? null,
             onApplyRecommendedPrice: recommendedPriceKrw != null ? noop : undefined,
             finalPriceKrw: product.priceOverrideKrw?.value ?? null,
             onConfirmPriceKrw: noop,
