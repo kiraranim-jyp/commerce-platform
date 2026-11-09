@@ -1,0 +1,267 @@
+diff --git a/apps/admin/src/app/pipeline/commerce/MarketPriceComparison.tsx b/apps/admin/src/app/pipeline/commerce/MarketPriceComparison.tsx
+index f88d8e1c..4f5735ea 100644
+--- a/apps/admin/src/app/pipeline/commerce/MarketPriceComparison.tsx
++++ b/apps/admin/src/app/pipeline/commerce/MarketPriceComparison.tsx
+@@ -2515,15 +2515,25 @@ function MarketColumn({
+                           >
+                             {CANDIDATE_JUDGEMENT_PREFIX} {CANDIDATE_GROUP_LABEL[group]}
+                           </p>
++                          {/**
++                            * 🔵🔵🔵 JUDGEMENT-DEDUP-1 ② — **핵심 근거는 «한 번» 만 적는다.**
++                            *
++                            * 🔴 1차 구현이 경고 줄을 **전부** 여기 적고 접힘 안에서도 **또**
++                            *    적어서 같은 문장이 화면에 **두 번** 섰다(CTO 자가 발견 · CPO 승인).
++                            * 🟢 역할을 가른다 — **밖 = 「확인 필요」 · 안 = 긍정 상세 근거**.
++                            * 🟢 생산자 `candidateWarningLines` 는 **언제나 최대 한 줄** 이다
++                            *    (사유를 `·` 로 **합쳐서** 돌려준다) ⟹ 여기서 자를 것이 없다.
++                            * 🔴 **문장을 새로 만들지 않는다**(사본 0) — 접두사만 붙인다.
++                            */}
+                           {candidateWarningLines(row).map((line) => (
+-                            <p
+-                              key={line}
+-                              data-testid="mi-candidate-judgement-basis"
+-                              className="text-[11px] text-text-tertiary"
+-                            >
+-                              {CANDIDATE_JUDGEMENT_BASIS_PREFIX} {line}
+-                            </p>
+-                          ))}
++                              <p
++                                key={line}
++                                data-testid="mi-candidate-judgement-basis"
++                                className="text-[11px] text-text-tertiary"
++                              >
++                                {CANDIDATE_JUDGEMENT_BASIS_PREFIX} {line}
++                              </p>
++                            ))}
+                           {/**
+                             * 🔵 ⑦⒝ — **사람 판정은 «보존하고 표시만» 한다.**
+                             * 🔴 선택 버튼은 제거됐다 — 이 줄은 **이미 저장된** 값을 읽을 뿐이고
+@@ -2602,9 +2612,22 @@ function MarketColumn({
+                             {CANDIDATE_PRICE_USE_LABEL[candidatePriceUse(row)]}
+                           </p>
+                         ) : null}
+-                        {candidateWarningLines(row).length > 0 ||
+-                        candidateEvidenceLines(row).length > 0 ||
+-                        Boolean(reviewApi?.review[row.discoveredUrl]) ? (
++                        {/**
++                          * 🔵🔵🔵 JUDGEMENT-DEDUP-1 ③ — **접힘 안은 「상세 근거」 전용이다.**
++                          *
++                          * 🔴🔴 **내 1차 수정이 틀렸고 계약이 잡았다.** 「핵심 1줄 + 상세
++                          *    N줄」로 나누려고 `.slice(1)` 을 썼는데, 생산자
++                          *    `candidateWarningLines` 는 **언제나 최대 «한 줄»** 을 낸다
++                          *    (모든 사유를 `·` 로 **합쳐서** 돌려준다) ⟹ 그 분기는
++                          *    **영원히 비는 죽은 코드** 였다.
++                          * 🟢 그래서 역할을 **정직하게** 가른다 —
++                          *    **접힘 밖 = 확인 필요(그 한 줄)** · **접힘 안 = 긍정 상세 근거**.
++                          *    ⟹ 같은 문장이 두 영역에 설 **경로 자체가 없다**(중복 0).
++                          * 🔴 **정보 손실 0** — 그 한 줄은 밖에서 **그대로** 읽힌다.
++                          * 🔴 사람 판정 표시도 접힘 밖 「우리 판단」으로 갔으므로 이 조건에서
++                          *    **뺀다** — 남겨 두면 **빈 접힘** 이 선다.
++                          */}
++                        {candidateEvidenceLines(row).length > 0 ? (
+                           <details data-testid="mi-candidate-evidence" className="mt-1">
+                             <summary className="cursor-pointer text-[11px] text-text-tertiary">
+                               ▸ {CANDIDATE_EVIDENCE_FOLD_LABEL}
+@@ -2618,15 +2641,15 @@ function MarketColumn({
+                                 {line}
+                               </p>
+                             ))}
+-                            {candidateWarningLines(row).map((line) => (
+-                              <p
+-                                key={line}
+-                                data-testid="mi-candidate-warning"
+-                                className="text-[11px] text-warning"
+-                              >
+-                                {line}
+-                              </p>
+-                            ))}
++                            {/**
++                              * 🔵🔵 JUDGEMENT-DEDUP-1 ③ — **「확인 필요」 줄은 여기 없다.**
++                              *
++                              * 🔴 그 줄은 **접힘 밖 「우리 판단」** 이 소유한다(역할 분리).
++                              *    여기 다시 적으면 **같은 문장이 두 번** 선다 — 그것이
++                              *    이 WU 가 고친 결함이다(CTO 자가 발견 · CPO 승인).
++                              * 🟢 **지운 것은 중복뿐이다** — 그 문장은 밖에서 그대로 읽힌다.
++                              * 🔴 되살리려면 **밖의 줄을 같이 없애야** 한다(둘 다 두지 않는다).
++                              */}
+                             {/**
+                               * 🔵🔵 D2(STAGE 2-R) — **「내 판단」은 여기 산다**(CPO 확정 구조).
+                               * 🔴 결론 영역이 **아니다** — 근거 상세 영역 안이다
+diff --git a/apps/admin/src/app/pipeline/commerce/__tests__/sourcing-candidate-unified-ux-1.test.ts b/apps/admin/src/app/pipeline/commerce/__tests__/sourcing-candidate-unified-ux-1.test.ts
+index 6de3833a..bcecc228 100644
+--- a/apps/admin/src/app/pipeline/commerce/__tests__/sourcing-candidate-unified-ux-1.test.ts
++++ b/apps/admin/src/app/pipeline/commerce/__tests__/sourcing-candidate-unified-ux-1.test.ts
+@@ -278,3 +278,173 @@ describe("V. 🔵 ②⑤⑦ — 기본 5칸 · 등급 이동 · 선택 UI 제거
+     expect(new Set(rows.map(shape)).size, "🔴 행마다 구조가 다르면 통일이 깨진 것이다").toBe(1);
+   });
+ });
++
++/**
++ * ════════════════════════════════════════════════════════════════════════════════
++ * 🔵🔵🔵 SOURCING-CANDIDATE-**JUDGEMENT-DEDUP-1** — 접힘 안팎의 «역할» 을 가른다
++ * ════════════════════════════════════════════════════════════════════════════════
++ *
++ * 🔴 CTO 자가 발견 · CPO 승인 — 같은 문장이 **두 번** 섰다:
++ * ```
++ * 접힘 밖  「판단 근거: ⚠ 확인 필요: 브랜드 미확인」
++ * 접힘 안  「⚠ 확인 필요: 브랜드 미확인」            ← 같은 줄
++ * ```
++ * 🟢 **단순 삭제가 아니다**(CPO 조건) — 역할을 가른다:
++ *    **밖 = 등급 + 핵심 근거 «하나»** · **안 = 상세(둘째 줄부터 + 긍정 근거)**.
++ * 🔴 모든 줄은 여전히 화면에 **한 번씩** 선다(정보 손실 0).
++ */
++describe("W. 🔵 판단 근거 중복 제거 — 접힘 «안팎» 둘 다 본다", () => {
++  /** 🔴 경고가 **둘 이상** 인 후보 — 그래야 「핵심 1 + 상세 N」이 측정된다. */
++  const TWO_WARNINGS = [
++    {
++      domain: "donokids.com",
++      discoveredUrl: "https://donokids.com/p/w",
++      title: "허그 헤어리 몬스터 티셔츠",
++      market: "KR",
++      priceAmount: 88_000,
++      priceCurrency: "KRW",
++      priceStatus: "VERIFIED_CURRENT",
++      crossSellerVerdict: "PRESUMED_SAME",
++      matchTruth: "TEXT_CONFIRMED",
++      priceTier: "COMPARISON",
++      crossSellerBlockers: ["BRAND_UNCONFIRMED", "MATERIAL"],
++      /** 🔴 **분모 조건** — 긍정 근거가 없으면 접힘이 서지 않아 중복을 측정할 수 없다
++       *    (변이 D1 이 그 이유로 «통과» 했다 — 계약이 아무것도 못 보고 있었다). */
++      matchReasons: ["근거: 핵심 상품명 monster", "근거: 상품군 TOP↔TOP"],
++      source: "DOMESTIC_LISTING",
++    },
++    {
++      domain: "junioredition.com",
++      discoveredUrl: "https://junioredition.com/p/w",
++      title: "Hug Hairy Monster T-Shirt",
++      market: "OVERSEAS",
++      priceAmount: 37,
++      priceCurrency: "GBP",
++      priceStatus: "VERIFIED_CURRENT",
++      crossSellerVerdict: "PRESUMED_SAME",
++      matchTruth: "TEXT_CONFIRMED",
++      priceTier: "COMPARISON",
++      crossSellerBlockers: ["BRAND_UNCONFIRMED", "MATERIAL"],
++      matchReasons: ["근거: 핵심 상품명 monster", "근거: 상품군 TOP↔TOP"],
++      source: "OVERSEAS_AUTO",
++    },
++  ];
++
++  async function mountWarnings(): Promise<void> {
++    stubFetch(productionData());
++    await act(async () => {
++      root.render(
++        sellerSurfaceElement({
++          marketDone: true,
++          autoCheckResult: { domesticShop: { domesticListingEvidence: TWO_WARNINGS } },
++        }),
++      );
++    });
++    for (let i = 0; i < 5; i += 1) {
++      await act(async () => {
++        await Promise.resolve();
++      });
++    }
++  }
++
++  /** 🟢 한 행의 텍스트를 **접힘 상태 그대로** / **펼친 뒤** 두 번 읽는다. */
++  function readRow(row: Element): { folded: string; opened: string } {
++    const folded = (row.textContent ?? "").replace(/\s+/g, " ");
++    for (const d of Array.from(row.querySelectorAll("details"))) {
++      (d as HTMLDetailsElement).open = true;
++    }
++    return { folded, opened: (row.textContent ?? "").replace(/\s+/g, " ") };
++  }
++
++  it("W-1 🔴🔴 **같은 근거 문장이 두 번 서지 않는다**(국내·해외 각각)", async () => {
++    await mountWarnings();
++    const rows = Array.from(container.querySelectorAll('[data-testid="mi-candidate-row"]'));
++    expect(rows.length, "🔴 분모 0 이면 아무것도 못 본다").toBeGreaterThanOrEqual(2);
++    for (const row of rows) {
++      const basis = row.querySelector('[data-testid="mi-candidate-judgement-basis"]');
++      expect(basis, "🔴 접힘 밖에 핵심 근거가 없다").not.toBeNull();
++      /** 🔴 **접두사를 벗긴** 핵심 문장이 펼친 뒤에도 **한 번만** 나와야 한다. */
++      const core = (basis!.textContent ?? "").replace("판단 근거:", "").trim();
++      expect(core.length).toBeGreaterThan(0);
++      const { opened } = readRow(row);
++      const occurrences = opened.split(core.replace(/\s+/g, " ")).length - 1;
++      expect(
++        occurrences,
++        `🔴 '${core}' 가 ${occurrences}번 나온다 — 접힘 안팎 중복이다`,
++      ).toBe(1);
++    }
++  });
++
++  it("W-2 🟢 **핵심은 밖에 하나 · 상세는 안에** — 역할이 갈린다", async () => {
++    await mountWarnings();
++    const row = container.querySelector('[data-testid="mi-candidate-row"]')!;
++    /** 🔴 접힘 밖 핵심은 **정확히 1줄** 이다(전부 쏟지 않는다). */
++    expect(row.querySelectorAll('[data-testid="mi-candidate-judgement-basis"]')).toHaveLength(1);
++    /**
++     * 🔴🔴 **내 1차 전제가 틀렸고 이 계약이 그것을 잡았다.**
++     *    「핵심 1줄 + 상세 N줄」로 나눌 수 있다고 봤는데, 생산자는 **언제나 최대 한 줄**
++     *    을 낸다(사유를 `·` 로 합친다) ⟹ 「확인 필요」는 **밖에만** 산다.
++     * 🟢 그래서 접힘 안의 경고는 **0 이어야 맞다**(중복이 구조적으로 불가능).
++     */
++    expect(
++      row.querySelectorAll('[data-testid="mi-candidate-warning"]'),
++      "🔴 접힘 안에 경고가 서면 밖의 줄과 중복된다",
++    ).toHaveLength(0);
++    /**
++     * 🔴 핵심은 **「근거 확인」 접힘 밖** 이다(안으로 들어가면 1차에서 안 보인다).
++     * 🔴🔴 `closest("details")` 로 보면 안 된다 — 카드 목록(`mi-candidate-list`)이
++     *    **조상 details** 라서 항상 걸린다(내 1차 단언이 그래서 틀렸다).
++     *    🟢 묻는 것은 **「근거 확인 접힘 안에 있는가」** 하나다.
++     */
++    expect(
++      row
++        .querySelector('[data-testid="mi-candidate-judgement-basis"]')!
++        .closest('[data-testid="mi-candidate-evidence"]'),
++      "🔴 핵심 근거가 「근거 확인」 접힘 안으로 들어갔다",
++    ).toBeNull();
++  });
++
++  it("W-3 🔴 **정보 손실 0** — 모든 줄이 화면에 한 번씩 선다", async () => {
++    await mountWarnings();
++    const row = container.querySelector('[data-testid="mi-candidate-row"]')!;
++    const { opened } = readRow(row);
++    /**
++     * 🟢 **정보 손실 0** — 입력한 사유 **둘 다** 그 한 줄 안에 들어 있다
++     *    (생산자가 `·` 로 합친다) ⟹ 「삭제로 중복을 없앴다」가 아니다.
++     */
++    expect(opened).toContain("판단 근거:");
++    const basis = row.querySelector('[data-testid="mi-candidate-judgement-basis"]')!.textContent ?? "";
++    expect(basis, "🔴 사유 하나가 사라졌다").toContain("브랜드");
++    expect(basis, "🔴 둘째 사유가 사라졌다 — 그것이 정보 손실이다").toContain("소재");
++  });
++
++  it("W-4 🔴 상세가 **없으면 접힘을 만들지 않는다**(빈 틀 금지)", async () => {
++    /** 🟢 경고가 하나뿐인 후보 — 핵심만 밖에 서고 접힘은 **서지 않아야** 한다. */
++    stubFetch(productionData());
++    await act(async () => {
++      root.render(
++        sellerSurfaceElement({
++          marketDone: true,
++          autoCheckResult: {
++            domesticShop: {
++              domesticListingEvidence: [
++                { ...TWO_WARNINGS[0], crossSellerBlockers: ["BRAND_UNCONFIRMED"], matchReasons: [] },
++              ],
++            },
++          },
++        }),
++      );
++    });
++    for (let i = 0; i < 5; i += 1) {
++      await act(async () => {
++        await Promise.resolve();
++      });
++    }
++    const row = container.querySelector('[data-testid="mi-candidate-row"]')!;
++    expect(row.querySelectorAll('[data-testid="mi-candidate-judgement-basis"]')).toHaveLength(1);
++    expect(
++      row.querySelector('[data-testid="mi-candidate-evidence"]'),
++      "🔴 상세가 없는데 접힘이 서면 셀러가 열어 보고 빈 것을 본다",
++    ).toBeNull();
++  });
++});
