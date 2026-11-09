@@ -637,6 +637,29 @@ export async function POST(request: Request) {
     domesticReference: intelligence?.candidateDomesticPrice ?? null,
     /**
      * ══════════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 REFERENCE-PRICE-PROFITABILITY-**POST-WIRING-1**(CPO 승인 A · 2026-11-09)
+     * ══════════════════════════════════════════════════════════════════════════
+     *
+     * 🔴🔴 **바로 위 `domesticReference` 와 «같은 수명·같은 통로» 다.** 그것이 A 안의
+     *    전부다 — 화면에 「국내 참고가격 KRW 88,000」이 **뜨는 그 순간** 그 가격 기준
+     *    예상 마진도 같이 뜬다. 🟢 둘이 **항상 같이 있거나 같이 없다** ⟹ 모순이 없다.
+     *
+     * 🔴 **왜 GET 이 아니라 여기인가.** GET 은 `geminiEvidence` 를 **null 로** 부른다
+     *    (B3-04 격리 · `[snapshotId]/route.ts`) ⟹ `domesticTransientRecords` 가 비어
+     *    `referenceProfitability.marginPercent` 가 **항상 null** 이다. 그 사실을
+     *    `reference-profitability-production-wiring-1` 이 실측으로 고정해 뒀다.
+     * 🟢 **B3-04 를 건드리지 않았다** — 복원분을 집계에 넣지 않는다. 바뀐 것은
+     *    「POST 가 **이미 계산한** 값을 한 칸 더 내보낸다」 하나다(WU-056 과 같은 모양).
+     *
+     * 🟢🟢 **`domesticReference` 와 «같은 후보 집합» 임이 구조로 보장된다** — MI 안에서
+     *    둘 다 **같은 변수**(`domesticCandidatePriceSummary`)에서 나온다(계약이 문다).
+     * 🔴 `null` = 참고가격이나 원가가 없다 ⟹ 받는 쪽은 **영역을 만들지 않는다**
+     *    (없는 수익성을 지어내지 않는다).
+     * 🔴 **판매 판정·추천가·CASE A~D 와 무관하다** — 이 칸은 어느 계산의 입력도 아니다.
+     */
+    referenceProfitability: intelligence?.referenceProfitability ?? null,
+    /**
+     * ══════════════════════════════════════════════════════════════════════════
      * 🔵🔵🔵 **IDENTITY-EVIDENCE-API-UI-1 — 응답 계약 ⒜**(CPO 승인 2026-11-08)
      * ══════════════════════════════════════════════════════════════════════════
      *

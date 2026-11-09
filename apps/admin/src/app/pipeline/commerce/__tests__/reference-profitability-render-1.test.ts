@@ -78,10 +78,10 @@ afterEach(async () => {
 });
 
 /** 🔴 **다섯 번 flush** — 패널은 GET → 파생 → 보고로 사이클을 여러 번 돈다(하니스 규약). */
-async function mount(data: PriceHistoryResponse): Promise<void> {
+async function mount(data: PriceHistoryResponse, autoCheckResult?: unknown): Promise<void> {
   stubFetch(data);
   await act(async () => {
-    root.render(sellerSurfaceElement({ marketDone: true }));
+    root.render(sellerSurfaceElement({ marketDone: true, autoCheckResult }));
   });
   for (let i = 0; i < 5; i += 1) {
     await act(async () => {
@@ -97,11 +97,16 @@ async function mount(data: PriceHistoryResponse): Promise<void> {
  * 🔴 손으로 만든 **모양** 이 유니온 밖으로 나가면 typecheck 가 막는다(타입에서 읽는다).
  */
 function withReferenceProfitability(
-  base: PriceHistoryResponse,
   over: Partial<NonNullable<PriceHistoryResponse["referenceProfitability"]>> = {},
-): PriceHistoryResponse {
+): unknown {
+  /**
+   * 🔴🔴 **RPP-POST-WIRING-1 에서 통로를 바꿨다 — GET 이 아니라 POST 다.**
+   *    전에는 이 값을 GET 응답에 얹었는데, 운영 GET 은 `geminiEvidence` 를 null 로
+   *    불러 그 칸이 **항상 null** 이다 ⟹ 그 fixture 는 **운영에 없는 상태** 를 그렸고,
+   *    그래서 이 파일이 전부 초록인데 CEO 화면엔 상자가 없었다(Production UI FAIL).
+   * 🟢 이제 **운영과 같은 통로**(`autoCheckResult`)로만 준다.
+   */
   return {
-    ...base,
     referenceProfitability: {
       basis: "REFERENCE_PRICE",
       marginPercent: 23.5,
@@ -119,7 +124,7 @@ function withReferenceProfitability(
 
 describe("E. 🔵 실제 셀러 화면 — 참고가격 기준 예상 수익성 영역", () => {
   it("E-1 🟢🟢 **배선 네 자리를 통과해 DOM 에 뜬다**", async () => {
-    await mount(withReferenceProfitability(productionData()));
+    await mount(productionData(), withReferenceProfitability());
     const area = container.querySelector('[data-testid="reference-profitability"]');
     expect(
       area,
@@ -129,7 +134,7 @@ describe("E. 🔵 실제 셀러 화면 — 참고가격 기준 예상 수익성 
   });
 
   it("E-2 🔴 **전제를 같이 말한다** — 확정 판단으로 읽히지 않게(CPO 경계 ③)", async () => {
-    await mount(withReferenceProfitability(productionData()));
+    await mount(productionData(), withReferenceProfitability());
     const text = container.querySelector('[data-testid="reference-profitability"]')?.textContent ?? "";
     /** 🔴 글자를 **직접** 단언한다 — 상수에서 읽으면 동어반복이다(메모 그 함정). */
     expect(text).toContain("동일상품으로 확정된 가격이 아닙니다");
@@ -137,7 +142,7 @@ describe("E. 🔵 실제 셀러 화면 — 참고가격 기준 예상 수익성 
   });
 
   it("E-3 🟢 **분모를 같이 말한다** — 근거 수(제외가 있으면 그것도)", async () => {
-    await mount(withReferenceProfitability(productionData()));
+    await mount(productionData(), withReferenceProfitability());
     const text = container.querySelector('[data-testid="reference-profitability-basis-count"]')?.textContent ?? "";
     expect(text).toContain("근거 1곳");
     /** 🔴 제외가 0 이면 그 절을 **만들지 않는다**(없는 제외를 적지 않는다). */
@@ -150,7 +155,8 @@ describe("E. 🔵 실제 셀러 화면 — 참고가격 기준 예상 수익성 
     document.body.appendChild(container);
     root = createRoot(container);
     await mount(
-      withReferenceProfitability(productionData(), {
+      productionData(),
+      withReferenceProfitability({
         excludedCount: 3,
         excludedUnverified: 2,
         excludedObservedDifference: 1,
@@ -163,7 +169,7 @@ describe("E. 🔵 실제 셀러 화면 — 참고가격 기준 예상 수익성 
   });
 
   it("E-4 🔴 비율이 없으면 **영역을 그리지 않는다** — 「0%」를 만들지 않는다", async () => {
-    await mount(withReferenceProfitability(productionData(), { marginPercent: null }));
+    await mount(productionData(), withReferenceProfitability({ marginPercent: null }));
     expect(
       container.querySelector('[data-testid="reference-profitability"]'),
       "🔴 측정불가 상태에서 영역이 서면 셀러가 수익성을 안다고 믿는다",
@@ -176,7 +182,7 @@ describe("E. 🔵 실제 셀러 화면 — 참고가격 기준 예상 수익성 
   });
 
   it("E-6 🔴🔴 **판정 어휘가 그 영역에 없다**(CPO 경계 ①의 화면 축)", async () => {
-    await mount(withReferenceProfitability(productionData()));
+    await mount(productionData(), withReferenceProfitability());
     const text = container.querySelector('[data-testid="reference-profitability"]')?.textContent ?? "";
     for (const banned of ["추천", "비추천", "낮추", "경쟁력", "적정가", "권장"]) {
       expect(text, `🔴 '${banned}' 가 이 영역에 들어가면 참고 축이 «권고» 를 하기 시작한다`).not.toContain(
@@ -186,7 +192,7 @@ describe("E. 🔵 실제 셀러 화면 — 참고가격 기준 예상 수익성 
   });
 
   it("E-7 🔴 기존 판정 영역과 **다른 상자** 다 — 섞이지 않는다", async () => {
-    await mount(withReferenceProfitability(productionData()));
+    await mount(productionData(), withReferenceProfitability());
     const area = container.querySelector('[data-testid="reference-profitability"]');
     expect(area).not.toBeNull();
     /** 🔴 판정 영역(요약·Action Center)이 이 상자 **안에 없다**. */
@@ -198,7 +204,7 @@ describe("E. 🔵 실제 셀러 화면 — 참고가격 기준 예상 수익성 
   });
 
   it("E-8 🟢 **1차 화면** 에 선다 — 접힘 안에 숨지 않는다", async () => {
-    await mount(withReferenceProfitability(productionData()));
+    await mount(productionData(), withReferenceProfitability());
     /**
      * 🔴 `firstScreenText()` 는 **닫힌 `details` 를 제거** 한 텍스트다. 그 안에 들어가면
      *    CEO 가 「수익성을 모른다」고 느낀 상태가 **그대로 남는다**(이 WU 의 목적 불충족).
@@ -207,7 +213,7 @@ describe("E. 🔵 실제 셀러 화면 — 참고가격 기준 예상 수익성 
   });
 
   it("E-9 🔴 **B 금액 비노출 동결** 을 깨지 않는다", async () => {
-    await mount(withReferenceProfitability(productionData()));
+    await mount(productionData(), withReferenceProfitability());
     const text = wholeText(container);
     /**
      * 🔴 참고가격 금액(₩88,000)을 **이 영역이** 적지 않는다 — 금액 owner 는 🇰🇷/🌎

@@ -870,7 +870,13 @@ export interface PriceHistoryResponse {
    * 🟢 그래서 「동일상품 EXACT 가 아니면 수익성을 아예 말할 수 없다」가 **풀린다** —
    *    `marketCase D` 에서도 **참고가격 기준** 으로는 비율을 낼 수 있다(CPO ③ 별도 축).
    * 🔴 `marginPercent === null` 은 **측정불가** 다(「0%」가 아니다).
-   * 🔴 구버전 응답에는 없다(optional) — 없으면 그 영역이 **서지 않는다**.
+   *
+   * 🔴🔴 **이 화면은 이 칸을 «읽지 않는다»**(RPP-POST-WIRING-1 · CPO 지시 ③).
+   *    GET 은 `geminiEvidence` 를 null 로 부르므로(B3-04 격리) 이 칸은 **항상 null** 이다
+   *    — 실측으로 고정돼 있다(`reference-profitability-production-wiring-1` W1).
+   *    🟢 화면이 쓰는 값은 **POST `/check` 응답**(`domesticReference` 의 짝)이다.
+   *    🔴 타입에 남겨 두는 이유는 **서버 응답에 실제로 존재하기 때문** 이다 —
+   *       지우면 응답 모양을 거짓으로 적게 된다.
    */
   referenceProfitability?: ReferenceProfitabilityResult | null;
 }
@@ -2381,6 +2387,24 @@ export function DomesticPriceIntelligencePanel({
   const [overseasReference, setOverseasReference] = useState<OverseasPriceSummary | null>(null);
   /** 🔴 WU-056 — 국내 축도 같은 모양이다. **별 state** 다(권위 집계와 섞지 않는다). */
   const [domesticReference, setDomesticReference] = useState<OverseasPriceSummary | null>(null);
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 REFERENCE-PRICE-PROFITABILITY-**POST-WIRING-1**(CPO 승인 A · 2026-11-09)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 **바로 위 `domesticReference` 와 «같은 수명» 이다** — 둘 다 POST `/check`
+   *    응답에서만 온다. 그래서 「국내 참고가격 KRW 88,000」이 뜨는 화면에서 그 가격
+   *    기준 예상 마진이 **같이** 뜬다(CPO 완료 기준 그 문장).
+   *
+   * 🔴🔴 **GET `data` 에서 읽지 않는다 — 소유권을 섞지 않는다**(CPO 지시 ③).
+   *    GET 은 `geminiEvidence` 를 null 로 부르므로 그 칸이 **항상 null** 이다
+   *    (실측 고정 — `reference-profitability-production-wiring-1` W1). 🔴 둘을
+   *    `??` 로 이으면 「어느 쪽 값인지」가 흐려지고, 재진입에서 **POST 값이 GET 의
+   *    null 로 조용히 덮일** 수 있다.
+   * 🔴 `prev ??` 를 쓰지 않는다 — WU-030 계약(상품 A→B 에서 A 값이 남는다).
+   */
+  const [referenceProfitability, setReferenceProfitability] =
+    useState<ReferenceProfitabilityResult | null>(null);
 
   /**
    * 🔴🔴 WU-082 — **자동 1회차 응답을 참고 축 초기값으로 받는다.**
@@ -2398,6 +2422,11 @@ export function DomesticPriceIntelligencePanel({
     const j = autoCheckResult as {
       overseasReference?: OverseasPriceSummary | null;
       domesticReference?: OverseasPriceSummary | null;
+      /**
+       * 🔵 RPP-POST-WIRING-1 — **최상위 칸** 이고 바로 위 `domesticReference` 의 **짝** 이다
+       *    (서버가 둘을 **같은 집계 변수** 에서 만든다 ⟹ 같은 후보 집합이다).
+       */
+      referenceProfitability?: ReferenceProfitabilityResult | null;
       /** 🔵 IDENTITY-EVIDENCE-API-UI-1 — **최상위 칸** 이다(`domesticShop` 안이 아니다). */
       identityEvidence?: IdentityEvidencePayload | null;
       domesticShop?: {
@@ -2417,6 +2446,8 @@ export function DomesticPriceIntelligencePanel({
     };
     setOverseasReference(j.overseasReference ?? null);
     setDomesticReference(j.domesticReference ?? null);
+    /** 🔵 RPP-POST-WIRING-1 — 🔴 **바로 위 줄과 같은 응답·같은 수명** 이다(A 안의 전부). */
+    setReferenceProfitability(j.referenceProfitability ?? null);
     setGeminiEvidence(j.domesticShop?.geminiEvidence ?? null);
     setUrlCandidateEvidence(j.domesticShop?.urlCandidateEvidence ?? null);
     setOverseasAutoEvidence(j.domesticShop?.overseasAutoEvidence ?? null);
@@ -2538,8 +2569,13 @@ export function DomesticPriceIntelligencePanel({
        * 🔵 REFERENCE-PRICE-PROFITABILITY-AXIS-1 — **그대로 올려보낸다**(가공 0).
        * 🔴 여기서 비율을 다시 계산하지 않는다 — owner 는 서버의
        *    `computeReferenceProfitability` 하나다(사본을 만들면 두 숫자가 갈린다).
+       *
+       * 🔴🔴 **RPP-POST-WIRING-1 에서 출처를 바꿨다 — `data`(GET)가 아니라 POST state 다.**
+       *    GET 은 `geminiEvidence` 를 null 로 부르므로 그 칸이 **항상 null** 이었고,
+       *    그래서 배선이 전부 살아 있는데도 화면에 **한 번도** 서지 못했다(CEO FAIL).
+       *    🟢 지금은 바로 위 `domesticReference` 와 **같은 응답·같은 수명** 이다.
        */
-      referenceProfitability: data?.referenceProfitability ?? null,
+      referenceProfitability,
     };
   }, [
     autoChecking,
@@ -2567,10 +2603,11 @@ export function DomesticPriceIntelligencePanel({
      */
     data?.savedCandidateRows,
     /**
-     * 🔵 REFERENCE-PRICE-PROFITABILITY-AXIS-1 — 🔴 **빠뜨리면 그 영역이 영원히 안 선다.**
-     *    GET 응답은 첫 렌더보다 늦게 온다(이 파일이 **다섯 번** 밟은 그 함정).
+     * 🔵 RPP-POST-WIRING-1 — 🔴 **빠뜨리면 그 영역이 영원히 안 선다.**
+     *    POST 응답은 첫 렌더보다 늦게 온다(이 파일이 **다섯 번** 밟은 그 함정).
+     *    🔴 `data?.referenceProfitability` 가 **아니다** — GET 에서는 항상 null 이다.
      */
-    data?.referenceProfitability,
+    referenceProfitability,
     /**
      * 🔵 MI-INVESTIGATION-STATE-UX-2 ④ — 🔴 **`data` 를 통째로 넣지 않는다.**
      *    그러면 memo 가 응답마다 깨져 위 effect 가 매번 보고한다. 🟢 쓰는 것은
@@ -2946,6 +2983,17 @@ export function DomesticPriceIntelligencePanel({
         setBrandExcludedNotice(json.domesticShop?.brandExcluded?.notice ?? null);
         setOverseasReference(json.overseasReference ?? null);
         setDomesticReference(json.domesticReference ?? null);
+        /**
+         * 🔵 RPP-POST-WIRING-1 — 🔴 **「🔄 다시 분석」 경로에도 같은 줄이 필요하다.**
+         *    여기를 빼먹으면 셀러가 다시 분석했을 때 **참고가격은 갱신되는데 수익성만
+         *    옛 값으로 남는다** — 바로 위 `identityEvidence` 주석이 적어 둔 그 함정이다.
+         * 🟢 바로 아래 `loadPriceHistory()`(GET)가 이 값을 **덮지 않는다** —
+         *    그 경로는 이 state 를 건드리지 않는다(소유권 분리 · CPO 지시 ③).
+         */
+        setReferenceProfitability(
+          (json as { referenceProfitability?: ReferenceProfitabilityResult | null })
+            .referenceProfitability ?? null,
+        );
       }
       await Promise.all([loadPriceHistory(), loadAlerts()]);
     } catch {

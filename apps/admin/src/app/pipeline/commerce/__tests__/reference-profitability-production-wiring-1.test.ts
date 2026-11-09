@@ -239,7 +239,14 @@ describe("W2. 🔴 화면 — CEO 스크린샷을 «그대로» 재현한다", (
     expect(text).toContain("수익성");
   });
 
-  it("W2-3 🟢 **값만 오면 같은 화면이 상자를 그린다** — 배선은 정상이다", async () => {
+  it("W2-3 🔴🔴 **[A 로 뒤집혔다] GET 에 값을 넣어도 그리지 않는다** — 소유권 분리", async () => {
+    /**
+     * 🔵🔵 **조사 시점에는 이 단언이 `not.toBeNull()` 이었다.** 그때 화면은 GET 사본을
+     *    읽었고, 그래서 「값만 오면 그린다(배선 정상)」를 증명하는 데 쓰였다.
+     * 🔴 CPO 승인 A + 지시 ③(소유권 혼합 금지)로 출처를 **POST 로 옮겼다** ⟹ 이제
+     *    GET 에 값이 있어도 **그리지 않는 것이 맞다.** 뜻을 바꾼 것이 아니라 **방향 전환** 이다.
+     * 🟢 그리고 그 전환이 지키는 것 — 재진입에서 **POST 값이 GET 의 null 로 덮이지 않는다**.
+     */
     await mount({
       ...ceoScreenData(),
       referenceProfitability: {
@@ -256,8 +263,8 @@ describe("W2. 🔴 화면 — CEO 스크린샷을 «그대로» 재현한다", (
     });
     expect(
       container.querySelector('[data-testid="reference-profitability"]'),
-      "🟢 prop·deps·Workspace 배선은 전부 살아 있다 — 모자란 것은 **입력** 하나다",
-    ).not.toBeNull();
+      "🔴 GET 사본으로 그리기 시작하면 소유권이 둘이 된다 — W5-1 이 POST 경로를 증명한다",
+    ).toBeNull();
   });
 });
 
@@ -273,33 +280,180 @@ describe("W4. 🔴🔴 **내 1차 결론을 정정한다** — POST 에서는 «
     expect(POST_ROUTE).toContain("      transientEvidence,");
   });
 
-  it("W4-2 🔴🔴 그런데 응답은 **그 칸을 내보내지 않는다** — 여기가 진짜 경계다", () => {
-    /** 🟢 같은 `intelligence` 의 **형제 칸 둘** 은 이미 내보내고 있다(WU-056 선례). */
+  it("W4-2 🟢🟢 **[RPP-POST-WIRING-1 에서 뒤집혔다]** 응답이 그 칸을 내보낸다", () => {
+    /** 🟢 같은 `intelligence` 의 **형제 칸 둘** 과 나란히 선다(WU-056 선례 그대로). */
     expect(POST_ROUTE).toContain("overseasReference: intelligence?.candidateOverseasPrice ?? null");
     expect(POST_ROUTE).toContain("domesticReference: intelligence?.candidateDomesticPrice ?? null");
     /**
-     * 🔴🔴 **이 단언이 FAIL 로 뒤집히는 날이 수정이 들어간 날이다.**
-     *    지금은 `referenceProfitability` 가 응답에 **없다** ⟹ 패널이 받을 방법이 없다.
+     * 🔵🔵 **이 단언은 전에 `not.toContain` 이었고 CPO 승인 A 로 «뒤집혔다».**
+     *    그 뒤집힘 자체가 수정의 증거다(이 리포의 쿠팡 고시 선례와 같은 모양).
      */
-    expect(
-      POST_ROUTE,
-      "🔴 POST 응답에 그 칸이 생기면 이 단언이 FAIL 한다 — 그것이 수정의 증거다",
-    ).not.toContain("referenceProfitability");
+    expect(POST_ROUTE).toContain("referenceProfitability: intelligence?.referenceProfitability ?? null");
   });
 
-  it("W4-3 🔴 그래서 내 1차 보고 문장을 정정한다", () => {
-    /**
-     * 🔴 1차 보고: 「계산 단계부터 null」 — **GET 에서만** 맞다.
-     * 🟢 정정: **POST 에서는 계산된다**(입력이 있다). 그 값이 **응답 경계에서 버려지고**,
-     *    패널은 **GET 사본** 을 읽으므로 화면에 영원히 서지 못한다.
-     * 🔴 즉 끊긴 곳은 **둘** 이고 **같은 성질** 이다 — 「POST 산출을 내보내지 않는다」와
-     *    「패널이 GET 만 읽는다」. `domesticReference` 는 그 둘을 **이미 넘은** 값이다.
-     */
+  it("W4-3 🟢 패널이 **POST 에서** 그 값을 받는다 — GET 사본을 읽지 않는다", () => {
     expect(PANEL).toContain("setDomesticReference(j.domesticReference ?? null)");
+    /** 🟢 자동 1회차 경로. */
+    expect(PANEL).toContain("setReferenceProfitability(j.referenceProfitability ?? null)");
+    /**
+     * 🔴🔴 **CPO 지시 ③ — 소유권을 섞지 않는다.** 그 값을 `data`(GET)에서 읽으면
+     *    재진입에서 **POST 값이 GET 의 null 로 조용히 덮일** 수 있다.
+     */
     expect(
       PANEL,
-      "🔴 패널에 POST 에서 그 값을 받는 자리가 **없다**(그래서 GET 사본만 본다)",
-    ).not.toContain("j.referenceProfitability");
+      "🔴 GET 사본을 다시 읽기 시작하면 소유권이 둘이 된다",
+    ).not.toContain("data?.referenceProfitability ?? null");
+  });
+
+  it("W4-4 🔴 **「🔄 다시 분석」 경로에도 같은 줄이 있다**(빠뜨리면 옛 값이 남는다)", () => {
+    /**
+     * 🔴 그 경로는 `j` 가 아니라 `json` 을 쓴다 — 자동 1회차 effect 와 **다른 자리** 다.
+     *    여기를 빼먹으면 참고가격은 갱신되는데 **수익성만 옛 값** 으로 남는다.
+     */
+    expect(PANEL).toContain("setDomesticReference(json.domesticReference ?? null)");
+    expect(PANEL).toContain(".referenceProfitability ?? null,");
+    const recheck = PANEL.indexOf("setDomesticReference(json.domesticReference");
+    expect(
+      PANEL.slice(recheck, recheck + 600),
+      "🔴 다시 분석 핸들러 안에 그 set 이 없으면 두 숫자가 갈린다",
+    ).toContain("setReferenceProfitability(");
+  });
+
+  it("W4-4b 🔴 **deps 에도 있다** — 🔴 이 축은 «소스로만» 잡힌다(변이 N5 가 통과했다)", () => {
+    /**
+     * 🔴🔴 **변이 N5(deps 한 줄 제거)가 행동 계약 28건을 «전부» 통과했다.**
+     *    POST state 가 바뀌는 그 렌더에서 **다른 deps 도 같이 바뀌어** memo 가 어차피
+     *    다시 계산되기 때문이다 ⟹ 하니스로는 그 누락을 **구조적으로 볼 수 없다.**
+     * 🔴 그런데 운영에서는 두 값이 **따로 도착할 수 있다** — 그때 이 줄이 없으면
+     *    참고가격만 갱신되고 수익성이 **옛 값으로 멈춘다.**
+     * 🟢 그래서 **소스 앵커로** 문다(이 리포가 「다섯 번 밟았다」고 적어 둔 그 함정).
+     */
+    const memoEnd = PANEL.indexOf("      referenceProfitability,\n    };\n  }, [");
+    expect(memoEnd, "🔴 memo 가 그 값을 싣지 않으면 영역이 설 수 없다").toBeGreaterThan(0);
+    const depsStart = PANEL.indexOf("  }, [", memoEnd);
+    const depsEnd = PANEL.indexOf("]);", depsStart);
+    expect(depsEnd).toBeGreaterThan(depsStart);
+    expect(
+      PANEL.slice(depsStart, depsEnd),
+      "🔴 deps 에 없으면 두 숫자가 갈린 채 멈춘다",
+    ).toContain("referenceProfitability,");
+  });
+
+  it("W4-5 🟢🟢 **같은 후보 집합임이 구조로 보장된다**(CPO 지시 ④)", () => {
+    /**
+     * 🔴 「같은 후보로 계산됐는가」를 숫자 비교로 확인하면 **그 순간의 표본** 만 본다.
+     * 🟢 그래서 **구조** 로 단언한다 — 서버가 두 칸을 **같은 변수 하나** 에서 만든다
+     *    ⟹ 분모가 갈릴 **경로 자체가 없다**.
+     */
+    expect(MI).toContain("candidateDomesticPrice: domesticCandidatePriceSummary,");
+    expect(MI).toContain("referencePriceKrw: domesticCandidatePriceSummary.byCurrency.KRW?.lowestAmount");
+    expect(MI).toContain("sellerCount: domesticCandidatePriceSummary.byCurrency.KRW?.count ?? 0");
+    /** 🔴 그 집계를 **한 번만** 부른다(두 번 부르면 두 숫자가 갈릴 수 있다). */
+    expect(MI.split("summarizeCandidateOverseasPrices(domesticTransientRecords)").length - 1).toBe(1);
+  });
+});
+
+describe("W5. 🟢🟢 **[A 구현] POST 응답 → state → 컴포넌트 → DOM**(CPO 지시 ⑤)", () => {
+  /**
+   * 🔴🔴 **이 절이 이 WU 의 완료 기준이다**(CPO 문장) —
+   *    「국내 참고가격이 ₩88,000 으로 표시되는 **순간**, 같은 화면에 참고가격 기준
+   *     예상 마진이 **함께** 표시되어야 한다」.
+   * 🟢 값을 prop 으로 밀어넣지 않는다 — **POST 응답 모양** 하나만 주고 DOM 에서 읽는다
+   *    ⟹ 응답·effect·state·memo·Workspace·영역 **여섯 자리를 전부 통과해야** 뜬다.
+   */
+  function autoCheckWithBoth(): unknown {
+    return {
+      ...(autoCheckWithDomesticReference() as Record<string, unknown>),
+      /** 🟢 서버가 `computeReferenceProfitability` 로 낸 모양 그대로(88,000 · 원가 67,290). */
+      referenceProfitability: {
+        basis: "REFERENCE_PRICE",
+        marginPercent: 23.5,
+        meetsTargetMargin: false,
+        targetMarginPercent: 30,
+        sellerCount: 1,
+        excludedCount: 0,
+        excludedUnverified: 0,
+        excludedObservedDifference: 0,
+        referencePriceKrw: 88_000,
+      },
+    };
+  }
+
+  it("W5-1 🟢🟢 ₩88,000 과 예상 마진이 **같은 화면에** 뜬다(완료 기준)", async () => {
+    await mount(ceoScreenData(), autoCheckWithBoth());
+    const first = firstScreenText(container);
+    expect(first, "🔴 참고가격이 없으면 이 기준 자체가 성립하지 않는다").toContain("국내 참고가격");
+    expect(first).toContain("88,000");
+    const area = container.querySelector('[data-testid="reference-profitability"]');
+    expect(area, "🔴🔴 이것이 CEO FAIL 의 정확한 반대 상태다").not.toBeNull();
+    expect(area?.textContent ?? "").toContain("예상 마진 24%");
+    expect(area?.textContent ?? "").toContain("근거 1곳");
+  });
+
+  it("W5-2 🟢 기존 판매 판단은 **그대로다**(CPO 완료 기준 후반)", async () => {
+    const before = await (async () => {
+      await mount(ceoScreenData(), autoCheckWithDomesticReference());
+      return (
+        container.querySelector('[data-testid="seller-decision"]')?.textContent ?? wholeText(container)
+      );
+    })();
+    await act(async () => root.unmount());
+    container.remove();
+    vi.unstubAllGlobals();
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    await mount(ceoScreenData(), autoCheckWithBoth());
+    const after =
+      container.querySelector('[data-testid="seller-decision"]')?.textContent ?? wholeText(container);
+    /** 🔴 신규 축이 판정 문구를 **한 글자도** 바꾸지 않는다(CPO 경계 ①·②). */
+    expect(after).toBe(before);
+  });
+
+  it("W5-3 🔴 값이 없거나 계산 불가면 **잘못된 마진을 적지 않는다**(CPO 지시 ⑥)", async () => {
+    /** ⒜ POST 가 null 을 주는 경우 — 영역 0. */
+    await mount(ceoScreenData(), {
+      ...(autoCheckWithDomesticReference() as Record<string, unknown>),
+      referenceProfitability: null,
+    });
+    expect(container.querySelector('[data-testid="reference-profitability"]')).toBeNull();
+
+    await act(async () => root.unmount());
+    container.remove();
+    vi.unstubAllGlobals();
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+
+    /** ⒝ 비율만 null 인 경우(원가 없음) — 참고가격은 떠도 **영역은 서지 않는다**. */
+    await mount(ceoScreenData(), {
+      ...(autoCheckWithDomesticReference() as Record<string, unknown>),
+      referenceProfitability: {
+        basis: "REFERENCE_PRICE",
+        marginPercent: null,
+        meetsTargetMargin: null,
+        targetMarginPercent: 30,
+        sellerCount: 1,
+        excludedCount: 0,
+        excludedUnverified: 0,
+        excludedObservedDifference: 0,
+        referencePriceKrw: null,
+      },
+    });
+    expect(firstScreenText(container)).toContain("88,000");
+    expect(
+      container.querySelector('[data-testid="reference-profitability"]'),
+      "🔴 「0%」를 만들지 않는다 — 측정불가는 침묵한다",
+    ).toBeNull();
+  });
+
+  it("W5-4 🔴 **POST 가 없으면 전과 똑같다** — GET 만으로는 서지 않는다(수명 동일)", async () => {
+    await mount(ceoScreenData());
+    expect(
+      container.querySelector('[data-testid="reference-profitability"]'),
+      "🟢 참고가격 블록도 같이 없다 ⟹ 둘이 «항상 같이» 있거나 없다(모순 0)",
+    ).toBeNull();
+    expect(wholeText(container)).not.toContain("국내 참고가격");
   });
 });
 
@@ -311,13 +465,19 @@ describe("W3. 🔴 두 통로가 다르다 — 그것이 경계다", () => {
     expect(PANEL).toContain("const saved = data?.savedCandidateRows ?? null;");
   });
 
-  it("W3-2 신규 축 owner 는 **GET `data`** 다 — 그래서 둘이 만나지 않는다", () => {
-    expect(PANEL).toContain("referenceProfitability: data?.referenceProfitability ?? null,");
+  it("W3-2 🟢🟢 **[A 로 뒤집혔다] 두 통로가 «하나» 가 됐다** — 둘 다 POST 응답이다", () => {
     /**
-     * 🔴🔴 **이 단언이 경계를 못박는다** — 그 값을 `domesticReference` 나 `rows` 에서
-     *    만들지 않는다. 즉 화면에 뜬 ₩88,000 과 신규 축은 **입력이 다르다.**
+     * 🔵🔵 **조사 시점 단언은 `data?.referenceProfitability` 였다** — 그것이 경계였고
+     *    화면에 뜬 ₩88,000(POST)과 신규 축(GET)의 **입력이 달랐다.**
+     * 🟢 A 가 그 둘을 **같은 응답** 으로 합쳤다 ⟹ 같이 뜨거나 같이 없다.
      */
-    const produce = PANEL.indexOf("referenceProfitability: data?.referenceProfitability");
-    expect(PANEL.slice(produce, produce + 200)).not.toContain("domesticReference");
+    expect(PANEL).toContain("setDomesticReference(j.domesticReference ?? null)");
+    expect(PANEL).toContain("setReferenceProfitability(j.referenceProfitability ?? null)");
+    /** 🔴 그리고 그 둘이 **나란히** 설정된다(한쪽만 갱신되는 자리가 없다). */
+    const at = PANEL.indexOf("setDomesticReference(j.domesticReference");
+    expect(
+      PANEL.slice(at, at + 400),
+      "🔴 떨어져 있으면 다음 사람이 한쪽만 고친다",
+    ).toContain("setReferenceProfitability(");
   });
 });

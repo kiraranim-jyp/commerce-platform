@@ -312,14 +312,29 @@ describe("C-W. 🔴🔴 **운영 배선** — 하니스가 못 보는 자리를 
   });
 
   it("C-5 🔴 패널이 그 값을 **생산하고 deps 에도 있다**(다섯 자리 함정)", () => {
-    const body = stripComments(readFileSync(PANEL_SRC, "utf8"));
-    expect(body).toContain("referenceProfitability: data?.referenceProfitability ?? null,");
     /**
-     * 🔴 deps 가 빠지면 **첫 응답 뒤 갱신되지 않는다** — 이 파일이 다섯 번 밟은 자리다.
-     *    🟢 생산 줄 **뒤** 에 한 번 더 등장해야 그것이 deps 배열이다.
+     * 🔵🔵 **RPP-POST-WIRING-1 에서 출처가 바뀌었다 — 이 단언을 갱신·강화했다.**
+     *
+     * 🔴 전에는 `referenceProfitability: data?.referenceProfitability ?? null` 을 봤다.
+     *    그런데 **GET 은 그 칸이 항상 null** 이다(`geminiEvidence` 를 null 로 부른다 ·
+     *    B3-04 격리) ⟹ 그 단언은 **운영에서 절대 발화하지 않는 배선** 을 지키고 있었다.
+     *    🔴 그래서 계약이 전부 초록인데 **CEO 화면엔 영역이 없었다**(Production UI FAIL).
+     * 🟢 지금은 **POST `/check` 응답** 이 owner 다(`domesticReference` 와 같은 수명).
+     *    ⟹ 단언도 **그 통로** 를 본다 — 약화가 아니라 **발화하는 자리로 옮긴 것** 이다.
      */
-    const produce = body.indexOf("referenceProfitability: data?.referenceProfitability");
-    expect(body.indexOf("data?.referenceProfitability,", produce + 1)).toBeGreaterThan(produce);
+    const body = stripComments(readFileSync(PANEL_SRC, "utf8"));
+    /** ⒜ POST 응답에서 받는다(자동 1회차). */
+    expect(body).toContain("setReferenceProfitability(j.referenceProfitability ?? null)");
+    /** ⒝ memo 가 그 state 를 싣는다. */
+    expect(body).toContain("      referenceProfitability,\n    };");
+    /**
+     * ⒞ deps 에도 있다 — 빠지면 **첫 응답 뒤 갱신되지 않는다**(다섯 번 밟은 자리).
+     * 🔴 그리고 **GET 사본을 다시 읽지 않는다**(소유권 혼합 금지 · CPO 지시 ③).
+     */
+    const memoEnd = body.indexOf("      referenceProfitability,\n    };\n  }, [");
+    const depsEnd = body.indexOf("]);", memoEnd);
+    expect(body.slice(memoEnd, depsEnd)).toContain("    referenceProfitability,\n");
+    expect(body).not.toContain("data?.referenceProfitability ?? null");
   });
 
   it("C-6 🔴 셀러 화면 하니스가 **운영과 같은 모양** 으로 넘긴다(드리프트 금지)", () => {
