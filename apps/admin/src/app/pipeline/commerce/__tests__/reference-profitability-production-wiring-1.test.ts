@@ -261,6 +261,48 @@ describe("W2. 🔴 화면 — CEO 스크린샷을 «그대로» 재현한다", (
   });
 });
 
+describe("W4. 🔴🔴 **내 1차 결론을 정정한다** — POST 에서는 «계산된다», 응답에서 버려진다", () => {
+  const POST_ROUTE = strip(
+    readFileSync(join(REPO, "apps/admin/src/app/api/price-history/check/route.ts"), "utf8"),
+  );
+
+  it("W4-1 POST 는 transient 후보를 MI 에 **넣는다**(국내 목록 포함)", () => {
+    expect(POST_ROUTE).toContain("...(domesticShop.domesticListingEvidence ?? [])");
+    expect(POST_ROUTE).toContain("intelligence = await computeMarketIntelligence(");
+    /** 🟢 그 인자가 `transientEvidence` 다 ⟹ `domesticTransientRecords` 가 **채워진다**. */
+    expect(POST_ROUTE).toContain("      transientEvidence,");
+  });
+
+  it("W4-2 🔴🔴 그런데 응답은 **그 칸을 내보내지 않는다** — 여기가 진짜 경계다", () => {
+    /** 🟢 같은 `intelligence` 의 **형제 칸 둘** 은 이미 내보내고 있다(WU-056 선례). */
+    expect(POST_ROUTE).toContain("overseasReference: intelligence?.candidateOverseasPrice ?? null");
+    expect(POST_ROUTE).toContain("domesticReference: intelligence?.candidateDomesticPrice ?? null");
+    /**
+     * 🔴🔴 **이 단언이 FAIL 로 뒤집히는 날이 수정이 들어간 날이다.**
+     *    지금은 `referenceProfitability` 가 응답에 **없다** ⟹ 패널이 받을 방법이 없다.
+     */
+    expect(
+      POST_ROUTE,
+      "🔴 POST 응답에 그 칸이 생기면 이 단언이 FAIL 한다 — 그것이 수정의 증거다",
+    ).not.toContain("referenceProfitability");
+  });
+
+  it("W4-3 🔴 그래서 내 1차 보고 문장을 정정한다", () => {
+    /**
+     * 🔴 1차 보고: 「계산 단계부터 null」 — **GET 에서만** 맞다.
+     * 🟢 정정: **POST 에서는 계산된다**(입력이 있다). 그 값이 **응답 경계에서 버려지고**,
+     *    패널은 **GET 사본** 을 읽으므로 화면에 영원히 서지 못한다.
+     * 🔴 즉 끊긴 곳은 **둘** 이고 **같은 성질** 이다 — 「POST 산출을 내보내지 않는다」와
+     *    「패널이 GET 만 읽는다」. `domesticReference` 는 그 둘을 **이미 넘은** 값이다.
+     */
+    expect(PANEL).toContain("setDomesticReference(j.domesticReference ?? null)");
+    expect(
+      PANEL,
+      "🔴 패널에 POST 에서 그 값을 받는 자리가 **없다**(그래서 GET 사본만 본다)",
+    ).not.toContain("j.referenceProfitability");
+  });
+});
+
 describe("W3. 🔴 두 통로가 다르다 — 그것이 경계다", () => {
   it("W3-1 화면의 참고가격 owner 는 **POST 응답/저장분** 이다", () => {
     /** 🔴 `domesticReference` 는 `autoCheckResult`(POST)에서 **따로** set 된다. */
