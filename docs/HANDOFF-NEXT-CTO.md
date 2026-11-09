@@ -10,13 +10,24 @@
 ```
 ① 🔴 「기준 커밋 e3183254」는 **HEAD 가 아니다.**
      e3183254 = **마지막 «운영 코드» 커밋**(= 배포된 UX ②⑤⑦)
-     d4e0771b = **현재 HEAD**(그 위의 docs 전용 커밋 — 패치 보존)
-   ⟹ 새 세션이 `git log -1` 로 **d4e0771b** 를 봐도 **정상이다.**
-      e3183254 가 안 보인다고 「인계가 틀렸다」로 읽지 않는다.
+     그 **위에 docs 전용 커밋이 쌓여 있다** — 패치 보존(d4e0771b) · 이 인수인계 문서
+   ⟹ 새 세션의 `git log -1` 이 **e3183254 가 아닌 docs 커밋** 을 보여도 **정상이다.**
+      「인계가 틀렸다」로 읽지 않는다.
 
-② 🟢 Production 에 **실제로 떠 있는 커밋도 d4e0771b** 다
-     (빌드 로그 `Commit: d4e0771` · Ready · `ttaejyo.vercel.app` **HTTP 200`).
-     🔴 docs 전용 커밋이라 **운영 동작은 e3183254 와 동일** 하다.
+🔴🔴 **그래서 이 문서는 HEAD 해시를 «박지 않는다».**
+   이 문서를 고쳐 커밋하면 HEAD 가 또 바뀌어 **그 숫자가 즉시 낡는다**
+   (실제로 1차 작성분이 그 함정에 빠졌다 — d4e0771b 라고 적은 순간 HEAD 가 옮겨갔다).
+   🟢 확인은 **해시 대조가 아니라 구조** 로 한다:
+```
+```bash
+git log -3 --stat --oneline     # 위쪽 커밋이 docs/ 만 건드리면 운영 동작은 불변
+git log -1 --format=%h -- apps packages    # ← 이것이 «운영 기준 커밋» 이고 e3183254 여야 한다
+```
+```
+② 🟢 Production 은 **그 docs 커밋 기준으로 Ready** 다(`ttaejyo.vercel.app` HTTP 200).
+   🔴 **docs 전용이라 운영 동작은 e3183254 와 동일** 하다 —
+      main push 가 배포를 부르므로 docs 커밋도 재배포를 일으키지만 **기능 변화는 0** 이다.
+   🔴 배포 **진행 중(Building)** 일 수 있다. 「Ready 아님」을 장애로 읽지 않는다.
 ```
 
 ---
@@ -57,14 +68,23 @@
 
 ```
 브랜치        main
-HEAD          d4e0771b  docs(JUDGEMENT-DEDUP-1): 구현·계약을 패치로 보존
+HEAD          **docs 전용 커밋**(해시를 박지 않는다 — §0① 참조)
 운영 기준 커밋  e3183254  feat(UNIFIED-UX-1 ②⑤⑦)      ← Production 동작의 기준
+              🟢 확인: git log -1 --format=%h -- apps packages
 origin/main   0 / 0 (behind / ahead)
 미커밋        **40** = 수정 12 + 미추적 28   🔴 **보존 대상**
               (그중 `docs/START-HERE.md` 1건 — 진입점 문서다)
 패치          docs/JUDGEMENT-DEDUP-1.patch  (15,245 bytes)
-              `git apply --check` **PASS**(clean 상태에서 확인)
-Production    Ready · Commit d4e0771 · HTTP 200
+              `git apply --check` **PASS**(실측 재확인 2026-11-09)
+Production    docs 커밋 기준 Ready · HTTP 200 · 🔴 운영 동작은 e3183254 와 동일
+```
+
+🔴🔴 **미커밋 40건과 이 패치는 «서로 다른 트랙» 이다 — 실측으로 확인했다.**
+```
+패치가 건드리는 파일  **2개**  MarketPriceComparison.tsx · sourcing-candidate-unified-ux-1.test.ts
+미커밋 40건            MI 스프린트 산출(테스트·fixture·crawler·shared) — 위 2파일 **미포함**
+⟹ 🟢 `git apply` 가 40건과 **충돌하지 않는다**(교집합 0 · reverse check 로 미적용 확인)
+🔴 그래도 STEP 2 는 **--check 를 먼저** 돌린다(§5).
 ```
 
 🔴 **금지** — `git reset` · `git clean` · 광범위 staging · 기존 40건을 이번 커밋에 섞기.
@@ -101,12 +121,15 @@ Production    Ready · Commit d4e0771 · HTTP 200
 
 ### STEP 1 — 환경 확인(첫 명령)
 ```bash
-git status --short
-git log -1 --oneline
-git branch --show-current
-ls -l docs/JUDGEMENT-DEDUP-1.patch
+git fetch origin --quiet
+git branch --show-current                        # main
+git status --short | wc -l                       # 40
+git log -1 --format=%h -- apps packages          # e3183254  ← 운영 기준 커밋
+git rev-list --left-right --count origin/main...HEAD   # 0  0
+git apply --check docs/JUDGEMENT-DEDUP-1.patch && echo PATCH_OK
 ```
-🔴 §3 의 값과 대조해 보고한다. 다르면 **정리하지 말고 차이를 보고**.
+🔴 **대조 대상은 HEAD 해시가 아니라 위 다섯 값** 이다(§0① — 해시는 docs 커밋마다 바뀐다).
+🔴 다르면 **정리하지 말고 차이를 보고**. 특히 `40` 이 줄었으면 **누가 지운 것** 이므로 멈춘다.
 
 ### STEP 2 — 패치 적용(재구현 금지)
 ```bash
