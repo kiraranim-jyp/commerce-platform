@@ -107,6 +107,12 @@ export interface SellerSurfaceOptions {
   marketDone?: boolean;
   /** 국내 비교상품이 확인됐는가 — workflow 의 `domesticDataFound` 입력. */
   domesticDataFound?: boolean;
+  /**
+   * 🔵 **자동 1회차 `POST /check` 응답.** 🔴 GET 에 **없는** 값이 여기로만 온다
+   *    (`domesticReference` · `domesticShop.*Evidence`) ⟹ 그 값이 화면에 서는 모양은
+   *    이 칸 없이는 **재현 불가** 다. 기본 `undefined` = 기존 동작.
+   */
+  autoCheckResult?: unknown;
 }
 
 /** `CommerceWorkspace` 가 셀러 화면에서 조립하는 그 트리. */
@@ -215,6 +221,20 @@ function SellerSurface(options: SellerSurfaceOptions): ReactElement {
    */
   const panel = createElement(DomesticPriceIntelligencePanel, {
     snapshotId,
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 REFERENCE-PRICE-PROFITABILITY-PRODUCTION-WIRING-1 — **POST 경로**
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 🔴🔴 **이 하니스가 지금까지 GET 경로만 그렸다.** 그래서 「POST 응답에만 있는
+     *    값」(`domesticReference` · transient 후보)이 화면에 서는 모양을 **한 번도
+     *    재현하지 못했다** — CEO 스크린샷의 「국내 참고가격 KRW 88,000 · 확인 1곳」이
+     *    정확히 그 값이고, 그 자리를 못 봤기 때문에 직전 WU 가 **입력이 비었다는 사실을
+     *    놓친 채 PASS 로 보고** 됐다.
+     * 🟢 운영과 같은 칸이다 — `CommerceWorkspace` 가 자동 1회차 응답을 이 prop 으로 준다.
+     * 🔴 기본값 `undefined` 라 **기존 계약은 한 글자도 바뀌지 않는다**(effect 가 즉시 return).
+     */
+    autoCheckResult: options.autoCheckResult,
     snapshotOriginPrice:
       product.priceValidity === "VALID"
         ? { amount: product.price.value.amount, currency: product.price.value.currency }
