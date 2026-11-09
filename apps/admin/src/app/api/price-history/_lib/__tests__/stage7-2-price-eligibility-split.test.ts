@@ -210,8 +210,31 @@ describe("STAGE 7-2 — C. 배선과 경계", () => {
     for (const b of ["MATERIAL", "FIT", "SIZE_SYSTEM", "MODEL_CODE_AGE_LINE", "GARMENT_FORM", "AUDIENCE_LINE"]) {
       expect(PRICE_DISQUALIFYING_BLOCKER_LIST, `🔴 ${b}`).not.toContain(b);
     }
-    /** 🔴 집합 리터럴은 **한 곳** 에만 있어야 한다. */
-    expect(AGG.split('"SAME_SELLER_DISTINCT_LISTING"').length - 1).toBe(1);
+    /**
+     * 🔴 집합 리터럴은 **한 곳** 에만 있어야 한다.
+     *
+     * 🔵🔵 **UNIFIED-UX-1 ⑧ 에서 그 「한 곳」이 옮겨졌다 — 뜻은 그대로다.**
+     *    셀러 화면이 「이 후보가 참고가격에서 빠졌다」를 말하려면 **같은 술어** 가
+     *    필요한데, `candidate-market.ts` 는 `@commerce/crawler` **루트 배럴** 을
+     *    import 해서 클라이언트가 가져올 수 없다(P-9-A). 🔴 화면에 문자열을 베끼면
+     *    두 집합이 갈린다 ⟹ **import 0 인 순수 모듈** 로 옮겼다.
+     * 🟢 그래서 단언을 **더 세게** 만들었다 — ⒜ 새 owner 에 **정확히 1회**
+     *    ⒝ 집계기엔 **0회**(사본 없음) ⒞ 🔴 **화면 파일에도 0회**(그 자리가 새 위험이다).
+     */
+    const OWNER = strip(
+      readFileSync(join(__dirname, "../../../../../lib/price-disqualifying-blockers.ts"), "utf8"),
+    );
+    const SCREEN = strip(
+      readFileSync(
+        join(__dirname, "../../../../pipeline/commerce/MarketPriceComparison.tsx"),
+        "utf8",
+      ),
+    );
+    expect(OWNER.split('"SAME_SELLER_DISTINCT_LISTING"').length - 1).toBe(1);
+    expect(AGG.split('"SAME_SELLER_DISTINCT_LISTING"').length - 1).toBe(0);
+    expect(SCREEN.split("SAME_SELLER_DISTINCT_LISTING").length - 1).toBe(0);
+    /** 🟢 그리고 집계기가 **그 owner 를 실제로 읽는다**(끊기면 사본이 되살아난다). */
+    expect(AGG).toContain('from "@/lib/price-disqualifying-blockers"');
   });
 
   it("C-3 🔴 Identity 정책을 건드리지 않았다 — 분류표·verdict·tier **불변**", () => {

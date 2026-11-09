@@ -1,3 +1,8 @@
+/**
+ * 🔵 SOURCING-CANDIDATE-UNIFIED-UX-1 ⑧ — 🔴 **금액 자격 술어의 owner 는 하나다.**
+ *    집계기(`candidate-market.ts`)가 읽는 **그 집합** 을 화면도 읽는다(사본 0).
+ */
+import { isPriceDisqualifiedByObservedDifference } from "@/lib/price-disqualifying-blockers";
 import {
   domesticMatchDisplay,
   tierDisplay,
@@ -2199,3 +2204,50 @@ export function costHoldLines(
   if (costPriceKrw != null) return [PRICE_DECISION_COST_AXIS];
   return [PRICE_DECISION_COST_AXIS, COST_REQUIRED_NOTE, COST_REQUIRED_SCOPE];
 }
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 SOURCING-CANDIDATE-UNIFIED-UX-1 ⑧ — **후보 카드가 「참고가격에 썼는가」를 말한다**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **CEO 화면의 실제 불만이 이것이다.** 화면이 이렇게 서 있었다:
+ * ```
+ * 「국내 참고가격 KRW 88,000 · 확인 1곳」   ← 어느 후보인지 안 적는다
+ * 「국내 소싱 후보 2곳」                     ← 나머지 하나가 왜 빠졌는지 안 적는다
+ * ```
+ * 🟢 **분모는 이미 맞다**(계약 `sourcing-candidate-count-denominators-1` D-1 —
+ *    후보 2 = 가격 쓴 1 + 제외 1 · 합계 3이 **아니다**). 빠진 것은 **표시** 하나다.
+ *
+ * 🔴 **새 규칙을 만들지 않는다** — 자격 술어는 집계기와 **같은 owner**
+ *    (`@/lib/price-disqualifying-blockers`)를 쓰고, 가격 공식·제외 조건은 **변경 0** 이다.
+ * 🔴 상태를 **셋으로** 가른다 — 「썼다」·「제외」·「모른다」. 🔴 「모른다」를 「제외」로
+ *    적지 않는다(가격이 없거나 미확인이면 애초에 분모가 아니다).
+ */
+export type CandidatePriceUse = "USED" | "EXCLUDED_OBSERVED_DIFFERENCE" | "NOT_PRICED";
+
+/** 🟢 집계기가 금액을 세는 조건과 **같은 순서** 로 본다(사본 아님 · 같은 술어 재사용). */
+export function candidatePriceUse(row: {
+  priceAmount?: number | null;
+  priceStatus?: string | null;
+  crossSellerBlockers?: string[];
+}): CandidatePriceUse {
+  /** 🔴 금액이 없으면 **제외가 아니다** — 분모에 들어간 적이 없다. */
+  if (row.priceAmount == null || !Number.isFinite(row.priceAmount)) return "NOT_PRICED";
+  /** 🔴 「금액은 있는데 확인만 안 됐다」도 금액 집계 밖이다(집계기의 `unverifiedCount`). */
+  if (row.priceStatus != null && row.priceStatus !== "VERIFIED_CURRENT") return "NOT_PRICED";
+  if (isPriceDisqualifiedByObservedDifference(row.crossSellerBlockers)) {
+    return "EXCLUDED_OBSERVED_DIFFERENCE";
+  }
+  return "USED";
+}
+
+/**
+ * 🔴 **사람의 말** 이다 — 내부 토큰(`BRAND_MISMATCH` 등)을 화면에 노출하지 않는다.
+ * 🔴 「추천/비추천」 어휘 **0** — 이 줄은 **사실 하나** 만 적는다.
+ */
+export const CANDIDATE_PRICE_USE_LABEL: Record<CandidatePriceUse, string | null> = {
+  USED: "참고가격에 반영",
+  EXCLUDED_OBSERVED_DIFFERENCE: "참고가격 제외 — 상품 차이가 확인됨",
+  /** 🔴 `null` = **줄을 만들지 않는다**(없는 상태를 적지 않는다). */
+  NOT_PRICED: null,
+};

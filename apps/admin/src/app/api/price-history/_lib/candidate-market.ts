@@ -306,17 +306,20 @@ const PRICE_VERIFIED_STATUS = "VERIFIED_CURRENT";
  *    `MODEL_CODE_AGE_LINE`(CPO ③ 현행 유지).
  * 🔴 **집합을 넓히거나 좁히는 것은 제품 정책 변경** 이다 — 코드에서 임의로 고치지 않는다.
  */
-const PRICE_DISQUALIFYING_BLOCKERS: ReadonlySet<string> = new Set([
-  /** 브랜드를 **읽었고 서로 달랐다**(「확인 못 했다」가 아니다). */
-  "BRAND_MISMATCH",
-  /** 제목이 **하나도 겹치지 않는다** — 겹침이 「없다」는 관측이다. */
-  "NO_TITLE_OVERLAP",
-  /** 🔴 **같은 판매처가 서로 다른 두 상품으로 진열했다** — 판매처 스스로의 선언이다. */
-  "SAME_SELLER_DISTINCT_LISTING",
-]);
+/**
+ * 🔵🔵 **SOURCING-CANDIDATE-UNIFIED-UX-1 ⑧ — 집합을 «순수 모듈» 로 옮겼다.**
+ *
+ * 🔴 **내용은 한 글자도 바뀌지 않았다**(세 사유 그대로). 옮긴 이유는 하나다 —
+ *    셀러 **화면** 이 「이 후보가 참고가격에서 빠졌다」를 말하려면 같은 술어가 필요한데,
+ *    이 파일은 `@commerce/crawler` **루트 배럴** 을 import 해서 클라이언트가 가져올 수
+ *    없다(P-9-A · Node 전용 모듈이 브라우저 번들에 끌려 들어온다).
+ * 🔴 화면에 **문자열을 베껴 두면** 두 집합이 갈리는 날이 온다 — 그때 화면은 「제외」라
+ *    적고 서버는 금액에 넣는다(= 화면이 거짓말한다) ⟹ **owner 는 하나** 로 둔다.
+ * 🟢 서버 동작 **변경 0** — 아래 사용처가 그대로 이 집합을 읽는다.
+ */
+import { PRICE_DISQUALIFYING_BLOCKERS } from "@/lib/price-disqualifying-blockers";
 
-/** 🟢 계약이 「부분집합인가」를 검사하는 지점(사본 금지). */
-export const PRICE_DISQUALIFYING_BLOCKER_LIST: readonly string[] = [...PRICE_DISQUALIFYING_BLOCKERS];
+export { PRICE_DISQUALIFYING_BLOCKER_LIST } from "@/lib/price-disqualifying-blockers";
 
 export interface CandidateOverseasPriceSummary {
   /** 가격 증거가 있는 해외/UNKNOWN 후보 수. */

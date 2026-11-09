@@ -79,6 +79,12 @@ import {
    * 🔴 가격 축(`selectMiSameCandidates`)과 **다른 함수** 다 — 그 정책은 변경 0.
    */
   selectCandidateList,
+  /**
+   * 🔵 UNIFIED-UX-1 ⑧ — 🔴 **화면이 자기 규칙을 만들지 않는다.** 자격 술어는
+   *    집계기와 같은 owner 이고 어휘도 `mi-same-candidates` 가 소유한다.
+   */
+  candidatePriceUse,
+  CANDIDATE_PRICE_USE_LABEL,
   CANDIDATE_LIST_HEADING,
   CANDIDATE_GROUP_LABEL,
   CANDIDATE_LIST_EMPTY,
@@ -2514,6 +2520,34 @@ function MarketColumn({
                           *    섞으면 카드가 다시 「스스로 모순」된다.
                           * 🔴 내부 판정 어휘(`판정방법:`·`판정근거:`)는 leaf 가 버린다.
                           */}
+                        {/**
+                          * ══════════════════════════════════════════════════════
+                          * 🔵🔵🔵 UNIFIED-UX-1 ⑧ — **이 후보가 참고가격에 «쓰였는가»**
+                          * ══════════════════════════════════════════════════════
+                          *
+                          * 🔴🔴 CEO 화면의 실제 불만이 이 줄의 부재였다 — 「확인 1곳」이
+                          *    **어느 후보** 인지, 나머지가 **왜 빠졌는지** 알 수 없었다.
+                          * 🟢 분모는 이미 맞았다(후보 2 = 반영 1 + 제외 1 · 합계 3이 아니다).
+                          *    빠진 것은 **표시** 하나다.
+                          * 🔴 **새 규칙 0** — 자격 술어는 집계기와 **같은 owner** 를 쓴다.
+                          *    가격 공식·제외 조건 **변경 0**(CPO 실행 조건).
+                          * 🔴 접힘 **밖** 에 둔다 — 접으면 또 「안 적는 것」과 같아진다.
+                          * 🔴 「모른다」(가격 없음·미확인)면 **줄을 만들지 않는다**.
+                          * 🟢 국내·해외가 **같은 카드** 라 이 줄도 두 시장에 **동시에** 선다.
+                          */}
+                        {CANDIDATE_PRICE_USE_LABEL[candidatePriceUse(row)] ? (
+                          <p
+                            data-testid="mi-candidate-price-use"
+                            data-use={candidatePriceUse(row)}
+                            className={
+                              candidatePriceUse(row) === "USED"
+                                ? "mt-1 text-[11px] text-text-secondary"
+                                : "mt-1 text-[11px] text-text-tertiary"
+                            }
+                          >
+                            {CANDIDATE_PRICE_USE_LABEL[candidatePriceUse(row)]}
+                          </p>
+                        ) : null}
                         {candidateWarningLines(row).length > 0 ||
                         candidateEvidenceLines(row).length > 0 ||
                         Boolean(reviewApi?.review[row.discoveredUrl]) ? (
