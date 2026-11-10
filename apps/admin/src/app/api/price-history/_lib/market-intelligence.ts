@@ -214,7 +214,11 @@ function dedupeEvidenceByUrl<T extends { discoveredUrl: string }>(rows: readonly
  *    🟢 그래서 POST·GET 어느 경로든 **행마다 이 칸이 «있다»**(있음/없음이 경로에 따라
  *    갈리면 UI 가 「undefined 면 옛 경로」 같은 분기를 만들게 된다).
  */
-function attachDerivedKrw<T extends { discoveredUrl: string }>(
+/**
+ * 🔵 MI-KRW-DERIVED-PIPELINE-WIRING-1 — **export 한다.** 합류 지점(`check/route.ts`)이
+ *    화면으로 가는 6배열에 **같은 함수** 를 적용해야 한다(사본을 만들면 규칙이 갈린다).
+ */
+export function attachDerivedKrw<T extends { discoveredUrl: string }>(
   rows: readonly T[] | null | undefined,
   krwByUrl: ReadonlyMap<string, number>,
 ): (T & { priceKrwDerived: number | null })[] | null {
@@ -1384,6 +1388,21 @@ export async function computeMarketIntelligence(
      * 🔵 §3-2 — **행에 `priceKrwDerived` 가 실려 나간다**(원본 칸은 그대로).
      * 🔴 POST 경로의 UI 행이 이것이다 ⟹ `:2486`·`:2658` 이 **같은 숫자** 를 읽는다.
      */
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 MI-KRW-DERIVED-PIPELINE-WIRING-1 §2-1 — **파생 금액 지도를 내보낸다**
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 🔴🔴 **왜 필요한가.** 화면의 후보 카드는 이 함수의 반환이 아니라
+     *    `domesticShop.overseasAutoEvidence` 등 **runner 가 만든 6배열** 을 읽는다.
+     *    그 배열들은 `attachDerivedKrw` 를 거치지 않아 **전건 「원화 환산 불가」** 였다.
+     *    ⟹ 합류 지점(`check/route.ts`)이 환산값을 붙이려면 **이 지도** 가 필요하다.
+     * 🔴 **환율표가 아니다.** URL → **이미 환산된 KRW 금액** 이다 ⟹ 내부 환율 데이터가
+     *    API 로 나가지 않는다(CPO 제약 ①). 🔴 route 는 환율을 **새로 조회하지 않는다.**
+     * 🔴 그래서 **환산 owner 는 여전히 이 파일 하나** 다 — route 는 «붙이기만» 한다.
+     * 🟢 `Object.fromEntries` 로 평범한 객체로 내보낸다(Map 은 JSON 직렬화되지 않는다).
+     */
+    candidateKrwByUrl: Object.fromEntries(candidateKrwByUrl),
     geminiEvidence: attachDerivedKrw(geminiEvidence, candidateKrwByUrl),
     /**
      * ══════════════════════════════════════════════════════════════════════

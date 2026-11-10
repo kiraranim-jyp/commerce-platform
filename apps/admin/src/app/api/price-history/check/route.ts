@@ -4,7 +4,7 @@ import { backfillCanonicalProduct, buildProductIdentityDna } from "@commerce/sha
 import { computeMarketAlert, type AlertCategory } from "@commerce/pricing";
 import { resolveMarketCategoryScopes } from "../../domestic-price-sources/_lib/category-scope";
 import { getSnapshot, saveSnapshotSearchRun } from "../../snapshots/_lib/snapshot";
-import { computeMarketIntelligence } from "../_lib/market-intelligence";
+import { computeMarketIntelligence, attachDerivedKrw } from "../_lib/market-intelligence";
 import { openAlertIfNotActive, resolveAlertsNotIn } from "../_lib/price-alerts";
 import {
   MAX_SUPPLIED_CANDIDATE_URLS,
@@ -615,9 +615,43 @@ export async function POST(request: Request) {
     /* 🔴 이력 저장 실패가 가격확인 자체의 성공/실패를 뒤집지 않는다(PART U 원칙). */
   }
 
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MI-KRW-DERIVED-PIPELINE-WIRING-1 §2-2 — **화면이 읽는 6배열에 환산값을 붙인다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 **고치는 결함.** 후보 카드는 `domesticShop.overseasAutoEvidence` 등 **runner 가
+   *    만든 배열** 을 읽는데, 그 배열들이 `attachDerivedKrw` 를 거치지 않아 전건
+   *    `priceKrwDerived === undefined` ⟹ 화면이 **「원화 환산 불가」만** 띄웠다.
+   *    (MI 반환의 `geminiEvidence`·`savedCandidateRows` 에만 붙어 있었다 — **다른 배열** 이다)
+   *
+   * 🔴 **여기서 환율을 조회하지 않는다.** MI 가 이미 환산한 **URL → KRW 지도** 를 받아
+   *    «붙이기만» 한다 ⟹ 환산 owner 는 **MI 하나** 로 유지된다.
+   * 🔴 **runner 를 고치지 않는다** — 그 파일은 환율을 모른다(owner 둘 금지).
+   * 🔴 **원본 `priceAmount`·`priceCurrency` 는 불변** 이다(`attachDerivedKrw` 가 spread 뒤
+   *    파생 칸 하나만 더한다). 지도에 없으면 **`null`**(0 으로 만들지 않는다).
+   * 🟢 **행마다 1회** — 각 배열을 한 번씩만 통과시킨다(중복 환산 경로 없음).
+   * 🔴 대상은 위 `PRODUCERS` 6개와 **같은 집합** 이다 — 하나라도 빠지면 그 생산자의
+   *    후보만 조용히 환산 없이 화면에 선다(계약이 그것을 FAIL 로 잡는다).
+   */
+  const krwByUrl = new Map<string, number>(
+    Object.entries(intelligence?.candidateKrwByUrl ?? {}),
+  );
+  const domesticShopWithKrw = domesticShop
+    ? {
+        ...domesticShop,
+        webSearchEvidence: attachDerivedKrw(domesticShop.webSearchEvidence, krwByUrl),
+        domesticListingEvidence: attachDerivedKrw(domesticShop.domesticListingEvidence, krwByUrl),
+        overseasAutoEvidence: attachDerivedKrw(domesticShop.overseasAutoEvidence, krwByUrl),
+        urlCandidateEvidence: attachDerivedKrw(domesticShop.urlCandidateEvidence, krwByUrl),
+        geminiEvidence: attachDerivedKrw(domesticShop.geminiEvidence, krwByUrl),
+        reviewedSameEvidence: attachDerivedKrw(domesticShop.reviewedSameEvidence, krwByUrl),
+      }
+    : domesticShop;
+
   return NextResponse.json({
     ...result,
-    domesticShop,
+    domesticShop: domesticShopWithKrw,
     /**
      * 🔴 **참고 축이다.** 통화별 최저가만 담고 환산하지 않는다.
      *    값이 없으면 `null` — 「0건」으로 적지 않는다.
