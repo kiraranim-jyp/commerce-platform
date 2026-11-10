@@ -3,6 +3,11 @@
  *    집계기(`candidate-market.ts`)가 읽는 **그 집합** 을 화면도 읽는다(사본 0).
  */
 import { isPriceDisqualifiedByObservedDifference } from "@/lib/price-disqualifying-blockers";
+/**
+ * 🔵 MI-DOMESTIC-PRICE-CANDIDATE-CONSISTENCY-1 — 🔴 **판정 자격 집합도 owner 가 하나다.**
+ *    집계기(`candidate-market.ts`)가 읽는 **그 집합** 을 화면도 읽는다(사본 0).
+ */
+import { isPriceIneligibleByVerdict } from "@/lib/price-eligible-verdicts";
 import {
   domesticMatchDisplay,
   tierDisplay,
@@ -2312,16 +2317,77 @@ export function costHoldLines(
  */
 export type CandidatePriceUse = "USED" | "EXCLUDED_OBSERVED_DIFFERENCE" | "NOT_PRICED";
 
-/** 🟢 집계기가 금액을 세는 조건과 **같은 순서** 로 본다(사본 아님 · 같은 술어 재사용). */
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 MI-DOMESTIC-PRICE-CANDIDATE-CONSISTENCY-1 — **집계의 «첫» 게이트가 빠져 있었다**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 ⑧ 가 집계기의 게이트를 **넷 중 둘만** 베꼈다. 집계기(`candidate-market.ts`
+ *    `summarizeCandidateOverseasPrices`)의 순서는 이렇다:
+ * ```
+ * ① priceTier === "EXCLUDED"            → continue      ← 🔴 이 줄이 여기 없었다
+ * ② verdict 가 자격 집합 밖              → continue      ← 🔴 이 줄도 없었다(해외 축)
+ * ③ 관측된 차이(blockers)               → continue
+ * ④ 금액 없음 / priceStatus 미확인       → continue
+ * ```
+ * 🔴 그래서 **「품번 충돌 · 참고」 군의 후보**(`CANDIDATE_GROUP_LABEL.POSSIBLE` ·
+ *    `isModelCodeOnlyReference`)가 **가격과 신뢰도를 갖고 있으면** 카드가
+ *    **「참고가격에 반영」** 이라 적었다. 🔴 그런데 그 후보의 `matchTruth` 는
+ *    `CONFLICT` 이고 `priceTierFromLink` 가 그것을 **`EXCLUDED`** 로 내므로
+ *    **집계기는 ①에서 그 금액을 버린다** ⟹ **카드가 거짓을 말한다.**
+ * 🔴 그 군은 가상의 모양이 아니다 — `CANDIDATE-POSSIBLE-CONFLICT-01` 이
+ *    **실제 후보**(`b226ab046` · bobochoses.com)로 열어 둔 자리이고, 그 주석이
+ *    「실측으로 그 자리에 **CEO SAME 2건(가격 보유)**」이라고 적어 뒀다.
+ *
+ * ── 🔴 고친 것과 고치지 «않은» 것 ─────────────────────────────────────────
+ * 🟢 고친 것은 **표시 상태 하나** 다 — 집계·분모·자격 조건·tier·verdict·판정은
+ *    **한 글자도** 바뀌지 않았다(`candidate-market.ts` 변경 **0**).
+ * 🔴 **새 상태·새 문구를 만들지 않았다** — 집계기의 ①도 ③도 「상품 차이가 관측됐다」
+ *    는 같은 사실이고(품번이 다르다는 관측), 그 말은 CPO 가 이미 고정했다.
+ * 🔴 후보를 **숨기지 않는다** — 카드는 그대로 서고 바뀌는 것은 그 한 줄이다.
+ *
+ * 🔴 **순서는 집계기와 다르고, 그것이 의도다.** 「금액 없음/미확인」을 **먼저** 본다 —
+ *    집계기 순서를 그대로 베끼면 가격이 **없는** 후보에까지 「참고가격 제외」가 서고,
+ *    그것이 이 함수가 금지한 「**「모른다」를 「제외」로 적는다**」 그 자체다.
+ */
+/** 🔴 집계기 ①의 그 값. 🟢 tier 이름은 이 층이 이미 쓰는 어휘다(`TIER_LABEL.EXCLUDED`). */
+const PRICE_EXCLUDED_TIER = "EXCLUDED";
+
+/** 🟢 집계기가 금액을 세는 조건과 **같은 게이트** 를 본다(사본 아님 · 같은 술어 재사용). */
 export function candidatePriceUse(row: {
   priceAmount?: number | null;
   priceStatus?: string | null;
+  priceTier?: string | null;
+  market?: string | null;
+  crossSellerVerdict?: string | null;
   crossSellerBlockers?: string[];
 }): CandidatePriceUse {
   /** 🔴 금액이 없으면 **제외가 아니다** — 분모에 들어간 적이 없다. */
   if (row.priceAmount == null || !Number.isFinite(row.priceAmount)) return "NOT_PRICED";
   /** 🔴 「금액은 있는데 확인만 안 됐다」도 금액 집계 밖이다(집계기의 `unverifiedCount`). */
   if (row.priceStatus != null && row.priceStatus !== "VERIFIED_CURRENT") return "NOT_PRICED";
+  /**
+   * 🔴 집계기 ① — **동일상품 금액이 아니라고 관측된 tier** 는 금액에 들어가지 않는다.
+   * 🔴 `null`/`undefined` 는 **막지 않는다** — tier 를 모르는 행(낡은 저장분)을
+   *    「제외」로 적으면 다시 「모른다 → 제외」가 된다.
+   */
+  if (row.priceTier === PRICE_EXCLUDED_TIER) return "EXCLUDED_OBSERVED_DIFFERENCE";
+  /**
+   * 🔴🔴 집계기 ② — **verdict 자격. 단 «해외 축에만» 있다.**
+   *
+   * 🔴 생산자가 둘이고 싣는 칸이 다르다(`market-intelligence.ts`) —
+   *    국내 `domesticTransientRecords.push` 는 **verdict 를 싣지 않고**(계약
+   *    `sprint3-p1 D-2` 가 그 비대칭을 **의도로** 잠갔다) 해외 `overseasEvidence.push`
+   *    는 싣는다. 집계기의 `r.verdict != null` 가드 때문에 **국내 참고가격은 이
+   *    게이트를 보지 않는다.**
+   * 🔴 그래서 국내에도 적용하면 **반대 방향으로 거짓** 이 된다 — 집계에 **들어간**
+   *    금액을 카드가 「제외」라 적는다(= CEO 화면의 「확인 1곳」을 지우는 방향).
+   * 🟢 집합 owner 는 `@/lib/price-eligible-verdicts` **하나** 다(집계기가 읽는 그 집합).
+   * 🔴 `null` 은 막지 않는다 — 집계기의 `!= null` 가드와 **같은 방향** 이다.
+   */
+  if (row.market !== "KR" && isPriceIneligibleByVerdict(row.crossSellerVerdict)) {
+    return "EXCLUDED_OBSERVED_DIFFERENCE";
+  }
   if (isPriceDisqualifiedByObservedDifference(row.crossSellerBlockers)) {
     return "EXCLUDED_OBSERVED_DIFFERENCE";
   }

@@ -981,3 +981,117 @@ C(2) = 표시 후보 전수(판정·가격 무관)일 가능성
 ⒠ 변이가 **적용됐는지** 확인한다 — 「적용 실패」를 「통과」로 읽지 않는다
 ⒡ `grep -c` 가 0 을 세면 **exit 1** 이라 `&&` 체인이 끊긴다(커밋이 조용히 안 됐다)
 ```
+
+---
+
+# 24. 🔵🔵🔵 **MI-DOMESTIC-PRICE-CANDIDATE-CONSISTENCY-1 — 판정 완료** (2026-11-11)
+
+🔴🔴 **새 페이지는 §23-0(전략) + 이 절만 읽는다.** §1~§22 는 끝난 WU 기록이다.
+
+## 24-0. 🟢 결론 한 줄
+
+> **세 숫자(A 참고가격 확인 · B 동일상품 확인 · C 소싱 후보)는 «각자 정확하다» —
+> 집계 오류가 아니었다. 틀린 것은 「그 금액을 썼는가」를 말하는 «후보 카드 한 줄» 이었다.**
+
+## 24-1. 🟢 owner 와 분모 — **확정됐다(재조사 금지)**
+
+```
+A 「국내 참고가격 … 확인 N곳」
+   owner  buildOverseasReference(summary, {sellerCountLabel: DOMESTIC_SELLER_COUNT_LABEL})
+          → scope = `확인 ${v.count}곳`           (overseas-reference.ts:345 · 라벨 :155)
+   분모   summarizeCandidateOverseasPrices(국내 레코드).byCurrency.KRW.count
+          🔴 **판매처(domain) 단위** 다 — `sellerKey: e.domain`(market-intelligence.ts:674)로
+             같은 판매처의 여러 레코드를 **최저 확인가 하나로 접은 뒤** 센다
+B 「동일상품 확인 N곳」  buildPriceGuide(j,market).sameCount = SAME 후보(URL 중복 접음)
+C 「국내 소싱 후보 N곳」  selectCandidateList(rows,market).length
+   owner  MarketPriceComparison.tsx:2434 — 🔴 `list.length` **파생**(상수 아님)
+   분모   LIKELY + PRESUMED + POSSIBLE · `discoveredUrl` 중복 제거 · CONFLICT/등급없음 제외
+🟢 세 분모가 겹치는 관계는 **이미 계약으로 잠겨 있다** —
+   `sourcing-candidate-count-denominators-1`(D-1~D-5 · 「합계 3」은 성립하지 않는다)
+🔴 그래서 이 WU 는 그 숫자를 **다시 세지 않았다**(분모·집계 조건 변경 **0**)
+```
+
+## 24-2. 🔴🔴 찾은 결함 — **카드가 집계와 다른 게이트를 봤다**
+
+```
+집계기 summarizeCandidateOverseasPrices 의 게이트는 **넷** 이다:
+  ① priceTier === "EXCLUDED"            ② verdict 가 자격 집합 밖(해외 축)
+  ③ 관측된 차이(blockers)                ④ 금액 없음 / priceStatus 미확인
+🔴 ⑧(`candidatePriceUse`)은 **③④ 만** 봤다 ⟹ ①②로 버려진 후보가 카드에서
+   **「참고가격에 반영」** 이라고 적혀 있었다(= 화면이 거짓말한다).
+🔴 가상의 모양이 아니다 — 「🟡 품번 충돌 · 참고」 군(`CANDIDATE-POSSIBLE-CONFLICT-01` ·
+   실제 후보 `b226ab046` · 그 주석이 「실측으로 CEO SAME 2건(가격 보유)」라 적어 뒀다)이
+   **가격을 들고** 그 자리에 선다. 그 군의 tier 는 `priceTierFromLink` 가 `EXCLUDED` 로 낸다.
+```
+
+🔴🔴 **1차 설계가 전수 계약(A-3)에서 «반증» 됐고 그것이 설계를 바꿨다 — 이 기록을 남긴다**:
+```
+1차: tier 게이트 하나만 더하고 「verdict 만으로 빠지는 행은 카드로 서지 않는다」를
+     안전조건으로 단언 → 🔴 **FAIL.** `matchTruth EXACT_IDENTIFIER`(tier EXACT) +
+     `verdict CONFLICT` 가 **카드로 선다**(display tier 는 matchTruth 가 정하고 verdict 를 안 본다)
+2차: 카드도 verdict 게이트를 본다 — 🔴 **단 「해외 축에만»**
+🔴 왜 시장으로 갈랐는가: 국내 생산자 `domesticTransientRecords.push` 는 **verdict 를 싣지
+   않는다**(계약 `sprint3-p1 D-2` 가 그 비대칭을 «의도» 로 잠갔다) ⟹ 국내 집계는 그 게이트를
+   보지 않는다. 국내에도 적용하면 **반대 방향으로 거짓** 이 된다 —
+   집계에 «들어간» 금액을 카드가 「제외」라 적는다(= CEO 화면의 「확인 1곳」을 카드가 부정).
+```
+
+## 24-3. 🟢 구현 — 운영 **2 파일 + 신규 lib 1**
+
+```
+🟢 apps/admin/src/lib/price-eligible-verdicts.ts          **신규** — 자격 집합 owner 하나
+   (`PRICE_DISQUALIFYING_BLOCKERS` 와 **같은 이유·같은 모양**: 집계기 파일은
+    `@commerce/crawler` 루트 배럴을 import 해서 **화면이 읽을 수 없다** · 번들 오염)
+🟢 candidate-market.ts        `const` → **import**(값·게이트 줄 **한 글자도** 안 바뀜)
+🟢 mi-same-candidates.ts      `candidatePriceUse` 가 ①②를 본다(②는 `market !== "KR"` 에서만)
+🔴 **고치지 않은 것** — 집계기 로직 · 분모 · 자격 조건 · tier · verdict · matchTruth ·
+   판정 · CASE A/B/C/D · 추천가격 · SAME/PRESUMED/POSSIBLE 정책 · 후보 데이터 ·
+   차액(추가 금지 유지) · UI 마크업/문구 · DB · schema **전부 0**
+🔴 **새 상태·새 문구 0** — 집계기 ①도 ③도 「상품 차이가 관측됐다」는 같은 사실이라
+   기존 라벨(「참고가격 제외 — 상품 차이가 확인됨」)을 그대로 쓴다
+🔴 후보를 **숨기지 않는다** — 카드는 그대로 서고 바뀌는 것은 그 한 줄이다
+```
+
+## 24-4. 🟢 검증
+
+```
+신규 계약  mdpc-1-price-use-parity (12건) — A 평형 · B 보존
+  A-2/A-3  🇰🇷/🌎 **전수 평형**(matchTruth 6 × verdict 6 × priceStatus 3 × blockers 3)
+           「카드가 「반영」」 ⟺ 「집계가 그 금액을 쓴다」 · 🔴 분모 0 을 PASS 로 쓰지 않도록
+           「카드가 서는 조합 수」와 「verdict 축이 측정된 수」를 **같이 단언** 한다
+  A-3b     **비대칭이 의도임을 잠근다** — 같은 행이 🇰🇷「반영」 ↔ 🌎「제외」
+  A-4      순서 계약 — 가격이 없으면 tier 가 EXCLUDED 여도 **줄을 만들지 않는다**
+음성대조   M1 tier 제거 **3F** · M2 verdict 제거 **3F** · M3 비대칭 파괴 **2F** ·
+           M4 순서 복제 **1F** · M5 tier 모를 때도 막음 **6F** · M6 집합 사본 **1F**
+           🟢 전부 적용 확인 · 원상복구 **바이트 동일**
+기존 계약  2건 갱신·**강화**(약화 0) — `core-2y Q2` · `sprint3-p1 D-3`
+           (집합 «자리» 가 바뀌어 FAIL 했다 ⟹ ⒜값 ⒝owner 하나 ⒞집계기가 그것을 읽음
+            ⒟게이트 줄 생존을 **전부** 단언하도록 고쳤다)
+```
+
+## 24-5. 🔴 측정불가 / 넘겨 읽지 않을 것
+
+```
+🔴 **라이브 E2E 를 돌리지 못했다** — 원상품 크롤이 `bobochoses.com` **429** 다
+   (메모 `origin-brand-recovery-fails-intermittently` 의 그 간헐 실패 · WU-150 하니스도 같은 지점에서 FAIL)
+   ⟹ 「실제 상품에서 카드 문구가 이렇게 바뀐다」는 **측정하지 않았다**(0 이 아니라 미측정)
+🔴 CEO 화면의 그 두 후보(donokids · miniboutique)는 **tier COMPARISON** 이라
+   이 수정의 영향이 **0** 이다 ⟹ 🟢 「확인 1곳 / 88,000」은 **그대로** 다(계약 B-4 가 잠금)
+🔴 영향이 실제로 나타나는 자리는 **「품번 충돌 · 참고」 군에 가격이 있을 때** 다 —
+   그 군의 실데이터는 **해외(bobochoses.com `b226ab046`)** 에서 관측돼 있다
+🔴 실제 따져 화면은 CTO 가 볼 수 없다 ⟹ **Production UI PASS 로 적지 않는다**
+```
+
+## 24-6. 🔵 다음 한 수
+
+```
+🟡 CEO 화면 확인 1회 — 🔴 질문은 **하나** 다:
+   「후보 카드의 「참고가격에 반영 / 참고가격 제외」가 위의 「확인 N곳」과 **어긋나 보이는가**」
+   🟢 정상: 「후보 2곳」인데 「확인 1곳」 — 나머지 하나의 카드가 **그 이유를 적고 있다**
+   🔴 FAIL: 반영이라 적힌 카드 수 > 확인 N곳
+🔵 그 뒤 ② 해외 정합성 — 🔴 착수 전에 읽을 것 하나:
+   「해외 「판매처 N곳」은 `sellerKey` 가 없어 **레코드 수** 다(국내처럼 판매처 단위로 접지
+    않는다 · `candidate-market.ts:367` 이 그 사실을 적어 뒀다) ⟹ 같은 판매처가 여러 후보로
+    오면 **부풀 수 있다**.」 🔴 그 축은 §9(해외 축 불변)이 보호하므로 **CPO 판정 사안** 이다
+🔴 START-HERE.md 는 **건드리지 않았다** — 보존 40건에 들어 있다(§23-1 금지)
+```

@@ -24,6 +24,14 @@ const SRC_INTEL = readFileSync(join(__dirname, "..", "market-intelligence.ts"), 
 /** 🔴 주석을 벗긴다 — 이 저장소가 여덟 번 걸린 함정이다. */
 const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 const AGG = strip(SRC_AGG);
+/**
+ * 🔵 MI-DOMESTIC-PRICE-CANDIDATE-CONSISTENCY-1 — 자격 집합의 **owner 모듈**.
+ * 🔴 `@commerce/crawler` 를 끌어오는 집계기 파일에 두면 **화면이 읽을 수 없다**(번들 오염)
+ *    ⟹ 화면이 그 게이트를 못 보고 집계와 어긋났다. 🟢 `@/lib` 의 순수 모듈이 소유한다.
+ */
+const OWNER = strip(
+  readFileSync(join(__dirname, "..", "..", "..", "..", "..", "lib", "price-eligible-verdicts.ts"), "utf8"),
+);
 const INTEL = strip(SRC_INTEL);
 
 const os = (
@@ -133,9 +141,26 @@ describe("SPRINT 3 P1 — 가격 집계 자격(verdict)", () => {
     expect(INTEL.slice(at, at + 420)).not.toContain("verdict");
   });
 
-  it("D-3 🔴 자격 집합은 상수 하나가 소유한다 · SAME 단독으로 좁히지 않는다", () => {
+  /**
+   * 🔵🔵 MI-DOMESTIC-PRICE-CANDIDATE-CONSISTENCY-1 — **집합의 «자리» 가 옮겨졌다(값은 그대로).**
+   *
+   * 🔴 전에는 이 단언이 `candidate-market.ts` **안에** 리터럴이 있기를 요구했다. 그런데
+   *    그 파일은 `@commerce/crawler` 루트 배럴을 import 해서 **화면이 읽을 수 없다**
+   *    ⟹ 후보 카드의 「참고가격 반영/제외」가 이 게이트를 **보지 못해 집계와 어긋났다**.
+   * 🟢 그래서 `PRICE_DISQUALIFYING_BLOCKERS` 와 **같은 방법** 으로 `@/lib` 의 순수 모듈로
+   *    옮겼다. 🔴 **약화가 아니라 강화** 다 — 아래가 ⒜ 값 ⒝ owner 가 하나 ⒞ 집계기가
+   *    그것을 읽는다 ⒟ 게이트 줄 생존을 **전부** 단언한다.
+   */
+  it("D-3 🔴 자격 집합은 **모듈 하나가 소유** 한다 · SAME 단독으로 좁히지 않는다", () => {
     expect(AGG).toContain("PRICE_ELIGIBLE_VERDICTS");
-    expect(AGG).toMatch(/PRICE_ELIGIBLE_VERDICTS\s*=\s*new Set\(\["SAME",\s*"PRESUMED_SAME"\]\)/);
+    /** ⒜⒝ 값과 owner — 🔴 집계기가 **직접 선언하면** 사본이 된다. */
+    expect(OWNER).toMatch(/PRICE_ELIGIBLE_VERDICTS\s*=\s*new Set\(\["SAME",\s*"PRESUMED_SAME"\]\)/);
+    expect(AGG, "🔴 집계기가 자격 집합을 직접 선언했다 — owner 가 둘이 된다").not.toContain(
+      "PRICE_ELIGIBLE_VERDICTS = new Set(",
+    );
+    /** ⒞ 집계기가 그 owner 를 읽는다. */
+    expect(AGG).toContain('from "@/lib/price-eligible-verdicts"');
+    /** ⒟ 게이트 줄은 그대로다. */
     expect(AGG).toContain("PRICE_ELIGIBLE_VERDICTS.has(r.verdict)");
   });
 

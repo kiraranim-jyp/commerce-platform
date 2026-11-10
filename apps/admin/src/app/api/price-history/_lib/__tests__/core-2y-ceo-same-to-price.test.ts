@@ -125,8 +125,19 @@ describe("§6 Q1~Q3 — 가격 집계가 «무엇을» 요구하는가", () => {
     for (const banned of ["matchTruth", "crossSellerVerdict", "EXACT_IDENTIFIER", "STRONG_IDENTIFIER"]) {
       expect(CAND_SRC, `🔴 집계기가 판정 어휘를 다룬다: ${banned}`).not.toContain(banned);
     }
-    /** 🟢 허용된 유일한 사용 — **자격 집합** 과 그 술어. */
-    expect(CAND_SRC).toMatch(/PRICE_ELIGIBLE_VERDICTS\s*=\s*new Set\(\["SAME",\s*"PRESUMED_SAME"\]\)/);
+    /**
+     * 🟢 허용된 유일한 사용 — **자격 집합** 과 그 술어.
+     * 🔵 MI-DOMESTIC-PRICE-CANDIDATE-CONSISTENCY-1 — 집합의 **값** 은 이제 `@/lib` 의
+     *    순수 모듈이 소유한다(화면도 그 게이트를 읽어야 해서 옮겼다 · 번들 오염 방지).
+     * 🔴 **약화가 아니다** — 집계기가 그 owner 를 읽는지와 게이트 줄 생존을 같이 단언한다.
+     */
+    expect(
+      readFileSync(path.join(LIB, "..", "..", "..", "..", "lib", "price-eligible-verdicts.ts"), "utf8"),
+    ).toMatch(/PRICE_ELIGIBLE_VERDICTS\s*=\s*new Set\(\["SAME",\s*"PRESUMED_SAME"\]\)/);
+    expect(CAND_SRC, "🔴 집계기가 자격 집합을 직접 선언했다 — owner 가 둘이 된다").not.toContain(
+      "PRICE_ELIGIBLE_VERDICTS = new Set(",
+    );
+    expect(CAND_SRC).toContain('from "@/lib/price-eligible-verdicts"');
     expect(CAND_SRC).toContain("PRICE_ELIGIBLE_VERDICTS.has(r.verdict)");
     /** 🔴 **tier 를 쓰지 않는다** — 승격·강등이 생기면 이 단언이 깨진다. */
     expect(CAND_SRC, "🔴 집계기가 tier 를 쓴다(승격/강등)").not.toMatch(/priceTier\s*=[^=]/);

@@ -285,8 +285,17 @@ export interface CandidateOverseasPriceRecord {
 /**
  * 🟢 **1차 가격 판단에 쓸 수 있는 verdict**(제품 정책 · CPO 확정 2026-11-02).
  * 🔴 집합을 넓히거나 좁히는 것은 **제품 정책 변경** 이다 — 코드에서 임의로 고치지 않는다.
+ *
+ * 🔵🔵 MI-DOMESTIC-PRICE-CANDIDATE-CONSISTENCY-1 — **집합의 자리를 옮겼다(값·게이트는 그대로).**
+ * 🔴 이 파일은 `@commerce/crawler` 루트 배럴을 import 하므로 **화면이 이 파일을 읽을 수
+ *    없다**(브라우저 번들 오염). 그런데 후보 카드의 「참고가격에 반영/제외」가 **이 게이트를
+ *    보지 못해** 집계와 어긋났다(집계는 버린 금액을 카드가 「반영」이라 적었다).
+ * 🟢 `PRICE_DISQUALIFYING_BLOCKERS` 와 **같은 방법** 으로 `@/lib` 의 순수 모듈로 옮겼다 —
+ *    집계기도 화면도 **그 하나** 를 읽는다. 🔴 아래 게이트 줄은 **한 글자도** 바뀌지 않았다.
+ * 🔴 그리고 그 게이트는 **해외 축에서만 발화한다** — 국내 생산자가 `verdict` 를 싣지
+ *    않기 때문이다(계약 `sprint3-p1 D-2`). 🟢 화면도 그 비대칭을 그대로 따른다.
  */
-const PRICE_ELIGIBLE_VERDICTS = new Set(["SAME", "PRESUMED_SAME"]);
+import { PRICE_ELIGIBLE_VERDICTS } from "@/lib/price-eligible-verdicts";
 
 /**
  * 🟢 **확인가의 단일 술어**(STAGE 7-1). 🔴 owner 는 `derivePriceStatus` 이고 이 파일은
