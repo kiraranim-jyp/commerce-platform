@@ -76,6 +76,13 @@ export interface JudgementSummaryInput {
    * 🔴 그 문장에 **금액이 섞여 있으면 쓰지 않는다** — 요약의 금액은 추천 판매가격 하나뿐이다.
    */
   decisionReason?: string | null;
+  /**
+   * 🔴🔴 MI-SELLER-MARKET-COMPARISON-A — **여기에 `marketKrwComparison` 을 넣지 않는다.**
+   *    1차에 이 칸을 추가했다가 **되돌렸다.** 위 WU-141-R3(CPO §2-A)이 이 블록에서
+   *    가격 숫자를 **직접 제거** 했기 때문이다 — 이 카드는 패널의 첫 자식이라
+   *    「가장 먼저 읽히는데 가장 약한 근거」가 되는 자리였다.
+   * 🟢 국내↔해외 비교는 **가격 owner 인 「📊 시장 판매 판단」** 이 말한다.
+   */
 }
 
 /**

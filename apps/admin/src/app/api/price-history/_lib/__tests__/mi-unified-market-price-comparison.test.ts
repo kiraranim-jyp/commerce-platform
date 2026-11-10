@@ -251,11 +251,98 @@ describe("T5 🔵🔵 ⑥ 국내 대비 해외 KRW 차이", () => {
 describe("T6 🔵 기존 정책 불변 — 이 WU 는 판정을 바꾸지 않는다", () => {
   it("T6-1 🔴 ⑥ 은 **파생 정보** 다 — 판정/추천/알림이 읽지 않는다", () => {
     /**
-     * 🔴 `marketKrwComparison` 이 **반환부에서만** 등장한다 ⟹ 위 계산들이 그것을
-     *    입력으로 쓰지 않는다. 쓰기 시작하면 이 단언이 FAIL 하고 그것이 신호다.
+     * ════════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 MI-SELLER-MARKET-COMPARISON-A — **T6-1 개편**(CPO 승인)
+     * ════════════════════════════════════════════════════════════════════════
+     *
+     * 🔴🔴 **1차 단언이 화면 연결을 막고 있었다.** 「`marketKrwComparison` 이 소스에
+     *    **정확히 1회** 등장한다」로 썼는데, 그러면 **화면이 그 값을 읽는 순간 FAIL** 한다.
+     *    내가 지키려던 것은 「등장 횟수」가 아니라 **「판정 owner 가 읽지 않는다」** 였다.
+     * 🟢 그래서 축을 **그 의미로** 바꾼다 — 등장 수를 세지 않고 **누가 읽는지** 를 본다.
+     *    🔴 약화가 아니다: 판정 입력으로 흘러가면 **여전히 FAIL** 한다(아래 두 단언).
      */
-    const uses = INTEL.match(/marketKrwComparison/g) ?? [];
-    expect(uses.length, "🔴 ⑥ 값을 다른 계산이 읽기 시작했다").toBe(1);
+    for (const owner of [
+      "sellerAction",
+      "computePriceRecommendation",
+      "computeReferenceProfitability",
+      "computeSellability",
+      "computeMarketAlert",
+      "toSellerFacingVerdict",
+    ]) {
+      expect(INTEL, `🔴 ⑥ 값이 ${owner} 입력으로 흘러갔다`).not.toMatch(
+        new RegExp(`${owner}[^\\n]*marketKrwComparison`),
+      );
+      expect(INTEL, `🔴 ${owner} 가 ⑥ 값을 읽는다`).not.toMatch(
+        new RegExp(`marketKrwComparison[^\\n]*${owner}`),
+      );
+    }
+    /** 🟢 생산은 **반환부 한 곳** 이다(계산 owner 를 둘로 만들지 않는다). */
+    expect(INTEL).toContain("marketKrwComparison: compareDomesticVsOverseasKrw(");
+  });
+
+  it("T6-1-b 🟢🟢 ⑥ 이 **실제 렌더 화면까지** 도달한다 (소비 검증)", () => {
+    /**
+     * 🔴🔴 이 WU 가 세 번 실패한 지점이 **바로 이것** 이다 — 서버가 값을 만들어도
+     *    화면이 읽지 않으면 셀러에게는 **없는 것** 이다. 그래서 경로 전체를 단언한다.
+     * 🔴 `MiPanelView` 는 **운영에서 마운트되지 않는다** ⟹ 그쪽으로 가면 안 된다.
+     */
+    const ROUTE = strip(
+      readFileSync(path.join(HERE, "..", "..", "check", "route.ts"), "utf8"),
+    );
+    const PANEL = strip(
+      readFileSync(
+        path.join(HERE, "..", "..", "..", "..", "pipeline", "commerce", "DomesticPriceIntelligencePanel.tsx"),
+        "utf8",
+      ),
+    );
+    const WORKSPACE = strip(
+      readFileSync(path.join(HERE, "..", "..", "..", "..", "pipeline", "CommerceWorkspace.tsx"), "utf8"),
+    );
+    const VIEW = strip(
+      readFileSync(
+        path.join(HERE, "..", "..", "..", "..", "pipeline", "commerce", "MarketPriceComparison.tsx"),
+        "utf8",
+      ),
+    );
+    const SUMMARY = strip(
+      readFileSync(
+        path.join(HERE, "..", "..", "..", "..", "pipeline", "commerce", "judgement-summary.ts"),
+        "utf8",
+      ),
+    );
+
+    /** ① 응답 */
+    expect(ROUTE, "🔴 API 응답에 실리지 않는다").toContain(
+      "marketKrwComparison: intelligence?.marketKrwComparison ?? null",
+    );
+    /** ② Panel state — 🔴 **GET·POST 둘 다**(한쪽만이면 재분석에서 사라진다) */
+    expect(
+      (PANEL.match(/setMarketKrwComparison\(/g) ?? []).length,
+      "🔴 GET·POST 두 경로가 아니다",
+    ).toBeGreaterThanOrEqual(2);
+    /** ③ Panel → payload(+deps) */
+    expect(PANEL, "🔴 payload 에 실리지 않는다").toContain("marketKrwComparison,");
+    /** ④ Workspace → 실제 마운트 컴포넌트 */
+    expect(WORKSPACE, "🔴 마운트 지점에 전달되지 않는다").toContain(
+      "marketKrwComparison={marketComparison?.marketKrwComparison ?? null}",
+    );
+    /** ⑤ 🟢 **화면이 실제로 그린다** — 세 값 + 자격 범위 문구 */
+    for (const id of [
+      "market-krw-comparison",
+      "market-krw-comparison-domestic",
+      "market-krw-comparison-overseas",
+      "market-krw-comparison-diff",
+      "market-krw-comparison-scope",
+    ]) {
+      expect(VIEW, `🔴 화면에 ${id} 가 없다`).toContain(`data-testid="${id}"`);
+    }
+    /** ⑥ 🔴 **요약 카드로 가지 않는다**(WU-141-R3 — 그 카드는 가격 owner 가 아니다) */
+    expect(SUMMARY, "🔴 요약 카드가 가격 비교를 읽는다").not.toMatch(
+      /marketKrwComparison\??:/,
+    );
+    /** ⑦ 🔴 화면이 **스스로 계산하지 않는다** — 차액·환산을 만들지 않는다 */
+    expect(VIEW).not.toMatch(/domesticKrw\s*-\s*overseasKrw/);
+    expect(VIEW).not.toContain("convertToKrwStrict(");
   });
 
   it("T6-2 🔴 `byCurrency` 버킷에 환산을 섞지 않았다", () => {

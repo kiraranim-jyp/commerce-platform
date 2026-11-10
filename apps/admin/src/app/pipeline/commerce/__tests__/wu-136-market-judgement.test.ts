@@ -215,8 +215,22 @@ describe("C. buildMarketJudgement", () => {
      *    **「서버가 환산하지 못하면 0 이 아니라 `null`」** 계약의 검증이다.
      * 🔴 통화별 `lowest`·`highest`·`n`·`onSale` 은 **한 글자도 바뀌지 않았다**.
      */
+    /**
+     * 🔵 MI-SELLER-MARKET-COMPARISON-A §1 — `lowestUrl` **추가**.
+     * 🔴 `lowest` 가 «어느 후보» 인지 산출물이 말하지 않아 「USD 40.6 ↔ 41」을
+     *    데이터로 가릴 수 없었다. 🟢 `used[0]` 의 URL 을 **고르기만** 한다.
+     * 🔴 금액 칸(`lowest`·`highest`·`n`·`onSale`)은 **한 글자도 바뀌지 않았다**.
+     */
     expect(j.byCurrency).toEqual([
-      { currency: "USD", lowest: 53, highest: 58, n: 2, onSale: 0, lowestKrw: null },
+      {
+        currency: "USD",
+        lowest: 53,
+        highest: 58,
+        n: 2,
+        onSale: 0,
+        lowestKrw: null,
+        lowestUrl: "https://a.example/1",
+      },
     ]);
     /** 🔴 그러나 「2곳에서 판매중」으로 읽히지 않게 **범위 문장이 직접 말한다**. */
     expect(priceRangeScope(j.byCurrency[0])).toContain("판매중 확인 0곳");

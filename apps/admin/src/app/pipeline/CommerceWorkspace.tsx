@@ -3794,6 +3794,17 @@ export function CommerceWorkspace({
             domesticReference={marketComparison?.domesticReference ?? null}
             overseasReference={marketComparison?.overseasReference ?? null}
             /**
+             * 🔵🔵🔵 MI-SELLER-MARKET-COMPARISON-A — **국내 ↔ 해외 최저 ↔ 차액.**
+             *
+             * 🔴🔴 서버가 이 값을 계산해 두고도 **아무도 읽지 않았다**(소비처 0) ⟹
+             *    셀러는 「국내에서 얼마에 팔리고 해외에서 얼마에 가져오는지」를 **한 줄로
+             *    본 적이 없다**. 이 prop 이 그 마지막 구간을 잇는다.
+             * 🔴 **여기서 계산하지 않는다** — 서버가 낸 값을 그대로 내려보낸다
+             *    (바로 위 두 참고가격과 **같은 가격 축** 이다).
+             * 🔴 **요약 카드로 보내지 않는다** — 거기는 WU-141-R3 이 가격을 제거한 자리다.
+             */
+            marketKrwComparison={marketComparison?.marketKrwComparison ?? null}
+            /**
              * 🔵🔵🔵 MI-INVESTIGATION-STATE-UX-2 ④ — **조사 상태를 그대로 내려보낸다.**
              *
              * 🔴 폴백이 `"INVESTIGATING"` 인 이유 — 패널이 **아직 보고하지 않은** 첫

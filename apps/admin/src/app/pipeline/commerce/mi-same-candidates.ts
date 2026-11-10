@@ -962,6 +962,8 @@ export function buildPriceGuide(j: MarketJudgement, market: "KR" | "OVERSEAS"): 
        * 🔴 서버가 환산하지 못했으면 `null` 이다(0 으로 만들지 않는다).
        */
       lowestKrw: used[0]?.row.priceKrwDerived ?? null,
+      /** 🔵 §1 — **같은 `used[0]`** 이다 ⟹ `lowest`·`lowestKrw`·`lowestUrl` 이 한 후보를 가리킨다. */
+      lowestUrl: used[0]?.row.discoveredUrl ?? null,
     });
   }
   const byCurrency = [...byCurrencyMap.values()].sort((a, b) => a.currency.localeCompare(b.currency));
@@ -1036,6 +1038,33 @@ export function priceGuideHeadline(g: PriceGuide): string | null {
  *    한쪽만 고치는 날이 온다(`MARKET_LABEL` 이 생긴 그 이유).
  */
 export const SAME_PRICE_LABEL = "동일상품 확인 가격";
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 MI-SELLER-MARKET-COMPARISON-A — **국내 ↔ 해외 비교 세 줄의 어휘**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 **새 어휘 가족을 만들지 않는다** — 위 `SAME_PRICE_LABEL`(「동일상품 확인 가격」)과
+ *    같은 자격을 가리키므로 그 말을 **그대로 이어** 쓴다.
+ * 🔴🔴 **자격 범위를 라벨이 말한다**(CPO §2). 해외 최저가는 아무 후보의 최저가 아니다 —
+ *    서버 퍼널 다섯을 **전부 통과** 한 후보 중의 최저다:
+ * ```
+ * ① 「동일상품 아님」(EXCLUDED) 제외      ② verdict ∈ {SAME, PRESUMED_SAME}
+ * ③ 관측된 차이(가격 부적격 blocker) 제외  ④ 금액 있음
+ * ⑤ 가격 확인됨(VERIFIED_CURRENT)        ⑥ 원화 환산 가능
+ * ```
+ * 🔴 그래서 「해외 최저가」라고만 적지 않는다 — 카드 목록에 **더 싼 후보가 보여도**
+ *    그것이 위 자격을 못 넘으면 이 숫자가 아니고, 그 차이를 셀러가 오해한다.
+ */
+export const COMPARE_DOMESTIC_LABEL = `국내 ${SAME_PRICE_LABEL}`;
+export const COMPARE_OVERSEAS_LABEL = `해외 ${SAME_PRICE_LABEL} 최저`;
+export const COMPARE_DIFF_LABEL = "국내 − 해외 차이";
+/** 🔴 부호의 뜻을 **글자로** 말한다 — 「+」만 두면 어느 쪽이 비싼지 셀러가 추측한다. */
+export const COMPARE_DIFF_DOMESTIC_HIGHER = "국내가 더 비쌈";
+export const COMPARE_DIFF_OVERSEAS_HIGHER = "해외가 더 비쌈";
+export const COMPARE_DIFF_SAME = "같음";
+/** 🔴 위 퍼널을 한 줄로 — 「무엇의 최저인지」를 화면이 직접 말한다. */
+export const COMPARE_SCOPE_NOTE =
+  "해외 값은 동일상품으로 확인되고 가격까지 확인된 후보 중 원화 환산이 가능한 최저가입니다.";
 /**
  * ════════════════════════════════════════════════════════════════════════════
  * 🔴🔴🔴 CORE-2AO-R1 — **해외 제목의 owner 는 «이것» 이다**(내가 틀린 자리를 고쳤다)
@@ -1887,6 +1916,22 @@ export interface MarketPriceRange {
    * 🔴 `lowest`(원본 금액)를 **대체하지 않는다** — 둘은 같이 쓰인다.
    */
   lowestKrw: number | null;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MI-SELLER-MARKET-COMPARISON-A §1 — **`lowest` 가 «어느 후보» 인지**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 **왜 필요한가.** 요약이 「USD 40.6」이라 적고 카드에는 「USD 41」이 보여
+   *    CEO·CPO 가 **데이터 불일치로 읽었다.** 그런데 그때 그것이 「같은 후보인데 금액이
+   *    다른 것」인지 「서로 다른 후보」인지 **산출물로는 가릴 수 없었다** — 이 집계가
+   *    최저를 고르고 **그 후보가 누구인지 버렸기** 때문이다.
+   * 🟢 `used[0]` 은 **이미 손에 쥐고 있다**(바로 위에서 금액 오름차순 정렬했다)
+   *    ⟹ 비용 0 · 새 집계 0 · **금액 변경 0**(고르기만 한다 · `lowestKrw` 와 같은 모양).
+   * 🔴 이 저장소의 후보 식별자는 **URL 하나** 다(별도 `candidateId` 칸이 없다 —
+   *    dedupe · 환산 지도 · React key · 사람 판정이 전부 그 키를 쓴다).
+   * 🔴 **표시용이 아니다.** 「무엇의 최저인지」를 데이터로 되짚기 위한 칸이다.
+   */
+  lowestUrl: string | null;
 }
 
 /**
@@ -1964,6 +2009,8 @@ export function buildMarketJudgement(
         onSale: s.sale === "ON_SALE" ? 1 : 0,
         /** 🔵 §3 — 서버 파생값을 **고른다**(환산 0). */
         lowestKrw: s.row.priceKrwDerived ?? null,
+        /** 🔵 §1 — 그 최저 후보의 **식별자**(URL). 금액과 **같은 행** 에서 가져온다. */
+        lowestUrl: s.row.discoveredUrl ?? null,
       });
       continue;
     }
@@ -1978,6 +2025,8 @@ export function buildMarketJudgement(
     if (p.amount < cur.lowest) {
       cur.lowest = p.amount;
       cur.lowestKrw = s.row.priceKrwDerived ?? null;
+      /** 🔵 §1 — 최저가 바뀌면 **식별자도 같이** 옮긴다(셋이 한 후보를 가리켜야 한다). */
+      cur.lowestUrl = s.row.discoveredUrl ?? null;
     }
     cur.highest = Math.max(cur.highest, p.amount);
     cur.n += 1;

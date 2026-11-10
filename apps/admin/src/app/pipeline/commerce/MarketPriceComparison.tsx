@@ -148,6 +148,17 @@ import {
   /** 🔴 WU-146 ② — **상태별 결론.** 한 문장 안내문이 아니다(가격 0 / SAME 0 / 국내 0 을 가른다). */
   marketDecisionLines,
   countPendingCandidates,
+  /**
+   * 🔵 MI-SELLER-MARKET-COMPARISON-A — 비교 세 줄의 **어휘 owner 는 그 파일 하나** 다.
+   * 🔴 여기서 문자열을 만들지 않는다(「동일상품 확인」 가족과 갈라지지 않게).
+   */
+  COMPARE_DOMESTIC_LABEL,
+  COMPARE_OVERSEAS_LABEL,
+  COMPARE_DIFF_LABEL,
+  COMPARE_DIFF_DOMESTIC_HIGHER,
+  COMPARE_DIFF_OVERSEAS_HIGHER,
+  COMPARE_DIFF_SAME,
+  COMPARE_SCOPE_NOTE,
   type MarketJudgement,
   type MiSameSelection,
 } from "./mi-same-candidates";
@@ -315,6 +326,20 @@ export interface MarketPriceComparisonProps {
   /** 🔴 MI 가 이미 낸 해외 참고가격 집계. 여기서 계산하지 않는다. */
   overseasReference?: OverseasPriceSummary | null;
   /**
+   * 🔵🔵🔵 MI-SELLER-MARKET-COMPARISON-A — **국내 ↔ 해외 최저 ↔ 차액**(표시 전용).
+   * 🔴 서버 compareDomesticVsOverseasKrw 가 낸 값이다 — 이 파일은 **환산도 계산도
+   *    하지 않는다**(환산 owner 는 서버 하나 · 이 파일의 직접 환산 호출 0건이 계약이다).
+   * 🔴 한쪽이라도 없으면 서버가 **null** 을 준다 ⟹ **줄을 그리지 않는다**(0원 차이 금지).
+   * 🔴 판정·CASE·추천가격은 이 값을 **읽지 않는다**.
+   */
+  marketKrwComparison?: {
+    domesticKrw: number;
+    overseasKrw: number;
+    overseasCurrency: string;
+    overseasAmount: number;
+    differenceKrw: number;
+  } | null;
+  /**
    * 🔴🔴 CORE-2S §5-⑤ — **셀러가 입력한 매입 원가.** 🔴 이 영역은 그 값으로
    *    **아무것도 계산하지 않는다**(추천가 0 · 마진 0 · 예상수익 0) — 「비어 있다」는
    *    사실 하나를 말하기 위해서만 읽는다. 🟢 값 자체는 `PriceHistoryResponse.
@@ -431,6 +456,8 @@ export function MarketPriceComparison({
   snapshotId,
   onRecheck,
   rechecking = false,
+  /** 🔵 A — 서버가 낸 국내↔해외 비교값(표시 전용 · 없으면 줄을 그리지 않는다). */
+  marketKrwComparison = null,
   domesticReference,
   overseasReference,
   costPriceKrw,
@@ -728,6 +755,79 @@ export function MarketPriceComparison({
           <span data-testid="market-price-basis-verdict" className="text-[11px] text-text-primary">
             {priceBasisVerdict}
           </span>
+        </div>
+      )}
+
+      {/**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔵🔵🔵 MI-SELLER-MARKET-COMPARISON-A — **국내 ↔ 해외 최저 ↔ 차액**
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * 🔴🔴 **왜 이 영역인가.** 가격 숫자의 owner 는 「📊 시장 판매 판단」 **하나** 다
+       *    (WU-141-R3 이 요약 카드에서 가격을 제거해 그렇게 모았다). 그래서 이 비교는
+       *    요약 카드가 아니라 **여기** 에 선다.
+       * 🟢 CPO 승인(2026-11-10) — 2026-11-08 동결 대상인 **B 금액**은
+       *    `recommendation.recommendedPrice`(시장 기반 추천가격)이고 **이 셋과 다른 데이터** 다.
+       *    ⟹ 그 동결은 **그대로** 지켜진다(여기에 추천가격 B 를 적지 않는다).
+       *
+       * 🔴 **이 영역은 아무것도 계산하지 않는다** — 환산·차액 모두 서버
+       *    `compareDomesticVsOverseasKrw` 가 낸 값을 **그대로** 그린다.
+       * 🔴 서버가 한쪽이라도 없으면 `null` 을 주므로 **줄 자체가 서지 않는다**
+       *    ⟹ 「0원 차이」를 만들 자리가 구조적으로 없다(CPO §3).
+       * 🔴 **자격 범위를 라벨과 주석이 말한다**(CPO §2) — 카드 목록에 더 싼 후보가
+       *    보여도 퍼널을 못 넘으면 이 숫자가 아니다. 그것을 안 적으면 셀러가
+       *    「왜 더 싼 게 있는데 이 값이냐」로 읽는다(실제로 그렇게 읽혔다).
+       * 🔴 원본 통화·금액을 **같이** 적는다 — 환산만 보여 주면 되짚을 수 없다.
+       */}
+      {marketKrwComparison && (
+        <div
+          data-testid="market-krw-comparison"
+          className="mt-2 rounded border border-border/60 bg-surface-subtle/40 p-2"
+        >
+          <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+            <span className="text-[11px] text-text-secondary">{COMPARE_DOMESTIC_LABEL}</span>
+            <span
+              data-testid="market-krw-comparison-domestic"
+              className="text-[12px] font-medium tabular-nums text-text-primary"
+            >
+              {formatKrw(marketKrwComparison.domesticKrw)}
+            </span>
+          </div>
+          <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-2">
+            <span className="text-[11px] text-text-secondary">{COMPARE_OVERSEAS_LABEL}</span>
+            <span
+              data-testid="market-krw-comparison-overseas"
+              className="text-[12px] font-medium tabular-nums text-text-primary"
+            >
+              {/** 🔴 원본(GBP 37)을 같이 적는다 — 환산만 두면 어느 후보인지 되짚을 수 없다. */}
+              {`${marketKrwComparison.overseasCurrency} ${marketKrwComparison.overseasAmount.toLocaleString("ko-KR")} · ${formatKrw(marketKrwComparison.overseasKrw)}`}
+            </span>
+          </div>
+          <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-2">
+            <span className="text-[11px] text-text-secondary">{COMPARE_DIFF_LABEL}</span>
+            <span
+              data-testid="market-krw-comparison-diff"
+              className="text-[12px] font-medium tabular-nums text-text-primary"
+            >
+              {/**
+               * 🔴 **부호를 글자로 말한다** — 「+」만 두면 어느 쪽이 비싼지 추측하게 된다.
+               * 🔴 금액은 **절댓값** 으로 적고 방향은 말이 책임진다(음수 기호 오독 방지).
+               */}
+              {`${formatKrw(Math.abs(marketKrwComparison.differenceKrw))} · ${
+                marketKrwComparison.differenceKrw > 0
+                  ? COMPARE_DIFF_DOMESTIC_HIGHER
+                  : marketKrwComparison.differenceKrw < 0
+                    ? COMPARE_DIFF_OVERSEAS_HIGHER
+                    : COMPARE_DIFF_SAME
+              }`}
+            </span>
+          </div>
+          <p
+            data-testid="market-krw-comparison-scope"
+            className="mt-1 text-[11px] text-text-tertiary"
+          >
+            {COMPARE_SCOPE_NOTE}
+          </p>
         </div>
       )}
 

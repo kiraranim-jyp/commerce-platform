@@ -1947,6 +1947,26 @@ export interface MarketComparisonInput {
   /** 🔴 진행 중 — 중복 클릭을 막고 화면이 「분석 중」을 말한다(CPO §4). */
   rechecking: boolean;
   domesticReference: OverseasPriceSummary | null;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MI-SELLER-MARKET-COMPARISON-A — **국내 ↔ 해외 최저 ↔ 차액**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 **요약 칸이 아니다.** 이 payload 가 금지한 것은 「상품 판단 요약 데이터를 섞는 것」
+   *    이고(채널 둘 · `seller-judgement-summary-2:450`), 이 칸은 바로 위
+   *    `rows`·`domesticReference`·`overseasReference` 와 **같은 가격 축** 이다.
+   * 🔴 **표시 전용 파생값** — 판정·CASE·추천가격·수익성은 이 값을 읽지 않는다.
+   * 🔴 서버가 한쪽이라도 없으면 `null` 을 준다 ⟹ 화면은 **줄을 그리지 않는다**
+   *    (「0원 차이」를 만들지 않는다).
+   * 🔴 이 값을 **요약 카드로 보내지 않는다** — 거기는 WU-141-R3 이 가격을 제거한 자리다.
+   */
+  marketKrwComparison: {
+    domesticKrw: number;
+    overseasKrw: number;
+    overseasCurrency: string;
+    overseasAmount: number;
+    differenceKrw: number;
+  } | null;
   overseasReference: OverseasPriceSummary | null;
   /**
    * 🔴🔴 CORE-2S §5-⑤ — **셀러가 입력한 매입 원가.** 결론 영역이 「수익성 판단 보류 ·
@@ -2389,6 +2409,25 @@ export function DomesticPriceIntelligencePanel({
   const [domesticReference, setDomesticReference] = useState<OverseasPriceSummary | null>(null);
   /**
    * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MI-SELLER-MARKET-COMPARISON-A §4 — **국내 ↔ 해외 최저 ↔ 차액**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 서버가 이 값을 **계산해 두고도 아무도 읽지 않았다**(소비처 0) ⟹ 셀러 화면에
+   *    「두 가격의 차이」가 **존재한 적이 없다**. 이 state 가 그 경로를 연다.
+   * 🔴 **파생 정보다** — 판정·CASE·추천가격·수익성에 넣지 않는다(위 두 참고가격과 같은 원칙).
+   * 🔴 한쪽이라도 없으면 서버가 **`null`** 을 준다(「0원 차이」를 만들지 않는다).
+   * 🔴 **두 경로 모두** 세팅한다 — GET(재진입)만 하면 「🔄 다시 분석」에서 사라진다
+   *    (`RPP-POST-WIRING-1` 이 같은 함정을 적어 뒀다).
+   */
+  const [marketKrwComparison, setMarketKrwComparison] = useState<{
+    domesticKrw: number;
+    overseasKrw: number;
+    overseasCurrency: string;
+    overseasAmount: number;
+    differenceKrw: number;
+  } | null>(null);
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
    * 🔵🔵🔵 REFERENCE-PRICE-PROFITABILITY-**POST-WIRING-1**(CPO 승인 A · 2026-11-09)
    * ══════════════════════════════════════════════════════════════════════════
    *
@@ -2421,6 +2460,8 @@ export function DomesticPriceIntelligencePanel({
     if (!autoCheckResult || typeof autoCheckResult !== "object") return;
     const j = autoCheckResult as {
       overseasReference?: OverseasPriceSummary | null;
+      /** 🔵 A §4 — 국내↔해외 최저↔차액(파생 정보 · 판정에 섞지 않는다). */
+      marketKrwComparison?: { domesticKrw: number; overseasKrw: number; overseasCurrency: string; overseasAmount: number; differenceKrw: number } | null;
       domesticReference?: OverseasPriceSummary | null;
       /**
        * 🔵 RPP-POST-WIRING-1 — **최상위 칸** 이고 바로 위 `domesticReference` 의 **짝** 이다
@@ -2445,6 +2486,8 @@ export function DomesticPriceIntelligencePanel({
       } | null;
     };
     setOverseasReference(j.overseasReference ?? null);
+    /** 🔵 A §4 — GET(재진입) 경로. 🔴 POST 쪽도 같이 세팅한다(한쪽만 하면 재분석에서 사라진다). */
+    setMarketKrwComparison(j.marketKrwComparison ?? null);
     setDomesticReference(j.domesticReference ?? null);
     /** 🔵 RPP-POST-WIRING-1 — 🔴 **바로 위 줄과 같은 응답·같은 수명** 이다(A 안의 전부). */
     setReferenceProfitability(j.referenceProfitability ?? null);
@@ -2530,6 +2573,8 @@ export function DomesticPriceIntelligencePanel({
         : saved,
       domesticReference,
       overseasReference,
+      /** 🔵 A — 가격 축의 같은 채널로 내보낸다(요약 칸 아님 · 판정에 안 쓴다). */
+      marketKrwComparison,
       /**
        * 🔴 CORE-2S §5-⑤ — **이미 받은 응답의 칸 하나를 같이 올려보낸다.**
        *    🔴 지어내지 않는다 — 응답에 없으면 `null`(= 「아직 없다」)이다.
@@ -2591,6 +2636,8 @@ export function DomesticPriceIntelligencePanel({
     webSearchEvidence,
     domesticReference,
     overseasReference,
+    /** 🔴 deps 에 빠지면 첫 응답 뒤 비교값이 갱신되지 않는다(이 파일이 네 번 겪은 함정). */
+    marketKrwComparison,
     /** 🔴 deps 에 빠지면 원가를 입력해도 결론이 **보류로 남는다**(CORE-2R-5 의 그 함정). */
     data?.currentPrice?.costPriceKrw,
     /** 🔵 CORE-NEXT STEP 4 — 같은 함정. 빠지면 B 가 **영원히 null 로 보인다**. */
@@ -2961,6 +3008,8 @@ export function DomesticPriceIntelligencePanel({
           };
           /** 🔴 WU-049 — 통화별 최저가만 담긴 참고 축(환산 0). 없으면 null. */
           overseasReference?: OverseasPriceSummary | null;
+          /** 🔵 A §4 — POST 응답에도 같은 칸. */
+          marketKrwComparison?: { domesticKrw: number; overseasKrw: number; overseasCurrency: string; overseasAmount: number; differenceKrw: number } | null;
           /** 🔴 WU-056 — 국내 축도 같은 모양이다(참고 축). 없으면 null. */
           domesticReference?: OverseasPriceSummary | null;
         };
@@ -2982,6 +3031,8 @@ export function DomesticPriceIntelligencePanel({
         /** 🔵 서버가 「취급 제외라 시작하지 않았다」를 돌려주면 **그 문구를 그대로** 쓴다(사본 0). */
         setBrandExcludedNotice(json.domesticShop?.brandExcluded?.notice ?? null);
         setOverseasReference(json.overseasReference ?? null);
+        /** 🔵 A §4 — POST(🔄 다시 분석) 경로. */
+        setMarketKrwComparison(json.marketKrwComparison ?? null);
         setDomesticReference(json.domesticReference ?? null);
         /**
          * 🔵 RPP-POST-WIRING-1 — 🔴 **「🔄 다시 분석」 경로에도 같은 줄이 필요하다.**
@@ -3126,6 +3177,13 @@ export function DomesticPriceIntelligencePanel({
       urlCandidateNotice={urlCandidateNotice}
       overseasReference={overseasReference}
       domesticReference={domesticReference}
+      /**
+       * 🔴🔴 MI-SELLER-MARKET-COMPARISON-A — **여기에 비교값을 넘기지 않는다.**
+       *    이 JSX 는 `<MiPanelView>` 이고 **운영에서 한 번도 마운트되지 않는다**
+       *    (`presentation === "HIDDEN"` 이 그 앞에서 `return null` · 이 파일 :2016).
+       *    ⟹ 여기 붙이면 **테스트는 초록인데 화면은 그대로** 가 된다(죽은 렌더).
+       * 🟢 비교값은 **두 번째 콜백**(:2287 계열)으로 Workspace 에 올린다.
+       */
       onRecheck={() => void recheckNow()}
       confirmingId={confirmingId}
       onConfirmSameProduct={(id) => void confirmSameProduct(id)}

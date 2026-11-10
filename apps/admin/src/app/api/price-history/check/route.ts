@@ -693,6 +693,18 @@ export async function POST(request: Request) {
      */
     referenceProfitability: intelligence?.referenceProfitability ?? null,
     /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 MI-SELLER-MARKET-COMPARISON-A §4 — **국내 ↔ 해외 최저 ↔ 차액**
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 🔴🔴 이 칸은 서버에서 **계산만 되고 아무도 읽지 않았다**(소비처 0). 그래서
+     *    셀러 화면에 「두 가격의 차이」가 **존재한 적이 없다**. 이 줄이 그 경로를 연다.
+     * 🔴 **파생 정보다** — `sellerAction`·CASE·추천가격·`referenceProfitability` 는
+     *    이 값을 **읽지 않는다**(판정에 섞지 않는다 · CPO 명시).
+     * 🔴 한쪽이라도 없으면 **`null`** 이다 — 「0원 차이」로 오인시키지 않는다.
+     */
+    marketKrwComparison: intelligence?.marketKrwComparison ?? null,
+    /**
      * ══════════════════════════════════════════════════════════════════════════
      * 🔵🔵🔵 **IDENTITY-EVIDENCE-API-UI-1 — 응답 계약 ⒜**(CPO 승인 2026-11-08)
      * ══════════════════════════════════════════════════════════════════════════
