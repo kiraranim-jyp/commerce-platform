@@ -1,308 +1,222 @@
-# [CTO 인수인계 · 즉시 실행] TTAEJYO — `JUDGEMENT-DEDUP-1`
+# [CTO 인수인계 · 즉시 실행] `MI-UNIFIED-MARKET-PRICE-COMPARISON-1`
 
-> 기준일 **2026-11-09** · 담당 **CTO** · 승인·검증 **CPO** · 최종 의사결정 **CEO**
-> 🔴 이 문서는 **CPO 지시 원문 + CTO 가 저장소에서 실측해 정정한 값** 이다.
+> 기준일 **2026-11-10** · 담당 **CTO** · 승인·검증 **CPO** · 최종 의사결정 **CEO**
+> 🔴 이 문서는 **조사를 다시 하지 않기 위한 것**이다. §3 의 값은 **확정값**이고 재조사 금지다.
 
 ---
 
-## 0. 🔴🔴 먼저 — CPO 초안의 사실 **정정 2건**(실측 2026-11-09 15:20 KST)
+## 0. 🔴🔴 먼저 — 이 문서는 HEAD 해시를 박지 않는다
 
 ```
-① 🔴 「기준 커밋 e3183254」는 **HEAD 가 아니다.**
-     e3183254 = **마지막 «운영 코드» 커밋**(= 배포된 UX ②⑤⑦)
-     그 **위에 docs 전용 커밋이 쌓여 있다** — 패치 보존(d4e0771b) · 이 인수인계 문서
-   ⟹ 새 세션의 `git log -1` 이 **e3183254 가 아닌 docs 커밋** 을 보여도 **정상이다.**
-      「인계가 틀렸다」로 읽지 않는다.
-
-🔴🔴 **그래서 이 문서는 HEAD 해시를 «박지 않는다».**
-   이 문서를 고쳐 커밋하면 HEAD 가 또 바뀌어 **그 숫자가 즉시 낡는다**
-   (실제로 1차 작성분이 그 함정에 빠졌다 — d4e0771b 라고 적은 순간 HEAD 가 옮겨갔다).
-   🟢 확인은 **해시 대조가 아니라 구조** 로 한다:
+🔴 지난 인수인계가 「HEAD = <해시>」를 박았다가 **그 문서를 커밋한 순간 낡았다.**
+   새 세션의 `git log -1` 과 어긋나 「인계가 틀렸다」로 읽히는 사고가 실제로 났다.
+🟢 그래서 확인은 **해시 대조가 아니라 구조** 로 한다:
 ```
 ```bash
-git log -3 --stat --oneline     # 위쪽 커밋이 docs/ 만 건드리면 운영 동작은 불변
-git log -1 --format=%h -- apps packages    # ← 이것이 «운영 기준 커밋» 이고 e3183254 여야 한다
+git log -3 --stat --oneline                  # 위쪽이 docs/ 만 건드리면 운영 동작 불변
+git log -1 --format=%h -- apps packages      # ← 「운영 기준 커밋」
 ```
+🔴 **이 문서를 커밋하면 HEAD 가 docs 커밋이 된다 — 정상이다.**
+
+---
+
+## 1. 🟢 지금 상태 (CTO 실측)
+
 ```
-② 🟢 Production 은 **그 docs 커밋 기준으로 Ready** 다(`ttaejyo.vercel.app` HTTP 200).
-   🔴 **docs 전용이라 운영 동작은 e3183254 와 동일** 하다 —
-      main push 가 배포를 부르므로 docs 커밋도 재배포를 일으키지만 **기능 변화는 0** 이다.
-   🔴 배포 **진행 중(Building)** 일 수 있다. 「Ready 아님」을 장애로 읽지 않는다.
+브랜치        main                     origin/main   0 / 0
+운영 기준 커밋  4964224a  feat(MI-UNIFIED-PIPELINE-1)
+tree          b0792a3afbefea766992af1efb5225e41ff259e6
+Production    Commit: 4964224 · Build Completed · ● Ready · HTTP 200
+작업트리       🔴 **보존 미커밋 40건**(수정 12 + 미추적 28) — 절대 건드리지 않는다
+마지막 성공    npx vitest run → 841 files / 10,713 passed · tsc 0 · build exit 0
+```
+
+🔴 **`docs/START-HERE.md` 는 그 40건 «안» 에 있다.** 그래서 이번에도 **갱신하지 않았다**.
+좌표 갱신이 필요하면 **CPO 지시를 받고** 하라(임의로 건드리면 보존 상태가 흔들린다).
+
+---
+
+## 2. 🔵 이번 WU 의 목적 (CPO 확정)
+
+> **해외 후보의 원래 가격·통화는 보존하고, 서버에서 동일한 환율 기준으로 KRW 파생값을
+> 계산하며, UI 는 서버가 계산한 결과만 표시한다.**
+
+🔴 고치는 결함 — **환산이 지금 «두 경로» 에서 따로 일어난다**:
+```
+서버  convertToKrwStrict(…, params.rates)   라이브 환율을 넘긴다
+UI    convertToKrwStrict(amount, currency)  3번째 인자를 **넘기지 않는다** → 내장 고정표
+⟹ 같은 후보의 「약 ₩…」가 경로에 따라 달라질 수 있다
+🔴 실제 괴리 폭은 **측정하지 않았다** — 「다를 수 있다」까지가 확정된 사실이다
 ```
 
 ---
 
-## 1. 🔵 이번 인계의 목적
+## 3. 🔵🔵🔵 확정값 — **재조사 금지**
 
-이전 페이지 작업을 **처음부터 재조사·재설계하지 않는다.** 보존된 패치를 **이어서 적용하고
-검증** 한다.
+```ts
+// 환산 owner — packages/pricing/src/currency.ts:73
+convertToKrwStrict(amount, currency, liveRates?) : KrwPrice | null
+  // hasKnownRateToKrw 가 false 면 **null**  ← 「환산 불가는 null」 조건과 정확히 일치
 
-> **첫 번째 목표 = `JUDGEMENT-DEDUP-1` 완료.**
-
-🔴 이것은 **한정된 잔여 UX 작업** 이다. 완료 후 **MI 정확도 스프린트로 복귀** 한다.
-🔴 이 작업을 이유로 **MI 우선순위를 바꾸거나 커머스 등록 기능을 추가 개발하지 않는다.**
-
----
-
-## 2. 🔵 프로젝트 전략 — 유지
-
-> 해외 상품 URL 을 입력하면 **한국에서 판매할 만한 상품인지 정확하게 판단** 하는
-> MI 기반 상품 분석·등록 시스템.
-
-| 우선순위 | 작업 |
-|---|---|
-| P0 | 국내 동일상품 매칭 정확도 |
-| P0 | 해외 현지 가격·통화 정확도 |
-| P0 | 원본가격 `ORIGIN_FX` 정확도 |
-| P0 | MI CASE 및 수익성 결과 검증 |
-| P1 | WOMEN_FASHION · FASHION_ACCESSORIES · HOME_LIFESTYLE 실제 상품군 |
-| P1 | 실제 실패가 확인된 카테고리 엔진 **최소** 수정 |
-| P2 | 추가 커머스 채널 및 등록 자동화 |
-
-🟢 스마트스토어·쿠팡은 **실제 등록까지 확인됐다.** 추가 채널은 MI 정확도와 상품군
-일반화 **이후** 다.
-
----
-
-## 3. 🟢 현재 저장소 상태 — **CTO 실측값**(추정 아님)
-
-```
-브랜치        main
-HEAD          **docs 전용 커밋**(해시를 박지 않는다 — §0① 참조)
-운영 기준 커밋  e3183254  feat(UNIFIED-UX-1 ②⑤⑦)      ← Production 동작의 기준
-              🟢 확인: git log -1 --format=%h -- apps packages
-origin/main   0 / 0 (behind / ahead)
-미커밋        **40** = 수정 12 + 미추적 28   🔴 **보존 대상**
-              (그중 `docs/START-HERE.md` 1건 — 진입점 문서다)
-패치          docs/JUDGEMENT-DEDUP-1.patch  (15,245 bytes)
-              `git apply --check` **PASS**(실측 재확인 2026-11-09)
-Production    docs 커밋 기준 Ready · HTTP 200 · 🔴 운영 동작은 e3183254 와 동일
+// 환율·기준시점 owner — apps/admin/src/lib/exchange-rates.ts:43
+interface ExchangeRates {
+  rates: Record<string, number>;
+  fetchedAt: string;                                  // ← rateBasisAt 로 쓸 값(이미 있다)
+  source: "frankfurter" | "last_known" | "fallback";  // ← 🔴 아래 경고 참조
+}
 ```
 
-🔴🔴 **미커밋 40건과 이 패치는 «서로 다른 트랙» 이다 — 실측으로 확인했다.**
+### 🔴🔴 반드시 설계에 넣을 것 — `source === "fallback"` 은 **비상 고정표** 다
+`FIXED_RATES_TO_KRW` 로 떨어지는 경로가 **실패 시 자동으로** 동작한다. 지시서가 금지한
+「임의의 기본 환율로 대체」가 **조용히** 일어나는 자리다.
+⟹ 🔴 `priceKrwDerived` 를 낼 때 **`source` 를 반드시 같이 내보낸다.** 숨기면 셀러가
+고정표 환산을 실제 환율로 오인한다. (제외할지 표시할지는 구현 시 판단 — **숨기는 것만 금지**)
+
+### 🟢 스키마 변경이 필요 없다
 ```
-패치가 건드리는 파일  **2개**  MarketPriceComparison.tsx · sourcing-candidate-unified-ux-1.test.ts
-미커밋 40건            MI 스프린트 산출(테스트·fixture·crawler·shared) — 위 2파일 **미포함**
-⟹ 🟢 `git apply` 가 40건과 **충돌하지 않는다**(교집합 0 · reverse check 로 미적용 확인)
-🔴 그래도 STEP 2 는 **--check 를 먼저** 돌린다(§5).
-```
-
-🔴 **금지** — `git reset` · `git clean` · 광범위 staging · 기존 40건을 이번 커밋에 섞기.
-🔴 위 값과 **다르면 임의로 정리하지 말고 차이를 보고** 한다.
-
----
-
-## 4. 🔵🔵 CPO 확정 설계 — `JUDGEMENT-DEDUP-1`
-
-```
-접힘 밖(카드)   우리 판단 **등급** + **「확인 필요」 경고 한 줄**
-접힘 안(상세)   **긍정적인** 상세 판단 근거만
-🔴 같은 경고 문구를 **두 영역에 중복 표시 금지**
-🟢 국내·해외 **동일 구조**
+exchange_rates 테이블에 fetched_at TIMESTAMPTZ NOT NULL 이 **이미 있다**(migration 045)
+fetchedAt = Frankfurter 응답의 `date` 기준일 ⟹ **없는 시각을 만들어내지 않는다**
+⟹ 🔴 migration 0 · 새 테이블 0
 ```
 
-🔴🔴 **왜 이 모양인가 — 실측이 설계를 고쳤다.**
-`candidateWarningLines`(`mi-same-candidates.ts:598`)는 **언제나 최대 «한 줄»** 을 낸다
-(모든 사유를 `·` 로 **합쳐서** 돌려준다). ⟹ 처음 승인됐던 「핵심 1줄 + 상세 N줄」 분할은
-**성립하지 않는다**(`.slice(1)` 이 **영원히 비는 죽은 코드** 가 된다).
-🟢 그래서 **밖 = 경고 / 안 = 긍정 근거** 로 가른다 — 중복 경로가 **구조적으로 사라진다.**
-
-### 유지 사항(되살리면 FAIL)
+### 🟢 배선 자리 (재배치 불필요)
 ```
-기존 판단 데이터 보존 · 기존 사람 판정 **읽기 전용** 유지
-🔴 수동 동일상품 선택 UI 부활 금지 · 신규 사람 판정 입력 UI 부활 금지
-🔴 내부 blocker 코드(BRAND_MISMATCH 등) 사용자 노출 금지
-🔴 가격 집계 공식·제외 조건·Identity·GT 변경 금지
+market-intelligence.ts:720    await fetchLiveExchangeRates()   ← **이미 호출한다**
+overseasEvidence  생성 ~:427 (루프 안)  →  소비 :1247 · :1278
+⟹ 환율 확보(:720)가 소비(:1247) «앞» 이므로 순서를 바꾸지 않고 파생값을 계산할 수 있다
+
+UI 자체 환산 제거 대상
+  MarketPriceComparison.tsx:1857   convertToKrwStrict(c.lowest, c.currency)
+  MarketPriceComparison.tsx:2486   convertToKrwStrict(row.priceAmount, row.priceCurrency)
 ```
 
 ---
 
-## 5. 🔵 즉시 실행 순서
+## 4. 🔵 구현 순서
 
-### STEP 1 — 환경 확인(첫 명령)
+```
+① 서버 파생값   overseasEvidence 원소에 priceKrwDerived · rateBasisAt · rateSource 추가
+                🔴 원래 priceAmount·priceCurrency 를 **덮어쓰지 않는다**
+                🔴 환율 없으면 priceKrwDerived = null (임의 환율 금지)
+② 응답 계약     그 값이 UI 까지 가도록 기존 응답 타입에 **최소** 추가
+③ UI 교체      :1857 · :2486 의 자체 환산 제거 → 서버 값 **읽기만**
+④ 비교         국내 KRW ↔ 해외 파생 KRW (같은 기준)
+🔴 금지        통화 **합산** 0 · overseas-reference.ts 통화별 집계 계약 **보존** ·
+               CASE A/B/C/D 0 · 동일성 승격 0 · 환산값을 EXACT 근거로 쓰지 않음
+```
+
+🟢 **CPO 가 가른 핵심 구분** — 「**환산(비교용 파생값)**」 ≠ 「**합산**」.
+`overseas-reference.ts` 가 금지한 것은 **통화를 합쳐 하나의 합계 칸을 만드는 것**이다.
+후보별 KRW 파생값을 **따로** 제공하는 것은 그 계약을 건드리지 않는다 ⟹ **CEO 승인 불필요**.
+
+---
+
+## 5. 🔵 검증 (지시서 T1~T7)
+
+```
+T1 환산 계약     KRW/USD/EUR/GBP · 미지 통화 · 환율 누락 · 잘못된 가격 → null
+T2 일관성       같은 입력·같은 환율 → 같은 결과 · 서버/UI 이중 계산 0
+T3 UI 이중 환산  :1857 · :2486 의 convertToKrwStrict 호출이 **사라졌는지**
+T4 POST/GET     국내 KRW · 해외 USD/EUR/GBP · 환산 실패 후보 대조
+T5 가격 비교     동일상품 ↔ 추정·유사 분리 · 해외 최저 환산 · 국내 대비 차이
+T6 정책 회귀     EXACT 유지 · COMPARISON → CASE D 유지 · 추천가/판매판정 불변
+T7 변이 4종     환율 전달 제거 · UI 서버값 사용 제거 · null 가드 제거 · POST/GET 환율 분리
+```
+🔴 변이는 **Edit 또는 literal 치환**으로 넣고 **적용 확인(md5 + 좌표 개수)** 을 찍는다.
+🔴 복구 후 `git diff --quiet` 로 **바이트 동일**을 확인한다.
+
+---
+
+## 6. 🔴 이 트랙에서 실제로 밟은 함정 (반복 금지)
+
+```
+① 내 단언이 **동어반복** 이었던 적이 두 번 — 변이가 둘 다 잡았다
+   ⒜ 「호출이 정확히 2개」로 세다가, 다른 변이가 그 호출 하나를 같이 지워 **축이 엉켰다**
+   ⒝ split 으로 자른 조각 끝에 **다음 줄의 접두가 붙어** 변이를 통과시켰다
+   🟢 교훈 — **좌표로 자른다**(예: 삼항의 `?` ~ `:`). 개수 세기는 축을 흐린다
+② 소스 문자열 계약은 **주석을 벗기고** 본다(이 트랙에서 여덟 번 걸렸다)
+③ 「전체 회귀 N건 PASS」를 **실제 상품 E2E PASS 로 쓰지 않는다**
+④ `vercel ls --meta githubCommitSha=` 는 **작동하지 않는다**(CONTROL 실패로 확인).
+   배포 확인은 **빌드 로그의 `Commit:` 줄** 과 `gh api .../commits/<sha>/status` 로 한다
+⑤ push 가 배포를 **안 만들 수 있다**(실제로 1회 발생). GitHub commit status 에
+   Vercel 항목이 0건이면 webhook 미처리다 — 빈 커밋으로 재트리거한 선례가 있다
+```
+
+---
+
+## 7. 🔴 금지 (CPO·CEO 승인 없이 변경 금지)
+
+```
+CASE A/B/C/D · EXACT 가격 적격성 · COMPARISON → CASE D · PRESUMED_SAME 승격 ·
+matcher threshold · Identity 8축/Probe · 추천 판매가 공식 · 판매 판정 ·
+recommendedPriceKrw ↔ recommendation.recommendedPrice 소유 관계 ·
+B 시장가격 노출 정책 · 통화별 관측 집계 · ORIGIN_FX 의미와 우선순위 ·
+docs/START-HERE.md(보존 40건 안) · 기존 미커밋 40건 · 광범위 staging · 불필요 migration
+```
+
+---
+
+## 8. 🟡 남아 있는 미검증 (완료로 적지 않는다)
+
+```
+① 실제 상품 URL E2E — 로그인 뒤 경로라 **CTO 가 실행할 수 없다**
+   ⟹ 합성 fixture 를 E2E PASS 로 보고하지 않는다. CEO 확인 최소 항목만 요청한다
+② 서버/UI 환산 **괴리 폭** 미측정(「다를 수 있다」까지가 사실)
+③ 해외 복원분의 `priceObservedAt`(관측 시점)은 저장 구조에 **없다**
+   — 필요하면 migration 제안이 **선행** 돼야 한다(임의로 만들지 않는다)
+④ migration 081 이전 저장 행은 `match_reasons` 가 비어 POSSIBLE 군 복원이 안 된다
+```
+
+---
+
+## 9. 🔵 직전 WU 들이 이미 닫은 것 (재구현 금지)
+
+```
+JUDGEMENT-DEDUP-1            접힘 안팎 중복 제거            69c942a0
+SOURCING-CARD-MINIMAL-1      셀러 카드는 결과만 말한다        7903e5dc
+MI-SOURCING-…-INTEGRATION    국내 후보 가격이 재진입에 산다   f0b4b693
+  └ test 분리(B-2a/B-2b)                                  a0467971
+MI-UNIFIED-PIPELINE-1        해외 후보도 같은 길로 복원       4964224a
+```
+🔴 이 다섯은 **CPO 가 보고 접수했다.** 다시 조사하거나 되돌리지 않는다.
+🟡 `JUDGEMENT-DEDUP-1`·`SOURCING-CARD-MINIMAL-1` 은 **MI 완료 조건에 포함되지 않는다**(CPO 확정).
+
+---
+
+## 10. 🟢 첫 명령 (복붙)
+
 ```bash
 git fetch origin --quiet
 git branch --show-current                        # main
 git status --short | wc -l                       # 40
-git log -1 --format=%h -- apps packages          # e3183254  ← 운영 기준 커밋
+git log -1 --format=%h -- apps packages          # 4964224a
 git rev-list --left-right --count origin/main...HEAD   # 0  0
-git apply --check docs/JUDGEMENT-DEDUP-1.patch && echo PATCH_OK
 ```
-🔴 **대조 대상은 HEAD 해시가 아니라 위 다섯 값** 이다(§0① — 해시는 docs 커밋마다 바뀐다).
-🔴 다르면 **정리하지 말고 차이를 보고**. 특히 `40` 이 줄었으면 **누가 지운 것** 이므로 멈춘다.
+🔴 `40` 이 줄었으면 **누가 지운 것** 이다 — 정리하지 말고 **멈추고 보고**한다.
 
-### STEP 2 — 패치 적용(재구현 금지)
-```bash
-git apply --check docs/JUDGEMENT-DEDUP-1.patch   # PASS 여야 한다
-git apply docs/JUDGEMENT-DEDUP-1.patch
-```
-패치 내용(2 파일):
-```
-MarketPriceComparison.tsx                  +43 / -20   구현
-__tests__/sourcing-candidate-unified-ux-1  +170        신규 계약 W-1~W-4
-```
-🔴 **새로 작성하거나 같은 기능을 재구현하지 않는다.**
+---
 
-### STEP 3 — 기존 계약 **6건 / 3 파일** 갱신
-경고 줄의 testid 가 **`mi-candidate-warning`(접힘 안) → `mi-candidate-judgement-basis`
-(접힘 밖)** 로 옮겨졌다. 그 사실에 맞게 **좌표를 옮긴다**.
-```
-cand-02-candidate-display      R2-06 · R2-08 (+ 801·804·825 줄의 warning 필터)
-core-ux-rebuild-01-exposure-depth   UXR-C-1 「경고 줄은 evidence 안에만」
-stage2-evidence-recovery       D1-5 「카드가 그 줄을 실제로 그린다」
-```
-🔴 **금지** — assertion 삭제 · 검증 강도 완화 · 통과만 시키려고 기대값 바꾸기.
-🟢 **옮기는 방향** — 「**밖에 하나 · 안에 0**」을 **같은 강도로** 단언한다.
-🔴 바뀐 testid 와 **실제 DOM 의 의미가 일치하는지** 확인한다.
+## 11. 🔴 용량 규칙 (이 트랙에서 세 번 걸렸다)
 
-### STEP 4 — 신규 계약 + 변이
 ```
-W-1  같은 근거 문장이 두 번 서지 않는다(국내·해외 각각 · 접힘 «펼친 뒤» 까지 본다)
-W-2  핵심은 밖에 하나 · 접힘 안 경고 0
-W-3  정보 손실 0 — 사유가 그 한 줄 안에 전부 들어 있다
-W-4  상세가 없으면 접힘을 만들지 않는다(빈 틀 금지)
-D1   접힘 안에 중복을 다시 넣는다  → **FAIL 해야 한다**
-D2   접힘 밖 경고를 없앤다        → **FAIL 해야 한다**
-```
-🔴🔴 **D1 의 분모 함정** — 접힘은 **긍정 근거가 있을 때만** 선다. `matchReasons` 가 없는
-fixture 로는 **중복을 측정조차 못 한다**(실제로 D1 이 그래서 **한 번 통과** 했다).
-🟢 패치의 W 블록은 그 분모를 **이미 고쳐** 놓았다 — 그대로 쓴다.
-
-### STEP 5 — 전체 검증(순서 고정)
-```
-① 변경한 기존 계약 6건 → ② W-1~W-4 → ③ D1/D2 변이 → ④ 전체 회귀
-→ ⑤ typecheck → ⑥ production build
-```
-🔴 실패하면 **원인과 영향 범위를 보고** 한다. 삭제·완화로 통과시키지 않는다.
-
-### STEP 6 — 커밋·배포
-```
-이번 작업 파일만 **명시적** staging  🔴 기존 40건은 포함하지 않는다
-선별 diff 확인 → 커밋 → push → origin/main 0/0 확인 → 배포 → HTTP 확인
-🔴 Production **UI** 검증은 **별도 상태** 로 적는다
+착수 «전» 에 전체 범위(구현·계약·변이·회귀 7분·빌드 2분·커밋·배포)를 판단한다.
+끝까지 갈 수 있으면 **중간 보고 없이** 끝까지 간다.
+부족하면 — 코드 변경 **전** 이면 **착수하지 않는다**.
+이미 변경했으면 안전한 체크포인트 · 작업트리 상태 · 마지막 성공 명령 ·
+정확한 재개 지시를 남기고 **clean 으로** 멈춘다.
+🔴 완료하지 않은 작업을 완료로 보고하지 않는다.
 ```
 
 ---
 
-## 6. 🔴 완료 보고에 반드시 가르는 것
-
-| 항목 | 필수 증거 |
-|---|---|
-| 패치 적용 | `--check` 결과 + 적용 결과 |
-| 기존 계약 | **6건** 실행 결과 |
-| 신규 계약 | W-1~W-4 실행 결과 |
-| Mutation | D1 · D2 결과(각 FAIL 수) |
-| 회귀 | 전체 테스트 결과 |
-| 타입 / 빌드 | typecheck · production build |
-| 보존 | 기존 **40건** 보존 확인 |
-| 커밋 | hash + 변경 파일 목록 |
-| 배포 | 배포 결과 + 빌드 로그 `Commit:` + HTTP |
-| **Production UI** | 🔴 **확인 여부를 별도 표시** |
-
-🔴🔴 **`Build PASS`·`Deploy Ready` 를 `Production UI PASS` 로 적지 않는다.**
-확인하지 못했으면 **`Production UI 미검증`** 이다.
-
----
-
-## 7. 🔴 이 페이지에서 반복하지 말아야 할 **실패 방식 둘**(직전 구간 실측)
+## 12. 🟢 CPO 에게 올리는 첫 보고에 포함할 것
 
 ```
-⒜ 🔴 **마운트 DOM 계약이 «운영 배선» 을 못 본다.**
-   셀러 화면 하니스는 `CommerceWorkspace` 조립을 **복제** 한다 ⟹ 운영 파일의 prop
-   전달을 지워도 **계약이 전부 통과** 한다(변이 M1 이 실제로 통과했다).
-   🟢 새 prop 은 **소스 앵커 세 겹**(Workspace 전달 · 패널 생산+deps · 하니스 드리프트)
-      으로 따로 문다.
-
-⒝ 🔴🔴 **fixture 가 «운영에 도달할 수 없는 상태» 를 그리면 계약이 전부 거짓말한다.**
-   서버 산출을 **GET fixture 에 손으로 얹어** 29건을 초록으로 만들었는데, 운영 GET 은
-   그 칸이 **항상 null** 이라 CEO 화면엔 그 영역이 **없었다**(Production UI FAIL).
-   🟢 POST 전용 값은 하니스의 **`autoCheckResult`** 옵션으로 준다.
-   🔴 화면이 읽는 출처를 `data?.x ?? postState` 로 **섞지 않는다**.
+① 첫 명령 5값 대조 결과       ② 구현한 파일과 실제 diff
+③ 서버 환산 owner·환율 기준    ④ 국내·해외 KRW 비교 결과
+⑤ POST/GET 일관성            ⑥ UI 이중 환산 제거 확인
+⑦ 계약·변이 결과(적용 md5 + 실패 계약 + 바이트 동일 복구)
+⑧ 회귀/typecheck/build       ⑨ 실제 상품 E2E(미검증이면 그렇게)
+⑩ 커밋·배포·tree SHA          ⑪ 미완료 및 위험
 ```
-
----
-
-## 8. 🔵 `JUDGEMENT-DEDUP-1` 완료 후 복귀할 MI 스프린트
-
-```
-P0-A 원본가격 정확도
-     Bobo Choses EUR 75 ORIGIN_FX · Smallable EUR 75 ORIGIN_FX · Junior Edition GBP
-     국가별 가격 · 배송국가별 통화 · 세일가/원본가 분리
-     🔴 Smallable JP 조회가 EUR 로 반환되는 문제 + `a0b3c08` 후속 확인
-     🔴 **「가격을 가져왔다」로 PASS 하지 않는다** — 실제 원본가격·통화인지 본다
-P0-B 국내 가격 매칭 정확도
-     EXACT / PRESUMED_SAME / 유사상품 / 다른 상품 — 각 상태의 **가격 사용 여부와 제외 근거**
-     🔴 매칭이 부족하다고 **threshold 를 낮추지 않는다**(Precision 우선)
-P0-C 해외 가격 비교 정확도
-     국가별 실제 현지 통화 · KRW equivalent · 국가별 차이 · 배송국가에 따른 변경
-     🔴 **실제 통화와 표시 통화가 일치하는지** 검증
-P0-D MI CASE 및 수익성
-     위 셋이 정확해진 «뒤» CASE A~D 검증
-     🔴 **CEO 승인 없이 CASE 정책·가격 산식을 바꾸지 않는다**
-P1   WOMEN_FASHION → FASHION_ACCESSORIES → HOME_LIFESTYLE
-     여러 브랜드·사이트 실제 URL 로 원본가격·브랜드·상품명·옵션·국내/해외 매칭·가격·
-     CASE·Radar·카테고리·등록 준비까지 전 흐름
-     🔴 **실제 실패가 확인된 부분만** 원인 조사 + **최소** 수정
-```
-
----
-
-## 9. 🔴 아직 **미검증** 인 것 셋 — PASS 로 전환하지 않는다
-
-```
-④ 실제 live 후보 3곳 검증        🔴 그 상품의 **live transient 후보** 가 필요하다
-                                    (CTO 가 재현할 수 없다 · DB 저장분과 다르다)
-⑥ ₩88,000 산출 후보 대조         🔴 같은 이유
-⑧ Production **실화면** 최종 확인  🔴 **로그인 뒤 화면이라 CTO 가 볼 수 없다**
-🔴🔴 **fixture 로 대체해 PASS 처리하지 않는다**(CPO 명시).
-```
-
----
-
-## 10. 🔵 검수 순서 — 이 순서를 지킨다
-
-```
-1차  CTO   실제 변경 diff + 테스트 증거 제출
-2차  CPO   승인 요구사항과 증거를 **독립적으로 대조**
-3차  CEO   🔴 **CPO 가 PASS 한 경우에만** 검수 요청
-```
-🔴 CEO 에게 기본 테스트·저장소 상태 확인을 요청하지 않는다.
-
----
-
-## 11. 🔴 진행 규칙(정지·핑퐁 방지)
-
-```
-① 지시를 받으면 **첫 저장소 확인 명령부터 실행** 한다
-② 첫 결과를 보고한 뒤 다음 단계로 간다
-③ 멈춰서 단순 대기 상태로 남지 않는다
-④ 오류는 **메시지·실패 명령·원인·복구 방안** 을 같이 보고한다
-⑤ 실행 환경이 끊겼으면 끊긴 지점과 보존 상태를 확인하고 이어간다
-⑥ 보존된 패치를 **재조사·재작성하지 않는다**
-⑦ 승인된 범위 안에서는 **테스트·빌드·커밋·배포까지** 간다
-⑧ 범위를 벗어나거나 정책 변경이 필요하면 **임의 진행하지 말고 CPO 보고**
-🔴 「인계받았습니다」로 끝내지 않는다 — **첫 명령 결과를 제출하고 바로 시작** 한다
-```
-
----
-
-## 12. 🟢 첫 응답에 반드시 포함(CPO 정상 시작 기준)
-
-```
-① 현재 브랜치 / HEAD
-② `git status --short` 결과(요약 가능 · **개수는 정확히**)
-③ 미커밋 **40건 보존** 확인
-④ 패치 파일 확인
-⑤ `git apply --check` 결과
-⑥ 다음에 실행할 단계
-```
-🔴 이 다섯이 나오기 전에는 **진행 중/완료로 인정되지 않는다.**
-
----
-
-## 13. 🔵 참고 — 진입점은 하나다
-
-```
-docs/START-HERE.md  §0-DEDUP  ← 이 작업의 좌표(설계·대상 6건·실행 순서)
-🔴 두 번째 진입 문서를 만들지 않는다. 종료된 WU 상세는 막혔을 때만 연다.
-```
+🔴 **파일 첨부는 이 대화에서 도달하지 않았다**(두 번 실패) — 증거는 **본문에** 싣는다.
