@@ -123,6 +123,19 @@ hasResolvedPrice (:659)  resolvedOriginalAmount > 0 && Boolean(resolvedOriginalC
 🔴 올릴 때 **호출이 2회가 되지 않게** 한다 — 같은 값을 두 번 받으면 두 숫자가
 서로 다른 환율 위에 설 수 있다(아래 ③ 의 주석이 경고하는 바로 그 사고다).
 
+##### 🔴🔴🔴 2026-11-10 3차 정정 — **「가드 밖」이 아니라 「`:404` 보다 위」다**
+
+```
+market-intelligence.ts:186   function savedCandidateRowsToEvidence(…)   ← GET 복원 생산자
+market-intelligence.ts:404   dedupeEvidenceByUrl(savedCandidateRowsToEvidence(savedCandidateRows))
+market-intelligence.ts:720   await fetchLiveExchangeRates()             ← 🔴 **소비보다 «뒤» 다**
+```
+🔴🔴 **후보 evidence 가 만들어지는 자리(`:404`)가 환율 조회(`:720`)보다 «앞» 이다.**
+⟹ 「가드 밖으로」만 옮기면 **GET 재진입 복원 후보는 환율을 못 본다**(그 경로가 바로
+`MI-UNIFIED-PIPELINE-1` 이 살려 둔 길이다 · §9). ⟹ 🔴 hoist 목표 지점은
+**`:404` 보다 위** 다. 🔴 §3-① 의 「소비 :1247」 서술도 **불완전했다** — 소비처가 둘이다
+(`:404` evidence 생산 · `:1247~` 응답 집계).
+
 #### ② 🔴🔴 UI 환산 지점은 **2곳이 아니라 셋** 이고, 셋째가 가장 위험하다
 
 ```
@@ -486,16 +499,36 @@ grep -rln "byCurrency" apps/admin/src --include=*.test.ts  →  **48**
 🔴 그래서 설계 원칙이 하나로 고정된다 — **기존 칸은 건드리지 않고 새 칸만 더한다.**
 🔴 회귀는 **841 files / 10,713 passed** 가 기준선이다(그 아래로 내려가면 원인 규명 전 커밋 금지).
 
-### ④ 🔵 운영 변경 대상 파일 (예상 4) · 수정하지 않을 파일
+### ④-2 🔴🔴🔴 2026-11-10 3차 — **`:1857` 의 `g.byCurrency` 는 «서버 집계가 아니다»**
 
 ```
-🟢 대상  market-intelligence.ts (1303줄)  ⓿ 환율 hoist · ① 파생값 · ② 응답
-         candidate-market.ts     (512줄)  요약 타입에 파생 칸 가산
+:1857  g.byCurrency[0] → buildPriceGuide(j, "OVERSEAS")
+       owner = apps/admin/src/app/pipeline/commerce/**mi-same-candidates.ts:914**
+       🔴 그 파일은 `app/pipeline/commerce/` = **클라이언트** 다
+       🔴 즉 `summarizeCandidateOverseasPrices`(서버)의 산출이 **아니다**
+       호출부 — mi-same-candidates.ts:1312·1313 · DomesticPriceIntelligencePanel.tsx:4131
+```
+🔴🔴 ⟹ **서버 집계에 `lowestKrw` 를 더해도 `:1857` 은 그것을 읽지 않는다.**
+🟢 그래서 설계가 하나로 좁혀진다 — **후보 «행» 에 `priceKrwDerived` 를 서버가 실고,
+`buildPriceGuide` 가 그 값을 «고르기만» 한다**(환산 0 · 그래야 §5 T3 「파일 전체 환산
+호출 0회」를 지키면서 `:1857`·`:2486`·`:2658` 셋이 **같은 숫자**를 읽는다).
+🔴 ⟹ **`mi-same-candidates.ts` 가 변경 대상 5번째 파일이다**(§15-④ 의 「예상 4」 정정).
+
+### ④ 🔵 운영 변경 대상 파일 (🔴 **예상 4 → 실측 5~6**) · 수정하지 않을 파일
+
+```
+🟢 대상  market-intelligence.ts  (1303줄) ⓿ hoist(**:404 보다 위**) · ① 파생값 ·
+                                          ② 응답 · GET 복원(:186·:404)도 같이 받는다
+         candidate-market.ts     (512줄)  요약에 파생 칸 **가산**(기존 칸 불변)
+         mi-same-candidates.ts   (버들)   🔴 **3차에 추가** — buildPriceGuide(:914)가
+                                          후보 행의 KRW 를 **고르기만** 한다(환산 0)
          MarketPriceComparison.tsx(2740줄) ③ UI 3지점(:1857 · :2486 · :2658)
-         + 응답 타입/route 최소 가산
+         + 후보 행 타입(`priceKrwDerived`) · 필요 시 Panel 배선
 🔴 금지  run-price-check.ts (§3-④ · 다른 축) · overseas-reference.ts 통화별 집계 계약 ·
          docs/START-HERE.md (보존 40건 안)
 ```
+🔴 `apps/admin/AGENTS.md` 경고 — 이 Next.js 는 학습 데이터와 다르다. **route handler 를
+건드릴 때만** `node_modules/next/dist/docs/` 를 먼저 읽는다(이번 범위는 lib·client 중심).
 
 ### ⑤ 🔴🔴 착수 전 용량 계획 (이 WU 는 «한 덩어리» 로 끝내야 한다)
 
