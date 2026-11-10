@@ -633,3 +633,63 @@ grep -rln "byCurrency" apps/admin/src --include=*.test.ts  →  **48**
 🔴 Production 실제 상품 E2E 는 **CTO 가 로그인 뒤 화면을 볼 수 없다** ⟹ 서버 응답·DB·
    테스트 증거까지 CTO 가 준비하고, **합성 fixture 로 PASS 를 주장하지 않는다**(§14-③·§8)
 ```
+
+---
+
+## 17. 🟢 `MI-DOMESTIC-COMPETITIVE-SELLABILITY` — STEP 1 배포 · looxloo **CLOSED**
+
+🔴 **CPO 가 조사를 끊었다**(2026-11-10). 이 절은 **기록** 이고 착수점이 아니다.
+
+### ① 🔵🔵 확정된 공통 원칙 — 사이트별 예외를 만들지 않는다
+
+> **80% 공통 기능을 완성하기 위해 20% 예외를 무한히 파고들지 않는다.
+> 수집할 수 있으면 수집하고, 못 하면 `UNKNOWN` 으로 넘긴다.**
+
+```
+🟢 신뢰할 수 있는 재고 신호를 주는 사이트 → 수집한다
+🔴 안 주거나 해석이 불확실하면 → **UNKNOWN** (추정 금지)
+🔴 재고 수집 실패를 **상품 매칭·가격 수집 실패로 전파하지 않는다**
+🔴 특정 사이트의 재고 때문에 **전체 파이프라인을 지연시키지 않는다**
+🔴 그 사이트를 위한 **예외 로직을 만들지 않는다**
+```
+
+### ② 🟢 STEP 1 배포 완료 (`f06be8d6`)
+
+```
+🟢 AggregationEvidence Pick 에 "soldOut" · GET 복원 `soldOut: r.soldOut`
+🔴 국내 transient «판정 입력» 레코드는 **`soldOut: null` 유지** —
+   거기에 실제 값을 넣었더니 `wu-061-price-closure:282` 가 FAIL 했고
+   (`computeSellerAction` 의 `soldOutCount` 가 `DOMESTIC_SHOP` 행만 센다)
+   **판매 판단이 조용히 바뀔** 자리였다 ⟹ 되돌렸다
+🔵 **「재고를 수집하는 것」과 「판매 판단에 사용하는 것」은 서로 다른 승인이다**
+계약 10 · 변이 2종(M1 2 FAIL · M2 3 FAIL) · 회귀 843 files / 10,752 passed · tsc 0 · build 0
+```
+
+### ③ 🔴 looxloo — **재조사 금지** (확정 사실만)
+
+```
+🔴 HTML 템플릿 마커는 재고 신호가 **아니다**(상품 5건에서 값이 전부 동일 = 상수)
+🟢 JSON-LD 는 변동한다 — 단 `availability` 는 **옵션(variant) 단위** 다
+   실측: ProductGroup `hasVariant` 3 중 1 OutOfStock · 2 InStock (같은 상품)
+   ⟹ 「InStock+OutOfStock 혼재」는 모순이 아니라 **옵션별 상태** 다
+🟢 옵션 선택 «전» 응답에 전 옵션 상태가 다 있다 ⟹ 선택 전후 변화 **없다** · 옵션 API 불필요
+🔴 `OutOfStock` 만인 전체 품절 상품 — 30건 스캔에서 **0건**
+   ⟹ 「없다」가 아니라 **「검색 경로로는 확보되지 않았다」**(미확인)
+🔴 어댑터 구조적 원인 — `looxloo.ts:137` 이 **검색 결과만** 받고 상세를 열지 않는다
+🔵 상세 Fetch 추가 = **보류 유지**(CPO)
+```
+
+### ④ 🟢 어댑터별 재고 생산 능력 (재조사 불필요)
+
+```
+🟢 littleluna(HTML 품절 마커) · foretforet(옵션 단위 · 「하나라도 SALE 이면 false」)
+🔴 chocoel(**항상 null** · 주석이 명시) · deuxbebe(기본 null) · looxloo(코드 없음)
+```
+
+### ⑤ 🔵 다음 방향 — MI 본래 목표로 복귀 (CPO)
+
+```
+국내 동일상품 판매가격 → 국내 판매·재고 확인 가능 여부 → 해외 소싱 가격
+→ 원화 환산 → 비용 반영 수익성 → **지금 판매할 가치가 있는가**
+🔴 사이트별 예외 해결이 아니라 **여러 사이트에 적용되는 공통 MI 성능** 이 우선이다
+```
