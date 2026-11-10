@@ -117,20 +117,75 @@ describe("B. 🔵 ② 집계 입력이 POST/GET 에서 «각각 하나» 다 (�
     ).not.toContain("for (const e of geminiEvidence ?? [])");
   });
 
-  it("B-2 🔴🔴 **POST 는 geminiEvidence «만»** 쓴다 — 저장분을 섞지 않는다(중복 집계 금지)", () => {
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵 **B-2 를 둘로 쪼갰다 — 변이 독립성 때문이다**(CPO 승인 2026-11-10)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 **CPO 지적이 맞았다.** 합쳤을 때는 한 케이스가 **세 동작을 함께** 봐서
+   *    ⒜ GET 복원 배선을 끊어도 ⒝ URL 중복 제거를 없애도 **같은 계약이 실패** 했다
+   *    ⟹ 두 보장 각각의 **독립 증거가 되지 못했다**(변이 N1 · N3 이 구별되지 않았다).
+   * 🟢 그래서 **보장 단위로** 가른다 — 운영 코드 변경 **0**(테스트만).
+   * ```
+   * B-2a  GET 복원 배선        ← 끊으면 N1 «만» 실패한다
+   * B-2b  URL 단위 중복 제거    ← 없애면 N3 «만» 실패한다
+   * ```
+   * 🔴 **약화 0** — 합본이 보던 단언을 **하나도 버리지 않고** 두 곳에 나눠 담았다.
+   */
+  it("B-2a 🔴🔴 **GET 가지가 복원분을 집계 입력으로** 쓴다(POST 는 섞지 않는다)", () => {
     const at = INTEL.indexOf("const aggregationEvidence");
     expect(at, "🔴 합류 지점을 찾지 못했다").toBeGreaterThan(0);
     const decl = INTEL.slice(at, INTEL.indexOf("for (const e of aggregationEvidence)", at));
-    /** 🔴 삼항의 참가지(= geminiEvidence 가 있을 때)에 복원분이 들어가면 두 번 세어진다. */
+    /** 🔴 분기 자체가 있어야 POST/GET 이 갈린다. */
     expect(decl).toContain("geminiEvidence && geminiEvidence.length > 0");
-    expect(decl).toContain("dedupeEvidenceByUrl(geminiEvidence)");
-    expect(decl).toContain("savedCandidateRowsToEvidence(savedCandidateRows)");
-    const [post, get] = decl.split("savedCandidateRowsToEvidence");
+    /** 🔴 GET 가지 — 이것이 없으면 재진입에서 국내 참고가격이 **다시 사라진다**. */
     expect(
-      post,
-      "🔴 POST 가지에 복원분이 섞였다 — 같은 후보가 두 번 집계된다",
-    ).not.toContain("savedCandidateRows");
-    expect(get, "🔴 GET 가지가 없다").toBeTruthy();
+      decl,
+      "🔴 GET 복원 배선이 끊겼다 — 재진입에서 국내 가격 근거가 소멸한다",
+    ).toContain("savedCandidateRowsToEvidence(savedCandidateRows)");
+    /** 🔴 POST 가지 — 저장분이 섞이면 같은 후보가 **두 번** 집계된다. */
+    const [post] = decl.split("savedCandidateRowsToEvidence");
+    expect(post, "🔴 POST 가지에 복원분이 섞였다 — 중복 집계").not.toContain("savedCandidateRows");
+    expect(post, "🔴 POST 가지가 geminiEvidence 를 쓰지 않는다").toContain("geminiEvidence");
+  });
+
+  it("B-2b 🔴 **쓰이는 가지마다 URL 단위 중복 제거** 를 통과한다", () => {
+    const at = INTEL.indexOf("const aggregationEvidence");
+    const decl = INTEL.slice(at, INTEL.indexOf("for (const e of aggregationEvidence)", at));
+    /**
+     * 🔴🔴 **1차 분리가 덜 갈렸고 변이가 그것을 잡았다**(이 기록을 남긴다).
+     *    처음엔 「`dedupeEvidenceByUrl(` 가 **정확히 2개**」로 썼다. 그런데 N1(GET 배선
+     *    제거)이 그 호출 **하나를 같이 지우므로** B-2b 도 함께 실패했다
+     *    ⟹ 「중복 제거」 축이 **「GET 가지 존재」에 간접 의존** 하고 있었다.
+     * 🟢 그래서 개수를 세지 않고 **각 가지 안에서** 확인한다 —
+     *    GET 가지의 **존재** 는 B-2a 의 책임이고 여기서 다시 묻지 않는다.
+     */
+    /**
+     * 🔴🔴 **두 번째 교정 — 내 단언이 또 동어반복이었고 변이가 잡았다.**
+     *    `decl.split("savedCandidateRowsToEvidence")[0]` 을 「POST 가지」로 썼는데,
+     *    GET 줄이 `: dedupeEvidenceByUrl(savedCandidateRowsToEvidence(…` 이라
+     *    그 **접두 `dedupeEvidenceByUrl(` 가 앞 조각 끝에 붙어 있었다**
+     *    ⟹ POST 가지에서 중복 제거를 없애도(N3) **통과** 했다.
+     * 🟢 그래서 **삼항 가지를 좌표로** 자른다 — `?` 와 `:` 사이가 POST 가지다.
+     */
+    const q = decl.indexOf("?");
+    const colon = decl.indexOf(":", q);
+    expect(q, "🔴 삼항 분기를 찾지 못했다").toBeGreaterThan(0);
+    expect(colon, "🔴 GET 가지 구분자를 찾지 못했다").toBeGreaterThan(q);
+    const postBranch = decl.slice(q + 1, colon);
+    const getBranch = decl.slice(colon + 1);
+    expect(postBranch, "🔴 POST 가지에 URL 중복 제거가 없다").toContain("dedupeEvidenceByUrl(");
+    /**
+     * 🔴 복원분을 **쓰는 가지가 있으면** 그것도 중복 제거를 통과해야 한다.
+     * 🟢 조건부지만 **공집합이 되지 않는다** — 그 가지의 존재는 B-2a 가 보장한다
+     *    ⟹ 정상 코드에서 이 분기는 **항상** 실행된다(둘이 합쳐 공백이 없다).
+     */
+    if (getBranch.includes("savedCandidateRowsToEvidence")) {
+      expect(
+        getBranch,
+        "🔴 복원분이 중복 제거를 거치지 않는다 — GET 경로에서 같은 URL 이 두 번 센다",
+      ).toContain("dedupeEvidenceByUrl(savedCandidateRowsToEvidence(");
+    }
   });
 
   it("B-3 🔴 중복 제거는 **URL 단위** 다 — 판매처(도메인)로 접지 않는다", () => {
