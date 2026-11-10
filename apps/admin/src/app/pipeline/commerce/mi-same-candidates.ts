@@ -955,6 +955,13 @@ export function buildPriceGuide(j: MarketJudgement, market: "KR" | "OVERSEAS"): 
       highest: Math.max(...amounts),
       n: used.length,
       onSale: used.filter((s) => s.sale === "ON_SALE").length,
+      /**
+       * 🔵 §3 — **최저 후보의 서버 환산값을 «고른다».** 환산 호출 **0**.
+       * 🟢 `used` 는 바로 위에서 **금액 오름차순으로 정렬** 됐으므로 `used[0]` 이
+       *    그 통화의 최저가 후보다 ⟹ `Math.min` 과 **같은 후보** 를 가리킨다.
+       * 🔴 서버가 환산하지 못했으면 `null` 이다(0 으로 만들지 않는다).
+       */
+      lowestKrw: used[0]?.row.priceKrwDerived ?? null,
     });
   }
   const byCurrency = [...byCurrencyMap.values()].sort((a, b) => a.currency.localeCompare(b.currency));
@@ -1866,6 +1873,20 @@ export interface MarketPriceRange {
   n: number;
   /** 🔴 그중 **판매중이 확인된** 곳. 「n 곳에서 판매중」으로 읽히지 않게 같이 적는다. */
   onSale: number;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MI-UNIFIED-MARKET-PRICE-COMPARISON-1 §3 — **`lowest` 의 서버 환산 KRW**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 **이 파일은 환산을 «하지 않는다».** 이 값은 서버가 후보 행에 실어 보낸
+   *    `row.priceKrwDerived` 를 **고른 것** 이다(지시서 §3 「클라이언트는 선택·정렬만」).
+   *    ⟹ 위 주석의 「환산하지 않는다 · 합계 칸이 없다」는 **그대로 유효** 하다 —
+   *      합계 칸이 생긴 것이 아니고 **최저 1건의 파생값** 이 실린 것이다.
+   * 🔴 `null` = 서버가 환산하지 못했다(환율 미확보 · 모르는 통화) ⟹ 화면은
+   *    **숫자를 만들지 않고** 「원화 환산 불가」를 적는다.
+   * 🔴 `lowest`(원본 금액)를 **대체하지 않는다** — 둘은 같이 쓰인다.
+   */
+  lowestKrw: number | null;
 }
 
 /**
@@ -1941,10 +1962,23 @@ export function buildMarketJudgement(
         highest: p.amount,
         n: 1,
         onSale: s.sale === "ON_SALE" ? 1 : 0,
+        /** 🔵 §3 — 서버 파생값을 **고른다**(환산 0). */
+        lowestKrw: s.row.priceKrwDerived ?? null,
       });
       continue;
     }
-    cur.lowest = Math.min(cur.lowest, p.amount);
+    /**
+     * 🔵🔵 §3 — **`lowest` 와 `lowestKrw` 는 «같은 후보» 를 가리켜야 한다.**
+     *
+     * 🔴 그래서 `Math.min` 을 비교문으로 바꿨다 — `Math.min` 은 「바뀌었는가」를
+     *    알려주지 않아서 환산값을 **짝지을 수 없다**. 🟢 `lowest`·`highest` 의
+     *    **결과는 한 글자도 바뀌지 않는다**(같은 최소/최대).
+     * 🔴 짝을 안 맞추면 「GBP 37 인데 약 ₩120,000」처럼 **다른 후보의 환산값** 이 붙는다.
+     */
+    if (p.amount < cur.lowest) {
+      cur.lowest = p.amount;
+      cur.lowestKrw = s.row.priceKrwDerived ?? null;
+    }
     cur.highest = Math.max(cur.highest, p.amount);
     cur.n += 1;
     if (s.sale === "ON_SALE") cur.onSale += 1;

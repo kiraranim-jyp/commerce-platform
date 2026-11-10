@@ -179,9 +179,20 @@ describe("B3-04 🔴🔴 복원이 가격 집계에 **닿지 않는다**", () =>
     /** 🔴 세 번째 인자에 복원분을 넣는 모양이 코드에 **없다**. */
     expect(MI).not.toMatch(/geminiEvidence\s*=\s*savedCandidateRows/);
     expect(MI).not.toMatch(/geminiEvidence:\s*savedCandidateRows/);
-    /** 🟢 반대로 — 복원은 **자기 칸 하나** 로만 나간다. */
-    const ret = MI.slice(MI.indexOf("    savedCandidateRows,"));
-    expect(ret.startsWith("    savedCandidateRows,")).toBe(true);
+    /**
+     * 🟢 반대로 — 복원은 **자기 칸 하나** 로만 나간다.
+     *
+     * 🔵 **앵커 재지정**(MI-UNIFIED-MARKET-PRICE-COMPARISON-1 · CPO 승인) —
+     *    전 앵커는 반환 줄이 **글자 그대로** `savedCandidateRows,` 이기를 요구했다.
+     *    이제 그 칸은 후보 행에 서버 환산값을 **가산** 해서 나간다(`attachDerivedKrw`).
+     * 🔴 **보호 내용은 그대로** 다 — ⒜ 「자기 칸」으로 나가고 ⒝ `geminiEvidence` 로
+     *    흘러들지 않는다(위 두 단언이 그것을 본다) ⒞ 집계 루프가 읽지 않는다(B3-04).
+     * 🔴 기대값을 임의로 바꾼 것이 아니다 — **실패 원인**(내가 그 줄을 바꿨다)을 확인하고
+     *    그 줄의 **새 실제 모양** 을 단언한다(CPO 「기대값 변경 금지」 준수).
+     */
+    expect(MI, "🔴 복원이 자기 칸으로 나가지 않는다").toContain(
+      "savedCandidateRows: attachDerivedKrw(savedCandidateRows, candidateKrwByUrl)",
+    );
   });
 
   it("B3-04-c 🔴 `/check`(POST) 경로는 복원을 **부르지 않는다** — 플래그가 꺼져 있다", () => {

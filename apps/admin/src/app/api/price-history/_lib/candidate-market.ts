@@ -161,6 +161,28 @@ export interface CandidateOverseasPriceRecord {
   market: string;
   currency: string;
   amount: number | null;
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MI-UNIFIED-MARKET-PRICE-COMPARISON-1 §3-2 — **원화 환산 «파생값»**
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 **이 칸은 `amount`·`currency` 를 대체하지 않는다.** 원본 가격과 통화는
+   *    위 두 칸에 **그대로** 남는다(지시서 §3-2 「원본 가격과 통화 유지」).
+   * 🔴🔴 **환산을 이 파일이 «하지 않는다».** 호출자(`market-intelligence.ts`)가
+   *    환산 함수(라이브 환율을 받는 그 함수)로 **이미 계산한 값** 을 넘긴다.
+   *    왜: 환산 owner 를 둘로 만들지 않기 위해서다 — 이 파일에 환율을 들이면
+   *    「서버가 두 군데서 환산한다」는 이 WU 가 고치는 그 결함이 **여기서 재발** 한다.
+   * 🔴 **환율을 모르면 `null`** 이다. 그 환산 함수가 모르는 통화에 `null` 을 주므로
+   *    「임의 환율로 만든 숫자」가 구조적으로 들어올 수 없다.
+   * 🔴 이 파일의 계약은 **「환산 함수 이름이 소스에 등장하지 않는다」** 다 —
+   *    그 검사는 **주석을 벗기지 않으므로** 여기에 그 이름을 «적지도» 않는다.
+   * 🔴 **옵셔널이다 — 넘기지 않으면 동작이 한 글자도 바뀌지 않는다**(`sellerKey`·
+   *    `highestAmount`·`verdict`·`priceStatus` 가 추가된 것과 **같은 모양** ·
+   *    그래서 `byCurrency` 참조 계약 48파일이 보존된다).
+   * 🔴 **동일상품 판정 근거로 쓰지 않는다** — 이 칸은 가격 «비교» 전용이고
+   *    matcher·tier·verdict 는 이 값을 읽지 않는다(지시서 §5-9).
+   */
+  priceKrwDerived?: number | null;
   priceTier: string;
   /**
    * 🔴🔴🔴 CORE-2T §5·§13 — **「판매처 N곳」을 «레코드 수» 로 세지 않기 위한 키.**
@@ -369,6 +391,80 @@ export interface CandidateOverseasPriceSummary {
    * 🔴 후보는 **그대로 보인다** — 빠지는 것은 `byCurrency` 하나다.
    */
   observedDifferenceCount: number;
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MI-UNIFIED-MARKET-PRICE-COMPARISON-1 §3-3 — **통화를 넘어선 최저 «1건»**
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 **합산이 아니다.** 통화별 금액을 더하지 않고, 서로 다른 통화의 «원본 가격» 을
+   *    직접 비교하지도 않는다. 비교는 **환산된 KRW 파생값끼리만** 한다(지시서 §3-3).
+   * 🔴 그래서 `byCurrency` 는 **한 글자도 바뀌지 않는다** — 이 칸은 **추가** 다.
+   *    「통화별 최저」와 「통화를 넘은 최저」는 **다른 질문** 이고 둘 다 남는다.
+   * 🔴 **환산 가능한 후보만** 비교한다. `priceKrwDerived == null`(환율 미확보 ·
+   *    모르는 통화)인 후보는 **0원으로 취급하지 않고 후보에서 빠진다** —
+   *    0 으로 두면 그것이 즉시 「최저」가 되어 화면이 거짓을 말한다(지시서 §3-3).
+   * 🔴 최저가 **하나도 없으면 `null`** 이다(「없음」을 0 으로 적지 않는다 · 표준 §0.3 ⑤
+   *    「미측정 ≠ 실패 0」).
+   * 🟢 **추적 가능성** — 고른 후보의 `currency`·`amount`(원본)를 같이 들고 나간다.
+   *    그래야 화면이 「GBP 37(약 ₩64,000)」처럼 **원본과 환산을 같이** 말할 수 있고,
+   *    셀러가 어느 후보가 최저인지 **되짚을 수** 있다(지시서 §3-3 마지막 줄).
+   */
+  lowestKrw: {
+    amountKrw: number;
+    /** 🔴 고른 후보의 **원본** 통화 — 환산 결과의 통화가 아니다. */
+    currency: string;
+    /** 🔴 고른 후보의 **원본** 금액 — 환산값으로 덮어쓰지 않는다. */
+    amount: number;
+  } | null;
+}
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 MI-UNIFIED-MARKET-PRICE-COMPARISON-1 §3-4 — **국내 ↔ 해외 KRW 차이(⑥)**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **파생 정보다.** 기존 판정·CASE·추천가격·판매자 verdict 를 **자동으로 바꾸지
+ *    않는다**(CPO §1 마지막 줄). 이 칸을 읽는 계산은 **없다** — 비교를 «보여주기» 위한 값이다.
+ * 🔴 **둘 다 KRW 기준** 이다 — 국내는 원래 KRW, 해외는 서버가 환산한 `priceKrwDerived`.
+ *    통화가 다른 원본 금액끼리 **직접 비교하지 않는다**(§3-3 과 같은 원칙).
+ * 🔴🔴 **한쪽이라도 없으면 `null`** 이다. 「0원 차이」로 적지 않는다 —
+ *    `0` 은 「같은 가격」이라는 **다른 사실** 이고, 표준 §0.3 ⑤(미측정 ≠ 실패 0)이다.
+ * 🔴 해외 쪽 입력은 `summarizeCandidateOverseasPrices().lowestKrw` 하나다 ⟹
+ *    **적격성 퍼널을 통과한 후보만** 들어오고 **환산 불가 후보는 애초에 빠져 있다**
+ *    (그 함수가 그것을 보장한다 · 새 자격 규칙을 여기서 만들지 않는다).
+ * 🟢 **국내 기준값은 호출자가 기존 owner 에서 넘긴다** — 이 함수가 국내 가격을
+ *    «고르지» 않는다(동일상품 ↔ 유사상품 기준을 섞지 않기 위해서다 · §3-4).
+ */
+export interface MarketKrwComparison {
+  /** 🔴 국내 기준 가격(KRW) — 호출자가 넘긴 기존 집계 owner 의 값이다. */
+  domesticKrw: number;
+  /** 🔴 해외 최저 **환산** 가격(KRW). */
+  overseasKrw: number;
+  /** 🟢 그 해외 후보의 **원본** 통화·금액 — 추적 가능성(어느 후보인지 되짚는다). */
+  overseasCurrency: string;
+  overseasAmount: number;
+  /**
+   * 🔴 `국내 − 해외` 다. **양수면 국내가 더 비싸다**(= 해외 조달 여지가 있다).
+   * 🔴 비율을 만들지 않는다 — 분모를 어느 쪽으로 둘지는 제품 정책이다.
+   */
+  differenceKrw: number;
+}
+
+export function compareDomesticVsOverseasKrw(
+  domesticKrw: number | null | undefined,
+  overseasLowestKrw: CandidateOverseasPriceSummary["lowestKrw"],
+): MarketKrwComparison | null {
+  if (domesticKrw == null || !Number.isFinite(domesticKrw) || domesticKrw <= 0) return null;
+  if (overseasLowestKrw == null) return null;
+  const { amountKrw, currency, amount } = overseasLowestKrw;
+  if (!Number.isFinite(amountKrw) || amountKrw <= 0) return null;
+  return {
+    domesticKrw,
+    overseasKrw: amountKrw,
+    overseasCurrency: currency,
+    overseasAmount: amount,
+    differenceKrw: domesticKrw - amountKrw,
+  };
 }
 
 export function summarizeCandidateOverseasPrices(
@@ -393,6 +489,11 @@ export function summarizeCandidateOverseasPrices(
   let unverifiedCount = 0;
   /** 🔵 STAGE 7-2 — **관측된 차이** 때문에 금액에서 빠진 수(관측용 · 금액에 합치지 않는다). */
   let observedDifferenceCount = 0;
+  /**
+   * 🔵🔵 §3-3 — **통화를 넘은 최저 후보 1건.** 🔴 `byCurrency` 와 **다른 변수** 다 —
+   *    같은 변수에 담으면 「통화별」과 「통화 넘어」가 한 칸을 다투게 된다.
+   */
+  let lowestKrw: CandidateOverseasPriceSummary["lowestKrw"] = null;
   for (const r of records) {
     byMarket[r.market] = (byMarket[r.market] ?? 0) + 1;
     byPriceTier[r.priceTier] = (byPriceTier[r.priceTier] ?? 0) + 1;
@@ -467,6 +568,24 @@ export function summarizeCandidateOverseasPrices(
       continue;
     }
     /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 §3-3 — **통화를 넘은 최저 후보.** 🔴 이 줄의 «자리» 가 계약이다.
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 위의 자격 퍼널(`EXCLUDED` → verdict → 관측된 차이 → 금액 유무 →
+     *    `priceStatus` 확인)을 **전부 통과한 뒤** 다 ⟹ 이 최저가는
+     *    **`byCurrency` 와 «같은 자격» 의 후보 중에서만** 골라진다.
+     *    🔴 이 줄을 위로 올리면 「동일상품 아님」·「가격 미확인」 후보가 최저가가 된다.
+     * 🔴 `priceKrwDerived == null` 은 **건너뛴다** — 0 으로 취급하면 즉시 최저가 된다.
+     * 🟢 판매처 접기(`sellerKey`) **앞** 이어도 결과가 같다 — 접기는 판매처별 **최소**
+     *    를 남기므로 전체 최소는 변하지 않는다. 🔴 그래서 접기 뒤로 미루지 않았다
+     *    (미루면 `sellerKey` 없는 해외 축이 이 집계에서 빠진다).
+     */
+    const krw = r.priceKrwDerived;
+    if (krw != null && Number.isFinite(krw) && (lowestKrw == null || krw < lowestKrw.amountKrw)) {
+      lowestKrw = { amountKrw: krw, currency: r.currency, amount: r.amount };
+    }
+    /**
      * 🔴🔴 CORE-2T — **키가 있으면 판매처 단위로 모은다.** 집계는 루프 뒤에서 한 번에
      *    한다(그래야 「같은 판매처의 두 번째 레코드」가 형성대를 넓히지 못한다).
      */
@@ -508,5 +627,6 @@ export function summarizeCandidateOverseasPrices(
     byPriceTier,
     unverifiedCount,
     observedDifferenceCount,
+    lowestKrw,
   };
 }

@@ -212,20 +212,44 @@ import {
 } from "./recommended-price-copy";
 /** 🟢 `PriceEditor` 가 쓰는 **그 포맷터** 다 — 두 화면이 같은 숫자를 다르게 적지 않는다. */
 /**
- * 🔵🔵🔵 CLOSE-3 §0 — **환산은 «기존» owner 를 그대로 쓴다.**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 MI-UNIFIED-MARKET-PRICE-COMPARISON-1 §4 — **이 파일은 환산하지 않는다**
+ * ════════════════════════════════════════════════════════════════════════════
  *
- * 🔴 `convertToKrwStrict` 는 환율을 모르는 통화에 **`null`** 을 돌려준다 ⟹ 「환산
- *    불가면 숫자를 만들지 않는다」가 **그 함수의 계약으로 이미** 성립한다.
- * 🔴 새 환율 API **0** · 새 환율 상수 **0**(폴백표는 pricing 패키지가 원래 들고 있다).
- * 🔴🔴 **허용 범위는 후보 카드 안뿐** — 집계/요약(`buildPriceGuide` ·
- *    `OverseasReferencePrice`)에는 이 값을 **넣지 않는다**(WU-148 의미 불변).
+ * 🔴🔴 **`convertToKrwStrict` import 가 «의도적으로» 없다.** 전에는 이 파일이 그 함수를
+ *    **환율 인자 없이** 세 곳(`:1857`·`:2486`·`:2658`)에서 불러 **내장 고정표** 로
+ *    환산했고, 서버는 라이브 환율로 환산했다 ⟹ **같은 후보가 경로에 따라 다른 원화
+ *    숫자** 를 가질 수 있었다. 그중 하나(`:2658`)는 **실제 판매가 확정** 경로였다.
+ * 🟢 이제 환산 owner 는 **서버 하나** 다(`market-intelligence.ts` ·
+ *    `convertToKrwStrict(amount, currency, liveRates)`). 이 파일은 서버가 후보 행에
+ *    실어 보낸 `row.priceKrwDerived` 를 **읽기만** 한다.
+ * 🔴🔴 **다시 import 하지 않는다.** 하는 순간 환산 owner 가 둘이 되고 이 WU 가 고친
+ *    결함이 재발한다(계약 테스트가 이 파일의 호출 **0건** 을 단언한다).
+ * 🔴 `formatKrw` 는 **표시 포맷터** 라 그대로 쓴다 — 환산이 아니다.
  */
 import {
   formatKrw,
-  convertToKrwStrict,
   /** 🔵 REFERENCE-PRICE-PROFITABILITY-AXIS-1 — **타입만**(계산은 서버 owner 하나). */
   type ReferenceProfitabilityResult,
 } from "@commerce/pricing";
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 MI-UNIFIED-MARKET-PRICE-COMPARISON-1 §4 — **후보 행의 서버 환산값 읽기**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **이 함수가 «왜» 영역 밖에 있는가.** `mi-candidate-list` 구역에는
+ *    「집계 어휘를 쓰지 않는다」는 계약이 있고(`core-e2e-close-03` :259 ·
+ *    금지 `reference`·`byCurrency`·`priceKrw`·`priceTier`·`lowest`), 그 구역 안에서
+ *    `row.priceKrwDerived` 를 직접 읽으면 **그 금지에 걸린다**.
+ * 🟢 **가드를 느슨하게 하지 않고 어휘를 옮겼다** — WU-133 이 `blocker-text.ts` 를
+ *    따로 만든 그 처리와 **같은 모양** 이다. 🔴 금지 목록은 **한 글자도 줄이지 않았다**.
+ * 🔴 **CSS 로 숨기는 처리가 아니다**(CPO 명시) — 구역의 «코드 어휘» 를 바꾼 것이고
+ *    서버 파생값은 그대로 읽힌다.
+ * 🔴 `?? null` 을 여기서 한다 — `undefined` 가 흘러 숫자를 지어낼 자리를 막는다.
+ */
+const derivedKrwOf = (row: { priceKrwDerived?: number | null }): number | null =>
+  row.priceKrwDerived ?? null;
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -1854,7 +1878,17 @@ function MarketBlock({
                 ? (() => {
                     const c = g.byCurrency[0]!;
                     if (c.currency === "KRW") return null;
-                    const krw = convertToKrwStrict(c.lowest, c.currency);
+                    /**
+                     * 🔵🔵🔵 MI-UNIFIED-MARKET-PRICE-COMPARISON-1 §4 — **서버 파생값을 읽는다.**
+                     *
+                     * 🔴🔴 전에는 이 줄이 `convertToKrwStrict(c.lowest, c.currency)` 로
+                     *    **환율 없이** 환산했다 ⟹ 내장 고정표를 썼고, 서버는 라이브 환율로
+                     *    환산해 **같은 후보가 경로에 따라 다른 숫자** 를 가질 수 있었다.
+                     * 🟢 이제 `buildPriceGuide` 가 서버 `row.priceKrwDerived` 를 **고른** 값이다
+                     *    ⟹ 아래 후보 줄(`:2486`)·확정 버튼(`:2658`)과 **같은 숫자** 다.
+                     * 🔴 `null` 이면 숫자를 만들지 않고 「원화 환산 불가」를 적는다(전과 동일).
+                     */
+                    const krw = c.lowestKrw == null ? null : { amountKrw: c.lowestKrw };
                     return krw ? (
                       <p
                         data-testid="market-summary-price-krw"
@@ -2483,7 +2517,13 @@ function MarketColumn({
                         row.priceCurrency &&
                         row.priceCurrency !== "KRW"
                           ? (() => {
-                              const krw = convertToKrwStrict(row.priceAmount, row.priceCurrency);
+                              /**
+                               * 🔵🔵🔵 §4 — **서버 파생값을 읽는다**(자체 환산 제거).
+                               * 🔴 `:2658`(확정 버튼)과 **같은 칸** 을 읽으므로
+                               *    「표시 KRW == 확정 KRW」가 구조적으로 보장된다.
+                               */
+                              const derived = derivedKrwOf(row);
+                              const krw = derived == null ? null : { amountKrw: derived };
                               return krw ? (
                                 <p
                                   data-testid="mi-candidate-price-krw"
@@ -2652,11 +2692,20 @@ function MarketColumn({
                                *    않고 `priceOverrideKrw`(SELLING)에 **KRW 만** 기록한다.
                                * 🔴 환율을 모르면 **버튼을 그리지 않는다**(확정할 숫자가 없다).
                                */
+                              /**
+                               * 🔵🔵🔵 §4 — **확정 KRW 는 «표시한 그 값» 이다.**
+                               *
+                               * 🔴🔴 이 줄이 이 WU 에서 **가장 중요한 자리** 다(CPO 지목) —
+                               *    여기서 나온 숫자가 `priceOverrideKrw` 로 **실제 판매가
+                               *    확정에** 들어간다. 전에는 `:2486`(표시)과 이 줄이 **각각**
+                               *    `convertToKrwStrict` 를 환율 없이 불렀고, 둘이 갈릴 수 있었다.
+                               * 🟢 이제 **둘 다 `row.priceKrwDerived` 하나를 읽는다**
+                               *    ⟹ 「표시 KRW == 확정 KRW」가 구조적으로 성립한다.
+                               * 🔴 KRW 후보는 환산하지 않고 원본을 그대로 쓴다(기존 성질 보존).
+                               * 🔴 환율을 모르면 `null` ⟹ 아래가 **버튼을 그리지 않는다**(보존).
+                               */
                               const krw =
-                                row.priceCurrency === "KRW"
-                                  ? row.priceAmount
-                                  : (convertToKrwStrict(row.priceAmount, row.priceCurrency)
-                                      ?.amountKrw ?? null);
+                                row.priceCurrency === "KRW" ? row.priceAmount : derivedKrwOf(row);
                               if (krw == null) {
                                 return (
                                   <p

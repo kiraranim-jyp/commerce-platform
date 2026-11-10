@@ -100,7 +100,28 @@ describe("C. 🟢 판정면에 닿지만 기존 판정을 바꾸지 않는다", 
   });
 
   it("🟢 반환 객체의 «별도 칸» 으로만 나간다", () => {
-    expect(INTEL).toContain("geminiEvidence: geminiEvidence ?? null");
+    /**
+     * ════════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 MI-UNIFIED-MARKET-PRICE-COMPARISON-1 — **앵커 재지정**(CPO 승인)
+     * ════════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 전 앵커는 `geminiEvidence: geminiEvidence ?? null` 이라는 **그대로 통과**
+     *    문법을 요구했다. 이제 그 칸은 후보 행에 **서버 환산값을 가산** 해서 나간다
+     *    (`attachDerivedKrw`) ⟹ 문법은 바뀌었지만 **지켜야 할 것은 그대로** 다:
+     * ```
+     * ⒜ «별도 칸» 으로만 나간다(판정/집계 칸에 섞이지 않는다)
+     * ⒝ null(안 돌았다) 과 [](후보 0) 을 **섞지 않는다**
+     * ⒞ 원본 칸을 **덮지 않는다**(spread 뒤에 파생 칸 하나만 더한다)
+     * ```
+     * 🔴 그래서 아래는 **생산 경로까지** 단언한다(CPO 지시) — 문자열 하나로 PASS 를 만들지 않는다.
+     */
+    expect(INTEL).toContain("geminiEvidence: attachDerivedKrw(geminiEvidence, candidateKrwByUrl)");
+    /** 🔴 ⒝ — 생산자가 `null` 을 `[]` 로 바꾸지 않는다(그 한 줄이 「0 ≠ 부재」를 지킨다). */
+    expect(INTEL, "🔴 null 을 [] 로 바꾸면 「안 돌았다」와 「후보 0」이 같아진다").toContain(
+      "if (!rows) return null;",
+    );
+    /** 🔴 ⒞ — 원본 칸 위에 **가산** 이다(spread 가 먼저 온다). */
+    expect(INTEL, "🔴 원본 칸을 덮으면 원가격·통화가 사라진다").toMatch(/\.\.\.r,\s*priceKrwDerived:/);
   });
 
   /**
@@ -196,7 +217,14 @@ describe("E. 🔴🔴 flag OFF 면 기존 동작이 한 글자도 바뀌지 않�
 
   it("🔴 null(안 돌았다) 과 [](후보 0) 을 섞지 않는다 — §7 의 0 ≠ 부재", () => {
     expect(RUNNER).toContain("geminiMetrics === null ? null : geminiEvidence");
-    expect(INTEL).toContain("geminiEvidence ?? null");
+    /**
+     * 🔵 **앵커 재지정**(CPO 승인) — 「0 ≠ 부재」를 지키는 자리가 `?? null` 에서
+     *    `attachDerivedKrw` 의 **첫 줄** 로 옮겨졌다. 🔴 보호 내용은 동일하다 —
+     *    입력이 `null` 이면 **`null` 을 그대로** 돌려주고 `[]` 로 바꾸지 않는다.
+     */
+    expect(INTEL, "🔴 null 입력을 [] 로 바꾸면 「안 돌았다」가 「후보 0」이 된다").toContain(
+      "if (!rows) return null;",
+    );
   });
 
   it("flag 는 여전히 \"true\" 만 ON 이다", () => {

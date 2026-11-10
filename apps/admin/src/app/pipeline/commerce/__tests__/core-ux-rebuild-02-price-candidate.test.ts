@@ -44,8 +44,27 @@ interface Dump {
   sellerUrl: Record<string, unknown>[];
 }
 const dump = (): Dump => JSON.parse(readFileSync(FIX, "utf8")) as Dump;
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 MI-UNIFIED-MARKET-PRICE-COMPARISON-1 — **fixture 가 «서버» 를 모사한다**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **운영 GET 경로를 그대로 모사한다.** `toSavedCandidateRows` 는 저장분을 행으로
+ *    되돌리기만 하고, 운영은 그 뒤 `market-intelligence.ts` 의 `attachDerivedKrw` 가
+ *    **모든 행에** `priceKrwDerived` 를 세운다(POST·GET 동일 계약).
+ * 🔴 그 단계를 빼면 fixture 가 **운영에 없는 상태**(칸 없는 행)를 그려 계약이 거짓말한다.
+ * 🔴 **임의 환율을 쓰지 않는다** — 이 파일은 환산 금액을 **같은 함수로** 기대값을
+ *    만드는 단언(아래 `:121`)이 있어, fixture 도 **그 함수** 를 써야 숫자가 맞는다.
+ * 🟢 테스트에서 그 함수를 부르는 것은 허용된다 — 금지된 것은 **운영 UI** 의 환산이다.
+ */
+const fixtureDerivedKrw = (amount: number | null | undefined, currency: string | null | undefined) =>
+  amount != null && currency && currency !== "KRW"
+    ? (convertToKrwStrict(amount, currency)?.amountKrw ?? null)
+    : null;
 const restored = (raw: Record<string, unknown>[]): GeminiTransientRow[] =>
-  toSavedCandidateRows(raw.map((r) => candidateReviewRowFromDb(r))) as GeminiTransientRow[];
+  (toSavedCandidateRows(raw.map((r) => candidateReviewRowFromDb(r))) as GeminiTransientRow[]).map(
+    (r) => ({ ...r, priceKrwDerived: fixtureDerivedKrw(r.priceAmount, r.priceCurrency) }),
+  );
 const bothMarkets = (): GeminiTransientRow[] => {
   const d = dump();
   return [...restored(d.legacy.rows), ...restored(d.sellerUrl)];
@@ -85,6 +104,17 @@ const sameRow = (over: Partial<GeminiTransientRow>): GeminiTransientRow =>
     market: "OVERSEAS",
     basis: "TLD",
     ...over,
+    /**
+     * 🔵 §3-2 — **운영이 항상 세우는 칸** 이라 fixture 도 항상 세운다(위 주석 참조).
+     * 🔴 `over` 가 명시하면 그 값이 이긴다(환율 미확보를 `null` 로 검증할 수 있어야 한다).
+     */
+    priceKrwDerived:
+      (over as { priceKrwDerived?: number | null }).priceKrwDerived !== undefined
+        ? (over as { priceKrwDerived?: number | null }).priceKrwDerived
+        : fixtureDerivedKrw(
+            (over as { priceAmount?: number | null }).priceAmount,
+            (over as { priceCurrency?: string | null }).priceCurrency,
+          ),
   }) as GeminiTransientRow;
 
 const SNAP = "c88d2ca4-bfe1-4851-9c1d-92f69222a3f2";

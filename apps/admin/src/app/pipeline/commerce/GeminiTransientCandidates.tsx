@@ -79,6 +79,23 @@ export interface GeminiTransientRow {
   crossSellerConflicts?: string[];
   priceAmount?: number | null;
   priceCurrency?: string | null;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MI-UNIFIED-MARKET-PRICE-COMPARISON-1 §3-2 — **서버가 환산한 원화 파생값**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 **클라이언트는 이 값을 «읽기만» 한다.** 환산을 다시 하지 않는다 —
+   *    전에는 UI 가 환산 함수를 **환율 인자 없이** 불러 내장 고정표로 환산했고, 서버는
+   *    라이브 환율로 환산해 **같은 후보가 경로에 따라 다른 숫자** 를 가질 수 있었다.
+   *    그것이 이 WU 가 고치는 결함이다(지시서 §3-1·§4).
+   * 🔴 이 파일의 계약은 **「환산 함수 이름이 소스에 등장하지 않는다」** 다(mi-022) —
+   *    그 검사는 **주석을 벗기지 않으므로** 여기에 그 이름을 «적지도» 않는다.
+   * 🔴 `null`/`undefined` = 환율 미확보 또는 모르는 통화 ⟹ 화면은 **숫자를 만들지 않고**
+   *    「원화 환산 불가」를 적는다. 🔴 **0 으로 취급하지 않는다.**
+   * 🔴 **원본 가격을 대체하지 않는다** — `priceAmount`·`priceCurrency` 는 그대로 쓰인다.
+   * 🔴 이 값은 **동일상품 판정 근거가 아니다**(가격 비교 전용 · 지시서 §5-9).
+   */
+  priceKrwDerived?: number | null;
   /** 🔴 시장 분류. `KR` / `OVERSEAS` / `UNKNOWN` — WU-020 의 `classifyCandidateMarket` 산출. */
   market?: string | null;
   basis?: string | null;

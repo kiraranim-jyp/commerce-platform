@@ -327,14 +327,64 @@ describe("④ 🔴🔴 해외 축의 격리", () => {
      *    (키를 더 늘려도 **합계 칸이면 FAIL** 한다 · 전엔 **무엇을 더해도** FAIL 이라
      *     「왜 FAIL 인지」를 구분하지 못했다).
      */
+    /**
+     * ════════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 MI-UNIFIED-MARKET-PRICE-COMPARISON-1 — **계약 ① 재지정**(CPO 승인)
+     * ════════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 **느슨하게 만든 것이 아니다.** 전 버전은 「칸 이름에 `krw` 가 없다」는
+     *    **이름 금지** 였고, 그것이 지키려던 실제 불변식은 **「통화를 섞어 더하지
+     *    않는다」** 였다. CPO 가 그 둘을 **분리** 하라고 판정했다:
+     * ```
+     * 유지  byCurrency 의 구조·집계 의미·통화별 최저/최고 — **불변**
+     * 유지  통화를 섞은 «합계/총액» 칸 — **여전히 금지**
+     * 허용  교차통화 KRW 최저는 **별도 파생 필드**(`lowestKrw`) 로 «최저 1건» 을 고른다
+     * ```
+     * 🔴 그래서 아래는 **이름 검사가 아니라 «구조와 값» 검사** 다 — 문자열만으로 PASS 를
+     *    만들지 않는다(CPO §3). 환산을 `byCurrency` 안으로 넣으면 **FAIL** 한다.
+     */
     expect(Object.keys(s).sort()).toEqual(
-      ["byCurrency", "byMarket", "byPriceTier", "count", "unverifiedCount", "observedDifferenceCount"].sort(),
+      [
+        "byCurrency",
+        "byMarket",
+        "byPriceTier",
+        "count",
+        "unverifiedCount",
+        "observedDifferenceCount",
+        /** 🔵 승인된 파생 필드 — 합계가 아니라 **최저 1건** 이다(아래가 값으로 단언한다). */
+        "lowestKrw",
+      ].sort(),
     );
-    /** 🔴 통화를 섞은 칸(합계·총액·KRW 환산)이 **하나도 없다**. */
+    /**
+     * 🔴🔴 **합계/총액 칸은 여전히 하나도 없다.** `krw` 를 이름 금지에서 뺀 대신
+     *    「섞어 더하는 어휘」는 **그대로** 막는다.
+     */
     for (const k of Object.keys(s)) {
-      expect(k).not.toMatch(/total|sum|krw|converted|환산/i);
+      expect(k, `🔴 통화를 섞어 더하는 칸이 생겼다: ${k}`).not.toMatch(
+        /total|sum|합계|총액|converted|환산/i,
+      );
     }
-    /** 🟢 그리고 새 칸은 **숫자(건수)** 이고 금액 범위를 만들지 않는다. */
+    /**
+     * 🔴🔴🔴 **`byCurrency` 버킷 안에는 환산이 «들어가지 않는다».** 이것이 계약 ①의
+     *    진짜 불변식이고 재지정 뒤에도 **그대로** 다(버킷에 칸을 더하면 FAIL).
+     */
+    for (const [cur, bucket] of Object.entries(s.byCurrency)) {
+      expect(Object.keys(bucket).sort(), `🔴 ${cur} 버킷에 칸이 늘었다`).toEqual(
+        ["count", "highestAmount", "lowestAmount"].sort(),
+      );
+    }
+    /**
+     * 🔵 **파생 필드를 «값으로» 단언한다** — 「최저 1건」이고 합계가 아니다.
+     * 🔴 `currency`·`amount` 는 **고른 후보의 원본** 이라 `byCurrency` 에 실재하는
+     *    통화여야 한다 ⟹ 환산값으로 원본을 덮거나 통화를 합쳐 만든 숫자면 FAIL 한다.
+     */
+    if (s.lowestKrw != null) {
+      expect(typeof s.lowestKrw.amountKrw).toBe("number");
+      expect(s.lowestKrw.amountKrw).toBeGreaterThan(0);
+      expect(Object.keys(s.byCurrency)).toContain(s.lowestKrw.currency);
+      expect(s.lowestKrw.amount).toBeGreaterThan(0);
+    }
+    /** 🟢 그리고 기존 새 칸은 **숫자(건수)** 이고 금액 범위를 만들지 않는다. */
     expect(typeof s.unverifiedCount).toBe("number");
   });
 
@@ -362,7 +412,15 @@ describe("⑤ 🟢 evidence 가 시장을 «들고» 나온다", () => {
   });
 
   it("🟢 해외 집계가 MI 반환에 실려 «읽는 쪽» 이 생겼다", () => {
-    expect(INTEL).toContain("candidateOverseasPrice: summarizeCandidateOverseasPrices(overseasEvidence)");
+    /**
+     * 🔵 **앵커 재지정**(MI-UNIFIED-MARKET-PRICE-COMPARISON-1) — 인라인 호출을 **const**
+     *    로 뽑았다(⑥ 이 그 요약의 `lowestKrw` 를 읽는다).
+     * 🟢 「반환에 실려 읽는 쪽이 생겼다」는 **성질은 그대로** 다 — 같은 집계기 · 같은 입력.
+     */
+    expect(INTEL).toContain(
+      "const overseasSummary = summarizeCandidateOverseasPrices(overseasEvidence)",
+    );
+    expect(INTEL).toContain("candidateOverseasPrice: overseasSummary");
     expect(INTEL).toContain("candidateOverseasEvidence: overseasEvidence");
   });
 });

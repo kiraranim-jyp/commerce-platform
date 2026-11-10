@@ -2,6 +2,8 @@ import type { GeminiTransientEvidence } from "./run-domestic-price-check";
 /** 🔴 MI-020 — 해외 가격의 «읽는 쪽». 순수 함수다(DB·환율 없다). */
 import {
   summarizeCandidateOverseasPrices,
+  /** 🔵 MI-UNIFIED-MARKET-PRICE-COMPARISON-1 §3-4(⑥) — 순수 함수 · 판정 0 · 파생 정보다. */
+  compareDomesticVsOverseasKrw,
   type CandidateOverseasPriceRecord,
 } from "./candidate-market";
 import { backfillCanonicalProduct } from "@commerce/shared";
@@ -20,6 +22,12 @@ import {
   groupMarketObservations,
   DEFAULT_PRICE_BREAKDOWN_INPUT,
   computePriceBreakdown,
+  /**
+   * 🔵 MI-UNIFIED-MARKET-PRICE-COMPARISON-1 §3-2 — **환산 owner 는 이 함수 하나다.**
+   * 🔴 모르는 통화에 `null` 을 돌려준다 ⟹ 임의 환율로 만든 숫자가 들어올 수 없다.
+   * 🔴 새 환율표·새 상수를 만들지 않았다(`packages/pricing/src/currency.ts:73`).
+   */
+  convertToKrwStrict,
   computeSellerAction,
   priceLevelFromVerdict,
   computeSellability,
@@ -173,6 +181,34 @@ function dedupeEvidenceByUrl<T extends { discoveredUrl: string }>(rows: readonly
     out.push(r);
   }
   return out;
+}
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 MI-UNIFIED-MARKET-PRICE-COMPARISON-1 §3-2 — **후보 «행» 에 환산값을 붙인다**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **왜 행에 붙이는가.** UI 의 `:1857` 은 서버 요약(`candidateOverseasPrice`)이 아니라
+ *    **클라이언트 `buildPriceGuide`** 산출(`g.byCurrency`)을 읽는다 ⟹ 서버 요약에
+ *    최저 환산만 더해도 그 줄은 **그 값을 보지 못한다**. 🟢 그래서 환산값을 **행** 에
+ *    실어 보내고, 클라이언트는 그 값을 **고르기만** 한다(환산 0 · 지시서 §2·§3).
+ * 🔴 **생산자 타입(`GeminiTransientEvidence`·`SavedCandidateRow`)을 고치지 않았다** —
+ *    새 객체를 만들어 칸을 **가산** 하므로 반환 타입이 교차 타입으로 자동 확장된다.
+ *    (생산자에 칸을 더하면 그 칸을 «채울 책임» 이 생산자들에게 번진다)
+ * 🔴 **원본 칸을 덮지 않는다** — spread 뒤에 파생 칸 하나만 더한다.
+ * 🔴 지도에 없으면 **`null`** 이다 — 「환산 못 했다」를 0 이나 누락으로 적지 않는다.
+ *    🟢 그래서 POST·GET 어느 경로든 **행마다 이 칸이 «있다»**(있음/없음이 경로에 따라
+ *    갈리면 UI 가 「undefined 면 옛 경로」 같은 분기를 만들게 된다).
+ */
+function attachDerivedKrw<T extends { discoveredUrl: string }>(
+  rows: readonly T[] | null | undefined,
+  krwByUrl: ReadonlyMap<string, number>,
+): (T & { priceKrwDerived: number | null })[] | null {
+  if (!rows) return null;
+  return rows.map((r) => ({
+    ...r,
+    priceKrwDerived: krwByUrl.get(r.discoveredUrl?.trim()) ?? null,
+  }));
 }
 
 /**
@@ -344,6 +380,11 @@ export async function computeMarketIntelligence(
     basis: string | null;
     currency: string;
     amount: number | null;
+    /**
+     * 🔵🔵 §3-2 — **원화 환산 파생값**(원본 `currency`·`amount` 는 위에 그대로 남는다).
+     * 🔴 `null` = 환율 미확보 또는 모르는 통화. **0 으로 만들지 않는다.**
+     */
+    priceKrwDerived: number | null;
     priceTier: string;
     matchTruth: string | null;
     /**
@@ -398,10 +439,41 @@ export async function computeMarketIntelligence(
    *    `domesticBasis` 도 `COMPARISON` 이고 `computePriceRecommendation` 은
    *    그대로 **CASE D** 를 낸다(CPO 결정 2 — EXACT 아니면 D 유지).
    */
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MI-UNIFIED-MARKET-PRICE-COMPARISON-1 §1 — **환율을 «여기서» 확보한다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 **왜 «이 줄 앞» 이어야 하는가.** 직전 인수인계는 「`canComputeCost` 가드 밖으로
+   *    옮기면 된다」고 적었는데 **그것으로는 부족하다.** 환율 조회가 원래 `:719` 가드
+   *    안이었고, 후보 evidence 가 만들어지는 자리는 **바로 아래**(`savedCandidateRowsToEvidence`
+   *    + `dedupeEvidenceByUrl`)다 ⟹ 가드만 걷으면 **GET 재진입 복원 후보가 환율을 못 본다**
+   *    (그 경로가 `MI-UNIFIED-PIPELINE-1` 이 살려 둔 길이다). 그래서 **소비보다 위** 로 올렸다.
+   * 🟢 ⟹ **POST(`geminiEvidence`)와 GET(복원분)이 «같은» 라이브 환율을 쓴다**(지시서 §1).
+   *
+   * 🔴🔴 **그런데 `liveRates` 의 의미는 «한 글자도» 바꾸지 않았다.** 그 변수는 아래
+   *    `canComputeCost && shippingKrw != null` 가드 **안에서만** 세팅된다 — 기존과 같다.
+   *    왜: 그 값이 `computePriceBreakdown`·`buyer-import-charge` 로 흘러가므로, 무조건
+   *    세팅하면 **원가/수익성 계산의 입력이 바뀐다**(지시서 §1 「기존 비용 계산 guard와
+   *    계산 정책은 그대로 유지」). ⟹ 🟢 가드는 그대로 두고 **재조회만 없앴다**.
+   * 🔴 **호출은 1회다.** 아래 가드는 이 `exchangeRates` 를 **재사용** 한다 — 두 번 받으면
+   *    두 숫자가 서로 다른 환율 위에 설 수 있다(`:656` 주석이 경고한 그 사고).
+   * 🔴 `source === "fallback"` 은 **비상 고정표** 다(`FIXED_RATES_TO_KRW`) ⟹ 환산값과
+   *    **같이 내보낸다**. 숨기면 셀러가 고정표 환산을 실제 환율로 오인한다.
+   */
+  const exchangeRates = await fetchLiveExchangeRates();
+  const candidateRates = exchangeRates.rates;
+
   const aggregationEvidence: AggregationEvidence[] =
     geminiEvidence && geminiEvidence.length > 0
       ? dedupeEvidenceByUrl(geminiEvidence)
       : dedupeEvidenceByUrl(savedCandidateRowsToEvidence(savedCandidateRows));
+  /**
+   * 🔵 §3-2 — **후보 URL → 서버 환산 KRW.** UI 세 지점(`:1857`·`:2486`·`:2658`)이
+   *    **같은 숫자** 를 읽게 하려고 응답 배열에 이 값을 실어 보낸다(아래 반환부).
+   * 🔴 키는 `discoveredUrl` 이다 — `dedupeEvidenceByUrl` 이 이미 URL 단위로 접었다.
+   */
+  const candidateKrwByUrl = new Map<string, number>();
   for (const e of aggregationEvidence) {
     /**
      * 🔴🔴 국내 축의 자격은 **둘** 이다 — KRW 금액 «그리고» `market === "KR"`.
@@ -445,6 +517,21 @@ export async function computeMarketIntelligence(
        *    **CEO 승인이 필요한 정책** 이라 이 WU 에서 구현하지 않았다(보고서 §8).
        */
       if (e.priceAmount != null && e.priceCurrency) {
+        /**
+         * ════════════════════════════════════════════════════════════════════
+         * 🔵🔵🔵 §3-2 — **원화 환산 파생값.** 🔴 위 `:443` 주석이 「여기서 하지
+         *    않는다 · CEO 승인이 필요한 정책」이라 적어 둔 **그 자리** 이고,
+         *    CPO 가 그것을 열었다 — **「환산(비교용 파생값)」 ≠ 「합산」** 이기 때문이다.
+         * ════════════════════════════════════════════════════════════════════
+         *
+         * 🔴🔴 **원본을 덮어쓰지 않는다** — `currency`·`amount` 는 아래에 **그대로** 실린다.
+         * 🔴 `convertToKrwStrict` 는 **모르는 통화에 `null`** 을 준다 ⟹ 「임의 환율로
+         *    만든 숫자」가 구조적으로 불가능하다(`GBP 37 → ₩37` 같은 거짓값 0).
+         * 🔴 **통화별 집계(`byCurrency`)는 이 값을 읽지 않는다** — 그 계약은 불변이다.
+         * 🟢 환산 owner 는 `packages/pricing` 의 그 함수 **하나** 다(새 환율표 0 · 새 상수 0).
+         */
+        const derived = convertToKrwStrict(e.priceAmount, e.priceCurrency, candidateRates);
+        if (derived) candidateKrwByUrl.set(e.discoveredUrl, derived.amountKrw);
         overseasEvidence.push({
           domain: e.domain,
           url: e.discoveredUrl,
@@ -452,6 +539,8 @@ export async function computeMarketIntelligence(
           basis: e.basis,
           currency: e.priceCurrency,
           amount: e.priceAmount,
+          /** 🔵 §3-2 — 환율 미확보/미지 통화면 **`null`**(0 으로 만들지 않는다). */
+          priceKrwDerived: derived?.amountKrw ?? null,
           priceTier: e.priceTier,
           matchTruth: e.matchTruth,
           /** 🔴 SPRINT 3 P1 — 지어내지 않는다. 판정이 이미 낸 값 그대로다. */
@@ -717,7 +806,10 @@ export async function computeMarketIntelligence(
   const shippingNotApplicable = resolvedShipping.basis === "NOT_APPLICABLE";
   const shippingKrw = shippingNotApplicable ? 0 : resolvedShipping.amountKrw;
   if (canComputeCost && shippingKrw != null) {
-    const exchangeRates = await fetchLiveExchangeRates();
+    /**
+     * 🔴 §1 — **재조회하지 않는다.** 환율은 위(후보 evidence 생산 «앞»)에서 **1회**
+     *    받았고 이 가드는 그 값을 재사용한다. 🔴 가드 자체와 아래 계산 정책은 **불변** 이다.
+     */
     liveRates = exchangeRates.rates;
     cost = computePriceBreakdown(
       {
@@ -1162,6 +1254,13 @@ export async function computeMarketIntelligence(
    *    🟢 집계 **내용은 한 글자도 바뀌지 않았다**(같은 함수 · 같은 인자).
    */
   const domesticCandidatePriceSummary = summarizeCandidateOverseasPrices(domesticTransientRecords);
+  /**
+   * 🔵 §3-4(⑥) — **해외 요약을 «한 번만» 만든다.** 전엔 반환부에서 인라인 호출이었는데
+   *    ⑥ 이 그 결과(`lowestKrw`)를 읽어야 해서 const 로 뽑았다.
+   * 🔴 **두 번 부르면 두 숫자가 갈릴 수 있다** — 같은 입력이라도 owner 를 둘로 만들지 않는다.
+   * 🟢 집계 내용은 **한 글자도 바뀌지 않았다**(같은 함수 · 같은 입력).
+   */
+  const overseasSummary = summarizeCandidateOverseasPrices(overseasEvidence);
 
   return {
     snapshotId,
@@ -1242,7 +1341,11 @@ export async function computeMarketIntelligence(
      *    `sellerAction`·tier·가격·alert 는 이 칸과 **독립** 이다.
      * 🔴 `null` = 경로가 안 돌았다 · `[]` = 켰는데 후보가 없었다.
      */
-    geminiEvidence: geminiEvidence ?? null,
+    /**
+     * 🔵 §3-2 — **행에 `priceKrwDerived` 가 실려 나간다**(원본 칸은 그대로).
+     * 🔴 POST 경로의 UI 행이 이것이다 ⟹ `:2486`·`:2658` 이 **같은 숫자** 를 읽는다.
+     */
+    geminiEvidence: attachDerivedKrw(geminiEvidence, candidateKrwByUrl),
     /**
      * ══════════════════════════════════════════════════════════════════════
      * 🔵🔵🔵 CANDIDATE-UX-REFINE-04 B-3 — **재진입 복원용 표시 전용 배열**
@@ -1255,7 +1358,11 @@ export async function computeMarketIntelligence(
      * 🔴 **이 칸을 `geminiEvidence` 와 합치지 않는다** — 합치는 순간 저장분이 집계에 들어간다.
      * 🔴 `null` = GET 복원이 안 돌았다(POST `/check`) · `[]` = 돌았는데 저장이 없다.
      */
-    savedCandidateRows,
+    /**
+     * 🔵 §3-2 — **GET 재진입 복원 행도 «같은» 환율의 파생값을 받는다.**
+     * 🔴 그래서 POST·GET 이 같은 숫자를 낸다(지시서 §1·§2 「동일한 계약」).
+     */
+    savedCandidateRows: attachDerivedKrw(savedCandidateRows, candidateKrwByUrl),
     /** 🔴 010R 관측용 — 가격이 붙어 버킷에 들어간 수 / 가격 없어 빠진 수.
      *    🔴 위 판정 계산은 이 칸을 읽지 않는다. */
     geminiPricedCount,
@@ -1265,7 +1372,24 @@ export async function computeMarketIntelligence(
      *    그것이 「해외 가격이 원가/국내 가격을 오염시키지 않는다」의 구현이다.
      * 🟢 `UNKNOWN` 을 해외로 합치지 않는다(`byMarket` 로 갈라 센다).
      */
-    candidateOverseasPrice: summarizeCandidateOverseasPrices(overseasEvidence),
+    candidateOverseasPrice: overseasSummary,
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 §3-4(⑥) — **국내 기준 가격 ↔ 해외 최저 환산가 차이.**
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 🔴🔴 **파생 정보다.** 위 `sellerAction`·tier·CASE·추천가·`price_alerts` 는 이 칸을
+     *    **읽지 않는다** — 그것이 「기존 판정을 자동으로 바꾸지 않는다」의 구현이다(CPO §1).
+     * 🟢 국내 기준값은 **기존 집계 owner** 를 그대로 넘긴다(`domesticSummary.lowestPriceKrw`)
+     *    ⟹ 🔴 이 WU 가 국내 가격을 **새로 고르지 않는다**(동일상품 ↔ 유사상품 기준 혼합 0).
+     * 🟢 해외 쪽은 `overseasSummary.lowestKrw` 하나 ⟹ **적격성 퍼널을 통과한 후보만**
+     *    들어오고 **환산 불가 후보는 애초에 빠져 있다**.
+     * 🔴 한쪽이라도 없으면 **`null`** 이다 — 「0원 차이」로 오인시키지 않는다.
+     */
+    marketKrwComparison: compareDomesticVsOverseasKrw(
+      domesticSummary.lowestPriceKrw,
+      overseasSummary.lowestKrw,
+    ),
     /**
      * 🔴🔴 WU-056 — **이번 확인으로 들어온 «국내» 가격 집계.**
      *    🟢 `domesticCompetition` 과 **다른 칸** 이다 — 그쪽은 DB 후보와 합쳐진

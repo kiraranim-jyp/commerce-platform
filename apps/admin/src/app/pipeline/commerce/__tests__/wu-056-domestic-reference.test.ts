@@ -222,8 +222,23 @@ describe("B. 배선", () => {
      *    부르면 참고가격과 화면 금액이 **갈릴 수 있는 구조** 가 된다.
      */
     expect(INTEL.split("summarizeCandidateOverseasPrices(domesticTransientRecords)").length - 1).toBe(1);
-    /** 🔴 **같은 집계기** 를 쓴다 — 사본을 만들지 않았다. */
-    expect(INTEL).toContain("candidateOverseasPrice: summarizeCandidateOverseasPrices(overseasEvidence)");
+    /**
+     * 🔴 **같은 집계기** 를 쓴다 — 사본을 만들지 않았다.
+     *
+     * 🔵 **앵커 재지정**(MI-UNIFIED-MARKET-PRICE-COMPARISON-1) — ⑥(국내↔해외 KRW 차이)이
+     *    이 요약의 `lowestKrw` 를 읽어야 해서 인라인 호출을 **const 로 뽑았다**.
+     * 🟢 불변식은 그대로다 — ⒜ 같은 집계기 ⒝ 입력은 `overseasEvidence` 그대로.
+     * 🔴 그리고 **더 강해졌다** — 같은 입력으로 **두 번 부르지 않는다**(두 번 부르면
+     *    두 숫자가 갈릴 수 있다 · T4-2 와 같은 축).
+     */
+    expect(INTEL).toContain(
+      "const overseasSummary = summarizeCandidateOverseasPrices(overseasEvidence)",
+    );
+    expect(INTEL).toContain("candidateOverseasPrice: overseasSummary");
+    expect(
+      INTEL.split("summarizeCandidateOverseasPrices(overseasEvidence)").length - 1,
+      "🔴 해외 집계를 두 번 부른다",
+    ).toBe(1);
   });
 
   /**

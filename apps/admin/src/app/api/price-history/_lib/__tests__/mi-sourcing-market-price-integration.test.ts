@@ -287,11 +287,41 @@ describe("C. 🔵 ③ 저장·복원 경로가 «이미 있는 구조» 다 (새
     expect(INTEL).toContain("toSavedCandidateRows");
   });
 
-  it("C-3 🔴🔴 **새 테이블·migration·환율 변환을 만들지 않았다**", () => {
-    for (const banned of ["CREATE TABLE", "ALTER TABLE", "convertToKrw", "exchangeRate *"]) {
+  it("C-3 🔴🔴 **새 테이블·migration 을 만들지 않았다**", () => {
+    /**
+     * 🔴 schema 축은 **한 글자도 바뀌지 않는다** — 두 파일 모두에서 금지 유지.
+     * 🔴 `exchangeRate *`(환율을 손으로 곱하는 모양)도 **그대로 금지** 다.
+     */
+    for (const banned of ["CREATE TABLE", "ALTER TABLE", "exchangeRate *"]) {
       expect(INTEL, `🔴 금지된 수단: ${banned}`).not.toContain(banned);
       expect(SAVED, `🔴 금지된 수단: ${banned}`).not.toContain(banned);
     }
+    /**
+     * ════════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 MI-UNIFIED-MARKET-PRICE-COMPARISON-1 — **환산 금지 재지정**(CPO 승인)
+     * ════════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 전 계약은 두 파일 **모두** 에서 `convertToKrw` 를 금지했다. 그때는 환산 owner 가
+     *    UI 였고 서버는 환산하지 않는 것이 맞았다. 이제 **서버가 환산 owner** 다
+     *    (UI 가 환율 없이 환산해 **표시값 ≠ 확정값** 이 될 수 있었던 결함을 고치려면
+     *     환산이 서버로 와야 한다).
+     * 🟢 그래서 **딱 한 파일에서만** 허용하고 나머지는 **그대로 금지** 한다:
+     * ```
+     * market-intelligence.ts   🟢 허용 — 승인된 유일한 환산 지점(라이브 환율을 받는다)
+     * saved-candidate-rows.ts  🔴 금지 — 저장분 복원기는 값을 «만들지» 않는다
+     * ```
+     */
+    expect(SAVED, "🔴 복원기가 환산하면 저장분이 값을 만들어낸다").not.toContain("convertToKrw");
+    /**
+     * 🔴🔴 **허용은 「아무렇게나 환산해도 된다」가 아니다.** 서버 환산이 지켜야 할 둘을
+     *    여기서 직접 단언한다 — 그래서 이 재지정은 **약화가 아니다**:
+     *    ⒜ **라이브 환율을 넘긴다**(인자 없이 부르면 내장 고정표라 이 WU 의 결함 재발)
+     *    ⒝ **`byCurrency` 집계 계약 불변** — 통화별 버킷에 환산을 섞지 않는다
+     */
+    expect(INTEL, "🔴 라이브 환율을 넘기지 않는다 — 내장 고정표로 환산하면 결함 재발이다").toContain(
+      "convertToKrwStrict(e.priceAmount, e.priceCurrency, candidateRates)",
+    );
+    expect(INTEL, "🔴 통화별 집계에 환산을 섞었다").not.toMatch(/byCurrency[^\n]*[Kk]rw/);
   });
 });
 

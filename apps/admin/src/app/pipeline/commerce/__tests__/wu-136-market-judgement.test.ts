@@ -207,7 +207,17 @@ describe("C. buildMarketJudgement", () => {
       row({ discoveredUrl: "https://a.example/1", soldOut: null, priceAmount: 53 }),
       row({ discoveredUrl: "https://b.example/2", soldOut: null, priceAmount: 58 }),
     ]);
-    expect(j.byCurrency).toEqual([{ currency: "USD", lowest: 53, highest: 58, n: 2, onSale: 0 }]);
+    /**
+     * 🔵 MI-UNIFIED-MARKET-PRICE-COMPARISON-1 — `lowestKrw` **추가**(CPO 승인).
+     *
+     * 🔴 이 표본의 행은 `priceKrwDerived` 를 **세우지 않는다**(서버 환산 전 상태) ⟹
+     *    `lowestKrw` 가 **`null`** 이어야 한다. 🟢 그래서 이 단언은 칸 추가 확인이자
+     *    **「서버가 환산하지 못하면 0 이 아니라 `null`」** 계약의 검증이다.
+     * 🔴 통화별 `lowest`·`highest`·`n`·`onSale` 은 **한 글자도 바뀌지 않았다**.
+     */
+    expect(j.byCurrency).toEqual([
+      { currency: "USD", lowest: 53, highest: 58, n: 2, onSale: 0, lowestKrw: null },
+    ]);
     /** 🔴 그러나 「2곳에서 판매중」으로 읽히지 않게 **범위 문장이 직접 말한다**. */
     expect(priceRangeScope(j.byCurrency[0])).toContain("판매중 확인 0곳");
     expect(priceRangeText(j.byCurrency[0])).toBe("USD 53 ~ 58");

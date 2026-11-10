@@ -48,8 +48,35 @@ interface Dump {
   sellerUrl: Record<string, unknown>[];
 }
 const dump = (): Dump => JSON.parse(readFileSync(FIX, "utf8")) as Dump;
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 MI-UNIFIED-MARKET-PRICE-COMPARISON-1 — **fixture 가 «서버» 를 모사한다**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **임의 환율을 쓰지 않는다.** 1차에 `* 1500` 을 썼다가 이 파일의 하드코딩
+ *    기대값과 어긋났다(`45,300,000 ↔ 52,548,000`) — 그 기대값은 **운영이 쓰는 환율표**
+ *    에서 나온 숫자다. ⟹ fixture 도 **같은 변환기** 를 불러 그 숫자를 재현한다.
+ * 🟢 **테스트에서 부르는 것은 허용된다** — 금지된 것은 **운영 UI** 가 환산하는 것이고
+ *    (계약 ②), 여기서 이 함수는 「서버가 이미 환산해 보냈다」를 **모사** 하는 역할이다.
+ */
+const fixtureDerivedKrw = (amount: number | null | undefined, currency: string | null | undefined) =>
+  amount != null && currency && currency !== "KRW"
+    ? (convertToKrwStrict(amount, currency)?.amountKrw ?? null)
+    : null;
+/**
+ * 🔴🔴 **운영 GET 경로를 그대로 모사한다.** `toSavedCandidateRows` 는 저장분을 행으로
+ *    되돌리기만 하고, 운영은 그 뒤 `market-intelligence.ts` 의 `attachDerivedKrw` 가
+ *    **모든 행에** `priceKrwDerived` 를 세운다(POST·GET 동일 계약).
+ * 🔴 그 단계를 빼면 fixture 가 **운영에 없는 상태**(칸 없는 행)를 그려 계약이 거짓말한다.
+ * 🟢 규칙은 운영과 같다 — 외화 + 금액 있음 ⟹ 숫자 · 그 외 ⟹ `null`.
+ */
 const restored = (raw: Record<string, unknown>[]): GeminiTransientRow[] =>
-  toSavedCandidateRows(raw.map((r) => candidateReviewRowFromDb(r))) as GeminiTransientRow[];
+  (toSavedCandidateRows(raw.map((r) => candidateReviewRowFromDb(r))) as GeminiTransientRow[]).map(
+    (r) => ({
+      ...r,
+      priceKrwDerived: fixtureDerivedKrw(r.priceAmount, r.priceCurrency),
+    }),
+  );
 
 const SNAP = "c88d2ca4-bfe1-4851-9c1d-92f69222a3f2";
 
@@ -330,7 +357,26 @@ describe("R2-D 🔴 owner 경계 — 이 영역이 최종가를 **만들거나 �
      *    `convertToKrwStrict` **하나** 이고, 환율표를 직접 들거나 숫자에 곱하는 것은
      *    **여전히 금지** 다(그 길이 `CAD 64 → 약 ₩64` 를 만든 자리다).
      */
-    expect(code, "🔴 환산 owner 가 기존 함수가 아니다").toContain("convertToKrwStrict(");
+    /**
+     * ════════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 MI-UNIFIED-MARKET-PRICE-COMPARISON-1 — **계약 ② 재지정**(CPO 승인)
+     * ════════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 **느슨해진 것이 아니라 «환산 owner 가 옮겨졌다».** 전 버전은 이 영역이
+     *    `convertToKrwStrict` 를 **직접 호출할 것** 을 요구했다. 그런데 그 구조에서
+     *    UI 는 환율을 **넘기지 못해** 내장 고정표로 환산했고, 서버는 라이브 환율로
+     *    환산했다 ⟹ **같은 후보가 경로에 따라 다른 원화 숫자** 를 가질 수 있었고
+     *    그중 하나가 **실제 판매가 확정**(`priceOverrideKrw`) 경로였다.
+     * 🟢 그래서 환산 owner 는 **서버 하나** 가 됐고 이 영역은 서버가 행에 실어 보낸
+     *    `priceKrwDerived` 를 **읽기만** 한다.
+     * 🔴🔴 **보호해야 할 불변식은 그대로 유지한다** — 아래 셋이 그것이다:
+     *    ⒜ UI 에 환산 **호출이 없다** ⒝ 환율표를 직접 들지 않는다
+     *    ⒞ 숫자에 손으로 곱하지 않는다. ⟹ 환산을 UI 로 되돌리면 **FAIL** 한다.
+     */
+    expect(code, "🔴 UI 가 다시 환산한다 — 환산 owner 는 서버 하나다").not.toContain(
+      "convertToKrwStrict(",
+    );
+    expect(code, "🔴 서버 파생값을 읽지 않는다").toContain("priceKrwDerived");
     expect(code, "🔴 이 영역이 환율표를 직접 들었다").not.toContain("FIXED_RATES_TO_KRW");
     expect(code, "🔴 환율을 손으로 곱했다").not.toMatch(/priceAmount\s*\*\s*\d/);
   });
@@ -351,8 +397,22 @@ describe("R2-D 🔴 owner 경계 — 이 영역이 최종가를 **만들거나 �
     expect(code, "🔴 KRW 분기가 없다 — 원화 후보를 환산에 태우면 중복 환산이다").toContain(
       'row.priceCurrency === "KRW"',
     );
+    /**
+     * 🔵🔵 **계약 ② 재지정**(CPO 승인) — 「환산 실패는 `null`」이라는 **의미는 유지** 하고
+     *    그 구현 모양만 바꾼다. 전엔 `convertToKrwStrict(...)?.amountKrw ?? null` 이라는
+     *    **UI 환산 문법** 을 요구했는데, 환산 owner 가 서버로 옮겨졌으므로 이제는
+     *    **서버 파생값을 `?? null` 로 받는 것** 이 같은 보호다.
+     * 🔴 `?? null` 이 빠지면 `undefined` 가 흘러 숫자를 지어낼 자리가 다시 열린다.
+     */
     expect(code, "🔴 환산 실패를 `null` 로 받지 않는다 — 숫자를 지어낼 자리가 열린다").toContain(
-      "?.amountKrw ?? null",
+      "derivedKrwOf(row)",
+    );
+    /**
+     * 🔴 그 헬퍼가 **`?? null` 을 실제로 한다** — 이름만 같고 `undefined` 를 흘리면
+     *    숫자를 지어낼 자리가 다시 열린다(이름 검사로 PASS 를 만들지 않는다).
+     */
+    expect(code, "🔴 헬퍼가 undefined 를 null 로 닫지 않는다").toContain(
+      "row.priceKrwDerived ?? null",
     );
     expect(code, "🔴 handler 에 넘기는 값이 그 변수가 아니다").toContain("onConfirmPriceKrw(krw)");
     expect(code, "🔴 환산값에 산수를 붙였다(두 번째 가격 owner)").not.toMatch(

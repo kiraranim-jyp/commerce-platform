@@ -66,15 +66,44 @@ afterEach(() => {
 });
 
 /** 🟢 운영 행 모양 그대로. 🔴 `matchTruth` 가 tier owner 의 입력이다(하니스 교훈). */
-const row = (over: Partial<GeminiTransientRow>): GeminiTransientRow => ({
-  domain: "s.example",
-  discoveredUrl: `https://s.example/${Math.random().toString(36).slice(2)}`,
-  matchTruth: "EXACT_IDENTIFIER",
-  market: "OVERSEAS",
-  soldOut: false,
-  priceStatus: "VERIFIED_CURRENT",
-  ...over,
-});
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 MI-UNIFIED-MARKET-PRICE-COMPARISON-1 — **fixture 환율**(테스트 전용)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **운영 환율이 아니다.** 운영은 `fetchLiveExchangeRates()` → `convertToKrwStrict`
+ *    로 서버에서 환산해 후보 행의 `priceKrwDerived` 에 **실어 보낸다**. 이 상수는
+ *    그 서버가 **환산에 성공한 상태** 를 fixture 가 재현하기 위한 값일 뿐이다.
+ * 🔴 그래서 **UI 가 이 숫자를 계산하는 것이 아니다** — UI 는 행의 값을 읽기만 한다.
+ */
+const FIXTURE_KRW_RATE = 1500;
+/**
+ * 🔴🔴 **`priceKrwDerived` 는 «운영이 항상 세우는» 칸이다**(POST·GET 양쪽 ·
+ *    `attachDerivedKrw`). 그래서 fixture 도 **항상** 세운다 — 안 세우면 운영에
+ *    없는 상태(칸이 아예 없는 행)를 그려 계약이 거짓말한다.
+ * 🟢 규칙은 운영과 같다 — **외화 + 금액 있음 ⟹ 숫자** · 그 외 ⟹ **`null`**.
+ * 🔴 테스트가 `priceKrwDerived` 를 **명시하면 그 값이 이긴다**(환율 미확보 케이스를
+ *    `null` 로 직접 넣어 검증할 수 있어야 한다).
+ */
+const row = (over: Partial<GeminiTransientRow>): GeminiTransientRow => {
+  const base: GeminiTransientRow = {
+    domain: "s.example",
+    discoveredUrl: `https://s.example/${Math.random().toString(36).slice(2)}`,
+    matchTruth: "EXACT_IDENTIFIER",
+    market: "OVERSEAS",
+    soldOut: false,
+    priceStatus: "VERIFIED_CURRENT",
+    ...over,
+  };
+  if (over.priceKrwDerived !== undefined) return base;
+  return {
+    ...base,
+    priceKrwDerived:
+      base.priceCurrency && base.priceCurrency !== "KRW" && base.priceAmount != null
+        ? Math.round(base.priceAmount * FIXTURE_KRW_RATE)
+        : null,
+  };
+};
 const guideOf = (rows: GeminiTransientRow[], market: "KR" | "OVERSEAS") =>
   buildPriceGuide(buildMarketJudgement(rows), market);
 const mount = (rows: GeminiTransientRow[]) => {
