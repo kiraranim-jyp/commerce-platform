@@ -211,15 +211,61 @@ describe("B. 🔵 ② 집계 입력이 POST/GET 에서 «각각 하나» 다 (�
     }
   });
 
-  it("B-5 🔴 복원분은 **해외 축에 들어가지 않는다**(basis 를 지어내지 않는다)", () => {
-    /**
-     * 🔴 `basis`(시장 판정 근거)는 저장되지 않는다 ⟹ 복원분은 null 이다.
-     * 🟢 값을 만들지 않고 **해외 가지에서 제외** 한다 ⟹ 해외 집계 숫자 불변.
-     */
-    expect(INTEL).toContain("e.priceAmount != null && e.priceCurrency && e.basis != null");
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 **B-5 의 방향이 뒤집혔다 — 해외도 같은 길로 온다**(UNIFIED-PIPELINE-1)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 전: 「복원분은 **해외 축에 들어가지 않는다**」 — `&& e.basis != null` 가드.
+   *    근거는 「`basis` 를 지어내지 않는다」였고 **그 원칙 자체는 지금도 유효** 하다.
+   * 🟢 후: 전수 확인 결과 그 칸은 **아무도 읽지 않는다** ⟹ null 을 실어도 숫자가
+   *    바뀌지 않는다 ⟹ **값을 만들지 않고 가드만 걷었다**(지어내기 0 · 새 저장소 0).
+   *
+   * 🔴 **약화가 아니다** — 이 케이스가 지키던 **「지어내지 않는다」** 를 그대로 단언하고
+   *    (`basis: null` 유지), **「아무도 안 읽는다」** 는 전제를 **새로** 잠근다.
+   *    ⟹ 누가 그 칸을 읽기 시작하면 이 계약이 **FAIL 로 알려 준다.**
+   */
+  it("B-5 🔴 basis 를 지어내지 않는다 — 그리고 그 칸은 «아무도 읽지 않는다»", () => {
+    /** 🔴 복원분은 여전히 `null` 이다(값 생성 0). */
     const at = INTEL.indexOf("function savedCandidateRowsToEvidence");
     const body = INTEL.slice(at, INTEL.indexOf("\n}\n", at));
     expect(body, "🔴 basis 를 지어냈다").toContain("basis: null");
+    /** 🟢 가드가 걷혔다 — 해외도 국내와 같은 길로 온다(비대칭 해소). */
+    expect(
+      INTEL,
+      "🔴 해외 가지가 복원분을 다시 막는다 — 재진입 비대칭이 돌아온다",
+    ).not.toContain("e.priceCurrency && e.basis != null");
+    /**
+     * 🔴🔴 **전제 잠금** — 그 칸을 «읽는» 코드가 생기면 null 분기를 먼저 설계해야 한다.
+     * 🟢 집계 레코드 타입에 `basis` 가 **없다** 는 사실로 그것을 본다.
+     */
+    const CM = strip(readFileSync(join(LIB, "candidate-market.ts"), "utf8"));
+    const recAt = CM.indexOf("CandidateOverseasPriceRecord");
+    const recBody = CM.slice(recAt, CM.indexOf("}", recAt));
+    expect(
+      recBody,
+      "🔴 집계 레코드가 basis 를 읽기 시작했다 — null 분기를 먼저 설계해야 한다",
+    ).not.toContain("basis");
+  });
+
+  it("B-6 🟢🟢 **국내·해외가 같은 입력·같은 루프를 쓴다**(시장별 분기 0)", () => {
+    const at = INTEL.indexOf("for (const e of aggregationEvidence)");
+    const loop = INTEL.slice(at, INTEL.indexOf("const domesticMarketSplit", at));
+    /** 🔴 루프는 **하나** 다 — 시장별 전용 루프를 만들면 구조가 다시 갈라진다. */
+    expect(
+      INTEL.split("for (const e of aggregationEvidence)").length - 1,
+      "🔴 집계 루프가 둘 이상이다 — 국내/해외가 갈라졌다",
+    ).toBe(1);
+    /** 🔴 시장은 **분기 조건** 일 뿐 별도 수집 경로가 아니다. */
+    expect(loop).toContain('e.market !== "KR"');
+    expect(loop, "🔴 해외 전용 복원 경로가 생겼다").not.toContain("savedOverseasRows");
+    /** 🟢 복원분은 **시장을 가리지 않고** 같은 변환기를 통과한다. */
+    const conv = INTEL.slice(
+      INTEL.indexOf("function savedCandidateRowsToEvidence"),
+      INTEL.indexOf("\n}\n", INTEL.indexOf("function savedCandidateRowsToEvidence")),
+    );
+    expect(conv, "🔴 복원기가 시장으로 걸러낸다 — 한쪽만 복원된다").not.toContain('=== "KR"');
+    expect(conv, "🔴 복원기가 시장으로 걸러낸다 — 한쪽만 복원된다").not.toContain('!== "KR"');
   });
 });
 

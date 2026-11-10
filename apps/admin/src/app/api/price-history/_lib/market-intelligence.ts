@@ -326,7 +326,22 @@ export async function computeMarketIntelligence(
     domain: string;
     url: string;
     market: string;
-    basis: string;
+    /**
+     * 🔵🔵🔵 MI-UNIFIED-MARKET-CANDIDATE-PIPELINE-1 — **`null` 을 허용한다**(해외 복원 대칭)
+     *
+     * 🔴 `basis`(시장을 그렇게 판정한 근거)는 `candidate_reviews` 에 **저장되지 않는다**
+     *    ⟹ 재진입 복원분은 이 값을 가질 수 없다. 직전 WU 는 그래서 **해외 축을 통째로
+     *    제외** 했고, 국내만 복원되는 **비대칭** 이 남았다.
+     * 🟢🟢 **그런데 이 칸은 «쓰기 전용» 이다**(운영 전수 확인):
+     * ```
+     * 집계  summarizeCandidateOverseasPrices 의 CandidateOverseasPriceRecord 에 basis 칸이 **없다**
+     * 응답  candidateOverseasEvidence 로 나가지만 UI 가 `.basis` 를 **읽지 않는다**
+     * ```
+     * ⟹ 🔴 값을 **지어내지 않고** `null` 을 그대로 실어도 **집계 숫자가 바뀌지 않는다.**
+     * 🔴 그래서 **새 테이블·migration 이 필요 없다**(지시서 §2-C 「기존 구조 우선」).
+     * 🔴🔴 나중에 이 칸을 **읽게 되면** null 분기를 먼저 설계해야 한다 — 이 타입이 그 전제다.
+     */
+    basis: string | null;
     currency: string;
     amount: number | null;
     priceTier: string;
@@ -415,15 +430,21 @@ export async function computeMarketIntelligence(
       /**
        * 🟢 가격이 있으면 **해외/UNKNOWN 축에 남긴다** — 버리지 않는다.
        *
-       * 🔴🔴 MI-SOURCING-MARKET-PRICE-INTEGRATION — **복원분은 여기 들어오지 않는다.**
-       *    `basis`(시장을 그렇게 판정한 근거)는 `candidate_reviews` 에 **저장되지 않아서**
-       *    복원분에서 `null` 이다. 🔴 값을 **지어내지 않는다** — 그것이 이 파일의
-       *    「시장은 증거가 일치할 때만 단정한다」(WU-020)와 정면으로 충돌한다.
-       * 🔴 그래서 **이번 범위는 국내 축이다**(CPO 성공 조건도 국내로 적혀 있다).
-       *    해외 재진입 복원은 `basis` 를 저장하는 별도 결정이 있어야 한다 —
-       *    🔴 그 전까지 **해외 집계 숫자는 한 글자도 바뀌지 않는다.**
+       * 🔵🔵🔵 MI-UNIFIED-MARKET-CANDIDATE-PIPELINE-1 — **해외도 국내와 «같은 길» 로 온다.**
+       *
+       * 🔴 직전 WU 는 `&& e.basis != null` 로 **복원분을 여기서 막았다**(국내만 복원).
+       *    근거는 「`basis` 를 지어내지 않는다」였고 그 원칙은 **지금도 유효** 하다.
+       * 🟢🟢 그런데 전수 확인 결과 그 칸은 **아무도 읽지 않는다**(집계 레코드에 없고 UI 도
+       *    안 본다) ⟹ **null 을 그대로 실어도 집계 숫자가 바뀌지 않는다.**
+       * 🔴 그래서 **값을 만들지 않고 가드만 걷는다** — 지어내기 0 · 새 저장소 0.
+       * ⟹ 🟢 국내·해외가 **같은 입력(`aggregationEvidence`) · 같은 루프 · 같은 자격 조건**
+       *    을 쓴다(지시서 §2-B 「시장별로 따로 구현하지 않는다」).
+       *
+       * 🔴🔴 **원화 환산은 여기서 하지 않는다** — 해외 축은 `overseas-reference.ts` 가
+       *    「통화별로만 집계 · 합계 칸이 없다」로 잠가 둔 계약이다. 원화 환산 비교는
+       *    **CEO 승인이 필요한 정책** 이라 이 WU 에서 구현하지 않았다(보고서 §8).
        */
-      if (e.priceAmount != null && e.priceCurrency && e.basis != null) {
+      if (e.priceAmount != null && e.priceCurrency) {
         overseasEvidence.push({
           domain: e.domain,
           url: e.discoveredUrl,
