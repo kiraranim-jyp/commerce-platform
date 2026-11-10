@@ -326,16 +326,36 @@ describe("T6 🔵 기존 정책 불변 — 이 WU 는 판정을 바꾸지 않는
     expect(WORKSPACE, "🔴 마운트 지점에 전달되지 않는다").toContain(
       "marketKrwComparison={marketComparison?.marketKrwComparison ?? null}",
     );
-    /** ⑤ 🟢 **화면이 실제로 그린다** — 세 값 + 자격 범위 문구 */
+    /** ⑤ 🟢 **화면이 실제로 그린다** — 국내 가격 · 해외 가격 · 자격 범위 문구 */
     for (const id of [
       "market-krw-comparison",
       "market-krw-comparison-domestic",
       "market-krw-comparison-overseas",
-      "market-krw-comparison-diff",
       "market-krw-comparison-scope",
     ]) {
       expect(VIEW, `🔴 화면에 ${id} 가 없다`).toContain(`data-testid="${id}"`);
     }
+    /**
+     * ⑤-b 🔴🔴 **차액은 그리지 않는다** (CPO 전략 정정 2026-11-10)
+     *
+     * 🔴 1차에 「국내 − 해외 차이」를 그렸고 그 testid 를 **요구** 하는 계약을 썼다.
+     *    CPO 가 그 방향을 철회했다 — 「차액으로 셀러의 **판매 결정을 유도** 하지 않는다.
+     *    가격은 정확히 제공하고 **판매 판단은 MI** 가 한다.」
+     * 🟢 그래서 단언을 **반대로** 세운다 — 다시 그리면 **FAIL** 한다.
+     * 🔴 금지 축은 셋이다: 전용 testid · 차액 어휘 · 화면에서의 뺄셈.
+     */
+    expect(VIEW, "🔴 차액 줄이 되살아났다").not.toContain(
+      'data-testid="market-krw-comparison-diff"',
+    );
+    expect(VIEW, "🔴 차액 어휘가 되살아났다").not.toMatch(/COMPARE_DIFF_/);
+    /**
+     * 🔴 **타입 선언은 남는다** — prop 계약의 칸이고 서버가 그 값을 보낸다.
+     *    그래서 「`differenceKrw` 라는 글자가 없다」로 쓰면 **선언까지 잡는다**(1차에 FAIL).
+     * 🟢 막아야 할 것은 **그 값을 «읽어서 화면에 쓰는 것»** 이다 ⟹ 사용 형태로 좁힌다.
+     */
+    expect(VIEW, "🔴 화면이 차액 값을 읽는다").not.toMatch(
+      /marketKrwComparison\.differenceKrw/,
+    );
     /** ⑥ 🔴 **요약 카드로 가지 않는다**(WU-141-R3 — 그 카드는 가격 owner 가 아니다) */
     expect(SUMMARY, "🔴 요약 카드가 가격 비교를 읽는다").not.toMatch(
       /marketKrwComparison\??:/,

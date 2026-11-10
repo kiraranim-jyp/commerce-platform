@@ -154,10 +154,10 @@ import {
    */
   COMPARE_DOMESTIC_LABEL,
   COMPARE_OVERSEAS_LABEL,
-  COMPARE_DIFF_LABEL,
-  COMPARE_DIFF_DOMESTIC_HIGHER,
-  COMPARE_DIFF_OVERSEAS_HIGHER,
-  COMPARE_DIFF_SAME,
+  /**
+   * 🔴 **차액 어휘를 들여오지 않는다**(CPO 전략 정정 2026-11-10) — 차액은 제품이
+   *    제공하지 않는다. 가격은 **나란히** 보여주고 판매 판단은 MI 가 한다.
+   */
   COMPARE_SCOPE_NOTE,
   type MarketJudgement,
   type MiSameSelection,
@@ -803,25 +803,20 @@ export function MarketPriceComparison({
               {`${marketKrwComparison.overseasCurrency} ${marketKrwComparison.overseasAmount.toLocaleString("ko-KR")} · ${formatKrw(marketKrwComparison.overseasKrw)}`}
             </span>
           </div>
-          <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-2">
-            <span className="text-[11px] text-text-secondary">{COMPARE_DIFF_LABEL}</span>
-            <span
-              data-testid="market-krw-comparison-diff"
-              className="text-[12px] font-medium tabular-nums text-text-primary"
-            >
-              {/**
-               * 🔴 **부호를 글자로 말한다** — 「+」만 두면 어느 쪽이 비싼지 추측하게 된다.
-               * 🔴 금액은 **절댓값** 으로 적고 방향은 말이 책임진다(음수 기호 오독 방지).
-               */}
-              {`${formatKrw(Math.abs(marketKrwComparison.differenceKrw))} · ${
-                marketKrwComparison.differenceKrw > 0
-                  ? COMPARE_DIFF_DOMESTIC_HIGHER
-                  : marketKrwComparison.differenceKrw < 0
-                    ? COMPARE_DIFF_OVERSEAS_HIGHER
-                    : COMPARE_DIFF_SAME
-              }`}
-            </span>
-          </div>
+          {/**
+           * ══════════════════════════════════════════════════════════════════
+           * 🔴🔴🔴 **차액을 그리지 않는다** (CPO 전략 정정 2026-11-10)
+           * ══════════════════════════════════════════════════════════════════
+           *
+           * 1차에 「국내 − 해외 차이 ₩N · 국내가 더 비쌈」을 그렸다가 **제거했다.**
+           * 🔴 CPO: 「차액을 계산해 셀러에게 **판매 결정을 유도** 하는 방향은 제품 전략과
+           *    맞지 않는다. 가격 정보는 **정확하게 제공** 하고 **판매 판단은 MI** 가 한다.」
+           * 🔴 그래서 이 영역은 두 가격을 **나란히 보여줄 뿐** 하나의 숫자로 합치지 않는다
+           *    (국내·해외를 억지로 최저가·차액으로 뭉치지 않는다).
+           * 🔴 **판단 채널과 섞지 않는다** — 판매 가능 여부는 CASE·MI 가 말한다.
+           * 🟢 서버의 `differenceKrw` 는 **지우지 않았다** — 다른 소비처 계약을 확인하기
+           *    전에 제거하지 말라는 CPO 지시다(현재 셀러 화면 소비는 **0**).
+           */}
           <p
             data-testid="market-krw-comparison-scope"
             className="mt-1 text-[11px] text-text-tertiary"

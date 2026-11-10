@@ -1057,11 +1057,15 @@ export const SAME_PRICE_LABEL = "동일상품 확인 가격";
  */
 export const COMPARE_DOMESTIC_LABEL = `국내 ${SAME_PRICE_LABEL}`;
 export const COMPARE_OVERSEAS_LABEL = `해외 ${SAME_PRICE_LABEL} 최저`;
-export const COMPARE_DIFF_LABEL = "국내 − 해외 차이";
-/** 🔴 부호의 뜻을 **글자로** 말한다 — 「+」만 두면 어느 쪽이 비싼지 셀러가 추측한다. */
-export const COMPARE_DIFF_DOMESTIC_HIGHER = "국내가 더 비쌈";
-export const COMPARE_DIFF_OVERSEAS_HIGHER = "해외가 더 비쌈";
-export const COMPARE_DIFF_SAME = "같음";
+/**
+ * 🔴🔴🔴 **차액 어휘를 여기에 두지 않는다** (CPO 전략 정정 2026-11-10)
+ *
+ * 1차에 `COMPARE_DIFF_LABEL`(「국내 − 해외 차이」)과 방향 문구 셋을 만들었다가
+ * **전부 제거했다.** 🔴 CPO: 「차액을 계산해 셀러의 **판매 결정을 유도** 하지 않는다 —
+ * 가격 정보는 **정확하게 제공** 하고 **판매 판단은 MI** 가 담당한다.」
+ * 🔴 그래서 이 파일은 국내·해외 가격을 **나란히 부르는 말** 까지만 소유한다.
+ * 🔴 다시 만들지 않는다 — 차액이 필요해 보이면 그것은 **판단 채널(CASE·MI)** 의 일이다.
+ */
 /** 🔴 위 퍼널을 한 줄로 — 「무엇의 최저인지」를 화면이 직접 말한다. */
 export const COMPARE_SCOPE_NOTE =
   "해외 값은 동일상품으로 확인되고 가격까지 확인된 후보 중 원화 환산이 가능한 최저가입니다.";
