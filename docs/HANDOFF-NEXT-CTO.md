@@ -749,3 +749,57 @@ grep "candidateOverseasPrice|candidateDomesticPrice" pipeline/commerce/*.tsx
    → 「판정 owner 가 읽지 않는다」로 재지정(화면 소비 허용)
 🔴 금지 — CASE/추천가격/sellerAction/matcher/재고 정책/DB 변경
 ```
+
+---
+
+## 20. 🔵🔵🔵 **다음 작업 = B-1 데이터 경로 연결** (CPO 설계 확정 2026-11-10)
+
+🔴 **조사·설계 회의 끝났다. 1번부터 바로 구현한다.**
+
+### ① 🔴 원인 (재조사 금지 · 실측 확정)
+```
+화면 카드   <GeminiTransientCandidates evidence={overseasAutoRest} />
+            ← overseasAuto ← **domesticShop.overseasAutoEvidence**(Panel:2453·:2971)
+내가 붙인 곳 computeMarketIntelligence 반환의 geminiEvidence · savedCandidateRows
+⟹ 🔴 **서로 다른 배열** 이라 attachDerivedKrw 가 닿지 않는다 ⟹ 전건 「원화 환산 불가」
+🟢 환율·환산 함수는 **무죄** 다 — FIXED_RATES_TO_KRW 에 USD·GBP·EUR·JPY·SEK 가 있어
+   라이브 환율이 없어도 환산된다. 🔴 **SGD 는 그 표에 없다**(라이브 없으면 null 이 정상)
+```
+
+### ② 🔵 확정 설계 (CPO 승인)
+```
+환율 소유자   MI 한 곳          route 에서 별도 환율 조회 **금지**
+전달 데이터   candidateKrwByUrl (URL → 환산 KRW 지도 · **환율표가 아니다**)
+             🟢 그래서 내부 환율이 API 로 노출되지 않는다
+적용         기존 attachDerivedKrw(rows, krwByUrl) **재사용**(새 로직 0)
+대상         check/route.ts:218 의 PRODUCERS **6배열 전부**
+             WEB_SEARCH · DOMESTIC_LISTING · OVERSEAS_AUTO ·
+             SELLER_URL · GEMINI · REVIEWED_SAME
+🔴 금지      run-domestic-price-check.ts 수정(그 파일은 환율을 모른다 · owner 둘 금지) ·
+             원본 priceAmount/priceCurrency 변경 · SGD 를 억지로 맞추기
+```
+
+### ③ 🔵 실행 순서 (CPO 지정)
+```
+1 MI 반환에 candidateKrwByUrl 추가       2 route 6배열에 동일 지도 적용
+3 배열 누락 방지 계약                     4 GBP/USD 숫자 · SGD null 검증
+5 회귀 → tsc → build                     6 명시 staging → commit → 배포
+7 **실제 카드 입력 배열에서 숫자형 KRW 생성 증명**
+🔴 계약 축 — 6배열 중 하나라도 빠지면 FAIL(배열이 늘 때 조용히 빠지는 것이 이번 실패의 본질)
+🔴 행마다 1회 · 저장분↔실시간 중복 환산 0(같은 지도를 보므로 구조적으로 불가)
+```
+
+### ④ 🔴🔴 완료 판정 — **둘을 구분한다**(CPO)
+```
+⒜ 서버가 환산값을 만들었다            ← 이것만으로 완료가 아니다
+⒝ **실제 판매자 후보 카드가 그 값을 받는다**  ← 여기까지 증명해야 한다
+🔴 ⒝ 까지 증명된 «뒤에» CEO 화면 확인을 요청한다. 그 전에 요청하지 않는다.
+```
+
+### ⑤ 🔴 이번 구간에서 내가 반복한 실수 (같은 계열 두 번)
+```
+B-1 1차   표면이 **둘**(gt-price ↔ mi-candidate-price)인데 **한 장만** 고쳤다
+B-1 2차   배열이 **여섯**인데 **둘**(geminiEvidence·savedCandidateRows)에만 붙였다
+⟹ 🔴 「연결했다」고 말하기 전에 **화면이 실제로 읽는 배열/컴포넌트를 끝까지 추적** 한다
+   그리고 그 추적 결과를 **계약으로 고정** 한다(위 ③-3 이 그것이다)
+```
