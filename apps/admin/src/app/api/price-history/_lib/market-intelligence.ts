@@ -164,6 +164,20 @@ type AggregationEvidence = Pick<
   | "matchTruth"
   | "crossSellerVerdict"
   | "crossSellerBlockers"
+  /**
+   * 🔵🔵🔵 MI-DOMESTIC-COMPETITIVE-SELLABILITY STEP 1(CPO 승인) — **재고 3상태 전달.**
+   *
+   * 🔴 전엔 이 칸이 Pick 목록에 **없어서** 국내 transient 레코드가 `soldOut: null` 을
+   *    무조건 썼다 ⟹ `littleluna`(품절 마커) · `foretforet`(옵션 단위)가 **실제로 생산한
+   *    재고 신호가 집계 입구에서 사라졌다**. 이 줄이 그 구멍을 닫는다.
+   * 🔴🔴 **의미를 만들지 않는다** — 생산자가 낸 값을 그대로 옮긴다:
+   *    `true` 품절 확인 · `false` 구매 가능 신호 확인 · `null` 확인 불가.
+   * 🔴 **가격으로 재고를 추정하지 않는다**(`chocoel` 은 가격을 채우면서 `soldOut` 을
+   *    `null` 로 둔다 — 그 둘은 이미 다른 축이다).
+   * 🔴 **옵션 하나 구매 가능 ≠ 상품 전체 재고** — 그 해석은 `foretforet` 어댑터가
+   *    owner 다(「하나라도 SALE 이면 전체 `soldOut=false`」). 여기서 재해석하지 않는다.
+   */
+  | "soldOut"
 > & { basis: GeminiTransientEvidence["basis"] | null };
 
 /**
@@ -238,6 +252,13 @@ function savedCandidateRowsToEvidence(
       matchTruth: r.matchTruth as GeminiTransientEvidence["matchTruth"],
       crossSellerVerdict: r.crossSellerVerdict,
       crossSellerBlockers: r.crossSellerBlockers,
+      /**
+       * 🔵 STEP 1 — **저장분의 재고 3상태를 그대로 되돌린다.** `candidate_reviews.sold_out`
+       *    이 이미 `boolean | null` 로 저장되고(`candidate-review.ts:126`) 복원기가 그것을
+       *    들고 있다(`saved-candidate-rows.ts:36`) ⟹ **값을 만들지 않고 옮긴다.**
+       * 🔴 그래서 POST(이번 수집)와 GET(재진입 복원)이 **같은 계약** 을 쓴다.
+       */
+      soldOut: r.soldOut,
       basis: null,
     });
   }
@@ -579,6 +600,24 @@ export async function computeMarketIntelligence(
       priceKrw: e.priceKrw,
       salePriceKrw: null,
       originalPriceKrw: null,
+      /**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔴🔴🔴 **이 칸은 «판정 입력» 이다 — 재고를 여기에 넣지 않는다.**
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * 🔴 MI-DOMESTIC-COMPETITIVE-SELLABILITY STEP 1 에서 여기에 `e.soldOut ?? null` 을
+       *    넣었다가 **되돌렸다.** 회귀가 이유를 가르쳐 줬다 —
+       *    `wu-061-price-closure.test.ts:282` 의 **「transient 는 품절 기회 신호를 만들지
+       *    못한다」** 가 바로 이 `soldOut: null` 을 근거로 서 있다.
+       * 🔴🔴 이 레코드는 `domesticTransientRecords` 로 들어가 **판정 경로** 를 탄다 —
+       *    `computeSellerAction` 의 `soldOutCount` 는 **`DOMESTIC_SHOP` 행만** 센다.
+       *    ⟹ 여기에 실제 `true` 가 들어오면 **판매 판단이 «조용히» 바뀐다.**
+       *      그것이 CPO 가 STEP 1 에서 명시적으로 금지한 「재고를 판매 판단에 사용」이다.
+       * 🟢 그래서 재고는 **응답/표시 경로로만** 간다 — 후보 «행»(`geminiEvidence` ·
+       *    `savedCandidateRows`)이 `soldOut` 을 이미 들고 나가고, STEP 1 의 나머지 배선
+       *    (집계 입력 계약 · GET 복원)이 그 값을 **잃지 않게** 한다.
+       * 🔵 이 자리에 재고를 싣는 것은 **별도 승인 사항** 이다(CPO §2 마지막 줄).
+       */
       soldOut: null,
       marketCode: null,
       marketCountry: null,
