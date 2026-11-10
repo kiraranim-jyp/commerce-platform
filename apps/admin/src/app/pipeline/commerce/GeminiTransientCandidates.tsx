@@ -125,6 +125,38 @@ export function priceText(row: GeminiTransientRow): string {
   return `${row.priceCurrency} ${row.priceAmount.toLocaleString("ko-KR")}`;
 }
 
+/** 🔴 서버가 환산하지 못했을 때의 문구 — **금액을 만들지 않는다**. */
+export const PRICE_KRW_UNAVAILABLE_TEXT = "원화 환산 불가";
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 MI-SELLER-PRICE-COMPARISON-UI-1 B-1 — **후보 «행» 의 원화 환산 표시**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **왜 이 함수가 생겼는가.** 서버는 후보마다 원화 파생값을 실어 보내고 있었고
+ *    이 파일의 타입에도 칸이 **있었는데**, 그리는 코드가 **없어서** 화면에는
+ *    `GBP 37` 만 떴다. 「배선 있음」과 「화면에 뜸」이 갈린 자리가 정확히 여기다.
+ *    (같은 UI 를 그리는 표면이 둘인데 다른 쪽만 고친 결과다)
+ *
+ * 🔴 **이 파일은 환산하지 않는다.** 환산 owner 는 서버 하나이고 여기서는 서버가 준
+ *    값을 **읽어서 포맷만** 한다. 🔴 환산 함수를 import 하지 않는다 — 이 파일에는
+ *    그 이름이 소스에 등장하지 않아야 한다는 계약이 있다(`mi-022`).
+ * 🔴 **KRW 후보에는 그리지 않는다** — `₩88,000` 아래 `약 ₩88,000` 은 같은 숫자를
+ *    두 번 적는 것이다(다른 표면이 쓰는 규칙과 **같다**).
+ * 🔴 **서버가 환산하지 못했으면 금액을 만들지 않는다** — 「원화 환산 불가」를 적는다.
+ *    🔴 `0 원`·추정 금액 **금지**.
+ * 🟢 반환이 `null` 이면 호출부가 **줄을 그리지 않는다**(원본 가격 줄은 그대로 남는다).
+ */
+export function priceKrwText(row: GeminiTransientRow): string | null {
+  /** 🔴 원본 가격이 없으면 환산을 말할 대상도 없다. */
+  if (row.priceAmount == null || !row.priceCurrency) return null;
+  /** 🔴 국내(KRW) 후보는 중복 표시하지 않는다. */
+  if (row.priceCurrency.trim().toUpperCase() === "KRW") return null;
+  const krw = row.priceKrwDerived;
+  if (krw == null || !Number.isFinite(krw)) return PRICE_KRW_UNAVAILABLE_TEXT;
+  return `약 ₩${Math.round(krw).toLocaleString("ko-KR")}`;
+}
+
 /** 🔴 WU-028 — 행에 붙는 **출처** 배지. 입력부와 결과부를 잇는 유일한 표시다. */
 export const SOURCE_LABEL: Record<
   "GEMINI_DISCOVERY" | "SELLER_URL" | "OVERSEAS_AUTO" | "REVIEWED_SAME" | "DOMESTIC_LISTING" | "WEB_SEARCH",
@@ -652,6 +684,23 @@ export function GeminiTransientCandidates({
                   {priceText(row)}
                 </span>
               </div>
+              {/**
+               * 🔵🔵🔵 MI-SELLER-PRICE-COMPARISON-UI-1 B-1 — **원 통화 «옆에» 원화 환산.**
+               *
+               * 🔴🔴 **원본 줄을 덮지 않는다** — 위 `gt-price`(`GBP 37`)는 한 글자도
+               *    바뀌지 않았다. 이 줄은 **추가** 다(통화 ISO 그대로 유지).
+               * 🔴 값은 **서버가 환산한 것** 이고 이 파일은 포맷만 한다(환산 owner 하나).
+               * 🔴 KRW 후보 · 가격 없음이면 `null` 이라 **줄이 서지 않는다**.
+               * 🔴 환산 실패는 「원화 환산 불가」로 적고 **금액을 만들지 않는다**.
+               */}
+              {priceKrwText(row) && (
+                <p
+                  data-testid="gt-price-krw"
+                  className="text-[11px] tabular-nums text-text-tertiary"
+                >
+                  {priceKrwText(row)}
+                </p>
+              )}
               {/* 🔴🔴 WU-028 — 가격 **바로 아래** 에 신뢰도와 미반영 사실을 적는다.
                   이것이 「가격은 있는데 왜 판매판정엔 없나」를 그 자리에서 답한다. */}
               {confidence && (
