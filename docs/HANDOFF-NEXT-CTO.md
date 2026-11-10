@@ -2,6 +2,9 @@
 
 > 기준일 **2026-11-10** · 담당 **CTO** · 승인·검증 **CPO** · 최종 의사결정 **CEO**
 > 🔴 이 문서는 **조사를 다시 하지 않기 위한 것**이다. §3 의 값은 **확정값**이고 재조사 금지다.
+> 🔴🔴 **2026-11-10 2차 — §3 배선 자리가 «정정» 됐다.** 환율이 가드 안에 있고(§3-①)
+> UI 환산 지점이 **셋**이다(§3-②). 1차 내용과 CPO 지시서 §7-1 은 그 둘을 몰랐다.
+> 🟢 §13 에 CPO 인수인계서의 전략 기준이 들어왔다.
 
 ---
 
@@ -79,30 +82,87 @@ fetchedAt = Frankfurter 응답의 `date` 기준일 ⟹ **없는 시각을 만들
 ⟹ 🔴 migration 0 · 새 테이블 0
 ```
 
-### 🟢 배선 자리 (재배치 불필요)
-```
-market-intelligence.ts:720    await fetchLiveExchangeRates()   ← **이미 호출한다**
-overseasEvidence  생성 ~:427 (루프 안)  →  소비 :1247 · :1278
-⟹ 환율 확보(:720)가 소비(:1247) «앞» 이므로 순서를 바꾸지 않고 파생값을 계산할 수 있다
+### 🔴🔴🔴 배선 자리 — **2026-11-10 CTO 실측으로 «정정» 됐다**
 
-UI 자체 환산 제거 대상
-  MarketPriceComparison.tsx:1857   convertToKrwStrict(c.lowest, c.currency)
-  MarketPriceComparison.tsx:2486   convertToKrwStrict(row.priceAmount, row.priceCurrency)
+🔴 이 절의 이전 내용(「재배치 불필요」· UI 2곳)은 **틀렸다.** 아래가 실측값이다.
+그대로 구현하면 ⒜ 환율이 전건 `undefined` 가 되거나 ⒝ 표시값과 확정값이 갈린다.
+
+#### ① 🔴 `liveRates` 는 «조건부» 다 — 가드 밖으로 올려야 한다
+
 ```
+market-intelligence.ts:657   let liveRates: Record<string, number> | undefined;
+market-intelligence.ts:719   if (canComputeCost && shippingKrw != null) {
+market-intelligence.ts:720     const exchangeRates = await fetchLiveExchangeRates();
+market-intelligence.ts:721     liveRates = exchangeRates.rates;        ← 🔴 **이 가드 «안» 이다**
+
+canComputeCost (:660)
+  costSource !== "STATIC_SNAPSHOT" ? hasResolvedPrice
+                                   : priceValidity === "VALID" && hasResolvedPrice
+hasResolvedPrice (:659)  resolvedOriginalAmount > 0 && Boolean(resolvedOriginalCurrency)
+```
+
+🔴🔴 ⟹ **원상품 가격이 해석되지 않았거나 배송비가 `null` 이면 `liveRates` 가
+`undefined`** 다. 그 상태로 해외 후보 KRW 파생값을 만들면 **전건 `null`** 이 된다 —
+그런데 해외 후보 가격 자체는 그 조건과 **무관하게 존재한다**(원상품 가격이 없어도
+후보는 수집된다). ⟹ 🔴 **「위치가 앞이라 그대로 쓸 수 있다」는 틀렸다.**
+🟢 필요한 것은 **`fetchLiveExchangeRates()` 를 가드 밖으로 올리는 것**이고,
+`cost` 계산 쪽은 기존 가드를 **그대로 둔다**(원가 축 회귀 0).
+🔴 올릴 때 **호출이 2회가 되지 않게** 한다 — 같은 값을 두 번 받으면 두 숫자가
+서로 다른 환율 위에 설 수 있다(아래 ③ 의 주석이 경고하는 바로 그 사고다).
+
+#### ② 🔴🔴 UI 환산 지점은 **2곳이 아니라 셋** 이고, 셋째가 가장 위험하다
+
+```
+MarketPriceComparison.tsx:1857   convertToKrwStrict(c.lowest, c.currency)              표시
+MarketPriceComparison.tsx:2486   convertToKrwStrict(row.priceAmount, row.priceCurrency) 표시
+MarketPriceComparison.tsx:2658   convertToKrwStrict(row.priceAmount, row.priceCurrency)
+                                 🔴🔴 **표시가 아니다 — `priceOverrideKrw`(확정 판매가)에 기록한다**
+```
+
+🔴🔴 `:2658` 은 CLOSE-3 §4 의 **「가격 확정」 버튼**이고, 그 자리 주석이 스스로
+**「넘기는 값은 위 줄이 화면에 이미 보여준 그 환산값」**이라고 적어 뒀다 —
+즉 **`:2486` 과 같은 숫자여야 한다는 계약**이다.
+⟹ 🔴 **`:2486` 만 서버 파생값으로 바꾸고 `:2658` 을 두면 「화면에 보인 금액」과
+「확정되는 금액」이 갈린다.** 지시서(§7-1)는 이 지점을 모른다 — **셋을 같이** 고친다.
+🟢 `:2658` 은 `row.priceCurrency === "KRW"` 면 환산을 건너뛰고, 환율을 모르면
+버튼을 그리지 않는다(`mi-candidate-confirm-unavailable`) — **그 두 성질은 보존한다.**
+
+#### ③ 🟢 코드가 이미 이 WU 를 예고해 뒀다 (설계 근거로 쓴다)
+
+`market-intelligence.ts:656` 의 주석이 `liveRates` 를 그 자리에 선언한 이유를
+**「두 숫자가 서로 다른 환율 위에 서게 된다」**고 적어 뒀다.
+⟹ 🟢 이 WU 는 새 정책이 아니라 **그 주석이 경고한 상태를 닫는 것**이다.
+
+#### ④ 🔴 서버 경로가 «둘» 이다 — 이 WU 의 대상이 아닌 쪽을 고치지 않는다
+
+```
+run-price-check.ts:112 · :125 · :180 · :201   convertToKrwStrict(…, params.rates)
+  🟢 **이미 라이브 환율을 넘긴다**(CPO §7-1 의 서술은 사실이다)
+  🔴 그러나 이 파일은 **원가/ORIGIN_FX 관측 경로** 다 — 해외 «후보» 집계가 아니다
+해외 후보 집계·소비                            market-intelligence.ts (위 ①)
+```
+🔴 ⟹ **`run-price-check.ts` 를 고치면 엉뚱한 파일이다.** 이 WU 의 서버측 구현 자리는
+`market-intelligence.ts` 하나다. 🟢 `price-intelligence/route.ts:48` 도 이미 rates 를
+넘긴다(참고 · 대상 아님).
 
 ---
 
 ## 4. 🔵 구현 순서
 
 ```
+⓿ 환율 확보     fetchLiveExchangeRates() 를 canComputeCost 가드 **밖으로** 올린다(§3-①)
+                🔴 호출은 **1회** 유지 · cost 쪽 기존 가드는 **그대로**(원가 축 회귀 0)
 ① 서버 파생값   overseasEvidence 원소에 priceKrwDerived · rateBasisAt · rateSource 추가
                 🔴 원래 priceAmount·priceCurrency 를 **덮어쓰지 않는다**
                 🔴 환율 없으면 priceKrwDerived = null (임의 환율 금지)
 ② 응답 계약     그 값이 UI 까지 가도록 기존 응답 타입에 **최소** 추가
-③ UI 교체      :1857 · :2486 의 자체 환산 제거 → 서버 값 **읽기만**
+③ UI 교체      :1857 · :2486 · **:2658** 의 자체 환산 제거 → 서버 값 **읽기만**
+                🔴🔴 :2658 은 `priceOverrideKrw` 확정 경로다 — 빼먹으면 **표시값 ≠ 확정값**
+                🟢 :2658 의 KRW 단축 + 「환율 모르면 버튼 없음」은 **보존**
 ④ 비교         국내 KRW ↔ 해외 파생 KRW (같은 기준)
 🔴 금지        통화 **합산** 0 · overseas-reference.ts 통화별 집계 계약 **보존** ·
-               CASE A/B/C/D 0 · 동일성 승격 0 · 환산값을 EXACT 근거로 쓰지 않음
+               CASE A/B/C/D 0 · 동일성 승격 0 · 환산값을 EXACT 근거로 쓰지 않음 ·
+               **run-price-check.ts 수정 0**(§3-④ · 다른 축이다)
 ```
 
 🟢 **CPO 가 가른 핵심 구분** — 「**환산(비교용 파생값)**」 ≠ 「**합산**」.
@@ -116,7 +176,10 @@ UI 자체 환산 제거 대상
 ```
 T1 환산 계약     KRW/USD/EUR/GBP · 미지 통화 · 환율 누락 · 잘못된 가격 → null
 T2 일관성       같은 입력·같은 환율 → 같은 결과 · 서버/UI 이중 계산 0
-T3 UI 이중 환산  :1857 · :2486 의 convertToKrwStrict 호출이 **사라졌는지**
+T3 UI 이중 환산  :1857 · :2486 · **:2658** 의 convertToKrwStrict 호출이 **사라졌는지**
+   🔴 「파일 전체에서 convertToKrwStrict 0회」로 단언한다 — **좌표로 세지 않는다**
+      (좌표는 구현하면서 밀린다 · 이 트랙에서 slice 단언이 세 번 어긋났다)
+   🔴 추가 단언 — **표시 KRW == 확정 KRW**(:2486 ↔ :2658 이 같은 값을 읽는가)
 T4 POST/GET     국내 KRW · 해외 USD/EUR/GBP · 환산 실패 후보 대조
 T5 가격 비교     동일상품 ↔ 추정·유사 분리 · 해외 최저 환산 · 국내 대비 차이
 T6 정책 회귀     EXACT 유지 · COMPARISON → CASE D 유지 · 추천가/판매판정 불변
@@ -220,3 +283,67 @@ git rev-list --left-right --count origin/main...HEAD   # 0  0
 ⑩ 커밋·배포·tree SHA          ⑪ 미완료 및 위험
 ```
 🔴 **파일 첨부는 이 대화에서 도달하지 않았다**(두 번 실패) — 증거는 **본문에** 싣는다.
+
+---
+
+## 13. 🔵🔵 CPO 인수인계서(2026-11-10) — 전략 기준 · 위 절들과 중복 없는 항목만
+
+🔴 아래는 CPO 가 「프로젝트 기준 문서」로 확정한 내용 중 **§0~§12 에 없던 것**이다.
+🔴 전략은 **확정됐다** — 새 페이지에서 다시 논의하지 않는다.
+
+### ① 🔵🔵 국내·해외는 «하나의» 공통 후보 구조다 (CEO 핵심 지시)
+
+> **국내와 해외를 다르게 관리하는 것이 아니라, 하나의 상품 비교 시스템에서
+> `market` 만 구분한다.**
+
+```
+공통   상품명 · 브랜드 · 모델코드 · 이미지 · URL · 판매처 · 원래가격 · 원래통화 ·
+       원화환산가격 · 가격관측시점 · 동일상품판단 · 가격비교 적격성
+갈리는 것은 둘뿐
+  국내  market=KR        국내 «판매»가격 관측   원래통화 KRW     국내 가격 기준
+  해외  market=OVERSEAS  해외 «조달»가격 관측   원래통화 보존     ORIGIN_FX 환산 필요
+🔴 국내용 별도 시스템 / 해외용 별도 시스템을 **만들지 않는다**
+```
+🟢 이번 WU 가 바로 그 마지막 칸(**원화환산가격**)을 공통 구조에 채우는 작업이다.
+
+### ② 🔴 추천가격 owner 가 «둘» 이다 — 혼동 금지
+
+```
+recommendedPriceKrw              원가 기반 추천가격
+recommendation.recommendedPrice  시장가격 기반 추천가격
+🔴 서로 다른 owner 다. 합치거나 한쪽을 다른 쪽으로 대체하지 않는다.
+🔴 B(시장가격) 금액은 기존 정책상 **판매자 UI 에서 숨긴다**(동결).
+```
+
+### ③ 🔴 검증 등급은 서로 «대체 불가» 다
+
+```
+Source Contract PASS  ≠  Component Render PASS
+                      ≠  실제 Workspace Surface Render PASS
+                      ≠  Production 실제 상품 E2E PASS
+🔴 CTO 테스트 PASS 만으로 실제 상품 기능 정상이라 판단하지 않는다.
+🔴 실제 E2E 를 돌리지 않았으면 **합성 fixture 로 PASS 를 주장하지 않는다.**
+게이트: CTO 1차 → CPO 2차 독립검증 → CEO 3차 Production 화면
+```
+
+### ④ 🔴 UI 는 이번 WU 가 끝나기 «전» 에 재설계하지 않는다
+
+```
+🔴 과거 `SOURCING-CARD-MINIMAL-1` · `JUDGEMENT-DEDUP-1` 은 코드 변경·배포 보고가
+   있었는데 **실제 Production 화면에서 기대한 변화가 확인되지 않았다**
+   ⟹ 그래서 **Production UI PASS 로 닫지 않았다**
+🟢 CEO 기존 지시(기억만 해 둔다 · 지금 구현 대상 아님) —
+   국내·해외 **같은 카드 컴포넌트** · 상품명·가격 간결 · 동일상품 배지는 기본정보 근처 ·
+   가격비교 반영/제외 표시 · 🔴 내부 blocker 노출 금지 · 🔴 하단 「우리 판단」 영역 금지 ·
+   🔴 세로로 긴 카드 금지
+```
+
+### ⑤ 🔴 MI 완료 전 방향 전환 금지 (P0 고정)
+
+```
+P0  국내 동일상품 매칭 정확도 · 국내 가격근거 MI 연결 · 해외 후보 가격복원 ·
+    **해외 후보 KRW 환산(= 이번 WU)** · 국내·해외 가격비교 · 수익성 판단 · ORIGIN_FX 정확성
+P1  상품군 일반화        P2  추가 커머스 채널
+🔴 MI 완성 전에 UI 꾸미기 · 추가 채널 · 상품군 확장으로 방향을 돌리지 않는다.
+🔴 MI 완료 판정은 **CPO**, 다음 단계 결정은 **CEO**.
+```
