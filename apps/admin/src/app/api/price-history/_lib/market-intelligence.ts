@@ -51,7 +51,7 @@ import { listDomesticPriceSources } from "../../domestic-price-sources/_lib/dome
  *    변환기는 **순수 함수** 다(판정 0 · 집계 0).
  */
 import { listSnapshotCandidateReviews } from "./candidate-review";
-import { toSavedCandidateRows } from "./saved-candidate-rows";
+import { toSavedCandidateRows, type SavedCandidateRow } from "./saved-candidate-rows";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -131,6 +131,83 @@ export async function isDomesticSourcedProduct(sourceUrl: string, workspaceId: s
  *    한 글자도 바뀌지 않는다** — 회귀 표면이 GET 하나로 좁아진다.
  * 🔴 **읽기만 한다** — Search/Crawl/`/check` 를 부르지 않는다(B3-09 · §B-4).
  */
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵 MI-SOURCING-MARKET-PRICE-INTEGRATION — 국내 가격 집계 루프가 **읽는 칸만**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 `GeminiTransientEvidence` **전체를 요구하지 않는다.** 그러면 복원분에 없는 칸
+ *    (`source`·`verified`·`confidence`·`title` …)을 **지어내야** 하고, 그중 `source`
+ *    는 **provenance** 다 — `saved-candidate-rows.ts` 의 LOCK 이 「출처를 추측해서
+ *    바꾸지 않는다」고 못박은 바로 그 값이다.
+ * 🟢 그래서 **루프가 실제로 읽는 12칸** 만 받는다(`Pick`). 🔴 칸을 더 읽게 되면
+ *    타입이 먼저 FAIL 한다 — 그것이 이 좁은 타입을 두는 이유다.
+ */
+type AggregationEvidence = Pick<
+  GeminiTransientEvidence,
+  | "domain"
+  | "discoveredUrl"
+  | "market"
+  | "priceAmount"
+  | "priceCurrency"
+  | "priceKrw"
+  | "priceStatus"
+  | "priceTier"
+  | "matchTruth"
+  | "crossSellerVerdict"
+  | "crossSellerBlockers"
+> & { basis: GeminiTransientEvidence["basis"] | null };
+
+/**
+ * 🔴 **URL 단위** 중복 제거(CPO 지시). 🔴 판매처(도메인)로 접지 **않는다** —
+ *    같은 샵의 «다른 상품» 관측을 합치면 그것이 더 큰 오류다.
+ * 🟢 먼저 온 것을 남긴다(POST 는 이번 수집, GET 은 저장분 — 둘이 섞이지 않는다).
+ */
+function dedupeEvidenceByUrl<T extends { discoveredUrl: string }>(rows: readonly T[]): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const r of rows) {
+    const key = r.discoveredUrl?.trim();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(r);
+  }
+  return out;
+}
+
+/**
+ * 🔴 저장분을 집계 입력으로 되돌린다 — **값을 만들지 않는다.**
+ * 🔴 `priceTier` 가 없는 행은 **건너뛴다**(tier 를 지어내면 그 후보가 가격 버킷에
+ *    들어갈 자격을 «우리가» 준 것이 된다). 🟢 화면 복원은 그 행도 그대로 받는다
+ *    (`savedCandidateRows` 는 이 함수와 무관하게 따로 나간다).
+ * 🔴 `basis` 는 **저장되지 않는다** ⟹ `null` 이다. 🟢 그 칸은 해외 가지에서만
+ *    읽히고 「시장을 왜 그렇게 봤는가」라는 **설명** 이라 집계 숫자를 바꾸지 않는다.
+ */
+function savedCandidateRowsToEvidence(
+  rows: readonly SavedCandidateRow[] | null,
+): AggregationEvidence[] {
+  if (!rows) return [];
+  const out: AggregationEvidence[] = [];
+  for (const r of rows) {
+    if (!r.priceTier) continue;
+    out.push({
+      domain: r.domain,
+      discoveredUrl: r.discoveredUrl,
+      market: r.market as GeminiTransientEvidence["market"],
+      priceAmount: r.priceAmount,
+      priceCurrency: r.priceCurrency,
+      priceKrw: r.priceKrw,
+      priceStatus: r.priceStatus,
+      priceTier: r.priceTier as GeminiTransientEvidence["priceTier"],
+      matchTruth: r.matchTruth as GeminiTransientEvidence["matchTruth"],
+      crossSellerVerdict: r.crossSellerVerdict,
+      crossSellerBlockers: r.crossSellerBlockers,
+      basis: null,
+    });
+  }
+  return out;
+}
+
 export async function computeMarketIntelligence(
   snapshotId: string,
   workspaceId: string,
@@ -277,7 +354,40 @@ export async function computeMarketIntelligence(
    *    🟢 타입은 해외 축과 **같은 레코드** 다 — 집계기도 같은 것을 쓴다(사본 0).
    */
   const domesticTransientRecords: CandidateOverseasPriceRecord[] = [];
-  for (const e of geminiEvidence ?? []) {
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MI-SOURCING-MARKET-PRICE-INTEGRATION ② — **재진입에서도 후보 가격을 쓴다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 **고치는 결함** — POST `/check` 는 후보 가격으로 국내 축을 만들고, GET
+   *    재진입은 그 후보를 **표시 칸으로만** 되돌렸다(`savedCandidateRows`).
+   *    ⟹ 같은 상품인데 새로고침하면 **국내 참고가격·참고 수익성이 사라졌다.**
+   *
+   * 🟢 **새 저장소를 만들지 않는다**(CPO 지시 3) — 값은 **이미 저장돼 있다**:
+   *    POST 가 `recordSeenCandidates`(check/route.ts:584)로 `candidate_reviews` 에
+   *    `price_amount·price_currency·market·price_tier` 를 쓰고, GET 이
+   *    `toSavedCandidateRows` 로 되돌린다. 빠진 것은 **이 루프로 오는 길** 뿐이었다.
+   * 🔴 migration 0 · 새 테이블 0 · 환율 변환 0.
+   *
+   * ── 🔴 중복을 막는 방식 (CPO 지시) ───────────────────────────────────────
+   * ```
+   * POST  geminiEvidence 가 있다 → **그것만** 쓴다(복원분을 섞지 않는다)
+   *       ⟹ 같은 후보가 「이번 수집」과 「저장분」으로 두 번 세어지지 않는다
+   * GET   geminiEvidence 가 없다 → 복원분을 쓴다
+   * 공통  **URL 단위** 중복 제거. 🔴 판매처(도메인)로 접지 않는다 —
+   *       같은 샵의 «다른 상품» 관측을 합치면 그것이 더 큰 오류다(CPO 명시).
+   * ```
+   * 🔴 `priceTier` 가 없는 저장분은 **버리지 않고 건너뛴다** — 이 루프가 담는 것은
+   *    `EXACT|COMPARISON` 뿐이고(:359·:381), tier 를 **지어내지 않는다**.
+   * 🔴 그래서 **CASE 정책은 한 줄도 바뀌지 않는다** — 복원분이 `COMPARISON` 이면
+   *    `domesticBasis` 도 `COMPARISON` 이고 `computePriceRecommendation` 은
+   *    그대로 **CASE D** 를 낸다(CPO 결정 2 — EXACT 아니면 D 유지).
+   */
+  const aggregationEvidence: AggregationEvidence[] =
+    geminiEvidence && geminiEvidence.length > 0
+      ? dedupeEvidenceByUrl(geminiEvidence)
+      : dedupeEvidenceByUrl(savedCandidateRowsToEvidence(savedCandidateRows));
+  for (const e of aggregationEvidence) {
     /**
      * 🔴🔴 국내 축의 자격은 **둘** 이다 — KRW 금액 «그리고» `market === "KR"`.
      *    통화만 보면 `bobochoses.com`(등록부 샵인데 EUR)처럼 충돌한 후보가
@@ -302,8 +412,18 @@ export async function computeMarketIntelligence(
         geminiPricedCount.krwWithoutKrEvidence += 1;
         continue;
       }
-      /** 🟢 가격이 있으면 **해외/UNKNOWN 축에 남긴다** — 버리지 않는다. */
-      if (e.priceAmount != null && e.priceCurrency) {
+      /**
+       * 🟢 가격이 있으면 **해외/UNKNOWN 축에 남긴다** — 버리지 않는다.
+       *
+       * 🔴🔴 MI-SOURCING-MARKET-PRICE-INTEGRATION — **복원분은 여기 들어오지 않는다.**
+       *    `basis`(시장을 그렇게 판정한 근거)는 `candidate_reviews` 에 **저장되지 않아서**
+       *    복원분에서 `null` 이다. 🔴 값을 **지어내지 않는다** — 그것이 이 파일의
+       *    「시장은 증거가 일치할 때만 단정한다」(WU-020)와 정면으로 충돌한다.
+       * 🔴 그래서 **이번 범위는 국내 축이다**(CPO 성공 조건도 국내로 적혀 있다).
+       *    해외 재진입 복원은 `basis` 를 저장하는 별도 결정이 있어야 한다 —
+       *    🔴 그 전까지 **해외 집계 숫자는 한 글자도 바뀌지 않는다.**
+       */
+      if (e.priceAmount != null && e.priceCurrency && e.basis != null) {
         overseasEvidence.push({
           domain: e.domain,
           url: e.discoveredUrl,

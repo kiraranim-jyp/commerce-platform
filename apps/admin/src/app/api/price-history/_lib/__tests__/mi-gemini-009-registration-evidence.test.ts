@@ -121,7 +121,7 @@ describe("C. 🟢 판정면에 닿지만 기존 판정을 바꾸지 않는다", 
    */
   it("🔴🔴 010R — evidence 는 «가격이 있는 것만» 버킷에 들어간다", () => {
     expect(INTEL).toContain("if (e.priceKrw == null)");
-    const loop = INTEL.slice(INTEL.indexOf("for (const e of geminiEvidence ?? [])"));
+    const loop = INTEL.slice(INTEL.indexOf("for (const e of aggregationEvidence)"));
     const body = loop.slice(0, loop.indexOf("const domesticMarketSplit"));
     /** 🔴 가격 없는 후보가 sellerCount 를 늘리면 안 된다 — continue 로 빠진다. */
     expect(body).toContain("droppedNoPrice += 1");
@@ -129,7 +129,7 @@ describe("C. 🟢 판정면에 닿지만 기존 판정을 바꾸지 않는다", 
   });
 
   it("🔴🔴 010R — marketCode/currency 를 기존 값에 맞춘다(기존 증거 파괴 방지)", () => {
-    const loop = INTEL.slice(INTEL.indexOf("for (const e of geminiEvidence ?? [])"));
+    const loop = INTEL.slice(INTEL.indexOf("for (const e of aggregationEvidence)"));
     const body = loop.slice(0, loop.indexOf("const domesticMarketSplit"));
     /** 🔴 운영 전수: DOMESTIC_SHOP 279행 전부 market_code=null · KRW.
      *     다르면 resolvePriceMarketKey 가 null 을 내고 sellerCount 가 0 이 된다. */
@@ -143,7 +143,7 @@ describe("C. 🟢 판정면에 닿지만 기존 판정을 바꾸지 않는다", 
     /** 🟢 append 한 뒤 **기존 함수** 를 그대로 부른다. */
     expect(INTEL).toContain("summarizeDomesticMarketSplit(exactShopRecords, [");
     /** 🔴 tier 는 evidence 가 들고 온 값을 쓴다 — 여기서 다시 계산하지 않는다. */
-    const loop = INTEL.slice(INTEL.indexOf("for (const e of geminiEvidence ?? [])"));
+    const loop = INTEL.slice(INTEL.indexOf("for (const e of aggregationEvidence)"));
     const body = loop.slice(0, loop.indexOf("const domesticMarketSplit"));
     expect(body).toContain('e.priceTier === "EXACT"');
     expect(body).not.toContain("priceTierFromLink(");

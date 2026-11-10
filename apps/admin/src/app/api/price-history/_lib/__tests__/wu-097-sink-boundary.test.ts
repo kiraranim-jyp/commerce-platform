@@ -58,7 +58,7 @@ describe("WU-097 ② sink 는 «가격 집계 입력» 이다 (화면 전용이 
     const mi = readFileSync(path.join(__dirname, "../market-intelligence.ts"), "utf8")
       .replace(/\/\*[\s\S]*?\*\//g, "")
       .replace(/^\s*\/\/.*$/gm, "");
-    const at = mi.indexOf("for (const e of geminiEvidence ?? [])");
+    const at = mi.indexOf("for (const e of aggregationEvidence)");
     expect(at).toBeGreaterThan(-1);
     /** 🔴 「읽기만 한다」가 아니다 — 그 루프 **안** 에서 가격 축에 담는다. */
     expect(mi.slice(at, at + 2000)).toContain("overseasEvidence.push");
@@ -77,7 +77,7 @@ describe("WU-097 ② sink 는 «가격 집계 입력» 이다 (화면 전용이 
       .replace(/\/\*[\s\S]*?\*\//g, "")
       .replace(/^\s*\/\/.*$/gm, "");
     /** 🔴 집계 루프가 그 배열을 **직접 순회** 한다. */
-    expect(mi).toContain("for (const e of geminiEvidence ?? [])");
+    expect(mi).toContain("for (const e of aggregationEvidence)");
   });
 });
 

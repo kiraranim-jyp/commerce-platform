@@ -46,6 +46,24 @@ export interface SavedCandidateRow {
   priceAmount: number | null;
   priceCurrency: string | null;
   market: string | null;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MI-SOURCING-MARKET-PRICE-INTEGRATION ① — **국내 축의 입장권**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 국내 가격 집계 루프는 **두 조건** 을 요구한다(market-intelligence.ts:286·333):
+   *    `market === "KR"` **그리고** `priceKrw != null`.
+   *    🔴 이 칸이 없어서 **복원분이 그 루프에 영원히 못 들어갔다** — 그것이
+   *       「재진입하면 국내 참고가격이 사라진다」의 직접 원인이다.
+   *
+   * 🔴🔴 **환산하지 않는다.** `KRW` 일 때만 `priceAmount` 를 그대로 옮긴다.
+   *    다른 통화는 **`null`** 이다 — 환율을 적용하면
+   *    ⒜ `overseas-reference.ts` 의 「환산 금지」 계약과 충돌하고
+   *    ⒝ 저장 시점 환율과 조회 시점 환율이 달라 **같은 입력이 다른 값** 을 낸다
+   *       (= 이 WU 가 고치려는 「POST/GET 일관성」을 스스로 깨뜨린다).
+   * 🟢 KRW 후보에서 `priceAmount === priceKrw` 인 것은 **변환이 아니라 항등** 이다.
+   */
+  priceKrw: number | null;
 }
 
 /** 🔴 화면 배지가 아는 집합의 **부분집합** 이다 — 새 값을 만들지 않는다. */
@@ -132,6 +150,17 @@ export function toSavedCandidateRows(rows: readonly CandidateReviewRow[]): Saved
       priceAmount: r.priceAmount,
       priceCurrency: r.priceCurrency,
       market: r.market,
+      /**
+       * 🔵 ① — **KRW 일 때만** 국내 축 입장권을 준다(환산 0 · 추정 0).
+       * 🔴 대소문자·공백을 정규화해서 본다 — 저장분에 `"krw"`·`" KRW"` 가 섞인다.
+       * 🔴 금액이 숫자가 아니면 `null` 이다(저장값을 믿고 그대로 싣지 않는다).
+       */
+      priceKrw:
+        r.priceCurrency?.trim().toUpperCase() === "KRW" &&
+        r.priceAmount != null &&
+        Number.isFinite(r.priceAmount)
+          ? r.priceAmount
+          : null,
     };
   });
 }

@@ -208,7 +208,7 @@ describe("Case D. 🔴 Gemini OFF 면 가격 보강이 돌지 않는다", () => 
 
   it("OFF 면 evidence 가 null 이라 위 루프가 한 번도 돌지 않는다", () => {
     expect(RUNNER).toContain("geminiEvidence: geminiMetrics === null ? null : geminiEvidence");
-    expect(INTEL).toContain("for (const e of geminiEvidence ?? [])");
+    expect(INTEL).toContain("for (const e of aggregationEvidence)");
   });
 });
 
@@ -237,7 +237,7 @@ describe("§6/§10 🔴 HTTP 를 구분해 세고, 저장은 0 이다", () => {
   });
 
   it("🔴 가격을 얻었어도 저장 경로가 없다", () => {
-    const loop = INTEL.slice(INTEL.indexOf("for (const e of geminiEvidence ?? [])"));
+    const loop = INTEL.slice(INTEL.indexOf("for (const e of aggregationEvidence)"));
     const body = loop.slice(0, loop.indexOf("const domesticMarketSplit"));
     for (const forbidden of ["insert", "upsert", "supabase", "prisma", "recordPrice", "await "]) {
       expect(body.toLowerCase()).not.toContain(forbidden.toLowerCase());
@@ -265,7 +265,7 @@ describe("🔴🔴 판매처 식별 — transient 는 «자기 URL» 을 들고 
    *    `sellerCount` 1 이 나왔다 — 운영 코드가 같은 실수를 하면 증거가 조용히 사라진다.
    */
   it("운영이 sourceProductUrl 에 후보 URL 을 넣는다", () => {
-    const loop = INTEL.slice(INTEL.indexOf("for (const e of geminiEvidence ?? [])"));
+    const loop = INTEL.slice(INTEL.indexOf("for (const e of aggregationEvidence)"));
     const body = loop.slice(0, loop.indexOf("const domesticMarketSplit"));
     expect(body).toContain("sourceProductUrl: e.discoveredUrl");
     expect(body).toContain("sourceLabel: e.domain");

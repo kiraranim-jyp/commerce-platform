@@ -158,15 +158,35 @@ describe("W1. 🔴 서버 — 신규 축의 입력이 GET 에서 «구조적으�
     expect(GET_ROUTE).toContain("restoreSavedCandidates: true");
   });
 
-  it("W1-2 국내 transient 배열은 **그 루프 안에서만** 채워진다", () => {
-    const loop = MI.indexOf("for (const e of geminiEvidence ?? [])");
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 **MI-SOURCING-MARKET-PRICE-INTEGRATION 이 이 단절을 닫았다**(CPO 승인 2026-11-10)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 이 케이스는 원래 **결함을 기록** 하고 있었다 — 「저장분은 그 배열에 들어가지
+   *    않는다(B3-04 격리) ⟹ 복원해도 안 채워진다」. 그것이 **CEO 화면에서 상자가
+   *    사라진 원인** 이었다.
+   * 🟢 이제 GET 도 저장분을 **집계 입력으로** 쓴다 ⟹ 그 격리는 **의도적으로 열렸다**.
+   *
+   * 🔴 **약화가 아니다 — 이 케이스가 지키던 «단일 owner» 는 그대로 강화된다**:
+   *    ⒜ `domesticTransientRecords.push(` 는 **여전히 한 곳** 뿐이다(사본 금지)
+   *    ⒝ 그 push 는 **여전히 루프 안** 이다(루프 밖에서 채우면 추적이 끊긴다)
+   *    ⒞ 🟢 **새로** — 그 루프의 입력이 POST/GET 에서 각각 하나임을 단언한다
+   */
+  it("W1-2 국내 transient 배열은 **한 곳에서만** 채워지고 그 입력이 GET 에서도 선다", () => {
+    const loop = MI.indexOf("for (const e of aggregationEvidence)");
     const push = MI.indexOf("domesticTransientRecords.push(");
     expect(loop, "🔴 루프가 없으면 이 추적이 성립하지 않는다").toBeGreaterThan(0);
     expect(push, "🔴 push 가 루프 «뒤» 에 하나뿐이어야 이 결론이 성립한다").toBeGreaterThan(loop);
     expect(MI.split("domesticTransientRecords.push(").length - 1).toBe(1);
-    /** 🔴 저장분은 그 배열에 **들어가지 않는다**(B3-04 격리) — 그래서 복원해도 안 채워진다. */
-    const between = MI.slice(loop, push);
-    expect(between).not.toContain("savedCandidateRows");
+    /** 🟢 **단절이 닫혔다** — GET 가지가 저장분을 집계 입력으로 만든다. */
+    const decl = MI.slice(MI.indexOf("const aggregationEvidence"), loop);
+    expect(
+      decl,
+      "🔴 GET 복원분이 집계 입력에서 빠졌다 — 재진입에서 국내 참고가격이 다시 사라진다",
+    ).toContain("savedCandidateRowsToEvidence(savedCandidateRows)");
+    /** 🔴 그러나 POST 가지는 **여전히 geminiEvidence 만** 쓴다(중복 집계 금지). */
+    expect(decl.split("savedCandidateRowsToEvidence")[0]).not.toContain("savedCandidateRows");
   });
 
   it("W1-3 🔴🔴 그 결과 — **계산 단계부터 `null`** 이다(화면에서 사라지는 것이 아니다)", () => {
