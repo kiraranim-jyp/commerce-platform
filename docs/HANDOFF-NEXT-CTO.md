@@ -715,3 +715,37 @@ tsc 0 · 회귀 843 files / 10,752 passed · build 0 · Production ● Ready
    T6-1 계약으로 그 상태를 **고정** 까지 했다.
 ⟹ 앞으로 「집계/파생 칸을 추가한 WU 는 **그 칸의 소비처를 같은 WU 안에서** 만든다」.
 ```
+
+---
+
+## 19. 🔵 `MI-SELLER-PRICE-COMPARISON-UI-1` — B-1 완료 · **다음은 A 하나**
+
+### ① 🟢 B-1 완료 (`100d6dfd`) — 재조사 금지
+```
+원인  후보 카드를 그리는 표면이 **둘** 인데 지난 WU 가 다른 쪽만 고쳤다
+      gt-price(GeminiTransientCandidates) ← 화면에 서는 쪽 · **비어 있었다**
+      mi-candidate-price(MarketPriceComparison) ← 그때 고친 쪽
+🟢 priceKrwText(row) + `gt-price-krw` 줄 추가 · 원본 줄 불변 · UI 환산 0
+🟢 계약 12 · mi-022 재지정(CPO §2) · 회귀 844 files / 10,761 passed · build 0
+🟡 **CEO 확인 대기** — ① 약 ₩ 표시 ② 환산 불가 문구 ③ KRW 중복 없음
+```
+
+### ② 🔴🔴 A 착수 전 **반드시 알아야 할 사실** (2026-11-10 실측)
+```
+grep "candidateOverseasPrice|candidateDomesticPrice" pipeline/commerce/*.tsx
+  → **전부 주석** 이다. 읽는 «코드» 가 0 이다.
+⟹ 🔴 서버 집계 칸들이 **화면에 배선돼 있지 않다**
+⟹ 🔴 A 는 「marketKrwComparison 한 줄 추가」가 **아니다** —
+     응답 → Workspace prop → 첫 영역까지 **배선 자체를 새로 깔아야** 한다
+🟡 그래서 A 는 B-1 보다 **크다.** 착수 전에 그 전제로 용량을 잡는다
+```
+
+### ③ 🔵 A 완료 형태 (CPO 지정)
+```
+국내 ₩88,000  ↔  해외 최저 약 ₩N  ↔  차이 ₩D
+🔴 없는 값은 「국내 가격 없음」·「해외 가격 없음」·「환산 불가」로 적는다
+🔴 비교 불가 상태에서 차액을 계산·추정하지 않는다 · 부호와 기준을 명시한다
+🔴 T6-1 재작성 필요 — 지금 「등장 1회」라 **화면 소비를 막고 있다**
+   → 「판정 owner 가 읽지 않는다」로 재지정(화면 소비 허용)
+🔴 금지 — CASE/추천가격/sellerAction/matcher/재고 정책/DB 변경
+```
