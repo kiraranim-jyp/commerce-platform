@@ -19,57 +19,26 @@
 🔴 **작업지시서는 repo 파일이 아니다** — 목표·완료조건은 **§14-③ 에 보존**돼 있다
 ```
 
-### 🔴🔴🔴 멈춰라 — **구현은 «미착수가 아니다». 266줄이 미커밋으로 살아 있다**
+### 🟢🟢🟢 현재 상태 — **두 WU 모두 «구현·배포 완료» 다** (2026-11-10)
 
-🔴 **§15·§16 은 「구현 미착수」 시점 문서다.** 그 뒤에 구현이 들어갔고 **커밋되지 않았다**
-⟹ 🔴🔴 **처음부터 다시 구현하면 그 266줄과 충돌한다.** 먼저 작업트리를 본다.
+🔴 **§3~§16 은 그 WU 를 «하기 전» 에 쓴 문서다.** 「미구현」·「14 failed」·「266줄 미커밋」
+같은 서술이 그 안에 남아 있지만 **전부 낡았다.** 아래가 현재 사실이다.
 
+```
+🟢 MI-UNIFIED-MARKET-PRICE-COMPARISON-1   **41d44100** 구현·배포 완료
+   8항목 전부 연결(신규 4·5·6) · T1~T7 29건 · 변이 4종 검출 · 회귀 0 failed
+🟢 MI-DOMESTIC-COMPETITIVE-SELLABILITY STEP 1  **f06be8d6** 구현·배포 완료
+   재고 3상태를 표시 경로로 전달 · 계약 10 · 변이 2종 · 상세는 §17
+🟢 작업트리 = **보존 40건뿐** (WU 변경분은 전부 커밋됐다)
+   🔴 그 40건(`docs/START-HERE.md` 포함)은 **수정·staging·커밋 전부 금지** · `git add -A` 금지
+```
 ```bash
-cd apps/admin && npx tsc --noEmit        # → 0 (구현이 살아 있다는 증거)
-git status --porcelain | wc -l           # → 45
+git status --porcelain | wc -l           # → 40  (보존분만)
+cd apps/admin && npx tsc --noEmit        # → 0
+git log -1 --format=%h -- apps packages  # ← 운영 기준 커밋
 ```
-```
-🔴 45 = **보존 40** + **WU 5**  — 성질이 다른 둘이다. 섞으면 보존분을 커밋한다
-🟢 WU 5건(이어서 작업 · 최종 커밋 대상 · staging 은 이 5개만 «명시»)
-   apps/admin/src/app/api/price-history/_lib/candidate-market.ts        +69
-   apps/admin/src/app/api/price-history/_lib/market-intelligence.ts    +104
-   apps/admin/src/app/pipeline/commerce/mi-same-candidates.ts           +36
-   apps/admin/src/app/pipeline/commerce/MarketPriceComparison.tsx       +57
-   apps/admin/src/app/pipeline/commerce/GeminiTransientCandidates.tsx   +15
-🔴 보존 40건(`docs/START-HERE.md` 포함) — 수정·staging·커밋 **전부 금지** · `git add -A` 금지
-```
-
-#### 🟢 이미 «구현된» 것 (다시 만들지 않는다)
-```
-§3-1 환율 hoist   `fetchLiveExchangeRates()` 를 **후보 evidence 생산 앞**(구 :404)으로 ·
-                  호출 **1회** · 🔴 `liveRates` 의 «비용 경로» 의미 **불변**(가드 유지 · 재조회만 제거)
-§3-2 후보 환산     `convertToKrwStrict(amount, currency, candidateRates)` →
-                  `attachDerivedKrw` 로 **POST(`geminiEvidence`)·GET(`savedCandidateRows`)
-                  두 응답 배열 모두** 에 `priceKrwDerived` 부착(생산자 타입 무변경 · 새 객체 가산)
-§3-3 교차통화 최저  `summarizeCandidateOverseasPrices` 에 `lowestKrw{amountKrw,currency,amount}` ·
-                  🔴 **자격 퍼널 전부 통과 뒤** 에 센다 · `byCurrency` **불변** · null 을 0 으로 안 쓴다
-§4   UI 3지점      `:1857`(= `c.lowestKrw`) · `:2486` · `:2658`(확정) 전부 서버값 ·
-                  🔴 `convertToKrwStrict` **import 까지 제거**(직접 호출 0건)
-                  🟢 `mi-same-candidates.ts` 는 **고르기만** 한다(환산 0 · 두 집계지점 모두)
-```
-
-#### 🔴 남은 것 — **CPO 승인 완료 · 판정 대기 0**
-```
-① 계약 ①② 재지정(승인됨)   core-2e-price-purpose.test.ts:**217**(MODULE=`mi-same-candidates.ts`) ·
-                          **:253 · :330**(VIEW=`MarketPriceComparison.tsx`)
-                          🔴🔴 그 가드는 `convertToKrwStrict` 를 **벗긴 뒤** `convertToKrw` 를 본다
-                             ⟹ **주석 문구도 걸린다**([[source-scan-must-strip-comments]])
-                          core-ux-rebuild-02 · r2-final-price-and-cta
-                          → 「UI 는 서버 파생값을 읽는다」 + 「환산 실패는 `null`」 + 확정 버튼 조건 보존
-② 의도된 갱신 12건         요약 칸 4→5(`lowestKrw`) · `MarketPriceRange` 칸 · 소스 앵커
-                          (`geminiEvidence ?? null` → `attachDerivedKrw(...)`)
-③ ⑥ 국내 대비 차이         **미구현**(④⑤ 는 완료)
-④ T1~T7 + 변이 4종        미작성 · 🔴 변이에 「UI 재환산 주입」·「환산 위치 오류」를 넣는다(CPO 지시)
-⑤ 전체 회귀 → tsc → build → **5파일만** staging → commit → push → 배포
-🔴 마지막 회귀 실측 = **14 failed / 10,699 passed / 831 files**(tsc **0**)
-🔴 Production 상품 E2E 는 **미검증으로 보고** 한다(CTO 는 로그인 뒤 화면을 볼 수 없다)
-```
-🔴 **CPO 가 PASS 로 승격하지 않았다** — 위는 **CTO 1차 검증** 이고 독립 검증·배포는 **미완** 이다.
+🔴 **이 문서에 남은 「미구현/실패」 서술을 작업 지시로 읽지 않는다.** 재구현 금지.
+🔵 다음 범위는 **CPO 가 지정한다** — 사이트별 예외가 아니라 **공통 MI 성능** 이 우선이다(§17-⑤).
 
 ---
 
