@@ -337,12 +337,16 @@ describe("MDPC-1 B — 🟢 **지운 것이 없다**(집계·분모·어휘 불�
     expect(INTEL_SRC.slice(os, os + 520)).toContain("verdict: e.crossSellerVerdict");
   });
 
-  it("B-3 🟢 상태는 **셋 그대로** 다 — 새 상태·새 문구를 만들지 않았다", () => {
-    expect(Object.keys(CANDIDATE_PRICE_USE_LABEL).sort()).toEqual(
-      ["EXCLUDED_OBSERVED_DIFFERENCE", "NOT_PRICED", "USED"].sort(),
-    );
+  /**
+   * 🔵 MI-OVERSEAS-PRICE-CANDIDATE-CONSISTENCY-1 — **상태가 넷이 됐다(의도된 변경).**
+   * 🔴 이 WU 가 만든 셋은 **글자까지 그대로** 다 — 그것이 이 단언의 핵심이고 약화가 아니다.
+   * 🟢 넷이라는 **집합 자체** 는 그 WU 의 계약(`mopc-1-overseas-price-axis-parity` B-3)이
+   *    소유한다 — 같은 목록을 두 곳에서 세면 owner 가 둘이 된다.
+   */
+  it("B-3 🟢 **이 WU 의 상태 셋은 글자까지 그대로** 다 — 새 문구를 만들지 않았다", () => {
     expect(CANDIDATE_PRICE_USE_LABEL.USED).toBe("참고가격에 반영");
     expect(CANDIDATE_PRICE_USE_LABEL.EXCLUDED_OBSERVED_DIFFERENCE).toBe("참고가격 제외 — 상품 차이가 확인됨");
+    expect(CANDIDATE_PRICE_USE_LABEL.NOT_PRICED, "🔴 「모른다」는 줄이 없다").toBeNull();
   });
 
   it("B-4 🟢 **「반영」이 여전히 난다** — 게이트를 더해 기능을 죽이지 않았다", () => {

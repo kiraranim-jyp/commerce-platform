@@ -150,7 +150,15 @@ describe("U. 🔵 후보 카드 — 같은 템플릿 · 참고가격 포함/제�
     for (const b of PRICE_DISQUALIFYING_BLOCKER_LIST) {
       expect(AREA_SRC, `🔴 '${b}' 가 화면 파일에 박혔다 — 사본이다`).not.toContain(b);
     }
-    expect(AREA_SRC).toContain("candidatePriceUse(row)");
+    /**
+     * 🔵 MI-OVERSEAS-PRICE-CANDIDATE-CONSISTENCY-1 — 인자가 하나 늘었다(화면 분기).
+     * 🔴 **약화가 아니다** — 「술어를 부른다」 «그리고» 「분기 값을 같은 함수에서 받는다」를
+     *    같이 단언한다(그 값을 손으로 세면 화면 숫자와 갈라진다).
+     */
+    expect(AREA_SRC).toContain("candidatePriceUse(row, { sameOnlyPriceAxis })");
+    expect(AREA_SRC, "🔴 분기 값을 화면이 자기 식으로 만들었다").toContain(
+      "sameOnlyPriceAxis={buildPriceGuide(judgement,",
+    );
   });
 
   it("U-3 🟢🟢 **반영된 후보가 「참고가격에 반영」을 말한다**(CPO 검수 ③)", async () => {

@@ -2315,7 +2315,38 @@ export function costHoldLines(
  * 🔴 상태를 **셋으로** 가른다 — 「썼다」·「제외」·「모른다」. 🔴 「모른다」를 「제외」로
  *    적지 않는다(가격이 없거나 미확인이면 애초에 분모가 아니다).
  */
-export type CandidatePriceUse = "USED" | "EXCLUDED_OBSERVED_DIFFERENCE" | "NOT_PRICED";
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 MI-OVERSEAS-PRICE-CANDIDATE-CONSISTENCY-1 — **네 번째 상태가 왜 필요한가**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **화면의 가격 owner 가 «분기» 한다**(`MarketBlock`):
+ * ```
+ * sameCount === 0 → <OverseasReferencePrice>  = 서버 집계(SAME **+ 추정** 포함)
+ * sameCount  > 0 → price-guide-*              = `buildPriceGuide` (**SAME 전용**)
+ * ```
+ * 🔴 두 분기의 **제목이 같다**(`PRICE_GUIDE_TITLE` 이 `OVERSEAS_REFERENCE_TITLE` 을 포함).
+ *    ⟹ SAME 이 하나 생기는 순간 **추정 후보의 가격이 화면에서 조용히 빠진다.**
+ *
+ * 🔴🔴 **운영 DB 실측(2026-11-11 · 읽기 전용)이 그 모순을 확정했다** —
+ *    스냅샷 `25a3bba7…`(B226AC033 Bobo Choses Pop sweatshirt):
+ * ```
+ * bonbonverona.it   EUR 62 · EXACT      · SAME         · VERIFIED · blockers []        → 화면에 선다
+ * junioredition.com GBP 58 · COMPARISON · PRESUMED_SAME · VERIFIED · blockers [MATERIAL]
+ *                   🔴 카드는 「참고가격에 반영」 · 서버 집계는 **담는다**
+ *                   🔴 그런데 화면은 SAME 전용으로 분기 ⟹ **GBP 축 자체가 사라진다**
+ * ```
+ * ⟹ 🔴 그 「반영」이 **거짓** 이다(CPO 원칙 ⑧ — 「카드 상태가 거짓을 말하지 않도록」).
+ *
+ * 🟢 그래서 **상태를 하나 더 둔다** — 「제외」가 아니다. 「제외」는 **상품 차이가 관측된**
+ *    것이고, 이것은 **집계 범위** 이야기다(추정 후보는 다른 상품이라는 관측이 없다).
+ * 🔴 집계·분모·자격 조건 **변경 0** — 바뀌는 것은 **그 카드가 말하는 사실** 하나다.
+ */
+export type CandidatePriceUse =
+  | "USED"
+  | "EXCLUDED_OBSERVED_DIFFERENCE"
+  | "SAME_AXIS_ONLY"
+  | "NOT_PRICED";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -2354,14 +2385,24 @@ export type CandidatePriceUse = "USED" | "EXCLUDED_OBSERVED_DIFFERENCE" | "NOT_P
 const PRICE_EXCLUDED_TIER = "EXCLUDED";
 
 /** 🟢 집계기가 금액을 세는 조건과 **같은 게이트** 를 본다(사본 아님 · 같은 술어 재사용). */
-export function candidatePriceUse(row: {
-  priceAmount?: number | null;
-  priceStatus?: string | null;
-  priceTier?: string | null;
-  market?: string | null;
-  crossSellerVerdict?: string | null;
-  crossSellerBlockers?: string[];
-}): CandidatePriceUse {
+export function candidatePriceUse(
+  row: {
+    priceAmount?: number | null;
+    priceStatus?: string | null;
+    priceTier?: string | null;
+    market?: string | null;
+    crossSellerVerdict?: string | null;
+    crossSellerBlockers?: string[];
+    matchTruth?: string | null;
+  },
+  /**
+   * 🔵 MI-OVERSEAS-PRICE-CANDIDATE-CONSISTENCY-1 — **화면의 가격 owner 가 SAME 전용인가.**
+   * 🔴 값의 owner 는 호출부다 — `buildPriceGuide(judgement, market).sameCount > 0` 이고
+   *    그것이 `MarketBlock` 의 분기 조건과 **같은 식** 이다(사본 아님 · 같은 함수).
+   * 🟢 넘기지 않으면(`undefined`) **동작이 한 글자도 바뀌지 않는다**(기존 호출부 보호).
+   */
+  opts?: { sameOnlyPriceAxis?: boolean },
+): CandidatePriceUse {
   /** 🔴 금액이 없으면 **제외가 아니다** — 분모에 들어간 적이 없다. */
   if (row.priceAmount == null || !Number.isFinite(row.priceAmount)) return "NOT_PRICED";
   /** 🔴 「금액은 있는데 확인만 안 됐다」도 금액 집계 밖이다(집계기의 `unverifiedCount`). */
@@ -2391,6 +2432,16 @@ export function candidatePriceUse(row: {
   if (isPriceDisqualifiedByObservedDifference(row.crossSellerBlockers)) {
     return "EXCLUDED_OBSERVED_DIFFERENCE";
   }
+  /**
+   * 🔴🔴 **마지막이다 — 순서가 의미다.** 위 네 게이트(금액·신뢰도·tier·verdict·관측차이)를
+   *    **전부 통과한 뒤** 이므로 이 상태는 「집계 자격은 있는데 **지금 화면의 숫자가
+   *    SAME 전용이라 그 숫자에는 없다**」를 정확히 가리킨다.
+   * 🔴 위로 올리면 「가격 미확인」·「상품 차이」를 이 말로 덮어 **사유가 사라진다.**
+   * 🟢 `transientDisplayTier` 는 **운영 산출을 읽는** 술어다(판정 0 · 승격 0).
+   */
+  if (opts?.sameOnlyPriceAxis && transientDisplayTier(row as GeminiTransientRow) !== "SAME") {
+    return "SAME_AXIS_ONLY";
+  }
   return "USED";
 }
 
@@ -2401,6 +2452,13 @@ export function candidatePriceUse(row: {
 export const CANDIDATE_PRICE_USE_LABEL: Record<CandidatePriceUse, string | null> = {
   USED: "참고가격에 반영",
   EXCLUDED_OBSERVED_DIFFERENCE: "참고가격 제외 — 상품 차이가 확인됨",
+  /**
+   * 🔵 MI-OVERSEAS-PRICE-CANDIDATE-CONSISTENCY-1 — 🔴 **「제외」라 적지 않는다.**
+   *    상품 차이가 관측된 것이 **아니고**, 위 가격 숫자의 **범위** 가 동일상품 확정
+   *    후보로 좁혀져 있다는 사실이다. 🔴 「추정/보류」 같은 **판정 어휘를 쓰지 않는다** —
+   *    등급은 카드의 그룹 배지(`CANDIDATE_GROUP_LABEL`)가 이미 말한다.
+   */
+  SAME_AXIS_ONLY: "위 가격에는 미반영 — 동일상품 확정 후보만 집계",
   /** 🔴 `null` = **줄을 만들지 않는다**(없는 상태를 적지 않는다). */
   NOT_PRICED: null,
 };

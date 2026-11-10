@@ -1095,3 +1095,129 @@ C 「국내 소싱 후보 N곳」  selectCandidateList(rows,market).length
     오면 **부풀 수 있다**.」 🔴 그 축은 §9(해외 축 불변)이 보호하므로 **CPO 판정 사안** 이다
 🔴 START-HERE.md 는 **건드리지 않았다** — 보존 40건에 들어 있다(§23-1 금지)
 ```
+
+---
+
+# 25. 🔵🔵🔵 **MI-OVERSEAS-PRICE-CANDIDATE-CONSISTENCY-1 — 판정 완료** (2026-11-11)
+
+🔴🔴 **새 페이지는 §23-0(전략) + §24 + 이 절만 읽는다.**
+
+## 25-0. 🟢 결론 두 줄
+
+```
+🟢 ① 「해외 판매처 N곳」 부풀림은 **구조적으로 가능하지만 현재 운영 데이터에서 0** 이다
+      ⟹ `sellerKey` 를 **추가하지 않았다**(원칙 ① 분모 변경 금지 · §24-6 의 내 경고를 실측으로 정정)
+🔴 ② 실재한 거짓은 **다른 것** 이었다 — 화면의 가격 owner 가 «분기» 하는데
+      후보 카드가 그 분기를 모르고 「참고가격에 반영」이라 적었다 ⟹ **고쳤다**
+```
+
+## 25-1. 🟢 owner·분모 — 확정됐다(재조사 금지)
+
+```
+해외 「판매처 N곳」      summarizeCandidateOverseasPrices(해외 레코드).byCurrency[cur].count
+                        🔴 `sellerKey` 가 **없다** ⟹ **레코드(=URL) 수** 다(국내는 domain 단위)
+해외 「동일상품 확인 N곳」 buildPriceGuide(j,"OVERSEAS").sameCount
+해외 「가격 확인 N곳」     같은 가이드의 pricedCount
+해외 「소싱 후보 N곳」     selectCandidateList(rows,"OVERSEAS").length
+통화별 최저/범위         byCurrency.lowestAmount / highestAmount (🔴 환산 0 · 통화 혼합 0)
+원화 환산 가능 후보       candidateKrwByUrl → 행의 `priceKrwDerived`(convertToKrwStrict · 모르면 null)
+🔴🔴 **단위가 둘이다** — 국내 집계만 **판매처**, 나머지 전부 **후보 URL** 인데 화면은 전부 「곳」이다
+   (`buildMarketJudgement` 가 `discoveredUrl` 로 접고 타입 이름이 `MarketSeller` 라 혼동이 쉽다)
+```
+
+## 25-2. 🟢 운영 DB 실측(읽기 전용 · 2026-11-11) — 숫자를 먼저 적는다
+
+```
+②③ 한 스냅샷에 같은 domain · 다른 URL      짝 **4**(스냅샷 2 · 도메인 2)
+   🔴 그런데 그 4 는 전부 **origin_code 축**(snapshot_id null) 또는 candidate_domain null
+      ⟹ **해외 가격 집계 입력에는 0건**
+④ 해외 자격 행에서 같은 domain 복수 URL     **0건**
+⑥ 같은 판매처·같은 통화인데 금액 상이       **0건**
+⑤ 스냅샷별 해외 자격 행                    rows == urls == domains (7/7/7 · 6/6/6 …)
+   ⟹ 🟢 **오늘은 「판매처 N곳」 == 실제 판매처 수** 다
+⑧ 해외 자격 행 tier×status 분포
+   COMPARISON+UNVERIFIED 70 · COMPARISON+null 62 · EXACT+null 38 ·
+   **COMPARISON+VERIFIED 33** · **EXACT+VERIFIED 31** · COMPARISON+PRICE_UNAVAILABLE 3 ·
+   EXACT+UNVERIFIED 3 · EXCLUDED+null 3
+⑪ 금액 자격 전수 통과 행                   EXACT **31행/20스냅샷** · COMPARISON **10행/10스냅샷**
+⑩ 🔴🔴 카드는 「반영」인데 화면 숫자에 없는 후보  **1 스냅샷**
+   `25a3bba7…`(B226AC033 Bobo Choses Pop sweatshirt) · screen_lo **62** ↔ aggregate_lo **58**
+⑫ 같은 통화 «안» 에서 최저가가 갈리는 사례   **0건**
+   ⟹ 🔴 틀어지는 것은 **통화 축의 유무와 건수** 이고 최저가 «숫자» 자체는 아니다(오늘)
+```
+
+🔴🔴 **그 1건의 내용(DB 원문 그대로)**:
+```
+bonbonverona.it   EUR 62 · EXACT      · SAME          · VERIFIED · blockers []
+junioredition.com GBP 58 · COMPARISON · PRESUMED_SAME · VERIFIED · blockers ["MATERIAL"]
+⟹ sameCount 1 > 0 이라 화면은 **SAME 전용 가이드** 로 분기 ⟹ **GBP 축이 화면에서 사라진다**
+⟹ 그런데 그 카드는 「참고가격에 반영」 이라 적었다(서버 집계는 GBP 58 을 담으므로 «직전 WU 기준» 으로는 맞다)
+```
+
+## 25-3. 🔴 원인 — 화면의 가격 owner 가 분기한다
+
+```
+MarketBlock  sameCount === 0 → <OverseasReferencePrice>  = 서버 집계(SAME **+ 추정**)
+             sameCount  > 0 → price-guide-*              = buildPriceGuide(**SAME 전용**)
+🔴 두 분기의 **제목이 같다**(PRICE_GUIDE_TITLE ⊃ OVERSEAS_REFERENCE_TITLE)
+⟹ SAME 이 하나 생기는 순간 추정 후보의 가격이 **조용히** 화면에서 빠진다
+⟹ 직전 WU 가 카드를 «서버 집계» 와 맞춴 것으로는 **부족했다**(그 기준에서는 「반영」이 참이다)
+```
+
+## 25-4. 🟢 구현 — 운영 **2 파일** · 상태 **하나 추가**
+
+```
+🟢 mi-same-candidates.ts  `candidatePriceUse(row, { sameOnlyPriceAxis })` + 상태 `SAME_AXIS_ONLY`
+   라벨 **「위 가격에는 미반영 — 동일상품 확정 후보만 집계」**
+   🔴 「제외」라 적지 않았다 — 「제외」는 **상품 차이가 관측된** 것이고 이것은 **집계 범위** 다
+   🔴 판정 어휘(추정·보류·유사)·내부 토큰 **0** — 등급은 그룹 배지가 이미 말한다
+   🔴 **게이트 순서의 맨 끝** 이다 — 위로 올리면 「가격 미확인」·「상품 차이」 사유를 덮는다
+🟢 MarketPriceComparison.tsx  `sameOnlyPriceAxis={buildPriceGuide(judgement, "<MK>").sameCount > 0}`
+   🔴 **`MarketBlock` 의 분기와 같은 함수·같은 식** 이다(사본 0 · 새 계산 0) · 🇰🇷/🌎 **둘 다**
+🔴 **변경 0** — 집계기 · `buildPriceGuide` · `buildMarketJudgement` · 분모 · 자격 조건 ·
+   tier · verdict · 판정 · CASE · 추천가격 · 환산 · 차액 · DB · schema · 후보 데이터
+🔴 **sellerKey 를 해외에 넣지 않았다**(④⑥ 이 0 이므로 숫자가 안 바뀐다 · CPO 가 지시하지 않았다)
+```
+
+## 25-5. 🟢 검증
+
+```
+신규 계약  mopc-1-overseas-price-axis-parity (10건)
+  A-1 실측 두 행 — 「반영」 → `SAME_AXIS_ONLY`(화면/집계/카드 셋을 같이 단언)
+  A-2 전수 평형 — 「반영」이라 적힌 후보의 **통화가 화면 숫자에 있다**(🇰🇷·🌎 · tier×truth×verdict)
+      🔴 분모 0 을 PASS 로 쓰지 않도록 「카드 선 수」·「반영 난 수」를 같이 단언
+  A-3 SAME 이 없으면 추정 후보는 **여전히 「반영」**(반대 방향 거짓 방지)
+  A-4 국내도 같은 분기 · A-5 opts 미전달 시 동작 불변 · A-6 순서(사유 우선)
+음성대조   N1 게이트 제거 **3F** · N2 항상 적용 **8F** · N3 순서 파괴 **2F** ·
+           N4 🌎 배선 끊기 **1F** · N5 카드가 값 무시 **1F** · N6 「제외」 어휘 **1F**
+           🟢 전부 적용 확인 · 원상복구 **바이트 동일**
+🔴🔴 **N5 가 1차에 통과했고 그래서 앵커를 강화했다** — `candidatePriceUse(row, {...})` 가
+   그 파일에 **네 번** 등장해 한 곳을 끊어도 `toContain` 이 통과했다 ⟹
+   **「옵션 없이 부르는 호출이 0」** 을 세도록 바꿨다(등장 하나만 보는 앵커는 뚫린다)
+기존 계약  2건 갱신·**강화** — `mdpc-1 B-3`(상태 셋 글자 불변으로 좁히고 집합 owner 는 새 계약) ·
+           `sourcing-candidate-unified-ux-1 U-2`(호출 + **분기 값 출처** 를 같이 단언)
+회귀 **847 files / 10,799 passed · 0 failed** · tsc **0** · build **exit 0**
+```
+
+## 25-6. 🔴 측정불가 / 넘겨 읽지 않을 것
+
+```
+🔴 라이브 크롤 E2E 는 하지 않았다 — `bobochoses.com` **429**(§24-5 와 같은 이유)
+   🟢 대신 **운영 DB 실측** 으로 분모·거짓 1건을 특정했다(추측 0)
+🔴 영향 범위는 **금액 자격을 통과한 COMPARISON 10행/10스냅샷** 이고, 그중 **SAME 과 공존하는
+   것은 1스냅샷** 이다 — 「운영 전체가 틀렸다」로 읽지 않는다
+🔴 「판매처 N곳」의 **단위** 는 여전히 해외=URL · 국내=domain 이다(오늘 숫자는 같다) ⟹
+   그 비대칭을 없애는 것은 **CPO 판정 사안** 이고 이번에 건드리지 않았다
+🔴 실제 따져 화면은 CTO 가 볼 수 없다 ⟹ **Production UI PASS 로 적지 않는다**
+```
+
+## 25-7. 🔵 다음 한 수
+
+```
+🔵 ③ MI 판매가격·추천 여부 검증(전략 우선순위 ③)으로 넘어갈 수 있다.
+🟡 이번 수정의 실화면 확인은 **「SAME 과 추정이 같이 있는 상품」** 에서만 보인다 —
+   운영 스냅샷 `25a3bba7…`(B226AC033)이 그 유일한 좌표다(CEO 확인이 필요하면 그 상품으로)
+🔴 열어 둔 CPO 판정 1건 — 해외 「판매처」의 **단위**(URL ↔ domain). 오늘 숫자 차이는 **0** 이고
+   `sellerKey` 를 넣으면 **미래의 중복만** 접는다(지금은 효과 0)
+🔴 START-HERE.md · CTO-HANDOVER-NEXT.md 는 **건드리지 않았다**(보존 40건)
+```

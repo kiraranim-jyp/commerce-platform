@@ -921,6 +921,13 @@ export function MarketPriceComparison({
           presumed={domesticPresumed}
           /** 🔵 CANDIDATE-EVIDENCE-VISIBILITY-01 — 같은 `rows` · 리스트 선택기 하나. */
           list={domesticList}
+          /**
+           * 🔵🔵 MI-OVERSEAS-PRICE-CANDIDATE-CONSISTENCY-1 — 🔴 **`MarketBlock` 의 분기와
+           *    «같은 식» 이다**(`g.sameCount === 0 ? 서버 집계 : SAME 전용 가이드`).
+           *    🟢 그래서 사본이 아니라 **같은 함수의 같은 산출** 이다(새 계산 0).
+           * 🔴 국내도 같은 분기를 쓴다 — 한쪽만 고치면 국내 카드가 같은 거짓을 말한다.
+           */
+          sameOnlyPriceAxis={buildPriceGuide(judgement, "KR").sameCount > 0}
           /** 🔵 CORE-E2E-CLOSE-04 — 선택 owner 는 위 `useCandidateReview` 하나다. */
           reviewApi={reviewApi}
           /**
@@ -955,6 +962,8 @@ export function MarketPriceComparison({
           presumed={overseasPresumed}
           /** 🔵 해외도 **같은 선택기** 를 쓴다(두 벌을 만들지 않는다). */
           list={overseasList}
+          /** 🔵🔵 MI-OVERSEAS-PRICE-CANDIDATE-CONSISTENCY-1 — 🌎 도 **같은 식** 이다(위 참조). */
+          sameOnlyPriceAxis={buildPriceGuide(judgement, "OVERSEAS").sameCount > 0}
           /** 🔵 CORE-E2E-CLOSE-04 — 🌎 도 **같은 owner** 를 쓴다(두 벌 금지). */
           reviewApi={reviewApi}
           /**
@@ -2346,10 +2355,21 @@ function MarketColumn({
    *    목표 화면의 후보 카드 구성에 **들어 있다**.
    */
   onConfirmPriceKrw,
+  /**
+   * 🔵🔵🔵 MI-OVERSEAS-PRICE-CANDIDATE-CONSISTENCY-1 — **위 가격 숫자가 SAME 전용인가.**
+   *
+   * 🔴 `MarketBlock` 은 `g.sameCount === 0` 이면 **서버 집계**(추정 포함)를, 그 외에는
+   *    `buildPriceGuide`(**SAME 전용**)를 그린다 — **제목이 같다.** 그래서 SAME 이 하나
+   *    생기는 순간 추정 후보의 가격이 화면에서 조용히 빠지는데 카드는 「참고가격에
+   *    반영」이라 적고 있었다(운영 DB 실측 `25a3bba7…` — GBP 58 이 그렇게 사라진다).
+   * 🟢 값은 호출부가 **같은 함수**(`buildPriceGuide`)로 만든다 — 사본 0 · 새 계산 0.
+   */
+  sameOnlyPriceAxis,
 }: {
   testId: string;
   heading: string;
   market: "KR" | "OVERSEAS";
+  sameOnlyPriceAxis?: boolean;
   onConfirmPriceKrw?: (krw: number) => void;
   /**
    * 🔵🔵 CORE-E2E-CLOSE-03 — **동일 «가능성» 후보**(표시 전용).
@@ -2727,17 +2747,17 @@ function MarketColumn({
                           * 🔴 「모른다」(가격 없음·미확인)면 **줄을 만들지 않는다**.
                           * 🟢 국내·해외가 **같은 카드** 라 이 줄도 두 시장에 **동시에** 선다.
                           */}
-                        {CANDIDATE_PRICE_USE_LABEL[candidatePriceUse(row)] ? (
+                        {CANDIDATE_PRICE_USE_LABEL[candidatePriceUse(row, { sameOnlyPriceAxis })] ? (
                           <p
                             data-testid="mi-candidate-price-use"
-                            data-use={candidatePriceUse(row)}
+                            data-use={candidatePriceUse(row, { sameOnlyPriceAxis })}
                             className={
-                              candidatePriceUse(row) === "USED"
+                              candidatePriceUse(row, { sameOnlyPriceAxis }) === "USED"
                                 ? "mt-1 text-[11px] text-text-secondary"
                                 : "mt-1 text-[11px] text-text-tertiary"
                             }
                           >
-                            {CANDIDATE_PRICE_USE_LABEL[candidatePriceUse(row)]}
+                            {CANDIDATE_PRICE_USE_LABEL[candidatePriceUse(row, { sameOnlyPriceAxis })]}
                           </p>
                         ) : null}
                         {/**
