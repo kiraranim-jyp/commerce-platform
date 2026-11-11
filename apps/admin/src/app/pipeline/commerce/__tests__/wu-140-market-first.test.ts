@@ -227,8 +227,10 @@ describe("C. 🔴🔴🔴 CPO 확정 순서 — 🇰🇷 → 🌎 → 판단 결
     /** 🔴 이 네 줄이 이 WU 의 핵심이다 — 뒤집으면 CPO NO-GO 화면으로 돌아간다. */
     expect(blocks).toBeLessThan(pos("market-seller-table"));
     expect(blocks).toBeLessThan(pos("market-judgement"));
-    expect(blocks).toBeLessThan(pos("market-verdict"));
-    expect(blocks).toBeLessThan(pos("mi-detail-fold"));
+    /** 🔵 MSRUX-1 D — 접힘이 사라져 `market-verdict` 가 1차에 선다(존재만 본다). */
+    expect(q("market-verdict"), "🔴 분류 라벨이 사라졌다").not.toBeNull();
+    /** 🔵 MSRUX-1 D — `mi-detail-fold` 는 **제거** 됐다. 남은 둘의 순서를 지킨다. */
+    expect(pos("mi-detail-fold"), "🔴 제거한 접힘이 되살아났다").toBe(-1);
   });
 
   it("🔴 C-2 🇰🇷 국내가 🌎 해외보다 먼저 온다(셀러의 질문 순서)", async () => {
@@ -244,18 +246,22 @@ describe("C. 🔴🔴🔴 CPO 확정 순서 — 🇰🇷 → 🌎 → 판단 결
     expect(container.textContent).toContain(MARKET_JUDGEMENT_TITLE);
     expect(container.textContent).toContain(MARKET_RESULT_HEADING);
     /** 🔴 기술 데이터는 **접혀** 있다(삭제 0 · WU-136 R-7 과 같은 축). */
-    expect((q("mi-detail-fold") as HTMLDetailsElement).open).toBe(false);
-    expect(pos("mi-detail-fold")).toBeGreaterThan(pos("market-judgement"));
+    /** 🔵 MSRUX-1 D — 접힘 제거 ⟹ 🟢 보존 단언은 **판단 결과가 선다** 로 옮긴다. */
+    expect(q("mi-detail-fold"), "🔴 제거한 접힘이 되살아났다").toBeNull();
+    expect(q("market-judgement"), "🔴 판매 판단이 사라졌다").not.toBeNull();
   });
 
   it("🔴🔴 C-4 셀러가 **후보 목록을 읽지 않고도** 네 수치를 읽는다(CPO 성공 기준)", async () => {
     await mount({ rows: twoMarkets });
     /** 🔴 CORE-2AO-R2 — 금액은 **1차**, 건수는 **＋ 상세정보 보기** 안이다(두 자리로 문다). */
     const kr = q("market-block-domestic")!.textContent ?? "";
-    const krDetail = q("market-detail-domestic")!.textContent ?? "";
-    expect(krDetail).toContain("동일상품 확정 1건");
-    expect(krDetail).toContain("판매중 확인 1곳");
-    expect(krDetail).toContain("가격 확인 1곳");
+    /**
+     * 🔵 MSRUX-1 D — 상세 블록은 **제거** 됐다. 🟢 건수 owner 는 `market-same-count-*` 다.
+     * 🔴 「판매중/가격 확인」은 **설명 축**(priceGuideCountNote)이라 화면에서 제거됐고,
+     *    그 계산은 순수 함수로 **그대로** 산다(아래 보존 단언).
+     */
+    expect(q("market-detail-domestic"), "🔴 제거한 상세 블록이 되살아났다").toBeNull();
+    expect(q("market-same-count-domestic")?.textContent ?? "").toContain("동일상품 확정 1건");
     expect(kr).toContain("KRW 88000");
     /** 🔴 환산 0 — 한쪽 통화가 다른 블록에 나타나지 않는다. */
     expect(kr).not.toContain("USD");
@@ -267,8 +273,14 @@ describe("D. 🔴🔴 시장이 비었을 때 — 네 상태가 화면에서 갈
   it("🔴🔴 D-1 ⒜ 후보 0 인 시장은 「찾지 못했습니다」라고 적는다", async () => {
     /** 🔴 국내 실측이 이 모양이다 — tier SAME **0**(WU-138 에서 원인 확정 · 완화 REJECT). */
     await mount({ rows: [sameRow()] });
-    const krEmpty = q("market-empty-domestic")?.textContent ?? "";
-    expect(krEmpty).toContain(MARKET_EMPTY_NO_CANDIDATE);
+    /**
+     * 🔵 MSRUX-1 D — 네 상태 **설명 문장** 은 셀러 화면에서 제거됐다.
+     * 🟢 그 **구분 자체는 순수 함수**(`marketEmptyNote`)가 그대로 들고 있다(보존 단언).
+     * 🔴 화면에는 **건수 줄** 이 남는다.
+     */
+    expect(q("market-empty-domestic"), "🔴 제거한 설명 문장이 되살아났다").toBeNull();
+    expect(marketEmptyNote(0, { count: 0, reasons: [] })).toContain(MARKET_EMPTY_NO_CANDIDATE);
+    const krEmpty = q("market-same-count-domestic")?.textContent ?? "";
     /** 🔴 WU-145 ② — 빈 칸이 아니라 **「동일상품 확정 0건」** 이라는 숫자를 말한다. */
     expect(krEmpty).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0건`);
     /** 🔴 빈 틀을 만들지 않는다 — 기준가 블록은 **렌더되지 않는다**(wu-139 C-4). */
@@ -283,11 +295,15 @@ describe("D. 🔴🔴 시장이 비었을 때 — 네 상태가 화면에서 갈
         pendingRow({ domain: "biskuit.kr", discoveredUrl: "https://biskuit.kr/p/1", market: "KR" }),
       ],
     });
-    const kr = q("market-empty-domestic")!.textContent ?? "";
+    expect(q("market-empty-domestic"), "🔴 제거한 설명 문장이 되살아났다").toBeNull();
+    /** 🟢 네 상태 구분은 순수 함수가 보존한다 — 「후보는 있다」가 「없다」와 다른 문장이다. */
+    const kr = marketEmptyNote(1, { count: 1, reasons: [] });
     /** 🔴🔴 **이것이 CPO STEP 6-4 가 지적한 그 자리다** — ⒜ 와 ⒝ 가 같은 빈 칸이었다. */
     expect(kr).not.toBe(MARKET_EMPTY_NO_CANDIDATE);
-    expect(kr).toContain("후보 1곳");
+    /** 🟢 순수 함수가 네 상태를 **그대로** 가른다 — 화면에서 뺐다고 구분이 사라지지 않았다. */
+    expect(kr, "🔴 「후보는 있다」 상태가 사라졌다").toContain("후보 1곳");
     expect(kr).toContain(MARKET_EMPTY_REVIEW_HINT);
+    expect(kr, "🔴 「후보 없음」과 같은 문장이 됐다").not.toBe(MARKET_EMPTY_NO_CANDIDATE);
     /** 🔴 내부 토큰을 셀러에게 보여주지 않는다. */
     expect(container.textContent).not.toContain("BRAND_UNCONFIRMED");
     expect(container.textContent).not.toContain("PRESUMED_SAME");
@@ -298,8 +314,10 @@ describe("D. 🔴🔴 시장이 비었을 때 — 네 상태가 화면에서 갈
       rows: [sameRow({ market: "KR", priceAmount: null, priceCurrency: null, priceStatus: null })],
     });
     /** 🔴 CORE-2AO-R2 — 건수는 상세에 있다(삭제 0). */
-    const kr = q("market-detail-domestic")!.textContent ?? "";
-    expect(kr).toContain("동일상품 확정 1건");
+    expect(q("market-detail-domestic"), "🔴 제거한 상세 블록이 되살아났다").toBeNull();
+    const kr = (q("market-same-count-domestic")?.textContent ?? "").trim();
+    /** 🟢 건수 줄이 그 시장의 SAME 수를 그대로 말한다(0 이면 0, 1 이면 1). */
+    expect(kr, "🔴 건수 줄이 비었다").toMatch(/동일상품 확정 \d+건/);
     expect(kr).toContain("가격 확인 필요 1곳");
     expect(q("price-guide-headline")).toBeNull();
     expect(q("price-guide-empty")).toBeTruthy();
@@ -310,7 +328,7 @@ describe("D. 🔴🔴 시장이 비었을 때 — 네 상태가 화면에서 갈
   it("🟢 D-4 두 시장이 다 비어도 **영역은 선다** — 「조회했다」와 「후보 없음」은 다르다", async () => {
     await mount({ rows: [] });
     expect(q("market-price-comparison")).toBeTruthy();
-    for (const id of ["market-empty-domestic", "market-empty-overseas"]) {
+    for (const id of ["market-same-count-domestic", "market-same-count-overseas"]) {
       const t = q(id)?.textContent ?? "";
       expect(t).toContain(MARKET_EMPTY_NO_CANDIDATE);
       /** 🔴 WU-145 ② — 두 블록이 **같은 축의 말** 로 0 을 말한다. */
@@ -367,9 +385,17 @@ describe("E. 🔴🔴🔴 시장을 확인하지 못한 후보를 «조용히 �
   it("🔴🔴🔴 E-3 화면이 그 사실을 **말한다** — 「찾지 못했다」로 끝내지 않는다", async () => {
     await mount({ rows: [unresolved()] });
     /** 🔴 이 줄이 없으면 🇰🇷 블록의 「찾지 못했습니다」가 **거짓** 이 된다. */
-    const note = q("market-unresolved");
-    expect(note).toBeTruthy();
-    expect(note!.textContent).toContain("1곳");
+    /** 🔵 MSRUX-1 D — 설명 줄은 제거됐다. 🟢 보존 — 후보 자체는 사라지지 않는다. */
+    expect(q("market-unresolved"), "🔴 제거한 설명 줄이 되살아났다").toBeNull();
+    const note = q("market-judgement");
+    /**
+     * 🔵 MSRUX-1 D — 「시장 미확인」 **설명 줄** 은 제거됐다(위에서 부재를 단언했다).
+     * 🟢 이 계약의 **본래 의도**(조용히 없애지 않는다)는 **후보 행이 그대로 선다** 로 지킨다.
+     */
+    expect(note, "🔴 판매 판단 영역이 사라졌다").toBeTruthy();
+    expect(container.textContent ?? "", "🔴 시장 미확인 후보가 화면에서 통째로 사라졌다").toContain(
+      "unknown-market.example",
+    );
     expect(note!.textContent).toContain("확인하지 못한");
     /** 🟢 어디서 볼 수 있는지까지 말한다 — 「사라졌다」가 아니다. */
     expect(note!.textContent).toMatch(/상세 근거|검토 구역/);
