@@ -252,3 +252,31 @@
 잔여  **99건 / 30파일**  ·  다음: seller-surface-render-harness-1(8)
 누계  묶음1 3파일 🟢 · 묶음2 core-2s 10/10 🟢 · 묶음3 wu-140 8/8 🟢
 ```
+
+### 묶음 4 사전 분석 — `seller-surface-render-harness-1`(8건) · 🔴 수정 전
+
+🟢 **구역 분해기는 정상이다** — `surfaceRegions` 는 **testid 기반**(위치 기반이 아니다) ⟹
+메모의 「regionsOf 가 위치로 분해해 어긋난다」 함정은 **이 파일에 해당하지 않는다**(확인함).
+🟢 `blockOrder` 도 `WORKFLOW → SUMMARY → CONCLUSION → GRID` 로 **정상** 이다(덤프 확인).
+
+🔴 **진짜 원인 — 결론 영역이 「B 기준 라벨」을 잃었다**:
+```
+seller-surface-render-harness-1.test.ts:406
+  expect(firstScreenText(conclusion!)).toContain(PRICE_BASIS_B_BASIS_LABEL);
+🔴 그 라벨은 C 가 **상품 판단 요약으로 옮긴** 「가격 계산 기준」 가족이다 ⟹ 결론 영역엔 없다
+```
+⟹ 8건 중 **6건이 같은 모양**(각 verdict code 별 ⒝ 테스트)이고 **한 자리**를 고치면 같이 풀린다.
+
+🔵 **처방(다음 세션이 바로 적용)**
+```
+① 결론 영역  : `PRICE_BASIS_B_BASIS_LABEL` **부재** 단언으로 전환(C 가 옮겼다)
+② 요약 영역  : 그 라벨이 **요약에 있다** 를 보존 단언으로 추가(이동의 «도착지» 를 문다)
+   🔴 요약 행 라벨은 **「가격 계산 기준」**(judgement-summary.ts `priceBasisLines`)이다
+③ 나머지 2건 : `MI-PRICE-BASIS-DISPLAY-1`(:556) · 「판정 머리말」(:402) — ①②와 같은 축인지
+   확인 후 **한 expect 에 한 의도** 로 분리
+```
+🔴 운영 코드 변경 **0** 으로 끝난다(라벨의 owner 는 이미 요약으로 이동 완료).
+
+```
+잔여  **99건 / 30파일**(변동 없음 · 묶음 4 는 분석만)
+```
