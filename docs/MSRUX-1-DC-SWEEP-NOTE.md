@@ -445,3 +445,24 @@ D 가 접힘을 걷어내자 **유지 대상** `market-judgement` 의 머리말 
 ```
 전수 재측정  **63건 / 20파일**(실행 기준 · 차감 추정 금지)
 ```
+
+### 🟢 `core-2r5` **완료**(22/22) — **슬라이스 기준점 교체**(교훈 ⒨ 적용)
+
+```
+firstLayer(h) = h.slice(0, h.indexOf('data-testid="price-detail-fold"'))   ← 🔴 사라진 칸
+            →  h.slice(0, h.indexOf('data-testid="market-judgement"'))     ← 🟢 새 경계
+```
+🟢 **의미가 보존된다** — 새 구조에서도 「가격 1차 층」은 **결론 영역 직전**까지다. `upToDetail`
+(:256)도 같은 기준으로 바꿨다. 🔴 단순 부재 단언으로 끝내지 않았다(CPO 지시).
+
+### 🟢 `wu-136-market-judgement-render` **완료**(10/10) — 6 → 0
+
+| 처리 | 내용 |
+|---|---|
+| 판매처 행·셀·링크 | **부재 단언** + 🟢 후보 카드 링크(`mi-candidate-link`)·화면 통화로 보존 |
+| `market-sale-counts` · `market-price-range` | 설명/근거 **부재** + 🟢 `market-judgement` 보존 |
+| 근거 접힘 | **부재** + 🟢 판단 결과 보존 |
+
+```
+전수 재측정 기준  이 커밋 직후 값으로 갱신한다(차감 금지)
+```

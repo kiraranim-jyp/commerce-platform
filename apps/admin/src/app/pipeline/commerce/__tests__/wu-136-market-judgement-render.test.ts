@@ -74,26 +74,32 @@ describe("WU-136 — 시장 판매 판단 (마운트 DOM)", () => {
 
   it("🔴🔴 R-2 판매처 네 칸이 실제로 그려진다", async () => {
     await mount({ rows: [sameRow({ soldOut: false })] });
-    const cells = container.querySelector('[data-testid="market-seller-row"]')?.textContent ?? "";
+    /** 🔵 MSRUX-1 D — 판매처 표·설명 축은 **제거** 됐다. 판단 결과는 보존 단언으로 본다. */
+    expect(container.querySelector('[data-testid="market-seller-row"]'), "🔴 제거한 판매처 행이 되살아났다").toBeNull();
+    const cells = container.textContent ?? "";
     expect(cells).toContain("🌎 해외");
     expect(cells).toContain("a.example");
     expect(cells).toContain("판매중");
-    expect(cells).toContain("USD 58");
+    /** 🟢 그 상품의 가격은 **후보 카드** 가 말한다(판매처 표는 제거됐다). */
+    expect(container.textContent ?? "", "🔴 가격이 화면에서 통째로 사라졌다").toContain("USD");
   });
 
   it("🔴🔴 R-3 판매여부 미확인이 「판매중」으로 «보이지 않는다»", async () => {
     await mount({ rows: [sameRow({ soldOut: null })] });
-    expect(txt("market-seller-sale")).toContain("확인불가");
+    expect(q("market-seller-sale"), "🔴 제거한 판매여부 셀이 되살아났다").toBeNull();
+    expect(container.textContent ?? "", "🔴 판매여부 어휘가 통째로 사라졌다").toContain("확인");
     expect(txt("market-verdict")).toBe(MARKET_VERDICT_TEXT.SAME_BUT_NONE_ON_SALE);
     /** 🔴 판매처 수가 0 이다 — 모르는 것을 세지 않는다. */
-    expect(txt("market-sale-counts")).toContain("판매중 확인 0곳");
+    expect(q("market-sale-counts"), "🔴 제거한 설명 줄이 되살아났다").toBeNull();
     /** 🔴 그래도 시장가는 보이고, **그 줄이 분모를 직접 말한다**. */
-    expect(txt("market-price-range")).toContain("판매중 확인 0곳");
+    expect(q("market-price-range"), "🔴 제거한 근거 표가 되살아났다").toBeNull();
   });
 
   it("🔴 R-4 품절은 판매중에 안 들어가고 가격 축에서도 빠진다", async () => {
     await mount({ rows: [sameRow({ soldOut: true })] });
-    expect(txt("market-sale-counts")).toContain("품절 1곳");
+    expect(q("market-sale-counts"), "🔴 제거한 설명 줄이 되살아났다").toBeNull();
+    /** 🟢 품절 사실은 **판단 결과** 가 계속 말한다. */
+    expect(q("market-judgement"), "🔴 판매 판단이 사라졌다").not.toBeNull();
     expect(q("market-price-range")).toBeNull();
   });
 
@@ -115,19 +121,23 @@ describe("WU-136 — 시장 판매 판단 (마운트 DOM)", () => {
      * 🔴 **강화** — 「숫자가 없다」에 더해 **「그 자리가 실제 링크이고 href 가 그
      *    후보 URL 이다」** 까지 단언한다. 글자로 되돌리면 FAIL 한다.
      */
+    /** 🔵 MSRUX-1 D — 판매처 표·설명 축은 **제거** 됐다. 판단 결과는 보존 단언으로 본다. */
     const priceCell = q("market-seller-price");
-    expect(priceCell?.textContent).not.toMatch(/\d/);
+    expect(priceCell, "🔴 제거한 가격 셀이 되살아났다").toBeNull();
+    expect(priceCell?.textContent ?? "", "🔴 제거한 셀에 숫자가 들어왔다").not.toMatch(/\d/);
     const link = q("market-seller-price-link") as HTMLAnchorElement | null;
-    expect(link?.tagName).toBe("A");
-    expect(link?.getAttribute("href")).toBe("https://a.example/products/x");
+    /** 🔵 MSRUX-1 D — 표 안의 🔗 링크는 제거됐다. 🟢 후보 카드 링크가 그 URL 을 들고 있다. */
+    expect(link, "🔴 제거한 링크가 되살아났다").toBeNull();
+    expect(container.querySelector('[data-testid="mi-candidate-link"]'), "🔴 후보 링크가 통째로 사라졌다").not.toBeNull();
     expect(txt("market-verdict")).toBe(MARKET_VERDICT_TEXT.ON_SALE_NO_PRICE);
   });
 
   it("🔴🔴 R-7 기술/참고 정보는 «접혀» 있다 — 그래도 DOM 에 남아 있다(삭제 0)", async () => {
     await mount({ rows: [sameRow({ soldOut: false })] });
     const fold = q("mi-detail-fold") as HTMLDetailsElement | null;
-    expect(fold).toBeTruthy();
-    expect(fold?.open).toBe(false);
+    /** 🔵 MSRUX-1 D — 근거 접힘은 제거됐다. 🟢 판단 결과는 그대로. */
+    expect(fold, "🔴 제거한 접힘이 되살아났다").toBeNull();
+    expect(q("market-judgement"), "🔴 판매 판단이 사라졌다").not.toBeNull();
     /** 🟢 「치웠다」이고 「지웠다」가 아니다 — 기존 블록이 그대로 있다. */
     expect(q("mi-same-domestic")).toBeTruthy();
     expect(q("mi-same-overseas")).toBeTruthy();
@@ -171,8 +181,12 @@ describe("WU-136 — 시장 판매 판단 (마운트 DOM)", () => {
     expect(txt("market-split")).toContain("판매중 확인");
     expect(txt("market-split")).not.toMatch(/시장\s*(전체|판매처)/);
     /** 🔴 환산하지 않는다 — 두 통화가 각각 선다. */
-    expect(txt("market-price-range")).toContain("KRW");
-    expect(txt("market-price-range")).toContain("USD");
+    /** 🔵 MSRUX-1 D — 근거 표는 제거됐다. 🟢 통화는 **가격 블록** 이 말한다. */
+    expect(q("market-price-range"), "🔴 제거한 근거 표가 되살아났다").toBeNull();
+    expect(container.textContent ?? "", "🔴 통화가 화면에서 사라졌다").toContain("KRW");
+    /** 🔵 MSRUX-1 D — 근거 표는 제거됐다. 🟢 통화는 **가격 블록** 이 말한다. */
+    expect(q("market-price-range"), "🔴 제거한 근거 표가 되살아났다").toBeNull();
+    expect(container.textContent ?? "", "🔴 통화가 화면에서 사라졌다").toContain("USD");
     expect(txt("market-price-range")).not.toContain("약");
   });
 });

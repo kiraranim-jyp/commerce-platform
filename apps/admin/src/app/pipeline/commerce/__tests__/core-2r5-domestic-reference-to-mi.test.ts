@@ -160,7 +160,7 @@ describe("CORE-2R-5 A — 국내 참고가격이 1차 🇰🇷 블록에 선다"
     const stripCandidateList = (h: string): string =>
       h.replace(/<details data-testid="mi-candidate-list"[\s\S]*?<\/details>/g, "");
     const firstLayer = (h: string): string =>
-      stripCandidateList(h.slice(0, h.indexOf('data-testid="price-detail-fold"')));
+      stripCandidateList(h.slice(0, h.indexOf('data-testid="market-judgement"')));
     const summary = firstLayer(html);
     expect(summary, "🔴 1차 층을 잘라내지 못했다(상세 접힘이 사라졌다)").not.toBe("");
     /** 🔴 분모를 **같이 잠근다** — 후보 구역을 못 걷어내면 위 단언이 공짜가 된다. */
@@ -253,7 +253,7 @@ describe("CORE-2R-5 A — 국내 참고가격이 1차 🇰🇷 블록에 선다"
      * 🔴 CORE-UX-SELLER-01 — A-2 와 **같은 이유로** 기준을 「층」으로 바꿨다
      *    (`market-next-step` 이 1차 순서 변경으로 `market-blocks` **앞** 에 온다).
      */
-    const upToDetail = html.slice(0, html.indexOf('data-testid="price-detail-fold"'));
+    const upToDetail = html.slice(0, html.indexOf('data-testid="market-judgement"'));
     const summary = upToDetail;
     expect((summary.match(/data-testid="overseas-reference"/g) ?? []).length).toBe(1);
     expect((html.match(/GBP 37/g) ?? []).length).toBe(1);
@@ -275,7 +275,9 @@ describe("CORE-2R-5 A — 국내 참고가격이 1차 🇰🇷 블록에 선다"
   it("A-6 🔴 국내 집계가 null 이면 줄이 서지 않는다", () => {
     const html = mount({ rows: ROWS, domesticReference: null });
     expect(html).not.toContain('data-testid="domestic-reference"');
-    expect(html).toContain('data-testid="market-empty-domestic"');
+    /** 🔵 MSRUX-1 D — 설명 문장은 제거됐고 **건수 줄** 이 그 자리를 말한다. */
+    expect(html).not.toContain('data-testid="market-empty-domestic"');
+    expect(html).toContain('data-testid="market-same-count-domestic"');
   });
 
   /** 🔴 환산 흔적 0 — 이 영역의 기존 계약(`wu-056r1` 계열)을 그대로 지킨다. */
