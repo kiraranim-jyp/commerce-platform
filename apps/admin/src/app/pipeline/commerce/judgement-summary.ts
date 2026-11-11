@@ -77,6 +77,29 @@ export interface JudgementSummaryInput {
    */
   decisionReason?: string | null;
   /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MI-SELLER-RESULT-UX-REFINE-1 C — **「가격 계산 기준」이 요약으로 올라온다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 전까지 그 설명은 ③ 수익성 카드 맨 아래의 **접힘**(「ⓘ 가격 계산 기준」)이었고
+   *    **수식과 긴 설명** 을 폈다 ⟹ 셀러는 권장가가 «무엇으로» 만들어졌는지 보려면
+   *    화면 아래로 내려가 접힘을 열어야 했다.
+   * 🟢 CPO C — **상품 판단 요약으로 옮기고 «핵심만»** 적는다(수식·긴 설명 **0**).
+   * 🔴🔴 **적용하지 않은 기준을 적용한 것처럼 적지 않는다**(CPO 명시) ⟹ 이 칸은
+   *    «사실» 만 받는다. 모르면 `undefined` 이고 **그 줄은 서지 않는다**.
+   * 🔴 숫자를 넣지 않는다 — 넣는 순간 그 값은 `computePriceBreakdown` 산출의 **사본** 이다.
+   */
+  priceBasisApplied?: {
+    /** 원가(원본가 × 환율)가 실제로 계산에 들어갔다. */
+    cost?: boolean;
+    /** 목표 마진이 적용됐다. */
+    margin?: boolean;
+    /** 판매 수수료가 적용됐다. */
+    fee?: boolean;
+    /** 🔴 국내 시장가격을 **참고** 했다 — 「반영」이 아니다(A 권장가는 시장을 쓰지 않는다). */
+    domesticMarketReference?: boolean;
+  } | null;
+  /**
    * 🔴🔴 MI-SELLER-MARKET-COMPARISON-A — **여기에 `marketKrwComparison` 을 넣지 않는다.**
    *    1차에 이 칸을 추가했다가 **되돌렸다.** 위 WU-141-R3(CPO §2-A)이 이 블록에서
    *    가격 숫자를 **직접 제거** 했기 때문이다 — 이 카드는 패널의 첫 자식이라
@@ -131,6 +154,21 @@ export const JUDGEMENT_SUMMARY_PRICE_LABEL = "추천 판매가격";
  * 네 가지 질문에 **한 덩어리로** 답한다:
  *   ① 팔아도 되는가  ② 동일상품인가  ③ 어디가 얼마인가  ④ 주의할 것은 무엇인가
  */
+/**
+ * 🔵 C — **적용된 것만** 문장이 된다. 순서는 계산 순서(원가 → 마진 → 수수료 → 시장).
+ * 🔴 새 계산 **0** — 호출부가 이미 알고 있는 사실을 «옮기기만» 한다.
+ */
+export function priceBasisLines(applied: JudgementSummaryInput["priceBasisApplied"]): string[] {
+  if (!applied) return [];
+  const out: string[] = [];
+  if (applied.cost) out.push("원가와 환율 반영");
+  if (applied.margin) out.push("목표 마진 반영");
+  if (applied.fee) out.push("판매 수수료 반영");
+  /** 🔴 「참고」다 — A 권장가는 시장가를 **쓰지 않는다**(그 둘을 같은 말로 적지 않는다). */
+  if (applied.domesticMarketReference) out.push("국내 시장가격 참고");
+  return out;
+}
+
 export function buildJudgementSummary(input: JudgementSummaryInput): JudgementSummaryRow[] {
   const groups = (input.transient ?? []).filter((g) => g.rows.length > 0);
   const transientCount = groups.reduce((n, g) => n + g.rows.length, 0);
@@ -210,6 +248,14 @@ export function buildJudgementSummary(input: JudgementSummaryInput): JudgementSu
     row("국내 가격 분석", domesticLine),
     row("해외 가격 분석", overseasLine),
     row("핵심 판단 이유", reason && !containsMoney(reason) ? reason : null),
+    /**
+     * 🔵🔵🔵 MI-SELLER-RESULT-UX-REFINE-1 C — **권장가가 «무엇으로» 만들어졌는지** 를
+     *    결론 옆에서 한 줄로 말한다(전까지는 ③ 카드 맨 아래 접힘 안의 **수식** 이었다).
+     * 🔴 금액 0 · 수식 0 · 긴 설명 0 — 기존 `containsMoney` 가드를 그대로 지난다.
+     * 🔴 **적용된 기준이 하나도 없으면 줄이 서지 않는다**(`row` 가 null 을 거른다) ⟹
+     *    적용하지 않은 기준을 적용한 것처럼 적지 않는다(CPO C 명시).
+     */
+    row("가격 계산 기준", priceBasisLines(input.priceBasisApplied).join(" · ") || null),
   ].filter((r): r is JudgementSummaryRow => r !== null);
 }
 

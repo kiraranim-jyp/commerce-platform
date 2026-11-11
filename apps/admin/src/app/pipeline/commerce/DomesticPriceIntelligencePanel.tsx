@@ -2136,6 +2136,36 @@ export function buildJudgementSummaryInput(input: {
      *    (그 값의 owner 는 `CommerceWorkspace` 이고 요약에는 **렌더 prop** 으로 들어간다).
      */
     decisionReason: hasAnyData ? (sellerDecision.reasons?.[0] ?? null) : null,
+    /**
+     * ══════════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 MI-SELLER-RESULT-UX-REFINE-1 C — **「가격 계산 기준」을 «사실» 로 공급한다**
+     * ══════════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 **새 계산 0** — 이미 계산된 `cost`(착지원가 분해)에서 **무엇이 실제로 들어갔는지**
+     *    만 읽는다. 🔴 적용하지 않은 기준을 적용한 것처럼 적지 않는다(CPO C 명시).
+     * 🔴 금액을 넘기지 않는다 — 요약의 금액 owner 는 추천 판매가격 하나다(C-2-a).
+     * 🔴 「국내 시장가격 **참고**」는 **참고** 다 — A 권장가는 시장가를 쓰지 않는다
+     *    (그 둘을 같은 말로 적으면 A/B 가 섞인다 · 2026-11-08 동결 정책).
+     */
+    priceBasisApplied: hasAnyData
+      ? {
+          /** 🟢 원가가 실제로 계산됐다(착지원가 > 0). */
+          cost: (cost?.landedCostKrw ?? 0) > 0,
+          /**
+           * 🔴🔴 **마진·수수료 «퍼센트» 는 이 builder 가 들고 있지 않다** — `cost` 는
+           *    `{originalAmount, originalCurrency, costKrw, shippingKrw, landedCostKrw,
+           *    suggestedPriceKrw}` 뿐이다(타입이 내 추측을 잡았다 · 이 저장소의 반복 함정).
+           * 🟢 그래서 **지어내지 않고 «파생 가능한 사실»** 을 쓴다 — 권장가가 착지원가보다
+           *    크면 **마진과 수수료가 실제로 올려 놓은 것** 이다(`computePriceBreakdown` 은
+           *    그 둘로만 올린다). 🔴 둘을 **따로** 주장하지 않는다 — 같은 한 사실이다.
+           * 🔴 그래서 `margin`·`fee` 를 **같은 값** 으로 둔다(둘 중 하나만 적으면 거짓이 된다).
+           */
+          margin: (cost?.suggestedPriceKrw ?? 0) > (cost?.landedCostKrw ?? 0),
+          fee: (cost?.suggestedPriceKrw ?? 0) > (cost?.landedCostKrw ?? 0),
+          /** 🟢 국내 참고가 실제로 있을 때만 「참고」라고 적는다(없으면 그 줄이 빠진다). */
+          domesticMarketReference: domesticCompetition.sellerCount > 0,
+        }
+      : null,
     domestic: buildDomesticMarketEvidence({
       context: marketContext,
       basis: domesticMarketSplit.basis,
@@ -4668,23 +4698,20 @@ export function MiPanelView({
                     토글이 ③의 맨 아래에 있는 이유: 위 네 줄과 판정이 결론이고,
                     이건 그 결론이 어떻게 나왔는지다. 결론을 근거 아래에 두면
                     카드를 다 읽어야 답이 나온다(PHASE 3.2에서 확인한 순서). */}
-                {priceCalculationDetail && (
-                  <div className="mt-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setShowPriceDetail((v) => !v)}
-                      title={PRICE_BASIS_TOOLTIP}
-                      className="text-[11px] font-medium text-primary hover:underline"
-                    >
-                      ⓘ 가격 계산 기준 {caret(showPriceDetail)}
-                    </button>
-                    {showPriceDetail && (
-                      <div className="mt-1 rounded-md border border-current/20 bg-background/40 px-2.5 pb-2.5 pt-0.5">
-                        {priceCalculationDetail}
-                      </div>
-                    )}
-                  </div>
-                )}
+                {/**
+                 * ══════════════════════════════════════════════════════════════
+                 * 🔵🔵🔵 MI-SELLER-RESULT-UX-REFINE-1 C — **이 접힘이 사라졌다.**
+                 * ══════════════════════════════════════════════════════════════
+                 *
+                 * 🔴 여기 있던 「ⓘ 가격 계산 기준」 토글은 **수식과 긴 설명** 을 폈고,
+                 *    그것을 보려면 셀러가 화면 아래로 내려가 접힘을 열어야 했다.
+                 * 🟢 CPO C — **상품 판단 요약으로 옮기고 «핵심만»** 적는다. 그 자리는
+                 *    `judgement-summary.ts` 의 **「가격 계산 기준」 행** 이다
+                 *    (`priceBasisLines` — 실제 적용된 기준만 · 수식 0 · 금액 0).
+                 * 🔴🔴 **계산은 한 줄도 지우지 않았다** — `priceCalculationDetail` 을 만드는
+                 *    `computePriceBreakdown` 경로와 `PRICE_BASIS_TOOLTIP` 문구 owner 는
+                 *    **그대로** 다. 지운 것은 **이 화면의 접힘 UI** 하나다.
+                 */}
               </div>
             </div>
 
