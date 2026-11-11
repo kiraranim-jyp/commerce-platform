@@ -140,8 +140,8 @@ describe("WU-144 — 2상품 Seller Decision (CPO A/B/C/D)", () => {
     const t = render(S2);
     /** 🟢 셋이 **같은 줄의 묶음** 으로 나온다(`priceGuideCountNote`). */
     expect(t).toContain("동일상품 확정 3건");
-    expect(t).toContain("판매중 확인 1곳");
-    expect(t).toContain("가격 확인 2곳");
+    expect(t)/** 🔵 MSRUX-1 D — 설명 축이라 화면에서 제거됐다(계산 보존). */ .not.toContain("판매중 확인 1곳");
+    expect(t)/** 🔵 MSRUX-1 D — 설명 축이라 화면에서 제거됐다(계산 보존). */ .not.toContain("가격 확인 2곳");
     /** 🟢 그리고 **숫자가 실제로** 있다 — 「판단할 기준」이 화면에 있다. */
     expect(t).toContain("58");
     expect(t).toContain("USD");
@@ -150,7 +150,7 @@ describe("WU-144 — 2상품 Seller Decision (CPO A/B/C/D)", () => {
   it("B 🟢 가격을 못 가져온 SAME 이 **사라지지 않는다** — 확인 필요로 선다", () => {
     const t = render(S2);
     /** 🔴 CPO STEP 3 — 「가격 없는 후보 삭제」 금지. */
-    expect(t).toContain("가격 확인 필요 1곳");
+    expect(t)/** 🔵 MSRUX-1 D — 설명 축이라 화면에서 제거됐다(계산 보존). */ .not.toContain("가격 확인 필요 1곳");
     /** 🟢 그리고 그 후보로 갈 길이 **링크로** 있다(WU-139 가 글자 → href 로 바꿨다). */
     expect(container.querySelector('a[href="https://global.trenbe.com/p/3"]')).not.toBeNull();
   });
@@ -184,7 +184,12 @@ describe("WU-144 — 2상품 Seller Decision (CPO A/B/C/D)", () => {
      */
     const t = render(S2);
     /** 🟢 S2 는 USD 58 하나(두 곳이지만 **같은 금액**) ⟹ 범위가 아니다(WU-139 계약 B-2). */
-    expect(t).toContain("시장 평균가가 아닙니다");
+    /**
+     * 🔵 MSRUX-1 D — 그 **부정문**(「시장 평균가가 아닙니다」)은 설명 축이라 제거됐다.
+     * 🟢 이 계약의 보호(= 1개를 「평균」·「범위」로 부르지 않는다)는 **아래 두 줄이 그대로**
+     *    지킨다 — 거짓 범위(`58 ~ 58`)도, 긍정형 「평균」도 화면에 없다.
+     */
+    expect(t, "🔴 제거한 설명 문장이 되살아났다").not.toContain("시장 평균가가 아닙니다");
     expect(t).not.toContain("58 ~ 58");
     /** 🔴 「평균」이 **긍정으로** 쓰인 자리가 하나도 없다. */
     for (const m of t.match(/[^.。]*평균[^.。]*/g) ?? []) {
@@ -195,7 +200,7 @@ describe("WU-144 — 2상품 Seller Decision (CPO A/B/C/D)", () => {
   it("F 🟢 S1 — 판매중이 0 이어도 **가격 기준은 통화별로** 선다", () => {
     const t = render(S1);
     expect(t).toContain("동일상품 확정 3건");
-    expect(t).toContain("판매중 확인 0곳");
+    expect(t)/** 🔵 MSRUX-1 D — 설명 축이라 화면에서 제거됐다(계산 보존). */ .not.toContain("판매중 확인 0곳");
     /** 🔴 세 통화를 **더하지 않는다**(환산 0 · `overseas-reference` 계약). */
     for (const cur of ["CAD", "GBP", "USD"]) expect(t).toContain(cur);
     /**

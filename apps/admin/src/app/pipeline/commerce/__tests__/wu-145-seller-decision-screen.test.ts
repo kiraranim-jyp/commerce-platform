@@ -179,25 +179,35 @@ describe("A. ① MI blocker 는 1차에 노출되지 않는다 (삭제가 아니
 
   it("🟢🟢 A-2 **건수는 1차에 남는다** — WU-133 이 고친 거짓말이 되돌아오지 않는다", () => {
     mount([...S2, pendingRow()]);
+    /**
+     * 🔵 MSRUX-1 D — 보류 **건수 줄**(`mi-same-pending`)은 접힘과 함께 제거됐다.
+     * 🟢 「건수가 사라지지 않는다」는 **동일상품 확정 건수**(유지 대상)로 지킨다.
+     */
     const el = q("mi-same-pending");
-    expect(el).not.toBeNull();
-    expect(el!.textContent).toContain("1건");
+    expect(el, "🔴 제거한 보류 건수 줄이 되살아났다").toBeNull();
+    expect(q("market-same-count-domestic")?.textContent ?? "", "🔴 건수 줄이 통째로 사라졌다").toContain(
+      "건",
+    );
     /** 🔴 CORE-2AO-R2 — 이 문장은 ＋ 상세정보 보기 안으로 «이동» 했다(삭제 0). */
-    expect(flat(), "🔴 건수 줄이 아예 사라졌다").toContain("1건");
+    /** 🟢 건수 축은 **동일상품 확정 건수** 가 들고 있다(보류 건수 줄은 제거됐다). */
+    expect(flat(), "🔴 건수 줄이 아예 사라졌다").toMatch(/동일상품 확정 \d+건/);
     expect(firstScreenText(), "🔴 건수 줄이 1차로 되돌아왔다").not.toContain("보류·충돌");
   });
 
   it("🔴🔴 A-3 사유는 **2차에 그대로** 있다 — 「지우지 않는다」(CPO 명시)", () => {
     mount([...S2, pendingRow()]);
+    /** 🔵 MSRUX-1 D — 사유 줄도 제거됐다. 🟢 보호(내부 토큰 비노출)는 아래가 지킨다. */
     const reasons = q("mi-same-pending-reasons");
-    expect(reasons).not.toBeNull();
+    expect(reasons, "🔴 제거한 사유 줄이 되살아났다").toBeNull();
     /** 🟢 두 축이 **둘 다** 산다 — 건수도 정렬도 줄이지 않았다. */
-    expect(reasons!.textContent).toContain("브랜드 미확인 1");
-    expect(reasons!.textContent).toContain("품번 충돌 1");
+    expect(flat(), "🔴 내부 토큰이 노출됐다").not.toContain("BRAND_UNCONFIRMED");
+    /** 🟢 사유 **문구** 는 제거됐다 — 보호는 내부 토큰 금지로 유지한다. */
+    expect(flat(), "🔴 내부 토큰이 노출됐다").not.toContain("MODEL_CODE");
     /** 🔴 그 자리가 **접혀 있다** — 안 접혀 있으면 「2차로 내렸다」가 거짓이다. */
-    const fold = q("mi-detail-fold")!;
-    expect(fold.contains(reasons!)).toBe(true);
-    expect(fold.hasAttribute("open")).toBe(false);
+    const fold = q("mi-detail-fold");
+    expect(fold, "🔴 제거한 접힘이 되살아났다").toBeNull();
+    /** 🟢 보존 — 그 접힘이 품던 **판단 결과** 는 1차에 그대로 선다. */
+    expect(q("market-verdict"), "🔴 분류 라벨이 같이 사라졌다").not.toBeNull();
   });
 
   it("🔴 A-4 보류가 0 이면 **두 줄 다 만들지 않는다**(없는 말을 적지 않는다)", () => {
@@ -360,7 +370,9 @@ describe("C. ② 셀러가 읽는 결론", () => {
 describe("D. ② 국내 동일상품 0 일 때", () => {
   it("🟢🟢 D-1 1차는 **「동일상품 확인 0곳」** 까지다", () => {
     mount(S2);
-    const kr = q("market-empty-domestic")?.textContent ?? "";
+    expect(q("market-empty-domestic"), "🔴 제거한 설명 문장이 되살아났다").toBeNull();
+    /** 🔵 ① 화면의 건수 owner 는 `market-same-count-*` 다. */
+    const kr = q("market-same-count-domestic")?.textContent ?? "";
     expect(kr).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0건`);
   });
 
@@ -381,7 +393,12 @@ describe("D. ② 국내 동일상품 0 일 때", () => {
     expect(kr).not.toContain("58");
     /** 🟢 그리고 「없다」로 단정하지 않는다 — 부재와 미발견은 다르다(WU-091 어휘 계약). */
     /** 🔴 CORE-2AO-R2 — CPO 가 1차를 «가격 세 덩어리»로 좁혔다 ⟹ 이 축은 ＋ 상세정보 보기 안이다(삭제 0 · 이동). */
-    expect(q("market-detail-domestic")!.textContent ?? "").toMatch(/찾지 못했습니다|판정된 곳이 없습니다/);
+    /**
+     * 🔵 MSRUX-1 D — 상세 블록은 **제거** 됐다. 🟢 「부재와 미발견을 다르게 말한다」는
+     *    **순수 함수**(`marketEmptyNote`)가 그대로 지킨다(화면 축 ↔ 계산 축 분리).
+     */
+    expect(q("market-detail-domestic"), "🔴 제거한 상세 블록이 되살아났다").toBeNull();
+    expect(marketEmptyNote(0, { count: 0, reasons: [] })).toMatch(/찾지 못했습니다|판정된 곳이 없습니다/);
   });
 
   it("🟢 D-4 순수 함수 축에서도 같다 — owner 가 그 말을 들고 있다", () => {
@@ -464,7 +481,11 @@ describe("F. 1차 화면은 «결론» 이다", () => {
      *    🟢 셀러가 **먼저 보는 것이 가격** 이고 나머지는 접힘 안이다 — 그것이
      *       「첫 화면 = 판단 / 상세 화면 = 근거」의 정의다.
      */
-    const order = ["USD 58", `${SAME_CONFIRMED_COUNT_LABEL} 3건`, "판매중 확인 1곳", MARKET_RESULT_HEADING];
+    /**
+     * 🔵 MSRUX-1 D — 「판매중 확인 N곳」은 **설명 축**(priceGuideCountNote)이라 제거됐다 ⟹
+     *    읽는 순서 계약에서 **그 항목만** 뺀다(나머지 순서는 그대로 지킨다).
+     */
+    const order = ["USD 58", `${SAME_CONFIRMED_COUNT_LABEL} 3건`, MARKET_RESULT_HEADING];
     let at = -1;
     for (const part of order) {
       const i = first.indexOf(part);
