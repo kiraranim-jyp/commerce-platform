@@ -1800,3 +1800,102 @@ B MI 판단     🟢 원가·CASE·추천가·화면 owner 가 정책대로 연�
    「🇰🇷 88,000 1곳 · 🌎 EUR 40 / USD 41 · 후보 7 중 반영 3 · 추천 판매가 101,090」
 🔴 START-HERE.md · CTO-HANDOVER-NEXT.md 는 건드리지 않았다(보존 40건)
 ```
+
+---
+
+# 31. 🔴🔴🔴 **PRODUCTION-WORKSPACE-VISIBLE-RESULT — 화면이 «다른 이름» 을 읽고 있었다** (2026-11-11)
+
+🔴🔴 **새 페이지는 §23-0 + §24~§30 + 이 절만 읽는다.** CPO 가 §30 의 완료 판정을 **보류** 했고
+그 판단이 맞았다 — 계산 PASS·마운트 DOM PASS 가 **Production 화면 PASS 가 아니다.**
+
+## 31-0. 🔴 원인 — 한 줄로
+
+```
+GET(페이지 열기) 응답은 두 금액을 **candidateDomesticPrice / candidateOverseasPrice** 로 준다
+POST(`/check`)는 같은 값을 **domesticReference / overseasReference** 로 **이름을 바꿔** 준다
+🔴 패널은 `set*Reference` 를 **POST 두 곳에서만** 불렀다
+   ① `autoCheckResult` effect(자동 1회차)  ② 「🔄 다시 분석」 핸들러
+⟹ 🔴🔴 **재진입/페이지 열기(GET)로는 두 state 가 `null` 이라 블록이 렌더되지 않았다**
+🟢 그런데 GET 응답은 그 값을 **이미 들고 있었다** — 그 라우트가 `restoreSavedCandidates: true`
+   로 저장 후보를 복원해 **같은 집계기** 로 계산한다(`[snapshotId]/route.ts:32`)
+🟢 후보 «행» 은 이미 `data?.savedCandidateRows` 로 폴백하고 있었다 ⟹
+   **후보는 보이는데 가격 블록만 비는** 모양이었다(그것이 CEO 가 본 화면이다)
+```
+
+## 31-1. 🟢 수정 — 운영 **1 파일 · 소비 지점 2줄 + 타입 2칸 + deps 2줄**
+
+```
+domesticReference: domesticReference ?? data?.candidateDomesticPrice ?? null
+overseasReference: overseasReference ?? data?.candidateOverseasPrice ?? null
+🟢 **바로 위 `rows` 와 같은 규칙** 이다 — live(POST) 가 있으면 live 가 이기고 없으면 저장분(GET)
+🔴 새 계산 0 · 새 집계 0 · 새 fetch 0 · 분모·자격·판정·CASE·A/B 정책 **불변**
+   — **이미 서버가 낸 칸을 읽는 것** 뿐이다. 두 값을 **합치지 않는다**(POST ?? GET)
+🔴 POST 배선(계약 `wu-049`·`wu-082`·`core-2t` 가 보는 줄들)은 **한 글자도** 안 바꿨다
+```
+
+## 31-2. 🟢 변경 전후 — 같은 GET 응답으로 마운트했을 때
+
+```
+                              변경 전            변경 후
+국내 참고가격 블록              **없음**           🟢 선다
+`domestic-lowest`              **없음**           🟢 **88,000**
+해외 참고가격 블록              **없음**           🟢 선다
+`overseas-lowest`              **없음**           🟢 **EUR 40** · **USD 41**(통화별 두 줄)
+후보 카드                       🟢 1장(변화 없음)   🟢 1장
+🔴 음성대조가 그 전후를 증명한다 — S1 국내 폴백 제거 **2 FAIL** · S2 해외 폴백 제거 **2 FAIL** ·
+   S3 우선순위 뒤집기 **2 FAIL** · S4 deps 제거 **1 FAIL** · 원상복구 **바이트 동일**
+```
+
+## 31-3. 🔴🔴 **이 결함이 계약을 통과한 이유 — 다음 사람이 먼저 읽는다**
+
+```
+기존 하니스 전부가 후보·참고가격을 **`autoCheckResult`(= POST 응답)** 로 넣어 검증했다
+⟹ 🔴 **「페이지를 그냥 열었을 때」(GET)는 한 번도 테스트되지 않았다**
+⟹ 그 경로에서 블록이 비어 있는데 계약은 **전부 초록** 이었다
+🟢 그래서 이번 계약(`pwvr-1-get-path-visible`)은 **`autoCheckResult` 를 넘기지 않는다** —
+   그것이 이 파일의 전부다. 🔴 메모 `fixtures-must-not-invent-a-state-production-cannot-reach`
+   의 **반대 실수** 다(그때는 GET fixture 로 POST 전용 값을 지어냈고, 이번엔 POST 로만 쟀다)
+```
+
+## 31-4. 🟡 같이 측정된 사실 — **고치지 않았다**(CPO 판정 사안)
+
+```
+🔴 실제 상품 `7b16eecc` 의 EUR 40 후보는 `market = "UNKNOWN"` 이다(§30-1 표)
+   해외 «집계»  `market !== "KR"`      ⟹ UNKNOWN **포함** → EUR 40 이 금액에 든다
+   후보 «카드»  `row.market === market` ⟹ UNKNOWN 은 **어느 칸에도 없다**
+⟹ 🔴 **금액은 뜨는데 그 근거 카드가 없다**(화면 후보 1장 ↔ 집계 2건)
+🔴 고치려면 `selectCandidateList` 의 시장 일치 규칙을 바꿔야 하고 그것은 **표시 정책 변경** 이다
+   (계약 `cand-01` 이 `selectCandidateList([kr],"OVERSEAS") === 0` 으로 잠갔다) ⟹ 🟡 **CPO 판정**
+🟢 계약 A-3 가 그 숫자를 **기록으로** 남겼다 — 누가 규칙을 바꾸면 FAIL 로 드러난다
+```
+
+## 31-5. 🟢 검증 · 배포
+
+```
+신규 계약  pwvr-1-get-path-visible (**6건**) — 🔴 `autoCheckResult` 없이 **GET 모양만** 으로
+  A-1 국내 88,000 이 선다 · A-2 해외 EUR 40 · USD 41 이 선다(🔴 1차에 **엉뚱한 subtree** 를
+  봤다 — 블록은 결론 영역이고 금액 노드는 통화마다 하나다) · A-3 §31-4 기록 ·
+  A-4 **POST 가 GET 을 이긴다**(77,700) · A-5 값이 없으면 **블록도 없다** · B-1 배선 앵커
+회귀 **853 files / 10,841 passed · 0 failed** · tsc **0** · build **exit 0**
+배포 🟢 운영 코드가 바뀌었다 ⟹ **배포가 생성된다**
+```
+
+## 31-6. 🔴 Production UI 판정 — 세 등급을 갈라 적는다
+
+```
+계산 PASS            🟢 (§29·§30)
+마운트 DOM PASS      🟢 (§31-2 · GET 경로 포함)
+Production 화면 PASS 🔴 **미확인** — CTO 는 로그인 뒤 화면을 볼 수 없다
+⟹ 🔴 이 WU 를 「완료」로 적지 않는다. **CEO 가 그 화면을 1회 열어야** 닫힌다
+```
+
+🟡 **CEO Action — 1회**: `/pipeline` → **B226AC009**(Bobo Choses) 열기 ·
+🔴 **「🔄 다시 분석」을 누르지 않고** 그대로 본다. 기대:
+```
+🇰🇷 국내 참고가격  **₩88,000 · 확인 1곳**
+🌎 해외 참고가격  **EUR 40** · **USD 41**
+후보 카드         1장(🇰🇷 donokids) + 🔴 EUR 40 의 카드는 **없다**(§31-4 · 정상)
+추천 판매가       **₩101,090**(A · 원가 역산 · CPO 판정으로 유지)
+차액 표시         **없음**
+```
+🔴 그 화면에서 두 금액이 **여전히 안 보이면** 원인은 이 수정 밖이고 그때 다시 좌표를 잡는다.

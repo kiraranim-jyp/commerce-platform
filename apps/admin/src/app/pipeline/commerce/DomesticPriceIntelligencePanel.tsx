@@ -861,6 +861,19 @@ export interface PriceHistoryResponse {
    */
   savedCandidateRows?: GeminiTransientRow[] | null;
   /**
+   * 🔴🔴 PRODUCTION-WORKSPACE-VISIBLE-RESULT — **서버가 쓰는 이름 그대로** 두 칸.
+   *
+   * 🔴 POST `/check` 는 이 값을 `domesticReference`/`overseasReference` 로 **이름을 바꿔**
+   *    싣는다. GET 은 MI 반환을 그대로 펼치므로 **이 이름** 으로 온다
+   *    (`market-intelligence.ts:1433·1457`).
+   * 🔴 그래서 패널이 POST 이름만 읽던 동안 **재진입 화면에 두 블록이 서지 못했다** —
+   *    계산은 되고 있었고 **읽는 이름이 어긋났다**. 🟢 `savedCandidateRows` 와 같은 성질의
+   *    「GET 복원 칸」이고, 같은 규칙(live 우선)으로 소비한다.
+   * 🔴 구버전 응답에는 없다(optional).
+   */
+  candidateDomesticPrice?: OverseasPriceSummary | null;
+  candidateOverseasPrice?: OverseasPriceSummary | null;
+  /**
    * ══════════════════════════════════════════════════════════════════════════
    * 🔵🔵🔵 REFERENCE-PRICE-PROFITABILITY-AXIS-1 — **참고가격 기준 예상 수익성**
    * ══════════════════════════════════════════════════════════════════════════
@@ -2571,8 +2584,30 @@ export function DomesticPriceIntelligencePanel({
             ...(webSearchEvidence ?? []),
           ]
         : saved,
-      domesticReference,
-      overseasReference,
+      /**
+       * ══════════════════════════════════════════════════════════════════════════
+       * 🔴🔴🔴 PRODUCTION-WORKSPACE-VISIBLE-RESULT — **페이지를 열면 두 가격 블록이
+       *    «보이지 않았다».** 계산은 되고 있었다 — 화면이 **다른 이름** 을 읽었다.
+       * ══════════════════════════════════════════════════════════════════════════
+       *
+       * ```
+       * 응답 칸          GET(이 패널의 `data`)        POST(`/check`)        이 state 를 set 하는 곳
+       * 국내 참고가격     **candidateDomesticPrice**   domesticReference     POST 두 곳 **뿐**
+       * 해외 참고가격     **candidateOverseasPrice**   overseasReference     POST 두 곳 **뿐**
+       * ```
+       * 🔴 `setDomesticReference`/`setOverseasReference` 는 **① `autoCheckResult` effect**
+       *    ② 「🔄 다시 분석」 핸들러 — **둘 다 POST** 다. ⟹ 재진입(GET)으로 화면을 열면
+       *    두 state 가 `null` 이고 **블록이 렌더되지 않는다**(셀러가 「다시 분석」을 눌러야 했다).
+       * 🟢 그런데 GET 응답은 그 값을 **이미 들고 있다** — 이 라우트가
+       *    `restoreSavedCandidates: true` 로 저장 후보를 복원해 **같은 집계기** 로 계산한다.
+       *
+       * 🟢🟢 **바로 위 `rows` 와 «같은 규칙» 이다** — live(POST)가 있으면 live 가 이기고,
+       *    없으면 저장분(GET)을 쓴다. 🔴 새 계산 **0** · 새 집계 **0** · 새 fetch **0** ·
+       *    분모·자격·판정 **불변** — **이미 서버가 낸 칸을 읽는 것** 뿐이다.
+       * 🔴 두 값을 **합치지 않는다**(POST ?? GET 이고 둘을 섞지 않는다).
+       */
+      domesticReference: domesticReference ?? data?.candidateDomesticPrice ?? null,
+      overseasReference: overseasReference ?? data?.candidateOverseasPrice ?? null,
       /** 🔵 A — 가격 축의 같은 채널로 내보낸다(요약 칸 아님 · 판정에 안 쓴다). */
       marketKrwComparison,
       /**
@@ -2649,6 +2684,12 @@ export function DomesticPriceIntelligencePanel({
      *    재진입 화면이 **전과 똑같이 빈 채로 남는다**(이 파일이 네 번 밟은 그 함정).
      */
     data?.savedCandidateRows,
+    /**
+     * 🔴 PRODUCTION-WORKSPACE-VISIBLE-RESULT — **deps 에 넣지 않으면 GET 응답이 와도
+     *    memo 가 다시 돌지 않아 블록이 계속 비어 있다**(바로 위 `savedCandidateRows` 와 같은 이유).
+     */
+    data?.candidateDomesticPrice,
+    data?.candidateOverseasPrice,
     /**
      * 🔵 RPP-POST-WIRING-1 — 🔴 **빠뜨리면 그 영역이 영원히 안 선다.**
      *    POST 응답은 첫 렌더보다 늦게 온다(이 파일이 **다섯 번** 밟은 그 함정).
