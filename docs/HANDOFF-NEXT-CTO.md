@@ -2105,3 +2105,56 @@ C 가격 계산 기준 이동 🔴 미착수 — 상품 판단 요약으로 옮�
 
 🟢 **착수 조건** — 세 작업을 **한 덩어리로 끝낼 용량** 이 있는 세션에서 시작한다(§4-C).
 용량이 부족하면 **쪼개지 말고** 그 사실을 먼저 보고한다 — 이번 세션이 그렇게 했다.
+
+---
+
+## §36 **B 완료** · 🔴 **D 에 차단 사유가 있다**(코드 위치와 함께 특정)
+
+### B — 두 가격 블록이 **같은 카드** 로 선다(배포 완료)
+
+🔴 **원인은 컴포넌트가 아니라 «분기» 였다**:
+```
+sameCount === 0 → <OverseasReferencePrice>   카드 셸(rounded-md border bg-muted/20 p-3)
+sameCount  > 0 → price-guide                 🔴 테두리도 배경도 없는 맨 div
+⟹ 🇰🇷(SAME 0)는 «카드», 🌎(SAME 3)는 «맨 줄» 로 떠서 같은 성격의 정보가 다른 무게로 읽혔다
+```
+🟢 **금액 위계는 이미 같았다**(둘 다 `compact` → `text-lg font-semibold`). 🟢 **건수 줄도 이미
+공통** 이었다(`market-same-count-{suffix}`). ⟹ 실제로 갈린 것은 **셸과 제목 크기** 뿐이다.
+🟢 그 카드의 **셸 클래스를 그대로** 쓰고 제목을 `font-medium` 으로 맞췄다.
+🔴 testid · 문구 · 금액 · 건수 · 집계 · 분모 · 판정 **변경 0**.
+
+```
+계약  msrux-1b-card-shell-parity **4 신설**(셸을 **클래스로** 본다 — 글자로는 테두리를 못 잡는다)
+변이  V1 셸 제거 **2 FAIL** → 바이트 동일 복구
+검증  관련 계약 **17 파일 / 308 passed** · 전체 **855 files / 10,852 passed · 0 failed**
+      typecheck 0 · build exit 0
+```
+
+### 🔴🔴 D — **문자 그대로 제거하면 「판매 판단」이 사라진다**(CPO 판정 필요)
+
+```
+`＋ 상세정보 보기`(price-detail-fold · MarketPriceComparison:1216~1661 · **445줄**) «안» 에
+들어 있는 testid 전수 — **26개**:
+  market-judgement · seller-decision · seller-decision-line · market-split · market-verdict ·
+  market-price-basis-a-note · market-price-basis-b-note · market-price-basis-line ·
+  market-price-range · market-sale-counts · market-seller-table/row/price/sale/price-link ·
+  market-cost-hold(-line) · market-detail-blocks · market-evidence-fold · market-unresolved ·
+  mi-detail-fold · mi-same-pending(-reasons) · price-basis(-line) · price-detail-fold
+```
+🔴 그 안에는 **설명 UI 가 아니라 «판단 결과»** 가 있다(`market-judgement` · `seller-decision` ·
+`market-split`). CPO 목표 화면 구성은 **「판매 판단」을 유지** 한다 ⟹ **fold 를 통째로 지우면
+그 영역이 함께 사라진다.**
+🔴 그리고 **「💡 가격 판단 기준」(`price-basis` :1365)도 그 fold «안» 에 있다** —
+둘은 별개 영역이 아니라 **포함 관계** 다.
+
+🟡 **CPO 가 골라야 하는 셋**(CTO 가 임의로 고르지 않았다 — 되돌리기 어려운 삭제다):
+```
+⒜ **chrome 만 제거** — `<details>/<summary>` 를 없애고 내용은 **그 자리에 그대로** 둔다
+   🟢 판단 블록 보존 · 🔴 1차 화면이 길어진다(간결화 목적과 반대)
+⒝ **판단 블록만 남기고 나머지 제거** — `market-judgement`·`seller-decision`·`market-split` 을
+   fold «밖» 으로 올리고 나머지(표·근거·설명) 제거
+   🟢 CPO 목표 화면과 가장 가깝다 · 🔴 계약 **26 testid 중 20+ 가 「없다」로 전환**
+⒞ **fold 전체 제거** — 🔴 판매 판단이 사라진다(CPO 목표 화면과 충돌) ⟹ **권하지 않는다**
+```
+🔴 C(가격 계산 기준 이동)는 **이 결정 뒤** 다 — `price-basis` 가 D 의 제거 대상 «안» 에 있어
+순서를 바꾸면 같은 코드를 두 번 옮기게 된다.

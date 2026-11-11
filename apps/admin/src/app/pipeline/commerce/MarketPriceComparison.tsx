@@ -1944,8 +1944,32 @@ function MarketBlock({
           )}
         </>
       ) : (
-        <div data-testid={`price-guide-${suffix}`}>
-          <p className="text-[11px] font-medium text-text-secondary">{PRICE_GUIDE_TITLE[market]}</p>
+        <div
+          data-testid={`price-guide-${suffix}`}
+          /**
+           * ══════════════════════════════════════════════════════════════════
+           * 🔵🔵🔵 MI-SELLER-RESULT-UX-REFINE-1 B — **두 분기가 «같은 카드» 로 선다**
+           * ══════════════════════════════════════════════════════════════════
+           *
+           * 🔴 CEO 캡처의 비대칭은 **컴포넌트가 달라서가 아니라 «분기» 가 달라서** 였다:
+           * ```
+           * sameCount === 0 → <OverseasReferencePrice>  카드 셸(테두리·배경·p-3)
+           * sameCount  > 0 → 이 블록                    🔴 테두리도 배경도 없는 맨 div
+           * ```
+           *    ⟹ 🇰🇷(SAME 0)는 **카드**, 🌎(SAME 3)는 **맨 줄** 로 떠서 같은 성격의 두
+           *    정보가 **다른 무게** 로 읽혔다.
+           * 🟢 그래서 **그 카드의 셸 클래스를 그대로** 쓴다(사본이 아니라 같은 값).
+           * 🔴 `data-testid` · 문구 · 금액 · 건수 · 집계 · 분모 · 판정은 **한 글자도**
+           *    바뀌지 않는다 — 바뀌는 것은 **테두리/배경/여백/제목 크기** 뿐이다.
+           * 🟢 금액 위계는 **이미 같았다**(둘 다 `text-lg font-semibold` · `compact`).
+           */
+          className="rounded-md border border-border/60 bg-muted/20 p-3 text-sm"
+        >
+          {/**
+           * 🔵 B — 제목 위계도 참고가격 카드와 **같게**(그쪽은 `font-medium` 이고 본문
+           *    크기를 셸에서 상속받는다). 🔴 글자·아이콘은 owner 상수 그대로다.
+           */}
+          <p className="font-medium text-text-primary">{PRICE_GUIDE_TITLE[market]}</p>
           {/**
            * 🔴🔴🔴 CORE-2AO-R2 — **1차는 «금액» 하나, 상세는 «그 금액의 근거» 전부.**
            *
