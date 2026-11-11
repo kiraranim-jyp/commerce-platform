@@ -877,6 +877,22 @@ export function MarketPriceComparison({
             reference={mk === "KR" ? domesticReference : overseasReference}
             variant="SUMMARY"
             /**
+             * ══════════════════════════════════════════════════════════════════
+             * 🔴🔴🔴 MSRUX-1 D 기능 회귀 복구 — **판매가 확정 CTA 가 사라져 있었다**
+             * ══════════════════════════════════════════════════════════════════
+             *
+             * 🔴 `market-final-price` · `market-edit-final-price` 블록은 **살아 있었는데**
+             *    (아래 `MarketBlock` 안) 그 prop 을 넘기는 **호출부가 «0»** 이었다 —
+             *    D 가 지운 **DETAIL 변형** 이 유일한 공급처였기 때문이다.
+             *    ⟹ 셀러가 **가격을 확정할 수 없었다**(설명이 아니라 **기능** 소실).
+             * 🟢 CPO 결정 ⒜ — **결론 영역(= 시장 블록 ~ 판매 판단) 자리에 복구** 한다.
+             *    🔴 새 UI **0** · 중복 CTA **0**(원래 설계대로 **시장 블록마다 하나**) ·
+             *    🔴 확정 가격은 기존 정책대로 **A(`resolveListingPrice`)** 값이고
+             *       **B(`computePriceRecommendation`)를 CTA 에 연결하지 않는다**.
+             */
+            finalPriceKrw={finalPriceKrw}
+            onOpenPriceEditor={onOpenPriceEditor}
+            /**
              * 🔵 FINAL UX REBUILD — `DETAIL` 이 쓰는 입력이라 1차에서도 **같은 값** 을
              *    넘긴다(prop 을 두 벌로 만들지 않는다). 🔴 `SUMMARY` 는 그것으로
              *    **아무것도 그리지 않는다**(`!isSummary` 게이트가 그것을 지킨다).
@@ -1813,6 +1829,14 @@ function MarketBlock({
         * 🔴 **값을 계산하지 않는다** — `finalPriceKrw` 는 `priceOverrideKrw` 를 그대로 받은 것이다.
         * 🔴 **편집하지 않는다** — 입력칸이 없고, 수정은 기존 `PriceEditor` 로 **보낸다**(§10).
         */}
+        </>
+      )}
+      {/**
+       * 🔴🔴 MSRUX-1 D 기능 회귀 복구 — 이 CTA 는 `{!isSummary && (…)}` **안** 에 있었다.
+       *    D 가 DETAIL 변형을 지우면서 **셀러가 가격을 확정할 수 없게** 됐다.
+       * 🟢 CPO 결정 ⒜ — **가드 밖(결론 영역 자리)으로 «옮긴다»**. 🔴 내용은 **한 글자도**
+       *    바꾸지 않았다(복제 0 · 새 UI 0 · 확정 가격 owner 는 A 그대로).
+       */}
       {(finalPriceKrw != null || onOpenPriceEditor) && (
         <div data-testid="market-final-price" className="mt-2 border-t border-border/60 pt-2">
           <div className="flex flex-wrap items-baseline justify-between gap-x-2">
@@ -1849,8 +1873,6 @@ function MarketBlock({
             </button>
           )}
         </div>
-      )}
-        </>
       )}
     </div>
   );
