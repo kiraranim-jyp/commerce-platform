@@ -273,6 +273,21 @@ describe.skipIf(!LIVE)("MPCD-2 ① — 🟢 한 상품에서 🇰🇷/🌎 를 �
       expectedFeePercent: bi.feePercent,
       brandMedianPriceKrw: null,
     });
+    /**
+     * ════════════════════════════════════════════════════════════════════════
+     * 🔴🔴🔴 PRODUCTION-UI-MISMATCH — **여기서 `10` 을 넘겨 화면과 다른 숫자를 냈다.**
+     * ════════════════════════════════════════════════════════════════════════
+     *
+     * 운영 호출부(`CommerceWorkspace`)는 `priceRoundingUnit ?? undefined` 를 넘기고
+     * 그 값은 **셀러 프로필**(`coupang_seller_profiles.price_rounding_unit` = 운영 실측
+     * **1000**)이다. 🔴 패키지 기본값은 `10` 이라 하니스가 그 기본값을 쓰면
+     * **₩101,090** 이 나오고 CEO 화면은 **₩101,000** 이다 — 둘 다 같은 함수의 결과이고
+     * 다른 것은 **반올림 단위** 하나다(환율 갱신분 제외).
+     * 🟢 그래서 **운영값을 덤프에서 읽어** 넘긴다 — 없으면 `undefined`(= 패키지 기본값)
+     *    로 두고 **지어내지 않는다**.
+     */
+    const roundingUnit = read<{ price_rounding_unit: number | null }[]>("rounding.json")[0]
+      ?.price_rounding_unit;
     const listing = resolveListingPrice(
       {
         priceOverrideKrw: null,
@@ -282,7 +297,7 @@ describe.skipIf(!LIVE)("MPCD-2 ① — 🟢 한 상품에서 🇰🇷/🌎 를 �
         priceValidity: pick.s.price_validity ?? "VALID",
       } as never,
       rates,
-      10,
+      roundingUnit ?? undefined,
     );
     console.log(
       `   원가 ${amount} ${currency} → 착지 ${cost.landedCostKrw} · CASE ${rec.marketCase}` +
@@ -490,5 +505,55 @@ describe("MPCD-2 ③ — 🔴 **함수 계약**: 원가 입력이 부족하면 �
       brandMedianPriceKrw: null,
     });
     expect(b.recommendedPrice, "🔴 정상 입력에서 B 추천가가 없다").not.toBeNull();
+  });
+
+  /* ══════════ ③-6 PRODUCTION-UI-MISMATCH — 반올림 단위가 화면 숫자의 owner ══════════ */
+
+  it("③-6 🔴🔴 **₩101,090 과 ₩101,000 은 같은 함수의 결과다** — 갈린 입력은 «둘» 이다", () => {
+    /**
+     * ══════════════════════════════════════════════════════════════════════════
+     * 🔴🔴🔴 CEO Production 화면이 `₩101,000` 인데 내 보고는 `₩101,090` 이었다.
+     * ══════════════════════════════════════════════════════════════════════════
+     *
+     * 🟢 **제품 결함이 아니다. 갈린 것은 내 측정 입력이고 «둘» 이다** — 하나로 적지 않는다:
+     *
+     * ```
+     *                       환율(GBP)        반올림 단위        결과
+     * 내 1차 보고 §30        1806.864865      10(패키지 기본)    ₩101,090
+     *                       (11-10 · krw 66,854 실측)
+     * CEO 운영 화면          1797.306841      **1000**(셀러 프로필) ₩101,000
+     *                       (11-11 · krw 66,500 실측)
+     * ```
+     * 🔴 운영 호출부는 `resolveListingPrice(..., exchangeRates?.rates,
+     *    priceRoundingUnit ?? undefined)` 이고 그 단위는 **셀러 프로필 값** 이다.
+     *    내 하니스는 `10` 을 **직접 넘겼다**.
+     * 🔴 그리고 환율은 **매일 갱신된다** — 같은 상품의 권장가가 날마다 달라지는 것은
+     *    정상이다(`ORIGIN_FX.price_krw` 가 그 날짜별 값을 그대로 들고 있다).
+     * 🔴 「화면이 1,000원 단위로 **절삭**한다」도 아니다 — `100,641 → 101,000` 은
+     *    **반올림** 이고 절삭이면 `100,000` 이어야 한다(아래 셋째 단언이 잠근다).
+     */
+    const input = {
+      priceOverrideKrw: null,
+      originalAmount: 37,
+      originalCurrency: "GBP",
+      priceBreakdown: { shippingKrw: 12_000, feePercent: 10, marginPercent: 12 },
+      priceValidity: "VALID",
+    } as never;
+
+    /** 🔴 **CEO 화면의 조건** — 11-11 환율 + 셀러 프로필 단위 1000. */
+    expect(
+      resolveListingPrice(input, { GBP: 1797.306841 }, 1_000).priceKrw,
+      "🔴 운영 조건에서 화면값 101,000 이 나오지 않았다",
+    ).toBe(101_000);
+    /** 🔴 **내 1차 보고의 조건** — 11-10 환율 + 기본 단위 10. */
+    expect(
+      resolveListingPrice(input, { GBP: 1806.864865 }, 10).priceKrw,
+      "🔴 내 보고값 101,090 이 재현되지 않았다 — 그러면 원인 설명이 틀린 것이다",
+    ).toBe(101_090);
+    /** 🔴 **절삭이 아니다** — 같은 환율·같은 단위에서 1,000원 아래로 깎이면 FAIL. */
+    expect(
+      resolveListingPrice(input, { GBP: 1797.306841 }, 1_000).priceKrw,
+      "🔴 1,000원 단위 절삭이면 100,000 이어야 한다 — 반올림이라는 사실이 깨졌다",
+    ).toBeGreaterThan(100_641);
   });
 });

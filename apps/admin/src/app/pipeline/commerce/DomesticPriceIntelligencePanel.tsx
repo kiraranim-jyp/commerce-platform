@@ -2604,10 +2604,32 @@ export function DomesticPriceIntelligencePanel({
        * 🟢🟢 **바로 위 `rows` 와 «같은 규칙» 이다** — live(POST)가 있으면 live 가 이기고,
        *    없으면 저장분(GET)을 쓴다. 🔴 새 계산 **0** · 새 집계 **0** · 새 fetch **0** ·
        *    분모·자격·판정 **불변** — **이미 서버가 낸 칸을 읽는 것** 뿐이다.
-       * 🔴 두 값을 **합치지 않는다**(POST ?? GET 이고 둘을 섞지 않는다).
+       * 🔴 두 값을 **합치지 않는다**(둘을 섞지 않는다).
+       *
+       * ──────────────────────────────────────────────────────────────────────────
+       * 🔴🔴🔴 PRODUCTION-UI-MISMATCH — **위 문장이 주장한 규칙과 구현이 달랐다.**
+       * ──────────────────────────────────────────────────────────────────────────
+       *
+       * 1차 구현은 `POST ?? GET` 이었다. 그것은 `rows` 의 규칙이 **아니다**:
+       *
+       * ```
+       * rows      anyEvidence ? live 전부 : 저장분 전부   ← **축** 단위(전부 아니면 전무)
+       * 1차 구현   POST ?? GET                             ← **칸** 단위
+       * ```
+       *
+       * 🔴 그래서 한 화면에서 **해외는 live · 국내는 저장분** 이 설 수 있었다 —
+       *    live 축에 국내 자격 후보가 없어 `domesticReference` 가 `null` 이면 그 칸만
+       *    조용히 저장분으로 떨어진다. 🔴🔴 **후보 카드는 live 인데 그 아래 국내 참고가격은
+       *    저장분** 이라, 셀러가 보는 「판매처 N곳」과 카드가 **서로 다른 수집분** 이 된다.
+       * 🟢 실측(CEO Production 화면 · snapshot `b6fe1871`) — 해외 블록은 live
+       *    (`GBP 37 · SGD 49 · USD 40.6`)인데 저장분 집계는 `EUR 40 · GBP 33` 이다.
+       *    두 숫자 **어느 쪽도 틀리지 않았고**, 틀린 것은 **한 화면에 둘을 같이 세운 것** 이다.
+       * 🟢 그래서 `rows` 가 쓰는 **그 술어 하나**(`anyEvidence`)로 통일한다 —
+       *    새 상태·새 규칙 **0**. live 축에서 집계가 없으면 블록은 **서지 않는다**(= 「이
+       *    수집분에는 없다」는 사실 그대로). 🔴 그것을 저장분으로 **메우지 않는다**.
        */
-      domesticReference: domesticReference ?? data?.candidateDomesticPrice ?? null,
-      overseasReference: overseasReference ?? data?.candidateOverseasPrice ?? null,
+      domesticReference: anyEvidence ? domesticReference : (data?.candidateDomesticPrice ?? null),
+      overseasReference: anyEvidence ? overseasReference : (data?.candidateOverseasPrice ?? null),
       /** 🔵 A — 가격 축의 같은 채널로 내보낸다(요약 칸 아님 · 판정에 안 쓴다). */
       marketKrwComparison,
       /**

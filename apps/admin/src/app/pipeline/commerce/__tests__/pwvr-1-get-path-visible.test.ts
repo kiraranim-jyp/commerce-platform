@@ -259,6 +259,47 @@ describe("PWVR-1 — 🔴 GET(페이지 열기)만으로 두 가격 블록이 �
     ).toBeNull();
   });
 
+  it("A-6 🔴🔴 **한 화면에 두 수집분을 섞지 않는다** — live 축이면 국내 칸이 비어도 저장분으로 메우지 않는다", async () => {
+    /**
+     * ════════════════════════════════════════════════════════════════════════
+     * 🔴🔴🔴 PRODUCTION-UI-MISMATCH — 1차 구현(`POST ?? GET`)이 **칸 단위** 폴백이라
+     *    live 축에서 국내 집계가 없을 때 그 칸만 **저장분** 으로 떨어졌다.
+     * ════════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 그 화면은 **후보 카드는 live 인데 국내 참고가격은 저장분** 이다 —
+     *    「판매처 N곳」과 카드가 서로 다른 수집분이 된다.
+     * 🟢 실측(CEO Production · `b6fe1871`) — 해외 블록 live `GBP 37` ↔ 저장분 `GBP 33`.
+     *    두 숫자 어느 쪽도 틀리지 않았고 **같이 세운 것** 이 틀렸다.
+     * 🔴 그래서 `rows` 가 쓰는 술어(`anyEvidence`) 하나로 통일했다.
+     */
+    stubFetch(getShapedResponse());
+    await act(async () => {
+      root.render(
+        sellerSurfaceElement({
+          marketDone: true,
+          autoCheckResult: {
+            /** 🟢 live 축은 성립한다(후보가 왔다) · 🔴 그런데 국내 집계는 **없다**. */
+            overseasReference: {
+              ...OVERSEAS_SUMMARY,
+              byCurrency: { GBP: { count: 1, lowestAmount: 37, highestAmount: 37 } },
+              lowestKrw: null,
+            },
+            domesticShop: { domesticListingEvidence: SAVED_ROWS },
+          },
+        }),
+      );
+    });
+    for (let i = 0; i < 8; i += 1) {
+      await act(async () => {
+        await Promise.resolve();
+      });
+    }
+    expect(
+      digits(textOf("domestic-lowest")),
+      "🔴🔴 live 축인데 국내 참고가격이 저장분(88,000)으로 섰다 — 한 화면에 두 수집분이 섞였다",
+    ).not.toContain("88000");
+  });
+
   it("B-1 🔴 **배선 앵커** — 소비처가 GET 이름을 읽고 deps 에도 들어 있다", () => {
     const SRC = stripComments(
       readFileSync(join(__dirname, "..", "DomesticPriceIntelligencePanel.tsx"), "utf8")
@@ -266,11 +307,23 @@ describe("PWVR-1 — 🔴 GET(페이지 열기)만으로 두 가격 블록이 �
         .join("\n"),
     );
     expect(SRC, "🔴 국내 GET 폴백이 끊겼다").toContain(
-      "domesticReference: domesticReference ?? data?.candidateDomesticPrice ?? null",
+      "domesticReference: anyEvidence ? domesticReference : (data?.candidateDomesticPrice ?? null)",
     );
     expect(SRC, "🔴 해외 GET 폴백이 끊겼다").toContain(
-      "overseasReference: overseasReference ?? data?.candidateOverseasPrice ?? null",
+      "overseasReference: anyEvidence ? overseasReference : (data?.candidateOverseasPrice ?? null)",
     );
+    /**
+     * 🔴🔴 PRODUCTION-UI-MISMATCH — **칸 단위 폴백으로 되돌아가지 않는다.**
+     *    `?? data?.candidate*` 는 live 축에서 그 칸만 저장분으로 떨어뜨린다(A-6).
+     */
+    for (const banned of [
+      "domesticReference: domesticReference ?? data?.candidateDomesticPrice",
+      "overseasReference: overseasReference ?? data?.candidateOverseasPrice",
+    ]) {
+      expect(SRC, `🔴 칸 단위 폴백이 되돌아왔다 — ${banned}`).not.toContain(banned);
+    }
+    /** 🟢 가격 블록과 후보 카드가 **같은 술어** 를 쓴다(축 단위). */
+    expect(SRC, "🔴 rows 의 축 술어가 사라졌다").toContain("rows: anyEvidence");
     /** 🔴 deps 에 없으면 응답이 와도 memo 가 다시 돌지 않는다(그러면 화면이 계속 빈다). */
     for (const dep of ["data?.candidateDomesticPrice,", "data?.candidateOverseasPrice,"]) {
       expect(SRC, `🔴 memo deps 에 ${dep} 가 없다`).toContain(dep);

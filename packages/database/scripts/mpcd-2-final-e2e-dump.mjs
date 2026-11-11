@@ -96,6 +96,20 @@ const OBS = await prisma.$queryRawUnsafe(
   ids,
 );
 const RATES = await prisma.$queryRawUnsafe(`select currency, rate from exchange_rates`);
+/**
+ * 🔴🔴🔴 PRODUCTION-UI-MISMATCH — **화면의 권장가는 「반올림 단위」가 같이 만든다.**
+ *
+ * `CommerceWorkspace` 는 `resolveListingPrice(..., exchangeRates?.rates,
+ * priceRoundingUnit ?? undefined)` 로 부르고 그 `priceRoundingUnit` 은
+ * **셀러 프로필 값**(`coupang_seller_profiles.price_rounding_unit`)이다.
+ * 🔴 하니스가 `10`(패키지 기본값)을 넘기면 **화면과 다른 숫자** 가 나온다 —
+ *    내 1차 실측 `₩101,090`(단위 10) ↔ CEO 운영 화면 `₩101,000`(단위 **1000**).
+ * 🟢 그래서 운영값을 같이 덤프한다(읽기만 한다 · 없으면 `null` — 기본값을 지어내지 않는다).
+ */
+const ROUNDING = await prisma.$queryRawUnsafe(
+  `select price_rounding_unit from coupang_seller_profiles
+    where price_rounding_unit is not null order by created_at limit 1`,
+);
 
 const json = (v) => JSON.stringify(v, (_k, x) => (typeof x === "bigint" ? Number(x) : x), 1);
 writeFileSync(path.join(OUT, "both.json"), json(BOTH));
@@ -104,6 +118,7 @@ writeFileSync(path.join(OUT, "candidates.json"), json(CANDS));
 writeFileSync(path.join(OUT, "links.json"), json(LINKS));
 writeFileSync(path.join(OUT, "observations.json"), json(OBS));
 writeFileSync(path.join(OUT, "rates.json"), json(RATES));
+writeFileSync(path.join(OUT, "rounding.json"), json(ROUNDING));
 console.log(
   `\n덤프 → ${OUT}\n  both ${BOTH.length} · verified ${VERIFIED.length} · cands ${CANDS.length} · links ${LINKS.length} · obs ${OBS.length}`,
 );
