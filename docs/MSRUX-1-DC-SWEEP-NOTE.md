@@ -201,3 +201,33 @@
 ```
 잔여  **107건 / 31파일**(wu-140 3 포함)
 ```
+
+### 묶음 3-3 시도 — 🔴 **되돌렸다**(새 실패 유입) · 그러나 확정 좌표 둘을 확보했다
+
+🔴 내 편집이 **다른 단언을 깨뜨렸다**(`expected undefined to be 'https://a.example/products/x'`)
+⟹ `git checkout` 으로 **`f9752f04` 상태로 복원**(wu-140 = 3 failed 유지 · 악화 0).
+
+🟢 **다음 세션이 바로 쓸 좌표**:
+
+```
+① E 의 fixture 도메인(🟢 **읽어서 확인** · 추측 아님)
+   wu-140-market-first.test.ts:365  const unresolved = () => pendingRow({
+     domain: "www.beaumonde.co.kr",
+     discoveredUrl: "https://www.beaumonde.co.kr/goods/x",
+     market: "UNKNOWN", priceAmount: null, priceCurrency: null, ...
+   ⟹ E 의 「후보가 통째로 사라지지 않았다」는 **그 도메인** 으로 단언한다
+
+② D-3 에 **내가 만든 깨진 정규식 줄** 이 하나 있다
+   expect(kr, "...").toMatch(/동일상품 확정 d+건/)   ← 🔴 백슬래시 소실(\d 여야 한다)
+   🔴 **삭제하면 안 된다** — 삭제했더니 줄 순서에 묶인 인접 테스트가 깨졌다
+   🟢 `d+건` → `\d+건` 으로 **고친다**(제거가 아니라 수정)
+```
+
+🔴 **교훈 ⒡** — 깨진 줄은 **지우지 말고 고친다**. 이 파일은 단언이 줄 순서에 묶여 있어
+`splice` 가 **다른 테스트의 기대값을 밀어낸다**(실제로 났다).
+🔴 **교훈 ⒢** — 스크립트 문자열로 정규식을 만들면 **백슬래시가 소실된다**(WU-078·WU-110 과
+같은 함정). 🟢 정규식은 **Edit 로 직접** 쓴다.
+
+```
+잔여  **107건 / 31파일**(wu-140 **3** · 변동 없음)
+```
