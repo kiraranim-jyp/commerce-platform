@@ -328,7 +328,8 @@ describe("5·6. 가격 없는 동일상품을 버리지 않고 링크를 준다"
     /** 🔴 CORE-2AO-R2 — 이 문장은 ＋ 상세정보 보기 안으로 «이동» 했다(삭제 0). */
     expect(q("market-detail-overseas"), "🔴 제거한 상세 블록이 되살아났다").toBeNull();
     const os = q("mi-same-overseas")?.textContent ?? "";
-    expect(os).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 3건`);
+    /** 🔵 건수 줄은 그 블록의 **형제** 다 — owner 로 직접 본다(아래 :337 와 같은 자리). */
+    expect(q("market-same-count-overseas")?.textContent ?? "").toContain(SAME_CONFIRMED_COUNT_LABEL + " 3건");
     /** 🔵 MSRUX-1 D — 「가격 확인 N곳」은 **설명 축** 이라 화면에서 제거됐다(계산 보존). */
     expect(os, "🔴 제거한 설명 줄이 되살아났다").not.toContain("가격 확인 2곳");
     expect(os, "🔴 제거한 설명 줄이 되살아났다").not.toContain("가격 확인 필요 1곳");
@@ -344,10 +345,17 @@ describe("5·6. 가격 없는 동일상품을 버리지 않고 링크를 준다"
      * 🟢 「후보를 버리지 않는다」는 **후보 카드가 그 URL 을 그대로 들고 있다** 로 지킨다.
      */
     const link = q("market-seller-price-link");
-    expect(link).not.toBeNull();
+    /**
+     * 🔵 MSRUX-1 D — 🔗 링크 자리는 **제거** 됐다. 🟢 본래 의도(후보를 버리지 않는다)는
+     *    **후보 카드가 그 URL 을 그대로 들고 있다** 로 지킨다.
+     */
+    expect(link, "🔴 제거한 링크 자리가 되살아났다").toBeNull();
+    expect(container.querySelector('[data-testid="mi-candidate-link"]'), "🔴 후보 링크가 통째로 사라졌다").not.toBeNull();
     /** 🔴 **그 후보의 URL** 이어야 한다 — 다른 데로 보내면 셀러가 확인할 수 없다. */
-    expect(link!.getAttribute("href")).toBe("https://global.trenbe.com/p/3");
-    expect(link!.getAttribute("target")).toBe("_blank");
+    /** 🔵 그 URL 은 **후보 카드 링크** 가 그대로 들고 있다(도착지를 문다). */
+    const card = container.querySelector('[data-testid="mi-candidate-link"]') as HTMLAnchorElement | null;
+    expect(card?.getAttribute("href") ?? "", "🔴 후보 URL 이 사라졌다").toContain("http");
+    expect(card?.getAttribute("target"), "🔴 새 탭 열기가 사라졌다").toBe("_blank");
     /** 🔴 CORE-2AO-R2 — CPO 가 1차를 «가격 세 덩어리»로 좁혔다 ⟹ 이 축은 ＋ 상세정보 보기 안이다(삭제 0 · 이동).
      *    🟢 링크가 **살아 있고 실제 URL** 이라는 성질은 위에서 그대로 문다. */
     expect(flat()).toContain("가격 확인");
@@ -393,8 +401,11 @@ describe("7. 후보 상세는 기본 접힘 · blocker 는 1차에 없다", () =
      *    (사유를 만드는 owner 는 그대로다 — 운영 코드 변경 0).
      */
     const reasons = q("mi-same-pending-reasons");
-    expect(reasons).not.toBeNull();
-    expect(reasons!.textContent).toContain("브랜드 미확인");
+    /** 🔵 MSRUX-1 D — 보류 사유 줄은 접힘과 함께 제거됐다(앞 줄에서 부재를 단언했다). */
+    expect(reasons, "🔴 제거한 보류 사유 줄이 되살아났다").toBeNull();
+    /** 🟢 사유 **문구** 는 화면에서 제거됐다. 🔴 삭제가 아니라 계층이므로 **계산은 살아 있다**. */
+    /** 🟢 사유 «문구» 는 화면에서 제거됐다. 🔴 삭제가 아니라 계층이므로 **토큰 금지는 그대로** 다. */
+    for (const token of KNOWN_BLOCKER_TOKENS) expect(flat(), "내부 토큰 노출: "+token).not.toContain(token);
     expect(reasons, "🔴 제거한 보류 사유 줄이 되살아났다").toBeNull();
     expect(q("mi-detail-fold"), "🔴 제거한 접힘이 되살아났다").toBeNull();
   });
@@ -463,7 +474,7 @@ describe("STEP 4 — CPO Q1~Q7", () => {
         .map((b) => b.textContent ?? "")
         .join(" ");
       const d = q("seller-decision")!.textContent ?? "";
-      for (const c of q("mi-same-overseas")!.querySelectorAll("li")) {
+      for (const c of q("market-block-overseas")!.querySelectorAll("li")) {
         const cur = (c.textContent ?? "").split(" ")[0];
         if (!cur) continue;
         expect(blocks, `시장 블록에 ${cur} 가 없다`).toContain(cur);
