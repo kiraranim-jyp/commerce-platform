@@ -136,7 +136,7 @@ describe("B. 🔴🔴 marketEmptyNote — ⒜ 검색 실패 ↔ ⒝ 판정 보�
   /**
    * 🔴🔴 **WU-145 에서 갱신·강화됨** — 두 축이 더해졌다:
    * ```
-   * ① 머리에 **「동일상품 확인 0곳」** 이 붙는다(CPO ② 1차 레이아웃) — 전까지 이
+   * ① 머리에 **「동일상품 확정 0곳」** 이 붙는다(CPO ② 1차 레이아웃) — 전까지 이
    *    블록은 `sameCount === 0` 일 때 건수 줄 자체가 없어서 셀러가 **0 이라는
    *    숫자를 못 봤다**(빈 칸과 0 은 다른 사실이다)
    * ② 🔴 **사유 어휘가 1차에서 빠졌다**(CPO STEP 3 「blocker 기본 노출 없음」) —
@@ -253,7 +253,7 @@ describe("C. 🔴🔴🔴 CPO 확정 순서 — 🇰🇷 → 🌎 → 판단 결
     /** 🔴 CORE-2AO-R2 — 금액은 **1차**, 건수는 **＋ 상세정보 보기** 안이다(두 자리로 문다). */
     const kr = q("market-block-domestic")!.textContent ?? "";
     const krDetail = q("market-detail-domestic")!.textContent ?? "";
-    expect(krDetail).toContain("동일상품 확인 1곳");
+    expect(krDetail).toContain("동일상품 확정 1곳");
     expect(krDetail).toContain("판매중 확인 1곳");
     expect(krDetail).toContain("가격 확인 1곳");
     expect(kr).toContain("KRW 88000");
@@ -269,7 +269,7 @@ describe("D. 🔴🔴 시장이 비었을 때 — 네 상태가 화면에서 갈
     await mount({ rows: [sameRow()] });
     const krEmpty = q("market-empty-domestic")?.textContent ?? "";
     expect(krEmpty).toContain(MARKET_EMPTY_NO_CANDIDATE);
-    /** 🔴 WU-145 ② — 빈 칸이 아니라 **「동일상품 확인 0곳」** 이라는 숫자를 말한다. */
+    /** 🔴 WU-145 ② — 빈 칸이 아니라 **「동일상품 확정 0곳」** 이라는 숫자를 말한다. */
     expect(krEmpty).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0곳`);
     /** 🔴 빈 틀을 만들지 않는다 — 기준가 블록은 **렌더되지 않는다**(wu-139 C-4). */
     expect(q("price-guide-domestic")).toBeNull();
@@ -299,7 +299,7 @@ describe("D. 🔴🔴 시장이 비었을 때 — 네 상태가 화면에서 갈
     });
     /** 🔴 CORE-2AO-R2 — 건수는 상세에 있다(삭제 0). */
     const kr = q("market-detail-domestic")!.textContent ?? "";
-    expect(kr).toContain("동일상품 확인 1곳");
+    expect(kr).toContain("동일상품 확정 1곳");
     expect(kr).toContain("가격 확인 필요 1곳");
     expect(q("price-guide-headline")).toBeNull();
     expect(q("price-guide-empty")).toBeTruthy();

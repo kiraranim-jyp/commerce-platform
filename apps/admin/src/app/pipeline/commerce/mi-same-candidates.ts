@@ -994,9 +994,23 @@ export function buildPriceGuide(j: MarketJudgement, market: "KR" | "OVERSEAS"): 
  *    (`priceGuideCountNote` · `marketEmptyNote` 의 0곳 머리) ⟹ 손으로 두 벌 적으면
  *    한쪽만 고치는 날이 오고, 그때 셀러는 **같은 축을 다른 이름으로** 보게 된다.
  */
-export const SAME_CONFIRMED_COUNT_LABEL = "동일상품 확인";
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 MI-SELLER-RESULT-UX-REFINE-1 A-② — **「확인」 ⟹ 「확정」**
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 「동일상품 **확인** 0곳」은 「확인해 봤다」로도 읽혀서 **0 의 뜻이 흐렸다**(CPO 지적).
+ *    🟢 이 숫자는 **동일상품으로 «확정» 된 판매처 수** 다 ⟹ 그 말을 그대로 쓴다.
+ * 🔴 **분모는 바뀌지 않는다** — `buildPriceGuide` 의 `sameCount`(= `displayTier SAME`
+ *    후보, URL 단위 중복 제거) 그대로다. 🔴 위 「반영 판매처」와 **다른 지표** 이고
+ *    합치지 않는다(CPO A 명시).
+ * 🔴 **`SAME_PRICE_LABEL`(「동일상품 확인 가격」)은 그대로 둔다** — 그 말은 «가격» 축의
+ *    이름이고 이 상수는 «건수» 축의 이름이다. 둘을 한 번에 바꾸면 가격 어휘 계약
+ *    (`wu-145` D-1)이 **다른 사실** 까지 같이 흔든다.
+ */
+export const SAME_CONFIRMED_COUNT_LABEL = "동일상품 확정";
 
-/** 🔴 그 숫자들을 **셀러의 말** 로. 「동일상품 확인」과 「가격 확인」을 가른다. */
+/** 🔴 그 숫자들을 **셀러의 말** 로. 「동일상품 확정」과 「가격 확인」을 가른다. */
 export function priceGuideCountNote(g: PriceGuide): string {
   const parts = [
     `${SAME_CONFIRMED_COUNT_LABEL} ${g.sameCount}곳`,

@@ -1841,7 +1841,12 @@ function MarketBlock({
                   icon: "🇰🇷",
                   testId: "domestic-reference",
                   amountTestId: "domestic-lowest",
-                  /** 🔴 CORE-2T §4 — 국내는 「확인 N곳」이다(해외는 기본값 「판매처」 그대로). */
+                  /**
+                   * 🔴 CORE-2T §4 — 국내는 해외와 **다른 지표** 다(해외는 기본값 그대로).
+                   * 🔵 MI-SELLER-RESULT-UX-REFINE-1 A-① — 「확인 N곳」 ⟹ **「반영 판매처 N곳」**.
+                   *    🔴 단위를 **같이** 넘긴다 — 국내는 판매처를 세므로 「곳」 이다
+                   *    (해외는 레코드를 세므로 「건」 · 그 기본값은 owner 가 들고 있다).
+                   */
                   sellerCountLabel: DOMESTIC_SELLER_COUNT_LABEL,
                   /** 🔴🔴 CORE-2U-A §5 — 「유사상품 1」(내부 등급 분포)을 **끈다.** */
                   showTierNote: false,

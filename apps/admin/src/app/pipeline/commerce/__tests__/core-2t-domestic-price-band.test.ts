@@ -105,7 +105,7 @@ describe("A. 국내 가격 형성대 — 화면", () => {
     expect(first, "🔴 형성대가 아니라 최저가 한 줄만 뜬다 — 「마지막 1미터」가 끊겼다").toContain(
       "KRW 83,600 ~ 88,000",
     );
-    expect(first).toContain("확인 3곳");
+    expect(first).toContain("반영 판매처 3곳");
   });
 
   /** 🔴 §4 — **1건·같은 금액을 억지 범위로 만들지 않는다**(실측 D4 가 바로 이 모양이다). */
@@ -114,7 +114,7 @@ describe("A. 국내 가격 형성대 — 화면", () => {
     const kr = text(el, "domestic-reference");
     expect(kr).toContain("KRW 88,000");
     expect(kr, "🔴 88,000 ~ 88,000 같은 거짓 폭을 만들었다").not.toContain("~");
-    expect(kr).toContain("확인 2곳");
+    expect(kr).toContain("반영 판매처 2곳");
   });
 
   /** 🔴 §11 — 금액은 **한 번만** 대표로 표시한다. */
@@ -147,11 +147,11 @@ describe("A. 국내 가격 형성대 — 화면", () => {
      *    FAIL 하도록 **양방향** 으로 잠근다.
      */
     const os = text(el, "overseas-reference");
-    expect(os, "🔴 해외 분모가 「판매처 N곳」이 아니다 — §9 위반").toContain("판매처 1곳");
-    expect(os, "🔴 국내 어휘가 해외 구역에 들어왔다").not.toContain("확인 1곳");
+    expect(os, "🔴 해외 분모가 「판매처 N곳」이 아니다 — §9 위반").toContain("반영 가격 1건");
+    expect(os, "🔴 국내 어휘가 해외 구역에 들어왔다").not.toContain("반영 판매처 1곳");
     expect(os).toContain(OVERSEAS_REFERENCE_TITLE);
     /** 🔴 반대로 국내 구역에는 해외의 말이 **없어야** 한다. */
-    expect(text(el, "domestic-reference")).not.toContain("판매처 3곳");
+    expect(text(el, "domestic-reference")).not.toContain("반영 가격 3건");
     /** 🔴 환산 흔적 0. */
     expect(whole).not.toMatch(/[₩€$£¥]/);
     expect(whole).not.toContain("약 ");
@@ -160,7 +160,7 @@ describe("A. 국내 가격 형성대 — 화면", () => {
   /** 🔴 §10 — 「동일상품 확정 수」와 「국내 가격 확인 수」를 **합치지 않는다**. */
   it("A-5 🔴 동일상품 0곳이어도 형성대가 **독립적으로** 선다", () => {
     const el = mount({ rows: ROWS, domesticReference: KR_BAND });
-    expect(text(el, "market-empty-domestic")).toContain("동일상품 확인 0곳");
+    expect(text(el, "market-empty-domestic")).toContain("동일상품 확정 0곳");
     expect(text(el, "domestic-reference")).toContain("KRW 83,600 ~ 88,000");
   });
 });
@@ -192,7 +192,13 @@ describe("B. 🔴 배선 앵커", () => {
      * 🔴 **집계가 판매처 단위로 접은 뒤의 수** 를 읽는다. 🟢 칸을 따로 두지 않았다 —
      *    1차 구현의 `sellerCount` 는 `count` 와 **항상 같아서** 지웠다(owner 둘 금지).
      */
-    expect(VIEW).toContain("${countLabel} ${v.count}곳");
+    /**
+     * 🔵 MI-SELLER-RESULT-UX-REFINE-1 F-③ — **단위가 라벨에서 온다**(「곳」 하드코딩 제거).
+     *    국내는 판매처를 세므로 「곳」 · 해외는 레코드를 세므로 「건」 이고, 그 짝을
+     *    owner 의 표(`COUNT_UNIT_BY_LABEL`)가 정한다 ⟹ 「반영 판매처 N건」이 못 나온다.
+     */
+    expect(VIEW).toContain("${countLabel} ${v.count}${countUnit}");
+    expect(VIEW, "🔴 라벨↔단위 짝의 owner 가 사라졌다").toContain("COUNT_UNIT_BY_LABEL[countLabel]");
   });
 
   it("B-3 🔴 국내만 「확인」 라벨을 넘긴다(해외는 기본값)", () => {

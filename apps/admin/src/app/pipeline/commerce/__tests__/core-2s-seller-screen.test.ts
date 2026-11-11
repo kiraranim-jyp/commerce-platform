@@ -146,7 +146,7 @@ describe("A. 🇰🇷 국내 — 가격이 먼저, 판정이 뒤", () => {
      * 🔴 **CORE-2T §4 에서 어휘가 바뀌었다** — 국내는 「확인 N곳」 · 해외는 「판매처 N곳」.
      *    🟢 지키는 성질(「1차에 국내 금액과 그 분모가 같이 선다」)은 **그대로** 다.
      */
-    expect(first).toContain("확인 1곳");
+    expect(first).toContain("반영 판매처 1곳");
     /** 🔴 CORE-2U-A — 제목이 **「국내 참고가격」** 으로 되돌아왔다(CPO 결정 A). */
     expect(first).toContain("국내 참고가격");
   });
@@ -182,7 +182,7 @@ describe("A. 🇰🇷 국내 — 가격이 먼저, 판정이 뒤", () => {
     /** ⒜ 🔴 가격이 **먼저** 다 — 되돌리면 셀러가 「0 이니까 가격도 없다」로 읽는다. */
     expect(price, "🔴 동일상품 확인 수가 가격보다 먼저 온다 — 셀러가 「없다」로 읽는다").toBeLessThan(count);
     /** ⒝ 🟢 **숫자는 1차에 있다**(CORE-UX-SELLER-02 의 목적). */
-    expect(firstScreen(el), "🔴 동일상품 확인 수가 1차에서 사라졌다").toContain("동일상품 확인 0곳");
+    expect(firstScreen(el), "🔴 동일상품 확인 수가 1차에서 사라졌다").toContain("동일상품 확정 0곳");
     /** ⒞ 🔴 **문장은 1차에 없다** — 게이트를 풀었는지 여기서 잡는다. */
     expect(
       firstScreen(el),

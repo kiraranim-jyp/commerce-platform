@@ -151,10 +151,58 @@ export const DOMESTIC_SAME_NOT_CONFIRMED = "동일상품으로 확정된 국내 
  * 🔴 새 집계·새 숫자 **0** 이다(라벨 하나다).
  */
 export const DOMESTIC_REFERENCE_BASIS = "국내 가격 참고값";
-/** 🔴 CORE-2T §4 — 국내는 **「확인 N곳」** 이다(「판매처 N곳」은 해외 축의 기존 말). */
-export const DOMESTIC_SELLER_COUNT_LABEL = "확인";
+/**
+ * 🔴 CORE-2T §4 — 국내는 **「확인 N곳」** 이었다(「판매처 N곳」은 해외 축의 기존 말).
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 MI-SELLER-RESULT-UX-REFINE-1 A-① — **「확인」이 무엇을 확인했는지 말하지 않았다**
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 CEO 화면의 「KRW 88,000 **확인 1곳**」은 셀러에게 **무엇을 센 숫자인지** 말하지
+ *    않는다(CPO 지적). 🟢 그 숫자의 실제 의미는 **이 참고가격 집계에 «들어간» 판매처 수**
+ *    다 — `candidate-market` 이 국내(`sellerKey` 있음)를 **판매처 단위로 접은 뒤** 센다.
+ * 🟢 그래서 이름을 그 사실로 바꾼다: 「국내 참고가격」 **반영 판매처 N곳**.
+ * 🔴 **분모는 한 글자도 바뀌지 않는다** — 세는 쪽(`byCurrency[*].count`)은 그대로다.
+ * 🔴 아래 `SAME_CONFIRMED_COUNT_LABEL`(동일상품 **확정**)과 **다른 지표** 다 —
+ *    둘을 합치거나 같은 분모로 만들지 않는다(CPO A 명시).
+ */
+export const DOMESTIC_SELLER_COUNT_LABEL = "반영 판매처";
 /** 🟢 해외 축의 기존 말 — **한 글자도 바꾸지 않는다**(§9). */
-export const OVERSEAS_SELLER_COUNT_LABEL = "판매처";
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ * 🔴🔴🔴 MI-SELLER-RESULT-UX-REFINE-1 F-③ — **이 이름은 «거짓» 이었다**
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 집계기(`candidate-market.ts`)가 `count` 의 의미를 **시장마다 다르게** 센다:
+ * ```
+ * sellerKey 있음(국내)  → **판매처 수**(같은 판매처는 최저 확인가 하나로 접힌 뒤)
+ * sellerKey 없음(해외)  → **레코드 수**(접을 근거가 없다)
+ * ```
+ * 🔴 그런데 해외 라벨이 **「판매처 N곳」** 이었다 ⟹ 같은 판매처의 리스팅 둘이
+ *    **판매처 2곳** 으로 읽힌다. 🔴 CPO F-3(「지표 명칭과 실제 집계값 일치」) 위반이다.
+ * 🔴 그리고 국내가 **「반영 판매처」** 가 되면서 두 말이 **부분 문자열** 로 겹쳐
+ *    「같은 지표의 시장별 값」으로 읽히게 됐다 — 그것은 CPO A 가 금지한 모양이다
+ *    (「두 지표의 집계 기준은 다르므로 합치거나 같은 분모로 만들지 않는다」).
+ * 🟢 그래서 해외는 **세는 «단위» 를 이름에 담는다** — 「반영 가격 N건」.
+ * 🔴 **분모는 한 글자도 바뀌지 않는다**(집계기·자격·중복 제거 전부 그대로).
+ */
+export const OVERSEAS_SELLER_COUNT_LABEL = "반영 가격";
+/** 🔴 국내는 **판매처** 를 세므로 「곳」 · 해외는 **레코드** 를 세므로 「건」. */
+export const DOMESTIC_SELLER_COUNT_UNIT = "곳";
+export const OVERSEAS_SELLER_COUNT_UNIT = "건";
+
+/**
+ * 🔴🔴 **라벨이 단위를 «결정» 한다 — 호출부가 둘을 따로 고르지 않는다.**
+ *
+ * 🔴 1차 구현은 `sellerCountLabel` 과 `sellerCountUnit` 을 **각각** 받았다. 그 모양은
+ *    「반영 판매처 3**건**」 이라는 **틀린 조합** 을 허용한다 — 실제로 기존 계약
+ *    (`wu-056`)이 그 문자열을 내며 **FAIL 로 잡았다**(그 계약은 라벨만 넘긴다).
+ * 🟢 그래서 단위의 owner 를 **이 표 하나** 로 만든다. 라벨만 넘겨도 짝이 맞는다.
+ */
+const COUNT_UNIT_BY_LABEL: Record<string, string> = {
+  [DOMESTIC_SELLER_COUNT_LABEL]: DOMESTIC_SELLER_COUNT_UNIT,
+  [OVERSEAS_SELLER_COUNT_LABEL]: OVERSEAS_SELLER_COUNT_UNIT,
+};
 export const DOMESTIC_REFERENCE_SCOPE =
   "이번 확인에만 쓰이고 저장되지 않습니다 — 새로고침하면 사라집니다.";
 
@@ -298,6 +346,8 @@ export function buildOverseasReference(
    */
   opts?: {
     sellerCountLabel?: string;
+    /** 🔴 F-③ — 라벨과 **같이** 와야 한다(「반영 판매처 N건」 같은 짝이 생기지 않게). */
+    sellerCountUnit?: string;
     /**
      * 🔴🔴🔴 CORE-2U-A §1·§5 — **등급 분포(`tierNote`)를 국내에서 끈다.**
      *
@@ -313,6 +363,12 @@ export function buildOverseasReference(
 ): OverseasReferenceView | null {
   if (!summary || summary.count <= 0) return null;
   const countLabel = opts?.sellerCountLabel ?? OVERSEAS_SELLER_COUNT_LABEL;
+  /**
+   * 🔴 F-③ — **라벨이 단위를 결정한다**(위 `COUNT_UNIT_BY_LABEL`). 호출부가 둘을 따로
+   *    고르면 「반영 판매처 N건」 같은 틀린 조합이 생긴다 — 실제로 났고 계약이 잡았다.
+   * 🟢 `sellerCountUnit` 은 **명시 override 전용** 이다(모르는 라벨이면 해외 기본값).
+   */
+  const countUnit = opts?.sellerCountUnit ?? COUNT_UNIT_BY_LABEL[countLabel] ?? OVERSEAS_SELLER_COUNT_UNIT;
   const showTierNote = opts?.showTierNote ?? true;
 
   const lines: OverseasReferenceLine[] = Object.entries(summary.byCurrency)
@@ -342,7 +398,7 @@ export function buildOverseasReference(
          * 🔴 `count` 는 **집계에 들어간 수** 다 — 국내는 집계기가 **판매처 단위로 접은
          *    뒤** 세므로 그 값이 「확인 N곳」의 분모로 정확하다(중복이 새어 나오지 않는다).
          */
-        scope: `${countLabel} ${v.count}곳`,
+        scope: `${countLabel} ${v.count}${countUnit}`,
       };
     });
   if (lines.length === 0) return null;

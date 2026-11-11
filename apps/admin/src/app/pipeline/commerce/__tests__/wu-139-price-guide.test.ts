@@ -76,7 +76,7 @@ describe("A. buildPriceGuide — 가격 없는 SAME 도 센다", () => {
     /** 🔴 **버려지지 않았다** — 링크를 줄 대상으로 센다. */
     expect(g.unpricedCount).toBe(1);
     const note = priceGuideCountNote(g);
-    expect(note).toContain("동일상품 확인 2곳");
+    expect(note).toContain("동일상품 확정 2곳");
     expect(note).toContain("가격 확인 1곳");
     expect(note).toContain("가격 확인 필요 1곳");
   });
@@ -289,6 +289,6 @@ describe("C. 화면 (마운트 DOM)", () => {
     expect(q("price-guide-headline")).toBeNull();
     /** 🔴 「동일상품이 없다」로 적지 않는다. */
     /** 🔴 CORE-2AO-R2 — 건수 줄은 상세로 내려갔다(문장 삭제 0). */
-    expect(q("market-detail-domestic")?.textContent).toContain("동일상품 확인 1곳");
+    expect(q("market-detail-domestic")?.textContent).toContain("동일상품 확정 1곳");
   });
 });

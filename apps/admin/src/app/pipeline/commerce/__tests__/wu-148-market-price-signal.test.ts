@@ -282,11 +282,11 @@ describe("D. 가격 계산 상한 3 (WU-149 STEP 3/4)", () => {
 
   it("🔴🔴 D-2 **건수는 자르지 않는다** — 관측된 사실을 숨기지 않는다(CPO STEP 10)", () => {
     const g = guide(KR_FIVE, "KR");
-    /** 🔴 「동일상품 확인 5곳 · 가격 확인 5곳」은 **그대로** 다 — 상한은 «가격 계산» 전용이다. */
+    /** 🔴 「동일상품 확정 5곳 · 가격 확인 5곳」은 **그대로** 다 — 상한은 «가격 계산» 전용이다. */
     expect(g.sameCount).toBe(5);
     expect(g.pricedCount).toBe(5);
     mount(KR_FIVE);
-    expect(q("price-guide-counts")!.textContent).toContain("동일상품 확인 5곳");
+    expect(q("price-guide-counts")!.textContent).toContain("동일상품 확정 5곳");
     expect(q("price-guide-counts")!.textContent).toContain("가격 확인 5곳");
   });
 

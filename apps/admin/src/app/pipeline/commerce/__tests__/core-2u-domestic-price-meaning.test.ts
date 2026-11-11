@@ -117,7 +117,7 @@ describe("§8 Case A~F — 기존 판정 결과를 하나의 seller-facing 의�
     const kr = text(el, "domestic-reference");
     expect(kr).toContain(DOMESTIC_REFERENCE_TITLE);
     expect(kr).toContain("KRW 88,000");
-    expect(kr).toContain("확인 1곳");
+    expect(kr).toContain("반영 판매처 1곳");
     /** 🔴🔴 **CPO 가 반려한 그 모양** — 유사상품 기준을 「형성대」로 부르지 않는다. */
     expect(kr, "🔴 유사상품 기준인데 「형성대」로 적었다").not.toContain("형성대");
     expect(kr, "🔴 「가격대」로도 적지 않는다").not.toContain(DOMESTIC_BAND_LABEL);
@@ -208,7 +208,7 @@ describe("§8 Case A~F — 기존 판정 결과를 하나의 seller-facing 의�
       ]),
     });
     const kr = text(el, "domestic-reference");
-    expect(kr).toContain("확인 1곳");
+    expect(kr).toContain("반영 판매처 1곳");
     expect(kr).toContain("KRW 88,000");
     expect(kr, "🔴 중복이 형성대를 넓혔다").not.toContain("~");
   });
@@ -243,13 +243,13 @@ describe("§3·§6·§7 — seller-facing 은 하나의 가격 판단", () => {
     const host = el();
     /**
      * 🔴🔴 **1차 단언이 틀렸고 그것을 적는다.** 처음엔 **첫 화면 전체** 에서
-     *    `"판매처 1곳"` 을 금지했는데, 그 말은 **🌎 해외 축의 기존 어휘** 라서
+     *    `"반영 가격 1건"` 을 금지했는데, 그 말은 **🌎 해외 축의 기존 어휘** 라서
      *    §9(해외 불변)와 **정면으로 충돌** 했다 — 즉 **내 단언이 틀렸고 코드가 맞았다**.
      * 🟢 그래서 **🇰🇷 블록으로 범위를 좁힌다** — §7 이 금지한 것은 「셀러가 **한 시장에서**
      *    여러 숫자를 해석해야 하는 구조」다.
      */
     const kr = text(host, "market-block-domestic");
-    for (const bad of ["유사상품 참고가격", "판매처 1곳", "후보 1곳", "보류·충돌"]) {
+    for (const bad of ["유사상품 참고가격", "반영 가격 1건", "후보 1곳", "보류·충돌"]) {
       expect(kr, `🔴 🇰🇷 블록에 경쟁 숫자/내부 상태가 있다: ${bad}`).not.toContain(bad);
     }
     /**
@@ -258,7 +258,7 @@ describe("§3·§6·§7 — seller-facing 은 하나의 가격 판단", () => {
      *    🟢 성질은 그대로다 — 🇰🇷 축에서 그 문장이 **사라지지 않았다**.
      */
     expect(kr).toContain("KRW 88,000");
-    expect(kr).toContain("확인 1곳");
+    expect(kr).toContain("반영 판매처 1곳");
     expect(text(host, "market-detail-domestic")).toContain(DOMESTIC_REFERENCE_BASIS);
     /** 🔴 1차 전체에서는 **MI 내부 상태** 만 금지한다(§5). */
     expect(firstScreen(host)).not.toContain("보류·충돌");
@@ -305,7 +305,7 @@ describe("§3·§6·§7 — seller-facing 은 하나의 가격 판단", () => {
     const os = text(el(), "overseas-reference");
     /** 🟢 불변 — 제목 · 분모 어휘 · 통화별 금액. */
     expect(os).toContain(OVERSEAS_REFERENCE_TITLE);
-    expect(os).toContain("판매처 1곳");
+    expect(os).toContain("반영 가격 1건");
     expect(os).toContain("GBP 37");
     expect(os).toContain("USD 58");
     /** 🔴 꺼진 것 — 내부 등급 분포(§5 금지 목록의 「유사상품 1」). */

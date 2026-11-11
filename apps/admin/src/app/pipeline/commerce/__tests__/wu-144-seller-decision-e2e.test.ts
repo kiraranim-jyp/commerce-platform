@@ -139,7 +139,7 @@ describe("WU-144 — 2상품 Seller Decision (CPO A/B/C/D)", () => {
   it("A 🟢 S2 — 동일상품 → 판매중 → 가격이 한 흐름으로 선다", () => {
     const t = render(S2);
     /** 🟢 셋이 **같은 줄의 묶음** 으로 나온다(`priceGuideCountNote`). */
-    expect(t).toContain("동일상품 확인 3곳");
+    expect(t).toContain("동일상품 확정 3곳");
     expect(t).toContain("판매중 확인 1곳");
     expect(t).toContain("가격 확인 2곳");
     /** 🟢 그리고 **숫자가 실제로** 있다 — 「판단할 기준」이 화면에 있다. */
@@ -194,7 +194,7 @@ describe("WU-144 — 2상품 Seller Decision (CPO A/B/C/D)", () => {
 
   it("F 🟢 S1 — 판매중이 0 이어도 **가격 기준은 통화별로** 선다", () => {
     const t = render(S1);
-    expect(t).toContain("동일상품 확인 3곳");
+    expect(t).toContain("동일상품 확정 3곳");
     expect(t).toContain("판매중 확인 0곳");
     /** 🔴 세 통화를 **더하지 않는다**(환산 0 · `overseas-reference` 계약). */
     for (const cur of ["CAD", "GBP", "USD"]) expect(t).toContain(cur);

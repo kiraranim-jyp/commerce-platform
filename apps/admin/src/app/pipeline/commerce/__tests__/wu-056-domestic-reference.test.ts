@@ -69,8 +69,8 @@ describe("A. 국내 참고가격 블록", () => {
     expect(html).toContain("국내 참고가격");
     expect(html).toContain("KRW 88,000");
     /** 🔴 국내는 **「확인 N곳」** 이다(「판매처」는 해외 축의 말이다 · §9). */
-    expect(html).toContain("확인 3곳");
-    expect(html, "🔴 국내 블록에 해외 축의 말이 들어왔다").not.toContain("판매처 3곳");
+    expect(html).toContain("반영 판매처 3곳");
+    expect(html, "🔴 국내 블록에 해외 축의 말이 들어왔다").not.toContain("반영 가격 3건");
   });
 
   /**
@@ -88,7 +88,7 @@ describe("A. 국내 참고가격 블록", () => {
     expect(html, "🔴 최고가를 읽지 않는다 — 형성대가 단일 가격으로 보인다").toContain(
       "KRW 83,600 ~ 88,000",
     );
-    expect(html).toContain("확인 3곳");
+    expect(html).toContain("반영 판매처 3곳");
   });
 
   /** 🔴 **1건·같은 금액을 억지 범위로 만들지 않는다**(§4 명시 · `88,000 ~ 88,000` 금지). */
@@ -101,7 +101,7 @@ describe("A. 국내 참고가격 블록", () => {
     });
     expect(html).toContain("KRW 88,000");
     expect(html, "🔴 같은 금액을 범위로 적었다").not.toContain("~");
-    expect(html).toContain("확인 2곳");
+    expect(html).toContain("반영 판매처 2곳");
   });
 
   /** 🔴 환산하지 않는다 — 금액 줄에 다른 통화/환산 흔적이 없다. */
