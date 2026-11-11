@@ -323,11 +323,14 @@ describe("④ 상세 계산은 MI ④ 수익성 한 곳에만 있고, ③ 등록
     // 생겼고 그 줄이 이 marker를 먼저 문다. 슬롯이 실제로 그려지는 자리는
     // 토글 뒤에 있는 쪽이다.
     const slotAt = panel.indexOf("{priceCalculationDetail}", toggleAt);
-    expect(chainAt).toBeGreaterThan(-1);
-    expect(toggleAt).toBeGreaterThan(chainAt);
+    /** 🔵 MSRUX-1 D — 제거된 UI 다(설명/접힘). 부재를 단언하고 판단 결과는 보존한다. 「ⓘ 가격 계산 기준」 토글이 제거돼 체인이 없다. */
+    /** 🟢 가격 체인 뷰는 **그대로** 있다(제거 대상이 아니다). */
+    expect(chainAt, "🔴 가격 체인이 사라졌다").toBeGreaterThan(-1);
+    /** 🔵 MSRUX-1 D/C — 「ⓘ 가격 계산 기준」 토글은 **제거** 됐다(요약으로 이동). */
+    expect(toggleAt, "🔴 제거한 토글이 되살아났다").toBe(-1);
     expect(slotAt).toBeGreaterThan(toggleAt);
     // 슬롯은 토글 안에 있다(기본 접힘).
-    expect(panel).toContain("{showPriceDetail && (");
+    expect(panel, "🔴 제거한 펼침이 되살아났다").not.toContain("{showPriceDetail && (");
   });
 
   it("수수료(%)는 요약이 아니라 상세 안에 있다 — 채널이 둘인데 한 줄로 적을 수 없다", () => {

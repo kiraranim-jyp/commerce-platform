@@ -428,3 +428,20 @@ D 가 접힘을 걷어내자 **유지 대상** `market-judgement` 의 머리말 
 ```
 잔여  **62건 / 24파일** · 누계 125 → 62(**63건 해소 · 50.4%**)
 ```
+
+### 묶음 10 — 1건짜리 파일 **4/5 해소**
+
+| 파일 | 처리 |
+|---|---|
+| `price-single-surface` · `price-judgement-card` | 🔴 **내 방향이 반대였다** — `chainAt`(가격 체인)은 **유지**, `toggleAt`(ⓘ 가격 계산 기준)만 **제거**. 실제 정의를 읽고 바로잡았다 |
+| `mi-ux-final-4` | `market-empty-domestic` 부재 + 🟢 `market-same-count-domestic` 존재 |
+| `core-2w-price-qualification` | `DOMESTIC_REFERENCE_BASIS`(설명) 부재 단언 |
+| `core-2r5` | 🔴 **남음** — `price-detail-fold` 를 **슬라이스 기준점**으로 쓴다(:163) ⟹ 그 testid 가 사라져 1차 층을 못 자른다 |
+
+🔴 **교훈 ⒨** — 제거된 testid 가 **단언 대상이 아니라 «슬라이스 기준점»** 으로 쓰이는 파일이 있다.
+그 경우 단언만 바꿔선 안 되고 **층을 나누는 기준 자체**를 새 구조로 바꿔야 한다
+(`core-2r5` 의 `firstLayer()` 가 그 모양 · 다음 작업의 첫 수정 지점).
+
+```
+전수 재측정  **63건 / 20파일**(실행 기준 · 차감 추정 금지)
+```

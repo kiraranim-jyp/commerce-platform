@@ -105,7 +105,8 @@ describe("§8-1·2 가격 있음 + SAME 없음을 «동시에» 말한다", () =
     expect(first).toContain(DOMESTIC_REFERENCE_TITLE);
     expect(first).toContain("KRW 88,000");
     /** 🔴 CORE-2AO-R2 — CPO 가 1차를 «가격 세 덩어리»로 좁혔다 ⟹ 이 축은 ＋ 상세정보 보기 안이다(삭제 0 · 이동). */
-    expect((el.textContent ?? "").replace(/\s+/g, " ")).toContain(DOMESTIC_REFERENCE_BASIS);
+    /** 🔵 MSRUX-1 D — 근거 라벨(설명)은 제거됐다. */
+    expect((el.textContent ?? "").replace(/s+/g, " "), "🔴 제거한 근거 라벨이 되살아났다").not.toContain(DOMESTIC_REFERENCE_BASIS);
   });
 
   /** 🔴 §6 — 참고가격이 있는데 「가격 없음」류가 **같이 뜨면 안 된다**. */

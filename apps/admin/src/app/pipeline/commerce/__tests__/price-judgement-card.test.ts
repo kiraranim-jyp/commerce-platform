@@ -44,8 +44,11 @@ describe("판단에 필요한 숫자가 접기 전에 보인다", () => {
   it("④ 수익성 요약이 토글보다 먼저 그려진다", () => {
     const chainAt = panel.indexOf("<PriceChainView rows={priceChain} />");
     const toggleAt = panel.indexOf("ⓘ 가격 계산 기준 {caret(showPriceDetail)}");
-    expect(chainAt).toBeGreaterThan(-1);
-    expect(toggleAt).toBeGreaterThan(chainAt);
+    /** 🔵 MSRUX-1 D — 제거된 UI 다(설명/접힘). 부재를 단언하고 판단 결과는 보존한다. 「ⓘ 가격 계산 기준」 토글이 제거돼 체인이 없다. */
+    /** 🟢 가격 체인 뷰는 **그대로** 있다(제거 대상이 아니다). */
+    expect(chainAt, "🔴 가격 체인이 사라졌다").toBeGreaterThan(-1);
+    /** 🔵 MSRUX-1 D/C — 「ⓘ 가격 계산 기준」 토글은 **제거** 됐다(요약으로 이동). */
+    expect(toggleAt, "🔴 제거한 토글이 되살아났다").toBe(-1);
   });
 
   it("요약은 새 산술을 하지 않는다 — price-hierarchy.ts가 고른 값을 그리기만 한다", () => {
