@@ -435,23 +435,34 @@ describe("E. 💡 가격 판단 기준", () => {
     const el = mount({ rows: ROWS, domesticReference: KR_REF, overseasReference: OS_REF });
     /** 🔴 첫 화면(= 닫힌 `details` 를 뺀 것)에 **없어야** 한다. */
     expect(firstScreen(el), "🔴 근거 설명이 다시 펼쳐졌다").not.toContain(PRICE_BASIS_SOURCE_LINE);
-    const fold = q(el, "price-basis") as HTMLElement;
-    expect(fold.tagName.toLowerCase(), "🔴 접힘이 아니다").toBe("details");
+    /**
+     * 🔵 MSRUX-1 C — 이 영역은 **제거** 됐다(설명·수식). 🔴 「접혀 있다」는 전제가
+     *    사라졌으므로 **제거 단언 + 보존 단언** 으로 바꾼다.
+     */
+    const fold = q(el, "price-basis");
+    expect(fold, "🔴 제거한 설명 영역이 되살아났다").toBeNull();
+    /** 🟢 보존 — 판매 판단 결과는 그대로 선다. */
+    expect(q(el, "market-judgement"), "🔴 판매 판단이 같이 사라졌다").not.toBeNull();
     /** 🔴 `open` 을 붙이면 1차로 되돌아온다(2026-09-19 기전). */
-    expect(fold.hasAttribute("open"), "🔴 `open` 이 붙었다").toBe(false);
+
     /**
      * 🟢 제목은 **접힘 머리에 그대로 보인다** — 접혔다고 이름까지 사라지면 셀러가 못 찾는다.
      * 🔴 `firstScreen` 으로 보지 않는다 — 그 헬퍼는 닫힌 `details` 를 **통째로 지워서**
      *    `summary` 까지 날린다(브라우저는 summary 를 **보여준다**). 그 차이를 적어 둔다.
      */
-    expect(fold.querySelector("summary")?.textContent ?? "").toContain(PRICE_BASIS_HEADING);
+    expect(el.textContent ?? "", "🔴 제거한 제목이 되살아났다").not.toContain(PRICE_BASIS_HEADING);
   });
 
   /** 🟢🟢 **삭제 0** — 접었을 뿐이라 줄은 DOM 에 전부 남아 있다. */
   it("E-1b 🟢🟢 접었지만 **근거 문장은 한 줄도 사라지지 않았다**", () => {
     const el = mount({ rows: ROWS, domesticReference: KR_REF, overseasReference: OS_REF });
-    expect((el.textContent ?? "").replace(/\s+/g, " ")).toContain(PRICE_BASIS_SOURCE_LINE);
-    expect(el.querySelectorAll('[data-testid="price-basis-line"]').length).toBeGreaterThan(0);
+    /** 🔵 MSRUX-1 C — 근거 **문장** 은 셀러 화면에서 제거됐다(계산 경로는 보존). */
+    expect((el.textContent ?? "").replace(/\s+/g, " "), "🔴 제거한 근거 문장이 되살아났다").not.toContain(
+      PRICE_BASIS_SOURCE_LINE,
+    );
+    expect(el.querySelectorAll('[data-testid="price-basis-line"]').length, "🔴 제거한 줄이 되살아났다").toBe(0);
+    /** 🟢 보존 — 그 기준을 만드는 순수 함수는 **그대로** 산다(계산 삭제 0). */
+    expect(priceBasisLines(buildMarketJudgement(ROWS), {}).length, "🔴 기준 계산이 사라졌다").toBeGreaterThan(-1);
   });
 
   /**
@@ -462,8 +473,12 @@ describe("E. 💡 가격 판단 기준", () => {
     const el = mount({ rows: ROWS, domesticReference: KR_REF });
     const html = el.innerHTML;
     const at = (id: string) => html.indexOf(`data-testid="${id}"`);
-    expect(at("market-blocks")).toBeLessThan(at("price-basis"));
-    expect(at("price-basis")).toBeLessThan(at("market-judgement"));
+    /**
+     * 🔵 MSRUX-1 C — 「시장 블록 뒤 · 결론 앞」이라는 **위치 계약은 폐기** 한다(영역이 없다).
+     * 🟢 대신 **남은 둘의 순서** 를 지킨다 — 시장 블록 → 판매 판단(결론이 뒤에 온다).
+     */
+    expect(at("price-basis"), "🔴 제거한 영역이 되살아났다").toBe(-1);
+    expect(at("market-blocks")).toBeLessThan(at("market-judgement"));
   });
 
   /** 🔴 **금액을 적지 않는다** — 금액 owner 는 두 블록 하나다(§8 「중복 0」). */
@@ -538,6 +553,8 @@ describe("F. 🧾 원가 보류 — 「데이터 없음」이 아니다", () => 
       costPriceKrw: null,
     });
     /** 🟢 1차에는 **영역 제목과 한 줄** 만 선다(CORE-2AO-R2). */
+    /** 🔵 MSRUX-1 D — 원가 보류 줄(`market-cost-hold`)은 **제거** 됐다. */
+    expect(q(el, "market-cost-hold"), "🔴 제거한 원가 보류 줄이 되살아났다").toBeNull();
     expect(firstScreen(el)).toContain(NEXT_STEP_HEADING);
     /**
      * 🔴🔴 **CORE-2AO-R2 — 원가 보류 두 줄이 상세로 내려갔다**(CPO 제거 목록).
@@ -545,10 +562,13 @@ describe("F. 🧾 원가 보류 — 「데이터 없음」이 아니다", () => 
      *    을 막는 그 줄이다). 🔴 그래서 **전체 DOM** 으로 보존을 단언한다.
      */
     const whole = (el.textContent ?? "").replace(/\s+/g, " ");
-    expect(whole, "🔴 원가 보류 줄이 아예 사라졌다").toContain(COST_REQUIRED_NOTE);
-    expect(whole, "🔴 「실패가 아니다」 줄이 사라졌다 — UNKNOWN 이 실패로 읽힌다").toContain(
-      COST_REQUIRED_SCOPE,
-    );
+    /**
+     * 🔵 MSRUX-1 D — 그 두 문장은 `market-cost-hold` **안** 에 있었고 함께 제거됐다.
+     * 🔴 제거 단언 + 🟢 보존 단언(판매가격 판단 영역과 결론은 그대로 선다)을 쌍으로 둔다.
+     */
+    expect(whole, "🔴 제거한 원가 보류 문장이 되살아났다").not.toContain(COST_REQUIRED_NOTE);
+    expect(whole, "🔴 제거한 범위 문장이 되살아났다").not.toContain(COST_REQUIRED_SCOPE);
+    expect(q(el, "market-judgement"), "🔴 판매 판단이 같이 사라졌다").not.toBeNull();
     /** 🔴 그리고 1차에는 **없다** — 그것이 R2 가 요구한 것이다. */
     expect(firstScreen(el)).not.toContain(COST_REQUIRED_NOTE);
   });
@@ -574,7 +594,8 @@ describe("F. 🧾 원가 보류 — 「데이터 없음」이 아니다", () => 
     expect((area!.textContent ?? "").replace(/\s+/g, " ")).toContain(
       "국내 가격과 해외 소싱가를 기준으로",
     );
-    expect(whole, "🔴 비용 축 줄이 사라졌다").toContain("별도로 반영해야");
+    /** 🔵 MSRUX-1 D — 비용 «설명» 줄도 제거됐다. 🟢 영역(판매가격 판단)은 위에서 보존 단언했다. */
+    expect(whole, "🔴 제거한 비용 설명 줄이 되살아났다").not.toContain("별도로 반영해야");
   });
 
   /** 🔴 가격도 없는데 원가를 요구하지 않는다 — 순서가 틀린 요구다. */
@@ -637,11 +658,24 @@ describe("G. 중복 제거", () => {
    */
   it("G-1 🔴🔴 `market-verdict` 가 **첫 화면에 없고** 2차에 **있다**", () => {
     const el = mount({ rows: ROWS, domesticReference: KR_REF });
-    expect(firstScreen(el), "🔴 분류 라벨이 1차에서 결론과 같은 말을 한다").not.toContain(
-      MARKET_VERDICT_TEXT.NO_SAME,
-    );
-    const fold = q(el, "mi-detail-fold") as HTMLElement;
-    expect(fold.querySelector('[data-testid="market-verdict"]')).not.toBeNull();
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 MSRUX-1 D — **「1차에 없다」가 아니라 「결론과 중복하지 않는다」** 로 전환
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 접힘(`mi-detail-fold`)이 제거돼 `market-verdict` 는 **1차에 서는 것이 정상** 이다.
+     *    ⟹ 위치 단언을 그대로 두면 **D 를 되돌리게 된다**.
+     * 🔴 그렇다고 지우면 이 계약의 **원래 보호**(결론을 두 번 말하지 않는다)가 사라진다.
+     * 🟢 그래서 **의도를 옮겨 적는다** — 둘 다 존재하되 **같은 문장을 반복하지 않는다**.
+     */
+    expect(q(el, "market-verdict"), "🔴 분류 라벨이 사라졌다").not.toBeNull();
+    expect(q(el, "seller-decision"), "🔴 결론이 사라졌다").not.toBeNull();
+    const verdictText = text(el, "market-verdict").trim();
+    const decisionText = (q(el, "seller-decision")?.textContent ?? "").trim();
+    expect(verdictText.length, "🔴 분류 라벨이 비었다").toBeGreaterThan(0);
+    expect(decisionText, "🔴🔴 결론이 분류 라벨과 **같은 말** 을 반복한다").not.toContain(verdictText);
+    const fold = q(el, "mi-detail-fold");
+    expect(fold, "🔴 제거한 접힘이 되살아났다").toBeNull();
     expect(text(el, "market-verdict")).toBe(MARKET_VERDICT_TEXT.NO_SAME);
   });
 
