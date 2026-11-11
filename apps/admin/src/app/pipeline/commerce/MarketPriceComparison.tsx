@@ -2668,8 +2668,19 @@ function MarketColumn({
                             {CANDIDATE_PRICE_UNVERIFIED}
                           </p>
                         ) : null}
+                        {/**
+                          * 🔵 MI-SOURCING-CANDIDATE-TEMPLATE-UNIFICATION-1 — **testid 하나만 더한다.**
+                          * 🔴 표시·순서·문구·조건 **변경 0** — 이 줄은 **계약이 볼 수 있게** 하는 것이
+                          *    목적이다(전까지 상품명은 testid 가 없어 「국내·해외가 같은 칸을 그린다」를
+                          *    기계로 단언할 수 없었다).
+                          */}
                         {row.title ? (
-                          <p className="truncate text-[11px] text-text-primary">{row.title}</p>
+                          <p
+                            data-testid="mi-candidate-title"
+                            className="truncate text-[11px] text-text-primary"
+                          >
+                            {row.title}
+                          </p>
                         ) : null}
                         <p
                           data-testid="mi-candidate-seller"
@@ -2853,7 +2864,13 @@ function MarketColumn({
                             * 🔴🔴 그 대가 — **새 사람 판정 입력이 끊긴다 ⟹ GT 신규 누적 중단**
                             *    (CPO 인정 · 「계속 누적된다」로 보고하지 않는다).
                             */}
+                          {/**
+                            * 🔵 MI-SOURCING-CANDIDATE-TEMPLATE-UNIFICATION-1 — **testid 하나만 더한다.**
+                            * 🔴 `href`·`target`·`rel`·문구·위치 **변경 0** — CPO §7 의 「링크 정상
+                            *    작동」을 기계로 단언하려면 계약이 이 앵커를 찾을 수 있어야 한다.
+                            */}
                           <a
+                            data-testid="mi-candidate-link"
                             href={row.discoveredUrl}
                             target="_blank"
                             rel="noreferrer"

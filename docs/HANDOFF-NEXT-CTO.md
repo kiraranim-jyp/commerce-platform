@@ -1353,3 +1353,111 @@ Bobo B226AC009              37 GBP     78,854  EXACT       88,000    B     88,00
 🔴 열어 둔 것 — CASE A/B/C 표본이 6상품뿐이다. 국내 EXACT 공급이 늘면 **그때 다시 잰다**
 🔴 START-HERE.md · CTO-HANDOVER-NEXT.md 는 건드리지 않았다(보존 40건)
 ```
+
+---
+
+# 27. 🔵🔵🔵 **MI-SOURCING-CANDIDATE-TEMPLATE-UNIFICATION-1 — 판정 완료** (2026-11-11)
+
+🔴🔴 **새 페이지는 §23-0 + §24 + §25 + §26 + 이 절만 읽는다.**
+
+## 27-0. 🟢 결론
+
+```
+🟢 **카드는 이미 하나였다** — `MarketColumn` 하나 · `mi-candidate-row` 마크업 하나 ·
+   카드 «안» 에 시장 분기 **0**(분기는 **통화** 로만 한다) ⟹ 🔴 **다시 만들지 않았다**
+🔴 구멍은 **계약** 에 있었다 — 기존 `U-1` 은 「컴포넌트가 하나인가」만 보고
+   「그 하나 안에서 시장으로 갈라지는가」를 **못 봤다** ⟹ 이번에 그것을 잠갔다
+🟡 운영 변경은 **testid 둘** 뿐이다(`mi-candidate-title` · `mi-candidate-link`) —
+   표시·순서·문구·조건·href **변경 0**
+```
+
+## 27-1. 🟢 국내·해외 구조 비교 (조사 결과 · 재조사 금지)
+
+```
+후보 데이터 타입   POST `GeminiTransientRow` · GET 복원 `SavedCandidateRow`  ← **시장 공통**
+후보 생성 owner    `selectCandidateList(rows, market)` 하나                   ← 시장 공통
+URL·중복 제거      `discoveredUrl` 단위                                      ← 시장 공통
+그룹 분류          LIKELY / PRESUMED / POSSIBLE                               ← 시장 공통
+카드 컴포넌트      `MarketColumn` + `mi-candidate-row`                        ← 시장 공통
+반영 상태          `candidatePriceUse`(+ `SAME_AXIS_ONLY`)                    ← 시장 공통
+Workspace 마운트   `<MarketColumn market="KR">` · `market="OVERSEAS"` 두 호출 **같은 컴포넌트**
+🔴 **다른 것은 둘뿐이고 둘 다 「시장」이 아니라 「통화」 다**:
+   ⒜ 원화 환산 줄   `row.priceCurrency !== "KRW"` 일 때만(KRW 후보에 중복 환산 금지)
+   ⒝ 확정 버튼      가격 상태에서 파생(`confirm-price` ↔ `confirm-unavailable`)
+🟢 집계 분모만 시장별로 다르다 — 국내 `sellerKey`(판매처) · 해외 레코드(§25-1) **보존**
+```
+
+## 27-2. 🟢 구현 — 운영 **1 파일 · testid 2**
+
+```
+🟢 `mi-candidate-title`  상품명 줄(`row.title`)에 testid 추가 — 전까지 계약이 **볼 수 없었다**
+🟢 `mi-candidate-link`   원본 상품 링크(`href={row.discoveredUrl}`)에 testid 추가
+🔴 **변경 0** — 표시·순서·문구·조건·href·target·rel · 가격 집계 · 판정 · CASE ·
+   추천가격 · `candidatePriceUse` · `SAME_AXIS_ONLY` · 그룹 정책 · 정렬 · 후보 수
+```
+
+🔴🔴 **구현하지 않은 것 둘 — 데이터가 없다(지어내지 않았다)**:
+```
+CPO §4 ② 「브랜드」 별도 표시   `GeminiTransientRow` 에 **brand 칸이 없다**(상품명에만 섞여 있다)
+CPO §4 ⑧ 「기본 상품 옵션 정보」 그 타입에 **옵션/사이즈 칸이 없다**
+⟹ 🔴 둘 다 **새 데이터 수집** 이 필요하다 ⟹ **CPO 결정 사안** 으로 올린다
+```
+
+🟡 **CPO 판정 1건 — 정보 «순서»**: CPO §4 는 ①이미지 ②브랜드·상품명 ③그룹 ④판매처·링크
+⑤가격 … 순서인데 현재 카드는 **이미지 → 그룹 → 가격 → 환산 → 미확인 → 반영상태 → 상품명 →
+판매처 → 링크** 다. 🔴 **바꾸지 않았다** — 그 배치는 `SOURCING-CARD-MINIMAL-1` ·
+`CANDIDATE-UX-REFINE-01` · FINAL UX REBUILD 가 **CEO/CPO 승인으로 만든 것** 이고,
+결함이 아닌데 순서를 바꾸면 그 승인을 되돌리는 것이다(§9 「UI 개선을 이유로 축소 금지」와 같은 방향).
+🟢 **국내·해외가 서로 같다는 요건은 이미 100% 충족** 이다 — 순서는 **두 시장이 같은 순서** 다.
+
+## 27-3. 🟢 검증 — 실제 상품 5개 행(운영 DB 실측값)
+
+```
+bonbonverona.it      EUR 62      EXACT      SAME          VERIFIED
+junioredition.com    GBP 58      COMPARISON PRESUMED_SAME VERIFIED
+kids-world.com       KRW 106,000 COMPARISON PRESUMED_SAME VERIFIED
+designerkidswear.com CAD 530     COMPARISON PRESUMED_SAME **UNVERIFIED**
+coupleshot.com       KRW 135,000 COMPARISON PRESUMED_SAME VERIFIED
+```
+```
+계약 mstu-1-candidate-template-unification (11건 · 마운트 DOM)
+  A-1 카드 블록 «안» 시장 분기 **0**(`market ===` · `"KR"` · `"OVERSEAS"`) + 통화 분기 **존재**
+  A-2 🔴🔴 **같은 후보를 🇰🇷/🌎 로 렌더 → testid 시퀀스 완전 동일**
+  A-3 §4 요소(이미지·상품명·그룹·판매처·가격·반영상태·링크)가 **양 시장에** 선다
+  A-4 환산 줄은 **통화로만** — KRW 후보 0 · 비KRW 후보 전건
+  A-5 링크 `href == discoveredUrl` · `target=_blank` · `rel=noreferrer`(양 시장)
+  A-6 실측 5행의 **골격이 하나** (가격·확정 파생 칸 제외)
+  A-7 가격 미확인 후보는 「가격 미확인」을 적고 **반영 상태를 지어내지 않는다**
+  B-1~B-4 카드 마크업 하나 유지 · 어휘 owner 불변 · 내부 토큰 노출 0 · **차액 어휘 0**
+음성대조  Q1 시장 분기 삽입 **5F** · Q2 환산을 시장 기준으로 **2F** · Q3 상품명 testid 제거 **1F** ·
+          Q4 링크 href 변조 **1F** · Q5 링크 제거 **2F** · Q6 내부 토큰 노출 **3F**
+          🟢 전부 적용 확인 · 원상복구 **바이트 동일**
+회귀 **849 files / 10,820 passed · 0 failed** · tsc **0** · build **exit 0**
+```
+
+🔴 **내가 틀린 것 하나** — A-6 의 골격 필터가 좁아 `confirm-price` ↔ `confirm-unavailable`
+차이를 「시장에 따라 구조가 갈린다」로 **오진** 했다. 🟢 그 둘은 **가격 축** 이고(A-2 가 같은
+행에서 동일함을 단언한다) 접두 둘을 빼도록 고쳤다.
+
+## 27-4. 🔴 측정불가 / 잔여
+
+```
+🔴 실제 따져 화면은 CTO 가 볼 수 없다 ⟹ **Production UI PASS 로 적지 않는다**
+   (화면 축은 **마운트 DOM** 이다 — jsdom 에 실제 후보 행을 넣어 렌더한 결과다)
+🔴 후보 행은 **운영 DB 값** 이지만 렌더는 **하니스 조립** 이다 ⟹ 운영 Workspace 의
+   실제 prop 배선은 소스 앵커(`sourcing-candidate-unified-ux-1` U-2 · `mopc-1` B-2)가 지킨다
+🔴 ②브랜드·⑧옵션은 **데이터 부재** 로 미구현 — CPO 결정 대기
+🟡 정보 순서(§27-2 마지막)는 **CPO 판정 1건** 으로 남긴다
+```
+
+## 27-5. 🔵 다음 한 수
+
+```
+🔵 전략 ④가 닫혔다 ⟹ 다음은 ⑤ **전상품 E2E**:
+   `해외 URL → 국내 시장 가격 → 해외 소싱 후보 → 가격 정합성 → MI 판매 판단 →
+    추천 판매가격 → 커머스 등록`
+🔴 그 E2E 의 **알려진 병목 둘** 을 먼저 적는다(§26-5 실측):
+   ⒜ 국내 basis EXACT 가 **6/16 상품** 뿐이다 ⟹ CASE A/B/C 표본이 좁다
+   ⒝ 원상품 크롤이 `bobochoses.com` **429** 로 간헐 실패한다(라이브 E2E 의 첫 관문)
+🔴 START-HERE.md · CTO-HANDOVER-NEXT.md 는 건드리지 않았다(보존 40건)
+```
