@@ -70,7 +70,7 @@ describe("STAGE 7-3 — A. 네 상태가 «서로 다른 말» 을 한다", () =
   });
 
   it("A-7 🟢 「동일상품 확인 0곳」 머리는 **유지** 된다(두 블록이 같은 축을 같은 말로 쓴다)", () => {
-    expect(marketEmptyNote(5, pending(5), false, 5)).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0곳`);
+    expect(marketEmptyNote(5, pending(5), false, 5)).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0건`);
   });
 });
 

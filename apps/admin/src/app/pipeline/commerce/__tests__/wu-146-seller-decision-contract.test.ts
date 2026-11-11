@@ -278,7 +278,7 @@ describe("4. SAME 0 은 «확정 0» 이지 «시장 부재» 가 아니다", ()
 
   it("🟢 4-b 「동일상품 확인 0곳」은 **허용** 이다 — 숫자는 사실이다", () => {
     mount(S2);
-    expect(q("market-empty-domestic")?.textContent).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0곳`);
+    expect(q("market-empty-domestic")?.textContent).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0건`);
   });
 
   it("🔴🔴 4-c 국내 0 의 결론은 **「해외를 기준으로 참고」** 다 — 단정하지 않는다", () => {
@@ -319,7 +319,7 @@ describe("5·6. 가격 없는 동일상품을 버리지 않고 링크를 준다"
     /** 🟢 S2 는 SAME 3곳 중 가격 확인 2곳 · 확인 필요 1곳 — **셋 다** 보인다. */
     /** 🔴 CORE-2AO-R2 — 이 문장은 ＋ 상세정보 보기 안으로 «이동» 했다(삭제 0). */
     const os = q("market-detail-overseas")!.textContent ?? "";
-    expect(os).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 3곳`);
+    expect(os).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 3건`);
     expect(os).toContain("가격 확인 2곳");
     expect(os).toContain("가격 확인 필요 1곳");
     expect(all("market-seller-row").length).toBe(3);
@@ -415,7 +415,7 @@ describe("STEP 4 — CPO Q1~Q7", () => {
     expect(flat()).toContain("가격 확인");
     expect(first).toContain("🇰🇷");
     expect(first).toContain("🌎");
-    expect(flat()).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 3곳`);
+    expect(flat()).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 3건`);
   });
 
   it("🔴 Q2 셀러에게 **동일/유사 판단을 다시 시키지 않는다** — 1차에 판정 요구 문구 0", () => {

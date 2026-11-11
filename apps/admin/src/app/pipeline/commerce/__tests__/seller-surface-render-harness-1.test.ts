@@ -250,7 +250,7 @@ describe("SELLER-SURFACE-RENDER-HARNESS-1 — 셀러 화면이 실제로 서는�
     expect(text, "A 는 원가 기반이라 MI 응답과 무관하게 선다").toContain("₩115,200");
 
     /** 🔴 시장 축은 **숫자를 만들지 않는다** — 국내/해외 동일상품은 0곳이어야 한다. */
-    expect(text).toContain("동일상품 확정 0곳");
+    expect(text).toContain("동일상품 확정 0건");
     /** 🔴 그리고 「시장 평균/적정가」류 어휘를 만들지 않는다(WU-146 계약과 같은 축). */
     expect(text).not.toContain("시장 평균가");
   });

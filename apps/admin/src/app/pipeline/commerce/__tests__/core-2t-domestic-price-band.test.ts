@@ -160,7 +160,7 @@ describe("A. 국내 가격 형성대 — 화면", () => {
   /** 🔴 §10 — 「동일상품 확정 수」와 「국내 가격 확인 수」를 **합치지 않는다**. */
   it("A-5 🔴 동일상품 0곳이어도 형성대가 **독립적으로** 선다", () => {
     const el = mount({ rows: ROWS, domesticReference: KR_BAND });
-    expect(text(el, "market-empty-domestic")).toContain("동일상품 확정 0곳");
+    expect(text(el, "market-empty-domestic")).toContain("동일상품 확정 0건");
     expect(text(el, "domestic-reference")).toContain("KRW 83,600 ~ 88,000");
   });
 });

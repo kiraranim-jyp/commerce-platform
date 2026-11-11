@@ -182,7 +182,7 @@ describe("A. 🇰🇷 국내 — 가격이 먼저, 판정이 뒤", () => {
     /** ⒜ 🔴 가격이 **먼저** 다 — 되돌리면 셀러가 「0 이니까 가격도 없다」로 읽는다. */
     expect(price, "🔴 동일상품 확인 수가 가격보다 먼저 온다 — 셀러가 「없다」로 읽는다").toBeLessThan(count);
     /** ⒝ 🟢 **숫자는 1차에 있다**(CORE-UX-SELLER-02 의 목적). */
-    expect(firstScreen(el), "🔴 동일상품 확인 수가 1차에서 사라졌다").toContain("동일상품 확정 0곳");
+    expect(firstScreen(el), "🔴 동일상품 확인 수가 1차에서 사라졌다").toContain("동일상품 확정 0건");
     /** ⒞ 🔴 **문장은 1차에 없다** — 게이트를 풀었는지 여기서 잡는다. */
     expect(
       firstScreen(el),
@@ -209,7 +209,7 @@ describe("A. 🇰🇷 국내 — 가격이 먼저, 판정이 뒤", () => {
   /** 🟢 「0곳」이라는 **숫자 자체는 남긴다** — 사실이고, 지우면 WU-145 가 되돌아간다. */
   it("A-4 🟢 「동일상품 확인 0곳」은 그대로 있다(숨기지 않는다)", () => {
     const el = mount({ rows: ROWS, domesticReference: KR_REF });
-    expect(text(el, "market-empty-domestic")).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0곳`);
+    expect(text(el, "market-empty-domestic")).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0건`);
   });
 });
 

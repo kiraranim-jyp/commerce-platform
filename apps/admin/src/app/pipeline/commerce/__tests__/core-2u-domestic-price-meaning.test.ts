@@ -195,7 +195,7 @@ describe("§8 Case A~F — 기존 판정 결과를 하나의 seller-facing 의�
     const el = mount({ rows: [] });
     expect(q(el, "domestic-reference")).toBeNull();
     expect(q(el, "price-guide-domestic")).toBeNull();
-    expect(text(el, "market-empty-domestic")).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0곳`);
+    expect(text(el, "market-empty-domestic")).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0건`);
   });
 
   /** Case 중복 판매처 → 1곳. 🟢 집계기가 **판매처당 최저 확인가 하나** 로 접는다. */

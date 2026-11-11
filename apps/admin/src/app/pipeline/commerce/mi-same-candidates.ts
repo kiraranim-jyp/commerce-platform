@@ -1010,10 +1010,30 @@ export function buildPriceGuide(j: MarketJudgement, market: "KR" | "OVERSEAS"): 
  */
 export const SAME_CONFIRMED_COUNT_LABEL = "동일상품 확정";
 
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 CPO 판정(2026-11-11) — **이 숫자의 단위는 「건」 이다**
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 `buildPriceGuide` 의 `sameCount` 는 **URL 단위로 중복 제거된 «후보» 수** 다 —
+ *    **판매처 수가 아니다**(같은 판매처의 리스팅 둘이면 2 다).
+ * 🔴 CPO 결정: **분모를 판매처 단위로 바꾸지 않는다**(집계·기존 계약 변경 금지) ⟹
+ *    바꾸는 것은 **표시 단위 하나** 다 — 「N곳」 ⟹ **「N건」**.
+ * 🔴 `PRESUMED_SAME` 을 확정으로 **승격하지 않는다** — SAME 판정 범위는 그대로다.
+ * 🟢 단위를 **상수로** 들고 있는 이유: 이 말이 **세 곳**(건수 줄 · 빈 상태 머리 ·
+ *    1차 요약)에서 나온다. 리터럴로 두면 한 곳만 고치는 날이 오고, 그때 같은 축이
+ *    「N곳」과 「N건」으로 갈린다(이 저장소가 반복해 막아 온 「owner 둘」).
+ */
+export const SAME_CONFIRMED_COUNT_UNIT = "건";
+/** 🟢 세는 자리마다 **이 함수 하나** 를 쓴다(짝이 어긋날 길이 없다). */
+export function sameConfirmedCountText(n: number): string {
+  return `${SAME_CONFIRMED_COUNT_LABEL} ${n}${SAME_CONFIRMED_COUNT_UNIT}`;
+}
+
 /** 🔴 그 숫자들을 **셀러의 말** 로. 「동일상품 확정」과 「가격 확인」을 가른다. */
 export function priceGuideCountNote(g: PriceGuide): string {
   const parts = [
-    `${SAME_CONFIRMED_COUNT_LABEL} ${g.sameCount}곳`,
+    sameConfirmedCountText(g.sameCount),
     `판매중 확인 ${g.onSaleCount}곳`,
     `가격 확인 ${g.pricedCount}곳`,
   ];
@@ -1786,7 +1806,7 @@ export function marketEmptyNote(
   priceDisqualifiedCount?: number,
 ): string {
   /** 🔴 **0 을 숫자로 말한다** — 「동일상품 확인 N곳」 축을 두 블록이 **같은 말** 로 쓴다. */
-  const head = `${SAME_CONFIRMED_COUNT_LABEL} 0곳`;
+  const head = sameConfirmedCountText(0);
   if (candidateCount === 0) return `${head} — ${MARKET_EMPTY_NO_CANDIDATE}`;
   /**
    * 🟢 CORE-2U-A — 가격이 **이미** 1차에 섰으면 **상태 한 줄로 끝낸다**(숫자 하나 원칙).

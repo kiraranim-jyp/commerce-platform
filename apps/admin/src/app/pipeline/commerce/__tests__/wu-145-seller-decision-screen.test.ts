@@ -361,7 +361,7 @@ describe("D. ② 국내 동일상품 0 일 때", () => {
   it("🟢🟢 D-1 1차는 **「동일상품 확인 0곳」** 까지다", () => {
     mount(S2);
     const kr = q("market-empty-domestic")?.textContent ?? "";
-    expect(kr).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0곳`);
+    expect(kr).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0건`);
   });
 
   it("🔴🔴🔴 D-2 **금지 문구 셋이 어디에도 없다**(CPO 명시)", () => {
@@ -386,7 +386,7 @@ describe("D. ② 국내 동일상품 0 일 때", () => {
 
   it("🟢 D-4 순수 함수 축에서도 같다 — owner 가 그 말을 들고 있다", () => {
     const note = marketEmptyNote(0, { count: 0, reasons: [] });
-    expect(note).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0곳`);
+    expect(note).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0건`);
     for (const bad of FORBIDDEN_PHRASES) expect(note).not.toContain(bad);
   });
 });
@@ -464,7 +464,7 @@ describe("F. 1차 화면은 «결론» 이다", () => {
      *    🟢 셀러가 **먼저 보는 것이 가격** 이고 나머지는 접힘 안이다 — 그것이
      *       「첫 화면 = 판단 / 상세 화면 = 근거」의 정의다.
      */
-    const order = ["USD 58", `${SAME_CONFIRMED_COUNT_LABEL} 3곳`, "판매중 확인 1곳", MARKET_RESULT_HEADING];
+    const order = ["USD 58", `${SAME_CONFIRMED_COUNT_LABEL} 3건`, "판매중 확인 1곳", MARKET_RESULT_HEADING];
     let at = -1;
     for (const part of order) {
       const i = first.indexOf(part);

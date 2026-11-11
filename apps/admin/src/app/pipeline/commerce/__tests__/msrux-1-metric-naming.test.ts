@@ -28,7 +28,11 @@ import {
   OVERSEAS_SELLER_COUNT_LABEL,
   buildOverseasReference,
 } from "../overseas-reference";
-import { SAME_CONFIRMED_COUNT_LABEL, marketEmptyNote } from "../mi-same-candidates";
+import {
+  SAME_CONFIRMED_COUNT_LABEL,
+  marketEmptyNote,
+  sameConfirmedCountText,
+} from "../mi-same-candidates";
 
 /** 🔴 **글자로** 단언한다 — 상수를 import 해 비교하면 동어반복이다(메모 그 함정). */
 describe("MSRUX-1 A — 지표 명칭", () => {
@@ -40,7 +44,7 @@ describe("MSRUX-1 A — 지표 명칭", () => {
 
   it("A-2 🔴 「확인 N곳」·「동일상품 확인 N곳」은 더 이상 쓰지 않는다", () => {
     const note = marketEmptyNote(0, { count: 0, reasons: [] });
-    expect(note).toContain("동일상품 확정 0곳");
+    expect(note).toContain("동일상품 확정 0건");
     expect(note, "🔴 옛 어휘가 남아 있다").not.toContain("동일상품 확인 0곳");
   });
 
@@ -70,6 +74,38 @@ describe("MSRUX-1 A — 지표 명칭", () => {
       expect(scope).not.toMatch(/판매처 \d+건/);
       expect(scope).not.toMatch(/가격 \d+곳/);
     }
+  });
+
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 CPO 판정(2026-11-11) — **동일상품 지표의 단위는 「건」 이다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 `sameCount` 는 **URL 중복 제거 기준의 후보 «건수»** 이고 판매처 수가 아니다.
+   * 🔴 CPO: **분모를 판매처 단위로 바꾸지 않는다** ⟹ 바꾸는 것은 표시 단위 하나.
+   * 🔴 그리고 **`PRESUMED_SAME` 을 확정으로 승격하지 않는다** — SAME 범위 불변.
+   */
+  it("A-5 🔴🔴 동일상품 지표는 「N건」 이다 — 「N곳」(판매처 단위)으로 되돌아가지 않는다", () => {
+    expect(sameConfirmedCountText(0)).toBe("동일상품 확정 0건");
+    expect(sameConfirmedCountText(3)).toBe("동일상품 확정 3건");
+    /** 🔴 **옛 단위가 어디에도 남지 않는다** — 세 자리가 한 owner 를 쓴다. */
+    expect(sameConfirmedCountText(1), "🔴 판매처 단위(곳)로 되돌아갔다").not.toContain("곳");
+    /** 🟢 빈 상태 머리도 같은 owner 를 쓴다(두 벌로 적히면 여기서 갈린다). */
+    expect(marketEmptyNote(0, { count: 0, reasons: [] })).toContain("동일상품 확정 0건");
+    /** 🔴 국내 「반영 판매처 N곳」은 **판매처** 를 세므로 「곳」 그대로다(다른 지표). */
+    expect(
+      buildOverseasReference(
+        {
+          count: 1,
+          byCurrency: { KRW: { count: 1, lowestAmount: 88_000, highestAmount: 88_000 } },
+          byMarket: { KR: 1 },
+          byPriceTier: { COMPARISON: 1 },
+          unverifiedCount: 0,
+          observedDifferenceCount: 0,
+        },
+        { sellerCountLabel: DOMESTIC_SELLER_COUNT_LABEL },
+      )?.lines[0]?.scope,
+    ).toBe("반영 판매처 1곳");
   });
 
   it("A-4 🟢 화면에도 그 말이 그대로 선다(마운트 DOM)", () => {

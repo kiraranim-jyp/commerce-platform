@@ -176,7 +176,7 @@ describe("B. §8 결론과 근거를 가른다", () => {
     /**
      * 🔴🔴 **1차 단언이 틀렸고 그것을 적는다.** 처음엔 `"판매중 확인"` 같은 **글자** 를
      *    금지했는데, 그 말은 🌎 블록의 `priceGuideCountNote`(= SAME 축의 **정직한 분모** ·
-     *    「동일상품 확정 1곳 · 판매중 확인 1곳 · 가격 확인 1곳」)가 **이미 쓰고 있다**
+     *    「동일상품 확정 1건 · 판매중 확인 1곳 · 가격 확인 1곳」)가 **이미 쓰고 있다**
      *    ⟹ **owner 를 잘못 지목** 했다(이 저장소가 반복한 단언 좌표 오류).
      * 🟢 그래서 **testid 로** 본다 — 「그 네 요소가 접힘 밖에 있는가」가 이 단언의 질문이다.
      */
@@ -296,15 +296,15 @@ describe("D. 🔴 CPO §9 FAIL 조건", () => {
     expect(first).toContain("KRW 88,000");
     expect(first, "🔴 「확정 없음」이 1차로 되돌아왔다").not.toContain(DOMESTIC_REFERENCE_BASIS);
     /** 🟢 숫자는 **1차에 있다** · 🔴 단 **가격보다 뒤** 여야 한다(원래 목적 그대로). */
-    expect(first, "🔴 동일상품 확인 수가 1차에서 사라졌다").toContain("동일상품 확정 0곳");
+    expect(first, "🔴 동일상품 확인 수가 1차에서 사라졌다").toContain("동일상품 확정 0건");
     expect(
       first.indexOf("KRW 88,000"),
-      "🔴 「동일상품 확정 0곳」이 가격보다 먼저 온다 — 셀러가 「없다」로 읽는다",
-    ).toBeLessThan(first.indexOf("동일상품 확정 0곳"));
+      "🔴 「동일상품 확정 0건」이 가격보다 먼저 온다 — 셀러가 「없다」로 읽는다",
+    ).toBeLessThan(first.indexOf("동일상품 확정 0건"));
     /** 🟢 단 **사라지지는 않았다** — 상세에 그대로 있다. */
     const whole = (ceoScreen().textContent ?? "").replace(/\s+/g, " ");
     expect(whole).toContain(DOMESTIC_REFERENCE_BASIS);
-    expect(whole).toContain("동일상품 확정 0곳");
+    expect(whole).toContain("동일상품 확정 0건");
   });
 
   it("D-3 🔴 환산 흔적 0 · 통화 합산 0", () => {

@@ -58,6 +58,7 @@ import {
    *    않는다(이 상수가 이미 `priceGuideCountNote` · `marketEmptyNote` 와 **같은 말** 을 쓴다).
    */
   SAME_CONFIRMED_COUNT_LABEL,
+  sameConfirmedCountText,
   marketPriceHeadline,
   marketPriceHeadlineLabel,
   SALE_STATE_TEXT,
@@ -1909,7 +1910,7 @@ function MarketBlock({
               data-testid={`market-same-count-${suffix}`}
               className="mt-0.5 text-[11px] text-text-tertiary"
             >
-              {`${SAME_CONFIRMED_COUNT_LABEL} ${g.sameCount}곳`}
+              {sameConfirmedCountText(g.sameCount)}
             </p>
           )}
           {/**
