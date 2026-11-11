@@ -1627,6 +1627,29 @@ function MarketBlock({
               </p>
               {/**
                * ══════════════════════════════════════════════════════════════
+               * 🔴🔴🔴 MSRUX-1 D 회귀 수정 — **「동일상품 확정 N건」이 사라졌었다**
+               * ══════════════════════════════════════════════════════════════
+               *
+               * 🔴 그 건수 줄의 owner 가 **두 분기에서 달랐다**:
+               * ```
+               * sameCount === 0 → market-same-count-{suffix} (1차)   🟢 남아 있었다
+               * sameCount  > 0 → price-guide-counts (**DETAIL 변형**) 🔴 그 변형이
+               *                  `price-detail-fold` «안» 이라 D 가 접힘을 지우며 같이 사라졌다
+               * ```
+               *    ⟹ 해외 SAME **3건** 인데 화면에는 국내의 「확정 0건」만 남았다
+               *    (내 B 계약 `msrux-1b` B-4 가 잡았다 · D 적용 **전** 에는 PASS 였다).
+               * 🟢 그래서 **0분기와 «같은 모양»** 을 이 분기 1차에도 세운다 — 같은 `testid` ·
+               *    같은 owner 함수(`sameConfirmedCountText`). 🔴 **집계·분모·판정 변경 0** —
+               *    새 숫자를 만들지 않는다(그 값은 `buildPriceGuide` 가 이미 센 `sameCount` 다).
+               */}
+              <p
+                data-testid={`market-same-count-${suffix}`}
+                className="mt-0.5 text-[11px] text-text-tertiary"
+              >
+                {sameConfirmedCountText(g.sameCount)}
+              </p>
+              {/**
+               * ══════════════════════════════════════════════════════════════
                * 🔵🔵🔵 PRICE & CANDIDATE UX FINAL FIX §3·§4 — **원 통화 + 원화 환산**
                * ══════════════════════════════════════════════════════════════
                *

@@ -60,8 +60,23 @@ function mount(): HTMLDivElement {
 }
 const has = (el: HTMLElement, id: string) => el.querySelector(`[data-testid="${id}"]`) != null;
 
-/** 🟢 CPO 가 **유지** 로 지정한 다섯. */
-const KEEP = ["market-judgement", "seller-decision", "seller-decision-line", "market-split", "market-verdict"];
+/**
+ * 🟢 CPO 가 **유지** 로 지정한 여섯(🔵 `market-same-count-*` 가 **추가됐다**).
+ *
+ * 🔴🔴 **그 여섯 번째가 D 1차에서 사라졌다** — 「동일상품 확정 N건」의 owner 가 분기마다
+ *    달랐다: `sameCount === 0` 은 1차에 `market-same-count-*` 로, `> 0` 은 **DETAIL 변형의
+ *    `price-guide-counts`** 로 그렸고 **후자가 접힘 안** 이라 같이 지워졌다 ⟹ 해외 SAME
+ *    3건인데 화면에 그 숫자가 없었다(`msrux-1b` B-4 가 잡았다).
+ * 🔴 이 지표는 설명 문구가 아니라 **A 에서 의미와 단위를 바로잡은 판단 지표** 다(CPO).
+ */
+const KEEP = [
+  "market-judgement",
+  "seller-decision",
+  "seller-decision-line",
+  "market-split",
+  "market-verdict",
+  "market-same-count-overseas",
+];
 /** 🔴 CPO 가 **제거** 로 지정한 것(접힘 · 표 · 근거 · 설명). */
 const REMOVE = [
   "price-detail-fold",
@@ -120,6 +135,16 @@ describe("MSRUX-1D — 판단 보존 · 설명 제거", () => {
         "🔴 제거 대상 접힘이 남아 있다",
       ).not.toMatch(/price-detail-fold|price-basis|mi-detail-fold|market-evidence-fold/);
     }
+  });
+
+  it("D-5 🔴🔴 **해외 SAME 3건이 숫자로 선다** — D 가 지웠던 그 줄의 회귀 방지", () => {
+    const el = mount();
+    const line = el.querySelector('[data-testid="market-same-count-overseas"]')?.textContent ?? "";
+    expect(line, "🔴 해외 건수 줄이 다시 사라졌다").toBe("동일상품 확정 3건");
+    /** 🔴 국내(0)와 해외(3)가 **각각** 제 숫자를 말한다 — 한 숫자로 합치지 않는다. */
+    expect(el.textContent ?? "", "🔴 국내 0건이 사라졌다").toContain("동일상품 확정 0건");
+    /** 🔴 단위는 A·CPO 판정대로 「건」 이다(「곳」 으로 되돌아가면 FAIL). */
+    expect(line).not.toContain("곳");
   });
 
   it("D-4 🔴🔴 **내부 계산은 살아 있다** — 판단 블록이 «값» 을 그린다(빈 껍데기가 아니다)", () => {
