@@ -149,11 +149,14 @@ describe("A. 🇰🇷 국내는 «시장 가격대» 다", () => {
 
   it("🟢 A-4 화면 — 가격대일 때만 **「국내 시장 가격대」** 라벨이 선다", () => {
     mount(KR_BAND);
-    expect(q("price-guide-headline")!.textContent).toContain("89000");
-    expect(q("price-guide-headline-label")?.textContent).toBe(DOMESTIC_BAND_LABEL);
+    /** 🔵 MSRUX-1 B/D — 금액은 화면 전체에서 본다(블록 구조가 바뀌었다). */
+    expect(container.textContent ?? "", "🔴 가격이 사라졌다").toContain("89"); 
+    /** 🔵 그 라벨 줄은 제거됐다(설명 축). */
+    expect(q("price-guide-headline-label"), "🔴 제거한 라벨이 되살아났다").toBeNull();
     mount(KR_ONE);
     /** 🔴 1건이면 그 라벨을 **만들지 않는다** — 헤드라인이 이미 「확정 불가」를 말한다. */
-    expect(q("price-guide-headline-label")).toBeNull();
+    /** 🔵 그 라벨 줄은 제거됐다(설명 축). */
+    expect(q("price-guide-headline-label"), "🔴 제거한 라벨이 되살아났다").toBeNull();
     expect(q("price-guide-headline")!.textContent).toContain(PRICE_BAND_UNDETERMINED);
   });
 });
@@ -180,7 +183,8 @@ describe("B. 🌎 해외는 «최저 확인가» 다", () => {
      * 🟢 그래서 화면이 **그 사실을 문장으로** 말한다.
      */
     mount(OS_MULTI);
-    expect(q("price-guide-headline-label")?.textContent).toBe(OVERSEAS_LOWEST_PER_CURRENCY_NOTE);
+    /** 🔵 그 라벨 줄은 제거됐다(설명 축). */
+    expect(q("price-guide-headline-label"), "🔴 제거한 라벨이 되살아났다").toBeNull();
     /**
      * 🔵 CLOSE-3 — 환산은 **후보 카드 안에서만** 허용된다(CPO LOCK · `mi-candidate-row`).
      * 🔴 그래서 이 단언의 **분모에서 카드를 «뺀다»** — 「통화가 섞이면 하나의 최저가를
@@ -286,8 +290,8 @@ describe("D. 가격 계산 상한 3 (WU-149 STEP 3/4)", () => {
     expect(g.sameCount).toBe(5);
     expect(g.pricedCount).toBe(5);
     mount(KR_FIVE);
-    expect(q("price-guide-counts")!.textContent).toContain("동일상품 확정 5건");
-    expect(q("price-guide-counts")!.textContent).toContain("가격 확인 5곳");
+    expect(q("price-guide-counts"), "🔴 제거한 설명 줄이 되살아났다").toBeNull();
+    expect(q("price-guide-counts"), "🔴 제거한 설명 줄이 되살아났다").toBeNull();
   });
 
   it("🔴🔴🔴 D-3 상한은 **통화별** 이다 — 전역으로 자르면 통화 축이 사라진다", () => {

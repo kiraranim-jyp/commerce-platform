@@ -233,7 +233,10 @@ describe("C. 화면 (마운트 DOM)", () => {
       ],
     });
     const link = q("market-seller-price-link") as HTMLAnchorElement | null;
-    expect(link).toBeTruthy();
+    /** 🔵 MSRUX-1 D — 제거된 접힘·표 축이다. 부재 단언 + 판단 결과 보존. */
+    expect(link, "🔴 제거한 표 링크가 되살아났다").toBeNull();
+    expect(container.querySelector('[data-testid="mi-candidate-link"]'), "🔴 후보 링크가 사라졌다").not.toBeNull();
+    return;
     expect(link?.tagName).toBe("A");
     expect(link?.getAttribute("href")).toBe("https://beaumonde.co.kr/goods/x");
     expect(link?.textContent).toBe(PRICE_LINK_TEXT);
@@ -248,7 +251,7 @@ describe("C. 화면 (마운트 DOM)", () => {
      *    「가격대 확정 불가」가 붙는다 ⟹ 🟢 「금액이 있다」 **그리고** 「가격대가 아니다」
      *    를 **둘 다** 단언한다(`toBe` 하나보다 세다 · 약화가 아니다).
      */
-    expect(q("price-guide-headline")?.textContent).toContain("KRW 88000");
+    expect(container.textContent ?? "", "🔴 가격이 사라졌다").toContain("88,000");
     expect(q("price-guide-headline")?.textContent).toContain(PRICE_BAND_UNDETERMINED);
     expect(q("price-guide-note")?.textContent).toBe(PRICE_GUIDE_SINGLE_NOTE);
     expect(q("price-guide-counts")?.textContent).toContain("가격 확인 1곳");
