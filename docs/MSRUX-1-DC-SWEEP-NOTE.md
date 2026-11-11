@@ -413,3 +413,18 @@ D 가 접힘을 걷어내자 **유지 대상** `market-judgement` 의 머리말 
 ```
 잔여  **68건 / 25파일** · 누계 125 → 68(**57건 해소 · 45.6%**) · 다음: core-2v(6)
 ```
+
+### 🟢 묶음 9 **완료** — `core-2v-seller-reading-order` **6 → 0**(14/14)
+
+| 처리 | 내용 |
+|---|---|
+| 읽는 순서 | `reference-status`·`market-empty-*` **제거 단언** + 🟢 **가격 → 건수** 순서를 `market-same-count-*` 로 유지 |
+| 1차 금지 목록 | 🔵 **둘로 분리**(교훈 ⒧) — `market-split` 은 **유지 대상**(1차에 서는 것이 정상) · 나머지 셋만 부재 |
+| 접힘 둘 | `market-evidence-fold`·`mi-detail-fold` **부재** + 🟢 `market-judgement`·`market-verdict` 보존 |
+| 순서 사슬 | 제거된 두 칸(`price-basis`·`mi-detail-fold`)을 빼고 **🇰🇷 → 🌎 → 판단 결과** 유지 |
+| 결론 제목 | 🔵 **의미 전환** — 접힘이 사라져 **1차에 서는 것이 정상** |
+| `DOMESTIC_REFERENCE_BASIS` | 설명 축 **제거 단언** |
+
+```
+잔여  **62건 / 24파일** · 누계 125 → 62(**63건 해소 · 50.4%**)
+```
