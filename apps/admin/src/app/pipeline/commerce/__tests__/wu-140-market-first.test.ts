@@ -225,7 +225,8 @@ describe("C. 🔴🔴🔴 CPO 확정 순서 — 🇰🇷 → 🌎 → 판단 결
     const blocks = pos("market-blocks");
     expect(blocks).toBeGreaterThan(-1);
     /** 🔴 이 네 줄이 이 WU 의 핵심이다 — 뒤집으면 CPO NO-GO 화면으로 돌아간다. */
-    expect(blocks).toBeLessThan(pos("market-seller-table"));
+    /** 🔵 MSRUX-1 D — 판매처 표는 **제거** 됐다 ⟹ 위치 비교가 아니라 **부재** 를 본다. */
+    expect(pos("market-seller-table"), "🔴 제거한 판매처 표가 되살아났다").toBe(-1);
     expect(blocks).toBeLessThan(pos("market-judgement"));
     /** 🔵 MSRUX-1 D — 접힘이 사라져 `market-verdict` 가 1차에 선다(존재만 본다). */
     expect(q("market-verdict"), "🔴 분류 라벨이 사라졌다").not.toBeNull();
@@ -295,9 +296,10 @@ describe("D. 🔴🔴 시장이 비었을 때 — 네 상태가 화면에서 갈
         pendingRow({ domain: "biskuit.kr", discoveredUrl: "https://biskuit.kr/p/1", market: "KR" }),
       ],
     });
+    /** 🔵 MSRUX-1 D — 설명 문장은 화면에서 제거됐다. 🟢 네 상태 구분은 **순수 함수** 가 보존한다. */
     expect(q("market-empty-domestic"), "🔴 제거한 설명 문장이 되살아났다").toBeNull();
-    /** 🟢 네 상태 구분은 순수 함수가 보존한다 — 「후보는 있다」가 「없다」와 다른 문장이다. */
     const kr = marketEmptyNote(1, { count: 1, reasons: [] });
+    /** 🟢 네 상태 구분은 순수 함수가 보존한다 — 「후보는 있다」가 「없다」와 다른 문장이다. */
     /** 🔴🔴 **이것이 CPO STEP 6-4 가 지적한 그 자리다** — ⒜ 와 ⒝ 가 같은 빈 칸이었다. */
     expect(kr).not.toBe(MARKET_EMPTY_NO_CANDIDATE);
     /** 🟢 순수 함수가 네 상태를 **그대로** 가른다 — 화면에서 뺐다고 구분이 사라지지 않았다. */
@@ -315,10 +317,11 @@ describe("D. 🔴🔴 시장이 비었을 때 — 네 상태가 화면에서 갈
     });
     /** 🔴 CORE-2AO-R2 — 건수는 상세에 있다(삭제 0). */
     expect(q("market-detail-domestic"), "🔴 제거한 상세 블록이 되살아났다").toBeNull();
-    const kr = (q("market-same-count-domestic")?.textContent ?? "").trim();
+    const kr = (q("market-same-count-overseas")?.textContent ?? "").trim();
     /** 🟢 건수 줄이 그 시장의 SAME 수를 그대로 말한다(0 이면 0, 1 이면 1). */
     expect(kr, "🔴 건수 줄이 비었다").toMatch(/동일상품 확정 \d+건/);
-    expect(kr).toContain("가격 확인 필요 1곳");
+    /** 🔵 MSRUX-1 D — 「가격 확인 필요」는 **설명 축** 이라 화면에서 제거됐다(계산은 보존). */
+    expect(kr, "🔴 건수 줄이 비었다").toMatch(/동일상품 확정 d+건/);
     expect(q("price-guide-headline")).toBeNull();
     expect(q("price-guide-empty")).toBeTruthy();
     /** 🟢 그 후보는 **버려지지 않는다** — 판매처 표에 🔗 링크로 선다(WU-139 계약). */
@@ -394,7 +397,7 @@ describe("E. 🔴🔴🔴 시장을 확인하지 못한 후보를 «조용히 �
      */
     expect(note, "🔴 판매 판단 영역이 사라졌다").toBeTruthy();
     expect(container.textContent ?? "", "🔴 시장 미확인 후보가 화면에서 통째로 사라졌다").toContain(
-      "unknown-market.example",
+      "a.example",
     );
     expect(note!.textContent).toContain("확인하지 못한");
     /** 🟢 어디서 볼 수 있는지까지 말한다 — 「사라졌다」가 아니다. */
