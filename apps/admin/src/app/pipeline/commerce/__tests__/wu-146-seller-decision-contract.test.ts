@@ -195,7 +195,12 @@ describe("1·2. seller-facing price owner = 1 · final judgement = 1", () => {
   it("🔴🔴 1-b 가격 **숫자** 의 출처가 하나다 — 블록과 근거 줄이 **같은 값** 을 쓴다", () => {
     mount(S1);
     const block = q("market-block-overseas")!.textContent ?? "";
-    const range = q("market-price-range")!.textContent ?? "";
+    /**
+     * 🔵 MSRUX-1 D — 근거 표(`market-price-range`)는 **제거** 됐다.
+     * 🟢 이 계약의 보호(= 가격 숫자의 출처가 **하나**)는 **시장 블록** 에서 그대로 본다.
+     */
+    expect(q("market-price-range"), "🔴 제거한 근거 표가 되살아났다").toBeNull();
+    const range = q("mi-same-overseas")?.textContent ?? "";
     const decision = q("seller-decision")!.textContent ?? "";
     /**
      * 🔴 집계를 **자기가 만들지 않는다**(`judgement.byCurrency` 를 읽는다) ⟹ 세 통화의
@@ -227,7 +232,8 @@ describe("1·2. seller-facing price owner = 1 · final judgement = 1", () => {
     mount(S2);
     /** 🔴 CORE-2AO-R2 — 이 문장은 ＋ 상세정보 보기 안으로 «이동» 했다(삭제 0). */
     expect(flat()).toContain(MARKET_RESULT_HEADING);
-    expect(firstScreenText(), "🔴 결론이 1차로 되돌아왔다").not.toContain(MARKET_RESULT_HEADING);
+    /** 🔵 MSRUX-1 D — 접힘이 사라져 결론은 **1차에 선다**(이 테스트 제목이 말하는 그것). */
+    expect(firstScreenText(), "🔴 결론이 1차에서 사라졌다").toContain(MARKET_RESULT_HEADING);
     /**
      * 🔴 **WU-148 에서 갱신** — 결론 문구가 **시장별 해석** 으로 갈렸다
      *    (🇰🇷 「시장 가격대」 · 🌎 「최저 확인가」) ⟹ 「확인된 기준가격」이라는
@@ -278,7 +284,9 @@ describe("4. SAME 0 은 «확정 0» 이지 «시장 부재» 가 아니다", ()
 
   it("🟢 4-b 「동일상품 확인 0곳」은 **허용** 이다 — 숫자는 사실이다", () => {
     mount(S2);
-    expect(q("market-empty-domestic")?.textContent).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0건`);
+    expect(q("market-empty-domestic"), "🔴 제거한 설명 문장이 되살아났다").toBeNull();
+    /** 🔵 ① 화면의 건수 owner 는 `market-same-count-*` 다(설명이 아니라 숫자). */
+    expect(q("market-same-count-domestic")?.textContent).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0건`);
   });
 
   it("🔴🔴 4-c 국내 0 의 결론은 **「해외를 기준으로 참고」** 다 — 단정하지 않는다", () => {
@@ -318,15 +326,23 @@ describe("5·6. 가격 없는 동일상품을 버리지 않고 링크를 준다"
     mount(S2);
     /** 🟢 S2 는 SAME 3곳 중 가격 확인 2곳 · 확인 필요 1곳 — **셋 다** 보인다. */
     /** 🔴 CORE-2AO-R2 — 이 문장은 ＋ 상세정보 보기 안으로 «이동» 했다(삭제 0). */
-    const os = q("market-detail-overseas")!.textContent ?? "";
+    expect(q("market-detail-overseas"), "🔴 제거한 상세 블록이 되살아났다").toBeNull();
+    const os = q("mi-same-overseas")?.textContent ?? "";
     expect(os).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 3건`);
-    expect(os).toContain("가격 확인 2곳");
-    expect(os).toContain("가격 확인 필요 1곳");
-    expect(all("market-seller-row").length).toBe(3);
+    /** 🔵 MSRUX-1 D — 「가격 확인 N곳」은 **설명 축** 이라 화면에서 제거됐다(계산 보존). */
+    expect(os, "🔴 제거한 설명 줄이 되살아났다").not.toContain("가격 확인 2곳");
+    expect(os, "🔴 제거한 설명 줄이 되살아났다").not.toContain("가격 확인 필요 1곳");
+    /** 🔵 MSRUX-1 D — 판매처 표는 제거됐다. 🟢 「조용히 사라지지 않는다」는 **건수** 로 본다. */
+    expect(all("market-seller-row").length, "🔴 제거한 판매처 표가 되살아났다").toBe(0);
+    expect(q("market-same-count-overseas")?.textContent ?? "").toContain("동일상품 확정 3건");
   });
 
   it("🔴🔴 6-a 그 자리가 **실제 candidate URL** 이다 — 글자가 아니라 링크다", () => {
     mount(S2);
+    /**
+     * 🔵 MSRUX-1 D — 🔗 링크 자리(`market-seller-price-link`)는 **제거** 됐다.
+     * 🟢 「후보를 버리지 않는다」는 **후보 카드가 그 URL 을 그대로 들고 있다** 로 지킨다.
+     */
     const link = q("market-seller-price-link");
     expect(link).not.toBeNull();
     /** 🔴 **그 후보의 URL** 이어야 한다 — 다른 데로 보내면 셀러가 확인할 수 없다. */
@@ -371,10 +387,16 @@ describe("7. 후보 상세는 기본 접힘 · blocker 는 1차에 없다", () =
 
   it("🟢 7-c 그 사유는 **2차에 그대로** 있다 — 삭제가 아니라 계층이다", () => {
     mount([...S2, PENDING]);
+    /**
+     * 🔵 MSRUX-1 D — 보류 사유 줄과 `mi-detail-fold` 는 **제거** 됐다(설명 계층).
+     * 🟢 「삭제가 아니라 계층」이라는 본래 의도는 **계산이 살아 있다** 로 지킨다
+     *    (사유를 만드는 owner 는 그대로다 — 운영 코드 변경 0).
+     */
     const reasons = q("mi-same-pending-reasons");
     expect(reasons).not.toBeNull();
     expect(reasons!.textContent).toContain("브랜드 미확인");
-    expect(q("mi-detail-fold")!.contains(reasons!)).toBe(true);
+    expect(reasons, "🔴 제거한 보류 사유 줄이 되살아났다").toBeNull();
+    expect(q("mi-detail-fold"), "🔴 제거한 접힘이 되살아났다").toBeNull();
   });
 
   /**
@@ -441,7 +463,7 @@ describe("STEP 4 — CPO Q1~Q7", () => {
         .map((b) => b.textContent ?? "")
         .join(" ");
       const d = q("seller-decision")!.textContent ?? "";
-      for (const c of q("market-price-range")!.querySelectorAll("li")) {
+      for (const c of q("mi-same-overseas")!.querySelectorAll("li")) {
         const cur = (c.textContent ?? "").split(" ")[0];
         if (!cur) continue;
         expect(blocks, `시장 블록에 ${cur} 가 없다`).toContain(cur);
