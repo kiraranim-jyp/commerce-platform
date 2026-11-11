@@ -328,6 +328,13 @@ describe("CORE-2E D — 마운트 DOM(화면이 실제로 그 말을 하는가)"
       row({ priceCurrency: "USD", priceAmount: 58, discoveredUrl: "https://o.example/1" }),
     ]);
     const range = txt("market-price-range");
+    /**
+      * 🔵 MSRUX-1 D — `market-price-range`(근거 표)는 **제거됐다**. 🔴 그래서 「그 구역에
+      *    환산이 없다」는 단언의 대상이 사라졌다 ⟹ **제거 단언 + 보존 단언** 으로 바꾼다:
+      *    환산 금지 축은 **남아 있는 가격 자리**(1차 블록)에서 계속 본다.
+      */
+     expect(range, "🔴 제거한 근거 표가 되살아났다").toBe("");
+     return;
     expect(range).toContain("KRW");
     expect(range).toContain("USD");
     expect(range, "🔴 그 구역에 환산을 넣으면 통화를 합친 것으로 읽힌다").not.toContain("약");

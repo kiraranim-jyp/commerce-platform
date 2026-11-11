@@ -36,3 +36,57 @@
 2. 127건 전수 분류·갱신
 3. B·D·C 통합 회귀 · typecheck · build
 4. **전부 PASS 일 때만** main 병합 → Production 배포 확인
+
+---
+
+# 📋 계약 스윕 진행표 (묶음마다 갱신·커밋한다)
+
+🔴 **다음 세션은 처음부터 다시 재지 않는다** — 아래 표가 기준이다.
+🔴 분류 규칙: **유지**(존재·내용 보존 단언) · **제거**(제거 단언 **+ 보존 단언 동반**) ·
+**이동**(owner 가 바뀐 것). 🔴 skip·무력화·제외 **금지**.
+
+```
+기준     24f1a84a (D 회귀 수정 완료) · 전체 125 failed / 35 파일
+갱신 뒤  (묶음마다 아래 표의 「남은」 열을 고친다)
+```
+
+| 파일 | 실패 | 분류 | 갱신 | 결과 | 비고 |
+|---|---:|---|---:|---|---|
+| core-2t-domestic-price-band | 1 | 제거(설명문장)+유지(건수줄) | 1 | 🟢 PASS | `market-empty-*` 제거 ⟹ `market-same-count-*` 로 본다 |
+| core-2e-price-purpose | 1 | 제거(`market-price-range`) | 1 | 🟢 PASS | 환산 금지 축은 **남은 가격 자리**에서 본다 |
+| price-display-layout | 1 | 제거(ⓘ 토글·펼침) | 1 | 🟢 PASS | 🔴 **주석을 벗기고** 본다(내 주석에 그 글자가 있다) |
+| core-2s-seller-screen | 10 | — | 0 | 🔴 남음 | |
+| wu-140-market-first | 8 | — | 0 | 🔴 남음 | |
+| seller-surface-render-harness-1 | 8 | — | 0 | 🔴 남음 | |
+| wu-146-seller-decision-contract | 7 | — | 0 | 🔴 남음 | |
+| core-2ao-r1-screen-dump | 7 | — | 0 | 🔴 남음 | |
+| wu-136-market-judgement-render | 6 | — | 0 | 🔴 남음 | |
+| core-2v-seller-reading-order | 6 | — | 0 | 🔴 남음 | |
+| core-2u-domestic-price-meaning | 6 | — | 0 | 🔴 남음 | |
+| wu-145-seller-decision-screen | 5 | — | 0 | 🔴 남음 | |
+| wu-144-seller-decision-e2e | 4 | — | 0 | 🔴 남음 | |
+| r2-final-price-and-cta | 4 | — | 0 | 🔴 남음 | |
+| product-tab-mounted | 4 | — | 0 | 🔴 남음 | |
+| product-tab-first-screen | 4 | — | 0 | 🔴 남음 | |
+| mi-ux-final | 4 | — | 0 | 🔴 남음 | |
+| mi-polish | 4 | — | 0 | 🔴 남음 | |
+| core-ux-seller-01-decision-order | 4 | — | 0 | 🔴 남음 | |
+| core-ux-rebuild-01-exposure-depth | 4 | — | 0 | 🔴 남음 | |
+| wu-148-market-price-signal | 3 | — | 0 | 🔴 남음 | |
+| wu-139-price-guide | 3 | — | 0 | 🔴 남음 | |
+| wu-136-market-judgement | 3 | — | 0 | 🔴 남음 | |
+| core-next-step4-recommended-price | 3 | — | 0 | 🔴 남음 | |
+| wu-133-pending-note-render | 2 | — | 0 | 🔴 남음 | |
+| wu-132-mi-same-price-comparison | 2 | — | 0 | 🔴 남음 | |
+| mi-simplify | 2 | — | 0 | 🔴 남음 | |
+| core-ux-rebuild-02-price-candidate | 2 | — | 0 | 🔴 남음 | |
+| (1건짜리 7파일) | 7 | — | 0 | 🔴 남음 | reference-profitability-production-wiring-1 · reference-price-profitability-axis-1 · price-single-surface · price-judgement-card · mi-ux-final-4 · core-2w-price-qualification · core-2r5-domestic-reference-to-mi |
+
+## 🔴 묶음 1 에서 배운 함정 둘(다음 묶음이 반복하지 않게)
+
+```
+⒜ **주석을 벗기지 않는 소스 계약이 있다** — 내가 쓴 설명 주석에 제거 대상 글자가 들어가
+   「되살아났다」로 FAIL 한다. ⟹ 제거 단언은 **주석 제거 뒤** 본다.
+⒝ 테스트마다 **쓸 수 있는 변수가 다르다**(`el`·`panel`·`range`) — 보존 단언을 더할 때
+   그 스코프에 **실제로 있는** 변수만 쓴다(없는 이름을 쓰면 `is not defined` 로 죽는다).
+```
