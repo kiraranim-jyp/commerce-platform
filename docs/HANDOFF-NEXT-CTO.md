@@ -1221,3 +1221,135 @@ MarketBlock  sameCount === 0 → <OverseasReferencePrice>  = 서버 집계(SAME 
    `sellerKey` 를 넣으면 **미래의 중복만** 접는다(지금은 효과 0)
 🔴 START-HERE.md · CTO-HANDOVER-NEXT.md 는 **건드리지 않았다**(보존 40건)
 ```
+
+---
+
+# 26. 🔵🔵🔵 **MI-SELLER-PRICE-RECOMMENDATION-VALIDATION-1 — 판정 완료** (2026-11-11)
+
+🔴🔴 **새 페이지는 §23-0(전략) + §24 + §25 + 이 절만 읽는다.**
+
+## 26-0. 🟢 결론
+
+```
+🟢 추천가격 사슬(원가 → CASE → 추천가)은 **실제 상품 16개에서 정책대로 돈다** — 오류 0
+🔴 거짓 하나를 찾아 고쳤다 — **CASE C 의 «근거 문장» 이 숫자와 모순됐다**
+   「국내 최저가 ₩202,000가 착지원가 ₩189,900보다 **낮아** …」 ⟹ 🔴 **202,000 > 189,900**
+🟢 WU-021 이 「환율이 없어 marketCase 를 측정하지 못했다」고 남긴 **구멍을 닫았다**
+```
+
+## 26-1. 🟢 owner 와 계산 구조 (재조사 금지)
+
+```
+A 추천가격   computePriceRecommendation (packages/pricing/src/price-recommendation.ts:120)
+  입력      totalCostKrw = cost.landedCostKrw          ← computePriceBreakdown(…, rates)
+            domesticLowestPriceKrw / domesticBasis     ← summarizeDomesticMarketSplit(:690)
+            minimumMarginPercent **10 하드코딩** · targetMarginPercent/expectedFeePercent
+            ← breakdownInput = product.priceBreakdown ?? **폼 기본값**(fee 10 · margin 12 · ship 12,000)
+            brandMedianPriceKrw ← usableBrandMarketProfile
+  🔴 목표가 = 원가 ÷ (1 − 마진)  (**곱셈이 아니다** — 1차에 내 기대값이 틀렸다)
+  CASE  D basis≠EXACT 또는 최저가 없음 → 추천가 **null**(brandMedian 은 참고치만)
+        C netProfitAt(시장가) ≤ 0 → 추천가 **null**  🔴 경계는 **수수료 뺀 뒤**(MI-P0-COST-02)
+        A 시장가 ≥ 목표가 → max(목표가, round(시장가×0.99))
+        B 그 외 → **시장가 그대로**(시장가보다 비싸게 추천하지 않는다 · P-26)
+  🔴 사슬 전체가 `canComputeCost && shippingKrw != null` **가드 안** 이다 ⟹ 환율/원가가
+     없으면 `recommendation = null` 이고 MI 는 `recommendedPriceKrw: … ?? null` 을 내보낸다
+     (🔴 원가 역산값 `cost.suggestedPriceKrw` 로 **메우지 않는다** — P-24 결함 방지)
+B 판매 추천  computeSellability(:663) → deriveRepresentativeSellerVerdict(:675)
+            → toSellerFacingVerdict(:698) → `{code, icon, title, reasons}`
+  🔴 NOT_RECOMMENDED 는 **`HOLD` 하나에서만** 온다(`SELLER_FACING_MAP`)
+  🔴 CASE B(목표마진 미달)는 **HOLD → 🔴 판매 비추천** 이다(`MI-SELLER-POLICY-A` · CEO 승인)
+```
+
+## 26-2. 🟢 실제 상품 16개 — 입력과 출력 (운영 DB 실데이터 · 읽기 전용)
+
+```
+상품                        원가입력   착지원가  국내basis   국내최저   CASE  추천가    마진%  최종판정
+Bobo AAA1804424            150 EUR    238,119  NONE           -      D    없음      -     🟡 조건부
+Bonjour                     73 GBP    143,900  NONE           -      D    없음      -     🟡 조건부
+BOBO CHOSES              16,500 JPY   152,693  NONE           -      D    없음      -     🟡 조건부
+Wynken WK21W97              91 GBP    176,424  NONE           -      D    없음      -     🟡 조건부
+Bobo AAA1804916             50 EUR     87,373  NONE           -      D    없음      -     🟡 조건부
+True Artist                126 GBP    239,664  NONE           -      D    없음      -     🟡 조건부
+Pèpè 01195-VERNICE-NERO    119 GBP    227,016  EXACT      258,000    B    258,000   12    🔴 비추천
+Pèpè (200 GBP)             200 GBP    373,371  EXACT      258,000    C    없음      -     🔴 비추천
+Main Story AW26MS185        57 GBP    114,991  COMPARISON 117,000    D    없음      -     🟡 조건부
+(브랜드 공백)                40 EUR     72,298  NONE           -      D    없음      -     🟡 조건부
+Main Story                  57 GBP    114,991  NONE           -      D    없음      -     🟡 조건부
+Wynken                      91 GBP    176,424  NONE           -      D    없음      -     🟡 조건부
+Bobo (KRW 원상품)        177,900 KRW   189,900  EXACT      202,000    C    없음      -     🔴 비추천
+Bobo B226AC010              37 GBP     78,854  EXACT       88,000    B     88,000  10.4   🔴 비추천
+Bobo B126AI018            21.6 GBP     51,028  EXACT       78,400    A     77,616  34.3   🟢 추천
+Bobo B226AC009              37 GBP     78,854  EXACT       88,000    B     88,000  10.4   🔴 비추천
+요약 — 상품 **16** · 추천가 산출 **4** · CASE D **10**(국내 EXACT 근거 없음)
+```
+
+🟢 **정합성 — 전건 통과**: ① basis≠EXACT ⇒ CASE D ∧ 추천가 null ② 추천가 존재 ⇒ CASE A|B
+③ 추천가 > 착지원가(**손실 추천 0**) ④ 표기 마진 == `marginPercentAt(추천가, 원가)`
+⑤ CASE A ⇒ 추천가 ≥ 목표가 · CASE B ⇒ 추천가 == 시장가 ⑥ CASE D ⇒ **🟢 추천이 아니다**
+⑦ 🟢 추천 ⇒ 추천가가 있다 ⑧ 추천이 아니면 **근거가 비어 있지 않다**
+
+🔴 **「CASE B + 추천가 + 🔴 비추천」은 모순이 아니다** — 목표마진 미달이면 HOLD 라는
+**CEO 승인 정책**(`MI-SELLER-POLICY-A`)이고 근거가 「예상 마진 10.4%」로 그 이유를 말한다.
+🟢 이 WU 는 그 정책을 **바꾸지 않았고** 계약으로 **잠갔다**(누가 완화하면 FAIL 한다).
+
+## 26-3. 🔴 고친 것 — CASE C 근거 문장 (운영 1 파일 · 판정 0)
+
+```
+🔴 전  `국내 최저가 ₩202,000가 착지원가 ₩189,900보다 **낮아** 시장가로 팔면 손해입니다`
+🟢 후  `국내 최저가 ₩202,000에서 착지원가 ₩189,900와 **예상 수수료를 빼면 남지 않습니다**`
+🔴 원인 — `MI-P0-COST-02` 가 CASE C 경계를 **Net(수수료 뺀 값)** 으로 옮겼는데 **사유 문장이
+   따라오지 않았다** ⟹ 최저가가 원가보다 **높아도** CASE C 가 되고 그때 문장이 거짓이 된다
+🟢 **두 모양을 가른다** — 진짜로 더 낮으면 **기존 문장 그대로**(Pèpè 258,000 < 373,371 실측)
+🔴 수수료 **금액을 적지 않는다** — CASE C 는 `netProfitKrw` 가 null 이다(없는 숫자를 만들지 않는다)
+🔴 **변경 0** — CASE 판정 · 추천가 공식 · verdict 매핑 · 마진/수수료 기본값 · 국내 basis ·
+   집계 · 차액(추가 금지) · UI
+```
+
+## 26-4. 🟢 검증
+
+```
+신규 계약  mspr-1-recommendation-trace (11건)
+  실측 1건  실제 상품 16개(LIVE · `MSPR1_OUT_DIR` 덤프) — 위 표 + 불변식 ①~⑧
+  S1~S10    CPO §4 시나리오 — EXACT/유사만/근거없음/손실/목표미달/전수 경계/가드/CASE 집합/
+            🔴 **S10 = 이 WU 가 고친 거짓**(양방향: 거짓 문구 복귀 금지 + 참이던 문구 보존)
+음성대조   P1 사유 분기 제거 **1F** · P2 비교 뒤집기 **1F** · P3 CASE D 가드 제거 **3F** ·
+           P4 CASE C 경계 되돌림 **2F** · P5 CASE C 추천가 생성 **4F** · P6 목표가 무시 **3F**
+           🟢 전부 적용 확인 · 원상복구 **바이트 동일**
+회귀 **848 files / 10,809 passed · 0 failed** · tsc **0** · build **exit 0**
+```
+
+🔴 **내가 이 구간에서 틀린 것 넷 — 다시 밟지 않는다**:
+```
+⒜ 표본을 `order by links desc` 로 뽑아 **같은 상품 12개** 가 나왔다(상품 5개 요건 미충족)
+   → `(brand, sku)` 단위 `row_number() = 1` 로 고쳤다
+⒝ 목표가를 **원가×(1+마진)** 으로 가정했다 — 실제는 **원가÷(1−마진)** 이라 CASE B 창이
+   111,112~113,635 다(내 기대값이 틀렸고 코드가 맞았다)
+⒞ 소스 검사에서 **주석을 벗기지 않아** P-24 주석의 설명 문장에 걸렸다(아홉 번째)
+⒟ 🔴 `JSON.stringify(facing).includes("RECOMMENDED")` 로 추천을 판정했다 ⟹
+   **`NOT_RECOMMENDED` 안의 `RECOMMENDED`** 가 걸려 「판매 비추천」을 「추천」으로 읽었다
+   → enum 은 **부분문자열로 비교하지 않는다**(칸을 타입에서 읽어 동등 비교)
+⒠ 정규식을 파이썬 heredoc 으로 편집해 `\r\n` 이 **실제 줄바꿈** 으로 박혔다(세 번째)
+   → `split/join` 으로 바꿨다
+```
+
+## 26-5. 🔴 측정불가 / 잔여 위험
+
+```
+🔴 운영의 최종 verdict·CASE 는 **DB 에 저장되지 않는다** ⟹ 「운영이 낸 그 값을 재현했다」가
+   아니다(WU-021 과 같은 한계). 🟢 **입력** 은 운영 실데이터다(스냅샷 16 · 관측 146 · 링크 10)
+🔴 국내 basis EXACT 는 **6/16** 뿐이다 — CASE A/B/C 표본이 그만큼 좁다(A 1 · B 3 · C 2)
+🔴 `brandMedianPriceKrw` 는 실측에서 **전건 null** 로 넣었다(그 profile 을 덤프하지 않았다)
+   ⟹ CASE D 의 `referencePriceKrw` 경로는 **시나리오 테스트로만** 검증했다
+🔴 실제 따져 화면은 CTO 가 볼 수 없다 ⟹ **Production UI PASS 로 적지 않는다**
+🔴 A/B 가격 표시 동결(`§0-FREEZE`)은 **건드리지 않았다** — 재조사도 하지 않았다
+```
+
+## 26-6. 🔵 다음 한 수
+
+```
+🟡 CEO 화면 확인이 필요하면 좌표는 **CASE C 가 난 KRW 원상품**(착지원가 189,900 ·
+   국내 최저 202,000) 하나다 — 그 사유 한 줄이 「수수료를 빼면 남지 않습니다」로 바뀌었다
+🔵 전략 ①②③ 이 닫혔다 ⟹ 다음은 ④ **후보 템플릿 통일** 또는 ⑤ **전상품 E2E** (CPO 지정)
+🔴 열어 둔 것 — CASE A/B/C 표본이 6상품뿐이다. 국내 EXACT 공급이 늘면 **그때 다시 잰다**
+🔴 START-HERE.md · CTO-HANDOVER-NEXT.md 는 건드리지 않았다(보존 40건)
+```

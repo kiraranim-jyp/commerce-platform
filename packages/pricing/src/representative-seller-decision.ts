@@ -148,9 +148,30 @@ function applyMarketCaseGuard(verdict: RepresentativeVerdict, input: Representat
   if (input.marketCase === "A" || input.marketCase === "D") return verdict;
 
   if (input.marketCase === "C") {
+    /**
+     * ════════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 MI-SELLER-PRICE-RECOMMENDATION-VALIDATION-1 — **이 문장이 거짓이었다**
+     * ════════════════════════════════════════════════════════════════════════
+     *
+     * 🔴🔴 **운영 실데이터에서 숫자가 문장을 반증했다**(읽기 전용 측정 2026-11-11):
+     * ```
+     * Bobo Choses(원상품 ₩177,900 KRW) 착지원가 **189,900** · 국내 최저가 **202,000** → CASE C
+     * 전 문장: 「국내 최저가 ₩202,000가 착지원가 ₩189,900보다 **낮아** …」  🔴 **202,000 > 189,900**
+     * ```
+     * 🔴 원인은 **CASE C 의 경계가 옮겨졌는데 이 문장이 안 따라온 것** 이다 —
+     *    `MI-P0-COST-02` 가 손익 경계를 `marketPrice <= landedCost` 에서
+     *    **`netProfitAt(marketPrice) <= 0`**(= 수수료까지 뺀 값)으로 바꿨다.
+     *    ⟹ 최저가가 원가보다 **높아도** CASE C 가 될 수 있고, 그때 이 문장은 거짓이다.
+     * 🟢 그래서 **두 모양을 가른다.** 🔴 판정·CASE·추천가는 **한 글자도** 바뀌지 않는다 —
+     *    바뀌는 것은 **셀러가 읽는 사유 한 줄** 이다.
+     * 🔴 수수료 **금액을 적지 않는다** — 이 입력에 그 값이 없다(CASE C 는 `netProfitKrw`
+     *    가 `null` 이다). 없는 숫자를 만들지 않고 **사실만** 적는다.
+     */
     const lossReason =
       input.domesticLowestPriceKrw != null && input.landedCostKrw != null
-        ? `국내 최저가 ₩${input.domesticLowestPriceKrw.toLocaleString()}가 착지원가 ₩${input.landedCostKrw.toLocaleString()}보다 낮아 시장가로 팔면 손해입니다`
+        ? input.domesticLowestPriceKrw <= input.landedCostKrw
+          ? `국내 최저가 ₩${input.domesticLowestPriceKrw.toLocaleString()}가 착지원가 ₩${input.landedCostKrw.toLocaleString()}보다 낮아 시장가로 팔면 손해입니다`
+          : `국내 최저가 ₩${input.domesticLowestPriceKrw.toLocaleString()}에서 착지원가 ₩${input.landedCostKrw.toLocaleString()}와 예상 수수료를 빼면 남지 않습니다`
         : "국내 시장가로 판매하면 착지원가를 회수하지 못합니다";
     return {
       ...VERDICT_COPY.HOLD,
