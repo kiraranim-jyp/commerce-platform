@@ -178,7 +178,12 @@ describe("A. 🇰🇷 국내 — 가격이 먼저, 판정이 뒤", () => {
     const same = html.indexOf('data-testid="market-empty-domestic"');
     expect(price, "🔴 1차에 국내 가격이 없다").toBeGreaterThan(-1);
     expect(count, "🔴 1차의 「동일상품 확인 N곳」 숫자 줄이 사라졌다").toBeGreaterThan(-1);
-    expect(same, "🔴 「동일상품 확인 0곳」 근거 문장이 사라졌다(상세에도 없다)").toBeGreaterThan(-1);
+    /**
+     * 🔵 MSRUX-1 D — 근거 **문장**(`market-empty-*`)은 제거됐다. 🟢 같은 사실의 owner 는
+     *    **건수 줄**(`market-same-count-*`)이고 그것은 **1차에 그대로** 있다(위 count).
+     * 🔴 제거 단언과 보존 단언을 **쌍** 으로 둔다.
+     */
+    expect(same, "🔴 제거한 근거 문장이 되살아났다").toBe(-1);
     /** ⒜ 🔴 가격이 **먼저** 다 — 되돌리면 셀러가 「0 이니까 가격도 없다」로 읽는다. */
     expect(price, "🔴 동일상품 확인 수가 가격보다 먼저 온다 — 셀러가 「없다」로 읽는다").toBeLessThan(count);
     /** ⒝ 🟢 **숫자는 1차에 있다**(CORE-UX-SELLER-02 의 목적). */
@@ -197,11 +202,12 @@ describe("A. 🇰🇷 국내 — 가격이 먼저, 판정이 뒤", () => {
   it("A-3 🔴 「🔎 동일상품 확인」 라벨이 가격 줄과 판정 줄을 가른다(상세 안)", () => {
     const el = mount({ rows: ROWS, domesticReference: KR_REF });
     /** 🔴 CORE-2AO-R2 — 이 라벨은 **상세** 로 내려갔다(삭제 0 · 자리만 바뀌었다). */
-    const block = q(el, "market-detail-domestic") as HTMLElement;
-    expect(block.textContent).toContain(SAME_CHECK_HEADING);
+    const block = q(el, "market-detail-domestic");
+    expect(block, "🔴 제거한 상세 블록이 되살아났다").toBeNull();
     /** 🔴 라벨은 판정 줄 **앞** 이다(그 사이가 그 라벨의 자리다). */
-    const html = block.innerHTML;
-    expect(html.indexOf(SAME_CHECK_HEADING)).toBeLessThan(html.indexOf('data-testid="market-empty-domestic"'));
+    const html = el.innerHTML;
+    expect(html.indexOf('data-testid="market-empty-domestic"'), "🔴 제거한 문장이 되살아났다").toBe(-1);
+    expect(text(el, "market-same-count-domestic")).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0건`);
     /** 🔴 1차에는 없다 — CPO 제거 목록의 「동일상품 여부에 대한 긴 설명」이다. */
     expect(firstScreen(el)).not.toContain(SAME_CHECK_HEADING);
   });
@@ -209,7 +215,9 @@ describe("A. 🇰🇷 국내 — 가격이 먼저, 판정이 뒤", () => {
   /** 🟢 「0곳」이라는 **숫자 자체는 남긴다** — 사실이고, 지우면 WU-145 가 되돌아간다. */
   it("A-4 🟢 「동일상품 확인 0곳」은 그대로 있다(숨기지 않는다)", () => {
     const el = mount({ rows: ROWS, domesticReference: KR_REF });
-    expect(text(el, "market-empty-domestic")).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0건`);
+    /** 🔵 MSRUX-1 D — `market-empty-*`(문장) → `market-same-count-*`(건수 줄)로 owner 이동. */
+    expect(text(el, "market-same-count-domestic")).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0건`);
+    expect(q(el, "market-empty-domestic"), "🔴 제거한 문장이 되살아났다").toBeNull();
   });
 });
 
@@ -246,10 +254,12 @@ describe("B. 🌎 해외 — 1차 · 통화 분리", () => {
     /** 🔴 CORE-2AO-R2 — 🇰🇷 와 **같은 처리** 다(A-2 참조). 두 시장이 대칭을 유지한다. */
     const html = el.innerHTML;
     const price = html.indexOf('data-testid="overseas-lowest"');
-    const same = html.indexOf('data-testid="market-empty-overseas"');
+    /** 🔵 MSRUX-1 D — 🇰🇷 와 **같은 이동** 이다(A-2/A-4 참조) · 대칭을 유지한다. */
+    const same = html.indexOf('data-testid="market-same-count-overseas"');
     expect(price).toBeGreaterThan(-1);
-    expect(same).toBeGreaterThan(-1);
-    expect(price).toBeLessThan(same);
+    expect(same, "🔴 해외 건수 줄이 사라졌다").toBeGreaterThan(-1);
+    expect(price, "🔴 건수가 가격보다 먼저 온다").toBeLessThan(same);
+    expect(html.indexOf('data-testid="market-empty-overseas"'), "🔴 제거한 문장이 되살아났다").toBe(-1);
   });
 });
 
