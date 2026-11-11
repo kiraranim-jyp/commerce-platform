@@ -1,4 +1,6 @@
 import { computePriceBreakdown, DEFAULT_PRICE_BREAKDOWN_INPUT, DEFAULT_PRICE_ROUNDING_UNIT, type PriceBreakdownInput } from "./breakdown";
+/** 🔴 「모르는 통화는 null」 의 owner — 새 환산 규칙을 만들지 않는다(아래 ③ 가드가 쓴다). */
+import { convertToKrwStrict } from "./currency";
 
 /**
  * P-4-H1-2-2(대표님 지시, 2026-08-28) — 실제 등록가(쿠팡/스마트스토어 어댑터가
@@ -128,6 +130,34 @@ export function resolveListingPrice(
     liveRates,
     roundingUnit,
   );
+
+  /**
+   * ════════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 MI-PRICE-COMPARISON-AND-DECISION-FINAL-E2E ③ — **환율을 모르면 원가가 없다**
+   * ════════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 위 가드는 **통화가 «비었을» 때** 를 막는다. 그런데 통화가 **있지만 환율표에 없을 때**
+   *    는 빠져나간다 — `convertToKrw` 가 모르는 통화의 금액을 **그대로 원화로** 돌려주기
+   *    때문이다(바로 위 주석이 적어 둔 「P0-B 의 CAD 84 → ₩84」 그 자리).
+   * 🔴 실측(함수 계약): `37 XYZ` + 배송비 12,000 → 권장가 **₩15,430** 이 났다.
+   *    상품 가격이 한 푼도 들어 있지 않은 숫자이고 이름은 「권장 판매가」다.
+   * 🟢 그래서 **「모르면 null」 을 주는 owner**(`convertToKrwStrict`)로 환산 가능성을 먼저 본다.
+   *    🔴 새 환율표·새 규칙·새 공식 **0** — 후보 원화 환산이 쓰는 그 함수 하나를 재사용한다.
+   *
+   * 🟢🟢 **오늘 운영 숫자는 한 원도 바뀌지 않는다**(실측 2026-11-11 · 원상품 통화 전수):
+   *    GBP 254 · EUR 242 · USD 90 · KRW 28 · JPY 20 · CAD 2 · 빈 값 12
+   *    ⟹ 환율표(12통화)에 **전건 있거나**(🟢 KRW 는 항등) **위 가드가 이미 막는다**(빈 값)
+   *    ⟹ 🔴 이 가드가 막는 것은 **새 통화가 들어오는 날** 의 거짓 가격이다
+   *       (후보에서는 이미 `TWD` 가 관측됐고 그 통화는 환율표에 **없다**).
+   */
+  if (convertToKrwStrict(input.originalAmount, input.originalCurrency, liveRates) == null) {
+    return {
+      priceKrw: null,
+      source: "UNRESOLVED",
+      isEstimate: true,
+      reason: "환율을 확인하지 못해 원가를 계산할 수 없습니다.",
+    };
+  }
 
   if (!(breakdown.suggestedPriceKrw > 0)) {
     return {

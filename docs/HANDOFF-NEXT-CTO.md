@@ -1695,3 +1695,108 @@ MI owner     `computePriceRecommendation`      ← **B**(시장가 기준 CASE A
    하나를 실제로 분석하면 된다(새 코드 0 · 기존 하니스에 상품 하나 추가)
 🔴 START-HERE.md · CTO-HANDOVER-NEXT.md 는 건드리지 않았다(보존 40건)
 ```
+
+---
+
+# 30. 🔵🔵🔵 **MI-PRICE-COMPARISON-AND-DECISION-FINAL-E2E — 세 조건 확보 · 두 목표 종료** (2026-11-11)
+
+🔴🔴 **새 페이지는 §23-0 + §24~§29 + 이 절만 읽는다.**
+
+## 30-0. 🟢 결론
+
+```
+🟢 ① 국내 ∧ 해외 동시 E2E   — **실제 상품 1개** 로 끝까지(표본을 만들지 않았다)
+🟢 ② VERIFIED_CURRENT 카드  — 「참고가격에 반영」 **3장** 이 집계 금액 안에 있다
+🟢 ③ 원가 부족 경로         — 함수 계약 5건 · 🔴 **그 과정에서 실제 결함 1건을 찾아 고쳤다**
+```
+
+## 30-1. 🟢 ① 국내 ∧ 해외 가격 동시 E2E — `7b16eecc` (Bobo Choses **B226AC009**)
+
+🔴 **표본 찾기에서 내가 축을 틀렸다** — 「`domestic_product_links` ∧ 해외 후보」로 찾으니
+**운영 전체 0건** 이었다. 🔴 그런데 화면의 국내 참고가격 owner 는 그 축이 **아니다**
+(`candidateDomesticPrice` = transient 후보 집계 · §24-1). 🟢 후보 축으로 다시 찾아 **8 상품**.
+
+```
+시장      판매처                 원본가      KRW 환산   tier         priceStatus        카드 상태
+OVERSEAS  junioredition.com     GBP 33      59,626    COMPARISON   VERIFIED_CURRENT   참고가격 제외(상품 차이)
+UNKNOWN   bobochoses.com        EUR 40      60,298    EXACT        VERIFIED_CURRENT   **참고가격에 반영**
+OVERSEAS  tinyapple.net         USD 41      55,218    EXACT        VERIFIED_CURRENT   **참고가격에 반영**
+OVERSEAS  peipeicollection.com  TWD 1,980   **없음**   COMPARISON   PRICE_UNAVAILABLE  (줄 없음)
+OVERSEAS  kihanan.com           JPY 7,590   64,719    COMPARISON   UNVERIFIED_SEARCH  (줄 없음)
+KR        donokids.com          KRW 88,000  88,000    COMPARISON   VERIFIED_CURRENT   **참고가격에 반영**
+KR        vividvia.com          KRW 88,000  88,000    COMPARISON   VERIFIED_CURRENT   참고가격 제외(상품 차이)
+🇰🇷 집계 **1곳 · 88,000**   🌎 집계 **EUR 40×1 · USD 41×1**
+원가 37 GBP → 착지원가 **78,854** · CASE **D** · B 추천가 **없음** · A 권장가 **101,090**
+```
+🟢 **Workspace 출력** — 🇰🇷/🌎 **두 블록이 같은 화면에** 서고, `domestic-lowest` 가 **88,000**
+그대로이며, 후보 수가 선택기 산출과 **두 시장 각각 일치**. 🟢 TWD 는 환율표에 없어 **환산 없음**
+(🔴 숫자를 지어내지 않는다) · 미확인/제외/반영이 **서로 구분** 된다.
+🔴 CASE D 는 **정상** 이다 — 이 상품의 `domesticBasis` 입력은 등록부 축이고 그 축이 비었다
+(후보 축 참고가격은 **그 입력이 아니다** · 분모 분리 유지).
+
+## 30-2. 🟢 ② VERIFIED_CURRENT 후보의 카드 ↔ 집계 일치
+
+```
+VERIFIED 후보 5 · 「반영」 카드 **3장**(bobochoses EUR 40 · tinyapple USD 41 · donokids KRW 88,000)
+🔴 단언 — 「반영」이면 **그 통화 집계 칸이 존재** 하고 금액이 **[최저, 최고] 범위 안** 이다
+🟢 화면의 `data-use="USED"` 카드 수 == 계산한 「반영」 수(🇰🇷+🌎 합산)
+🔴 집계 분모·자격·상태 분류 **변경 0**
+```
+🔴 **내가 분모를 좁혀 1차 FAIL 했다** — 해외만 세고 DOM 은 두 시장을 세어 `1 ↔ 2` 가 됐다
+(국내 donokids 도 「반영」이다). 🟢 카드 축을 **두 시장** 으로 맞췄다.
+
+## 30-3. 🔴🔴 ③ 원가 부족 경로 — **함수 계약** · 실제 결함 1건 수정
+
+```
+③-1 금액 0            → 권장가 **null** 🟢 (기존 가드)
+③-2 배송비 null       → 권장가 **null** 🟢 (기존 가드 · 「비운 값이 되살아나지 않는다」)
+③-3 🔴 **환율표에 없는 통화** → **₩15,430 이 났다**(37 XYZ + 배송비 12,000)
+    🔴 `convertToKrw` 가 모르는 통화의 금액을 **그대로 원화로** 돌려준다 —
+       그 파일 주석이 적어 둔 「P0-B 의 CAD 84 → ₩84」 그 자리다
+    🟢 **고쳤다** — `convertToKrwStrict`(「모르면 null」 owner)로 환산 가능성을 먼저 본다
+③-4 원가 0 → B 추천가 **null** · CASE **D** 🟢
+③-5 대조군 — 입력이 갖춰지면 **A·B 둘 다 산출된다**(가드가 과하지 않다)
+```
+
+🟢🟢 **오늘 운영 숫자는 한 원도 바뀌지 않는다**(원상품 통화 전수 실측):
+```
+GBP 254 · EUR 242 · USD 90 · KRW 28 · JPY 20 · CAD 2 · 빈 값 12
+⟹ 환율표(12통화)에 **전건 있거나**(🟢 KRW 는 항등) **기존 가드가 이미 막는다**(빈 값 12)
+⟹ 🔴 이 가드가 막는 것은 **새 통화가 들어오는 날** 의 거짓 가격이다
+   (후보에서는 이미 **TWD** 가 관측됐고 그 통화는 환율표에 **없다**)
+```
+🔴 변경은 **운영 1 파일 · 가드 1개**(`packages/pricing/src/listing-price.ts`) — 공식·마진·수수료·
+CASE·분모·A/B 정책 **전부 불변**.
+
+## 30-4. 🟢 검증
+
+```
+신규 계약  mpcd-2-final-e2e (**7건**) — ① 실제 상품 1개 전 흐름 + Workspace · ② 카드↔집계 ·
+           ③ 함수 계약 5(🔴 「운영 실측이 아니라 계약」임을 파일에 명시)
+회귀       **852 files / 10,835 passed · 0 failed**(두 번째 실행)
+           🔴 **1차 실행에서 2건 FAIL 했고 규명했다** — `lotteon-final-06` ·
+              `step3fix-settings-reach-screen` 이고 **단독 실행 25/25 통과** ·
+              2차 전체 실행 **0 failed** ⟹ **병렬 간섭(flaky)** 이고 이 변경과 무관하다
+           🔴 「flaky 니까 넘어간다」로 적지 않는다 — 단독·재실행 **두 증거** 로 가렸다
+tsc        🔴 **한때 2건** 이었다(내 테스트가 `domesticAveragePriceKrw` 필수 칸을 빠뜨렸다) →
+           🟢 타입이 잡아 고쳤다 · 최종 **0**
+build      exit 0
+```
+
+## 30-5. 🟡 Production UI / 배포
+
+```
+배포      🟢 **운영 코드가 바뀌었다**(`listing-price.ts`) ⟹ 이번에는 **배포가 생성된다**
+Production UI 🔴 **미확인** — CTO 가 볼 수 없다(화면 축은 마운트 DOM)
+🟢 화면 영향 — **오늘 데이터에서는 0** 이다(위 §30-3 의 통화 전수 근거)
+```
+
+## 30-6. 🟢 두 목표 종료 상태
+
+```
+A 가격 비교   🟢 수집·집계·카드·화면이 **실제 상품 1개에서 끝까지** 일치한다(§30-1·§30-2)
+B MI 판단     🟢 원가·CASE·추천가·화면 owner 가 정책대로 연결된다(§29·§30-3)
+🟡 남은 것은 **CEO 실화면 확인 1회** 뿐이다 — 좌표는 `7b16eecc`(B226AC009):
+   「🇰🇷 88,000 1곳 · 🌎 EUR 40 / USD 41 · 후보 7 중 반영 3 · 추천 판매가 101,090」
+🔴 START-HERE.md · CTO-HANDOVER-NEXT.md 는 건드리지 않았다(보존 40건)
+```
