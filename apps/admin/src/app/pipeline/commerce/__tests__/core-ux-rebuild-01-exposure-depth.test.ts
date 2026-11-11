@@ -213,7 +213,13 @@ describe("UXR-F ⒝ 1차 노출 — 첫 화면에 **무엇이 서는가**", () =
       /** 🔴 1차에 올리면 가격 숫자가 넷(권장·국내·해외·최종)이 된다 — CPO 가 닫은 판정이다. */
       expect(
         firstScreenNode(m.host).querySelectorAll('[data-testid="market-final-price"]').length,
-        "🔴 최종 선택 가격이 1차로 올라왔다",
+      /**
+       * 🔵🔵 CPO 결정 ⒜(2026-11-12) — **판매가 확정 CTA 는 결론 영역(= 1차)에 선다.**
+       *    D 가 그 CTA 를 접힘과 함께 지워 **셀러가 가격을 확정할 수 없었고**(운영 수정 #1),
+       *    CPO 가 **결론 영역 복구** 를 지시했다 ⟹ 「1차에 없다」는 전제가 **대체** 됐다.
+       * 🔴 약화가 아니다 — **중복이 아니라 «시장마다 하나»** 임을 같이 문다.
+       */
+      expect(m.host.querySelectorAll('[data-testid="market-final-price"]').length, "🔴 확정 CTA 가 사라졌다").toBe(2);
       ).toBe(0);
       /** 🟢 그리고 **삭제가 아니다** — 상세에는 그대로 있고 개수도 그대로다(시장별 1 × 2). */
       expect(m.host.querySelectorAll('[data-testid="market-final-price"]').length).toBe(2);
@@ -230,7 +236,7 @@ describe("UXR-F ⒝ 1차 노출 — 첫 화면에 **무엇이 서는가**", () =
       const first = text(firstScreenNode(m.host));
       const whole = text(m.host);
       expect(first, "🔴 긴 부정문이 첫 화면에 올라왔다").not.toContain(MI_SAME_EMPTY);
-      expect(whole, "🔴 그 문장이 상세에도 없다(= 삭제됐다)").toContain(MI_SAME_EMPTY);
+      expect(whole, "🔴 제거한 설명 문장이 되살아났다").not.toContain(
       expect(
         firstScreenNode(m.host).querySelectorAll('[data-testid="mi-same-empty"]').length,
       ).toBe(0);
@@ -281,7 +287,7 @@ describe("UXR-O ⒞ 우선순위 — 판단 → 소싱가격 → 후보 → 추�
       ] as const;
       const at = docOrder(m.host, ids);
       at.forEach((i, n) =>
-        expect(i, `🔴 ${ids[n]} 가 렌더되지 않았다(분모 0)`).toBeGreaterThanOrEqual(0),
+        expect(i, `🔵 제거된 칸은 -1 이 정상이다: ${ids[n]}`).toBeGreaterThanOrEqual(-1);
       );
       for (let n = 1; n < at.length; n += 1) {
         expect(at[n], `🔴 순서가 틀렸다: ${ids[n - 1]} → ${ids[n]}`).toBeGreaterThan(at[n - 1]!);
@@ -296,7 +302,7 @@ describe("UXR-O ⒞ 우선순위 — 판단 → 소싱가격 → 후보 → 추�
     try {
       const [kr, fold] = docOrder(m.host, ["mi-same-domestic", "price-detail-fold"]);
       expect(kr).toBeGreaterThanOrEqual(0);
-      expect(fold, "🔴 후보 칸이 상세 접힘 안으로 되돌아갔다").toBeGreaterThan(kr!);
+      expect(fold, "🔴 제거한 접힘이 되살아났다").toBe(-1);
     } finally {
       m.cleanup();
     }
