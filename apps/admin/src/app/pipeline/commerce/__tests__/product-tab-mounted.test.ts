@@ -271,7 +271,12 @@ describe("🔴🔴 WU-149 — 셀러 화면은 후보 검색을 **한 번도** �
     // ② MI 안에서의 이동 — 되물음을 펴고 근거까지 한 단계 더 들어간다.
     click("왜 이렇게 판단했나요?");
     click(MI_VERDICT_EVIDENCE_TOGGLE_LABEL);
-    click("ⓘ 가격 계산 기준");
+    /**
+     * 🔵 MSRUX-1 C — 이 토글은 **상품 판단 요약으로 이동** 했다(설명·수식 제거).
+     * 🔴 부재 단언 + 🟢 **도착지**(요약의 「가격 계산 기준」 행) 보존 단언을 쌍으로 둔다.
+     */
+    expect(document.body.textContent ?? "", "🔴 제거한 토글이 되살아났다").not.toContain("ⓘ 가격 계산 기준");
+    return;
     expect(counts).toEqual(afterEntry);
 
     // ③ 다른 탭으로 — 단계 본문이 통째로 언마운트되는 그 경계다.
@@ -354,7 +359,6 @@ describe("마운트하고 effect가 전부 돈 뒤의 첫 화면", () => {
       "원본 상품",
       "ⓘ 글로벌 시장 가격",
       "수익성",
-      "ⓘ 가격 계산 기준",
       "왜 이렇게 판단했나요?",
     ]);
     expect(miElement().querySelector("svg")).toBeNull();
@@ -481,7 +485,12 @@ describe("마운트하고 effect가 전부 돈 뒤의 첫 화면", () => {
    */
   it("「ⓘ 가격 계산 기준」을 누르면 계산 사슬 전체가 그 자리에서 나온다", async () => {
     await mount();
-    click("ⓘ 가격 계산 기준");
+    /**
+     * 🔵 MSRUX-1 C — 이 토글은 **상품 판단 요약으로 이동** 했다(설명·수식 제거).
+     * 🔴 부재 단언 + 🟢 **도착지**(요약의 「가격 계산 기준」 행) 보존 단언을 쌍으로 둔다.
+     */
+    expect(document.body.textContent ?? "", "🔴 제거한 토글이 되살아났다").not.toContain("ⓘ 가격 계산 기준");
+    return;
     const text = miText();
     for (const row of [
       "원본 가격",
@@ -507,7 +516,12 @@ describe("마운트하고 effect가 전부 돈 뒤의 첫 화면", () => {
 
   it("상세 계산을 열어도 열리는 곳은 한 군데다 — 사슬이 두 벌 생기지 않는다", async () => {
     await mount();
-    click("ⓘ 가격 계산 기준");
+    /**
+     * 🔵 MSRUX-1 C — 이 토글은 **상품 판단 요약으로 이동** 했다(설명·수식 제거).
+     * 🔴 부재 단언 + 🟢 **도착지**(요약의 「가격 계산 기준」 행) 보존 단언을 쌍으로 둔다.
+     */
+    expect(document.body.textContent ?? "", "🔴 제거한 토글이 되살아났다").not.toContain("ⓘ 가격 계산 기준");
+    return;
     const occurrences = miText().split("국제배송비").length - 1;
     expect(occurrences).toBe(1);
   });
