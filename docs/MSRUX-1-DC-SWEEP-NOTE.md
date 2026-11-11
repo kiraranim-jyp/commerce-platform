@@ -466,3 +466,36 @@ firstLayer(h) = h.slice(0, h.indexOf('data-testid="price-detail-fold"'))   ← �
 ```
 전수 재측정 기준  이 커밋 직후 값으로 갱신한다(차감 금지)
 ```
+
+### 🟢 `core-2u-domestic-price-meaning` **완료**(17/17) — 6 → 0
+
+`reference-status`·`market-detail-*`·`market-empty-*`·`price-basis` **부재 단언** +
+🟢 건수 줄(`market-same-count-*`) · `market-judgement` · 화면 통화 **보존 단언**.
+순서 계약은 **가격 → 건수** 로 전환(제거된 라벨 대신).
+
+---
+
+## 🔴🔴🔴 **기능 소실 발견 — `r2-final-price-and-cta` (CPO 판정 필요)**
+
+🔴 **테스트를 부재 단언으로 바꾸면 «잃어버린 기능» 을 정답으로 굳힌다** ⟹ 바꾸지 않았다.
+
+```
+증상   `market-final-price`(최종 가격 확정 블록)와 `market-edit-final-price`(수정 CTA)가
+       **화면에 0개** 다(테스트 기대 2).
+🔴 원인 — 그 블록은 **살아 있다**(MarketPriceComparison.tsx:1817) 그런데
+   `finalPriceKrw={...}` · `onOpenPriceEditor={...}` 를 **넘기는 호출부가 «0» 이다**(전수 grep).
+   ⟹ D 수술이 지운 **DETAIL 변형 블록** 이 그 prop 을 넘기던 유일한 자리였다.
+🔴 CPO D 지시의 범위는 **「설명 UI 제거 · 필수 기능 보존」** 이다 — 이것은 **설명이 아니라 기능**
+   (셀러가 판매가를 확정하는 CTA)이다 ⟹ **되살려야 한다.**
+```
+
+🟡 **CPO 가 골라야 하는 둘**(CTO 가 임의로 고르지 않았다 — 운영 코드 변경이다):
+```
+⒜ 결론 영역(`market-judgement` 근처)에 **같은 블록을 배선** 한다(새 UI 0 · prop 배선만)
+⒝ 「📊 가격 분석」 카드 안(가격 owner 옆)에 배선한다
+🔴 ⒞ 「없는 채로 둔다」는 **셀러가 가격을 확정할 수 없게 되는 것** 이라 권하지 않는다
+```
+
+```
+전수 재측정  이 커밋 직후 값으로 갱신(차감 금지)
+```

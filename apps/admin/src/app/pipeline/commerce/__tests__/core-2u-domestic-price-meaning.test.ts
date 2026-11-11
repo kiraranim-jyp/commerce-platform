@@ -128,15 +128,18 @@ describe("§8 Case A~F — 기존 판정 결과를 하나의 seller-facing 의�
   /** 🔴🔴 §1·§4 — **가격과 「확정 여부」가 나란히 서고 서로 모순되지 않는다.** */
   it("C-SIM-b 🔴🔴 가격 바로 아래에서 **「동일상품 확정 없음」** 을 말한다", () => {
     const el = mount({ rows: SIMILAR_ROWS, domesticReference: ref([{ amount: 88000, seller: "donokids.com" }]) });
-    expect(text(el, "reference-status")).toBe(DOMESTIC_REFERENCE_BASIS);
+    /** 🔵 MSRUX-1 D — 설명/근거 축은 **제거** 됐다. 판단 결과·건수는 보존 단언으로 본다. */
+    expect(q(el, "reference-status"), "🔴 제거한 근거 라벨이 되살아났다").toBeNull();
     /**
      * 🔴🔴 **CORE-2AO-R2 — 「확정 여부」가 상세로 내려가 층이 갈렸다**(CPO 2026-10-26).
      *    🟢 **순서 성질은 그대로** 다 — 금액이 **먼저** 다. 🔴 단 한 구역 안이 아니라
      *       **문서 전체** 로 잰다(1차 금액 → 상세 확정 여부).
      */
     const html = el.innerHTML;
+    /** 🔵 MSRUX-1 D — `reference-status` 는 제거됐다 ⟹ **가격 → 건수** 순서로 본다. */
+    expect(html.indexOf('data-testid="reference-status"'), '🔴 제거한 근거 라벨이 되살아났다').toBe(-1);
     expect(html.indexOf('data-testid="domestic-lowest"')).toBeLessThan(
-      html.indexOf('data-testid="reference-status"'),
+      html.indexOf('data-testid="market-same-count-domestic"'),
     );
   });
 
@@ -168,8 +171,9 @@ describe("§8 Case A~F — 기존 판정 결과를 하나의 seller-facing 의�
      * 🔴 CORE-2AO-R2 — 1차 블록은 **금액** 만, 그 금액이 «무엇인지»(가격대 라벨)는
      *    **상세** 다. 🟢 둘 다 **사라지지 않았다** — 두 자리에서 각각 문다.
      */
-    expect(text(el, "price-guide-domestic")).toContain("KRW 83600 ─ 88000");
-    expect(text(el, "market-detail-domestic")).toContain(DOMESTIC_BAND_LABEL);
+    /** 🟢 가격대는 **참고가격 카드** 가 말한다(설명 축 제거 후 owner 하나). */
+    expect(el.textContent ?? '', '🔴 국내 가격이 사라졌다').toContain('KRW');
+    expect(q(el, "market-detail-domestic"), "🔴 제거한 상세 블록이 되살아났다").toBeNull();
   });
 
   /** Case DIFFERENT + 가격 → 어느 가격 축에도 들어가지 않는다. */
@@ -195,7 +199,8 @@ describe("§8 Case A~F — 기존 판정 결과를 하나의 seller-facing 의�
     const el = mount({ rows: [] });
     expect(q(el, "domestic-reference")).toBeNull();
     expect(q(el, "price-guide-domestic")).toBeNull();
-    expect(text(el, "market-empty-domestic")).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0건`);
+    expect(q(el, "market-empty-domestic"), "🔴 제거한 설명 문장이 되살아났다").toBeNull();
+    expect(text(el, "market-same-count-domestic")).toContain(`${SAME_CONFIRMED_COUNT_LABEL} 0건`);
   });
 
   /** Case 중복 판매처 → 1곳. 🟢 집계기가 **판매처당 최저 확인가 하나** 로 접는다. */
@@ -259,7 +264,7 @@ describe("§3·§6·§7 — seller-facing 은 하나의 가격 판단", () => {
      */
     expect(kr).toContain("KRW 88,000");
     expect(kr).toContain("반영 판매처 1곳");
-    expect(text(host, "market-detail-domestic")).toContain(DOMESTIC_REFERENCE_BASIS);
+    expect(q(host, "market-detail-domestic"), "🔴 제거한 상세 블록이 되살아났다").toBeNull();
     /** 🔴 1차 전체에서는 **MI 내부 상태** 만 금지한다(§5). */
     expect(firstScreen(host)).not.toContain("보류·충돌");
   });
@@ -268,7 +273,9 @@ describe("§3·§6·§7 — seller-facing 은 하나의 가격 판단", () => {
   it("U-3 🔴 MI 보류 줄이 **2차로 격리** 됐다(삭제 아님)", () => {
     const host = el();
     const fold = q(host, "mi-detail-fold") as HTMLElement;
-    expect(fold.querySelector('[data-testid="mi-same-pending"]')).not.toBeNull();
+    /** 🔵 MSRUX-1 D — 접힘과 보류 줄은 **제거** 됐다. 🟢 판단 결과는 보존. */
+    expect(fold, "🔴 제거한 접힘이 되살아났다").toBeNull();
+    expect(q(host, "market-judgement"), "🔴 판매 판단이 사라졌다").not.toBeNull();
     expect(firstScreen(host), "🔴 MI 내부 상태가 1차에 남았다").not.toContain("판정이 보류·충돌된");
   });
 
@@ -279,7 +286,8 @@ describe("§3·§6·§7 — seller-facing 은 하나의 가격 판단", () => {
 
   /** 🔴 §2 — 가격 판단 기준이 그 가격의 **성질** 을 말한다. */
   it("U-5 🟢 가격 판단 기준이 「확정 가격만을 의미하지 않는다」를 말한다", () => {
-    expect(text(el(), "price-basis")).toContain(PRICE_BASIS_REFERENCE_LINE);
+    /** 🔵 MSRUX-1 C — 「가격 판단 기준」 영역은 **상품 판단 요약으로 이동** 했다. */
+    expect(q(el(), "price-basis"), "🔴 제거한 설명 영역이 되살아났다").toBeNull();
   });
 
   /** 🔴 §7 — 셀러에게 판단을 떠넘기는 문구 **0**. */
