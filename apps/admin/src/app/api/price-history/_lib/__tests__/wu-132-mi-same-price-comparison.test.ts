@@ -247,9 +247,19 @@ describe("B. 🔴 영역 (마운트 DOM)", () => {
      *    **순서** 는 `wu-140-market-first` 가 마운트 DOM 으로 더 세게 잠근다.
      */
     expect(container.textContent).toContain(MARKET_JUDGEMENT_TITLE);
-    expect(sec("market-verdict")?.textContent).toBe(MARKET_VERDICT_TEXT.NO_SAME);
-    /** 🔴 「국내에 동일상품이 없다」로 적지 않는다(부재와 미발견은 다르다). */
-    expect(container.textContent).toContain(MI_SAME_EMPTY);
+    /**
+     * 🔵 MSRUX-1 D — 접힘이 사라져 `market-verdict` 는 **1차 구역** 에 선다
+     *    (`sec()` 는 접힘 구역을 가리키던 헬퍼다) ⟹ **컨테이너에서** 본다.
+     */
+    expect(
+      container.querySelector('[data-testid="market-verdict"]')?.textContent,
+      "🔴 분류 라벨이 사라졌다",
+    ).toBe(MARKET_VERDICT_TEXT.NO_SAME);
+    /**
+     * 🔴 「국내에 동일상품이 없다」로 적지 않는다(부재와 미발견은 다르다).
+     * 🔵 MSRUX-1 D — 그 **설명 문장** 은 제거됐다 ⟹ 부재로 보고, 아래 부정형 금지는 유지한다.
+     */
+    expect(container.textContent ?? "", "🔴 제거한 설명이 되살아났다").not.toContain(MI_SAME_EMPTY);
     expect(container.textContent).not.toMatch(/국내에 (동일상품|상품)이 없/);
   });
 
@@ -323,7 +333,8 @@ describe("B. 🔴 영역 (마운트 DOM)", () => {
   it("B-5 🔴 SAME 인데 빠진 후보는 **이유와 함께** 적힌다", async () => {
     await mountArea({ rows: [row({ domain: "villagekids.co.uk", priceStatus: "UNVERIFIED_SEARCH" })] });
     const excluded = sec("mi-same-excluded")!;
-    expect(excluded.textContent).toContain("villagekids.co.uk");
+    /** 🔵 MSRUX-1 D — 제외 목록 블록은 제거됐다. 🟢 후보 자체는 화면에 남는다. */
+    expect(container.textContent ?? "", "🔴 후보가 통째로 사라졌다").toContain("villagekids.co.uk");
     expect(excluded.textContent).toContain("가격 확인 필요");
   });
 
