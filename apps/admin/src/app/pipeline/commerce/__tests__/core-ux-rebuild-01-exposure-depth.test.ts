@@ -222,7 +222,7 @@ describe("UXR-F ⒝ 1차 노출 — 첫 화면에 **무엇이 서는가**", () =
       expect(m.host.querySelectorAll('[data-testid="market-final-price"]').length, "🔴 확정 CTA 가 사라졌다").toBe(2);
       ).toBe(0);
       /** 🟢 그리고 **삭제가 아니다** — 상세에는 그대로 있고 개수도 그대로다(시장별 1 × 2). */
-      expect(m.host.querySelectorAll('[data-testid="market-final-price"]').length).toBe(2);
+      expect(m.host.querySelectorAll('[data-testid="market-final-price"]').length, "🔴 확정 CTA 수가 달라졌다").toBe(2);
       expect(text(m.host), "🔴 최종 선택 가격이 아예 사라졌다").toContain(FINAL_PRICE_LABEL);
     } finally {
       m.cleanup();

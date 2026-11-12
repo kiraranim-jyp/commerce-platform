@@ -332,10 +332,14 @@ describe("B. 🔴 영역 (마운트 DOM)", () => {
 
   it("B-5 🔴 SAME 인데 빠진 후보는 **이유와 함께** 적힌다", async () => {
     await mountArea({ rows: [row({ domain: "villagekids.co.uk", priceStatus: "UNVERIFIED_SEARCH" })] });
-    const excluded = sec("mi-same-excluded")!;
+    const excluded = sec("mi-same-excluded");
     /** 🔵 MSRUX-1 D — 제외 목록 블록은 제거됐다. 🟢 후보 자체는 화면에 남는다. */
     expect(container.textContent ?? "", "🔴 후보가 통째로 사라졌다").toContain("villagekids.co.uk");
-    expect(excluded.textContent).toContain("가격 확인 필요");
+    /**
+     * 🔵 MSRUX-1 D — 제외 목록 블록은 제거됐다. 🟢 그 후보가 **사라지지 않는다** 는
+     *    사실은 위 줄(도메인)이 이미 문다. 🔴 상태 «문구» 는 설명 축이라 제거됐다.
+     */
+    expect(excluded, "🔴 제거한 제외 목록 블록이 되살아났다").toBeNull();
   });
 
   it("B-6 🟢 두 참고가격 집계가 **이 영역 안** 에 선다(WU-130 ④ 에서 이동)", async () => {
