@@ -351,13 +351,14 @@ describe("E. 영역 경계", () => {
   it("🔴🔴 E-6 판매여부·판매처 표가 가격 범위 «앞» 에 선다 (셀러의 1순위)", () => {
     const counts = src.indexOf("market-sale-counts");
     const range = src.indexOf("market-price-range");
-    expect(counts).toBeGreaterThan(-1);
-    expect(range).toBeGreaterThan(counts);
+    /** 🔵 MSRUX-1 D — **소스 문자열 축** 이다(DOM 아님 · 교훈 ⒩). 그 칸들은 제거됐다. */
+    expect(counts, "🔴 제거한 설명 줄이 되살아났다").toBe(-1);
+    expect(range, "🔴 제거한 근거 표가 되살아났다").toBe(-1);
   });
 
   it("🔴🔴 E-7 기술/참고 블록은 «접혀» 있고 `open` 이 아니다", () => {
-    expect(src).toContain('data-testid="mi-detail-fold"');
-    expect(src).toMatch(/<details data-testid="mi-detail-fold"(?![^>]*\bopen\b)/);
+    expect(src, "🔴 제거한 접힘이 되살아났다").not.toContain('data-testid="mi-detail-fold"');
+    expect(src).not.toContain('<details data-testid="mi-detail-fold"');
   });
 
   it("🟢 E-8 기존 블록이 «삭제되지 않았다» — 참고가격·결론·후보 행이 그대로 있다", () => {
@@ -375,7 +376,12 @@ describe("E. 영역 경계", () => {
       'data-testid="mi-same-empty"',
       'data-testid="mi-same-pending"',
     ]) {
-      expect(src).toContain(kept);
+      /** 🟢 제거된 것은 부재로, 남은 것은 존재로 — 한 줄에 한 의도. */
+      if (["mi-same-pending", "mi-detail-fold"].some((x) => kept.includes(x))) {
+        expect(src, `🔴 제거한 칸이 되살아났다: ${kept}`).not.toContain(kept);
+      } else {
+        expect(src, `🔴 보존 대상이 사라졌다: ${kept}`).toContain(kept);
+      }
     }
   });
 

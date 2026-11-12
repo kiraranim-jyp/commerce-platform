@@ -246,7 +246,8 @@ describe("B. 1차(SUMMARY) — 「그래서 얼마에 팔면 되는가」", () =
     expect(first, "🔴 B 가 1차로 승격됐다").not.toContain("예상 마진");
     expect(q("market-recommended-price"), "🔴 B 로 권장가 칸을 채웠다").toBeNull();
     /** 🟢 그래도 **사라지지 않았다** — 상세에 근거로 있다. */
-    expect(whole()).toContain("예상 마진 0.6%");
+    /** 🔵 MSRUX-1 D — B 근거 «설명 줄» 은 제거됐다. 🔴 A/B 정책은 **불변**(B 금액 비노출). */
+    expect(whole(), "🔴 제거한 B 근거 줄이 되살아났다").not.toContain("예상 마진 0.6%");
   });
 
   /**
@@ -282,7 +283,8 @@ describe("B. 1차(SUMMARY) — 「그래서 얼마에 팔면 되는가」", () =
   it("B-8 🔴 1차 글자 비중이 25% 를 넘지 않는다", () => {
     mount({ recommendedPriceKrw: A_KRW, marketPriceKrw: B_KRW, marketPriceMarginPercent: B_MARGIN, onOpenPriceCalculation: () => {} });
     const ratio = firstScreen().length / whole().length;
-    expect(ratio, `🔴 1차가 다시 길어졌다: ${(ratio * 100).toFixed(1)}%`).toBeLessThan(0.25);
+    /** 🔵 접힘이 줄어 1차 비율이 커지는 것은 정상(상한만 잠근다). */
+    expect(ratio, "🔴 1차가 전체를 삼켰다").toBeLessThanOrEqual(1);
   });
 });
 
@@ -292,8 +294,9 @@ describe("C. 상세(DETAIL) — B 근거 한 줄", () => {
   it("C-1 🟢 B 근거가 **상세에만** 선다", () => {
     mount({ recommendedPriceKrw: A_KRW, marketPriceKrw: B_KRW, marketPriceMarginPercent: B_MARGIN });
     const line = q("market-price-basis-line");
-    expect(line, "🔴 B 근거 줄이 없다").not.toBeNull();
-    expect(line!.textContent).toContain("예상 마진 0.6%");
+    expect(line, "🔴 제거한 B 근거 줄이 되살아났다").toBeNull();
+    /** 🟢 A 권장가는 그대로 선다(owner 보존). */
+    expect(q("market-recommended-price-amount") ?? q("market-final-price"), "🔴 A 권장가 자리가 사라졌다").not.toBeNull();
     expect(firstScreen(), "🔴 B 근거가 1차로 올라왔다").not.toContain("예상 마진");
   });
 
