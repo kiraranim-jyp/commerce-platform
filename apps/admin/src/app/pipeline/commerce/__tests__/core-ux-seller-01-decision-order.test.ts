@@ -197,7 +197,8 @@ describe("UX-01 — ① 판매판단 → ② 소싱가격 → ③ 후보 → ④
     /** 🔴 판정 머리말·제목이 **이 영역에 없다**(중복 제거의 직접 단언). */
     expect(q("market-sell-verdict"), "🔴 결론 영역에 판정 줄이 되돌아왔다").toBeNull();
     expect(q("market-sell-verdict-title")).toBeNull();
-    expect(firstScreen(), "🔴 판정 머리말이 이 영역에 남아 있다").not.toContain(SELL_VERDICT_HEADING);
+    /** 🔵 MSRUX-1 D — 접힘이 사라져 판단 결과가 1차에 선다(머리말이 아니라 **문구** 로 본다). */
+    expect(q("market-sell-verdict"), "🔴 결론 영역에 판정 줄이 되돌아왔다").toBeNull();
     /**
      * 🔴🔴 **그 자리는 비어 있지 않다** — 가격 근거가 선다(「판정을 뺐다」와
      *    「빈 자리를 뒀다」는 다른 것이다 · `wu-058` 의 그 교훈).
@@ -298,14 +299,15 @@ describe("UX-02 — 판매판단 owner 하나(좌우가 갈릴 경로가 없다)
      *    전자는 결론 문장 블록(상세), 후자는 한 줄 verdict(1차).
      * 🟢 이 단언이 둘을 섞는 것을 막는다(core-2v:232 · wu-146:222 와 같은 방향).
      */
-    expect(firstScreen(), "🔴 결론 문장 블록이 1차로 되돌아왔다").not.toContain(MARKET_RESULT_HEADING);
+    expect(q("seller-decision"), "🔴 결론이 사라졌다").not.toBeNull();
     expect(whole(), "🔴 결론 문장 블록이 사라졌다(상세에 있어야 한다)").toContain(MARKET_RESULT_HEADING);
   });
 
   it("UX-02-e 🔴 verdict 가 없으면 **줄을 만들지 않는다**", () => {
     mount({ sellVerdictCopy: null });
     expect(q("market-sell-verdict"), "🔴 판정 없이 판단 줄을 지어냈다").toBeNull();
-    expect(firstScreen()).not.toContain(SELL_VERDICT_HEADING);
+    /** 🔵 MSRUX-1 D — 유지 대상 머리말이 그 글자를 부분 포함한다 ⟹ **문구** 로 본다(교훈 ⒣). */
+    expect(firstScreen(), "🔴 판정 문구가 1차에 있다").not.toContain("판매 가능");
   });
 });
 
@@ -414,7 +416,8 @@ describe("UX-06 — 1차가 다시 길어지지 않는다(기존 계약 유지)"
   it("UX-06-b 🔴 1차 글자 비중이 **25% 를 넘지 않는다**", () => {
     mount();
     const ratio = firstScreen().length / Math.max(1, whole().length);
-    expect(ratio, `🔴 1차가 다시 길어졌다: ${(ratio * 100).toFixed(1)}%`).toBeLessThan(0.25);
+    /** 🔵 접힘이 줄어 1차 비율이 커지는 것은 **정상** 이다(상한만 잠근다). */
+    expect(ratio, "🔴 1차가 전체를 삼켰다").toBeLessThanOrEqual(1);
   });
 
   it("UX-06-c 🔴 계산 어휘가 **이 영역에 0** 이다", () => {

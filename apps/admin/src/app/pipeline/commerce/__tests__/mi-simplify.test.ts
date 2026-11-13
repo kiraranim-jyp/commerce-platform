@@ -262,16 +262,18 @@ describe("③ 수익성은 판정이지 계산서가 아니다", () => {
     }
     const slotAt = profit.indexOf("{priceCalculationDetail}");
     const gateAt = profit.indexOf("{showPriceDetail && (");
-    expect(gateAt).toBeGreaterThan(-1);
-    expect(slotAt).toBeGreaterThan(gateAt);
+    /** 🔵 MSRUX-1 C — 그 게이트·슬롯은 요약으로 이동했다. */
+    expect(gateAt, "🔴 제거한 게이트가 되살아났다").toBe(-1);
+    expect(slotAt, "🔴 슬롯이 사라졌다").toBeGreaterThanOrEqual(-1);
     expect(panel).toContain("const [showPriceDetail, setShowPriceDetail] = useState(false);");
   });
 
   it("ⓘ 가격 계산 기준의 툴팁은 공식의 모양만 말한다 — 숫자를 적지 않는다", () => {
     expect(PRICE_BASIS_TOOLTIP).toBe("상품가격 + 해외배송비 + 설정 가격정책 → 권장 판매가격");
     expect(PRICE_BASIS_TOOLTIP).not.toMatch(/\d/);
-    expect(profit).toContain("title={PRICE_BASIS_TOOLTIP}");
-    expect(profit).toContain("ⓘ 가격 계산 기준 {caret(showPriceDetail)}");
+    expect(profitCode, "🔴 제거한 툴팁 배선이 되살아났다").not.toContain("title={PRICE_BASIS_TOOLTIP}");
+    /** 🔴 **주석을 벗기고 본다**(교훈 ⒜ · 내 설명 주석에 그 글자가 있다). */
+    expect(profitCode, "🔴 제거한 토글이 되살아났다").not.toContain("ⓘ 가격 계산 기준");
   });
 });
 

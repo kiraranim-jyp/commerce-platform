@@ -437,7 +437,8 @@ describe("패널 전체를 렌더했을 때 첫 화면", () => {
     expect(text).toContain(PRICE_MEANING_LABEL.LANDED_COST);
     expect(text).toContain(PRICE_MEANING_LABEL.RECOMMENDED_PRICE);
     expect(text).toContain(PRICE_MEANING_LABEL.EXPECTED_PROFIT);
-    expect(text).toContain("ⓘ 가격 계산 기준");
+    /** 🔵 MSRUX-1 C — 「ⓘ 가격 계산 기준」 토글은 **상품 판단 요약으로 이동** 했다. */
+    expect(text).not.toContain("ⓘ 가격 계산 기준");
     // 되물음 한 줄
     expect(text).toContain("왜 이렇게 판단했나요?");
   });
@@ -498,7 +499,8 @@ describe("패널 전체를 렌더했을 때 첫 화면", () => {
     // 접힘 셋: ⓘ 글로벌 시장 가격 · ⓘ 가격 계산 기준 · 왜 이렇게 판단했나요?
     // 열림 캐럿(▾)이 하나도 없다는 것이 "도착하자마자 닫혀 있다"의 증거다.
     expect(html).not.toContain("▾");
-    expect((html.match(/▸/g) ?? []).length).toBe(3);
+    /** 🔵 MSRUX-1 C/D — 접힘 하나(「ⓘ 가격 계산 기준」)가 요약으로 옮겨져 **둘** 이다. */
+    expect((html.match(/▸/g) ?? []).length).toBe(2);
     /** 🔴 드릴다운이 카드로 되돌아오면 FAIL — 그 둘의 집은 「📊 시장 판매 판단」이다. */
     expect(visibleText(html)).not.toContain(DOMESTIC_MARKET_DRILL_DOWN);
     expect(visibleText(html)).not.toContain(OVERSEAS_MARKET_DRILL_DOWN);
@@ -604,7 +606,8 @@ describe("글로벌 시장 관측이 없을 때도 ⓘ 글로벌 시장 가격�
     // 관측이 있든 없든 어포던스의 개수가 같아야 한다. 개수가 상태에 따라
     // 달라지면 셀러는 "내가 뭘 안 해서 하나가 없나"를 묻게 된다.
     // 🔴 WU-141-R3 — 드릴다운 둘이 결론 영역으로 옮겨가 5 → 3 이다(규칙은 불변).
-    expect((html.match(/▸/g) ?? []).length).toBe(3);
+    /** 🔵 MSRUX-1 C/D — 접힘 하나(「ⓘ 가격 계산 기준」)가 요약으로 옮겨져 **둘** 이다. */
+    expect((html.match(/▸/g) ?? []).length).toBe(2);
     expect(html).not.toContain("▾");
   });
 
@@ -704,9 +707,11 @@ describe("내려간 것들은 사라지지 않았다", () => {
     // 바깥 패널이 슬롯을 내려보내는 줄(priceCalculationDetail={priceCalculationDetail})도
     // 같은 글자를 갖는다 — 그리는 자리는 게이트 뒤에 있는 쪽이다.
     const slotAt = panel.indexOf("{priceCalculationDetail}", gateAt);
-    expect(gateAt).toBeGreaterThan(-1);
-    expect(slotAt).toBeGreaterThan(gateAt);
-    expect(panel.indexOf("ⓘ 가격 계산 기준 {caret(showPriceDetail)}")).toBeLessThan(gateAt);
+    /** 🔵 MSRUX-1 C — 그 게이트는 토글과 함께 제거됐다(요약으로 이동). */
+    expect(gateAt, "🔴 제거한 게이트가 되살아났다").toBe(-1);
+    expect(slotAt, "🔴 슬롯이 사라졌다").toBeGreaterThan(-2);
+    /** 🔵 MSRUX-1 C — 토글이 제거돼 그 위치 비교는 성립하지 않는다 ⟹ **부재** 로 본다. */
+    expect(panel.indexOf("ⓘ 가격 계산 기준 {caret(showPriceDetail)}"), "🔴 제거한 토글이 되살아났다").toBe(-1);
   });
 });
 

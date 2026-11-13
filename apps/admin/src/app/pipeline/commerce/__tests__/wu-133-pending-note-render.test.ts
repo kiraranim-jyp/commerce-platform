@@ -95,27 +95,34 @@ describe("WU-133 — 보류 사유가 화면에 선다 (마운트 DOM)", () => {
   it("🔴🔴 1차는 **건수만** · 사유는 **2차에 그대로** 있다 (이동 · 삭제 아님)", async () => {
     await mount({ rows: [pendingRow()] });
     const el = container.querySelector('[data-testid="mi-same-pending"]');
-    expect(el).not.toBeNull();
-    /** ① 건수는 1차에 남는다. */
-    expect(el!.textContent).toContain("1건");
+    /**
+     * 🔵 MSRUX-1 D — 보류 **건수 줄**(`mi-same-pending`)은 접힘과 함께 제거됐다.
+     * 🟢 「건수는 1차에 남는다」는 **동일상품 확정 건수** 가 이어받는다(owner 이동).
+     */
+    expect(el, "🔴 제거한 보류 건수 줄이 되살아났다").toBeNull();
+    /** ① 건수는 1차에 남는다 — 그 owner 로 본다. */
+    expect(container.textContent ?? "", "🔴 건수 축이 통째로 사라졌다").toMatch(/동일상품 확정 \d+건/);
     /** ② 🔴 1차에 **사유 어휘가 없다** — 셀러의 첫 화면이 MI 내부 축 이름으로 채워지지 않는다. */
     for (const token of KNOWN_BLOCKER_TOKENS) {
-      expect(el!.textContent, `1차에 사유 토큰이 남았다: ${token}`).not.toContain(blockerText(token));
+      /** 🟢 줄이 제거됐으므로 **화면 전체** 에서 내부 토큰 금지를 지킨다(보호 유지). */
+      expect(container.textContent ?? "", `1차에 사유 토큰이 남았다: ${token}`).not.toContain(token);
     }
     /** 🔴 내부 토큰을 **그대로 노출하지 않는다**(WU-056 의 `EXCLUDED` 누출 재발 방지). */
-    expect(el!.textContent).not.toContain("BRAND_UNCONFIRMED");
-    /** ③ 🟢 **2차에는 그 사유가 있다** — CPO 지시는 「옮긴다」이고 「지운다」가 아니다. */
+    expect(container.textContent ?? "").not.toContain("BRAND_UNCONFIRMED");
+    /**
+     * ③④ 🔵 MSRUX-1 D — **2차(접힘) 자체가 제거** 됐다(CPO ⒝ · 설명 계층 삭제).
+     * 🔴 그래서 「2차에 있다」·「접혀 있다」는 전제가 사라졌다 ⟹ **부재** 로 바꾼다.
+     * 🟢 **보호는 유지된다** — 위 ② 가 **화면 전체** 에서 내부 토큰을 금지하고,
+     *    아래가 **판단 결과가 살아 있다** 를 문다(설명만 지우고 결과는 남겼다).
+     */
     const reasons = container.querySelector('[data-testid="mi-same-pending-reasons"]');
-    expect(reasons).not.toBeNull();
-    expect(reasons!.textContent).toContain("브랜드 미확인");
-    expect(reasons!.textContent).not.toContain("BRAND_UNCONFIRMED");
-    /** ④ 🔴 그 2차가 **접혀 있다** — 안 접혀 있으면 「2차로 내렸다」가 거짓이다. */
+    expect(reasons, "🔴 제거한 사유 줄이 되살아났다").toBeNull();
     const fold = container.querySelector('[data-testid="mi-detail-fold"]');
-    expect(fold).not.toBeNull();
-    expect(fold!.contains(reasons!)).toBe(true);
-    expect(fold!.hasAttribute("open")).toBe(false);
+    expect(fold, "🔴 제거한 접힘이 되살아났다").toBeNull();
+    expect(container.querySelector('[data-testid="market-judgement"]'), "🔴 판매 판단이 사라졌다").not.toBeNull();
     /** 🟢 「동일상품 0건」 문장도 **같이** 선다 — 둘 다 사실이다. */
-    expect(container.textContent).toContain(MI_SAME_EMPTY);
+    /** 🔵 MSRUX-1 D — 그 설명 문장은 제거됐다. 🟢 판단 결과는 보존 단언이 문다. */
+    expect(container.textContent ?? "", "🔴 제거한 설명이 되살아났다").not.toContain(MI_SAME_EMPTY);
   });
 
   it("🔴 보류가 0 이면 **그 줄을 만들지 않는다**(없는 말을 적지 않는다)", async () => {
@@ -142,6 +149,8 @@ describe("WU-133 — 보류 사유가 화면에 선다 (마운트 DOM)", () => {
     ).toHaveLength(1);
     /** 🔴 D1 — 중복 surface 가 되살아나면 FAIL 한다. */
     expect(container.querySelectorAll('[data-testid="mi-same-row"]')).toHaveLength(0);
-    expect(container.querySelector('[data-testid="mi-same-pending"]')!.textContent).toContain("1건");
+    /** 🔵 MSRUX-1 D — 보류 건수 줄은 제거됐다. 🟢 건수 축은 **동일상품 확정 건수** 가 말한다. */
+    expect(container.querySelector('[data-testid="mi-same-pending"]'), "🔴 제거한 줄이 되살아났다").toBeNull();
+    expect(container.textContent ?? "", "🔴 건수 축이 사라졌다").toMatch(/동일상품 확정 \d+건/);
   });
 });

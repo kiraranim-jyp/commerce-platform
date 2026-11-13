@@ -398,11 +398,35 @@ describe("MI-INVESTIGATION-STATE-UX-2 — 조사 상태·가격 표시", () => {
       data.representativeVerdict!.code,
     )!.title;
 
-    /** 🔴 결론 영역 — 판정 머리말·문구가 **없다**(중복 제거). */
-    expect(firstScreenText(conclusion!), "🔴 결론 영역에 판정 머리말이 되돌아왔다").not.toContain(
-      SELL_VERDICT_HEADING,
-    );
-    /** 🟢 그 자리에 **가격 근거** 가 선다 — 빈 자리를 두지 않았다. */
+    /**
+     * 🔴 결론 영역 — **판정 «문구»** 를 되풀이하지 않는다(중복 제거).
+     *
+     * 🔴🔴 **단언 대상을 좁혔다** — 전에는 `SELL_VERDICT_HEADING`("판매 판단")을 썼는데,
+     *    D 가 접힘을 걷어내면서 **유지 대상인 `market-judgement` 의 머리말**
+     *    「💡 판매 판단」이 1차에 서게 됐다. 그 글자는 **같은 문자열을 부분 포함** 한다 ⟹
+     *    머리말로 단언하면 **보존해야 할 블록이 FAIL 을 만든다**(이 저장소의 그 함정).
+     * 🟢 이 계약의 의도는 「**판정 결과 문구가 두 번 나오지 않는다**」이므로 **그 문구**
+     *    (`title`)로 단언한다 — 보호는 그대로이고 거짓 FAIL 만 사라진다.
+     */
+    expect(firstScreenText(conclusion!), "🔴 결론 영역에 판정 문구가 되돌아왔다").not.toContain(title);
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔵🔵 MSRUX-1 C — **가격 근거는 「상품 판단 요약」으로 «이동» 했다**
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 전까지 이 라벨은 **결론 영역** 에 있었다. C 가 그것을 요약의 「가격 계산 기준」
+     *    행으로 옮겼다(수식·긴 설명 제거 · `priceBasisLines`).
+     * 🔴 **한 expect 에 한 의도** — ⒜ 결론에 **없다** ⒝ 요약에 **있다** 를 «갈라서» 둔다.
+     *    그래야 「옮겼다」와 「잃었다」가 구분된다(둘을 한 줄로 쓰면 도착지를 못 묻는다).
+     */
+    /**
+     * 🔴🔴 **내 1차 분석이 틀렸고 그것을 적는다** — 이 라벨은 C 가 옮긴 것이 **아니다**.
+     *    `MarketPriceComparison.tsx:754` 에서 **결론 영역이 그대로 그린다**(C 가 옮긴 것은
+     *    「ⓘ 가격 계산 기준」 접힘이고 이 라벨은 **다른 문구** 다).
+     * 🟢 그래서 **원래 단언이 옳다** — 되돌린다. 이 파일의 8건 중 6건은 그 때문이 아니라
+     *    `SELL_VERDICT_HEADING`("판매 판단")이 유지 대상 머리말 「💡 판매 판단」에
+     *    **부분 포함** 돼서 깨진 것이었다(위 주석).
+     */
     expect(firstScreenText(conclusion!)).toContain(PRICE_BASIS_B_BASIS_LABEL);
     /** 🟢🟢 남은 **두 자리** 는 그대로 말한다(일관성 계약 유지). */
     expect(firstScreenText(summary!), "🔴 요약이 판정을 잃었다").toContain(title);
@@ -438,7 +462,13 @@ describe("MI-INVESTIGATION-STATE-UX-2 — 조사 상태·가격 표시", () => {
       expect(firstScreenText(summary!), `🔴 요약 문구 불일치: ${code}`).toContain(copy.title);
       expect(firstScreenText(right!), `🔴 ActionCenter 문구 불일치: ${code}`).toContain(copy.title);
       /** 🔴 결론 영역은 판정을 되풀이하지 않는다(CPO ⒝). */
-      expect(firstScreenText(conclusion!)).not.toContain(SELL_VERDICT_HEADING);
+      /**
+       * 🔴 위 ⒝ 와 **같은 좁히기** — 머리말("판매 판단")이 아니라 **판정 문구** 로 단언한다.
+       *    D 가 접힘을 걷어내 유지 대상 `market-judgement` 의 「💡 판매 판단」이 1차에 선다.
+       */
+      expect(firstScreenText(conclusion!), `🔴 결론 영역에 판정 문구가 되돌아왔다: ${code}`).not.toContain(
+        copy.title,
+      );
       /**
        * 🔴🔴 **행동 ↔ 문구 일치** — 행동이 있으면 ActionCenter 가 그것을 말하고,
        *    없으면(`READY`/`HOLD`) **기존 안내문** 이 그대로 선다(지어내지 않는다).
@@ -557,9 +587,19 @@ describe("MI-INVESTIGATION-STATE-UX-2 — 조사 상태·가격 표시", () => {
     stubFetch(withDomesticComparable());
     await mount();
     const whole = wholeText(container);
-    /** 🟢 전제 두 줄(상세) — A 는 원가+목표마진 · B 는 관측값. */
-    expect(whole).toContain(PRICE_BASIS_A_NOTE);
-    expect(whole).toContain(PRICE_BASIS_B_NOTE);
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔵🔵 MSRUX-1 D — 전제 두 줄은 **설명 문장** 이라 셀러 화면에서 제거됐다
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 그 두 줄은 `market-price-basis-a-note` · `-b-note` 로 **`＋ 상세정보 보기` 안**
+     *    에 있었고 D(CPO ⒝)가 그 영역을 지웠다.
+     * 🟢 이 계약의 **본래 보호**(= 「금액은 A 하나뿐」 · A/B 동결)는 **아래 줄들이 그대로**
+     *    지킨다 ⟹ 제거 단언과 보존 단언을 **쌍** 으로 둔다.
+     * 🔴 문구 상수는 **지우지 않았다**(owner 보존 · 다른 표면이 쓸 수 있다).
+     */
+    expect(whole, "🔴 제거한 A 전제 문장이 되살아났다").not.toContain(PRICE_BASIS_A_NOTE);
+    expect(whole, "🔴 제거한 B 전제 문장이 되살아났다").not.toContain(PRICE_BASIS_B_NOTE);
     /**
      * 🔴 **판단 한 줄** 이 목표마진 충족 여부를 말한다.
      * 🔴 문구를 **owner 에서 읽는다** — 1차에 정규식 `목표마진 (…)` 으로 적었다가

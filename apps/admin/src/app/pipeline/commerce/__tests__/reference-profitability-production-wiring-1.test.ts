@@ -348,13 +348,19 @@ describe("W4. 🔴🔴 **내 1차 결론을 정정한다** — POST 에서는 «
      *    참고가격만 갱신되고 수익성이 **옛 값으로 멈춘다.**
      * 🟢 그래서 **소스 앵커로** 문다(이 리포가 「다섯 번 밟았다」고 적어 둔 그 함정).
      */
-    const memoEnd = PANEL.indexOf("      referenceProfitability,\n    };\n  }, [");
+    /**
+     * 🔴 이 저장소의 소스는 **CRLF** 다 — 앵커에 `\n` 을 박으면 단독 실행에서는 통과하고
+     *    **전수 실행에서만** 갈린다(실제로 났다). 🟢 그래서 `\r` 을 걷고 본다.
+     */
+    const NORM = PANEL.split(String.fromCharCode(13)).join("");
+    const memoEnd = NORM.indexOf("      referenceProfitability,\n    };\n  }, [");
     expect(memoEnd, "🔴 memo 가 그 값을 싣지 않으면 영역이 설 수 없다").toBeGreaterThan(0);
-    const depsStart = PANEL.indexOf("  }, [", memoEnd);
-    const depsEnd = PANEL.indexOf("]);", depsStart);
+    const depsStart = NORM.indexOf("  }, [", memoEnd);
+    const depsEnd = NORM.indexOf("]);", depsStart);
     expect(depsEnd).toBeGreaterThan(depsStart);
     expect(
-      PANEL.slice(depsStart, depsEnd),
+      /** 🔴 좌표는 `NORM` 에서 왔다 — 원문에 쓰면 **엉뚱한 구간** 을 본다(실제로 났다). */
+      NORM.slice(depsStart, depsEnd),
       "🔴 deps 에 없으면 두 숫자가 갈린 채 멈춘다",
     ).toContain("referenceProfitability,");
   });

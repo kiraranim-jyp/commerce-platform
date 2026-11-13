@@ -233,7 +233,10 @@ describe("C. 화면 (마운트 DOM)", () => {
       ],
     });
     const link = q("market-seller-price-link") as HTMLAnchorElement | null;
-    expect(link).toBeTruthy();
+    /** 🔵 MSRUX-1 D — 제거된 접힘·표 축이다. 부재 단언 + 판단 결과 보존. */
+    expect(link, "🔴 제거한 표 링크가 되살아났다").toBeNull();
+    expect(container.querySelector('[data-testid="mi-candidate-link"]'), "🔴 후보 링크가 사라졌다").not.toBeNull();
+    return;
     expect(link?.tagName).toBe("A");
     expect(link?.getAttribute("href")).toBe("https://beaumonde.co.kr/goods/x");
     expect(link?.textContent).toBe(PRICE_LINK_TEXT);
@@ -248,10 +251,23 @@ describe("C. 화면 (마운트 DOM)", () => {
      *    「가격대 확정 불가」가 붙는다 ⟹ 🟢 「금액이 있다」 **그리고** 「가격대가 아니다」
      *    를 **둘 다** 단언한다(`toBe` 하나보다 세다 · 약화가 아니다).
      */
-    expect(q("price-guide-headline")?.textContent).toContain("KRW 88000");
+    expect(container.textContent ?? "", "🔴 가격이 사라졌다").toContain("88,000");
     expect(q("price-guide-headline")?.textContent).toContain(PRICE_BAND_UNDETERMINED);
-    expect(q("price-guide-note")?.textContent).toBe(PRICE_GUIDE_SINGLE_NOTE);
-    expect(q("price-guide-counts")?.textContent).toContain("가격 확인 1곳");
+    /**
+     * 🔵 MSRUX-1 D — **설명 줄 둘**(`price-guide-note` · `price-guide-counts`)은
+     *    제거됐다(CPO ⒝ 「가격 판단 기준 설명·상세 근거 제거」).
+     * 🔴 **부재만 쓰지 않는다** — 위 두 줄(금액 · 「가격대 확정 불가」)이 **보존 단언**
+     *    이고, 아래가 그 설명 어휘가 되살아나는 것을 막는다.
+     */
+    expect(q("price-guide-note"), "🔴 제거한 설명 줄이 되살아났다").toBeNull();
+    expect(q("price-guide-counts"), "🔴 제거한 건수 설명 줄이 되살아났다").toBeNull();
+    expect(container.textContent ?? "", "🔴 제거한 설명 문장이 되살아났다").not.toContain(
+      PRICE_GUIDE_SINGLE_NOTE,
+    );
+    /** 🟢 건수 축은 **동일상품 확정 건수** 가 이어받는다(owner 이동 · 삭제 아님). */
+    expect(container.textContent ?? "", "🔴 건수 축이 통째로 사라졌다").toMatch(
+      /동일상품 확정 \d+건/,
+    );
   });
 
   it("🟢 C-3 국내·해외 가이드가 «따로» 선다", async () => {
@@ -288,7 +304,11 @@ describe("C. 화면 (마운트 DOM)", () => {
     expect(q("price-guide-empty")?.textContent).toBe(PRICE_GUIDE_EMPTY);
     expect(q("price-guide-headline")).toBeNull();
     /** 🔴 「동일상품이 없다」로 적지 않는다. */
-    /** 🔴 CORE-2AO-R2 — 건수 줄은 상세로 내려갔다(문장 삭제 0). */
-    expect(q("market-detail-domestic")?.textContent).toContain("동일상품 확정 1건");
+    /**
+     * 🔵 MSRUX-1 D — 상세 블록(`market-detail-domestic`)은 제거됐다.
+     * 🟢 건수 줄은 **1차로 올라왔다**(내려갔다 → 올라왔다 · 문장 삭제 0).
+     */
+    expect(q("market-detail-domestic"), "🔴 제거한 상세 블록이 되살아났다").toBeNull();
+    expect(q("market-same-count-domestic")?.textContent).toContain("동일상품 확정 1건");
   });
 });

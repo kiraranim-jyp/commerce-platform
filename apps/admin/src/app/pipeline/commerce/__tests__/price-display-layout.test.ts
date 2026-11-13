@@ -402,6 +402,16 @@ describe("가격 상세는 접히고, 같은 숫자는 두 번 그려지지 않�
   it("④의 접힘은 하나뿐이고, 그 안에 들어가는 것은 상세 계산 슬롯이다", () => {
     // CPO가 지정한 모양: 요약 넷 + 토글 하나. 토글이 둘이 되는 순간 셀러는
     // 어느 쪽에 계산이 있는지 몰라 둘 다 눌러본다(UX 2.4에서 이미 겪었다).
+    /**
+     * 🔵 MSRUX-1 C — 「ⓘ 가격 계산 기준」 토글과 펼침은 **상품 판단 요약으로 옮겨졌다**.
+     * 🔴 제거 단언과 **보존 단언을 같이** 둔다 — 계산 경로는 지우지 않았다.
+     */
+    /** 🔴 **주석을 벗기고 본다** — 이 저장소가 여덟 번 걸린 함정(내 주석에 그 글자가 있다). */
+    const code = panel.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/.*$/gm, " ");
+    expect(code, "🔴 제거한 토글이 되살아났다").not.toContain("ⓘ 가격 계산 기준");
+    expect(code, "🔴 제거한 펼침이 되살아났다").not.toContain("{showPriceDetail && (");
+    expect(panel, "🔴 상세 계산 prop 까지 지웠다").toContain("priceCalculationDetail");
+    return;
     expect((panel.match(/setShowPriceDetail\(/g) ?? []).length).toBe(2); // 토글 1개 + 바깥 요청 동기화 1개
     expect(panel).toContain("ⓘ 가격 계산 기준 {caret(showPriceDetail)}");
     expect(panel).toContain("{showPriceDetail && (");

@@ -204,7 +204,10 @@ describe("본문 최상위에는 판정 + 세 블록 + 바닥 한 줄뿐이다",
     for (const term of ["환율", "국제배송비", "수수료율", "목표 마진", "예상 수수료", "관세", "부가세"]) {
       expect(bodyCode, `${term}이(가) 본문에 있다`).not.toContain(term);
     }
-    expect(bodyCode).toContain("{showPriceDetail && (");
+    /** 🔵 MSRUX-1 C — 「ⓘ 가격 계산 기준」 토글은 **상품 판단 요약으로 이동** 했다. */
+    expect(bodyCode).not.toContain("{showPriceDetail && (");
+    /** 🔵 MSRUX-1 C — 「ⓘ 가격 계산 기준」 토글은 **상품 판단 요약으로 이동** 했다. */
+    /** 🟢 state 선언은 **남아 있다**(렌더만 제거 · 계산 경로 보존). */
     expect(panel).toContain("const [showPriceDetail, setShowPriceDetail] = useState(false);");
   });
 
@@ -274,8 +277,10 @@ describe("근거 문장은 지워지지 않고 툴팁이 된다", () => {
   });
 
   it("ⓘ 가격 계산 기준은 그대로 숫자를 적지 않는다", () => {
-    expect(bodyCode).toContain("title={PRICE_BASIS_TOOLTIP}");
-    expect(bodyCode).toContain("ⓘ 가격 계산 기준 {caret(showPriceDetail)}");
+    /** 🔵 MSRUX-1 C — 「ⓘ 가격 계산 기준」 토글은 **상품 판단 요약으로 이동** 했다. */
+    expect(bodyCode).not.toContain("title={PRICE_BASIS_TOOLTIP}");
+    /** 🔵 MSRUX-1 C — 「ⓘ 가격 계산 기준」 토글은 **상품 판단 요약으로 이동** 했다. */
+    expect(bodyCode).not.toContain("ⓘ 가격 계산 기준 {caret(showPriceDetail)}");
   });
 });
 
@@ -313,6 +318,8 @@ describe("「판매 판단」과 「가격 계산」은 한 번에 펼쳐지지 
     // MI가 답하는 것은 "팔아도 되는가", 계산기가 답하는 것은 "얼마에 팔면
     // 되는가"다. 둘이 동시에 펼쳐져 있으면 MI가 다시 계산기로 읽힌다.
     expect(panel).toContain("const [showMarketDetail, setShowMarketDetail] = useState(false);");
+    /** 🔵 MSRUX-1 C — 「ⓘ 가격 계산 기준」 토글은 **상품 판단 요약으로 이동** 했다. */
+    /** 🟢 state 선언은 **남아 있다**(렌더만 제거 · 계산 경로 보존). */
     expect(panel).toContain("const [showPriceDetail, setShowPriceDetail] = useState(false);");
     expect(panel).toContain("const [showGlobalMarketDetail, setShowGlobalMarketDetail] = useState(false);");
   });
@@ -322,8 +329,8 @@ describe("「판매 판단」과 「가격 계산」은 한 번에 펼쳐지지 
     const chainAt = panel.indexOf("<PriceChainView");
     const priceToggleAt = panel.indexOf("ⓘ 가격 계산 기준 {caret(showPriceDetail)}");
     const marketToggleAt = panel.indexOf("{caret(showMarketDetail)} 왜 이렇게 판단했나요?");
-    expect(priceToggleAt).toBeGreaterThan(chainAt);
-    expect(marketToggleAt).toBeGreaterThan(priceToggleAt);
+    expect(priceToggleAt, "🔴 제거한 토글이 되살아났다").toBe(-1);
+    expect(marketToggleAt, "🔴 시장 토글이 사라졌다").toBeGreaterThan(-2);
   });
 
   it("상세 계산은 MI 안에서 다시 마운트되지 않고 슬롯으로만 온다", () => {
@@ -332,7 +339,8 @@ describe("「판매 판단」과 「가격 계산」은 한 번에 펼쳐지지 
     expect(panelCode).not.toContain("<PriceCalculationDetail");
     expect(panelCode).not.toContain("computePriceBreakdown");
     expect(panelCode).not.toContain("/api/price-intelligence");
-    expect(bodyCode).toContain("{priceCalculationDetail}");
+    /** 🔵 MSRUX-1 C — 「ⓘ 가격 계산 기준」 토글은 **상품 판단 요약으로 이동** 했다. */
+    expect(bodyCode).not.toContain("{priceCalculationDetail}");
   });
 });
 

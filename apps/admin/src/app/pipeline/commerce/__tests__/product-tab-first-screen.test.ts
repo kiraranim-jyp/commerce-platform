@@ -105,7 +105,6 @@ describe("상품정보 탭 — 아무것도 누르지 않았을 때의 첫 화�
        *       **트리에 없다**(CommerceWorkspace 가 주인이다).
        */
       "수익성",
-      "ⓘ 가격 계산 기준",
       "왜 이렇게 판단했나요?",
       // ── 여기부터는 MI가 아니다(StageBody) ──
       "지금 단계 · 2. 시장 판단",
@@ -149,7 +148,6 @@ describe("상품정보 탭 — 아무것도 누르지 않았을 때의 첫 화�
        *       **트리에 없다**(CommerceWorkspace 가 주인이다).
        */
       "수익성",
-      "ⓘ 가격 계산 기준",
       "왜 이렇게 판단했나요?",
     ];
     expect(headingsInOrder(miHtml)).toEqual(expected);
@@ -405,7 +403,8 @@ describe("상품정보 탭 — 아무것도 누르지 않았을 때의 첫 화�
    * 아니라는 사실은 product-tab-mounted.test.ts가 실제로 열어서 확인한다.
    */
   it("판단 카드는 상세 계산 슬롯을 여는 토글을 그대로 갖고 있다", () => {
-    expect(miText).toContain("ⓘ 가격 계산 기준");
+    /** 🔵 MSRUX-1 C — 이 토글은 **상품 판단 요약** 으로 옮겼다(설명 축). */
+    expect(miText).not.toContain("ⓘ 가격 계산 기준");
   });
 });
 
@@ -462,7 +461,6 @@ describe("첫 화면의 길이는 MI가 아니라 그 아래가 정한다", () =
        *       **트리에 없다**(CommerceWorkspace 가 주인이다).
        */
       "수익성",
-      "ⓘ 가격 계산 기준",
       "왜 이렇게 판단했나요?",
     ]);
   });

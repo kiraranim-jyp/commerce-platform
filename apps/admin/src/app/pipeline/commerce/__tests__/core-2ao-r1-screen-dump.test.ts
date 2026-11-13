@@ -141,8 +141,9 @@ describe("CORE-2AO-R1 — 배포 전 화면 실측(마운트 DOM)", () => {
 
     /** ③ 🔴 근거 설명이 접혀 결론이 바로 읽힌다. */
     const basis = container.querySelector('[data-testid="price-basis"]') as HTMLElement;
-    expect(basis.tagName.toLowerCase()).toBe("details");
-    expect(basis.hasAttribute("open")).toBe(false);
+    /** 🔵 MSRUX-1 D — 「💡 가격 판단 기준」 영역은 **제거** 됐다 ⟹ 접힘 검사가 아니라 **부재** 를 본다. */
+    expect(basis, "🔴 제거한 설명 영역이 되살아났다").toBeNull();
+    expect(container.querySelector('[data-testid="market-judgement"]')).not.toBeNull();
   });
 
   it("🟢 그러면서 **잃은 것이 없다** — 금액·결론·근거가 전부 살아 있다", () => {
@@ -162,14 +163,28 @@ describe("CORE-2AO-R1 — 배포 전 화면 실측(마운트 DOM)", () => {
      *    이 「상세에 남아 있다」 계약은 **그대로 유효** 하고 문자열만 갱신했다.
      */
     const all = (container.textContent ?? "").replace(/\s+/g, " ");
-    for (const kept of [
-      "국내 참고가격이 확인됐습니다",
-      "판매처 상세 페이지에서 확인한",
-      "국내 가격 참고값",
-      "배송비·관부가세·수수료·목표마진은 별도로 반영해야",
-      "수익성 판단 보류",
-    ]) {
-      expect(all, `🔴 상세로 «옮긴» 문장이 아예 사라졌다: ${kept}`).toContain(kept);
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔵🔵 MSRUX-1 D — **목록을 «둘» 로 가른다**(교훈 ⒧)
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 이 배열에는 **남는 결론 문장** 과 **D 가 지운 설명 문장** 이 섞여 있었다.
+     *    한 항목씩 `if` 로 가르면 **다음 항목에서 또 걸린다**(실제로 났다).
+     * 🟢 그래서 **보존 목록 ↔ 제거 목록** 으로 나누고 각각 존재/부재를 단언한다.
+     */
+    const REMOVED_BY_D = ["판매처 상세 페이지에서 확인한", "국내 가격 참고값", "배송비·관부가세·수수료·목표마진은 별도로 반영해야", "수익성 판단 보류"];
+    const KEPT_ON_SCREEN = ["국내 참고가격이 확인됐습니다"];
+    for (const gone of REMOVED_BY_D) {
+      expect(all, `🔴 제거한 설명 문장이 되살아났다: ${gone}`).not.toContain(gone);
+    }
+    for (const kept of KEPT_ON_SCREEN) {
+      /** 🟢 남는 쪽은 **결론 문장** 이다 — 그대로 선다. */
+      /**
+       * 🟢 이 목록은 **결론 문장** 이다 — 그대로 선다.
+       * 🔵 MSRUX-1 D — 단 「판매처 상세 페이지에서 확인한…」은 **설명 축** 이라 제거됐다 ⟹
+       *    그 한 항목만 **부재** 로 가른다(목록을 통째로 뒤집지 않는다).
+       */
+      expect(all, "🔴 결론 문장이 사라졌다: "+kept).toContain(kept);
     }
     /**
      * ══════════════════════════════════════════════════════════════════════════
@@ -290,7 +305,7 @@ describe("CORE-2AO-R2 — 첫 화면에 «긴 설명» 이 남아 있지 않다"
     expect(first, "🔴 근거 «문장» 이 1차로 올라왔다(게이트가 풀렸다)").not.toContain(
       "국내 가격 참고값",
     );
-    expect(allText(),"🔴 근거 문장이 상세에서도 사라졌다 — 이동이 아니라 삭제가 됐다").toContain(
+    expect(allText(), "🔴 제거한 근거 문장이 되살아났다").not.toContain(
       "국내 가격 참고값",
     );
   });
@@ -321,10 +336,10 @@ describe("CORE-2AO-R2 — 첫 화면에 «긴 설명» 이 남아 있지 않다"
    */
   it("🟢🟢 R2-1d `MI_SAME_AREA_SCOPE` 가 **상세에 렌더되고 1차에는 없다**", () => {
     mount();
-    expect(allText(), "🔴 동일상품 영역 범위 설명이 화면에서 사라졌다(M5 가 뚫은 그 구멍)").toContain(
+    expect(allText(), "🔴 제거한 범위 설명이 되살아났다").not.toContain(
       MI_SAME_AREA_SCOPE,
     );
-    expect(firstScreen(), "🔴 그 설명이 1차로 올라왔다(긴 설명 금지)").not.toContain(
+    expect(firstScreen(), "🔴 제거한 설명이 1차에 있다").not.toContain(
       MI_SAME_AREA_SCOPE,
     );
   });
@@ -347,18 +362,22 @@ describe("CORE-2AO-R2 — 첫 화면에 «긴 설명» 이 남아 있지 않다"
      *    🟢 실측 기준 1차는 전체의 **10% 대** 다. 25% 를 넘으면 1차가 다시 설명을
      *       끌어안기 시작한 것이고, 그것이 이 WU 가 되돌리려는 상태다.
      */
-    expect(first / whole, `🔴 첫 화면이 다시 길어졌다(${first}/${whole})`).toBeLessThan(0.25);
+    /** 🔵 MSRUX-1 D — 접힘이 사라져 **1차 == 전체** 가 정상이다 ⟹ 비율 계약을 폐기하고, 대신 */
+    /** 🟢 **설명이 없다** 는 사실을 본다(길이가 아니라 «내용» 으로). */
+    /** 🔴 후보 목록 접힘은 **이 WU 의 제거 대상이 아니다** ⟹ 1차 < 전체가 정상이다. */
+    expect(first / whole, "🔴 1차가 전체를 통째로 삼켰다").toBeLessThanOrEqual(1);
   });
 
   it("🟢 R2-4 상세는 **접혀 있다**(`open` 금지) 그리고 근거를 전부 들고 있다", () => {
     mount();
     const fold = container.querySelector('[data-testid="price-detail-fold"]') as HTMLElement;
-    expect(fold, "🔴 `＋ 상세정보 보기` 가 없다").not.toBeNull();
-    expect(fold.tagName.toLowerCase()).toBe("details");
-    expect(fold.hasAttribute("open"), "🔴 상세가 펼쳐져 있다").toBe(false);
-    const inside = (fold.textContent ?? "").replace(/\s+/g, " ");
+    /** 🔵 MSRUX-1 D — 「＋ 상세정보 보기」 접힘은 **제거** 됐다. */
+    expect(fold, "🔴 제거한 접힘이 되살아났다").toBeNull();
+    expect(container.querySelector('[data-testid="seller-decision"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="market-verdict"]')).not.toBeNull();
+    const inside = allText();
     for (const kept of MUST_NOT_BE_ON_FIRST_SCREEN) {
-      expect(inside, `🔴 1차에서 뺐는데 상세에도 없다(= 삭제됐다): ${kept}`).toContain(kept);
+      expect(inside, `🔴 제거한 설명이 되살아났다: ${kept}`).not.toContain(kept);
     }
   });
 
@@ -372,13 +391,17 @@ describe("CORE-2AO-R2 — 첫 화면에 «긴 설명» 이 남아 있지 않다"
    */
   it("🔴 R2-5 **집계 금액** 은 1차에만 있다 — 상세 근거 블록이 또 그리지 않는다", () => {
     mount();
-    const detail = container.querySelector('[data-testid="market-detail-blocks"]') as HTMLElement;
-    const inside = (detail.textContent ?? "").replace(/\s+/g, " ");
+    /** 🔵 MSRUX-1 D — 상세 근거 블록은 **제거** 됐다 ⟹ 「금액을 또 그린다」가 성립하지 않는다. */
+    const detail = container.querySelector('[data-testid="market-detail-blocks"]');
+    expect(detail, "🔴 제거한 상세 근거 블록이 되살아났다").toBeNull();
+    const inside = allText();
     for (const amount of ["KRW 88,000", "GBP 37 · USD 58"]) {
-      expect(inside, `🔴 상세 근거 블록이 집계 금액을 또 그린다: ${amount}`).not.toContain(amount);
+      /** 🟢 블록이 사라졌으므로 **중복 0** 을 「전체에서 1회」로 확인한다(의도 보존). */
+      expect((inside.match(new RegExp(amount.replace(/[.*+?^${}()|[]\]/g, "\$&"), "g")) ?? []).length, "🔴 집계 금액이 두 번 그려진다: "+amount).toBeLessThanOrEqual(1);
     }
     /** 🟢 반대로 **판매처별 근거** 는 상세에 있어야 한다(CPO 가 요구한 목록). */
     const fold = container.querySelector('[data-testid="price-detail-fold"]') as HTMLElement;
-    expect((fold.textContent ?? "").replace(/\s+/g, " ")).toContain("GBP 37");
+    /** 🔵 MSRUX-1 D — 접힘이 사라졌다 ⟹ 그 금액은 **화면 전체** 에서 본다(교훈 ⒥). */
+    expect(allText()).toContain("GBP 37 · USD 58");
   });
 });

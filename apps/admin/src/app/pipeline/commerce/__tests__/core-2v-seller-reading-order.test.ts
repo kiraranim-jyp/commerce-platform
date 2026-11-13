@@ -139,11 +139,18 @@ describe("A. 국내 가격 표현 단일화", () => {
      */
     const html = ceoScreen().innerHTML;
     const at = (id: string) => html.indexOf(`data-testid="${id}"`);
-    for (const id of ["domestic-lowest", "reference-status", "market-empty-domestic"]) {
+    /**
+     * 🔵 MSRUX-1 D — `reference-status`·`market-empty-*`(설명)는 **제거** 됐다.
+     * 🟢 읽는 순서는 **남은 둘**(가격 → 건수)로 지킨다.
+     */
+    for (const gone of ["reference-status", "market-empty-domestic"]) {
+      expect(at(gone), `🔴 제거한 설명이 되살아났다: ${gone}`).toBe(-1);
+    }
+    for (const id of ["domestic-lowest", "market-same-count-domestic"]) {
       expect(at(id), `🔴 ${id} 가 사라졌다`).toBeGreaterThan(-1);
     }
-    expect(at("domestic-lowest")).toBeLessThan(at("reference-status"));
-    expect(at("reference-status")).toBeLessThan(at("market-empty-domestic"));
+    /** 🟢 가격이 건수보다 **먼저** 온다(이 계약의 본래 의도). */
+    expect(at("domestic-lowest")).toBeLessThan(at("market-same-count-domestic"));
   });
 
   /**
@@ -182,24 +189,34 @@ describe("B. §8 결론과 근거를 가른다", () => {
      */
     const clone = host.cloneNode(true) as HTMLElement;
     for (const d of [...clone.querySelectorAll("details")]) if (!d.hasAttribute("open")) d.remove();
-    for (const id of ["market-sale-counts", "market-split", "market-price-range", "market-seller-table"]) {
-      expect(clone.querySelector(`[data-testid="${id}"]`), `🔴 ${id} 가 1차에 남았다`).toBeNull();
+    /**
+     * 🔵 MSRUX-1 D — 🔴 `market-split` 은 **유지 대상** 이다(CPO 지정) ⟹ 1차에 서는 것이 정상.
+     *    나머지 셋은 제거됐다. 🟢 그래서 목록을 **둘로 가른다**(교훈 ⒧).
+     */
+    expect(clone.querySelector('[data-testid="market-split"]'), "🔴 유지 대상이 사라졌다").not.toBeNull();
+    for (const id of ["market-sale-counts", "market-price-range", "market-seller-table"]) {
+      expect(clone.querySelector(`[data-testid="${id}"]`), `🔴 제거한 ${id} 가 되살아났다`).toBeNull();
     }
-    const fold = q(host, "market-evidence-fold") as HTMLElement;
-    expect(fold, "🔴 근거 접힘이 없다").not.toBeNull();
-    for (const id of ["market-sale-counts", "market-split", "market-price-range", "market-seller-table"]) {
-      expect(fold.querySelector(`[data-testid="${id}"]`), `🔴 ${id} 가 사라졌다(삭제 금지)`).not.toBeNull();
+    /** 🔵 MSRUX-1 D — 근거 접힘은 **제거** 됐다. 🟢 판단 결과는 그대로 선다. */
+    const fold = q(host, "market-evidence-fold");
+    expect(fold, "🔴 제거한 근거 접힘이 되살아났다").toBeNull();
+    expect(q(host, "market-judgement"), "🔴 판매 판단이 사라졌다").not.toBeNull();
+    /** 🟢 유지 대상(`market-split`)은 **화면에** 있다 — 접힘이 아니라 1차다. */
+    for (const id of ["market-split"]) {
+      expect(q(host, id), `🔴 ${id} 가 사라졌다(삭제 금지)`).not.toBeNull();
     }
   });
 
   /** 🔴 **`open` 금지** — 붙이면 1차로 되돌아온다(2026-09-19 사고의 기전). */
   it("B-2 🔴 두 접힘 모두 **기본 접힘** 이다", () => {
     const host = ceoScreen();
+    /** 🔵 MSRUX-1 D — 접힘 둘은 **제거** 됐다(펼침 여부를 물을 대상이 없다). */
     for (const id of ["market-evidence-fold", "mi-detail-fold"]) {
-      expect((q(host, id) as HTMLElement).hasAttribute("open"), `🔴 ${id} 가 펼쳐져 있다`).toBe(false);
+      expect(q(host, id), `🔴 제거한 접힘이 되살아났다: ${id}`).toBeNull();
     }
     /** 🔴 접힘 이름이 **서로 다르다** — 「내부 분석」과 「판매처 근거」는 다른 것이다. */
-    expect(text(host, "market-evidence-fold")).toContain(MARKET_EVIDENCE_FOLD_LABEL);
+    /** 🟢 그 라벨도 화면에서 사라졌다(접힘과 함께). */
+    expect(host.textContent ?? "", "🔴 제거한 접힘 라벨이 되살아났다").not.toContain(MARKET_EVIDENCE_FOLD_LABEL);
   });
 
   /** 🔴 §3 — 셀러가 **①~④ 까지만** 읽어도 판단이 끝난다. */
@@ -207,9 +224,13 @@ describe("B. §8 결론과 근거를 가른다", () => {
     const html = ceoScreen().innerHTML;
     const at = (id: string) => html.indexOf(`data-testid="${id}"`);
     expect(at("market-block-domestic")).toBeLessThan(at("market-block-overseas"));
-    expect(at("market-block-overseas")).toBeLessThan(at("price-basis"));
-    expect(at("price-basis")).toBeLessThan(at("market-judgement"));
-    expect(at("market-judgement")).toBeLessThan(at("mi-detail-fold"));
+    /**
+     * 🔵 MSRUX-1 D — 사슬에서 **제거된 두 칸**(price-basis · mi-detail-fold)을 뺀다.
+     * 🟢 남은 순서(🇰🇷 → 🌎 → 판단 결과)는 **그대로** 지킨다.
+     */
+    expect(at("price-basis"), "🔴 제거한 영역이 되살아났다").toBe(-1);
+    expect(at("mi-detail-fold"), "🔴 제거한 접힘이 되살아났다").toBe(-1);
+    expect(at("market-block-overseas")).toBeLessThan(at("market-judgement"));
     /**
      * 🟢 제목이 첫 화면에 있다(아래로 읽기만 하면 된다).
      * 🔴🔴 **CORE-2AO-R1 — `PRICE_BASIS_HEADING` 이 이 목록에서 빠졌다.** 그 영역은
@@ -219,9 +240,10 @@ describe("B. §8 결론과 근거를 가른다", () => {
      *    접힘과 무관하다) · 🟢 제목이 접힘 머리에 살아 있다는 것은 아래에서 직접 문다.
      */
     const first = firstScreen(ceoScreen());
-    const basisFold = q(ceoScreen(), "price-basis") as HTMLElement;
-    expect(basisFold.tagName.toLowerCase(), "🔴 근거 설명이 다시 펼쳐졌다").toBe("details");
-    expect(basisFold.querySelector("summary")?.textContent ?? "").toContain(PRICE_BASIS_HEADING);
+    /** 🔵 MSRUX-1 D — 「💡 가격 판단 기준」 영역은 **제거** 됐다. */
+    const basisFold = q(ceoScreen(), "price-basis");
+    expect(basisFold, "🔴 제거한 설명 영역이 되살아났다").toBeNull();
+    expect(first, "🔴 제거한 제목이 1차에 있다").not.toContain(PRICE_BASIS_HEADING);
     /**
      * 🔴🔴 **CORE-2AO-R2 — `MARKET_RESULT_HEADING`(💡 판매 판단)도 상세로 내려갔다.**
      *    1차에 남는 제목은 **국내 가격 · 해외 소싱가 · 판매가격 가이드** 셋이다.
@@ -229,7 +251,8 @@ describe("B. §8 결론과 근거를 가른다", () => {
      */
     expect(first).toContain(DOMESTIC_REFERENCE_TITLE);
     expect((ceoScreen().textContent ?? "").replace(/\s+/g, " ")).toContain(MARKET_RESULT_HEADING);
-    expect(first, "🔴 결론 제목이 1차로 되돌아왔다").not.toContain(MARKET_RESULT_HEADING);
+    /** 🔵 MSRUX-1 D — 접힘이 사라져 결론 제목은 **1차에 서는 것이 정상** 이다. */
+    expect(first, "🔴 결론 제목이 1차에서 사라졌다").toContain(MARKET_RESULT_HEADING);
   });
 });
 
@@ -257,9 +280,10 @@ describe("C. §5 내부 MI 표현은 핵심 결과에 없다", () => {
 
   /** 🟢 **지우지 않았다** — 사유 분포는 `▸ MI 상세 분석` 안에 그대로 있다. */
   it("C-2 🟢 보류 사유는 MI 상세 안에 **살아 있다**", () => {
-    const fold = q(ceoScreen(), "mi-detail-fold") as HTMLElement;
-    expect(fold.querySelector('[data-testid="mi-same-pending"]')).not.toBeNull();
-    expect(fold.querySelector('[data-testid="market-verdict"]')).not.toBeNull();
+    /** 🔵 MSRUX-1 D — 접힘은 제거됐고 🟢 그 안의 **판단 결과** 는 1차에 선다. */
+    const fold = q(ceoScreen(), "mi-detail-fold");
+    expect(fold, "🔴 제거한 접힘이 되살아났다").toBeNull();
+    expect(q(ceoScreen(), "market-verdict"), "🔴 분류 라벨이 사라졌다").not.toBeNull();
   });
 });
 
@@ -303,7 +327,8 @@ describe("D. 🔴 CPO §9 FAIL 조건", () => {
     ).toBeLessThan(first.indexOf("동일상품 확정 0건"));
     /** 🟢 단 **사라지지는 않았다** — 상세에 그대로 있다. */
     const whole = (ceoScreen().textContent ?? "").replace(/\s+/g, " ");
-    expect(whole).toContain(DOMESTIC_REFERENCE_BASIS);
+    /** 🔵 MSRUX-1 D — 「국내 가격 참고값」 근거 라벨은 **설명 축** 이라 제거됐다. */
+    expect(whole, "🔴 제거한 근거 라벨이 되살아났다").not.toContain(DOMESTIC_REFERENCE_BASIS);
     expect(whole).toContain("동일상품 확정 0건");
   });
 
