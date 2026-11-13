@@ -322,7 +322,13 @@ describe("C-W. 🔴🔴 **운영 배선** — 하니스가 못 보는 자리를 
      * 🟢 지금은 **POST `/check` 응답** 이 owner 다(`domesticReference` 와 같은 수명).
      *    ⟹ 단언도 **그 통로** 를 본다 — 약화가 아니라 **발화하는 자리로 옮긴 것** 이다.
      */
-    const body = stripComments(readFileSync(PANEL_SRC, "utf8"));
+    /**
+     * 🔴 이 저장소의 소스는 **CRLF** 다 — 앵커에 `\n` 을 박으면 **영원히 안 맞는다**.
+     * 🟢 그래서 `\r` 를 걷고 본다(단언의 뜻은 그대로다).
+     */
+    const body = stripComments(readFileSync(PANEL_SRC, "utf8"))
+      .split(String.fromCharCode(13))
+      .join("");
     /** ⒜ POST 응답에서 받는다(자동 1회차). */
     expect(body).toContain("setReferenceProfitability(j.referenceProfitability ?? null)");
     /** ⒝ memo 가 그 state 를 싣는다. */

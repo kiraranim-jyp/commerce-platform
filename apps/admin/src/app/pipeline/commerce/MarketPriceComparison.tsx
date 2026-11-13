@@ -1717,10 +1717,27 @@ function MarketBlock({
                 : null}
               </>
             ) : (
-              /** 🔴 「가격을 못 가져왔다」와 「동일상품이 없다」는 다른 문장이다. */
-              <p data-testid="price-guide-empty" className="text-[11px] text-text-tertiary">
-                {PRICE_GUIDE_EMPTY}
-              </p>
+              <>
+                {/**
+                 * 🔴🔴 MSRUX-1 D 회귀 수정 ② — **건수 줄의 owner 분기가 «셋» 이었다.**
+                 *    `sameCount === 0` 과 `head != null` 둘은 복구했는데 **이 분기**
+                 *    (동일상품은 있는데 가격이 하나도 없다)에는 애초에 건수 줄이 없었고,
+                 *    D 가 상세(`price-guide-counts`)를 지우면서 그 공백이 드러났다
+                 *    ⟹ 「동일상품 1건」인데 화면이 그 수를 **한 번도 말하지 않는다**.
+                 * 🟢 같은 `testid` · 같은 owner 함수(`sameConfirmedCountText`) · 같은 값
+                 *    (`g.sameCount`). 🔴 **새 계산 0 · 새 분모 0 · 판정 변경 0.**
+                 */}
+                <p
+                  data-testid={`market-same-count-${suffix}`}
+                  className="mt-0.5 text-[11px] text-text-tertiary"
+                >
+                  {sameConfirmedCountText(g.sameCount)}
+                </p>
+                {/** 🔴 「가격을 못 가져왔다」와 「동일상품이 없다」는 다른 문장이다. */}
+                <p data-testid="price-guide-empty" className="text-[11px] text-text-tertiary">
+                  {PRICE_GUIDE_EMPTY}
+                </p>
+              </>
             )
           ) : (
             <>

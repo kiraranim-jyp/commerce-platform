@@ -210,19 +210,22 @@ describe("UXR-F ⒝ 1차 노출 — 첫 화면에 **무엇이 서는가**", () =
   it("UXR-F-3 🔴🔴 **최종 선택 가격은 1차에 없고 상세에 있다**(CPO LOCK ⒜)", () => {
     const m = mount({ rows: bothMarkets(), finalPriceKrw: 85000, onOpenPriceEditor: () => {} });
     try {
-      /** 🔴 1차에 올리면 가격 숫자가 넷(권장·국내·해외·최종)이 된다 — CPO 가 닫은 판정이다. */
-      expect(
-        firstScreenNode(m.host).querySelectorAll('[data-testid="market-final-price"]').length,
       /**
        * 🔵🔵 CPO 결정 ⒜(2026-11-12) — **판매가 확정 CTA 는 결론 영역(= 1차)에 선다.**
-       *    D 가 그 CTA 를 접힘과 함께 지워 **셀러가 가격을 확정할 수 없었고**(운영 수정 #1),
+       *    D 가 그 CTA 를 접힘과 함께 지워 **셀러가 가격을 확정할 수 없었다**(운영 수정 #1).
        *    CPO 가 **결론 영역 복구** 를 지시했다 ⟹ 「1차에 없다」는 전제가 **대체** 됐다.
-       * 🔴 약화가 아니다 — **중복이 아니라 «시장마다 하나»** 임을 같이 문다.
+       * 🔴 **약화가 아니다** — 「1차에 있다」와 「**시장마다 하나뿐**」을 **둘 다** 문다.
+       *    전에는 1차 부재만 봤으므로 중복 렌더를 잡지 못했다.
        */
-      expect(m.host.querySelectorAll('[data-testid="market-final-price"]').length, "🔴 확정 CTA 가 사라졌다").toBe(2);
-      ).toBe(0);
-      /** 🟢 그리고 **삭제가 아니다** — 상세에는 그대로 있고 개수도 그대로다(시장별 1 × 2). */
-      expect(m.host.querySelectorAll('[data-testid="market-final-price"]').length, "🔴 확정 CTA 수가 달라졌다").toBe(2);
+      expect(
+        firstScreenNode(m.host).querySelectorAll('[data-testid="market-final-price"]').length,
+        "🔴 확정 CTA 가 1차에서 사라졌다",
+      ).toBe(2);
+      /** 🟢 그리고 **중복이 아니다** — 화면 전체에서도 시장별 1 × 2 뿐이다. */
+      expect(
+        m.host.querySelectorAll('[data-testid="market-final-price"]').length,
+        "🔴 확정 CTA 수가 달라졌다",
+      ).toBe(2);
       expect(text(m.host), "🔴 최종 선택 가격이 아예 사라졌다").toContain(FINAL_PRICE_LABEL);
     } finally {
       m.cleanup();
@@ -236,11 +239,17 @@ describe("UXR-F ⒝ 1차 노출 — 첫 화면에 **무엇이 서는가**", () =
       const first = text(firstScreenNode(m.host));
       const whole = text(m.host);
       expect(first, "🔴 긴 부정문이 첫 화면에 올라왔다").not.toContain(MI_SAME_EMPTY);
-      expect(whole, "🔴 제거한 설명 문장이 되살아났다").not.toContain(
+      /**
+       * 🔵 MSRUX-1 D — 그 설명 문장은 **상세와 함께 제거** 됐다(CPO ⒝) ⟹ 「상세에 있다」가
+       *    「어디에도 없다」로 바뀐다. 🔴 **부재만 쓰지 않는다** — 아래가 **판단 결과는
+       *    살아 있다** 를 같이 문다(설명만 지웠고 결론을 지운 것이 아니다).
+       */
+      expect(whole, "🔴 제거한 설명 문장이 되살아났다").not.toContain(MI_SAME_EMPTY);
+      expect(m.host.querySelectorAll('[data-testid="mi-same-empty"]').length, "🔴 제거한 줄이 되살아났다").toBe(0);
       expect(
-        firstScreenNode(m.host).querySelectorAll('[data-testid="mi-same-empty"]').length,
-      ).toBe(0);
-      expect(m.host.querySelectorAll('[data-testid="mi-same-empty"]').length).toBeGreaterThan(0);
+        m.host.querySelectorAll('[data-testid="market-judgement"]').length,
+        "🔴 판매 판단이 같이 사라졌다",
+      ).toBeGreaterThan(0);
     } finally {
       m.cleanup();
     }
@@ -286,11 +295,20 @@ describe("UXR-O ⒞ 우선순위 — 판단 → 소싱가격 → 후보 → 추�
         "price-detail-fold",
       ] as const;
       const at = docOrder(m.host, ids);
-      at.forEach((i, n) =>
-        expect(i, `🔵 제거된 칸은 -1 이 정상이다: ${ids[n]}`).toBeGreaterThanOrEqual(-1);
-      );
-      for (let n = 1; n < at.length; n += 1) {
-        expect(at[n], `🔴 순서가 틀렸다: ${ids[n - 1]} → ${ids[n]}`).toBeGreaterThan(at[n - 1]!);
+      /**
+       * 🔵 MSRUX-1 D — 목록의 일부 칸은 **제거** 됐다(`-1`). 🔴 그래도 목록에서 빼지
+       *    않는다 — 빼면 「되살아나도 통과」한다. 🟢 대신 **살아 있는 칸들끼리** 순서를
+       *    문다(순서 단언은 약화되지 않는다).
+       */
+      const present = at
+        .map((i, n) => ({ i, id: ids[n] }))
+        .filter((e) => e.i >= 0);
+      expect(present.length, "🔴 남아야 할 칸이 하나도 없다").toBeGreaterThan(1);
+      for (let n = 1; n < present.length; n += 1) {
+        expect(
+          present[n]!.i,
+          `🔴 순서가 틀렸다: ${present[n - 1]!.id} → ${present[n]!.id}`,
+        ).toBeGreaterThan(present[n - 1]!.i);
       }
     } finally {
       m.cleanup();
