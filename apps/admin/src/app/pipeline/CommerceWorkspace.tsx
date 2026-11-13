@@ -3893,11 +3893,26 @@ export function CommerceWorkspace({
             finalPriceKrw={product.priceOverrideKrw?.value ?? null}
             onConfirmPriceKrw={updateSalePriceKrw}
             /**
-             * 🔴 `PriceEditor` 는 **상품정보 탭** 에 있고 이 영역은 그 탭이 아니다 ⟹
-             *    그 자리로 보내는 **기존** 전환을 그대로 쓴다(새 라우팅·새 앵커 **0**).
-             *    🟢 `:2110`·`:2117` 의 준비도 점이 쓰는 것과 **같은 호출** 이다.
+             * ══════════════════════════════════════════════════════════════════
+             * 🔴🔴🔴 MSRUX-1 UI-2 — **그 전제가 틀렸다. 이 영역은 «그 탭» 이다.**
+             * ══════════════════════════════════════════════════════════════════
+             *
+             * 🔴 전에는 `() => setTab("source")` 였다. 그런데 이 블록은 **상품정보
+             *    탭 안** 에 서 있다 ⟹ 셀러가 「가격 수정 →」을 눌러도 **이미 그 탭**
+             *    이라 **화면이 한 픽셀도 움직이지 않는다**(CEO 캡처의 그 상태).
+             *    `PriceEditor` 는 같은 페이지 **훨씬 아래** 에 있고 접혀 있을 수도 있다.
+             * 🟢 그래서 **기존 핸들러 하나로 바꾼다**(`:818`) — 새 핸들러·새 라우팅·
+             *    새 앵커 **0**. 그 함수가 셋을 한다:
+             * ```
+             * setTab("source")                     탭 보장
+             * setPriceSurfaceRequest(n + 1)        접힘을 «펼친다»   ← 전에 빠졌다
+             * scrollIntoView(PRICE_SURFACE_ANCHOR_ID)  그 자리로 «간다» ← 전에 빠졌다
+             * ```
+             * 🟢 이미 **네 곳이 쓰는 확립된 경로** 다(`:2176` · `:2310` · `:4000` · `:4571`).
+             * 🔴 가격 계산·A/B 정책·저장 경로는 **한 글자도** 바뀌지 않는다 — 확정은
+             *    그대로 `onConfirmPriceKrw={updateSalePriceKrw}`(`PriceEditor` 와 같은 함수).
              */
-            onOpenPriceEditor={() => setTab("source")}
+            onOpenPriceEditor={handleRequestPriceReview}
           />
           {/**
            * ══════════════════════════════════════════════════════════════════
