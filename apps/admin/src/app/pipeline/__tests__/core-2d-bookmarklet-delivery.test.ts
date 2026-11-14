@@ -242,17 +242,30 @@ describe("CORE-2D D — 🔴🔴 배선(소스 앵커 — 마운트만으로는 
     expect(COMP).toContain("buildBookmarkletForSnapshot(window.location.origin, snapshotId)");
   });
 
-  it("D-3 🔴 페이지가 **현재 상품의 snapshotId** 를 넘긴다", () => {
-    expect(PAGE).toContain("<SmartSearchBookmarklet snapshotId={snapshotId}");
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 UX-CONSOLIDATION ① 에서 **방향이 뒤집혔다** — 「선다」 → 「숨긴다」
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 CEO 지시(2026-11-14): 「사용하지 않는 AI 검색 기능이 화면 하단에 남아 있다」
+   *    ⟹ **셀러 화면에서 노출 제거**. 그래서 D-3·D-4(「선다」·「자리가 뒤다」)의
+   *    전제가 사라졌다.
+   * 🔴🔴 **단언을 지우지 않는다** — 「없다」로 **뒤집고**, 그 옆에 **보존 단언** 을
+   *    붙인다(기능 소실을 부재로 덮지 않는다). 🟢 D-1·D-2 등 **생성·전달 계약은
+   *    그대로** 살아 있어 기능 자체는 계속 잠겨 있다.
+   */
+  it("D-3 🔵 셀러 화면에서 **렌더하지 않는다**(기능 삭제가 아니라 노출 제거)", () => {
+    expect(PAGE, "🔴 숨긴 도구가 셀러 화면에 되살아났다").not.toContain("<SmartSearchBookmarklet");
+    /** 🟢 **보존** — 컴포넌트와 그 계약은 그대로다(되돌릴 수 있다). */
+    expect(COMP, "🔴 컴포넌트를 지웠다").toContain("export function SmartSearchBookmarklet");
   });
 
-  it("D-4 🔴 자리가 `CommerceWorkspace` **뒤** 다(결론이 최상단이어야 한다)", () => {
-    const workspace = PAGE.indexOf("<CommerceWorkspace");
-    const bookmarklet = PAGE.indexOf("<SmartSearchBookmarklet");
-    expect(workspace).toBeGreaterThan(-1);
-    expect(bookmarklet, "🔴 도구가 판단 결과보다 먼저 서면 WU-140-R1 의 FAIL 모양이다").toBeGreaterThan(
-      workspace,
-    );
+  it("D-4 🔵 판단 결과(`CommerceWorkspace`)는 **그대로 선다** — 같이 지우지 않았다", () => {
+    /**
+     * 🔴 전에는 「도구가 워크스페이스 **뒤**」를 단언했다. 도구가 사라졌으니 그 순서는
+     *    성립하지 않는다 ⟹ 🟢 지키려던 **본래 의도**(「결론이 최상단」)만 남긴다.
+     */
+    expect(PAGE.indexOf("<CommerceWorkspace"), "🔴 판단 결과 화면이 사라졌다").toBeGreaterThan(-1);
   });
 
   it("D-5 🔴 ⑨ 기존 `/check` 에 연결된다 — 새 API 를 만들지 않았다", () => {

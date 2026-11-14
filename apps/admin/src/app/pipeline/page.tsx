@@ -26,7 +26,8 @@ import { isStaleSnapshotResponse, resolveSnapshotSaveAction } from "./snapshot-s
 /** 🔴 CORE-2C — 북마크 1클릭 핸드오프. 규칙 owner 는 그 파일 하나다(사본 금지). */
 import { parseSuppliedUrlsParam, SUPPLIED_URL_PARAM } from "./supplied-url-handoff";
 /** 🔴 CORE-2D — 그 북마크릿을 셀러에게 전달하는 최소 UI(검색 UI 0 · 후보 목록 0). */
-import { SmartSearchBookmarklet } from "./SmartSearchBookmarklet";
+/** 🔵 UX-CONSOLIDATION ① — 셀러 화면에서 «숨김». 되살리려면 이 import 와 아래 한 줄을 복구한다. */
+// import { SmartSearchBookmarklet } from "./SmartSearchBookmarklet";
 import type { PipelineProgressEvent, PipelineResponse, TabKey, WorkspaceItem } from "./types";
 import { WorkspaceTabs } from "./WorkspaceTabs";
 import { downloadWorkspaceZip, resizeToSquare } from "./zip";
@@ -1280,15 +1281,22 @@ export default function PipelinePage() {
           />
 
           {/*
-            🔴🔴 CORE-2D — **북마크릿 전달 UI**(CPO 지시 · 새 검색 UI 0 · 후보 목록 0).
+            ══════════════════════════════════════════════════════════════════
+            🔵🔵🔵 UX-CONSOLIDATION ① — **「🔎 AI 검색으로 후보 찾기」를 «숨긴다»**
+            ══════════════════════════════════════════════════════════════════
 
-            🔴 **자리를 `CommerceWorkspace` «뒤» 로 둔다.** 앞에 두면 셀러가 화면을
-               열 때 가장 먼저 보는 것이 「판단 결과」가 아니라 「도구」가 된다 —
-               WU-140-R1 에서 CEO 가 FAIL 로 돌려보낸 그 모양이다(결론이 최상단).
-            🔴 `snapshotId` 가 없으면 컴포넌트가 **스스로 아무것도 렌더하지 않는다**
-               (상품을 모르면 북마크릿을 만들지 않는다 — 상품 간 후보 혼선 금지).
+            🔴 CEO 지시(2026-11-14) — 쓰지 않는 도구가 셀러 화면 맨 아래에 남아 있다.
+               판매자 화면에서 **그 영역 전체**(설명 문구 + 북마크 버튼)를 치운다.
+
+            🔴🔴 **삭제가 아니라 노출 제거다**(지시서 §1 「검색 로직이나 API 를 임의로
+               삭제하지 않는다」). 🟢 그래서 **컴포넌트·파서·`candidateUrls` 경계·
+               API 를 한 글자도 건드리지 않았다** — 렌더 한 줄만 뺐다.
+               WU-130 ③ 이 「붙여넣기 입력」에 쓴 것과 **같은 방식** 이다.
+            🟢 되돌리는 법도 같다 — 아래 한 줄을 되살리면 그대로 돌아온다:
+               `<SmartSearchBookmarklet snapshotId={snapshotId} productTitle={...} />`
+            🔴 국내·해외 소싱 후보 조회(`/check` · MI · 집계)에는 **영향 0** 이다 —
+               그 경로는 이 컴포넌트를 거치지 않는다(계약이 잠근다).
           */}
-          <SmartSearchBookmarklet snapshotId={snapshotId} productTitle={product.title?.value} />
 
           {/* P0-UI Epic 1 — JSON/ZIP/원본 URL/처리 리포트 등은 판매자가 매일 볼
            * 필요가 없는 개발자 정보다. Developer Mode를 껐으면 이 섹션 자체가
