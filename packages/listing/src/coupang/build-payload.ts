@@ -1633,9 +1633,24 @@ function buildCoupangItem(args: {
    *  같은 판정을 쓴다. 여기서 한 번 더 계산하면 두 칸이 갈릴 수 있고, 그게
    *  P0 에서 실제로 일어난 일이다(한쪽은 값을, 한쪽은 출처를 봤다). */
   manufacture?: string;
+  /** 🔴 S2-① — 기본가(`listing.priceKrw`)를 환산할 때 쓴 **그 환율표**. 옵션 차액도
+   *  같은 표로 환산해야 기본가와 옵션가의 기준이 어긋나지 않는다. */
+  liveRates?: Record<string, number>;
 }): { item: CoupangItem; complianceResults: ComplianceFieldResult[] } {
-  const { product, listing, sellerConfig, categoryMeta, images, contents, optionGroups, variant, brandProfile, manufacture, binding } =
-    args;
+  const {
+    product,
+    listing,
+    sellerConfig,
+    categoryMeta,
+    images,
+    contents,
+    optionGroups,
+    variant,
+    brandProfile,
+    manufacture,
+    binding,
+    liveRates,
+  } = args;
 
   const compliance = buildCoupangCompliance(
     categoryMeta,
@@ -1699,6 +1714,7 @@ function buildCoupangItem(args: {
     ? computeVariantFinalPriceKrw(
         { amount: product.price.value.amount, currency: product.price.value.currency, finalKrw: listing.priceKrw },
         { amount: variant.price.amount, currency: variant.price.currency, mode: variant.priceMode },
+        liveRates,
       )
     : { finalKrw: listing.priceKrw, applied: false, reason: "NO_VARIANT_PRICE" as const };
   /* 🔴 S2-① — finalKrw === null 은 «환율을 몰라 옵션가를 계산하지 못했다»는 뜻이다.
@@ -1787,6 +1803,11 @@ export function buildCoupangPayload(
   product: CoupangProductInput,
   listing: ListingModel,
   options: {
+    /** 🔴 S2-① — 기본가를 환산할 때 쓴 **그 환율표**를 옵션 차액 환산에도 그대로
+     *  넘긴다(롯데ON 과 같은 모양 · lotteon/build-payload.ts:197).
+     *  🟡 아직 운영 route 가 채우지 않는다(= 고정표 폴백 · 기존 동작 불변) —
+     *     그 배선은 S2 ④(route·client)로 남아 있다. */
+    liveRates?: Record<string, number>;
     sellerConfig?: CoupangSellerConfig;
     descriptionTemplate?: CoupangDescriptionTemplate;
     categoryMeta?: CoupangCategoryMeta | null;
@@ -1932,6 +1953,7 @@ export function buildCoupangPayload(
       brandProfile: options.brandProfile,
       manufacture: productManufacture,
       binding: options.binding,
+      liveRates: options.liveRates,
     }),
   );
   const items: CoupangItem[] = built.map((b) => b.item);

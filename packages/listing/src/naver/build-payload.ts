@@ -84,6 +84,15 @@ import {
 export interface NaverPayloadInput {
   product: SmartStoreProductInput;
   listing: ListingModel;
+  /** 🔴 S2-① — 기본가(`listing.priceKrw`)를 환산할 때 쓴 **그 환율표**. 옵션 차액도
+   *  반드시 같은 표로 환산해야 기본가와 옵션가의 기준이 어긋나지 않는다
+   *  (롯데ON 은 이 칸을 이미 받는다 · lotteon/build-payload.ts:197).
+   *
+   *  🔴 **빌더와 검증기가 같은 값을 봐야 한다** — 한쪽만 받으면 검증기가 막은 것을
+   *  빌더가 통과시키거나 그 반대가 된다. 그래서 둘 다 이 칸 하나를 본다.
+   *  🟡 아직 운영 route 가 채우지 않는다(= 고정표 폴백 · 기존 동작 불변).
+   *     그 배선은 S2 ④(route·client)로 남아 있다. */
+  liveRates?: Record<string, number>;
   /** N-2.4 확인 — 리프 카테고리 ID(예: "50000535"). */
   leafCategoryId: string;
   /** N-2.5 확인 — 판매자 주소록(addressbooks-for-page)의 addressType=RELEASE
@@ -334,7 +343,12 @@ export function assembleNaverDetailContent(
  * 흐름에서는 id를 절대 채우지 않는다. SKU는 부작용 없는 sellerManagerCode
  * (판매자 관리 코드)로 옮긴다. optionName1..4는 product.optionGroups
  * 순서대로 variant.optionValues 값을 채운다. */
-function buildOptionCombinations(product: SmartStoreProductInput, salePrice: number): NaverOptionCombination[] {
+function buildOptionCombinations(
+  product: SmartStoreProductInput,
+  salePrice: number,
+  /** 🔴 S2-① — 검증기(validate-payload)와 **반드시 같은 값**이어야 한다. */
+  liveRates?: Record<string, number>,
+): NaverOptionCombination[] {
   const groupNames = product.optionGroups.map((g) => g.name);
   return product.variants.map((variant) => {
     const values = groupNames.map((name) => variant.optionValues[name] ?? "");
@@ -352,11 +366,20 @@ function buildOptionCombinations(product: SmartStoreProductInput, salePrice: num
       ? computeVariantFinalPriceKrw(
           { amount: product.price.value.amount, currency: product.price.value.currency, finalKrw: salePrice },
           { amount: variant.price.amount, currency: variant.price.currency, mode: variant.priceMode },
+          liveRates,
         )
-      : { finalKrw: salePrice, applied: false };
-    /* 🔴 S2-① — 환율을 몰라 옵션 최종가를 «계산하지 못하면» 그 옵션을 빼낸다.
-       바로 아래 재고 null 과 **같은 처분**이다(0 이나 기본가로 메우지 않는다).
-       기본가로 폴백해 넣으면 옵션 추가금이 사라진 가격이 차액 0 으로 등록된다. */
+      : { finalKrw: salePrice, applied: false, reason: "NO_VARIANT_PRICE" as const };
+    /* ══ 🔴 S2-①(CPO 2차 검토로 **정정**) — 여기서 빼는 것은 「제외해도 된다」가 아니다 ══
+       환율을 몰라 옵션 최종가를 계산하지 못하면 payload 에서 빼낸다. 🔴 그러나 이것을
+       **바로 아래 재고 null 과 같은 처분으로 읽으면 안 된다**:
+
+         재고 null      그 옵션을 **실제로 못 판다** ⟹ 빼는 것이 사실에 맞는다
+         환율 미확인    **팔 수 있는데 가격만 모른다** ⟹ 빠진 채 등록되면
+                        **상품 구성이 조용히 달라진다**
+
+       🔴 그래서 **등록 자체는 validate-payload 가 막는다**(그 파일의
+       `unresolvedPriceVariants` 블록 → BLOCKED). 여기서 빼는 것은 payload 를
+       «만들 수 있게» 하기 위한 것이고, **등록 가부는 검증기 하나가 소유한다**. */
     if (variantResult.finalKrw == null) return null;
     const priceDelta = variantResult.finalKrw - salePrice;
     /* 🔴 모르면 null 이다 — 아래에서 그 옵션을 «빼낸다»(0 으로 메우지 않는다). */
@@ -929,7 +952,7 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
                 // 배열이 아니다(types.ts의 NaverOptionCombinationGroupNames 주석
                 // 참고 — 실제 등록 시도에서 HTTP 400으로 확인된 버그).
                 optionCombinationGroupNames: buildOptionCombinationGroupNames(product.optionGroups),
-                optionCombinations: buildOptionCombinations(product, listing.priceKrw),
+                optionCombinations: buildOptionCombinations(product, listing.priceKrw, input.liveRates),
               }
             : undefined,
         // N-3.49(2026-08-17, 실제 등록 3차 시도로 발견) — minorPurchasable이

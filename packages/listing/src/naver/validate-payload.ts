@@ -1,3 +1,4 @@
+import { computeVariantFinalPriceKrw } from "@commerce/pricing";
 import { getSelectedImageUrl, isRegistrationSafeImageUrl } from "@commerce/shared";
 
 import { hasRealProductOptions } from "./build-payload";
@@ -148,6 +149,9 @@ export function validateNaverPayload(
   payload: NaverProductRegistrationPayload,
   input: Pick<
     NaverPayloadInput,
+    /** 🔴 S2-① — 빌더가 옵션 차액을 환산할 때 쓴 **그 환율표**. 검증기가 같은 값을
+     *  봐야 「빌더는 계산했는데 검증기가 막는다」(또는 그 반대)가 나오지 않는다. */
+    | "liveRates"
     | "product"
     | "releaseAddressBookNo"
     | "refundAddressBookNo"
@@ -861,6 +865,36 @@ export function validateNaverPayload(
          *    (`stage5-guidance-destination.test.ts`).
          */
         "옵션 그룹은 선언됐는데 보낼 옵션 조합이 0개입니다 — 원본에서 옵션별 재고를 확인하지 못했습니다. 상품정보 → 재고의 「기본 재고 수량」을 입력하면 조합이 복구됩니다(재고를 0이나 999로 임의로 메우지 않습니다).",
+      );
+    }
+    /* ══ 🔴 S2-① (CPO 2차 검토 지적) — **「제외」가 아니라 「차단」이다** ════════
+       환율을 몰라 옵션가를 계산하지 못한 조합은 빌더가 payload 에서 빼낸다
+       (buildOptionCombinations). 🔴 그런데 그것을 **바로 위 재고 null 과 같은
+       처분으로 두면 안 된다** — 두 상태는 의미가 다르다:
+
+         재고 null      그 옵션을 **실제로 못 판다** ⟹ 빼는 것이 사실에 맞는다
+         환율 미확인    **팔 수 있는데 가격만 모른다** ⟹ 빼면 등록은 성공하는데
+                        **상품 구성이 조용히 달라진다**(셀러가 의도한 옵션이 사라진다)
+
+       🔴 채널 정책상 「일부 옵션 제외」를 승인받는 경로가 이 저장소에 **없다**
+       (전수 확인). 승인 경로가 없으면 **상품 전체를 막는 것**이 맞는 처분이다.
+       🔴 빌더가 아니라 여기서 막는 이유 — 빌더는 payload 를 만들 수 있어야 하고,
+       등록 가부는 이 검증기 하나가 소유한다(register/route.ts:588 이 이것을 본다). */
+    const unresolvedPriceVariants = product.variants.filter((v) => {
+      if (!v.price) return false;
+      return (
+        computeVariantFinalPriceKrw(
+          { amount: product.price.value.amount, currency: product.price.value.currency, finalKrw: originProduct.salePrice },
+          { amount: v.price.amount, currency: v.price.currency, mode: v.priceMode },
+          input.liveRates,
+        ).finalKrw == null
+      );
+    });
+    if (unresolvedPriceVariants.length > 0) {
+      blocked(
+        fields,
+        "detailAttribute.optionInfo.optionCombinations[].price",
+        `환율을 확인하지 못해 옵션 판매가를 계산할 수 없는 옵션이 ${unresolvedPriceVariants.length}개 있습니다 — 그 옵션만 빠진 채 등록되지 않도록 상품 전체 등록을 막습니다(환율이 확인된 뒤 등록할 수 있습니다).`,
       );
     }
     const negativeFinalPriceCombos = combos.filter((c) => originProduct.salePrice + c.price < 0);
