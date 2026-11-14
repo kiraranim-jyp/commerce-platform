@@ -4275,9 +4275,19 @@ export function CommerceWorkspace({
                       product={product}
                       recommendedPriceKrw={recommendedPriceKrw}
                       onUpdateSalePriceKrw={updateSalePriceKrw}
-                      /* "왜 이 값인가"는 여기서 답하지 않는다 — MI ④의 상세
-                         계산으로 데려가기만 한다(사본을 만들지 않는다). */
-                      onOpenPriceCalculation={handleOpenPriceCalculation}
+                      /* 🔵🔵 UXC-⑥ UX(CEO 지시 2026-11-14) — "왜 이 값인가"의 답을
+                         **여기서 펼친다.** 전에는 `onOpenPriceCalculation` 으로
+                         **위쪽 가격 분석 카드** 로 스크롤해서, 판매가를 고치던 셀러가
+                         편집 위치에서 이탈했다.
+
+                         🔴 **사본을 만들지 않는다** — `priceCalculationDetail` 은
+                            `:2076` 의 **그 노드 하나** 다(새 계산식 0 · A/B 혼합 0).
+                         🟢 두 진입점이 충돌하지 않는다 — 위쪽 ⓘ 는
+                            `priceDetailRequest > 0` 일 때만 그 자리에 그리고,
+                            여기는 **자기 접힘 상태** 로만 그린다 ⟹ 앵커 id 중복 0.
+                         🔴 `onOpenPriceCalculation` 은 **넘기지 않는다** — 넘기면
+                            폴백이 아니라 「위로 점프」가 다시 이긴다. */
+                      priceCalculationDetail={priceCalculationDetail}
                     />
                   </div>
                 ),

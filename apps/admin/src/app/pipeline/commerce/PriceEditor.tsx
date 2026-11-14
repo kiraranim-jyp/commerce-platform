@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, type ReactNode } from "react";
 import type { CanonicalProduct } from "@commerce/shared";
 import { formatKrw } from "@commerce/pricing";
 import { EditableText } from "./EditableField";
@@ -58,6 +59,7 @@ export function PriceEditor({
   recommendedPriceKrw,
   onUpdateSalePriceKrw,
   onOpenPriceCalculation,
+  priceCalculationDetail,
 }: {
   product: CanonicalProduct;
   /**
@@ -70,7 +72,23 @@ export function PriceEditor({
   /** MI ③ 💰 수익성의 [ⓘ 가격 계산 기준]을 펼치고 그 자리로 데려간다.
    * 여기서 계산하지도, 조회하지도 않는다 — 화면 이동 하나뿐이다. */
   onOpenPriceCalculation?: () => void;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 UXC-⑥ UX — **상세 계산 기준은 «여기서» 펼친다**(CEO 지시 2026-11-14)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 전에는 이 버튼이 `onOpenPriceCalculation` 을 불러 **위쪽 가격 분석 카드의
+   *    앵커로 스크롤** 했다 ⟹ 셀러가 판매가를 고치다가 근거를 보려고 누르면
+   *    **편집 위치에서 이탈** 했다(CEO 가 FAIL 로 지목한 그 흐름).
+   * 🟢 이 노드를 받으면 **그 자리에서 접었다 폈다** 한다 — 탭 전환 0 · 스크롤 0.
+   * 🔴 **새 계산식 0** — 상위가 이미 만든 `priceCalculationDetail` 노드 **그대로** 다
+   *    (A `resolveListingPrice` 입력 · B `computePriceRecommendation` 혼입 0).
+   * 🔴 안 넘기면 **기존 동작 그대로** 다(`onOpenPriceCalculation` 폴백).
+   */
+  priceCalculationDetail?: ReactNode;
 }) {
+  /** 🟢 이 카드 **안** 의 상태다 — 닫아도 입력값·편집 상태가 그대로 남는다. */
+  const [basisOpen, setBasisOpen] = useState(false);
   // N-3.54(CPO 지시) — 원본 가격을 못 읽었으면 "얼마로 팔 것인가"를 물을 수
   // 없다. 경고 배너 원본과 원본 가격 입력칸은 상세 계산(PriceCalculationDetail)이
   // 갖는다 — 같은 경고를 두 카드가 각자 그리면 셀러는 문제가 둘인 줄 안다.
@@ -175,14 +193,25 @@ export function PriceEditor({
 
       {/* "왜 이 값인가"로 가는 단 하나의 통로. 답은 MI ④ 안에 있고, 이 카드는
           그 답을 복제하지 않는다(복제하는 순간 이번 지시 이전으로 돌아간다). */}
-      {onOpenPriceCalculation && (
+      {(priceCalculationDetail || onOpenPriceCalculation) && (
         <button
           type="button"
-          onClick={onOpenPriceCalculation}
+          data-testid="price-editor-basis-toggle"
+          aria-expanded={priceCalculationDetail ? basisOpen : undefined}
+          onClick={priceCalculationDetail ? () => setBasisOpen((v) => !v) : onOpenPriceCalculation}
           className="mt-1.5 text-xs font-medium text-primary hover:underline"
         >
-          가격 계산 기준 보기 →
+          {priceCalculationDetail && basisOpen ? "가격 계산 기준 닫기" : "가격 계산 기준 보기 →"}
         </button>
+      )}
+      {/**
+       * 🔴 **요청하기 전에는 그리지 않는다** — 기본 화면은 간결하게 둔다(지시서 ⑦).
+       * 🟢 그리고 **같은 노드** 다 — 사본을 만들지 않는다.
+       */}
+      {priceCalculationDetail && basisOpen && (
+        <div data-testid="price-editor-basis-detail" className="mt-2">
+          {priceCalculationDetail}
+        </div>
       )}
     </section>
   );

@@ -352,12 +352,28 @@ describe("D. 배선 다섯 자리 + 앵커 복구", () => {
     expect(WORKSPACE).toContain(
       "marketPriceMarginPercent={marketComparison?.marketPriceMarginPercent ?? null}",
     );
-    /** 🟢 **같은 핸들러** 다 — `PriceEditor` 와 도착지가 하나여야 한다(사본 0). */
-    expect(WORKSPACE).toContain("onOpenPriceCalculation={handleOpenPriceCalculation}");
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔵🔵 UXC-⑥ UX(CEO 지시 2026-11-14) — **2 → 1 로 «의도해서» 줄었다**
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 `PriceEditor` 쪽 진입점이 그 핸들러를 쓰면 **위쪽 가격 분석 카드로 점프**
+     *    해서 셀러가 편집 위치에서 이탈했다(CEO FAIL). ⟹ 그쪽은 **제자리 펼침** 으로
+     *    바뀌었고 핸들러를 더 이상 쓰지 않는다.
+     * 🔴 **약화가 아니다** — 「하나뿐」을 못 박고, 사라진 쪽이 **대체 경로를 갖는지**
+     *    를 **같이** 단언한다(기능 소실을 개수 완화로 덮지 않는다).
+     */
+    expect(WORKSPACE, "🔴 위쪽 ⓘ 진입점까지 사라졌다").toContain(
+      "onOpenPriceCalculation={handleOpenPriceCalculation}",
+    );
     expect(
       (WORKSPACE.match(/onOpenPriceCalculation=\{handleOpenPriceCalculation\}/g) ?? []).length,
-      "🔴 핸들러가 두 벌이 됐다(또는 하나가 사라졌다)",
-    ).toBe(2);
+      "🔴 「위로 점프」 핸들러가 다시 두 벌이 됐다",
+    ).toBe(1);
+    /** 🟢 **대체 경로 보존** — 편집기는 같은 노드를 받아 그 자리에서 펼친다. */
+    expect(WORKSPACE, "🔴 편집기가 상세 노드를 못 받는다 — 기능이 사라졌다").toContain(
+      "priceCalculationDetail={priceCalculationDetail}",
+    );
   });
 
   /**

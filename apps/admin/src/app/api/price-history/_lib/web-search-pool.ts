@@ -161,11 +161,49 @@ interface ApifySearchOutcome {
  */
 class SearchHttpError extends Error {
   readonly status: number;
-  constructor(status: number) {
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 UXC-③ — **상태코드 하나로는 401 의 «이유» 를 가를 수 없다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 실제로 났다 — 운영이 **401 세 번 연속**인데 본문을 버려서 「토큰이 틀렸나 ·
+   *    권한인가 · 사용량인가」를 코드만으로 답할 수 없었다(CPO 가 그 구분을 요구했다).
+   * 🟢 CTO 실측으로 외부 축은 갈렸다(토큰 없음/빈값 → **402** · 무효 → **401** ·
+   *    actor 메타 **200**). 🔴 그래도 **다음 장애에서 또 추측하지 않도록** 공급자가
+   *    주는 `error.type` 을 들고 온다.
+   * 🔴🔴 **민감정보는 넣지 않는다** — 토큰은 쿼리스트링에 있으므로 **URL·헤더·본문
+   *    전문을 담지 않는다.** 담는 것은 공급자 오류 **분류 코드** 하나이고, 길이도 자른다.
+   */
+  readonly errorType: string | null;
+  /**
+   * 🟢 기존 배선(`describeSearchError` → `errorCode`)이 `code` 를 읽는다 ⟹
+   *    **기록 모양을 바꾸지 않고** 분류 코드가 `searchRun.search.errorCode` 로 간다.
+   */
+  readonly code: string | undefined;
+  constructor(status: number, errorType: string | null = null) {
     /** 🔴 message 에 **URL·본문을 넣지 않는다**(토큰이 URL 에 있다). */
     super(`search HTTP ${status}`);
     this.name = "SearchHttpError";
     this.status = status;
+    this.errorType = errorType;
+    this.code = errorType ?? undefined;
+  }
+}
+
+/**
+ * 🟢 공급자 오류 **분류 코드만** 뽑는다(예: `token-not-found` ·
+ *    `monthly-usage-hard-limit-exceeded`). 🔴 메시지 본문은 가져오지 않는다 —
+ *    거기에 요청 URL 이 섞여 나오면 토큰이 로그로 샌다.
+ * 🔴 본문 읽기가 실패해도 **원래 오류를 삼키지 않는다**(null 로 두고 상태코드로 간다).
+ */
+const APIFY_ERROR_TYPE_MAX = 64;
+async function readErrorType(res: Response): Promise<string | null> {
+  try {
+    const body = (await res.json()) as { error?: { type?: unknown } };
+    const t = body?.error?.type;
+    return typeof t === "string" && t.length > 0 ? t.slice(0, APIFY_ERROR_TYPE_MAX) : null;
+  } catch {
+    return null;
   }
 }
 
@@ -191,7 +229,8 @@ async function apifySearch(query: string, token: string): Promise<ApifySearchOut
       signal: controller.signal,
     });
     /** 🔴 **토큰이 URL 에 있으므로 `res.url`/오류 본문을 로그에 싣지 않는다.** */
-    if (!res.ok) throw new SearchHttpError(res.status);
+    /** 🔴 본문을 **읽고 나서** 던진다 — 전에는 버려서 401 의 사유가 사라졌다. */
+    if (!res.ok) throw new SearchHttpError(res.status, await readErrorType(res));
     const items = (await res.json()) as ApifySearchItem[];
     /**
      * ════════════════════════════════════════════════════════════════════════
