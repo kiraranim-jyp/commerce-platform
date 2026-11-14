@@ -159,7 +159,7 @@ export function StageBody({
     <div className="space-y-4">
       {focus.main === "COLLECTION" && <CollectionStage workflow={workflow} images={surfaces.images} />}
 
-      {focus.main === "MARKET" && <MarketStage />}
+      {focus.main === "MARKET" && <MarketStage workflow={workflow} />}
 
       {/* 🔴 ③의 본문. 새 Stepper 를 만들지 않았으므로 단계 전환이 그대로
           이 본문을 고른다 — 화면에 진행 표시가 둘이 되지 않는다. */}
@@ -367,7 +367,27 @@ function CollectionStage({ workflow, images }: { workflow: Workflow; images: Rea
  * 🟢 단 **빈 단계로 두지 않는다**(`wu-058` 「단계마다 본문 하나」) — 이 패널은 결론이
  *    어디 있는지 한 줄로 말한다.
  */
-function MarketStage() {
+/**
+ * ══════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 UXC-진행 — **96초 동안 «무엇을 하는지» 를 보여준다**(CEO 지시 2026-11-14)
+ * ══════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 실측 — 신규 상품 분석이 **약 96초** 걸리는데(03:48:29 → 03:50:05) 그동안 셀러는
+ *    「한국 시장 가격을 조회하고 있습니다…」 **한 줄** 만 봤다.
+ *
+ * 🔴🔴 **원인은 「진행 표시가 없다」가 아니라 «그 자리에 없다» 였다** — 단계 목록
+ *    (`workflow.current.subSteps`)은 **① 상품 수집(`CollectionStage`)에서만** 그려졌고
+ *    ② 시장 판단에는 아예 없었다.
+ *
+ * 🟢 그래서 **새로 만들지 않는다**(CPO 「불필요한 재설계 금지」) — ① 이 쓰는 **같은
+ *    배열 · 같은 아이콘 · 같은 상태 어휘** 를 여기서도 그린다.
+ * 🔴 **가짜 진행률 0 · 임의 타이머 0 · 자동 증가 퍼센트 0** — 상태는 전부 실제 신호
+ *    (`priceProbeDone` · `domesticProbeDone` · `domesticDataFound` …)에서 온다.
+ * 🔴 **모르는 단계를 「진행 중」으로 꾸미지 않는다** — `keepSingleRunning` 이 RUNNING 을
+ *    하나로 유지하고, 조회는 끝났는데 결과가 없으면 `DONE_NO_DATA`(「없다」는 사실)다.
+ * 🟢 완료되면 같은 목록이 그대로 **최종 상태** 가 된다(별도 완료 화면을 만들지 않는다).
+ */
+function MarketStage({ workflow }: { workflow: Workflow }) {
   return (
     <StagePanel
       index={2}
@@ -375,7 +395,30 @@ function MarketStage() {
       headline="결론은 화면 맨 위 「📊 시장 판매 판단」 하나입니다"
       badge="결론"
     >
-      <div className="rounded-md border border-dashed border-border bg-background/40 p-2">
+      {/** 🟢 ① 과 **같은 모양** 이다 — 사본이 아니라 같은 데이터·같은 렌더 규칙. */}
+      <ol data-testid="market-stage-steps" className="space-y-1">
+        {workflow.current.subSteps.map((sub) => (
+          <li
+            key={sub.key}
+            data-testid="market-stage-step"
+            data-status={sub.status}
+            className="flex items-start gap-1.5 text-xs"
+          >
+            <span className={`w-3 shrink-0 ${SUB_ICON_CLASS[sub.status]}`} aria-hidden>
+              {SUB_STEP_ICON[sub.status]}
+            </span>
+            <span
+              className={
+                sub.status === "RUNNING" ? "font-medium text-text-primary" : "text-text-secondary"
+              }
+            >
+              {sub.label}
+              {sub.message && <span className="ml-1 text-text-tertiary">{sub.message}</span>}
+            </span>
+          </li>
+        ))}
+      </ol>
+      <div className="mt-2 rounded-md border border-dashed border-border bg-background/40 p-2">
         <p className="text-[11px] text-text-tertiary">
           동일상품 여부는 시스템이 판단합니다 — 셀러가 확인할 것은 위 영역의 판매상태와 가격 근거입니다
         </p>

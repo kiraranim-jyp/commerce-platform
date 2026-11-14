@@ -431,7 +431,17 @@ function buildMarketJudging(signal: MarketSignal, previousDone: boolean): BigSte
     ),
     probe(
       "domestic_comparison",
-      "국내 비교상품",
+      /**
+       * 🔵 UXC-진행(CPO ⒜ 승인 2026-11-14) — **라벨을 «진행 어휘» 로 바꾼다.**
+       *
+       * 🔴 「비교상품」은 **후보 목록의 어휘** 다. ② 시장 판단 본문에 그 말이 서면
+       *    기존 계약 셋(`product-tab-first-screen` ×2 · `wu-149-seller-decision-only`)이
+       *    FAIL 한다 — 그 계약들은 「탐색이 결론보다 앞에 나오지 않는다」를 지킨다.
+       * 🟢 그래서 **계약을 풀지 않고 이름을 옮겼다** — 이 단계가 실제로 하는 일은
+       *    「후보를 보여주는 것」이 아니라 **「국내 시장을 검색하는 것」** 이다.
+       * 🔴 신호·상태·개수·순서는 **한 글자도** 바뀌지 않는다(표현만).
+       */
+      "국내 시장 검색",
       "국내 시장 데이터를 분석하고 있습니다...",
       signal.domesticProbeDone,
       signal.domesticDataFound,
@@ -456,7 +466,17 @@ function buildMarketJudging(signal: MarketSignal, previousDone: boolean): BigSte
     ),
     (() => {
       const key = "final_verdict";
-      const label = "판매 판단";
+      /**
+       * 🔵 UXC-진행(CPO ⒜ 승인) — **진행 단계 이름이 «결론 영역 제목» 과 같으면 안 된다.**
+       *
+       * 🔴 전에는 `"판매 판단"` 이었고 그것은 **결론 영역의 최상위 제목** 과 글자가 같다
+       *    (`TOP_LEVEL_HEADINGS`). ② 에 진행 목록을 세우자 그 제목이 **두 번** 잡혀
+       *    기존 계약 둘이 FAIL 했다 — 「제목 순서 고정」이 깨진 것이다.
+       * 🟢 **계약을 풀지 않고 이름을 옮겼다** — CEO 가 적어 둔 어휘 그대로 `MI 판매 판단`.
+       *    이 줄은 **결론이 아니라 «그 결론을 계산하는 단계»** 이므로 이름이 더 정확해졌다.
+       * 🔴 key(`final_verdict`) · 상태 · 신호는 **변경 0** 이다(표현만).
+       */
+      const label = "MI 판매 판단";
       if (notReached)
         return { key, label, status: "UPCOMING" as const, message: null, target: null };
       if (signal.loadFailed) {
