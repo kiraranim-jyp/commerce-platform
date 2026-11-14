@@ -878,7 +878,31 @@ export async function computeMarketIntelligence(
     // P-26 Sprint 1-2(CPO 지시, 2026-09-03) — domesticBasis(EXACT/COMPARISON/
     // NONE)를 넘겨야 CASE A/B/C(시장경쟁 판단)와 CASE D(EXACT 아님, 판단 보류)를
     // 구분할 수 있다. domesticMarketSplit.basis는 이미 위에서 계산된 값 그대로다.
-    recommendation = computePriceRecommendation({
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔴🔴🔴 SPRINT2-① — **환율이 확인되지 않은 원가로 수익성을 계산하지 않는다**
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 실측(2026-11-14) — `convertToKrw`(currency.ts:31)는 환율을 모르면
+     *    **원본 금액을 그대로 KRW 로** 돌려주고 `isEstimate: true` 만 붙인다.
+     *    그래서 운영 DB 에 **CAD 84 → ₩84** 가 저장돼 있었다(4행 · 2스냅샷 ·
+     *    그 스냅샷엔 대체 원가가 **없다**).
+     * 🔴🔴 그 값이 원가로 들어가면 운영 함수가 **CASE A · 마진 99.9% ·
+     *    추천가 ₩87,120** 을 실제로 낸다(`computePriceRecommendation` 직접 호출로 실측).
+     *    ⟹ 셀러가 **팔면 안 되는 상품을 「추천」으로** 본다.
+     *
+     * 🟢 그래서 **여기 한 곳에서만** 막는다 — 공용 `convertToKrw` 도
+     *    `computeLandedCost`/`computePriceBreakdown` 도 **한 글자도 바꾸지 않았다**
+     *    (그 함수들은 이미 `isRateEstimate` 를 정직하게 돌려주고 있었고,
+     *     문제는 **아무도 그 플래그를 읽지 않은 것** 이다).
+     * 🟢 `recommendation` 이 null 로 남으면 화면은 이미 그 상태를 안다 —
+     *    `MarketPriceComparison.tsx` 의 `recommendedPriceKrw != null &&` 가드가
+     *    추천가 블록을 **아예 렌더하지 않는다**(「0원」·「-」로 새지 않는다).
+     * 🔴 원본 금액·통화는 **보존** 한다(CPO 정책) — 지우는 것은 «추천/수익성» 뿐이다.
+     * 🔴 환율이 **확인된** 통화는 경로가 그대로다(대조군 불변).
+     */
+    if (!cost.isRateEstimate)
+      recommendation = computePriceRecommendation({
       totalCostKrw: cost.landedCostKrw,
       currentSellingPriceKrw: currentSellingPriceKrw ?? undefined,
       domesticLowestPriceKrw: domesticSummary.lowestPriceKrw,
