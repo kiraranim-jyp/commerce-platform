@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fetchLiveExchangeRates } from "@/lib/exchange-rates";
 import type { ListingModel } from "@commerce/marketplace";
 import { isVerifiedCategorySelected } from "@commerce/marketplace";
 import type { CanonicalProduct } from "@commerce/shared";
@@ -483,11 +484,27 @@ export async function POST(request: Request) {
     `출고지=${releaseAddressBookNo ?? "없음"}, 반품지=${refundAddressBookNo ?? "없음"}`,
   );
 
+  /* 🔴 S2-② — 등록 시점의 환율 스냅샷을 **서버가** 한 번 구해 둔다. 한 번만 부르고
+     그 결과를 빌더·검증기가 공유해야 「기본가와 옵션가가 다른 스냅샷」이 될 수 없다. */
+  const rateSnapshot = await fetchLiveExchangeRates();
+
   // buildNaverProductPayload/validateNaverPayload가 같은 근원 데이터를 보게
   // 한다 — NaverPayloadPreview.tsx가 클라이언트에서 하는 것과 동일한 원칙
   // (Resolver → Payload 단방향, 두 곳에서 따로 계산하지 않는다). 이 값들은
   // 전부 resolveNaverContext()가 이미 계산해준 것을 그대로 옮긴다.
   const payloadInputCommon = {
+    /* ══ 🔴 S2-② — 환율 스냅샷의 **출처는 서버다**(client 가 보낸 값이 아니다) ══
+       `fetchLiveExchangeRates()` 는 Frankfurter(ECB) → DB `exchange_rates`
+       (last_known) → 비상 고정표 순으로 **서버가 스스로** 구한다. 그래서
+       「client 가 임의 환율을 보낸다」는 통로를 **만들지 않았다**(CPO 지적 ④⑤).
+
+       🟢 이 칸이 `payloadInputCommon` 에 있다는 것이 핵심이다 — 이 객체는 빌더
+       입력과 **검증기 입력 둘 다에 spread** 되므로, 기본가와 옵션가가 **같은
+       스냅샷을 보는 것이 «구조» 로 보장된다**(규약이 아니다).
+
+       🔴 LotteON 은 이것을 `body.liveRates`(client)로 받는다 — 이 라우트는 그
+       방식을 따르지 않았다. 서버가 같은 값을 직접 구할 수 있기 때문이다. */
+    liveRates: rateSnapshot.rates,
     releaseAddressBookNo,
     refundAddressBookNo,
     primaryReturnDeliveryCompanyPriorityType: context.delivery.primaryReturnCompany?.priorityType ?? null,

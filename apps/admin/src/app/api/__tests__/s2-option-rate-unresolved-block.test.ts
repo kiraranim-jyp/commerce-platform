@@ -124,12 +124,13 @@ function makeListing(product: CanonicalProduct): ListingModel {
   } as ListingModel;
 }
 
-function naverVerdictFor(variantCurrency: string) {
+function naverVerdictFor(variantCurrency: string, liveRates?: Record<string, number>) {
   const product = makeOptionProduct(variantCurrency);
   const listing = makeListing(product);
   const input = {
     product,
     listing,
+    liveRates,
     leafCategoryId: "50000535",
     releaseAddressBookNo: 900000001,
     refundAddressBookNo: 900000002,
@@ -216,6 +217,84 @@ describe("S2-① Coupang — RATE_UNAVAILABLE 이면 등록 전에 PRICE_UNRESOL
     const failedAt = route.indexOf('status: "FAILED"', gateAt);
     expect(gateAt).toBeGreaterThan(-1);
     expect(failedAt).toBeGreaterThan(gateAt);
+  });
+});
+
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ * 🔴 S2-② 환율 **스냅샷** 계약 — 「누가 환율의 주인인가」
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 직전 보고에서 내가 「client 가 환율의 주인이라 client → route → builder 로
+ * 배선해야 한다」고 적었는데 **그 결론이 틀렸다**(CPO 지적으로 다시 추적함).
+ *
+ * 실제 주인은 **서버** 다 — `apps/admin/src/lib/exchange-rates.ts` 의
+ * `fetchLiveExchangeRates()` 가 Frankfurter(ECB) → DB `exchange_rates`
+ * (last_known) → 비상 고정표 순으로 **서버가 스스로** 구하고,
+ * `{ rates, fetchedAt, source }` 로 **출처와 시각을 같이** 들고 다닌다.
+ * client 의 `/api/exchange-rates` 도 **그 같은 서버 함수**를 부르는 얇은 래퍼다.
+ *
+ * ⟹ 그러므로 client 에게서 환율을 받는 통로를 **만들지 않는다**. 서버가 직접 구한다.
+ */
+describe("S2-② 환율 스냅샷 — 출처는 서버이고, 기본가·옵션가가 같은 스냅샷을 본다", () => {
+  it("🔴 Naver route 가 **서버에서** 스냅샷을 구하고 client 의 환율을 읽지 않는다", () => {
+    const route = strippedSource("apps/admin/src/app/api/smartstore/register/route.ts");
+    expect(route).toContain("await fetchLiveExchangeRates()");
+    // 🔴 client 가 보낸 환율을 쓰는 통로가 «없어야» 한다.
+    expect(route).not.toContain("body.liveRates");
+  });
+
+  it("🔴 Coupang route 도 서버에서 구하고 client 의 환율을 읽지 않는다", () => {
+    const route = strippedSource("apps/admin/src/app/api/coupang/register/route.ts");
+    expect(route).toContain("await fetchLiveExchangeRates()");
+    expect(route).toContain("liveRates: rateSnapshot.rates");
+    expect(route).not.toContain("body.liveRates");
+  });
+
+  it("🟢🟢 Naver 는 빌더·검증기가 같은 스냅샷을 보는 것이 **구조로** 보장된다", () => {
+    const route = strippedSource("apps/admin/src/app/api/smartstore/register/route.ts");
+    // payloadInputCommon 은 빌더 입력과 검증기 입력 **둘 다에 spread** 된다.
+    const commonAt = route.indexOf("const payloadInputCommon = {");
+    const ratesAt = route.indexOf("liveRates: rateSnapshot.rates", commonAt);
+    const commonEndAt = route.indexOf("};", commonAt);
+    expect(commonAt).toBeGreaterThan(-1);
+    // 🔴 환율이 그 «공통» 객체 안에 있어야 한다 — 밖으로 나가면 한쪽만 받게 된다.
+    expect(ratesAt).toBeGreaterThan(commonAt);
+    expect(ratesAt).toBeLessThan(commonEndAt);
+    // 그 공통 객체가 실제로 두 번 쓰인다(빌더 입력 + 검증기 입력).
+    expect((route.match(/\.\.\.payloadInputCommon/g) ?? []).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("🟢 스냅샷에 그 통화가 있으면 옵션가가 **정상 계산**된다 — 차단은 «모를 때»뿐이다", () => {
+    // 서버 스냅샷(Frankfurter)은 CAD 를 추적한다(TRACKED_CURRENCIES).
+    const { payload, verdict } = naverVerdictFor(UNKNOWN_RATE_CURRENCY, { CAD: 1000 });
+    const combos =
+      (payload as never as { originProduct?: { detailAttribute?: { optionInfo?: { optionCombinations?: { price: number }[] } } } })
+        .originProduct?.detailAttribute?.optionInfo?.optionCombinations ?? [];
+    expect(combos).toHaveLength(1);
+    expect(combos[0].price).toBe(84 * 1000); // 기본가 대비 +84 CAD.
+    const blockedOptionPrice = (verdict as never as { fields: { field: string; status: string }[] }).fields.filter(
+      (f) => f.status === "BLOCKED" && f.field === OPTION_PRICE_FIELD,
+    );
+    expect(blockedOptionPrice).toHaveLength(0);
+  });
+
+  it("🔴 스냅샷에도 없는 통화는 여전히 차단된다(고정표를 라이브 환율로 둔갑시키지 않는다)", () => {
+    // 스냅샷에 CAD 가 있어도 상품 통화가 ZZZ 면 계산할 수 없다.
+    const { verdict } = naverVerdictFor("ZZZ", { CAD: 1000 });
+    const blockedFields = (verdict as never as { fields: { field: string; status: string }[] }).fields.filter(
+      (f) => f.status === "BLOCKED",
+    );
+    expect(blockedFields.map((f) => f.field)).toContain(OPTION_PRICE_FIELD);
+  });
+
+  it("🔴 환율 스냅샷은 출처와 시각을 같이 들고 다닌다 — 숫자만 떠다니지 않는다", () => {
+    const lib = strippedSource("apps/admin/src/lib/exchange-rates.ts");
+    expect(lib).toContain("fetchedAt");
+    expect(lib).toContain('source: "frankfurter"');
+    expect(lib).toContain('source: "last_known"');
+    // 비상 고정표는 "fallback" 으로 **구분되어** 돌아온다(정상 환율로 섞이지 않는다).
+    expect(lib).toContain('source: "fallback"');
   });
 });
 

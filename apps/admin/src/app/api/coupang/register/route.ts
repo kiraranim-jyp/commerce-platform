@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fetchLiveExchangeRates } from "@/lib/exchange-rates";
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct, ErrorCode } from "@commerce/shared";
 import {
@@ -615,7 +616,15 @@ export async function POST(request: Request) {
     `RAW=${product.brand.value ? 1 : 0} / CLEANED=${product.brandResolution ? 1 : 0} / BRAND_API_MATCH=${resolvedBrand ? 1 : 0} / USER_REQUIRED=${resolvedBrand ? 0 : 1}`,
   );
 
+  /* 🔴 S2-② — 환율 스냅샷의 출처는 **서버다**(client 가 보낸 값이 아니다).
+     `fetchLiveExchangeRates()` = Frankfurter(ECB) → DB last_known → 비상 고정표.
+     🔴 client 가 임의 환율을 보내는 통로를 만들지 않았다(CPO 지적 ④⑤). */
+  const rateSnapshot = await fetchLiveExchangeRates();
+
   const payload = buildCoupangPayload(product, listing, {
+    /* 🔴 S2-② — 옵션 차액 환산에 쓰는 환율표. 이 한 값이 빌더 안의 모든 단품에
+       쓰이므로 단품끼리 다른 스냅샷을 볼 수 없다. */
+    liveRates: rateSnapshot.rates,
     /* NEXT-04d Phase B-2 — 쿠팡 채널값(카테고리 동적 입력폼에 셀러가 채운
        답)은 이제 상품이 아니라 이 통로로 간다. 저장 위치는 그대로다. */
     binding: toCoupangBinding(product),
