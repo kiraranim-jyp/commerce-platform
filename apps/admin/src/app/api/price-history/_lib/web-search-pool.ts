@@ -20,7 +20,10 @@ import type { ProductIdentityDna } from "@commerce/shared";
  *    (후보 생성은 기존 `collectUrlCandidatePool` 이 한다 · CORE-2R-4 와 같은 패턴)
  * ❌ 2차 Search — 결과가 적어도 **다시 부르지 않는다**(CPO §7 특히 금지)
  * ❌ 질의 fallback — 품번이 없으면 **검색하지 않는다**(브랜드/상품명으로 대신하지 않는다)
- * ❌ 국내/해외 분리 질의 · 한글 질의 · 언어 유도
+ * ❌ 국내/해외 **분리 질의**(질의를 둘로 쪼개지 않는다 — 비용이 두 배가 된다)
+ * ❌ 한글 질의(질의 «문자열» 은 그대로다 — 브랜드·품번 중심)
+ * 🔵 **로케일은 2026-11-14 CPO ⒜ 로 «한국 한정» 열렸다** — 질의가 아니라 요청
+ *    파라미터 둘(`countryCode`/`languageCode`)뿐이고 질의 수·페이지 수는 불변이다
  * ❌ 재시도 — 실패는 **실패로 적는다**(「결과 0」으로 적지 않는다)
  * ❌ 토큰을 로그/응답/오류 메시지에 **싣지 않는다**
  * ```
@@ -60,6 +63,38 @@ export const MAX_SEARCHES_PER_PRODUCT = 1;
  * 🔴 3페이지 이상은 **별도 비용 결정** 이다(CPO 명시) · 질의 variation 추가 **금지**.
  */
 const MAX_PAGES_PER_QUERY = 2;
+
+/**
+ * ══════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 UXC-국내공급 — **한국 로케일 «한정» 예외**(CPO ⒜ 승인 2026-11-14)
+ * ══════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **원인(실측)** — 그동안 요청에 로케일이 **아예 없었다.** 그러면 Google 은
+ *    actor 데이터센터 기준(사실상 미국)으로 답한다 ⟹ 국내 상품 페이지가 상위에
+ *    거의 오르지 않는다. 실측 — 최근 성공 실행 organic **2건이 둘 다 해외** ·
+ *    국내 `domestic_product_links` **0행**.
+ *
+ * 🔴 **「형식적 중립」이 실제로는 「미국 기준」이었고 그 비용을 국내만 혼자 치렀다**
+ *    (CPO 문장). 두 시장의 보조 경로가 비대칭이기 때문이다:
+ * ```
+ * 해외  등록부 35곳이 OVERSEAS_AUTO 로 독립 공급 → 받칠 것이 있다
+ * 국내  자동 검색 가능 등록부 **8곳**            → 받칠 것이 없다
+ * ```
+ *
+ * 🟢 **Actor 지원을 먼저 확인했다**(공개 input schema · 토큰 0 · 비용 0):
+ * ```
+ * countryCode    "Country"            = Google `gl`  🟢 지원
+ * languageCode   "Interface language" = Google `hl`  🟢 지원
+ * searchLanguage "Search language"    = Google `lr`  🔴 **계속 금지** — 결과를
+ *                한국어 «문서» 로 제한해 해외를 잃는다(의미가 다르다)
+ * ```
+ *
+ * 🔴 **비용이 늘지 않는다** — 과금 단위는 `질의 수 × 페이지 수` 이고 그 둘은 그대로다.
+ * 🔴 **시장 «분류» 에 쓰지 않는다** — 국내/해외 판단은 `classifyCandidateMarket` 이
+ *    증거(TLD · 등록부 · 통화)로 한다. 로케일을 시장 근거로 쓰면 해외가 국내로 잘못 분류된다.
+ */
+export const SEARCH_COUNTRY_CODE = "kr";
+export const SEARCH_LANGUAGE_CODE = "ko";
 const RESULTS_PER_PAGE = 20;
 /** 🔴 외부 호출이 오래 끌면 셀러 화면이 멈춘다 — 끊고 「실패」로 적는다. */
 const TIMEOUT_MS = 60_000;
@@ -223,6 +258,9 @@ async function apifySearch(query: string, token: string): Promise<ApifySearchOut
         queries: query,
         maxPagesPerQuery: MAX_PAGES_PER_QUERY,
         resultsPerPage: RESULTS_PER_PAGE,
+        /** 🔵 CPO ⒜ 한정 예외 — 이 둘 «만» 허용된다(나머지 지역/언어 파라미터는 금지). */
+        countryCode: SEARCH_COUNTRY_CODE,
+        languageCode: SEARCH_LANGUAGE_CODE,
         saveHtml: false,
         saveHtmlToKeyValueStore: false,
       }),

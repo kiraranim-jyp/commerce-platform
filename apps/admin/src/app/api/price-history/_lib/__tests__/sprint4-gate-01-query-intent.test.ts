@@ -169,19 +169,29 @@ describe("SPRINT4-GATE-01 — Search Intent", () => {
     const at = POOL.indexOf("body: JSON.stringify({");
     expect(at, "🔴 요청 본문을 찾지 못했다").toBeGreaterThan(0);
     const body = POOL.slice(at, POOL.indexOf("}),", at));
-    for (const banned of [
-      "countryCode",
-      "languageCode",
-      "locationUule",
-      "searchLanguage",
-      "mobileResults",
-      "gl:",
-      "hl:",
-      "cr:",
-      "lr:",
-    ]) {
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔵🔵 CPO ⒜ 승인(2026-11-14) — **한국 로케일 «둘만» 예외다. 전면 해제가 아니다.**
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 왜 열렸나 — 로케일이 **아예 없으면** Google 은 actor 데이터센터 기준
+     *    (사실상 미국)으로 답한다. 「형식적 중립」이 실제로는 「미국 기준」이었고
+     *    그 비용을 **국내만 혼자** 치렀다(해외는 등록부 35곳이 받치고 국내는 8곳뿐).
+     * 🔴 `searchLanguage`(=`lr`)는 **계속 금지** — 그쪽은 결과를 **한국어 문서로
+     *    제한** 해 해외를 잃는다. `languageCode` 는 **인터페이스 언어**(=`hl`)이고
+     *    의미가 다르다(Apify actor input schema 로 확인: "Interface language").
+     * 🟢 아래 G7b 가 **그 둘이 정확히 kr/ko 인지** 를 따로 문다 — 아무 값이나 못 넣는다.
+     */
+    for (const banned of ["locationUule", "searchLanguage", "mobileResults", "gl:", "hl:", "cr:", "lr:"]) {
       expect(body, `🔴 Search 가 시장을 좁힌다: ${banned}`).not.toContain(banned);
     }
+    /** 🔴 G7b — 예외는 **그 둘뿐이고 값도 상수로 고정** 이다. */
+    expect(body, "🔴 국가 코드가 빠졌다 — 미국 기준 결과로 되돌아간다").toContain(
+      "countryCode: SEARCH_COUNTRY_CODE",
+    );
+    expect(body, "🔴 언어 코드가 빠졌다").toContain("languageCode: SEARCH_LANGUAGE_CODE");
+    expect(POOL, "🔴 로케일 값이 한국이 아니다").toContain('SEARCH_COUNTRY_CODE = "kr"');
+    expect(POOL, "🔴 로케일 값이 한국이 아니다").toContain('SEARCH_LANGUAGE_CODE = "ko"');
     /** 🟢 보내는 것은 넷뿐이다 — 질의 · 페이지 수 · 페이지당 결과 수 · HTML 저장 끄기. */
     expect(body).toContain("queries: query");
     expect(body).toContain("maxPagesPerQuery: MAX_PAGES_PER_QUERY");
