@@ -81,7 +81,13 @@ async function mount(shippingKrw: number | null) {
         product: product(shippingKrw),
         onUpdatePriceBreakdown: (b: { shippingKrw: number | null; feePercent: number; marginPercent: number }) =>
           committed.push({ shippingKrw: b.shippingKrw }),
-        exchangeRates: { rates: { EUR: 1480 }, fetchedAt: "2026-09-20T00:00:00.000Z", source: "frankfurter" as const },
+        /* 🔴 S2-③ — 고시 기준일(rateDate)은 가져온 시각(fetchedAt)과 «다른 값» 이다. */
+        exchangeRates: {
+          rates: { EUR: 1480 },
+          fetchedAt: "2026-09-20T00:00:00.000Z",
+          rateDate: "2026-09-19",
+          source: "frankfurter" as const,
+        },
         exchangeRatesLoading: false,
         onRefreshExchangeRates: () => {},
         priceRoundingUnit: 10,

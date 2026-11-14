@@ -1081,8 +1081,12 @@ export function CommerceWorkspace({
   const [categoryTraceLog, setCategoryTraceLog] = useState<string[]>([]);
   const [exchangeRates, setExchangeRates] = useState<{
     rates: Record<string, number>;
+    /** 🔴 S2-③ — 가져온 «시각». 환율 기준일이 아니다. */
     fetchedAt: string;
-    source: "frankfurter" | "fallback";
+    /** 🔴 S2-③ — 환율 고시 «기준일»(YYYY-MM-DD). fallback 은 null. 화면은 이 칸을 쓴다. */
+    rateDate: string | null;
+    /** 🔴 `last_known` 이 빠져 있었다 — 서버가 실제로 내는 값이다. */
+    source: "frankfurter" | "last_known" | "fallback";
   } | null>(null);
   const [exchangeRatesLoading, setExchangeRatesLoading] = useState(false);
   /** Sprint A #1(Category Meta -> 동적 입력폼) — 카테고리를 실제로 선택(검증된

@@ -194,7 +194,15 @@ export function PriceCalculationDetail({
   product: CanonicalProduct;
   onUpdateOriginalPrice?: (patch: Partial<{ amount: number; currency: string }>) => void;
   onUpdatePriceBreakdown: (breakdown: { shippingKrw: number | null; feePercent: number; marginPercent: number }) => void;
-  exchangeRates: { rates: Record<string, number>; fetchedAt: string; source: "frankfurter" | "fallback" } | null;
+  /** 🔴 S2-③ — `rateDate`(고시 기준일)와 `fetchedAt`(가져온 시각)은 **다른 값**이다.
+   *  화면의 「환율 기준일」은 `rateDate` 이고, fallback 은 그 칸이 **null** 이다.
+   *  🔴 `source` 에 `last_known` 이 빠져 있었다(서버는 그 값을 낸다) — 같이 고친다. */
+  exchangeRates: {
+    rates: Record<string, number>;
+    fetchedAt: string;
+    rateDate: string | null;
+    source: "frankfurter" | "last_known" | "fallback";
+  } | null;
   exchangeRatesLoading: boolean;
   onRefreshExchangeRates: () => void;
   /** Settings의 "가격 정책"(반올림 단위). CommerceWorkspace가 이미 조회해 둔
@@ -395,6 +403,23 @@ export function PriceCalculationDetail({
           "착지원가"라 부르는데 이 사슬만 "상품 원가"라고 부르면, 셀러는 같은
           카드 안에서 서로 다른 값을 봤다고 읽는다 — 이 저장소가 반복해서
           고쳐 온 라벨 표류라 여기서 되살리지 않는다. */}
+      {/* ══ 🔴 S2-③ — **환율 기준일**(CPO 지시) ═══════════════════════════════
+          이 화면의 원화 금액은 **참고용 추정 가격**이고 실제 결제 금액이 아니다
+          (실제 구매가는 소싱 사이트 결제 환율·카드사 환율·수수료로 달라진다).
+          그래서 「어느 날짜 환율로 환산했는가」를 이 영역 **맨 위**에서 먼저 밝힌다.
+
+          🔴 `fetchedAt`(가져온 시각)이 아니라 **`rateDate`(고시 기준일)** 다.
+          🔴 fallback(비상 고정표)은 기준일이 **없으므로 날짜를 적지 않는다** —
+             오늘 날짜를 붙이면 코드에 박힌 상수가 「오늘 고시된 환율」로 보인다.
+          🔴 출처·고시기관·영업일 경과·휴일 설명은 **붙이지 않는다**(CPO 범위 제한). */}
+      {exchangeRates && (
+        <Row label="환율 기준일">
+          <span className="text-text-secondary">
+            {exchangeRates.rateDate ?? "확인 불가 — 추정 환율"}
+          </span>
+        </Row>
+      )}
+
       <Row label="원본 가격" badge={<ValueBadge kind="original" />}>
         {onUpdateOriginalPrice ? (
           <div className="flex items-center justify-end gap-1.5">

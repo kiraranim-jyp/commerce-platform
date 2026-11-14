@@ -42,7 +42,23 @@ const TRACKED_CURRENCIES = [
 
 export interface ExchangeRates {
   rates: Record<string, number>;
+  /**
+   * 🔴 S2-③ — **데이터를 «가져온» 시각이다. 환율의 기준일이 아니다.**
+   *
+   * 전에는 이 칸 하나가 두 의미를 겸했다(frankfurter 경로에서 ECB 고시일을
+   * 여기에 넣었다). 이름이 `fetchedAt` 이라 다음 사람이 「가져온 시각」으로 읽고,
+   * 그러면 **과거 환율을 방금 받은 최신 환율처럼** 다루게 된다.
+   */
   fetchedAt: string;
+  /**
+   * 🔴 S2-③ — **환율이 «기준으로 삼는» 날짜**(ECB 고시일 · `YYYY-MM-DD`).
+   * 화면의 「환율 기준일」은 **이 칸**이고 `fetchedAt` 이 아니다.
+   *
+   * 🔴 `fallback`(비상 고정표)은 **null** 이다 — 그 표는 어느 날짜의 고시도
+   * 아니므로 기준일을 **지어내지 않는다**(오늘 날짜를 붙이면 코드에 박힌 상수가
+   * 「오늘 고시된 환율」로 보인다).
+   */
+  rateDate: string | null;
   source: "frankfurter" | "last_known" | "fallback";
 }
 
@@ -74,7 +90,12 @@ async function readLastKnownRates(): Promise<ExchangeRates | null> {
     if (row.fetched_at > newest) newest = row.fetched_at;
   }
   if (Object.keys(rates).length <= 1) return null;
-  return { rates, fetchedAt: newest, source: "last_known" };
+  /* 🔴 S2-③ — DB `exchange_rates.fetched_at` 컬럼에는 **ECB 고시일**이 들어 있다
+     (saveLastKnownRates 가 그렇게 쓴다 — 컬럼 이름은 역사적 잔재다). 그래서 그
+     값은 `rateDate` 로 읽고, `fetchedAt` 은 **지금 다시 읽은 시각**이다.
+     🔴 이 둘을 겹쳐 두면 「DB 에서 다시 읽었다」는 이유로 과거 환율이 최신으로
+     둔갑한다 — 원래 기준일을 **그대로 보존**하는 것이 이 줄의 목적이다. */
+  return { rates, fetchedAt: new Date().toISOString(), rateDate: newest.slice(0, 10), source: "last_known" };
 }
 
 /** Frankfurter(ECB 데이터, 무료, 키 불필요)에서 "1 통화 = ? KRW" 표를 만든다.
@@ -100,9 +121,12 @@ export async function fetchLiveExchangeRates(): Promise<ExchangeRates> {
       if (code === "KRW") continue;
       if (perEur > 0) rates[code] = krwPerEur / perEur;
     }
-    const fetchedAt = `${data.date}T00:00:00Z`;
-    await saveLastKnownRates(rates, fetchedAt);
-    return { rates, fetchedAt, source: "frankfurter" };
+    /* 🔴 S2-③ — `data.date` 는 **ECB 고시일**이다(우리가 가져온 시각이 아니다).
+       ECB 는 평일 1회만 고시하므로 오늘 요청해도 어제·그제 날짜가 정상이다.
+       그 사실을 숨기지 않고 `rateDate` 로 그대로 내보낸다. */
+    const rateDate = data.date;
+    await saveLastKnownRates(rates, `${rateDate}T00:00:00Z`);
+    return { rates, fetchedAt: new Date().toISOString(), rateDate, source: "frankfurter" };
   } catch (error) {
     console.warn("[exchange-rates] Frankfurter 조회 실패:", error);
     // CPO 결정 — 오래된 고정 환율을 기본 폴백으로 쓰지 않는다. 마지막 정상
@@ -112,6 +136,9 @@ export async function fetchLiveExchangeRates(): Promise<ExchangeRates> {
     // 여기까지 왔다는 건 한 번도 성공한 적이 없다는 뜻이다(신규 배포 + API 장애).
     // 고정표는 이 경우에만 닿는 비상용이며, source="fallback"으로 구분된다.
     console.warn("[exchange-rates] 마지막 정상 환율도 없음 — 비상 고정표 사용");
-    return { rates: FIXED_RATES_TO_KRW, fetchedAt: new Date().toISOString(), source: "fallback" };
+    /* 🔴 S2-③ — `rateDate: null` 이다. 비상 고정표는 **어느 날짜의 고시도 아니다** —
+       오늘 날짜를 붙이면 코드에 박힌 상수가 「오늘 고시된 환율」로 보인다.
+       화면은 null 을 보고 날짜를 **표시하지 않는다**(지어내지 않는다). */
+    return { rates: FIXED_RATES_TO_KRW, fetchedAt: new Date().toISOString(), rateDate: null, source: "fallback" };
   }
 }

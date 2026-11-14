@@ -551,7 +551,13 @@ function ProductTab(options: TabOptions): ReactElement {
     product,
     onUpdateOriginalPrice: noop,
     onUpdatePriceBreakdown: noop,
-    exchangeRates: { rates: RATES, fetchedAt: "2026-09-12T08:00:00.000Z", source: "frankfurter" as const },
+    /* 🔴 S2-③ — 고시 기준일(rateDate)은 가져온 시각(fetchedAt)과 «다른 값» 이다. */
+    exchangeRates: {
+      rates: RATES,
+      fetchedAt: "2026-09-12T08:00:00.000Z",
+      rateDate: "2026-09-11",
+      source: "frankfurter" as const,
+    },
     exchangeRatesLoading: false,
     onRefreshExchangeRates: noop,
     priceRoundingUnit: ROUNDING_UNIT,
