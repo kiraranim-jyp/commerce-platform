@@ -8,7 +8,7 @@ import type {
   SellingConditions,
 } from "@commerce/shared";
 import { getRegistrationImageUrl, getSelectedImageUrl, isRegistrationSafeImageUrl } from "@commerce/shared";
-import { computeVariantFinalPriceKrw } from "@commerce/pricing";
+import { computeVariantFinalPriceKrw, type VariantPriceUnresolvedReason } from "@commerce/pricing";
 import { payloadStockQuantity, variantStockWithSellerDefault } from "@commerce/shared";
 import { manufacturerInputFromProduct, resolveManufacturer } from "../common/manufacturer";
 import { resolveCommonOrigin } from "../common/origin";
@@ -168,6 +168,12 @@ export interface CoupangItem {
   itemName: string;
   originalPrice: number;
   salePrice: number;
+  /** 🔴 S2-① — 이 단품의 최종가를 «계산하지 못한» 이유. 값이 있으면 위
+   *  originalPrice/salePrice 는 **기본 상품가로 자리끼운 임시값**이고 그
+   *  옵션의 실제 판매가가 아니다. 쿠팡 스키마가 가격을 비우지 못해(롯데ON
+   *  slPrc 처럼 null 을 허용하지 않는다) 값을 채우되, 등록 경로의 유일한
+   *  가격 게이트인 validateCoupangPricing() 이 이 칸을 보고 막는다. */
+  priceUnresolvedReason?: VariantPriceUnresolvedReason;
   /** 원본 사이트의 옵션별 SKU(variant.sku) — 옵션이 없는 상품은 없음. */
   externalVendorSku?: string;
   maximumBuyCount: number;
@@ -1694,13 +1700,21 @@ function buildCoupangItem(args: {
         { amount: product.price.value.amount, currency: product.price.value.currency, finalKrw: listing.priceKrw },
         { amount: variant.price.amount, currency: variant.price.currency, mode: variant.priceMode },
       )
-    : { finalKrw: listing.priceKrw, applied: false };
-  const priceKrw = variantPriceResult.finalKrw;
+    : { finalKrw: listing.priceKrw, applied: false, reason: "NO_VARIANT_PRICE" as const };
+  /* 🔴 S2-① — finalKrw === null 은 «환율을 몰라 옵션가를 계산하지 못했다»는 뜻이다.
+     쿠팡 스키마는 가격을 비울 수 없으므로 기본가로 자리끼우고, 그 사실을
+     priceUnresolvedReason 에 실어 보낸다 — validateCoupangPricing() 이 그것을 보고
+     PRICE_UNRESOLVED 로 막는다(register/route.ts:735 → CP008 FAILED · 실제 쿠팡 API
+     호출 «전»에 끊긴다). 🔴 이 폴백값을 「옵션 판매가」라고 부르지 않는다. */
+  const priceUnresolvedReason: VariantPriceUnresolvedReason | undefined =
+    variantPriceResult.finalKrw == null ? (variantPriceResult.reason ?? "RATE_UNAVAILABLE") : undefined;
+  const priceKrw = variantPriceResult.finalKrw ?? listing.priceKrw;
 
   const item: CoupangItem = {
     itemName,
     originalPrice: priceKrw,
     salePrice: priceKrw,
+    priceUnresolvedReason,
     /* ══ 장기 스프린트 S-11(CEO 지시, 2026-09-26) — 상품코드가 «사라지고» 있었다 ══
 
        `variant?.sku` 하나만 봤다. 옵션 없는 단품에는 variant 가 없으므로
@@ -2012,6 +2026,18 @@ export function validateCoupangPricing(
     issues.push({
       field: "salePrice",
       message: "원본 상품 가격을 확인할 수 없습니다 — 해외 사이트의 가격을 확인한 후 등록할 수 있습니다.",
+      code: "PRICE_UNRESOLVED",
+    });
+  }
+  /* 🔴 S2-① — 옵션 최종가를 계산하지 못한 단품이 있으면 막는다. 그 단품의
+     salePrice 는 기본가 폴백이라 **그 옵션의 가격이 아니다** — 그대로 등록하면
+     옵션 추가금이 사라진 판매가가 쿠팡에 올라간다. 롯데ON 이 slPrc == null 을
+     BLOCKED 로 막는 것(adapter.ts:171)과 같은 처분을 쿠팡 스키마에 맞춰 한 것이다. */
+  const unresolvedPriceItems = payload.items.filter((item) => item.priceUnresolvedReason != null);
+  if (unresolvedPriceItems.length > 0) {
+    issues.push({
+      field: "salePrice",
+      message: `옵션 판매가를 계산하지 못한 단품이 ${unresolvedPriceItems.length}건 있습니다(환율 미확정) — 환율이 확인된 뒤 등록할 수 있습니다.`,
       code: "PRICE_UNRESOLVED",
     });
   }

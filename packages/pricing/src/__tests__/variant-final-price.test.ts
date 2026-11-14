@@ -95,6 +95,71 @@ describe("computeVariantFinalPriceKrw + computePriceBreakdown 통합 — Layer1�
     const base = { amount: 29, currency: "EUR", finalKrw: breakdown.suggestedPriceKrw };
     const variantResult = computeVariantFinalPriceKrw(base, { amount: 34, currency: "EUR" }, { EUR: 1480 });
     // 5EUR * 1480 = 7400.
-    expect(variantResult.finalKrw - base.finalKrw).toBe(7400);
+    expect(variantResult.finalKrw! - base.finalKrw).toBe(7400);
+  });
+});
+
+/**
+ * 🔴 S2-① — **환율을 모르는 통화의 옵션 차액이 「금액 그대로 KRW」로 더해지던 결함.**
+ *
+ * convertToKrw 는 환율을 모르는 통화를 `{amountKrw: 금액 그대로, isEstimate:true}` 로
+ * 돌려준다(currency.ts:48-50 의 최후 폴백). 그래서 옵션 차액 `+84 CAD` 가 **`+₩84`** 로
+ * 더해져 세 채널 등록 payload 의 판매가가 됐다 — 실제 ₩84,000 선과 천 배가 어긋난다.
+ *
+ * 🔴 `isEstimate` 로는 못 가른다 — 「고정표를 썼다(환율은 안다)」와 「환율을 아예
+ * 모른다」가 **둘 다 true** 다. 두 상태를 실제로 가르는 술어는 `hasKnownRateToKrw`
+ * 이고 그것을 쓰는 것이 `convertToKrwStrict`(모르면 null)다.
+ */
+describe("S2-① 환율 미확정 옵션가 — 지어내지도, 조용히 떨어뜨리지도 않는다", () => {
+  const base = { amount: 44, currency: "USD", finalKrw: 105674 };
+  /** CAD 는 FIXED_RATES_TO_KRW(KRW·EUR·USD·GBP·SEK·JPY)에 «없다». */
+  const baseCad = { amount: 100, currency: "CAD", finalKrw: 150000 };
+
+  it("🔴 결함 재현 방지 — 환율을 모르는 통화(CAD)의 차액을 «금액 그대로» 더하지 않는다", () => {
+    const result = computeVariantFinalPriceKrw(baseCad, { amount: 184, currency: "CAD" }, { USD: 1408.45 });
+    // 옛 동작: convertToKrw(84,"CAD").amountKrw === 84 → 150000 + 84 = 150084.
+    expect(result.finalKrw).not.toBe(150084);
+    expect(result.finalKrw).toBeNull();
+    expect(result.applied).toBe(false);
+    expect(result.reason).toBe("RATE_UNAVAILABLE");
+  });
+
+  it("🔴 환율을 모르면 기본가로 «폴백하지 않는다» — 옵션 추가금이 조용히 사라지는 것을 막는다", () => {
+    const result = computeVariantFinalPriceKrw(baseCad, { amount: 184, currency: "CAD" });
+    expect(result.finalKrw).not.toBe(baseCad.finalKrw);
+    expect(result.finalKrw).toBeNull();
+  });
+
+  it("환율이 주어지면 그 통화도 정상 계산된다 — 막는 것은 «모를 때»뿐이다", () => {
+    const result = computeVariantFinalPriceKrw(baseCad, { amount: 184, currency: "CAD" }, { CAD: 1000 });
+    expect(result.finalKrw).toBe(150000 + 84000);
+    expect(result.applied).toBe(true);
+    expect(result.reason).toBeNull();
+  });
+
+  it("고정표에 있는 통화(EUR)는 liveRates 가 없어도 계산된다 — 기존 동작 불변", () => {
+    const baseEur = { amount: 29, currency: "EUR", finalKrw: 100000 };
+    const result = computeVariantFinalPriceKrw(baseEur, { amount: 34, currency: "EUR" });
+    expect(result.finalKrw).toBe(100000 + 5 * 1480);
+    expect(result.applied).toBe(true);
+  });
+
+  it("폴백 세 경우는 «기본가 폴백» 그대로이고 이유만 갈라 적힌다(CPO 케이스 7·8 불변)", () => {
+    const noPrice = computeVariantFinalPriceKrw(base, undefined);
+    const unknownMode = computeVariantFinalPriceKrw(base, { amount: 49, currency: "USD", mode: "UNKNOWN" });
+    const mismatch = computeVariantFinalPriceKrw(base, { amount: 49, currency: "EUR" });
+    expect(noPrice.reason).toBe("NO_VARIANT_PRICE");
+    expect(unknownMode.reason).toBe("UNKNOWN_PRICE_MODE");
+    expect(mismatch.reason).toBe("CURRENCY_MISMATCH");
+    for (const r of [noPrice, unknownMode, mismatch]) {
+      expect(r.finalKrw).toBe(base.finalKrw); // 🔴 이 셋은 null 이 «아니다».
+      expect(r.applied).toBe(false);
+    }
+  });
+
+  it("차액이 0이면 환율을 몰라도 환산할 것이 없다 — 기본가 그대로 적용된다", () => {
+    const result = computeVariantFinalPriceKrw(baseCad, { amount: 100, currency: "CAD" });
+    expect(result.finalKrw).toBe(150000);
+    expect(result.applied).toBe(true);
   });
 });

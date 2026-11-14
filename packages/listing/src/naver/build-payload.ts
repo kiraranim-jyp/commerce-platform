@@ -354,6 +354,10 @@ function buildOptionCombinations(product: SmartStoreProductInput, salePrice: num
           { amount: variant.price.amount, currency: variant.price.currency, mode: variant.priceMode },
         )
       : { finalKrw: salePrice, applied: false };
+    /* 🔴 S2-① — 환율을 몰라 옵션 최종가를 «계산하지 못하면» 그 옵션을 빼낸다.
+       바로 아래 재고 null 과 **같은 처분**이다(0 이나 기본가로 메우지 않는다).
+       기본가로 폴백해 넣으면 옵션 추가금이 사라진 가격이 차액 0 으로 등록된다. */
+    if (variantResult.finalKrw == null) return null;
     const priceDelta = variantResult.finalKrw - salePrice;
     /* 🔴 모르면 null 이다 — 아래에서 그 옵션을 «빼낸다»(0 으로 메우지 않는다). */
     const stock = variantStockWithSellerDefault(product, variant);

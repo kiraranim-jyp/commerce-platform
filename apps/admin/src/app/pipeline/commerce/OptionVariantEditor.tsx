@@ -181,14 +181,23 @@ function VariantRow({
       {baseProduct && (
         <>
           <td className="py-1.5 pr-2 align-top text-text-primary">
-            {priceResult
-              ? priceResult.applied
-                ? `${priceResult.finalKrw - baseProduct.finalKrw >= 0 ? "+" : ""}${(priceResult.finalKrw - baseProduct.finalKrw).toLocaleString()}원`
-                : "옵션가 통화 불일치 — 기본가 적용"
-              : "옵션가 없음 — 기본가 적용"}
+            {/* 🔴 S2-① — 「기본가 적용」과 「계산 불가」를 가른다. 환율을 모르는
+                경우는 기본가로 폴백하지 «않으므로» 그렇게 적으면 거짓말이 된다. */}
+            {priceResult == null
+              ? "옵션가 없음 — 기본가 적용"
+              : priceResult.finalKrw == null
+                ? `환율 미확정${variant.price?.currency ? `(${variant.price.currency})` : ""} — 옵션가를 계산할 수 없습니다`
+                : priceResult.applied
+                  ? `${priceResult.finalKrw - baseProduct.finalKrw >= 0 ? "+" : ""}${(priceResult.finalKrw - baseProduct.finalKrw).toLocaleString()}원`
+                  : "옵션가 통화 불일치 — 기본가 적용"}
           </td>
           <td className="py-1.5 align-top font-medium text-text-primary">
-            {(priceResult ? priceResult.finalKrw : baseProduct.finalKrw).toLocaleString()}원
+            {/* 🔴 S2-① — 계산하지 못한 자리에 숫자를 만들어 넣지 않는다. */}
+            {priceResult?.finalKrw != null
+              ? `${priceResult.finalKrw.toLocaleString()}원`
+              : priceResult != null && priceResult.finalKrw == null
+                ? "계산 불가"
+                : `${baseProduct.finalKrw.toLocaleString()}원`}
           </td>
         </>
       )}

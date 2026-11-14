@@ -1,4 +1,4 @@
-import { convertToKrw } from "./currency";
+import { convertToKrw, convertToKrwStrict } from "./currency";
 
 /**
  * P0-1(가격 계산 투명화) — "원가 → 최종 판매가"만 보여주던 걸 원본가격/환율/
@@ -88,13 +88,39 @@ export function computePriceBreakdown(
 
 export type VariantPriceMode = "ABSOLUTE" | "DELTA" | "UNKNOWN";
 
+/**
+ * 🔴 S2-① — 옵션 최종가를 «확정하지 못한» 네 가지 이유. 넷 다 `applied:false`
+ * 지만 **셋과 하나가 서로 다른 처분을 받는다**(아래 finalKrw 주석).
+ */
+export type VariantPriceUnresolvedReason =
+  /** 옵션 원본가 자체가 없다(크롤러가 못 읽었거나 옵션에 가격이 없다). */
+  | "NO_VARIANT_PRICE"
+  /** 원본이 절대가인지 차액인지 명시하지 않았다 — 추정하지 않는다. */
+  | "UNKNOWN_PRICE_MODE"
+  /** 옵션 통화가 기본가 통화와 다르다(케이스 7). */
+  | "CURRENCY_MISMATCH"
+  /** 🔴 S2-① 신규 — 그 통화를 KRW 로 바꿀 **환율을 모른다**. */
+  | "RATE_UNAVAILABLE";
+
 export interface VariantFinalPriceResult {
-  /** 이 옵션 조합에 실제로 적용해야 할 최종 판매가(KRW). */
-  finalKrw: number;
-  /** false면 옵션 원본가를 반영하지 못해(통화 불일치/UNKNOWN/값 없음)
-   * 기본 상품의 최종가를 그대로 썼다는 뜻 — 화면이 "옵션가 미확인"으로
-   * 구분해서 보여줄 수 있게 한다. */
+  /**
+   * 이 옵션 조합에 실제로 적용해야 할 최종 판매가(KRW).
+   *
+   * 🔴 S2-① — **`null` 은 「계산할 수 없다」 는 뜻이고 기본가 폴백이 아니다.**
+   * `RATE_UNAVAILABLE` 일 때만 null 이다. 나머지 세 이유는 예전처럼
+   * `base.finalKrw` 로 폴백한다(CPO 케이스 7·8 결정 — 그 셋은 «옵션 차액을
+   * 반영하지 않는다» 가 맞는 처분이다).
+   *
+   * 환율을 모르는 경우만 폴백하지 «않는» 이유: 그 자리에 기본가를 넣으면
+   * 옵션 추가금이 **조용히 사라진 채** 완성된 판매가처럼 채널에 등록된다.
+   * 「모르면 채우지 않는다」(SHIPPING-POLICY-01 · 재고 null 과 같은 처분).
+   */
+  finalKrw: number | null;
+  /** false면 옵션 원본가를 반영하지 못했다는 뜻 — 화면이 "옵션가 미확인"으로
+   * 구분해서 보여줄 수 있게 한다. 🔴 그 «이유» 는 reason 으로 갈라 읽는다. */
   applied: boolean;
+  /** applied 가 true 면 null. 🔴 「폴백했다」와 「계산 불가」를 가르는 칸이다. */
+  reason: VariantPriceUnresolvedReason | null;
 }
 
 /**
@@ -117,19 +143,32 @@ export function computeVariantFinalPriceKrw(
   variant: { amount: number; currency: string; mode?: VariantPriceMode } | undefined,
   liveRates?: Record<string, number>,
 ): VariantFinalPriceResult {
-  if (!variant) return { finalKrw: base.finalKrw, applied: false };
+  if (!variant) return { finalKrw: base.finalKrw, applied: false, reason: "NO_VARIANT_PRICE" };
   const mode: VariantPriceMode = variant.mode ?? "ABSOLUTE";
-  if (mode === "UNKNOWN") return { finalKrw: base.finalKrw, applied: false };
+  if (mode === "UNKNOWN") return { finalKrw: base.finalKrw, applied: false, reason: "UNKNOWN_PRICE_MODE" };
   if (variant.currency.toUpperCase() !== base.currency.toUpperCase()) {
     // 케이스 7(CPO 지시: "옵션별 통화가 서로 다른 경우 → UNRESOLVED") — 서로
     // 다른 통화의 절대값을 빼면 의미 없는 숫자가 나온다. 값을 지어내지 않고
     // 기본 상품가로 폴백한다.
-    return { finalKrw: base.finalKrw, applied: false };
+    return { finalKrw: base.finalKrw, applied: false, reason: "CURRENCY_MISMATCH" };
   }
   const deltaSourceAmount = mode === "DELTA" ? variant.amount : variant.amount - base.amount;
-  if (deltaSourceAmount === 0) return { finalKrw: base.finalKrw, applied: true };
-  const deltaKrw = convertToKrw(deltaSourceAmount, variant.currency, liveRates).amountKrw;
-  return { finalKrw: base.finalKrw + deltaKrw, applied: true };
+  if (deltaSourceAmount === 0) return { finalKrw: base.finalKrw, applied: true, reason: null };
+  /* ── 🔴 S2-① — 여기가 고친 자리다 ────────────────────────────────────────
+     전에는 `convertToKrw(...).amountKrw` 였다. 그 함수는 **환율을 모르는 통화를
+     「금액 그대로 KRW」로 돌려준다**(currency.ts:48-50 의 최후 폴백 · isEstimate
+     만 true). 그래서 옵션 차액 `+84 CAD` 가 **`+₩84`** 로 더해졌다 — 실제
+     ₩84,000 선과 천 배가 어긋난 값이 그대로 채널 등록 payload 의 판매가가 된다.
+
+     🔴 `isEstimate` 로는 못 가른다 — 그 플래그는 「고정표를 썼다(환율은 안다)」와
+     「환율을 아예 모른다」 **둘 다에서 true** 다. 두 상태를 실제로 가르는 술어는
+     `hasKnownRateToKrw` 이고, 그것을 쓰는 것이 `convertToKrwStrict`(모르면 null)다.
+
+     🔴 여기서 base.finalKrw 로 폴백하지 «않는다». 폴백하면 옵션 추가금이 조용히
+     사라진 값이 «완성된 판매가» 로 등록된다. null 을 돌려 호출부가 막게 한다. */
+  const delta = convertToKrwStrict(deltaSourceAmount, variant.currency, liveRates);
+  if (delta == null) return { finalKrw: null, applied: false, reason: "RATE_UNAVAILABLE" };
+  return { finalKrw: base.finalKrw + delta.amountKrw, applied: true, reason: null };
 }
 
 /**
