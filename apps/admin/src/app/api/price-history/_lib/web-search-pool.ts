@@ -93,6 +93,7 @@ const MAX_PAGES_PER_QUERY = 2;
  * 🔴 **시장 «분류» 에 쓰지 않는다** — 국내/해외 판단은 `classifyCandidateMarket` 이
  *    증거(TLD · 등록부 · 통화)로 한다. 로케일을 시장 근거로 쓰면 해외가 국내로 잘못 분류된다.
  */
+/** 🔴 STEP A 롤백 — 전송하지 않는다. 상수는 **비교 측정용으로 남긴다**(사용처 0). */
 export const SEARCH_COUNTRY_CODE = "kr";
 export const SEARCH_LANGUAGE_CODE = "ko";
 const RESULTS_PER_PAGE = 20;
@@ -258,8 +259,15 @@ async function apifySearch(query: string, token: string): Promise<ApifySearchOut
         queries: query,
         maxPagesPerQuery: MAX_PAGES_PER_QUERY,
         resultsPerPage: RESULTS_PER_PAGE,
-        /** 🔵 CPO ⒜ 한정 예외 — 이 둘 «만» 허용된다(나머지 지역/언어 파라미터는 금지). */
-        countryCode: SEARCH_COUNTRY_CODE,
+        /**
+         * 🔴🔴 **STEP A 롤백(2026-11-14)** — `countryCode` 를 **뺐다.**
+         *    실측 A/B(같은 상품 b226tc174 · 같은 질의 · 배포 전후):
+         *    organic **2 → 0**(2회 연속 · `failed=false` 이므로 「결과가 없다」).
+         *    🔴 내 가설(「국내가 늘어난다」)이 **반증됐다** — 따옴표 둘로 이미 좁은
+         *       질의에 한국 색인 제한이 겹쳐 **전체가 0** 이 됐다.
+         * 🔵 `languageCode` 는 **임의로 결정하지 않는다**(CPO 명시) — 유지한 채로 두고
+         *    별도 비교 측정 대상으로 남긴다.
+         */
         languageCode: SEARCH_LANGUAGE_CODE,
         saveHtml: false,
         saveHtmlToKeyValueStore: false,

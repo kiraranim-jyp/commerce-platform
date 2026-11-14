@@ -19,7 +19,6 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   MAX_SEARCHES_PER_PRODUCT,
-  SEARCH_COUNTRY_CODE,
   SEARCH_LANGUAGE_CODE,
 } from "../web-search-pool";
 
@@ -34,15 +33,30 @@ const BODY = CODE.slice(
 );
 
 describe("UXC-⒜ 한국 로케일 한정 예외", () => {
-  it("A-1 🟢 로케일 둘이 **실제로 전송된다** · 값은 kr/ko 로 고정", () => {
-    expect(BODY).toContain("countryCode: SEARCH_COUNTRY_CODE");
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴 **STEP A 롤백(2026-11-14)** — `countryCode` 는 **전송하지 않는다.**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 실측 A/B — 같은 상품(`b226tc174`) · 같은 질의 · 배포 전후:
+   * ```
+   * 로케일 전   organic **2**   (11-14 03:50:05)
+   * 로케일 후   organic **0**   (06:49:42 · 06:50:33 · 둘 다 failed=false)
+   * ```
+   * 🔴 「국내가 늘어난다」는 내 가설이 **반증됐다** — 따옴표 둘로 이미 좁은 질의에
+   *    한국 색인 제한이 겹쳐 **전체가 0** 이 됐다.
+   * 🔵 `languageCode` 는 **임의로 결정하지 않는다**(CPO 명시) — 유지한 채 두고
+   *    **별도 비교 측정** 대상으로 남긴다.
+   */
+  it("A-1 🔴 국가 코드는 **보내지 않는다** · 언어 코드만 남는다", () => {
+    expect(BODY, "🔴 국가 코드가 되살아났다 — organic 이 0 이 된다").not.toContain("countryCode");
     expect(BODY).toContain("languageCode: SEARCH_LANGUAGE_CODE");
-    expect(SEARCH_COUNTRY_CODE).toBe("kr");
     expect(SEARCH_LANGUAGE_CODE).toBe("ko");
   });
 
   it("A-2 🔴🔴 **예외는 그 둘뿐** — 나머지 지역/언어 파라미터는 계속 금지", () => {
     for (const banned of [
+      "countryCode",
       "locationUule",
       "searchLanguage",
       "mobileResults",
