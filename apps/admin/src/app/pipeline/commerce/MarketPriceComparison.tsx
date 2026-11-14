@@ -206,6 +206,7 @@ import {
   EDIT_FINAL_PRICE_LINK_TEXT,
   PRICE_CALCULATION_LINK_TEXT,
   RECOMMENDED_PRICE_LABEL,
+  RECOMMENDED_PRICE_UNVERIFIED_NOTE,
   /* 🔴 `SELL_VERDICT_HEADING` import 를 **뺐다** — CPO 결정 ⒝ 로 이 영역이 판정
      머리말을 쓰지 않는다. 🟢 상수 자체는 그대로 있고 요약·Action Center 가 쓴다. */
   /** 🔵 CLOSE-3 §0 — 후보 카드 «안» 의 환산 어휘(집계 영역엔 쓰지 않는다). */
@@ -1098,6 +1099,30 @@ export function MarketPriceComparison({
                   {formatKrw(recommendedPriceKrw)}
                 </span>
               </div>
+              {/**
+               * ══════════════════════════════════════════════════════════════
+               * 🔵🔵🔵 UXC-추천가 — **근거가 없으면 «확정 가격» 으로 읽히게 두지 않는다**
+               * ══════════════════════════════════════════════════════════════
+               *
+               * 🔴 CEO 캡처 — 「권장 판매가격 ₩101,000」 옆에 「원가 정보 필요」·
+               *    「가격 확인 필요」가 같이 있었다. 셀러는 그 숫자를 **팔아도 되는
+               *    가격** 으로 읽는다.
+               * 🟢 숫자는 **숨기지 않는다**(실측상 A 의 올바른 라이브 계산이다) —
+               *    대신 **같은 자리에서** 무엇이 확인 안 됐는지 말한다.
+               * 🔴 **새 판정을 만들지 않는다** — 이미 계산된
+               *    `referenceProfitability.marginPercent` 하나를 **읽기만** 한다.
+               *    그 값이 있으면(= 수익성을 말할 수 있으면) 이 줄은 **서지 않는다**.
+               * 🔴 A `resolveListingPrice` · B · MI 판단 · 가격 계산 기준 · 가격 수정
+               *    **변경 0**. 바뀌는 것은 표시 조건과 문구뿐이다.
+               */}
+              {referenceProfitability?.marginPercent == null && (
+                <p
+                  data-testid="market-recommended-price-unverified"
+                  className="mt-0.5 text-[11px] text-text-tertiary"
+                >
+                  {RECOMMENDED_PRICE_UNVERIFIED_NOTE}
+                </p>
+              )}
               {/**
                * 🔵🔵 CORE-UX-SELLER-01 ② — **「그 가격으로 하겠다」를 그 자리에서 끝낸다.**
                *
