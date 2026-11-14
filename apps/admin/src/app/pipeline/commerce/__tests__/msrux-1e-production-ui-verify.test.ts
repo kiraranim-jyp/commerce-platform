@@ -141,8 +141,15 @@ describe("MSRUX-1 UI-2 — 판매가 확정 CTA 가 **실제로 동작한다**",
       onOpenPriceEditor: () => calls.push(1),
     });
     const btns = [...el.querySelectorAll('[data-testid="market-edit-final-price"]')];
-    expect(btns.length, "🔴 CTA 가 시장별 하나가 아니다(중복/소실)").toBe(2);
-    expect(btns.map((b) => b.tagName).join(","), "🔴 클릭 가능한 버튼이 아니다").toBe("BUTTON,BUTTON");
+    /**
+     * 🔵🔵 UX-CONSOLIDATION ⑤ 에서 **2 → 1 로 바뀌었다**(약화가 아니라 **강화**).
+     * 🔴 판매가는 **상품 단위 값** 이라 시장마다 그리면 같은 금액·같은 CTA 가 두 벌
+     *    뜬다(CEO 캡처). ⟹ 「시장마다 하나」가 아니라 **「화면에 하나뿐」** 이 맞다.
+     */
+    expect(btns.length, "🔴 확정 CTA 가 사라졌거나 다시 두 벌이 됐다").toBe(1);
+    expect(btns[0]!.tagName, "🔴 클릭 가능한 버튼이 아니다").toBe("BUTTON");
+    /** 🔴 금액 줄도 하나뿐이다 — 같은 숫자를 두 번 말하지 않는다. */
+    expect(el.querySelectorAll('[data-testid="market-final-price"]').length).toBe(1);
     act(() => {
       btns[0]!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });

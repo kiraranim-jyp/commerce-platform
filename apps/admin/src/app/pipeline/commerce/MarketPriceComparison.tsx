@@ -890,8 +890,13 @@ export function MarketPriceComparison({
              *    🔴 확정 가격은 기존 정책대로 **A(`resolveListingPrice`)** 값이고
              *       **B(`computePriceRecommendation`)를 CTA 에 연결하지 않는다**.
              */
-            finalPriceKrw={finalPriceKrw}
-            onOpenPriceEditor={onOpenPriceEditor}
+            /**
+             * 🔵 UX-CONSOLIDATION ⑤ — `finalPriceKrw`·`onOpenPriceEditor` 를 **여기로
+             *    넘기지 않는다.** 넘기면 시장마다 한 벌씩 = 두 벌이 된다. 그 블록은
+             *    격자 **바로 아래** 에 하나로 선다. 🔴 `MarketBlock` 의 prop 선언은
+             *    **남겨 둔다** — `DETAIL` 변형이 다시 쓸 자리이고 지우면 계약이 깨진다.
+             * 🔴 **속성 자리에 `{/* *‍/}` 를 쓰지 않는다** — 이 리포가 네 번 밟은 함정이다.
+             */
             /**
              * 🔵 FINAL UX REBUILD — `DETAIL` 이 쓰는 입력이라 1차에서도 **같은 값** 을
              *    넘긴다(prop 을 두 벌로 만들지 않는다). 🔴 `SUMMARY` 는 그것으로
@@ -901,6 +906,58 @@ export function MarketPriceComparison({
           />
         ))}
       </div>
+
+      {/**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔵🔵🔵 UX-CONSOLIDATION ⑤ — **최종 선택 가격과 수정 진입점은 «하나» 다**
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * 🔴 전에는 이 블록이 `MarketBlock` **안** 이라 시장마다 한 벌씩 = **두 벌** 떴다
+       *    (CEO 캡처 실측 `market-edit-final-price × 2` · 같은 ₩89,000 이 두 번).
+       * 🔴🔴 판매가의 owner 는 **상품 하나** 다(`product.priceOverrideKrw` → A
+       *    `resolveListingPrice`) — 🇰🇷/🌎 로 갈리지 않는다. 시장 칸 안에 두면
+       *    **「시장별 판매가가 있다」는 거짓** 을 말한다.
+       * 🟢 **기능을 지우지 않았다** — 격자 «밖» 에 **하나로** 옮겼다. 같은 testid ·
+       *    같은 문구 · 같은 핸들러 · 같은 저장 경로(`updateSalePriceKrw`).
+       * 🟢 CPO 결정 ⒜(결론 영역)는 유지된다 — 여기는 여전히 시장 블록과 판매 판단 사이다.
+       */}
+      {(finalPriceKrw != null || onOpenPriceEditor) && (
+        <div data-testid="market-final-price" className="mt-2 border-t border-border/60 pt-2">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+            <span className="text-[11px] text-text-secondary">{FINAL_PRICE_LABEL}</span>
+            {finalPriceKrw != null ? (
+              <span className="flex items-baseline gap-1">
+                <span
+                  data-testid="market-final-price-amount"
+                  className="text-lg font-semibold tabular-nums text-text-primary"
+                >
+                  {formatKrw(finalPriceKrw)}
+                </span>
+                {/** 🟢 **셀러가 고른 값** 임을 말한다 — 권장가(계산)와 구별되는 유일한 표시다. */}
+                <span data-testid="market-final-price-badge" className="text-[11px] text-text-tertiary">
+                  {FINAL_PRICE_SELECTED_BADGE}
+                </span>
+              </span>
+            ) : (
+              /** 🔴 없는 값을 숫자로 만들지 않는다 — 「0원」·「-」 금지. */
+              <span data-testid="market-final-price-none" className="text-[11px] text-text-tertiary">
+                {FINAL_PRICE_NONE_TEXT}
+              </span>
+            )}
+          </div>
+          {/** 🔴 갈 곳이 없으면 그리지 않는다(이 파일의 기존 규약 · 죽은 링크 금지). */}
+          {onOpenPriceEditor && (
+            <button
+              type="button"
+              data-testid="market-edit-final-price"
+              onClick={onOpenPriceEditor}
+              className="mt-1 text-[11px] text-accent underline"
+            >
+              {EDIT_FINAL_PRICE_LINK_TEXT}
+            </button>
+          )}
+        </div>
+      )}
 
       {/**
        * ══════════════════════════════════════════════════════════════════════
@@ -1873,49 +1930,6 @@ function MarketBlock({
         * 🔴 **편집하지 않는다** — 입력칸이 없고, 수정은 기존 `PriceEditor` 로 **보낸다**(§10).
         */}
         </>
-      )}
-      {/**
-       * 🔴🔴 MSRUX-1 D 기능 회귀 복구 — 이 CTA 는 `{!isSummary && (…)}` **안** 에 있었다.
-       *    D 가 DETAIL 변형을 지우면서 **셀러가 가격을 확정할 수 없게** 됐다.
-       * 🟢 CPO 결정 ⒜ — **가드 밖(결론 영역 자리)으로 «옮긴다»**. 🔴 내용은 **한 글자도**
-       *    바꾸지 않았다(복제 0 · 새 UI 0 · 확정 가격 owner 는 A 그대로).
-       */}
-      {(finalPriceKrw != null || onOpenPriceEditor) && (
-        <div data-testid="market-final-price" className="mt-2 border-t border-border/60 pt-2">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-            <span className="text-[11px] text-text-secondary">{FINAL_PRICE_LABEL}</span>
-            {finalPriceKrw != null ? (
-              <span className="flex items-baseline gap-1">
-                <span
-                  data-testid="market-final-price-amount"
-                  className="text-lg font-semibold tabular-nums text-text-primary"
-                >
-                  {formatKrw(finalPriceKrw)}
-                </span>
-                {/** 🟢 **셀러가 고른 값** 임을 말한다 — 권장가(계산)와 구별되는 유일한 표시다. */}
-                <span data-testid="market-final-price-badge" className="text-[11px] text-text-tertiary">
-                  {FINAL_PRICE_SELECTED_BADGE}
-                </span>
-              </span>
-            ) : (
-              /** 🔴 없는 값을 숫자로 만들지 않는다 — 「0원」·「-」 금지. */
-              <span data-testid="market-final-price-none" className="text-[11px] text-text-tertiary">
-                {FINAL_PRICE_NONE_TEXT}
-              </span>
-            )}
-          </div>
-          {/** 🔴 갈 곳이 없으면 그리지 않는다(이 파일의 기존 규약 · 죽은 링크 금지). */}
-          {onOpenPriceEditor && (
-            <button
-              type="button"
-              data-testid="market-edit-final-price"
-              onClick={onOpenPriceEditor}
-              className="mt-1 text-[11px] text-accent underline"
-            >
-              {EDIT_FINAL_PRICE_LINK_TEXT}
-            </button>
-          )}
-        </div>
       )}
     </div>
   );

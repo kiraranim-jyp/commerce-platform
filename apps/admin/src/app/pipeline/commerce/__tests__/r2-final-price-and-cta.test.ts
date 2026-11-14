@@ -152,7 +152,8 @@ describe("R2-B 🔵 STEP 7 — 최종 선택 가격이 **두 시장에 같은 �
     try {
       const blocks = [...m.host.querySelectorAll('[data-testid="market-final-price"]')];
       /** 🔴 **둘** 이어야 한다 — 국내 칸 · 해외 칸(같은 컴포넌트가 두 번 마운트된다). */
-      expect(blocks.length).toBe(2);
+            /** 🔵🔵 UX-CONSOLIDATION ⑤ — 판매가는 **상품 단위 값** 이라 시장마다 그리면 두 벌이 된다 ⟹ **하나** 다. */
+      expect(blocks.length).toBe(1);
       for (const b of blocks) {
         expect(b.textContent).toContain(FINAL_PRICE_LABEL);
         expect(b.textContent).toContain(FINAL_PRICE_SELECTED_BADGE);
@@ -167,7 +168,8 @@ describe("R2-B 🔵 STEP 7 — 최종 선택 가격이 **두 시장에 같은 �
     const m = mount({ rows: restored(dump().legacy.rows), finalPriceKrw: null, onOpenPriceEditor: () => {} });
     try {
       const none = [...m.host.querySelectorAll('[data-testid="market-final-price-none"]')];
-      expect(none.length).toBe(2);
+            /** 🔵🔵 UX-CONSOLIDATION ⑤ — 판매가는 **상품 단위 값** 이라 시장마다 그리면 두 벌이 된다 ⟹ **하나** 다. */
+      expect(none.length).toBe(1);
       expect(none[0].textContent).toBe(FINAL_PRICE_NONE_TEXT);
       expect(m.host.querySelectorAll('[data-testid="market-final-price-amount"]').length).toBe(0);
       /** 🔴 「0」이 최종가 자리에 서지 않는다. */
@@ -187,7 +189,8 @@ describe("R2-B 🔵 STEP 7 — 최종 선택 가격이 **두 시장에 같은 �
         expect(b.querySelectorAll("textarea").length).toBe(0);
       }
       /** 🟢 수정은 **기존 편집기로 보낸다** — 링크 하나뿐이다. */
-      expect(m.host.querySelectorAll('[data-testid="market-edit-final-price"]').length).toBe(2);
+            /** 🔵🔵 UX-CONSOLIDATION ⑤ — 판매가는 **상품 단위 값** 이라 시장마다 그리면 두 벌이 된다 ⟹ **하나** 다. */
+      expect(m.host.querySelectorAll('[data-testid="market-edit-final-price"]').length).toBe(1);
     } finally {
       m.cleanup();
     }

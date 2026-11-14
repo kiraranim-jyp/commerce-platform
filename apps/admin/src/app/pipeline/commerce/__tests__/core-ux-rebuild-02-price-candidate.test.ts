@@ -257,10 +257,16 @@ describe("PX-B 최종 판매가격 — **편집 owner 는 하나 · 진입점은
     }
   });
 
-  it("PX-B-4 🔴 시장 블록의 `market-edit-final-price` 개수는 **2 그대로** 다(계약 R2 유지)", () => {
+  /**
+   * 🔵🔵 UX-CONSOLIDATION ⑤ — **2 → 1 로 바뀌었다.** 판매가는 **상품 단위 값** 이라
+   *    시장마다 그리면 같은 금액·같은 CTA 가 두 벌 뜬다(CEO 캡처 실측).
+   * 🔴 **약화가 아니다** — 「하나뿐」이 「두 벌」보다 센 단언이고, 아래 두 번째 줄의
+   *    「다른 축과 섞지 않는다」는 **그대로** 살아 있다.
+   */
+  it("PX-B-4 🔵 시장 블록의 `market-edit-final-price` 는 **하나뿐** 이다", () => {
     const m = mount({ rows: bothMarkets(), finalPriceKrw: 85000, onOpenPriceEditor: () => {} });
     try {
-      expect(m.host.querySelectorAll('[data-testid="market-edit-final-price"]').length).toBe(2);
+      expect(m.host.querySelectorAll('[data-testid="market-edit-final-price"]').length).toBe(1);
       /** 🔴 1차의 것은 **다른 testid** 다 — 두 축을 섞으면 개수 계약이 거짓이 된다. */
       expect(m.host.querySelectorAll('[data-testid="market-edit-price-link"]').length).toBe(0);
     } finally {

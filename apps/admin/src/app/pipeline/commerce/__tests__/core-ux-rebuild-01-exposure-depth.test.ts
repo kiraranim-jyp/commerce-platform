@@ -217,15 +217,19 @@ describe("UXR-F ⒝ 1차 노출 — 첫 화면에 **무엇이 서는가**", () =
        * 🔴 **약화가 아니다** — 「1차에 있다」와 「**시장마다 하나뿐**」을 **둘 다** 문다.
        *    전에는 1차 부재만 봤으므로 중복 렌더를 잡지 못했다.
        */
+      /**
+       * 🔵🔵 UX-CONSOLIDATION ⑤ 에서 **2 → 1**(약화가 아니라 강화) — 판매가는
+       *    상품 단위 값이라 시장마다 그리면 같은 금액이 두 벌 뜬다(CEO 캡처).
+       */
       expect(
         firstScreenNode(m.host).querySelectorAll('[data-testid="market-final-price"]').length,
         "🔴 확정 CTA 가 1차에서 사라졌다",
-      ).toBe(2);
-      /** 🟢 그리고 **중복이 아니다** — 화면 전체에서도 시장별 1 × 2 뿐이다. */
+      ).toBe(1);
+      /** 🟢 그리고 **중복이 아니다** — 화면 전체에서도 하나뿐이다. */
       expect(
         m.host.querySelectorAll('[data-testid="market-final-price"]').length,
-        "🔴 확정 CTA 수가 달라졌다",
-      ).toBe(2);
+        "🔴 확정 CTA 가 다시 두 벌이 됐다",
+      ).toBe(1);
       expect(text(m.host), "🔴 최종 선택 가격이 아예 사라졌다").toContain(FINAL_PRICE_LABEL);
     } finally {
       m.cleanup();
