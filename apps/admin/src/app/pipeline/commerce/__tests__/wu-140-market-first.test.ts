@@ -263,7 +263,8 @@ describe("C. 🔴🔴🔴 CPO 확정 순서 — 🇰🇷 → 🌎 → 판단 결
      */
     expect(q("market-detail-domestic"), "🔴 제거한 상세 블록이 되살아났다").toBeNull();
     expect(q("market-same-count-domestic")?.textContent ?? "").toContain("동일상품 확정 1건");
-    expect(kr).toContain("KRW 88000");
+    /** 🔵 MI-UI-CONSISTENCY-01 P0-A — 천단위 구분자(의도된 변경 · 되돌리면 FAIL). */
+    expect(kr).toContain("KRW 88,000");
     /** 🔴 환산 0 — 한쪽 통화가 다른 블록에 나타나지 않는다. */
     expect(kr).not.toContain("USD");
     expect(q("market-block-overseas")!.textContent).not.toContain("KRW");

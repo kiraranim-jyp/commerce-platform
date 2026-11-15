@@ -1247,10 +1247,37 @@ export function domesticPriceBand(g: PriceGuide): DomesticPriceBand {
 export const PRICE_BAND_UNDETERMINED = "가격대 확정 불가";
 export const DOMESTIC_BAND_LABEL = "국내 시장 가격대";
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴🔴 MI-UI-CONSISTENCY-01 P0-A — **같은 통화가 한 화면에서 두 형식으로 떴다**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 CONTROL 실측(두 시장에 **구조적으로 동일한** 입력을 넣은 마운트 DOM):
+ * ```
+ * 🇰🇷 국내 블록   「KRW 88000 ─ 95000」   ← 이 함수       🔴 구분자 없음
+ * 🇰🇷 국내 참고가격「KRW 88,000」          ← overseas-reference.ts:237  🟢 구분자 있음
+ * ```
+ *    ⟹ **같은 화면 · 같은 통화 · 같은 성격의 금액** 인데 형식이 다르다.
+ * 🔴 해외가 멀쩡해 «보였던» 이유는 규칙이 달라서가 아니라 **금액이 작아서** 다
+ *    (`GBP 37` 은 구분자가 들어갈 자리가 없다) ⟹ 같은 결함이 두 함수에 있었다.
+ *
+ * 🟢 **새 포맷터를 만들지 않는다** — 이 영역의 금액 형식 owner 는
+ *    `overseas-reference.ts:237-240`(`${currency} ${lo.toLocaleString("ko-KR")}`)이고
+ *    그 모양을 그대로 쓴다.
+ * 🔴🔴 `formatKrwAmount`·`formatOriginAmount`(mi-headline.ts)를 **쓰지 않는다** —
+ *    둘 다 `₩` 를 낸다. 이 영역 전체에 `₩` 를 금지하는 계약이 **6건** 있다
+ *    (`wu-141-r3` C-1-b · `wu-144` F · `wu-145` B-3 · `wu-146` 1-b · `wu-148` B-2 ·
+ *     `wu-139` B-5) ⟹ ISO 코드 형식(`KRW 88,000`)을 유지한다.
+ * 🔴 **집계·분모·판정·환산 변경 0** — 숫자 자체는 한 글자도 바뀌지 않는다.
+ */
+function amountText(amount: number): string {
+  return amount.toLocaleString("ko-KR");
+}
+
 export function domesticBandText(b: DomesticPriceBand): string | null {
   if (b.kind === "NONE" || b.currency == null || b.lowest == null) return null;
-  if (b.kind === "SINGLE") return `${b.currency} ${b.lowest} · ${PRICE_BAND_UNDETERMINED}`;
-  return `${b.currency} ${b.lowest} ─ ${b.highest}`;
+  if (b.kind === "SINGLE") return `${b.currency} ${amountText(b.lowest)} · ${PRICE_BAND_UNDETERMINED}`;
+  return `${b.currency} ${amountText(b.lowest)} ─ ${amountText(b.highest ?? b.lowest)}`;
 }
 
 /**
@@ -1268,7 +1295,8 @@ export const OVERSEAS_LOWEST_PER_CURRENCY_NOTE =
 
 export function overseasLowestText(g: PriceGuide): string | null {
   if (g.byCurrency.length === 0) return null;
-  return g.byCurrency.map((c) => `${c.currency} ${c.lowest}`).join(" · ");
+  /** 🔴 MI-UI-CONSISTENCY-01 — 국내와 **같은 형식 owner** 를 쓴다(위 `amountText` 주석). */
+  return g.byCurrency.map((c) => `${c.currency} ${amountText(c.lowest)}`).join(" · ");
 }
 
 /** 🟢 통화가 하나일 때만 「최저 확인가 X」라고 **단정** 할 수 있다. */

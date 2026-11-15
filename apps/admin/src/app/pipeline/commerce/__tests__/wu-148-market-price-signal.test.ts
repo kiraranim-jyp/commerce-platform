@@ -124,8 +124,9 @@ describe("A. 🇰🇷 국내는 «시장 가격대» 다", () => {
     expect(b.kind).toBe("BAND");
     expect(b.lowest).toBe(89000);
     expect(b.highest).toBe(95000);
-    expect(domesticBandText(b)).toContain("89000");
-    expect(domesticBandText(b)).toContain("95000");
+    /** 🔵 MI-UI-CONSISTENCY-01 P0-A — 천단위 구분자(의도된 변경 · 구분자를 빼면 FAIL). */
+    expect(domesticBandText(b)).toContain("89,000");
+    expect(domesticBandText(b)).toContain("95,000");
     /** 🔴 1곳 문구가 **섞이지 않는다**. */
     expect(domesticBandText(b)).not.toContain(PRICE_BAND_UNDETERMINED);
   });
@@ -134,7 +135,8 @@ describe("A. 🇰🇷 국내는 «시장 가격대» 다", () => {
     const b = domesticPriceBand(guide(KR_ONE, "KR"));
     expect(b.kind).toBe("SINGLE");
     const t = domesticBandText(b)!;
-    expect(t).toContain("89000");
+    /** 🔵 MI-UI-CONSISTENCY-01 P0-A — 천단위 구분자(의도된 변경). */
+    expect(t).toContain("89,000");
     expect(t).toContain(PRICE_BAND_UNDETERMINED);
     /** 🔴 범위 기호(`─`)를 쓰지 않는다 — 그것이 「가격대」의 표식이다. */
     expect(t).not.toContain("─");
@@ -228,7 +230,15 @@ describe("C. 💡 판매 판단 — 시장별 해석", () => {
     const blockText = (rows: typeof KR_BAND, m: "KR" | "OVERSEAS") =>
       `${marketPriceHeadline(guide(rows, m)) ?? ""} ${marketPriceHeadlineLabel(guide(rows, m)) ?? ""}`;
     expect(blockText(KR_BAND, "KR")).toContain(DOMESTIC_BAND_LABEL);
-    expect(blockText(KR_BAND, "KR")).toContain("89000");
+    /**
+     * 🔵 MI-UI-CONSISTENCY-01 P0-A — 천단위 구분자(의도된 변경).
+     * 🔴🔴 **그리고 이 테스트의 한계를 적는다** — 여기서 부르는 것은 **순수 함수 둘** 이고
+     *    「그 두 줄이 화면에 선다」는 **보지 않는다**. 실측(마운트 DOM): `headLabel` 의
+     *    렌더 자리(`price-guide-headline-label`)는 `MarketBlock` 의 **`!isSummary`(DETAIL)**
+     *    분기이고 운영은 `variant="SUMMARY"` **하나만** 넘긴다(`MarketPriceComparison:1007`)
+     *    ⟹ 🔴 **이 라벨은 운영 화면에 서지 않는다.** 그 처리는 CPO 판정 사안으로 올렸다.
+     */
+    expect(blockText(KR_BAND, "KR")).toContain("89,000");
     expect(blockText(OS_SINGLE, "OVERSEAS")).toContain(OVERSEAS_LOWEST_LABEL);
     expect(blockText(OS_SINGLE, "OVERSEAS")).toContain("USD 58");
     /** 🔴 그리고 결론은 그 금액을 **다시 적지 않는다**(중복 금지). */
@@ -244,7 +254,8 @@ describe("C. 💡 판매 판단 — 시장별 해석", () => {
     expect(lines).toContain("1건");
     expect(lines).not.toContain(DOMESTIC_BAND_LABEL);
     /** 🟢 금액은 **사라지지 않았다** — 헤드라인이 들고 있다. */
-    expect(marketPriceHeadline(guide(KR_ONE, "KR")) ?? "").toContain("89000");
+    /** 🔵 MI-UI-CONSISTENCY-01 P0-A — 천단위 구분자(의도된 변경). */
+    expect(marketPriceHeadline(guide(KR_ONE, "KR")) ?? "").toContain("89,000");
   });
 
   it("🔴🔴 C-3 **추천 판매가를 만들지 않는다**(원가·수수료·마진 0 · §00-B)", () => {

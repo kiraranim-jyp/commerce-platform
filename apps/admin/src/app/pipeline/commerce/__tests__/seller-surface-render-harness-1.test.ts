@@ -563,8 +563,13 @@ describe("MI-INVESTIGATION-STATE-UX-2 — 조사 상태·가격 표시", () => {
     const first = firstScreenText(surfaceRegions(container).conclusion!);
     /** 🔴 모순 문장이 사라졌다 — 같은 1차가 금액을 보여주면서 「확인되지 않아」라 말하지 않는다. */
     expect(first, "🔴 1차 모순이 되돌아왔다").not.toContain("확인되지 않아");
-    /** 🟢 그런데 **가격 근거는 남아 있다**(문장을 지운 것이 아니라 모순만 없앴다). */
-    expect(first).toContain("88000");
+    /**
+     * 🟢 그런데 **가격 근거는 남아 있다**(문장을 지운 것이 아니라 모순만 없앴다).
+     * 🔵 MI-UI-CONSISTENCY-01 P0-A — 금액에 **천단위 구분자** 가 들어왔다(의도된 변경).
+     *    🔴 전까지 `88000` 이었고 같은 화면의 국내 참고가격은 `88,000` 이라 **같은 통화가
+     *       두 형식** 이었다 ⟹ 이제 한 형식이다(`mi-same-candidates` `amountText`).
+     */
+    expect(first).toContain("88,000");
   });
 
   it("④ 분모 설명은 1차에서 **내려갔고 지워지지 않았다**(접힘에 보존)", async () => {

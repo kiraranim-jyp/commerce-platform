@@ -261,7 +261,8 @@ describe("3. domestic/overseas = 동일 판단 영역", () => {
     mount([...S2, ...KR_SAME]);
     const kr = q("market-block-domestic")!.textContent ?? "";
     const os = q("market-block-overseas")!.textContent ?? "";
-    expect(kr).toContain("KRW 88000");
+    /** 🔵 MI-UI-CONSISTENCY-01 P0-A — 천단위 구분자(의도된 변경 · 되돌리면 FAIL). */
+    expect(kr).toContain("KRW 88,000");
     expect(kr).not.toContain("USD");
     expect(os).toContain("USD 58");
     expect(os).not.toContain("KRW");

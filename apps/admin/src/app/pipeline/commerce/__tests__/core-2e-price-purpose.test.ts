@@ -123,7 +123,13 @@ describe("CORE-2E A — 🇰🇷 국내는 «시장 가격대» 다(§3)", () =>
     expect(band.kind).toBe("BAND");
     expect(band.lowest).toBe(88000);
     expect(band.highest).toBe(95000);
-    expect(domesticBandText(band)).toBe("KRW 88000 ─ 95000");
+    /**
+     * 🔵🔵 MI-UI-CONSISTENCY-01 P0-A — **천단위 구분자가 들어왔다**(의도된 변경).
+     * 🔴 전까지 `KRW 88000 ─ 95000` 이었고 **같은 화면의 국내 참고가격** 은
+     *    `KRW 88,000`(`overseas-reference.ts:237`)이라 **같은 통화가 두 형식** 으로 떴다.
+     * 🟢 `toBe` 라서 이 단언이 곧 **잠금** 이다 — 구분자를 되돌리면 여기서 FAIL 한다.
+     */
+    expect(domesticBandText(band)).toBe("KRW 88,000 ─ 95,000");
     expect(marketPriceHeadlineLabel(g)).toBe(DOMESTIC_BAND_LABEL);
   });
 

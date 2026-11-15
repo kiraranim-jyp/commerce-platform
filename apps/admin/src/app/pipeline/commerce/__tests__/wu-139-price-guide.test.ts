@@ -284,7 +284,8 @@ describe("C. 화면 (마운트 DOM)", () => {
         }),
       ],
     });
-    expect(q("price-guide-domestic")?.textContent).toContain("KRW 88000");
+    /** 🔵 MI-UI-CONSISTENCY-01 P0-A — 천단위 구분자(의도된 변경 · 되돌리면 FAIL). */
+    expect(q("price-guide-domestic")?.textContent).toContain("KRW 88,000");
     expect(q("price-guide-overseas")?.textContent).toContain("USD 58");
     /** 🔴 환산이 없다 — 한쪽 통화가 다른 쪽 블록에 나타나지 않는다. */
     expect(q("price-guide-domestic")?.textContent).not.toContain("USD");
