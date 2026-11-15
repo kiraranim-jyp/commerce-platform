@@ -378,6 +378,17 @@ export interface CandidateOverseasPriceSummary {
    */
   byCurrency: Record<string, { count: number; lowestAmount: number; highestAmount: number }>;
   /** 🔴 시장 판정 분포 — `UNKNOWN` 을 해외로 합치지 않는다. */
+  /**
+   * 🔵🔵 S3 — **통화별 최저가가 «어느 판매처» 에서 나왔는가**(국내 축 = 도메인).
+   *
+   * 🔴 **`byCurrency` 안에 넣지 않았다.** 그 객체의 모양을 `toEqual` 로 고정한
+   *    계약이 **5파일** 있고, 칸을 하나 더했더니 **11건이 깨졌다**(실측).
+   *    ⟹ 최상위 별도 칸으로 둔다. summary 전체를 깊은 동등으로 고정한 계약은 **0** 이다.
+   * 🔴 **선택** 이다 — 없는 기존 fixture/호출부도 그대로 돈다.
+   * 🔴 최저가를 **다시 고르지 않는다** — 이미 고른 값의 출처를 적기만 한다.
+   * 🔴 `sellerKey` 가 없는 축(해외)에서는 **비어 있다** — 추정하지 않는다.
+   */
+  lowestSellerByCurrency?: Record<string, string>;
   byMarket: Record<string, number>;
   /** 🟢 동일상품 축(EXACT/COMPARISON)과 참고 축을 가른다 — 승격이 아니라 분류다. */
   byPriceTier: Record<string, number>;
@@ -480,6 +491,8 @@ export function summarizeCandidateOverseasPrices(
   records: CandidateOverseasPriceRecord[],
 ): CandidateOverseasPriceSummary {
   const byCurrency: CandidateOverseasPriceSummary["byCurrency"] = {};
+  /** 🔵 S3 — 최저가의 출처(판매처 키). 🔴 `byCurrency` «밖» 이다(그 모양은 계약이 고정). */
+  const lowestSellerByCurrency: Record<string, string> = {};
   const byMarket: Record<string, number> = {};
   const byPriceTier: Record<string, number> = {};
   /**
@@ -621,17 +634,36 @@ export function summarizeCandidateOverseasPrices(
    * 🟢 그래서 여기서의 `count` 는 **판매처 수** 다 — 「확인 N곳」이 그 값을 읽는다.
    */
   for (const [currency, perSeller] of lowestBySeller) {
-    const amounts = [...perSeller.values()];
-    if (amounts.length === 0) continue;
+    const entries = [...perSeller.entries()];
+    if (entries.length === 0) continue;
+    const amounts = entries.map(([, amount]) => amount);
+    const lowest = Math.min(...amounts);
+    /**
+     * 🔴🔴 S3 — **`byCurrency` 는 한 글자도 바꾸지 않는다.**
+     *    이 객체의 «모양» 을 `toEqual` 로 고정한 계약이 **5파일** 있다(실측: 칸을
+     *    하나 더했더니 11건이 깨졌다). 그래서 출처는 **최상위 별도 칸** 으로 나간다.
+     */
     byCurrency[currency] = {
       count: perSeller.size,
-      lowestAmount: Math.min(...amounts),
+      lowestAmount: lowest,
       highestAmount: Math.max(...amounts),
     };
+    /**
+     * 🔵🔵 S3 — **고른 값의 출처를 «따로» 적는다.** 🔴 최저가를 다시 고르지 않는다 —
+     *    바로 위에서 정해진 `lowest` 와 **같은 금액인 판매처 키** 를 찾을 뿐이다
+     *    (선정 알고리즘·가격 검증·tier·market 편입 **변경 0**).
+     * 🔴 동점이면 첫 번째 — 금액이 같으므로 셀러가 보는 숫자는 달라지지 않는다.
+     * 🔴 `sellerKey` 가 없는 축(해외)은 이 루프에 **들어오지 않는다** ⟹ 칸이 비고,
+     *    화면은 「판매처 미확인」으로 적는다(도메인을 추정해 만들지 않는다).
+     */
+    const key = entries.find(([, amount]) => amount === lowest)?.[0];
+    if (key) lowestSellerByCurrency[currency] = key;
   }
   return {
     count: records.length,
     byCurrency,
+    /** 🔵 S3 — `byCurrency` «밖» 의 출처 칸(그 모양은 계약 5파일이 고정하고 있다). */
+    lowestSellerByCurrency,
     byMarket,
     byPriceTier,
     unverifiedCount,
