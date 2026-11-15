@@ -340,6 +340,15 @@ export interface MarketPriceComparisonProps {
     items: { label: string; confirmed: boolean; note: string | null }[];
   } | null;
   /**
+   * 🔵🔵 S5-WIRE-2 — **CASE 별 결론 한 줄 + 행동 문장**(서버 `buildSellingSummary`).
+   * 🔴 여기서 만들지 않는다 — CASE C 면 「수익성 부족」+예상 손실, D 면 「데이터 부족」.
+   * 🔴 기존 판정 owner(`sellerDecision.finalVerdict`)를 **덮지 않는다** — 그 결론의
+   *    «이유와 다음 행동» 을 적는 축이다.
+   */
+  sellingSummary?: { tone: "GOOD" | "CAUTION" | "STOP" | "UNKNOWN"; headline: string; numbers: string | null; action: string } | null;
+  /** 🔵 S5-WIRE-2 — CASE 별 설명 문장들(서버 `buildSellingGuidance`). */
+  sellingGuidance?: string[] | null;
+  /**
    * 🔵🔵🔵 MI-SELLER-MARKET-COMPARISON-A — **국내 ↔ 해외 최저 ↔ 차액**(표시 전용).
    * 🔴 서버 compareDomesticVsOverseasKrw 가 낸 값이다 — 이 파일은 **환산도 계산도
    *    하지 않는다**(환산 owner 는 서버 하나 · 이 파일의 직접 환산 호출 0건이 계약이다).
@@ -475,6 +484,8 @@ export function MarketPriceComparison({
   domesticReference,
   overseasReference,
   confidenceBasis,
+  sellingSummary,
+  sellingGuidance,
   costPriceKrw,
   recommendedPriceKrw,
   marketPriceKrw,
@@ -617,6 +628,40 @@ export function MarketPriceComparison({
       data-testid="market-price-comparison"
       className="rounded-md border border-border bg-surface/30 p-3"
     >
+      {/* ══ 🔵🔵 S5-WIRE-2 — **CASE 별 결론 한 줄 + 다음 행동** ═══════════════════
+          🔴 서버 `buildSellingSummary` 가 이미 만든 문장이다 — 여기서 만들지 않는다.
+             CASE C(실측 47건) → 「현재 시장 가격에서는 수익성 부족」 + **예상 손실**
+             CASE D(실측 12건) → 「국내 동일상품 시장 데이터 부족」
+          🔴 기존 판정 owner(`sellerDecision.finalVerdict`)를 **덮지 않는다** —
+             그 결론의 «이유와 다음 행동» 을 적는 축이고, 새 판정을 만들지 않는다.
+          🔴 설명 문장(`sellingGuidance`)은 **접힘 안**에 둔다 — 1차 화면은 판단이다. */}
+      {sellingSummary ? (
+        <div data-testid="selling-summary" className="mb-2">
+          <p data-testid="selling-summary-headline" className="text-[12px] font-medium text-text-primary">
+            {sellingSummary.headline}
+          </p>
+          {sellingSummary.numbers ? (
+            <p data-testid="selling-summary-numbers" className="text-[11px] tabular-nums text-text-secondary">
+              {sellingSummary.numbers}
+            </p>
+          ) : null}
+          <p data-testid="selling-summary-action" className="text-[11px] text-text-secondary">
+            {sellingSummary.action}
+          </p>
+        </div>
+      ) : null}
+      {sellingGuidance && sellingGuidance.length > 0 ? (
+        <details data-testid="selling-guidance" className="mb-2">
+          <summary className="cursor-pointer text-[11px] text-text-tertiary">▸ 판단 설명</summary>
+          <ul data-testid="selling-guidance-items" className="mt-1 space-y-0.5 pl-2">
+            {sellingGuidance.map((line) => (
+              <li key={line} data-testid="selling-guidance-item" className="text-[11px] text-text-tertiary">
+                {line}
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
       {/* ══ 🔵🔵 S5-WIRE — **「왜 그 판단인지」를 셀러가 펼쳐 볼 수 있게 한다** ══════
           🔴 실측 근거: 국내 71 스냅샷에서 **83%가 CASE C(적자 47)·D(보류 12)** 다.
              결론만 보이고 이유가 없으면 셀러는 「왜 안 된다는 건지」를 알 수 없다.

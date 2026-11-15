@@ -1961,6 +1961,24 @@ export interface MarketComparisonInput {
     items: { label: string; confirmed: boolean; note: string | null }[];
   } | null;
   /**
+   * 🔵🔵 S5-WIRE-2 — **CASE 별 결론 한 줄 + 행동 문장.**
+   * 🔴 서버가 `buildSellingSummary(marketCase, facts)` 로 이미 만든다 —
+   *    여기서 만들지 않는다. CASE C 면 「현재 시장 가격에서는 수익성 부족」과
+   *    **예상 손실 금액**, CASE D 면 「국내 동일상품 시장 데이터 부족」이 온다.
+   * 🔴 `confidenceBasis` 와 같은 이유로 끊겨 있었다(MI-UX-FINAL-4 되물음 제거).
+   */
+  sellingSummary: {
+    tone: "GOOD" | "CAUTION" | "STOP" | "UNKNOWN";
+    headline: string;
+    numbers: string | null;
+    action: string;
+  } | null;
+  /**
+   * 🔵🔵 S5-WIRE-2 — **CASE 별 설명 문장들.** 서버 `buildSellingGuidance` 산출.
+   * 🔴 「왜 그 판단인가」를 문장으로 말하는 축이다(숫자는 위 summary 가 말한다).
+   */
+  sellingGuidance: string[] | null;
+  /**
    * ══════════════════════════════════════════════════════════════════════════
    * 🔵🔵🔵 CORE-E2E-CLOSE-05 — **셀러가 직접 다시 조회한다**
    * ══════════════════════════════════════════════════════════════════════════
@@ -2739,6 +2757,9 @@ export function DomesticPriceIntelligencePanel({
              `reference-profitability-production-wiring-1` W4-4b).
             뒤에 끼우면 그 둘이 깨진다 — 계약을 고치는 대신 내 줄을 옮겼다. */
       confidenceBasis: data?.confidenceBasis ?? null,
+      /* 🔵 S5-WIRE-2 — 서버가 이미 낸 CASE 별 결론/설명. 여기서 만들지 않는다. */
+      sellingSummary: data?.sellingSummary ?? null,
+      sellingGuidance: data?.sellingGuidance ?? null,
       referenceProfitability,
     };
   }, [
@@ -2788,6 +2809,9 @@ export function DomesticPriceIntelligencePanel({
     /* 🔵 S5-WIRE — 🔴 **deps 에 빠뜨리면 GET/POST 응답이 와도 근거가 영원히 안 선다**
        (이 파일이 이미 다섯 번 밟은 그 함정 · 바로 위 주석들이 같은 말을 한다). */
     data?.confidenceBasis,
+    /* 🔵 S5-WIRE-2 — 🔴 같은 함정. deps 에 없으면 응답이 와도 문장이 안 선다. */
+    data?.sellingSummary,
+    data?.sellingGuidance,
     data === null,
   ]);
   const onMarketComparisonChangeRef = useRef(onMarketComparisonChange);

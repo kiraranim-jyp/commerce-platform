@@ -89,8 +89,25 @@ async function mount(): Promise<void> {
   }
 }
 
+/** 운영 `buildSellingSummary` 가 CASE C 에서 내는 모양(실측 47건의 그 자리). */
+const SUMMARY = {
+  tone: "STOP" as const,
+  headline: "현재 시장 가격에서는 수익성 부족",
+  numbers: "착지원가 ₩120,000 · 예상 손실 -₩18,000",
+  action: "등록 전 매입가 절감이나 다른 공급처를 먼저 확인하세요.",
+};
+const GUIDANCE = [
+  "현재 소싱 가격으로는 국내 시장에서 경쟁력을 확보하기 어렵습니다.",
+  "다른 공급처나 세일 시점을 확인해보세요.",
+];
+
 function withBasis(): PriceHistoryResponse {
-  return { ...productionData(), confidenceBasis: BASIS } as unknown as PriceHistoryResponse;
+  return {
+    ...productionData(),
+    confidenceBasis: BASIS,
+    sellingSummary: SUMMARY,
+    sellingGuidance: GUIDANCE,
+  } as unknown as PriceHistoryResponse;
 }
 
 describe("S5-WIRE 판단 근거 — CommerceWorkspace 마운트 DOM", () => {
@@ -121,6 +138,27 @@ describe("S5-WIRE 판단 근거 — CommerceWorkspace 마운트 DOM", () => {
     const region = container.querySelector('[data-testid="confidence-basis"]');
     expect(region?.tagName.toLowerCase()).toBe("details");
     expect(region?.hasAttribute("open"), "🔴 열어 두면 2026-09-19 사고 기전으로 되돌아간다").toBe(false);
+  });
+
+  it("🟢🟢 S5-WIRE-2 — **CASE 별 결론·숫자·행동**이 실제 화면에 선다", async () => {
+    stubFetch(withBasis());
+    await mount();
+
+    const text = wholeText(container);
+    // 🔴 CASE C(실측 47건)의 그 문장 — 결론만이 아니라 **왜·얼마·다음 행동**.
+    expect(text).toContain("현재 시장 가격에서는 수익성 부족");
+    expect(text).toContain("예상 손실");
+    expect(text).toContain("등록 전 매입가 절감이나 다른 공급처를 먼저 확인하세요.");
+  });
+
+  it("🟢 S5-WIRE-2 — 설명 문장은 **접힘** 안에 있다(1차 화면은 판단이다)", async () => {
+    stubFetch(withBasis());
+    await mount();
+
+    const fold = container.querySelector('[data-testid="selling-guidance"]');
+    expect(fold?.tagName.toLowerCase()).toBe("details");
+    expect(fold?.hasAttribute("open")).toBe(false);
+    expect(container.querySelectorAll('[data-testid="selling-guidance-item"]').length).toBe(2);
   });
 
   it("🟢 서버가 주지 않으면 영역을 **만들지 않는다**(빈 근거를 짓지 않는다)", async () => {
@@ -157,5 +195,16 @@ describe("S5-WIRE 판단 근거 — CommerceWorkspace 마운트 DOM", () => {
     // ③ 결론 컴포넌트가 받아서 그린다
     expect(mpc).toContain("confidenceBasis,");
     expect(mpc).toContain('data-testid="confidence-basis"');
+
+    // 🔵 S5-WIRE-2 — 같은 세 자리를 두 필드에 대해서도 잠근다.
+    for (const field of ["sellingSummary", "sellingGuidance"] as const) {
+      expect(panel, `패널 payload 에 ${field} 가 없다`).toContain(`${field}: data?.${field} ?? null`);
+      expect(panel, `deps 에 ${field} 가 없다`).toContain(`data?.${field},`);
+      expect(ws, `Workspace 가 ${field} 를 안 내린다`).toContain(
+        `${field}={marketComparison?.${field} ?? null}`,
+      );
+    }
+    expect(mpc).toContain('data-testid="selling-summary"');
+    expect(mpc).toContain('data-testid="selling-guidance"');
   });
 });

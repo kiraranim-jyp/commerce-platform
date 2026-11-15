@@ -3803,6 +3803,9 @@ export function CommerceWorkspace({
              *    그대로 내려간다(새 fetch 0 · 새 state 0 · 서버 응답 변경 0).
              */
             confidenceBasis={marketComparison?.confidenceBasis ?? null}
+            /** 🔵 S5-WIRE-2 — CASE 별 결론/설명. 서버 산출을 그대로 내린다(계산 0). */
+            sellingSummary={marketComparison?.sellingSummary ?? null}
+            sellingGuidance={marketComparison?.sellingGuidance ?? null}
             /**
              * 🔵🔵🔵 MI-SELLER-MARKET-COMPARISON-A — **국내 ↔ 해외 최저 ↔ 차액.**
              *
