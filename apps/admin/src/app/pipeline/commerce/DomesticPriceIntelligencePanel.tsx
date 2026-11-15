@@ -1979,6 +1979,26 @@ export interface MarketComparisonInput {
    */
   sellingGuidance: string[] | null;
   /**
+   * 🔵🔵 S5-WIRE-3 — **「지금 무엇을 해야 하는가」의 근거.**
+   * 🔴 owner 는 `sellerAction.status` 다(Production 실측으로 키를 확인했다 —
+   *    `status·icon·title·signals·reasons·opportunity`. `finalVerdict` 는 **없는 칸** 이다).
+   * 🔴 결론 자체(`sellerDecision.finalVerdict`)는 **이미 화면에 서 있다** ⟹
+   *    여기서는 그것을 **다시 적지 않고** 「왜 그 추천인가(reasons)」만 보탠다.
+   */
+  sellerActionReasons: string[] | null;
+  /**
+   * 🔵🔵 S5-WIRE-3 — **국내 동일상품이 없을 때의 브랜드 시장 참고.**
+   * 🔴 서버가 표본 1~2개면 **이미 null 로 걸러서** 보낸다(P-13A) — 화면이 다시
+   *    거르지 않는다. 🔴 새 브랜드 판정·새 시장 점수 **만들지 않는다**.
+   */
+  brandMarketProfile: {
+    sampleCount: number;
+    medianPriceKrw: number;
+    minPriceKrw: number;
+    maxPriceKrw: number;
+    confidence: "HIGH" | "MEDIUM" | "LOW";
+  } | null;
+  /**
    * ══════════════════════════════════════════════════════════════════════════
    * 🔵🔵🔵 CORE-E2E-CLOSE-05 — **셀러가 직접 다시 조회한다**
    * ══════════════════════════════════════════════════════════════════════════
@@ -2760,6 +2780,10 @@ export function DomesticPriceIntelligencePanel({
       /* 🔵 S5-WIRE-2 — 서버가 이미 낸 CASE 별 결론/설명. 여기서 만들지 않는다. */
       sellingSummary: data?.sellingSummary ?? null,
       sellingGuidance: data?.sellingGuidance ?? null,
+      /* 🔵 S5-WIRE-3 — 🔴 `status` 가 owner 인 그 객체에서 **reasons 만** 가져온다.
+         결론은 이미 화면에 있으므로 **중복 출력하지 않는다**(CPO 명시). */
+      sellerActionReasons: data?.sellerAction?.reasons ?? null,
+      brandMarketProfile: data?.brandMarketProfile ?? null,
       referenceProfitability,
     };
   }, [
@@ -2812,6 +2836,9 @@ export function DomesticPriceIntelligencePanel({
     /* 🔵 S5-WIRE-2 — 🔴 같은 함정. deps 에 없으면 응답이 와도 문장이 안 선다. */
     data?.sellingSummary,
     data?.sellingGuidance,
+    /* 🔵 S5-WIRE-3 — 🔴 같은 함정(다섯 번 밟았다). deps 에 없으면 영원히 안 선다. */
+    data?.sellerAction?.reasons,
+    data?.brandMarketProfile,
     data === null,
   ]);
   const onMarketComparisonChangeRef = useRef(onMarketComparisonChange);

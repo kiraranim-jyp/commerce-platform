@@ -3806,6 +3806,9 @@ export function CommerceWorkspace({
             /** 🔵 S5-WIRE-2 — CASE 별 결론/설명. 서버 산출을 그대로 내린다(계산 0). */
             sellingSummary={marketComparison?.sellingSummary ?? null}
             sellingGuidance={marketComparison?.sellingGuidance ?? null}
+            /** 🔵 S5-WIRE-3 — 🔴 결론은 이미 화면에 있다. 여기서는 «이유» 와 «참고» 만. */
+            sellerActionReasons={marketComparison?.sellerActionReasons ?? null}
+            brandMarketProfile={marketComparison?.brandMarketProfile ?? null}
             /**
              * 🔵🔵🔵 MI-SELLER-MARKET-COMPARISON-A — **국내 ↔ 해외 최저 ↔ 차액.**
              *

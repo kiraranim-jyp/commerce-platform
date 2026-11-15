@@ -348,6 +348,8 @@ function SellerSurface(options: SellerSurfaceOptions): ReactElement {
             confidenceBasis: marketComparison?.confidenceBasis ?? null,
             sellingSummary: marketComparison?.sellingSummary ?? null,
             sellingGuidance: marketComparison?.sellingGuidance ?? null,
+            sellerActionReasons: marketComparison?.sellerActionReasons ?? null,
+            brandMarketProfile: marketComparison?.brandMarketProfile ?? null,
             costPriceKrw: marketComparison?.costPriceKrw ?? null,
             recommendedPriceKrw,
             marketPriceKrw: marketComparison?.marketPriceKrw ?? null,

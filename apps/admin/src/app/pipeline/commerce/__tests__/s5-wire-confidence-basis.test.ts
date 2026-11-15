@@ -107,6 +107,24 @@ function withBasis(): PriceHistoryResponse {
     confidenceBasis: BASIS,
     sellingSummary: SUMMARY,
     sellingGuidance: GUIDANCE,
+    /* 🔴 owner 는 `sellerAction.status` 다 — 키는 Production 실측으로 확인했다. */
+    sellerAction: {
+      status: "REVIEW",
+      icon: "🟡",
+      title: "판매가격을 조정하세요",
+      signals: [],
+      reasons: ["국내 동일상품 시장가가 착지원가보다 낮습니다."],
+    },
+    brandMarketProfile: {
+      market: "KR",
+      sampleCount: 7,
+      minPriceKrw: 90000,
+      p25PriceKrw: 100000,
+      medianPriceKrw: 110000,
+      p75PriceKrw: 120000,
+      maxPriceKrw: 130000,
+      confidence: "MEDIUM",
+    },
   } as unknown as PriceHistoryResponse;
 }
 
@@ -159,6 +177,29 @@ describe("S5-WIRE 판단 근거 — CommerceWorkspace 마운트 DOM", () => {
     expect(fold?.tagName.toLowerCase()).toBe("details");
     expect(fold?.hasAttribute("open")).toBe(false);
     expect(container.querySelectorAll('[data-testid="selling-guidance-item"]').length).toBe(2);
+  });
+
+  it("🟢🟢 S5-WIRE-3 — `sellerAction.reasons` 와 브랜드 시장 참고가 화면에 선다", async () => {
+    stubFetch(withBasis());
+    await mount();
+
+    const text = wholeText(container);
+    expect(text).toContain("국내 동일상품 시장가가 착지원가보다 낮습니다.");
+    expect(text).toContain("브랜드 시장 참고");
+    expect(text).toContain("표본 7건");
+  });
+
+  it("🔴🔴 S5-WIRE-3 — 결론을 **중복 출력하지 않는다**(CPO 금지)", async () => {
+    stubFetch(withBasis());
+    await mount();
+
+    // 🔴 `sellerAction.title` 은 결론 축이고 그것은 이미 화면에 있다 ⟹
+    //    이 배선이 같은 말을 한 번 더 적으면 안 된다.
+    const text = wholeText(container);
+    expect((text.match(/판매가격을 조정하세요/g) ?? []).length).toBeLessThanOrEqual(1);
+    // 🔴 이유 접힘은 **접힌 채** 로 선다.
+    const fold = container.querySelector('[data-testid="seller-action-reasons"]');
+    expect(fold?.hasAttribute("open")).toBe(false);
   });
 
   it("🟢 서버가 주지 않으면 영역을 **만들지 않는다**(빈 근거를 짓지 않는다)", async () => {

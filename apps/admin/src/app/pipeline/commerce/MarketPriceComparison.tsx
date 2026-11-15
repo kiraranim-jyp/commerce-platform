@@ -349,6 +349,20 @@ export interface MarketPriceComparisonProps {
   /** 🔵 S5-WIRE-2 — CASE 별 설명 문장들(서버 `buildSellingGuidance`). */
   sellingGuidance?: string[] | null;
   /**
+   * 🔵 S5-WIRE-3 — `sellerAction.reasons`(「왜 이 추천이 나왔는지」).
+   * 🔴 owner 는 `sellerAction.status` 이고 **결론 자체는 이미 화면에 있다** ⟹
+   *    여기서 결론을 다시 적지 않는다(CPO 중복 금지).
+   */
+  sellerActionReasons?: string[] | null;
+  /** 🔵 S5-WIRE-3 — 국내 동일상품이 없을 때의 브랜드 시장 참고(서버가 표본 부족이면 null). */
+  brandMarketProfile?: {
+    sampleCount: number;
+    medianPriceKrw: number;
+    minPriceKrw: number;
+    maxPriceKrw: number;
+    confidence: "HIGH" | "MEDIUM" | "LOW";
+  } | null;
+  /**
    * 🔵🔵🔵 MI-SELLER-MARKET-COMPARISON-A — **국내 ↔ 해외 최저 ↔ 차액**(표시 전용).
    * 🔴 서버 compareDomesticVsOverseasKrw 가 낸 값이다 — 이 파일은 **환산도 계산도
    *    하지 않는다**(환산 owner 는 서버 하나 · 이 파일의 직접 환산 호출 0건이 계약이다).
@@ -486,6 +500,8 @@ export function MarketPriceComparison({
   confidenceBasis,
   sellingSummary,
   sellingGuidance,
+  sellerActionReasons,
+  brandMarketProfile,
   costPriceKrw,
   recommendedPriceKrw,
   marketPriceKrw,
@@ -649,6 +665,32 @@ export function MarketPriceComparison({
             {sellingSummary.action}
           </p>
         </div>
+      ) : null}
+      {/* ══ 🔵 S5-WIRE-3 — **브랜드 시장 참고**(국내 동일상품이 없을 때) ═══════════
+          🔴 서버가 표본 1~2개면 **이미 null 로 걸러** 보낸다(P-13A) — 다시 거르지 않는다.
+          🔴 새 브랜드 판정·새 시장 점수 **만들지 않는다**. 🔴 「동일상품 가격」이라고
+             부르지 않는다 — 그건 다른 축이고 이것은 **참고**다. */}
+      {brandMarketProfile ? (
+        <p data-testid="brand-market-profile" className="mb-2 text-[11px] text-text-tertiary">
+          브랜드 시장 참고 · 표본 {brandMarketProfile.sampleCount}건 · 중앙값{" "}
+          {formatKrw(brandMarketProfile.medianPriceKrw)} ({formatKrw(brandMarketProfile.minPriceKrw)}~
+          {formatKrw(brandMarketProfile.maxPriceKrw)})
+        </p>
+      ) : null}
+      {/* ══ 🔵 S5-WIRE-3 — **「왜 이 추천인가」**(`sellerAction.reasons`) ═══════════
+          🔴 결론(`sellerDecision.finalVerdict`)은 **이미 화면에 있다** ⟹ 여기서
+             다시 적지 않는다(CPO 중복 금지). 이 접힘은 **이유만** 담는다. */}
+      {sellerActionReasons && sellerActionReasons.length > 0 ? (
+        <details data-testid="seller-action-reasons" className="mb-2">
+          <summary className="cursor-pointer text-[11px] text-text-tertiary">▸ 이 추천이 나온 이유</summary>
+          <ul data-testid="seller-action-reason-items" className="mt-1 space-y-0.5 pl-2">
+            {sellerActionReasons.map((line) => (
+              <li key={line} data-testid="seller-action-reason-item" className="text-[11px] text-text-tertiary">
+                {line}
+              </li>
+            ))}
+          </ul>
+        </details>
       ) : null}
       {sellingGuidance && sellingGuidance.length > 0 ? (
         <details data-testid="selling-guidance" className="mb-2">
