@@ -4,6 +4,13 @@ import {
   summarizeCandidateOverseasPrices,
   /** 🔵 MI-UNIFIED-MARKET-PRICE-COMPARISON-1 §3-4(⑥) — 순수 함수 · 판정 0 · 파생 정보다. */
   compareDomesticVsOverseasKrw,
+  /**
+   * 🔵🔵 MARGIN-BASIS-SPLIT-01 — **「동일상품 추정」 술어는 «그 파일» 이 소유한다.**
+   * 🔴 이 파일에 그 리터럴을 둘 수 없다 — `core-2r5` B-5 가 금지한다(「판정 축을
+   *    집계 파일에 들이지 마라」). 🟢 **가드를 풀지 않고 술어를 어휘의 집으로 옮겼다.**
+   * 🔴 판정을 다시 하지 않는다 — 생산자가 이미 낸 verdict 를 **읽기만** 한다.
+   */
+  isPresumedSameVerdict,
   type CandidateOverseasPriceRecord,
 } from "./candidate-market";
 import { backfillCanonicalProduct } from "@commerce/shared";
@@ -437,6 +444,38 @@ export async function computeMarketIntelligence(
   const domesticTransientRecords: CandidateOverseasPriceRecord[] = [];
   /**
    * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MARGIN-BASIS-SPLIT-01 — **참고가격은 살리고 마진 근거만 좁힌다**(CPO ⒞ 승인)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 CPO 결정이 둘을 갈랐다:
+   * ```
+   * 국내 참고가격   PRESUMED_SAME / COMPARISON 가격도 **보여준다**(근사치 허용)
+   * 예상 마진       PRESUMED_SAME 에서 온 가격은 **근거에서 제외** 한다
+   * ```
+   * 🟢 그래서 `domesticTransientRecords`(참고가격 owner)를 **한 글자도 바꾸지 않고**
+   *    마진 근거용 배열을 **따로** 쌓는다 ⟹ `candidateDomesticPrice` 출력과
+   *    「🇰🇷 국내 참고」 숫자는 **불변** 이다.
+   *
+   * 🔴🔴 **CPO 전제가 실측으로 반증된 것을 적어 둔다**(운영 DB · candidate_reviews):
+   * ```
+   * price_tier=COMPARISON 233행 → system_verdict=PRESUMED_SAME **233 (100%)**
+   * price_tier=EXACT       76행 → system_verdict=SAME            75 · null 1
+   * ```
+   * ⟹ 「다른 경로의 COMPARISON」은 현재 데이터에 **0건** 이다. 즉 이 제외는
+   *    **COMPARISON 전부 제외와 같은 결과** 이고, 그래서 참고가격 축을 **반드시
+   *    살려 둬야** 한다(마진만 빼는 것이 ⒞ 의 핵심이다).
+   * 🔴 제외 영향도 실측했다 — 가격 근거 보유 스냅샷 **110 → 62**(48개가 마진 근거를
+   *    잃는다). 🟢 그 48개도 **참고가격은 그대로 본다** — 잃는 것은 마진 숫자뿐이다.
+   *
+   * 🔴 **새 판정을 만들지 않는다** — `crossSellerVerdict` 는 생산자가 이미 계산해
+   *    실어 보낸 값이다(`run-domestic-price-check.ts:357` · `candidate-market.ts:220`).
+   * 🔴 SAME 임계값 · 축 · 점수 · blocker 기준 **변경 0**.
+   * 🔴 사람 판정(`candidate_reviews`)은 **여기 들어오지 않는다** — WU-081/131 계약
+   *    「사람 판정은 시스템 판정을 덮지 않는다」를 지킨다(CPO 보류 유지).
+   */
+  const marginBasisRecords: CandidateOverseasPriceRecord[] = [];
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
    * 🔵🔵🔵 MI-SOURCING-MARKET-PRICE-INTEGRATION ② — **재진입에서도 후보 가격을 쓴다**
    * ══════════════════════════════════════════════════════════════════════════
    *
@@ -682,6 +721,19 @@ export async function computeMarketIntelligence(
         priceStatus: e.priceStatus,
         blockers: e.crossSellerBlockers,
       });
+      /**
+       * 🔵🔵 MARGIN-BASIS-SPLIT-01 — **같은 레코드를 «마진 근거» 배열에도 쌓는다.**
+       *
+       * 🟢 위 참고가격 배열은 **그대로** 다(한 글자도 안 바꿨다) — 이 줄은 **추가 전용** 이다.
+       * 🔴 `PRESUMED_SAME` 만 뺀다. `priceTier` 로 거르지 **않는다** — CPO ⒞ 는
+       *    「다른 경로의 COMPARISON 은 일괄 제거하지 않는다」이고, 그 구분은
+       *    `crossSellerVerdict` 로만 할 수 있다(tier 는 둘을 못 가른다).
+       * 🔴 `undefined`/`null` verdict 는 **빼지 않는다** — 「모른다」를 「PRESUMED 다」로
+       *    취급하면 근거가 조용히 사라진다(이 저장소의 「미측정 ≠ 0」 원칙).
+       */
+      if (!isPresumedSameVerdict(e.crossSellerVerdict)) {
+        marginBasisRecords.push(domesticTransientRecords[domesticTransientRecords.length - 1]);
+      }
     }
     /** 🔴 REFERENCE/EXCLUDED 는 기존 국내 후보와 **같은 이유로** 가격 버킷에
      *     들어가지 않는다(위 루프도 EXACT/COMPARISON 만 담는다). */
@@ -1322,6 +1374,15 @@ export async function computeMarketIntelligence(
    */
   const domesticCandidatePriceSummary = summarizeCandidateOverseasPrices(domesticTransientRecords);
   /**
+   * 🔵🔵 MARGIN-BASIS-SPLIT-01 — **마진 근거 집계는 «별 집계» 다**(CPO ⒞).
+   *
+   * 🟢 **같은 집계기 · 같은 규칙** 이다(사본 0) — 다른 것은 **입력 배열** 하나뿐이고
+   *    그 배열은 `PRESUMED_SAME` 만 빠진 것이다.
+   * 🔴 위 `domesticCandidatePriceSummary`(참고가격)를 **대체하지 않는다** — 둘은
+   *    같이 산다. 참고가격은 근사치를 보여주고, 마진은 근거가 있을 때만 선다.
+   */
+  const marginBasisSummary = summarizeCandidateOverseasPrices(marginBasisRecords);
+  /**
    * 🔵 §3-4(⑥) — **해외 요약을 «한 번만» 만든다.** 전엔 반환부에서 인라인 호출이었는데
    *    ⑥ 이 그 결과(`lowestKrw`)를 읽어야 해서 const 로 뽑았다.
    * 🔴 **두 번 부르면 두 숫자가 갈릴 수 있다** — 같은 입력이라도 owner 를 둘로 만들지 않는다.
@@ -1493,13 +1554,28 @@ export async function computeMarketIntelligence(
      *    `breakdownInput.marginPercent`, 제외 수는 그 집계의 두 칸이다.
      * 🔴 **KRW 로 좁혀서** 넘긴다 — 환산하지 않는다(WU-020 외화 보호 유지).
      */
+    /**
+     * 🔵🔵🔵 MARGIN-BASIS-SPLIT-01 — **입력을 `marginBasisSummary` 로 바꿨다**(CPO ⒞).
+     *
+     * 🔴 전까지 이 네 칸은 `domesticCandidatePriceSummary`(= 참고가격 집계)를 읽었고,
+     *    그 집계에는 `PRESUMED_SAME` 가격이 들어 있다 ⟹ **사람이 「다른 상품」이라
+     *    한 후보의 가격이 마진의 기준가가 될 수 있었다**(운영 DB 실측: PRESUMED_SAME ∩
+     *    COMPARISON ∩ human DIFFERENT = **11건**).
+     * 🟢 이제 마진은 `PRESUMED_SAME` 이 빠진 근거에서만 산출된다. 근거가 없으면
+     *    `computeReferenceProfitability` 가 **기존 규칙대로 null** 을 낸다 —
+     *    🔴 **새 상태를 만들지 않았고 숫자를 지어내지도 않는다**(CPO 「억지로 계산 금지」).
+     * 🔴 `candidateDomesticPrice`(참고가격 출력)는 **위 그대로** 다 — 화면의
+     *    「🇰🇷 국내 참고」 숫자는 **불변** 이다.
+     * 🔴 네 칸을 **같은 집계에서** 읽는다 — 기준가는 좁히고 제외 건수는 넓은 집계에서
+     *    읽으면 「분모가 둘」이 되어 화면이 모순된 말을 한다.
+     */
     referenceProfitability: computeReferenceProfitability({
-      referencePriceKrw: domesticCandidatePriceSummary.byCurrency.KRW?.lowestAmount ?? null,
+      referencePriceKrw: marginBasisSummary.byCurrency.KRW?.lowestAmount ?? null,
       landedCostKrw: cost?.landedCostKrw ?? null,
       targetMarginPercent: breakdownInput.marginPercent,
-      sellerCount: domesticCandidatePriceSummary.byCurrency.KRW?.count ?? 0,
-      excludedUnverified: domesticCandidatePriceSummary.unverifiedCount,
-      excludedObservedDifference: domesticCandidatePriceSummary.observedDifferenceCount,
+      sellerCount: marginBasisSummary.byCurrency.KRW?.count ?? 0,
+      excludedUnverified: marginBasisSummary.unverifiedCount,
+      excludedObservedDifference: marginBasisSummary.observedDifferenceCount,
     }),
     /** 🔴 원본 목록도 같이 돌려준다 — 집계만 주면 「어느 후보였나」를 잃는다. */
     candidateOverseasEvidence: overseasEvidence,

@@ -365,27 +365,68 @@ describe("W4. 🔴🔴 **내 1차 결론을 정정한다** — POST 에서는 «
     ).toContain("referenceProfitability,");
   });
 
-  it("W4-5 🟢🟢 **같은 후보 집합임이 구조로 보장된다**(CPO 지시 ④)", () => {
-    /**
-     * 🔴 「같은 후보로 계산됐는가」를 숫자 비교로 확인하면 **그 순간의 표본** 만 본다.
-     * 🟢 그래서 **구조** 로 단언한다 — 서버가 두 칸을 **같은 변수 하나** 에서 만든다
-     *    ⟹ 분모가 갈릴 **경로 자체가 없다**.
-     */
+  /**
+   * ══════════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MARGIN-BASIS-SPLIT-01 — **「같은 후보 집합」계약이 «폐기» 됐다**(CPO ⒞ 승인)
+   * ══════════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 **이것은 앵커 갱신이 아니라 «정책 반전» 이다.** 두 지시가 정면으로 반대다:
+   * ```
+   * 과거 CPO ④⑤  참고가격과 마진은 **같은 집합** · 참고가격이 뜨면 마진도 **함께** 뜬다
+   * 오늘  CPO ⒞   참고가격은 유지 · 마진은 **PRESUMED_SAME 제외** ⟹ **분모가 갈린다**
+   *               ⟹ 「참고가격만 뜨고 마진은 근거 부족」인 화면이 **정상** 이다
+   * ```
+   * 🔴 **CPO 가 ④⑤의 폐기를 명시적으로 승인했다** — CTO 가 임의로 뒤집은 것이 아니다.
+   *    사유(CPO 문장): 「국내 참고가격은 시장에 관측된 비교 후보를 보여주는 값이고,
+   *    예상 마진은 실제 판매 판단에 쓸 수 있는 신뢰도 있는 근거로 계산해야 한다.
+   *    두 값의 목적이 다르므로 분모가 반드시 같을 필요가 없다.」
+   * 🔴 실측 근거 — `PRESUMED_SAME ∩ COMPARISON ∩ human DIFFERENT` = **11건**(운영 DB).
+   */
+  it("W4-5 🟢🟢 **두 집계가 «의도적으로» 갈려 있다**(CPO ⒞ — ④ 대체)", () => {
+    /** 🟢 참고가격 축 — 옛 집합 그대로(숫자 불변). */
     expect(MI).toContain("candidateDomesticPrice: domesticCandidatePriceSummary,");
-    expect(MI).toContain("referencePriceKrw: domesticCandidatePriceSummary.byCurrency.KRW?.lowestAmount");
-    expect(MI).toContain("sellerCount: domesticCandidatePriceSummary.byCurrency.KRW?.count ?? 0");
-    /** 🔴 그 집계를 **한 번만** 부른다(두 번 부르면 두 숫자가 갈릴 수 있다). */
+    expect(MI).toContain("summarizeCandidateOverseasPrices(domesticTransientRecords)");
+    /** 🔴 마진 축 — **다른 집계** 에서 온다. 같아지면 PRESUMED 가 마진에 되돌아온다. */
+    expect(MI).toContain("referencePriceKrw: marginBasisSummary.byCurrency.KRW?.lowestAmount");
+    expect(MI).toContain("sellerCount: marginBasisSummary.byCurrency.KRW?.count ?? 0");
+    expect(MI).toContain("summarizeCandidateOverseasPrices(marginBasisRecords)");
+    /**
+     * 🔴🔴 **분리의 «이유» 를 구조로 잠근다** — 이 조건이 사라지면 두 집계가 같아지고
+     *    PRESUMED_SAME 가격이 다시 마진 기준가가 된다(음성 대조 M1 이 이것을 본다).
+     */
+    expect(MI).toContain("isPresumedSameVerdict(e.crossSellerVerdict)");
+    /** 🔴 각 집계는 **한 번만** 부른다(두 번 부르면 같은 축 안에서 숫자가 갈린다). */
     expect(MI.split("summarizeCandidateOverseasPrices(domesticTransientRecords)").length - 1).toBe(1);
+    expect(MI.split("summarizeCandidateOverseasPrices(marginBasisRecords)").length - 1).toBe(1);
+  });
+
+  it("W4-6 🔴 `priceTier` 로 거르지 않는다 — 다른 경로의 COMPARISON 은 보존(CPO ⒞ §5)", () => {
+    /**
+     * 🔴 `priceTier === "COMPARISON"` 으로 빼면 **PRESUMED 가 아닌 COMPARISON** 까지
+     *    같이 죽는다. CPO ⒞ §5 가 금지한 것이고, 구분은 `crossSellerVerdict` 로만 된다.
+     * 🔴🔴 **한계를 기록한다** — 현재 운영 데이터에 「PRESUMED 아닌 COMPARISON」은
+     *    **0건** 이다(실측: COMPARISON 233행 전수가 PRESUMED_SAME). 그래서 이 보존은
+     *    **운영 데이터로 증명되지 않았고** 합성 계약(`margin-basis-split-01`)으로만 잠근다.
+     */
+    const marginBlock = MI.slice(MI.indexOf("marginBasisRecords.push"));
+    expect(marginBlock.slice(0, 200)).not.toContain('priceTier === "COMPARISON"');
   });
 });
 
 describe("W5. 🟢🟢 **[A 구현] POST 응답 → state → 컴포넌트 → DOM**(CPO 지시 ⑤)", () => {
   /**
-   * 🔴🔴 **이 절이 이 WU 의 완료 기준이다**(CPO 문장) —
-   *    「국내 참고가격이 ₩88,000 으로 표시되는 **순간**, 같은 화면에 참고가격 기준
-   *     예상 마진이 **함께** 표시되어야 한다」.
-   * 🟢 값을 prop 으로 밀어넣지 않는다 — **POST 응답 모양** 하나만 주고 DOM 에서 읽는다
-   *    ⟹ 응답·effect·state·memo·Workspace·영역 **여섯 자리를 전부 통과해야** 뜬다.
+   * 🔴🔴 **옛 완료 기준이 폐기됐다**(MARGIN-BASIS-SPLIT-01 · CPO ⒞ 승인):
+   * ```
+   * 폐기  「국내 참고가격이 ₩88,000 으로 표시되는 «순간», 같은 화면에 참고가격 기준
+   *        예상 마진이 «함께» 표시되어야 한다」(옛 CPO 지시 ⑤)
+   * 신규  「참고가격은 기존대로 표시하고, 예상 마진은 **신뢰 가능한 근거가 있을 때만**
+   *        표시한다」 ⟹ 🔴 **참고가격만 뜨고 마진이 없는 화면이 «정상» 이다**
+   * ```
+   * 🟢 그래서 아래 묶음은 **「둘이 같이 뜰 수 있다」는 배선 증명** 으로 남는다 —
+   *    서버가 마진을 «냈을 때» 그것이 DOM 까지 가는지를 본다(여섯 자리 통과).
+   * 🔴 **「반드시 같이 떠야 한다」로 읽지 않는다.** 마진 근거가 PRESUMED 뿐이면
+   *    서버가 `null` 을 내고 그 자리는 비는 것이 설계다(`margin-basis-split-01` E 가 잠근다).
+   * 🟢 값을 prop 으로 밀어넣지 않는다 — **POST 응답 모양** 하나만 주고 DOM 에서 읽는다.
    */
   function autoCheckWithBoth(): unknown {
     return {

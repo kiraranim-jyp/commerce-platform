@@ -487,6 +487,32 @@ export function compareDomesticVsOverseasKrw(
   };
 }
 
+/**
+ * ══════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 MARGIN-BASIS-SPLIT-01 — **「동일상품 «추정»」인지 묻는 술어**(CPO ⒞ 승인)
+ * ══════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 **왜 이 파일에 있는가** — `market-intelligence.ts` 에는 `PRESUMED_SAME` 리터럴을
+ *    둘 수 없다. 기존 계약이 그것을 **금지** 한다:
+ * ```
+ * core-2r5-domestic-reference-to-mi.test.ts B-5
+ *   for (const banned of ["SAME_MIN_AXES","crossSellerReserved","PRESUMED_SAME"])
+ *     expect(MI_CODE).not.toContain(banned)      ← 「판정 축을 집계 파일에 들이지 마라」
+ * ```
+ * 🟢 **가드를 풀지 않고 술어를 옮겼다** — 그 계약의 의도(집계 파일에서 동일성 판정을
+ *    다시 하지 않는다)는 **그대로 지켜진다**. 이 함수는 판정을 **하지 않고** 생산자가
+ *    이미 낸 값을 **읽기만** 한다(`GeminiTransientEvidence.crossSellerVerdict`).
+ * 🔴 그리고 이 파일이 그 어휘의 **원래 집** 이다 — 위 주석들이 이미
+ *    `PRESUMED_SAME → TEXT_CONFIRMED → COMPARISON` 경로를 설명하고 있다.
+ *
+ * 🔴 **`null`/`undefined` 는 `false` 다** — 「모른다」를 「추정이다」로 취급하면 근거가
+ *    조용히 사라진다(「미측정 ≠ 0」). CPO 가 명시 승인한 동작이다.
+ * 🔴 새 등급·새 임계값·새 축을 **만들지 않는다** — 문자열 하나를 비교할 뿐이다.
+ */
+export function isPresumedSameVerdict(verdict: string | null | undefined): boolean {
+  return verdict === "PRESUMED_SAME";
+}
+
 export function summarizeCandidateOverseasPrices(
   records: CandidateOverseasPriceRecord[],
 ): CandidateOverseasPriceSummary {

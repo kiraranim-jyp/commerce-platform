@@ -364,20 +364,44 @@ describe("D. 🔴 집계를 다시 하지 않는다 — owner 하나", () => {
     expect(body).toContain("candidateDomesticPrice: domesticCandidatePriceSummary,");
   });
 
-  it("D-2 🔴 참고가격은 **KRW 칸에서만** 온다 — 환산 0", () => {
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MARGIN-BASIS-SPLIT-01 — **D-2·D-3 은 «정책이 바뀌어» 갱신됐다**(CPO ⒞ 승인)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 **앵커를 통과용으로 고친 것이 아니다.** 마진의 **근거 집합 자체** 가 바뀌었다:
+   * ```
+   * 전   마진 근거 = domesticCandidatePriceSummary  (= 참고가격과 «같은» 집합)
+   * 후   마진 근거 = marginBasisSummary             (= PRESUMED_SAME 이 빠진 집합)
+   * ```
+   * 🔴 근거 — 운영 DB 실측 `PRESUMED_SAME ∩ COMPARISON ∩ human DIFFERENT` = **11건**.
+   *    그 가격이 마진의 기준가가 될 수 있었다.
+   * 🟢 **참고가격 축은 그대로** 다(D-3b 가 잠근다).
+   */
+  it("D-2 🔴 마진 기준가는 **KRW 칸에서만** 온다 — 환산 0", () => {
     const body = stripComments(readFileSync(MI_SRC, "utf8"));
-    expect(body).toContain("domesticCandidatePriceSummary.byCurrency.KRW?.lowestAmount");
+    expect(body).toContain("referencePriceKrw: marginBasisSummary.byCurrency.KRW?.lowestAmount");
     /** 🔴 다른 통화를 끌어오거나 합치면 WU-020 외화 보호가 깨진다. */
     expect(body).not.toMatch(/referenceProfitability:[\s\S]{0,400}convertToKrw/);
   });
 
-  it("D-3 🟢 근거 수·제외 수가 **집계기 산출** 에서 온다(지어낸 상수 0)", () => {
+  it("D-3 🟢 근거 수·제외 수가 **마진 근거 집계** 에서 온다(지어낸 상수 0 · 분모 하나)", () => {
     const body = stripComments(readFileSync(MI_SRC, "utf8"));
-    expect(body).toContain("sellerCount: domesticCandidatePriceSummary.byCurrency.KRW?.count ?? 0");
-    expect(body).toContain("excludedUnverified: domesticCandidatePriceSummary.unverifiedCount");
-    expect(body).toContain(
-      "excludedObservedDifference: domesticCandidatePriceSummary.observedDifferenceCount",
-    );
+    expect(body).toContain("sellerCount: marginBasisSummary.byCurrency.KRW?.count ?? 0");
+    expect(body).toContain("excludedUnverified: marginBasisSummary.unverifiedCount");
+    expect(body).toContain("excludedObservedDifference: marginBasisSummary.observedDifferenceCount");
+    /**
+     * 🔴 네 칸이 **같은 집계** 에서 와야 한다 — 기준가는 좁은 집계, 제외 건수는 넓은
+     *    집계에서 읽으면 「분모가 둘」이 되어 화면이 모순된 말을 한다.
+     */
+    expect(body).not.toContain("referencePriceKrw: domesticCandidatePriceSummary");
+  });
+
+  it("D-3b 🟢 참고가격 출력은 **옛 집계 그대로** 다 — 마진만 갈렸다(CPO ⒞)", () => {
+    const body = stripComments(readFileSync(MI_SRC, "utf8"));
+    /** 🔴 이 줄이 바뀌면 「🇰🇷 국내 참고」 숫자가 움직인다 — CPO ⒞ 가 금지한 것이다. */
+    expect(body).toContain("candidateDomesticPrice: domesticCandidatePriceSummary,");
+    expect(body).toContain("summarizeCandidateOverseasPrices(domesticTransientRecords)");
   });
 
   it("D-4 🟢🟢 **실제 운영 행** 으로 집계기 → 새 함수가 이어진다(real-data)", () => {
