@@ -3798,6 +3798,12 @@ export function CommerceWorkspace({
             domesticReference={marketComparison?.domesticReference ?? null}
             overseasReference={marketComparison?.overseasReference ?? null}
             /**
+             * 🔵🔵 S5-WIRE — **「왜 보류인지」의 근거 4항목.**
+             * 🔴 여기서 계산하지 않는다 — 서버가 낸 값이 패널 → 이 state 를 타고
+             *    그대로 내려간다(새 fetch 0 · 새 state 0 · 서버 응답 변경 0).
+             */
+            confidenceBasis={marketComparison?.confidenceBasis ?? null}
+            /**
              * 🔵🔵🔵 MI-SELLER-MARKET-COMPARISON-A — **국내 ↔ 해외 최저 ↔ 차액.**
              *
              * 🔴🔴 서버가 이 값을 계산해 두고도 **아무도 읽지 않았다**(소비처 0) ⟹

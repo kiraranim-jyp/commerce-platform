@@ -1938,6 +1938,30 @@ export interface MarketComparisonInput {
   rows: GeminiTransientRow[] | null;
   /**
    * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 S5-WIRE — **「왜 보류인지」의 근거 4항목**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 서버가 **이미 계산해 응답에 싣는** 값이다(`buildConfidenceBasis`). 그런데
+   *    `MI-UX-FINAL-4` 이후 그것을 읽던 화면(되물음)이 사라졌고, 그 뒤 재배선이
+   *    안 됐다 ⟹ **계산은 되는데 셀러가 볼 수 없는 상태**가 이어졌다.
+   *    🔴 그 값을 읽던 `MiPanelView` 하위 트리는 **운영에서 마운트되지 않는다**
+   *       (그 파일 :3275 주석) — 그래서 거기 되살리면 «죽은 렌더» 가 된다.
+   *
+   * 🟢 왜 이 payload 인가 — 결론을 그리는 `MarketPriceComparison` 으로 가는
+   *    **이미 있는 길**이다(새 fetch 0 · 새 state 0 · 서버 응답 변경 0).
+   * 🟢 계약 확인 — `seller-judgement-summary-2` ④-d 가 금지하는 것은
+   *    **`judgementSummary` 칸 하나**이고 이 칸은 거기 해당하지 않는다.
+   *
+   * 🔴 **표시 전용이다.** 판정·CASE·추천가·수익성은 이 값을 읽지 않는다.
+   * 🔴 서버가 안 주면 `null` — 화면은 영역을 **그리지 않는다**(빈 근거를 만들지 않는다).
+   */
+  confidenceBasis: {
+    confirmedCount: number;
+    totalCount: number;
+    items: { label: string; confirmed: boolean; note: string | null }[];
+  } | null;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
    * 🔵🔵🔵 CORE-E2E-CLOSE-05 — **셀러가 직접 다시 조회한다**
    * ══════════════════════════════════════════════════════════════════════════
    *
@@ -2707,6 +2731,14 @@ export function DomesticPriceIntelligencePanel({
        *    그래서 배선이 전부 살아 있는데도 화면에 **한 번도** 서지 못했다(CEO FAIL).
        *    🟢 지금은 바로 위 `domesticReference` 와 **같은 응답·같은 수명** 이다.
        */
+      /* 🔵 S5-WIRE — 서버가 이미 낸 「판단 근거」 4항목을 결론 화면으로 올려보낸다.
+         🔴 여기서 만들지 않는다(계산 0) · 없으면 null 이다(빈 근거를 짓지 않는다).
+         🔴🔴 **`referenceProfitability` «앞» 에 둔다** — 기존 계약 둘이
+            `"      referenceProfitability,\n    };"` 를 **글자 그대로** 단언한다
+            (`reference-price-profitability-axis-1` C-5 ·
+             `reference-profitability-production-wiring-1` W4-4b).
+            뒤에 끼우면 그 둘이 깨진다 — 계약을 고치는 대신 내 줄을 옮겼다. */
+      confidenceBasis: data?.confidenceBasis ?? null,
       referenceProfitability,
     };
   }, [
@@ -2753,6 +2785,9 @@ export function DomesticPriceIntelligencePanel({
      *    그러면 memo 가 응답마다 깨져 위 effect 가 매번 보고한다. 🟢 쓰는 것은
      *    **「응답이 없다」는 불리언 하나** 이므로 그 조각만 넣는다(이 파일의 deps 규약 그대로).
      */
+    /* 🔵 S5-WIRE — 🔴 **deps 에 빠뜨리면 GET/POST 응답이 와도 근거가 영원히 안 선다**
+       (이 파일이 이미 다섯 번 밟은 그 함정 · 바로 위 주석들이 같은 말을 한다). */
+    data?.confidenceBasis,
     data === null,
   ]);
   const onMarketComparisonChangeRef = useRef(onMarketComparisonChange);

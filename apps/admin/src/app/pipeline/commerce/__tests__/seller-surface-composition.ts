@@ -342,6 +342,10 @@ function SellerSurface(options: SellerSurfaceOptions): ReactElement {
             rechecking: marketComparison?.rechecking ?? false,
             domesticReference: marketComparison?.domesticReference ?? null,
             overseasReference: marketComparison?.overseasReference ?? null,
+            /* 🔵 S5-WIRE — 운영 `CommerceWorkspace` 와 **같은 자리·같은 모양**.
+               🔴 이 하니스는 조립을 «복제» 하므로 여기만 맞으면 통과한다 ⟹
+                  운영 배선은 **소스 앵커로 따로** 잠근다(그 테스트 파일 참조). */
+            confidenceBasis: marketComparison?.confidenceBasis ?? null,
             costPriceKrw: marketComparison?.costPriceKrw ?? null,
             recommendedPriceKrw,
             marketPriceKrw: marketComparison?.marketPriceKrw ?? null,

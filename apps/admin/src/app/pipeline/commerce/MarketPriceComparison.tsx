@@ -328,6 +328,18 @@ export interface MarketPriceComparisonProps {
   /** 🔴 MI 가 이미 낸 해외 참고가격 집계. 여기서 계산하지 않는다. */
   overseasReference?: OverseasPriceSummary | null;
   /**
+   * 🔵🔵 S5-WIRE — **「왜 보류인지 · 어떤 데이터가 부족한지」 4항목.**
+   * 🔴 서버(`buildConfidenceBasis`)가 이미 낸 값이다 — 여기서 만들지 않는다.
+   *    각 항목이 `confirmed` 와 **확인 못 한 사유(`note`)** 를 같이 들고 온다
+   *    (「유사상품만 확인됐다」 ↔ 「동일상품을 찾지 못했다」를 **가른다**).
+   * 🔴 표시 전용 — 판정·CASE·추천가·수익성은 이 값을 읽지 않는다.
+   */
+  confidenceBasis?: {
+    confirmedCount: number;
+    totalCount: number;
+    items: { label: string; confirmed: boolean; note: string | null }[];
+  } | null;
+  /**
    * 🔵🔵🔵 MI-SELLER-MARKET-COMPARISON-A — **국내 ↔ 해외 최저 ↔ 차액**(표시 전용).
    * 🔴 서버 compareDomesticVsOverseasKrw 가 낸 값이다 — 이 파일은 **환산도 계산도
    *    하지 않는다**(환산 owner 는 서버 하나 · 이 파일의 직접 환산 호출 0건이 계약이다).
@@ -462,6 +474,7 @@ export function MarketPriceComparison({
   marketKrwComparison = null,
   domesticReference,
   overseasReference,
+  confidenceBasis,
   costPriceKrw,
   recommendedPriceKrw,
   marketPriceKrw,
@@ -604,6 +617,34 @@ export function MarketPriceComparison({
       data-testid="market-price-comparison"
       className="rounded-md border border-border bg-surface/30 p-3"
     >
+      {/* ══ 🔵🔵 S5-WIRE — **「왜 그 판단인지」를 셀러가 펼쳐 볼 수 있게 한다** ══════
+          🔴 실측 근거: 국내 71 스냅샷에서 **83%가 CASE C(적자 47)·D(보류 12)** 다.
+             결론만 보이고 이유가 없으면 셀러는 「왜 안 된다는 건지」를 알 수 없다.
+          🟢 서버(`buildConfidenceBasis`)가 이미 낸 값을 **읽기만** 한다 —
+             새 계산 0 · 새 판정 0 · 새 fetch 0 · 서버 응답 변경 0.
+          🔴 `open` 을 붙이지 않는다 — 1차 화면은 «판단» 이고 근거는 접힘이다
+             (WU-136 §D · 2026-09-19 사고 기전과 같은 계약).
+          🔴🔴 **`checkRan` 게이트 «앞» 에 둔다** — 후보가 0건일 때야말로 「왜 0인지」가
+             필요하고 그 상태가 바로 CASE D 다. 뒤에 두면 **데이터가 없을 때 근거도
+             사라져** 셀러가 가장 답답한 순간에 아무 설명이 없다(실측으로 확인했다). */}
+      {confidenceBasis && confidenceBasis.items.length > 0 ? (
+        <details data-testid="confidence-basis" className="mb-2">
+          <summary className="cursor-pointer text-[11px] text-text-tertiary">
+            ▸ 판단 근거 {confidenceBasis.confirmedCount}/{confidenceBasis.totalCount} 확인됨
+          </summary>
+          <ul data-testid="confidence-basis-items" className="mt-1 space-y-0.5 pl-2">
+            {confidenceBasis.items.map((item) => (
+              <li key={item.label} data-testid="confidence-basis-item" className="text-[11px] text-text-tertiary">
+                <span data-testid="confidence-basis-label">
+                  {item.confirmed ? "✓" : "—"} {item.label}
+                </span>
+                {/* 🔴 확인 못 한 «이유» 가 이 줄의 존재 이유다 — 결론만 적지 않는다. */}
+                {item.note ? <span data-testid="confidence-basis-note"> · {item.note}</span> : null}
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
       {/**
        * ══════════════════════════════════════════════════════════════════════
        * 🔴🔴🔴 CORE-2AO-R2 — **첫 화면 = 판단 · 상세 화면 = 근거**(CPO 2026-10-26)
