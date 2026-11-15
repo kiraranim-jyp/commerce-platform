@@ -32,6 +32,16 @@ export interface OverseasPriceSummary {
    *    🟢 그래서 칸을 더하지 않았다 — 같은 것을 가리키는 칸 둘을 만들지 않는다.
    */
   byCurrency: Record<string, { count: number; lowestAmount: number; highestAmount?: number }>;
+  /**
+   * 🔵🔵 S3 — **통화별 최저가가 «어느 판매처» 에서 나왔는가**(국내 축 = 도메인).
+   *
+   * 🔴 **`byCurrency` «밖»** 이다 — 그 버킷 모양을 `toEqual` 로 고정한 계약이
+   *    5파일이고, 칸을 안에 더했더니 **11건이 깨졌다**(실측 · 서버 커밋 8fc1eba8 참조).
+   * 🔴 **선택** 이다 — 없는 기존 fixture/호출부도 그대로 돈다.
+   * 🔴 서버가 **이미 고른** 최저가의 출처다 — 화면이 최저가를 역산하지 않는다.
+   * 🔴 없으면 **「판매처 미확인」** — 도메인을 추정해 만들지 않는다.
+   */
+  lowestSellerByCurrency?: Record<string, string>;
   byMarket: Record<string, number>;
   byPriceTier: Record<string, number>;
   /**
@@ -249,6 +259,12 @@ export interface OverseasReferenceLine {
   lowest: string;
   /** `판매처 2곳` */
   scope: string;
+  /**
+   * 🔵 S3 — 최저가의 출처 판매처(국내 축 = 도메인). 🔴 서버가 고른 값의 출처이고
+   *    화면이 역산한 값이 **아니다**. 🔴 `null` 이면 「판매처 미확인」 — 추정 금지.
+   * 🔴 `scope`(판매처 N곳)를 대신하지 않는다 — **다른 질문**에 답하는 칸이다.
+   */
+  lowestSeller: string | null;
 }
 
 export interface OverseasReferenceView {
@@ -399,6 +415,14 @@ export function buildOverseasReference(
          *    뒤** 세므로 그 값이 「확인 N곳」의 분모로 정확하다(중복이 새어 나오지 않는다).
          */
         scope: `${countLabel} ${v.count}${countUnit}`,
+        /**
+         * 🔵🔵 S3 — **최저가가 «어느 판매처» 에서 나왔는가.**
+         * 🔴 서버가 이미 고른 값의 출처를 **읽기만** 한다 — 화면이 최저가를
+         *    역산하지 않는다(선정 규칙은 서버에 있다).
+         * 🔴 **통화별로 따로** 읽는다 — 다른 통화의 판매처를 섞지 않는다.
+         * 🔴 없으면 `null` ⟹ 화면이 「판매처 미확인」으로 적는다(추정 0).
+         */
+        lowestSeller: summary.lowestSellerByCurrency?.[currency]?.trim() || null,
       };
     });
   if (lines.length === 0) return null;

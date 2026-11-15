@@ -110,6 +110,15 @@ export function OverseasReferencePrice({
                 {l.lowest}
               </span>
               <span className="text-xs text-muted-foreground">{l.scope}</span>
+              {/**
+               * 🔵🔵 S3 — **최저가가 «어느 판매처» 에서 나왔는가.**
+               * 🔴 서버가 고른 값의 출처를 **적기만** 한다 — 화면이 최저가를 역산하지 않는다.
+               * 🔴 없으면 **「판매처 미확인」** — 도메인을 추정해 만들지 않는다.
+               * 🔴 `scope`(판매처 N곳)와 **다른 질문** 이라 그 말을 대신하지 않는다.
+               */}
+              <span data-testid="reference-lowest-seller" className="text-xs text-text-tertiary">
+                {l.lowestSeller ? `최저가 ${l.lowestSeller}` : "최저가 판매처 미확인"}
+              </span>
             </li>
           ))}
         </ul>
