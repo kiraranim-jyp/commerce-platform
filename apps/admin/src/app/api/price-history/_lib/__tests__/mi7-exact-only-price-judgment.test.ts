@@ -206,14 +206,40 @@ describe("④ 🔴 소스 — 판정 입력과 표시 입력이 갈라져 있다
    * 🟢 **계약을 약하게 만들지 않았다** — 방향만 뒤집고 **양방향으로** 잠근다.
    * 🔴 그리고 **추천가/마진 축은 여전히 `EXACT` 만** 본다(아래 ⑤ 가 그것을 문다).
    */
-  it("sellability 는 «resolved» 를 받는다 — EXACT 우선 · 없으면 COMPARISON", () => {
+  /**
+   * ══════════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MI-SELLABILITY-BASIS-GATE — **이 케이스의 «적용 범위» 가 명확해졌다**(CPO ⒜)
+   * ══════════════════════════════════════════════════════════════════════════════
+   *
+   * 🟢 **이 파일의 원칙(COMPARISON 가격을 MI 가 쓴다)은 폐기되지 않았다** — 아래
+   *    「그래도 MI 가 쓴다」 케이스가 그것을 계속 지킨다.
+   * 🔴 바뀐 것은 **그 가격으로 «확정» 판매 가능을 말할 수 있는가** 하나다:
+   * ```
+   * 실측  basis=COMPARISON → sellability **GREEN**  ↔  basis=NONE → YELLOW
+   * ⟹ PRESUMED_SAME 후보 «한 건» 이 「판매 가능」을 올렸다(사람 기준 13/19 가 다른 상품)
+   * ```
+   * 🟢 CPO 가 적용 범위를 갈랐다(명시 승인) — 참고가격·후보목록·축 A·축 B 는 **유지**,
+   *    `computeSellability` 의 **GREEN 승격 근거** 에서만 제외한다.
+   * 🔴 **계약을 약하게 만들지 않았다** — 방향을 뒤집고 **양방향으로** 잠근다(아래 둘).
+   */
+  it("sellability 는 «exact» 만 받는다 — 추정 근거로 확정 판정하지 않는다(CPO ⒜)", () => {
     const at = CODE.indexOf("computeSellability({");
     expect(at).toBeGreaterThan(-1);
     const block = CODE.slice(at, CODE.indexOf("});", at));
-    expect(block).toContain("domesticMarketSplit.resolved.sellerCount");
-    expect(block).toContain("domesticMarketSplit.resolved.averagePriceKrw");
-    /** 🔴 `exact` 단독으로 되돌리면 COMPARISON 가격이 다시 버려진다 — 여기서 잡는다. */
-    expect(block).not.toContain("domesticMarketSplit.exact");
+    expect(block).toContain("domesticMarketSplit.exact.sellerCount");
+    expect(block).toContain("domesticMarketSplit.exact.averagePriceKrw");
+    /** 🔴 `resolved` 로 되돌리면 PRESUMED_SAME 이 다시 GREEN 을 만든다 — 여기서 잡는다. */
+    expect(block).not.toContain("domesticMarketSplit.resolved");
+  });
+
+  it("🟢 그래도 COMPARISON 가격은 MI 가 계속 쓴다 — 이 파일의 원칙은 유지된다", () => {
+    /**
+     * 🔴 위 케이스만 두면 「COMPARISON 을 통째로 버렸다」로 읽힌다. 🟢 참고가격 집계와
+     *    시장 분할 입력에서 **그대로 쓰인다** — 그 사실을 같이 잠근다.
+     */
+    expect(CODE).toContain("candidateDomesticPrice: domesticCandidatePriceSummary,");
+    expect(CODE).toContain("...comparisonShopRecords,");
+    expect(CODE).toContain("domesticBasis: domesticMarketSplit.basis");
   });
 
   /**

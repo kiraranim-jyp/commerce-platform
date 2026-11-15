@@ -1185,11 +1185,39 @@ export async function computeMarketIntelligence(
    * 🟢 그래서 `domesticBasis` 가 **여전히 응답에 실린다** — 셀러 문장이 「비교상품 N곳
    *    시장가격 기준」이라고 **출처를 계속 말한다**(그 사실이 사라지면 안 된다).
    */
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MI-SELLABILITY-BASIS-GATE — **추정 근거로 「판매 가능」을 올리지 않는다**(CPO ⒜)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 **실측으로 드러난 결함** — `resolved` 는 EXACT 가 없으면 **COMPARISON 버킷** 이고
+   *    (`price-history.ts:644-646`) 그 버킷에는 `PRESUMED_SAME` 이 들어온다(:675).
+   *    `computeSellability` 는 **basis 를 받지 않아** 그것이 추정인지 확정인지 모른다 ⟹
+   * ```
+   * 순수 함수 비교(조사 실측)   COMPARISON → **GREEN**   ↔   NONE → YELLOW
+   * ⟹ 🔴 PRESUMED 후보 «한 건» 이 「판매 가능성」을 YELLOW → GREEN 으로 올렸다
+   *    그 후보는 사람 기준 19건 중 **13건(68%)이 다른 상품** 이었다(운영 DB 실측)
+   * ⟹ 🔴 오염 방향이 «낙관» 쪽이라 셀러에게 더 위험하다
+   * ```
+   *
+   * 🟢🟢 **새 입력(`domesticBasis`)을 만들지 않았다 — 그 정책은 «이미» 있었다.**
+   *    `compute-readiness.ts:195`(대시보드 경로)가 **P0-D.3** 으로 같은 결정을 적어 뒀다:
+   *    「『국내 동일상품을 찾았다』는 **EXACT 버킷에서만** 참이다. 비교상품만 있는
+   *     상품에 『찾았다』고 말하면 그 문장이 거짓이 된다.」
+   *    🔴 **상세 경로(이 파일)만 그것을 따르지 않았다** ⟹ 대시보드와 상품 상세가
+   *       서로 다른 판정을 냈다(이 저장소가 `marketOptions` 에서 밟은 그 구멍).
+   * 🟢 그래서 **표현을 그 호출부와 같게** 맞춘다 — CPO 금지(「동일 의미의 상태를
+   *    중복 생성하지 않는다」)를 지키고 owner 가 둘로 갈리지 않는다.
+   * 🟢 `basis === "EXACT"` ⟺ `exact.sellerCount > 0` 은 **정의상 동치** 다(`:644`).
+   *
+   * 🔴 **COMPARISON 을 버리는 것이 아니다** — 참고가격·후보 목록·축 A 추천가·축 B 마진은
+   *    **한 글자도 바뀌지 않는다**. 바뀌는 것은 「확정 판매 가능」 승격 하나다.
+   */
   const sellability = computeSellability({
     costPriceKrw,
     domestic: {
-      matched: domesticMarketSplit.resolved.sellerCount > 0,
-      averagePriceKrw: domesticMarketSplit.resolved.averagePriceKrw,
+      matched: domesticMarketSplit.exact.sellerCount > 0,
+      averagePriceKrw: domesticMarketSplit.exact.averagePriceKrw,
     },
   });
 

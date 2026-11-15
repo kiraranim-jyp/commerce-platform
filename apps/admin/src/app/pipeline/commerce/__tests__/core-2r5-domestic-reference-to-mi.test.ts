@@ -320,16 +320,55 @@ function rec(id: string, krw: number): PriceObservationRecord {
 }
 
 describe("CORE-2R-5 B — 국내 가격 evidence 가 MI 판정 입력이 된다", () => {
-  /** 🔴 이 한 줄이 「국내 가격을 찾아 놓고 MI 가 못 쓴다」를 끝낸다. */
-  it("B-1 🔴🔴 판정 입력이 `resolved` 다 — `exact` 단독이 아니다(소스 앵커)", () => {
+  /**
+   * ══════════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MI-SELLABILITY-BASIS-GATE — **B-1 의 «적용 범위» 가 좁혀졌다**(CPO ⒜ 승인)
+   * ══════════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 **옛 B-1 은 이것을 단언했다** — 「`computeSellability` 가 `resolved` 를 받는다」.
+   *    목적은 「국내 가격을 찾아 놓고 MI 가 **못 쓴다**」를 끝내는 것이었고 **그 목적은
+   *    폐기되지 않았다**. 🔴 그러나 그 배선이 **확정 판정** 까지 열어 버렸다:
+   * ```
+   * 실측(순수 함수)  basis=COMPARISON → sellability **GREEN** · rep **REVIEW_MATCH**
+   *                 basis=NONE       → sellability  YELLOW  · rep  MARKET_OPPORTUNITY
+   * ⟹ 🔴 PRESUMED_SAME 후보 «한 건» 이 「판매 가능」을 올렸다.
+   *    그 후보는 사람 기준 19건 중 **13건(68%)이 다른 상품** 이다(운영 DB 실측).
+   * ```
+   * 🟢🟢 **CPO 가 적용 범위를 갈랐다(명시 승인)** — COMPARISON 활용 원칙은 **유지** 하고
+   *    **확정 판매 가능 승격 근거** 에서만 뺀다:
+   * ```
+   * 유지  국내 참고가격 · 후보/가격 목록 · 축 A 추천가 게이트 · 축 B 수익성 정책
+   * 금지  computeSellability 의 GREEN 승격 · PRESUMED 만으로 READY 승격
+   * ```
+   * 🔴 **그래서 이 케이스를 지우지 않았다** — 방향을 뒤집고 **보존 단언을 더해** 강화했다.
+   *    옛 목적(「못 쓴다」 종료)은 아래 B-1b 가 **대신 지킨다**.
+   * 🟢 `basis === "EXACT"` ⟺ `exact.sellerCount > 0` 은 정의상 동치다(`price-history.ts:644`).
+   */
+  it("B-1 🔴🔴 **확정 판매 가능** 판정은 `exact` 만 받는다 — 추정 승격 차단(CPO ⒜)", () => {
     const at = MI_CODE.indexOf("computeSellability({");
     expect(at).toBeGreaterThan(0);
     const block = MI_CODE.slice(at, at + 300);
-    expect(block).toContain("domesticMarketSplit.resolved.sellerCount > 0");
-    expect(block).toContain("domesticMarketSplit.resolved.averagePriceKrw");
-    expect(block, "🔴 exact 단독으로 되돌아가면 COMPARISON 가격이 다시 버려진다").not.toContain(
-      "domesticMarketSplit.exact",
-    );
+    expect(block).toContain("domesticMarketSplit.exact.sellerCount > 0");
+    expect(block).toContain("domesticMarketSplit.exact.averagePriceKrw");
+    expect(
+      block,
+      "🔴 resolved 로 되돌아가면 PRESUMED_SAME 한 건이 다시 「판매 가능」을 GREEN 으로 올린다",
+    ).not.toContain("domesticMarketSplit.resolved");
+  });
+
+  it("B-1b 🟢 **옛 B-1 의 목적은 보존된다** — COMPARISON 가격이 MI 에서 계속 쓰인다", () => {
+    /**
+     * 🔴 이 케이스가 없으면 위 B-1 의 방향 전환이 「COMPARISON 을 통째로 버렸다」로
+     *    읽힌다. 🟢 실제로는 **네 자리에서 그대로 쓰인다** — 그것을 숫자로 잠근다.
+     */
+    /** ① 국내 참고가격 집계(옛 집계 그대로). */
+    expect(MI_CODE).toContain("candidateDomesticPrice: domesticCandidatePriceSummary,");
+    /** ② 시장 분할 — COMPARISON 버킷이 여전히 집계 입력이다. */
+    expect(MI_CODE).toContain("...comparisonShopRecords,");
+    /** ③ 축 A — basis 를 그대로 받는다(CASE A~D 게이트 불변). */
+    expect(MI_CODE).toContain("domesticBasis: domesticMarketSplit.basis");
+    /** ④ `domesticSummary`(= resolved)를 쓰는 다른 소비자는 **바뀌지 않았다**. */
+    expect(MI_CODE).toContain("domesticLowestPriceKrw: domesticSummary.lowestPriceKrw");
   });
 
   /** 🟢 EXACT 가 있으면 **EXACT 가 이긴다**(COMPARISON 으로 덮지 않는다). */
