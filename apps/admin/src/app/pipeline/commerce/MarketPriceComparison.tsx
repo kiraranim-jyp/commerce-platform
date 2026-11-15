@@ -174,28 +174,6 @@ import {
   HUMAN_REVIEW_VALUES,
   HUMAN_REVIEW_BUTTON,
   SAVE_STATE_TEXT,
-  /**
-   * 🔵🔵🔵 REVIEW-HISTORY-REVIVE-01 — **📚 이전에 확인한 후보가 «죽은 렌더» 였다.**
-   *
-   * 🔴 CEO 육안 FAIL: 「과거 육안 판단으로 확인했던 동일상품 판정 결과가 화면에 없다」.
-   * ```
-   * DomesticPriceIntelligencePanel:3270   if (presentation === "HIDDEN") return null;
-   * MiPanelView(:3801)                    ← 그래서 마운트되지 않는다
-   *   :4002  useCandidateReview(…)        ← 🔴 훅이 아예 돌지 않는다(GET 0)
-   *   :3775  <ReviewHistorySection …/>    ← 🔴 죽은 렌더
-   * ```
-   * 🔴 이것은 `mi-same-candidates.ts:96-99` 가 기록한 그 사고의 **재발** 이다 —
-   *    WU-152 가 패널을 숨기면서 **그 안의 독립 기능이 함께 죽었다**.
-   *    `CORE-E2E-CLOSE-03` 이 그때 **후보 목록만** 되살렸고 📚 는 남겨 두었다.
-   * 🟢 **새 훅·새 GET·새 콜백·lift 가 전부 불필요하다** — 이 컴포넌트는 마운트되고
-   *    `useCandidateReview(snapshotId)`(:542)를 **이미** 부른다. 그 반환의 `history`
-   *    칸을 그리기만 한다(`use-candidate-review.ts:187` = `{review, saveState, history, note, onReview}`).
-   * 🔴 **복제가 아니다** — 패널 쪽 `<ReviewHistorySection rows={reviewHistory} />` 는
-   *    `wu-131` 계약이 고정한 줄이라 **지우지 않았다**. 그 줄은 패널이 다시 보이는 날
-   *    그대로 쓰이고, 지금 셀러가 **실제로 보는 것은 이 자리** 다.
-   * 🔴 판정·집계·가격·API **변경 0** — 이력은 사람 판정 기록이고 MI 입력이 아니다(WU-131).
-   */
-  ReviewHistorySection,
   type GeminiTransientRow,
 } from "./GeminiTransientCandidates";
 /** 🔵 CORE-E2E-CLOSE-04 — 저장 배선. 🔴 새 API 0 · POST 중복 구현 0(CPO §4). */
@@ -1543,16 +1521,6 @@ export function MarketPriceComparison({
         <p data-testid="market-verdict" className="mt-1 text-[11px] text-text-secondary">
           {MARKET_VERDICT_TEXT[judgement.verdict]}
         </p>
-      {/**
-       * 🔵🔵🔵 REVIEW-HISTORY-REVIVE-01 — **📚 이전에 확인한 후보**(근거는 위 import 주석).
-       *
-       * 🔴 **맨 아래에 둔다.** CPO 가 고정한 순서(① 판매판단 → ② 권장가 → ③ 근거 → ④ ⓘ)
-       *    사이에 끼우면 `slice` 로 층을 자르는 기존 순서 계약이 **모호한 FAIL** 을 낸다
-       *    (이 저장소가 실제로 밟은 함정). 🟢 이력은 보조 정보라 맨 아래가 뜻에도 맞다.
-       * 🟢 `rows` 가 `null`(아직 안 읽음)이면 `ReviewHistorySection` 이 **스스로 `null`** 을
-       *    돌려준다(`wu-131` 계약 :242) ⟹ 빈 틀을 만들지 않는다.
-       */}
-      <ReviewHistorySection rows={reviewApi.history} />
     </section>
   );
 }
