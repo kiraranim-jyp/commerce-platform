@@ -5,6 +5,7 @@ import {
   countPrimaryIdentitySignals,
   createDomesticStageCollector,
   hasPrimaryIdentitySignal,
+  verifyDomesticCandidates,
   type ComparisonCandidate,
   type DomesticStageRecord,
 } from "@commerce/crawler";
@@ -131,6 +132,14 @@ function record(over: Partial<DomesticStageRecord>): DomesticStageRecord {
     providerCalls: 1,
     newCandidates: 0,
     primaryIdentityHits: 0,
+    verification: {
+      detailPage: 0,
+      listingPage: 0,
+      unknownShape: 0,
+      withImage: 0,
+      imageUnavailable: 0,
+      priceConfirmed: 0,
+    },
     elapsedMs: 10,
     stoppedAfter: false,
     ...over,
@@ -184,7 +193,83 @@ describe("B. 수집기는 칸별 기록을 보존하고 합계를 «파생» 한
       primaryIdentityHits: 0,
       shopsStoppedEarly: 0,
       elapsedMsTotal: 0,
+      candidates: 0,
+      verification: {
+        detailPage: 0,
+        listingPage: 0,
+        unknownShape: 0,
+        withImage: 0,
+        imageUnavailable: 0,
+        priceConfirmed: 0,
+      },
     });
+  });
+});
+
+/* ══════ F. 「검색 결과가 나왔다」 ≠ 「정상적인 상품 발견」 (CPO 2026-11-16) ══════ */
+
+describe("F. 검증 분리 — 후보 수와 통과 수를 같은 숫자로 적지 않는다", () => {
+  function cand(url: string, over: Partial<ComparisonCandidate> = {}): ComparisonCandidate {
+    return { url, title: "t", price: null, confidence: 0, ...over } as unknown as ComparisonCandidate;
+  }
+
+  it("F-1 🔴 목록/브랜드 페이지는 **상세 발견으로 세지 않는다**", () => {
+    const v = verifyDomesticCandidates([
+      cand("https://shop.example.com/products/hidden-monster-sweatshirt-b226ac038"),
+      cand("https://shop.example.com/collections/bobo-choses"),
+    ]);
+    expect(v.detailPage).toBe(1);
+    expect(v.listingPage).toBe(1);
+  });
+
+  it("F-2 🔴 이미지가 없으면 **검증 불가** 로 따로 남는다(「오류」가 아니다)", () => {
+    const v = verifyDomesticCandidates([
+      cand("https://shop.example.com/products/a", { imageUrl: "https://img.example.com/a.jpg" }),
+      cand("https://shop.example.com/products/b"),
+    ]);
+    expect(v.withImage).toBe(1);
+    expect(v.imageUnavailable).toBe(1);
+  });
+
+  it("F-3 가격은 `VERIFIED_CURRENT` 만 통과로 센다", () => {
+    const v = verifyDomesticCandidates([
+      cand("https://shop.example.com/products/a", { priceStatus: "VERIFIED_CURRENT" }),
+      cand("https://shop.example.com/products/b", { priceStatus: "UNVERIFIED_SEARCH" }),
+    ]);
+    expect(v.priceConfirmed).toBe(1);
+  });
+
+  it("F-4 🔴🔴 후보 수와 통과 수가 **다른 칸** 이다 — 합계가 후보 수와 같지 않을 수 있다", () => {
+    const c = createDomesticStageCollector();
+    const list = [
+      cand("https://shop.example.com/collections/x"),
+      cand("https://shop.example.com/collections/y"),
+    ];
+    c.observer(record({ newCandidates: list.length, verification: verifyDomesticCandidates(list) }));
+    const s = c.summary();
+    expect(s.candidates).toBe(2);
+    expect(s.verification.detailPage).toBe(0);
+    expect(s.verification.listingPage).toBe(2);
+  });
+
+  it("F-5 🔴 이 함수는 **판정하지 않는다** — 판정 어휘를 만들지 않는다", () => {
+    expect(METRICS_CODE).not.toContain("verdict");
+    expect(METRICS_CODE).not.toContain("SAME");
+  });
+
+  it("F-6 링크 모양 판별 owner 는 **기존 함수 하나** 다(규칙 복제 금지)", () => {
+    expect(METRICS_CODE).toContain("classifyUrlShape(c.url)");
+    expect(METRICS_CODE).not.toMatch(/\/collections\/|\/category\/|goods_list/);
+  });
+
+  it("F-7 사다리가 **한 자리에서** 센다 — 숫자를 인자로 받지 않는다", () => {
+    expect(SEARCH_CODE).toMatch(/verification: verifyDomesticCandidates\(counted\)/);
+    expect(SEARCH_CODE).toMatch(/newCandidates: counted\.length/);
+  });
+
+  it("F-8 운영 로그가 칸별 검증을 **그대로** 싣는다", () => {
+    const log = RUNNER_CODE.slice(RUNNER_CODE.indexOf("[SPRINT2-stage]"));
+    expect(log).toContain("verify: r.verification");
   });
 });
 
@@ -237,8 +322,20 @@ describe("C. 배선 (행동 축이 못 보는 자리 — 소스 앵커로 잠근
   });
 
   it("C-7 1차 식별 신호는 **점수를 매긴 뒤** 센다(날것 후보엔 facts 가 없다)", () => {
-    expect(SEARCH_CODE).toMatch(/countPrimaryIdentitySignals\(query\.facts,\s*added\)/);
-    expect(SEARCH_CODE).not.toMatch(/countPrimaryIdentitySignals\(query\.facts,\s*got\)/);
+    /**
+     * 🔴 세는 자리가 `emit` 안으로 들어갔다(검증 분리 때 한 자리로 모았다). 그래서
+     *    단언을 **「무엇을 emit 에 넘기는가」** 로 옮긴다 — 성질은 그대로다:
+     *    판정 가능 분기는 `withConfidence` 를 통과한 `added` 를 넘겨야 한다.
+     */
+    expect(SEARCH_CODE).toMatch(/countPrimaryIdentitySignals\(query\.facts,\s*counted\)/);
+    expect(SEARCH_CODE).toContain("emit(added, confirmedExternalSame)");
+    const judged = SEARCH_CODE.slice(
+      SEARCH_CODE.indexOf("const added: ComparisonCandidate[]"),
+      SEARCH_CODE.indexOf("if (confirmedExternalSame) break;"),
+    );
+    expect(judged.length).toBeGreaterThan(0);
+    /** 🔴 판정 가능 분기에서 **날것(`got`)을 세면** FAIL 이다(하위호환 분기는 그래도 된다). */
+    expect(judged).not.toContain("emit(got");
   });
 });
 

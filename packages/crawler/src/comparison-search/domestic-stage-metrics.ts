@@ -33,6 +33,8 @@
  */
 import { brandsCompatible } from "./cross-seller";
 import { compareModelCode } from "./model-code";
+/** 🔴 링크 모양 판별 owner 는 **하나** 다 — 이 파일에서 규칙을 다시 쓰지 않는다. */
+import { classifyUrlShape } from "./url-shape";
 import type { ComparisonCandidate } from "./types";
 import type { ProductFacts } from "@commerce/shared";
 
@@ -67,6 +69,66 @@ export function countPrimaryIdentitySignals(
 }
 
 /**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 **「검색 결과가 나왔다」 ≠ 「정상적인 상품 발견」**(CPO 지시 2026-11-16)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * CPO 원문 — 「검색 후보 수와 **검증을 통과한 상품 수를 분리** 한다」 ·
+ *            「계측 결과에 이미지·링크 **검증 불가 항목도 별도로** 남긴다」.
+ *
+ * 🔴🔴 **이 함수는 판정하지 않는다.** 세 축을 «세기만» 한다 —
+ * ```
+ * 링크   목록/검색/카테고리 페이지를 **상세페이지로 확인된 것처럼 기록하지 않는다**
+ *        판별은 **기존 `classifyUrlShape`** 하나다(새 규칙 0)
+ * 이미지 🔴 **「있다」만 센다 — 「일치한다」가 아니다.** 대표 이미지가 그 상품인지는
+ *        사람이 보는 축이고(§5-D 보조 근거 · 표준 §2.2 가 SAME 정원에서 제외),
+ *        CTO 가 그것을 판정하면 「이미지로 SAME 을 올렸다」가 된다
+ * 가격   `VERIFIED_CURRENT` 만 센다(기존 가격 신뢰도 owner 그대로)
+ * ```
+ * 🔴 그리고 이 숫자들은 **SAME 판정의 근거가 아니다** — 이미지 오류·목록 링크는
+ *    「노출 품질 실패」·「연결 품질 미달」이고 동일성 축이 아니다(CPO 표 그대로).
+ */
+export interface DomesticCandidateVerification {
+  /** `classifyUrlShape === "PRODUCT_PAGE"` — **상세페이지로 보이는** 링크 수. */
+  detailPage: number;
+  /** 목록/검색/카테고리로 **판별된** 링크 수. 🔴 「상세 발견」으로 세지 않는다. */
+  listingPage: number;
+  /** 🔴 모양을 **판별하지 못한** 링크 수 — 「정상」도 「오류」도 아닌 **검증 불가** 다. */
+  unknownShape: number;
+  /** 🔴 대표 이미지가 **있다** 는 뜻뿐이다(일치 여부 아님). */
+  withImage: number;
+  /** 🔴 이미지가 없어 **이미지 검증 자체가 불가** 한 후보 수. */
+  imageUnavailable: number;
+  /** `priceStatus === "VERIFIED_CURRENT"` 인 후보 수. */
+  priceConfirmed: number;
+}
+
+const EMPTY_VERIFICATION: DomesticCandidateVerification = {
+  detailPage: 0,
+  listingPage: 0,
+  unknownShape: 0,
+  withImage: 0,
+  imageUnavailable: 0,
+  priceConfirmed: 0,
+};
+
+export function verifyDomesticCandidates(
+  candidates: readonly ComparisonCandidate[],
+): DomesticCandidateVerification {
+  const out = { ...EMPTY_VERIFICATION };
+  for (const c of candidates) {
+    const shape = classifyUrlShape(c.url);
+    if (shape === "PRODUCT_PAGE") out.detailPage += 1;
+    else if (shape === "LISTING_PAGE") out.listingPage += 1;
+    else out.unknownShape += 1;
+    if (c.imageUrl) out.withImage += 1;
+    else out.imageUnavailable += 1;
+    if (c.priceStatus === "VERIFIED_CURRENT") out.priceConfirmed += 1;
+  }
+  return out;
+}
+
+/**
  * 사다리 한 칸(또는 alias 폴백 한 번)의 실행 기록.
  *
  * 🔴 **칸마다 한 줄** 이다 — 합산한 값을 적지 않는다. 기존 비용 계측이 같은 규칙을
@@ -88,6 +150,11 @@ export interface DomesticStageRecord {
   newCandidates: number;
   /** 🔴 관측 전용 — 위 `hasPrimaryIdentitySignal` 을 만족한 **새 후보** 수. */
   primaryIdentityHits: number;
+  /**
+   * 🔵 **검증 분리**(CPO 2026-11-16) — `newCandidates` 는 「검색 결과 수」이고
+   *    이 칸은 「그중 무엇이 검증을 통과했는가」다. 🔴 **둘을 같은 수로 적지 않는다.**
+   */
+  verification: DomesticCandidateVerification;
   elapsedMs: number;
   /**
    * 이 칸 **뒤에 사다리가 멈췄는가.**
@@ -112,6 +179,12 @@ export interface DomesticStageSummary {
   shopsStoppedEarly: number;
   /** 검색에 쓴 벽시계 시간 합(샵이 병렬이라 **벽시계 총시간이 아니다**). */
   elapsedMsTotal: number;
+  /**
+   * 🔵 전체 후보 수. 🔴 아래 `verification` 과 **같은 수가 아니다** — 그것이 이 칸을
+   *    따로 두는 이유다(「검색 결과가 나왔다」 ≠ 「정상적인 상품 발견」).
+   */
+  candidates: number;
+  verification: DomesticCandidateVerification;
 }
 
 export interface DomesticStageCollector {
@@ -133,6 +206,19 @@ export function createDomesticStageCollector(): DomesticStageCollector {
       primaryIdentityHits: records.reduce((n, r) => n + r.primaryIdentityHits, 0),
       shopsStoppedEarly: new Set(records.filter((r) => r.stoppedAfter).map((r) => r.shopId)).size,
       elapsedMsTotal: records.reduce((n, r) => n + r.elapsedMs, 0),
+      candidates: records.reduce((n, r) => n + r.newCandidates, 0),
+      /** 🔴 칸을 **하나씩** 더한다 — 「통과 수」를 한 숫자로 뭉개면 어느 축이 실패했는지 사라진다. */
+      verification: records.reduce<DomesticCandidateVerification>(
+        (acc, r) => ({
+          detailPage: acc.detailPage + r.verification.detailPage,
+          listingPage: acc.listingPage + r.verification.listingPage,
+          unknownShape: acc.unknownShape + r.verification.unknownShape,
+          withImage: acc.withImage + r.verification.withImage,
+          imageUnavailable: acc.imageUnavailable + r.verification.imageUnavailable,
+          priceConfirmed: acc.priceConfirmed + r.verification.priceConfirmed,
+        }),
+        { ...EMPTY_VERIFICATION },
+      ),
     }),
   };
 }

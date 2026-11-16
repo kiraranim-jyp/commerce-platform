@@ -3,7 +3,11 @@ import { extractShopifyHandle, fetchShopifyProductJson, stripShopifyLocalePrefix
 import { lookupBrandAlias } from "./brand-alias";
 import { fetchChocoelProductPrice } from "./chocoel";
 /** 🔵 SPRINT 2 — 기록 전용. 🔴 판정 함수를 부르지 않는다(그 파일이 그것을 금지한다). */
-import { countPrimaryIdentitySignals, type DomesticStageObserver } from "./domestic-stage-metrics";
+import {
+  countPrimaryIdentitySignals,
+  verifyDomesticCandidates,
+  type DomesticStageObserver,
+} from "./domestic-stage-metrics";
 import { fetchDeuxbebeProductPrice } from "./deuxbebe";
 import { fetchForetforetProductPrice } from "./foretforet";
 import { fetchLooxlooProductPrice } from "./looxloo";
@@ -30,8 +34,15 @@ export {
   countPrimaryIdentitySignals,
   createDomesticStageCollector,
   hasPrimaryIdentitySignal,
+  verifyDomesticCandidates,
 } from "./domestic-stage-metrics";
-export type { DomesticStageCollector, DomesticStageObserver, DomesticStageRecord, DomesticStageSummary } from "./domestic-stage-metrics";
+export type {
+  DomesticCandidateVerification,
+  DomesticStageCollector,
+  DomesticStageObserver,
+  DomesticStageRecord,
+  DomesticStageSummary,
+} from "./domestic-stage-metrics";
 export { scoreCandidate, withConfidence } from "./match";
 /** 🔴 WU-037 — 「같은 브랜드 스토어의 같은 listing(시장만 다름)」 판별기. 하니스가
  *  운영과 **같은 술어** 를 쓰게 하려고 노출한다(복제 금지). */
@@ -408,15 +419,20 @@ async function searchOneDomesticShop(
     for (const [termIndex, term] of terms.entries()) {
       const startedAt = Date.now();
       const got = await searchWith(term);
-      const emit = (newCandidates: number, primaryIdentityHits: number, stoppedAfter: boolean) =>
+      /**
+       * 🔴 **후보 배열을 받아 «한 자리에서» 센다.** 숫자를 인자로 받으면 「검색 결과 수」와
+       *    「검증 통과 수」가 호출부마다 갈릴 수 있고, 그 둘을 가르는 것이 이 계측의 목적이다.
+       */
+      const emit = (counted: readonly ComparisonCandidate[], stoppedAfter: boolean) =>
         observer?.({
           shopId: source.id,
           domain: source.domain,
           termIndex,
           term,
           providerCalls: 1,
-          newCandidates,
-          primaryIdentityHits,
+          newCandidates: counted.length,
+          primaryIdentityHits: countPrimaryIdentitySignals(query.facts, counted),
+          verification: verifyDomesticCandidates(counted),
           elapsedMs: Date.now() - startedAt,
           stoppedAfter,
         });
@@ -429,10 +445,10 @@ async function searchOneDomesticShop(
          */
         if (got.length > 0) {
           collected.push(...got);
-          emit(got.length, 0, true);
+          emit(got, true);
           break;
         }
-        emit(0, 0, false);
+        emit([], false);
         continue;
       }
       // 🔴 여러 칸이 같은 상품을 다시 집는다 — URL 로 합친다(판매처는 이미 하나다).
@@ -451,7 +467,7 @@ async function searchOneDomesticShop(
        * 🔴 1차 식별 신호는 **점수를 매긴 뒤** 센다 — 어댑터가 돌려준 날것 후보에는
        *    `facts` 가 없다(`withConfidence` 가 붙인다). 날것으로 세면 **전건 0** 이 된다.
        */
-      emit(added.length, countPrimaryIdentitySignals(query.facts, added), confirmedExternalSame);
+      emit(added, confirmedExternalSame);
       if (confirmedExternalSame) break;
     }
     // 🔴 이미 점수를 매긴 후보를 다시 매기지 않는다. 하위호환 경로는 아직 점수가
@@ -515,6 +531,7 @@ async function searchOneDomesticShop(
         providerCalls: aliasProviderCalls,
         newCandidates: scored.length,
         primaryIdentityHits: countPrimaryIdentitySignals(query.facts, scored),
+        verification: verifyDomesticCandidates(scored),
         elapsedMs: Date.now() - aliasStartedAt,
         stoppedAfter: false,
       });

@@ -2610,6 +2610,12 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
           calls: r.providerCalls,
           added: r.newCandidates,
           primaryHits: r.primaryIdentityHits,
+          /**
+           * 🔴 **「검색 결과가 나왔다」와 「정상적인 상품 발견」을 같은 줄에서 가른다**
+           *    (CPO 2026-11-16). `added` 는 전자이고 이것이 후자다 —
+           *    목록 링크·이미지 없음은 **발견으로 세지 않는다**.
+           */
+          verify: r.verification,
           ms: r.elapsedMs,
           stopped: r.stoppedAfter,
         })),
