@@ -69,6 +69,12 @@ import {
   type ProductFacts,
   type SizeSystem,
 } from "@commerce/shared";
+/**
+ * 🔵 SPRINT2-FOLLOWUP ② — **같은 패키지** 의 기존 등록부다(순환 없음).
+ * 🔴 `packages/shared` 의 `resolveBrandIdentity` 는 이 등록부를 **볼 수 없다**(의존성이 `{}`) —
+ *    그래서 연결 자리가 **여기** 이고, 그것이 「기존 자산 재사용」의 유일한 지점이다.
+ */
+import { isKnownProductBrand, lookupBrandByAliasInTitle } from "./brand-alias";
 import { extractCategoryTaxon, type CategoryTaxon } from "./match";
 import { compareModelCode } from "./model-code";
 
@@ -322,8 +328,64 @@ function sharedTokens(a: Set<string>, b: Set<string>): string[] {
  * 🔴 공개된다고 **판정 축이 되는 것은 아니다** — 그 신호는 관측 전용이고
  *    `judgeDomesticCandidate` 를 대체하지 않는다(그 파일 머리 주석 · 계약으로 잠겼다).
  */
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵 **SPRINT2-FOLLOWUP ② — 등록부가 «이미 아는» 한글 표기를 비교에서 재사용한다**
+ * ════════════════════════════════════════════════════════════════════════════
+ * (CPO 승인 2026-11-16 · 「기존 자산 재사용·연결만 허용」)
+ *
+ * 🔴 **실측 손실** — B226AC038 라이브 계측에서 유일한 생존 후보가 이렇게 막혔다:
+ * ```
+ * 원상품 brand "Bobo Choses" ↔ vividvia brand **"보보쇼즈"**
+ * 품번   B226AC038 ↔ B226AC038  **exact**
+ * ⟹ blocker **BRAND_MISMATCH** ("브랜드 Bobo Choses ↔ 보보쇼즈")
+ * ```
+ * 🔴 그런데 **그 표기는 등록부에 «이미» 있다** — `brand-alias.ts` 의
+ *    `{ brand: "Bobo Choses", alias: "보보쇼즈" }`(WU-151 실측 등록).
+ *
+ * ── 🔴 왜 «여기» 인가 (추출이 아니라 비교다) ─────────────────────────────────
+ * ```
+ * ❌ `product-url-facts` 에서 facts.brand 를 「Bobo Choses」로 **고쳐 쓰지 않는다** —
+ *    그 값은 **판매처가 실제로 적은 값** 이고, WU-151 주석이 「소비처가 brandFromHtml
+ *    (= facts.brand) 이므로 동작을 건드리면 **확정 브랜드가 움직인다**」고 금지했다.
+ * 🟢 바뀌는 것은 **「두 표기를 같은 브랜드로 볼 수 있는가」** 하나다.
+ * ```
+ *
+ * ── 🔴 이것은 「브랜드 불일치 차단 완화」가 아니다 ───────────────────────────
+ * ```
+ * 완화      = 서로 **다른 브랜드** 를 같다고 하는 것          ⟹ 하지 않았다
+ * 이 연결   = **같은 브랜드의 등록된 다른 표기** 를 인식하는 것 ⟹ 거짓 신호 제거
+ * 🟢 선례가 같은 파일에 있다 — 이 함수가 원래 `includes` 였을 때
+ *    「Konges Sløjd A/S ↔ Konges Sløjd Clothing 30% Off Sale」가 불일치였고
+ *    그것이 **SAME 도달을 막는 단일 최대 원인** 이었다(P0-A.35 ④).
+ * 🔴 사정거리는 **등록부 4건** 뿐이다 — 신규 alias **0** · 음역 추론 **0** ·
+ *    사전 확대 **0** · 도메인 조건 **0**.
+ * ```
+ * 🔴🔴 **품번 exact 를 SAME 으로 승격하지 않는다** — 이 함수는 **브랜드 축 하나** 만
+ *    돌려주고, SAME 은 여전히 `SAME_MIN_AXES` 와 blocker 전수를 지나야 한다.
+ */
+function registryCanonicalBrand(raw: string): string | null {
+  /** 🟢 이미 등록부의 정규 브랜드 문자열이면 그대로 쓴다(변환 0). */
+  if (isKnownProductBrand(raw)) return raw;
+  /**
+   * 🔴 등록부에 **실측으로 올라온 표기** 만 역방향 조회한다. 그 함수가 쥔 **경계 규칙**
+   *    (`WORDISH_RE`)이 「보보쇼즈풍」·「보보쇼즈st」를 **거부** 한다 ⟹ 유사품 표기가
+   *    브랜드로 올라오지 않는다. 🔴 새 사전을 만들지 않았다.
+   */
+  return lookupBrandByAliasInTitle(raw) ?? null;
+}
+
 export function brandsCompatible(a: string, b: string): boolean {
-  return brandIdentitiesCompatible(resolveBrandIdentity(a), resolveBrandIdentity(b));
+  if (brandIdentitiesCompatible(resolveBrandIdentity(a), resolveBrandIdentity(b))) return true;
+  /**
+   * 🔴 **1차가 실패한 뒤에만** 등록부를 본다 — 기존 판정이 참인 경우의 경로를
+   *    한 줄도 바꾸지 않는다(기존 동작 보존이 우선이다).
+   */
+  const ca = registryCanonicalBrand(a);
+  const cb = registryCanonicalBrand(b);
+  /** 🔴 한쪽이라도 등록부가 모르면 **그대로 불일치** 다 — 「모른다」를 「같다」로 읽지 않는다. */
+  if (!ca || !cb) return false;
+  return brandIdentitiesCompatible(resolveBrandIdentity(ca), resolveBrandIdentity(cb));
 }
 
 /**

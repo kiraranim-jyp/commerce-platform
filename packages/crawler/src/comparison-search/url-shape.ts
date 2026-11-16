@@ -108,6 +108,42 @@ const LISTING_PATH = /(?:^|\/)(?:collections|collection|category|categories|sear
  */
 const PRODUCT_ITEM_ID_SUFFIX = /(?:^|\/)shopping\/[^?#]+-item-\d+\.aspx$/i;
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵 **SPRINT2-FOLLOWUP ① — `/s/<슬러그>/<숫자 id>` 상품 상세**(CPO 제한적 재검토 2026-11-16)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 **실측 손실** — B226AC038 라이브 계측(2026-11-16)에서 CPO 가 「상품 상세」로 분류한
+ *    Nordstrom URL 이 `UNKNOWN_PAGE` 가 되어 **요청조차 나가지 않았다**:
+ * ```
+ * /s/bobo-choses-hidden-monster-sweatshirt/9195361   → 🔴 NOT_PRODUCT_PAGE 로 탈락
+ * ```
+ *    `s` 는 `PRODUCT_PATH` 토큰에도 `LISTING_PATH` 토큰에도 **없다** ⟹ 「모른다」로 떨어졌고,
+ *    후보 풀은 `PRODUCT_PAGE` 만 열기 때문에 **해외 정상 상세가 구조적으로 사라졌다**.
+ *
+ * ── 🔴 토큰 목록에 `s` 를 더하지 «않는다» ────────────────────────────────────
+ * ```
+ * `PRODUCT_PATH` 에 `s` 를 넣으면 `/s/<무엇이든>` 이 전부 상품이 된다 —
+ * `/s/sale` · `/s/search` · `/s/new-arrivals` 까지 상품이고, 그것이 CPO 가 승인하지
+ * 않겠다고 명시한 **「목록이 상세로 통과하는 부작용」** 이다.
+ * 🔴 그리고 `s` 는 한 글자라 SPRINT-02 가 고친 **`c` 토큰 사고와 같은 종류** 다.
+ * ```
+ * 🟢 그래서 **셋을 동시에** 요구한다(`PRODUCT_ITEM_ID_SUFFIX` 와 같은 설계):
+ * ```
+ * ⒜ `s` 가 **경로 세그먼트 하나** 여야 한다(`/s/`)
+ * ⒝ 그 아래 세그먼트가 **하이픈을 포함한 슬러그** 여야 한다(`bobo-choses-hidden-…`)
+ *    🔴 목록 이름은 보통 한 낱말이다(`sale`·`search`·`new`) ⟹ 하이픈이 그 둘을 가른다
+ * ⒞ **마지막 세그먼트가 숫자만** 이어야 한다(`9195361` = 상품 id)
+ *    🔴 목록 URL 은 그 꼬리를 갖지 않는다
+ * ```
+ * 🔴 **`.html` 류·쿼리·og:type 을 근거로 쓰지 않는다** — 경로 모양만 본다(이 파일의 원칙).
+ * 🔴 **도메인을 보지 않는다** — Nordstrom 전용 규칙이 아니다(사이트별 예외 금지).
+ * 🔴 **미측정 위험을 적는다** — 「하이픈 있는 카테고리 + 숫자 꼬리」(`/s/womens-clothing/12345`)
+ *    모양의 목록은 이 표본에 **없었고**, 있으면 통과한다. 🟢 그때도 `factsFromProductUrl` 의
+ *    `NO_FACTS` 가 **두 번째 층** 으로 막는다(같은 실측에서 coupleshot 목록이 그렇게 걸렸다).
+ */
+const PRODUCT_SLUG_NUMERIC_ID = /(?:^|\/)s\/[^/]*-[^/]*\/\d+\/?$/i;
+
 export function classifyUrlShape(url: string): UrlShape {
   let pathname: string;
   try {
@@ -140,6 +176,12 @@ export function classifyUrlShape(url: string): UrlShape {
    * 🟢 `NON_PRODUCT_FILE` 은 이미 지나왔다 ⟹ `search.aspx` 류는 여기까지 오지 않는다.
    */
   if (PRODUCT_ITEM_ID_SUFFIX.test(pathname)) return "PRODUCT_PAGE";
+  /**
+   * 🔵 SPRINT2-FOLLOWUP ① — `/s/<슬러그>/<숫자 id>`.
+   * 🟢 `NON_PRODUCT_FILE` 은 이미 지나왔고, `s` 는 `LISTING_PATH` 토큰이 **아니다** ⟹
+   *    이 줄이 없으면 그 모양은 `UNKNOWN_PAGE` 로 떨어진다(실측 손실 지점).
+   */
+  if (PRODUCT_SLUG_NUMERIC_ID.test(pathname)) return "PRODUCT_PAGE";
   if (PRODUCT_SUFFIX.test(pathname)) {
     // 🔴 확실히 상품이 아닌 파일명은 목록 쪽으로도 올리지 않는다 — «모른다» 가 답이다.
     return NON_PRODUCT_FILE.test(pathname) ? "UNKNOWN_PAGE" : "PRODUCT_PAGE";
