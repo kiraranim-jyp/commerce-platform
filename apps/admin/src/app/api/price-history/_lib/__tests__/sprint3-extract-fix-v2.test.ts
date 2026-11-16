@@ -283,6 +283,89 @@ describe("C. GT 보유 쌍에서의 방향별 변화", () => {
   });
 });
 
+/* ═════ C2. 🔵🔵 신규 증거 4건 — **유형별** 평가 (CPO C) ═════ */
+
+describe("C2. 신규 증거 4건은 «두 유형» 이고 순이득은 하나다", () => {
+  const shadow = JSON.parse(readFileSync(join(DOCS, "MI-REEVAL-STEP5-SHADOW.json"), "utf8")) as {
+    change: { recoveredMissedSame: string[] };
+    pairsA: {
+      pairId: string;
+      domain: string;
+      priorGt: string | null;
+      ceoLatest: string | null;
+      baselineReproduced: string;
+      shadowV1?: { verdict: string };
+      shadowV2?: { verdict: string };
+      axes?: { axis: string; status: string }[];
+    }[];
+  };
+  /** 🔴 S6-② 가 「상태 승격 3건」으로 지목한 셋을 회수 7 에서 빼면 **신규 증거 4** 다. */
+  const STATE_PROMOTED = ["C11", "C48", "C37"];
+  const newEvidence = shadow.change.recoveredMissedSame.filter((x) => !STATE_PROMOTED.includes(x));
+  const byId = new Map(shadow.pairsA.map((p) => [p.pairId, p]));
+  const axisOf = (id: string, axis: string) =>
+    byId.get(id)!.axes?.find((a) => a.axis === axis)?.status ?? "UNKNOWN";
+
+  it("C2-1 신규 증거 4건은 **C27 · C14 · S1-1 · S1-4** 다(회수 7 − 상태 승격 3)", () => {
+    expect(newEvidence).toEqual(["C27", "C14", "S1-1", "S1-4"]);
+  });
+
+  it("C2-2 🔵 **유형 ① 품번 일치형**(C27 · C14) — MODEL_CODE 가 MATCH 다", () => {
+    for (const id of ["C27", "C14"]) expect(axisOf(id, "MODEL_CODE"), id).toBe("MATCH");
+  });
+
+  it("C2-3 🔵 **유형 ② 품번 없는 텍스트 일치형**(S1-1 · S1-4) — MODEL_CODE 가 MATCH 가 아니다", () => {
+    for (const id of ["S1-1", "S1-4"]) expect(axisOf(id, "MODEL_CODE"), id).not.toBe("MATCH");
+    /** 🟢 그 둘은 BRAND + PRODUCT_TYPE + DESIGN 으로 선다. */
+    for (const id of ["S1-1", "S1-4"]) {
+      expect(axisOf(id, "BRAND"), id).toBe("MATCH");
+      expect(axisOf(id, "PRODUCT_TYPE"), id).toBe("MATCH");
+      expect(axisOf(id, "DESIGN"), id).toBe("MATCH");
+    }
+  });
+
+  it("C2-4 🔴🔴 **유형 ① 은 «신규 정보가 아니다»** — 운영이 이미 품번 축을 갖고 있었다", () => {
+    /**
+     * REPORT 의 「개선 가능 6건」 표가 **6/6 모두 `운영이 품번 축 보유 = true`** 라고 적는다.
+     * ⟹ 🔴 상세설명을 연결해도 유형 ① 에는 **새 증거가 더해지지 않는다**. 막는 것은
+     *    보조 축 **blocker** 이고 그것은 **동결 축** 이다(CPO 가 이번에도 동결 유지했다).
+     */
+    const report = readFileSync(join(DOCS, "MI-DESC-COMPARE-REPORT.md"), "utf8");
+    expect(report).toContain("운영이 품번 축 보유");
+    expect(report).toContain("상세설명을 더 모아도 이 6건은 열리지 않는다");
+  });
+
+  it("C2-5 🔵🔵 **V2 기준 순이득은 S1-4 하나다** — S1-1 은 색상 미확인으로 SIMILAR 다", () => {
+    expect(byId.get("S1-4")!.shadowV2?.verdict).toBe("SAME");
+    expect(byId.get("S1-1")!.shadowV2?.verdict).toBe("SIMILAR");
+    /** 🟢 그 둘을 가르는 축이 **COLOR** 다 — CPO 가 고른 V2 의 안전 축이 거기서 발화한다. */
+    expect(axisOf("S1-4", "COLOR")).toBe("MATCH");
+    expect(axisOf("S1-1", "COLOR")).not.toBe("MATCH");
+  });
+
+  it("C2-6 🔴🔴 **구분력을 측정할 수 없다** — 이 4건의 GT 가 전부 SAME 이다", () => {
+    for (const id of newEvidence) {
+      const p = byId.get(id)!;
+      expect(p.ceoLatest ?? p.priorGt, id).toBe("SAME");
+    }
+    /**
+     * 🔴 DIFFERENT 분모가 **0** 이므로 「SAME 과 DIFFERENT 를 얼마나 정확히 구분하는가」는
+     *    **이 4건으로 답할 수 없다**(CPO 평가 항목 2 · 측정불가). 오포함도 **관측 기회가 없다**.
+     */
+    expect(newEvidence.filter((id) => (byId.get(id)!.ceoLatest ?? byId.get(id)!.priorGt) !== "SAME")).toEqual(
+      [],
+    );
+  });
+
+  it("C2-7 🟢 기존 판정과 **충돌이 아니라 승격** 이다", () => {
+    const baselines = newEvidence.map((id) => byId.get(id)!.baselineReproduced);
+    expect(baselines.filter((b) => b === "PRESUMED_SAME").length).toBe(3);
+    expect(baselines.filter((b) => b === "SIMILAR").length).toBe(1);
+    /** 🔴 baseline 이 DIFFERENT/CONFLICT 인 것은 **없다** ⟹ 판정을 뒤집는 것이 아니다. */
+    expect(baselines.filter((b) => b === "CONFLICT" || b === "DIFFERENT")).toEqual([]);
+  });
+});
+
 /* ═════ D. 🔴 A군 33 은 재측정 «불가» — 입력이 없다 ═════ */
 
 describe("D. A군 33쌍 재측정 가능성", () => {
