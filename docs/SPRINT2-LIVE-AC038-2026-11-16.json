@@ -1,0 +1,107 @@
+{
+ "approvedHttpBudget": 6,
+ "httpUsed": 4,
+ "origin": {
+  "snapshotId": "a4fd7939-893b-406f-ac77-192028d09748",
+  "url": "https://bobochoses.com/en-kr/products/b226ac038-hidden-monster-sweatshirt",
+  "title": "Hidden Monster sweatshirt",
+  "brand": "Bobo Choses",
+  "brandModelCode": "B226AC038",
+  "color": "Blue",
+  "refetched": false
+ },
+ "suppliedUrls": 6,
+ "poolMetrics": {
+  "suppliedUrls": 6,
+  "acceptedUrls": 3,
+  "usableProductUrls": 1,
+  "miEligibleCandidates": 1,
+  "fetchCalls": 4,
+  "notFetchedOverLimit": [],
+  "dropped": [
+   {
+    "url": "https://www.nordstrom.com/s/bobo-choses-hidden-monster-sweatshirt/9195361",
+    "reason": "NOT_PRODUCT_PAGE"
+   },
+   {
+    "url": "https://james-basile.be/en/brands/bobo-choses",
+    "reason": "NOT_PRODUCT_PAGE"
+   },
+   {
+    "url": "https://stitch-house.com/SHOP/129832/112134/list.html",
+    "reason": "NOT_PRODUCT_PAGE"
+   },
+   {
+    "url": "https://www.coupleshot.com/shop/shopbrand.html?type=X",
+    "reason": "NO_FACTS"
+   },
+   {
+    "url": "https://www.junioredition.com/collections/11-years/products/hidden-monster-sweatshirt-by-bobo-choses",
+    "reason": "UNREACHABLE"
+   }
+  ],
+  "providerCalls": 0
+ },
+ "fetchLog": [
+  {
+   "url": "https://vividvia.com/product/%EB%B3%B4%EB%B3%B4%EC%87%BC%EC%A6%88-26fw-hidden-monster-sweatshirt-b226ac038/505/category/1/display/6/",
+   "httpCalls": 1,
+   "status": "OK",
+   "skipped": false
+  },
+  {
+   "url": "https://www.coupleshot.com/shop/shopbrand.html?type=X",
+   "httpCalls": 1,
+   "status": "NO_FACTS",
+   "skipped": false
+  },
+  {
+   "url": "https://www.junioredition.com/collections/11-years/products/hidden-monster-sweatshirt-by-bobo-choses",
+   "httpCalls": 2,
+   "status": "UNREACHABLE",
+   "skipped": false
+  }
+ ],
+ "candidateCount": 1,
+ "verification": {
+  "detailPage": 1,
+  "listingPage": 0,
+  "unknownShape": 0,
+  "withImage": 0,
+  "imageUnavailable": 1,
+  "priceConfirmed": 1
+ },
+ "sameCount": 0,
+ "presumedOrSimilar": 1,
+ "rows": [
+  {
+   "domain": "vividvia.com",
+   "url": "https://vividvia.com/product/%EB%B3%B4%EB%B3%B4%EC%87%BC%EC%A6%88-26fw-hidden-monster-sweatshirt-b226ac038/505/category/1/display/6/",
+   "canonical": "https://vividvia.com/product/%EB%B3%B4%EB%B3%B4%EC%87%BC%EC%A6%88-26fw-hidden-monster-sweatshirt-b226ac038/505/category/1/display/6/",
+   "title": "보보쇼즈 26FW Hidden Monster sweatshirt B226AC038 - VIVIDVIA",
+   "candidateBrand": "보보쇼즈",
+   "candidateCode": "B226AC038",
+   "sellerSku": null,
+   "primaryIdentitySignal": false,
+   "crossSellerVerdict": "PRESUMED_SAME",
+   "crossSellerBlockers": [
+    {
+     "blocker": "BRAND_MISMATCH",
+     "detail": "브랜드 Bobo Choses ↔ 보보쇼즈"
+    }
+   ],
+   "matchLevel": "low",
+   "imagePresent": false,
+   "imageUrl": null,
+   "imageMatchesProduct": "UNVERIFIED_BY_CTO",
+   "urlShape": "PRODUCT_PAGE",
+   "isDetailPage": true,
+   "price": {
+    "amount": 138000,
+    "currency": "KRW"
+   },
+   "priceStatus": "VERIFIED_CURRENT",
+   "soldOut": null
+  }
+ ]
+}
