@@ -1,0 +1,542 @@
+{
+ "note": "🔴 STEP 7 — 추출 가드 ON 재측정. 운영 반영 0 · 기존 STEP5/6 산출물 미변경 · HTTP 0",
+ "limits": [
+  "설명문 원문 없음 ⟹ 저장 keyword 의 context 창에서 가드를 재적용했다",
+  "colorBrandGuard 의 「선언된 색상 자리」(Colour: X)는 전문을 요구하므로 발화하지 않는다",
+  "A군 33 은 keyword 가 저장돼 있지 않아 재측정 불가"
+ ],
+ "denominators": {
+  "bGroupPairs": 109,
+  "bGroupWithGt": 36
+ },
+ "nonReproducibleKeywords": 24,
+ "droppedKeywords": 161,
+ "axisChangeShapes": [
+  "UNKNOWN→NOT_APPLICABLE",
+  "MISMATCH→UNKNOWN",
+  "MATCH→MISMATCH",
+  "MATCH→UNKNOWN"
+ ],
+ "pairsWithAxisChange": 35,
+ "axisChangeByAxis": {
+  "BRAND": 0,
+  "MODEL_CODE": 0,
+  "PRODUCT_TYPE": 11,
+  "DESIGN": 0,
+  "PRINT_PATTERN": 3,
+  "COLOR": 7,
+  "MATERIAL": 1,
+  "SLEEVE_FORM": 16,
+  "FIT": 0,
+  "AUDIENCE": 1,
+  "SIZE_OPTION": 0
+ },
+ "gtDirection": {
+  "sameMatchLost": 0,
+  "nonSameMatchLost": 0
+ },
+ "changedPairs": [
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "cissywears.com",
+   "humanGt": "SAME",
+   "changedAxes": [
+    "PRINT_PATTERN"
+   ],
+   "before": {
+    "PRINT_PATTERN": "UNKNOWN"
+   },
+   "after": {
+    "PRINT_PATTERN": "NOT_APPLICABLE"
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "junioredition.com",
+   "humanGt": "SAME",
+   "changedAxes": [
+    "SLEEVE_FORM"
+   ],
+   "before": {
+    "SLEEVE_FORM": "UNKNOWN"
+   },
+   "after": {
+    "SLEEVE_FORM": "NOT_APPLICABLE"
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "junioredition.com",
+   "humanGt": null,
+   "changedAxes": [
+    "SLEEVE_FORM"
+   ],
+   "before": {
+    "SLEEVE_FORM": "UNKNOWN"
+   },
+   "after": {
+    "SLEEVE_FORM": "NOT_APPLICABLE"
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "junioredition.com",
+   "humanGt": "SAME",
+   "changedAxes": [
+    "SLEEVE_FORM"
+   ],
+   "before": {
+    "SLEEVE_FORM": "UNKNOWN"
+   },
+   "after": {
+    "SLEEVE_FORM": "NOT_APPLICABLE"
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "junioredition.com",
+   "humanGt": "SAME",
+   "changedAxes": [
+    "SLEEVE_FORM"
+   ],
+   "before": {
+    "SLEEVE_FORM": "UNKNOWN"
+   },
+   "after": {
+    "SLEEVE_FORM": "NOT_APPLICABLE"
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "kids21.com",
+   "humanGt": "SAME",
+   "changedAxes": [
+    "SLEEVE_FORM"
+   ],
+   "before": {
+    "SLEEVE_FORM": "UNKNOWN"
+   },
+   "after": {
+    "SLEEVE_FORM": "NOT_APPLICABLE"
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "m.luxboy.com",
+   "humanGt": "DIFFERENT",
+   "changedAxes": [
+    "SLEEVE_FORM"
+   ],
+   "before": {
+    "SLEEVE_FORM": "UNKNOWN"
+   },
+   "after": {
+    "SLEEVE_FORM": "NOT_APPLICABLE"
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "miniboutique.co.kr",
+   "humanGt": null,
+   "changedAxes": [
+    "AUDIENCE"
+   ],
+   "before": {
+    "AUDIENCE": "UNKNOWN"
+   },
+   "after": {
+    "AUDIENCE": "NOT_APPLICABLE"
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "parkette.ca",
+   "humanGt": "DIFFERENT",
+   "changedAxes": [
+    "PRINT_PATTERN"
+   ],
+   "before": {
+    "PRINT_PATTERN": "UNKNOWN"
+   },
+   "after": {
+    "PRINT_PATTERN": "NOT_APPLICABLE"
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "scoutandcokids.com",
+   "humanGt": "SAME",
+   "changedAxes": [
+    "SLEEVE_FORM"
+   ],
+   "before": {
+    "SLEEVE_FORM": "UNKNOWN"
+   },
+   "after": {
+    "SLEEVE_FORM": "NOT_APPLICABLE"
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "stockmann.ee",
+   "humanGt": "SAME",
+   "changedAxes": [
+    "PRODUCT_TYPE"
+   ],
+   "before": {
+    "PRODUCT_TYPE": "UNKNOWN"
+   },
+   "after": {
+    "PRODUCT_TYPE": "NOT_APPLICABLE"
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": null,
+   "humanGt": "SAME",
+   "changedAxes": [
+    "SLEEVE_FORM"
+   ],
+   "before": {
+    "SLEEVE_FORM": "UNKNOWN"
+   },
+   "after": {
+    "SLEEVE_FORM": "NOT_APPLICABLE"
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": null,
+   "humanGt": "SAME",
+   "changedAxes": [
+    "SLEEVE_FORM"
+   ],
+   "before": {
+    "SLEEVE_FORM": "UNKNOWN"
+   },
+   "after": {
+    "SLEEVE_FORM": "NOT_APPLICABLE"
+   }
+  },
+  {
+   "originCode": "B226AC010",
+   "candidateDomain": "junioredition.com",
+   "humanGt": null,
+   "changedAxes": [
+    "SLEEVE_FORM"
+   ],
+   "before": {
+    "SLEEVE_FORM": "MISMATCH"
+   },
+   "after": {
+    "SLEEVE_FORM": "UNKNOWN"
+   }
+  },
+  {
+   "originCode": "B226AC017",
+   "candidateDomain": "kidbizkid.com",
+   "humanGt": null,
+   "changedAxes": [
+    "SLEEVE_FORM"
+   ],
+   "before": {
+    "SLEEVE_FORM": "UNKNOWN"
+   },
+   "after": {
+    "SLEEVE_FORM": "NOT_APPLICABLE"
+   }
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "folkberlin.com",
+   "humanGt": "DIFFERENT",
+   "changedAxes": [
+    "PRODUCT_TYPE"
+   ],
+   "before": {
+    "PRODUCT_TYPE": "MISMATCH"
+   },
+   "after": {
+    "PRODUCT_TYPE": "UNKNOWN"
+   }
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "shoppiccoliandco.com",
+   "humanGt": "DIFFERENT",
+   "changedAxes": [
+    "PRODUCT_TYPE"
+   ],
+   "before": {
+    "PRODUCT_TYPE": "MISMATCH"
+   },
+   "after": {
+    "PRODUCT_TYPE": "UNKNOWN"
+   }
+  },
+  {
+   "originCode": "B226AC036",
+   "candidateDomain": "folkberlin.com",
+   "humanGt": null,
+   "changedAxes": [
+    "PRODUCT_TYPE",
+    "COLOR"
+   ],
+   "before": {
+    "PRODUCT_TYPE": "MISMATCH",
+    "COLOR": "MATCH"
+   },
+   "after": {
+    "PRODUCT_TYPE": "UNKNOWN",
+    "COLOR": "MISMATCH"
+   }
+  },
+  {
+   "originCode": "B226AC036",
+   "candidateDomain": "junioredition.com",
+   "humanGt": null,
+   "changedAxes": [
+    "SLEEVE_FORM"
+   ],
+   "before": {
+    "SLEEVE_FORM": "UNKNOWN"
+   },
+   "after": {
+    "SLEEVE_FORM": "NOT_APPLICABLE"
+   }
+  },
+  {
+   "originCode": "B226AC038",
+   "candidateDomain": "folkberlin.com",
+   "humanGt": null,
+   "changedAxes": [
+    "PRODUCT_TYPE"
+   ],
+   "before": {
+    "PRODUCT_TYPE": "MISMATCH"
+   },
+   "after": {
+    "PRODUCT_TYPE": "UNKNOWN"
+   }
+  },
+  {
+   "originCode": "B226AC041",
+   "candidateDomain": "folkberlin.com",
+   "humanGt": null,
+   "changedAxes": [
+    "PRODUCT_TYPE"
+   ],
+   "before": {
+    "PRODUCT_TYPE": "MISMATCH"
+   },
+   "after": {
+    "PRODUCT_TYPE": "UNKNOWN"
+   }
+  },
+  {
+   "originCode": "B226AC041",
+   "candidateDomain": "villagekids.co.uk",
+   "humanGt": null,
+   "changedAxes": [
+    "COLOR"
+   ],
+   "before": {
+    "COLOR": "MISMATCH"
+   },
+   "after": {
+    "COLOR": "UNKNOWN"
+   }
+  },
+  {
+   "originCode": "B226AC043",
+   "candidateDomain": "folkberlin.com",
+   "humanGt": null,
+   "changedAxes": [
+    "PRODUCT_TYPE"
+   ],
+   "before": {
+    "PRODUCT_TYPE": "MISMATCH"
+   },
+   "after": {
+    "PRODUCT_TYPE": "UNKNOWN"
+   }
+  },
+  {
+   "originCode": "B226AC073",
+   "candidateDomain": "folkberlin.com",
+   "humanGt": null,
+   "changedAxes": [
+    "COLOR"
+   ],
+   "before": {
+    "COLOR": "MISMATCH"
+   },
+   "after": {
+    "COLOR": "UNKNOWN"
+   }
+  },
+  {
+   "originCode": "B226AC110",
+   "candidateDomain": "junioredition.com",
+   "humanGt": "SIMILAR",
+   "changedAxes": [
+    "SLEEVE_FORM"
+   ],
+   "before": {
+    "SLEEVE_FORM": "UNKNOWN"
+   },
+   "after": {
+    "SLEEVE_FORM": "NOT_APPLICABLE"
+   }
+  },
+  {
+   "originCode": "B226TC175",
+   "candidateDomain": "folkberlin.com",
+   "humanGt": null,
+   "changedAxes": [
+    "PRODUCT_TYPE",
+    "COLOR"
+   ],
+   "before": {
+    "PRODUCT_TYPE": "MISMATCH",
+    "COLOR": "MISMATCH"
+   },
+   "after": {
+    "PRODUCT_TYPE": "UNKNOWN",
+    "COLOR": "UNKNOWN"
+   }
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "folkberlin.com",
+   "humanGt": null,
+   "changedAxes": [
+    "MATERIAL"
+   ],
+   "before": {
+    "MATERIAL": "MISMATCH"
+   },
+   "after": {
+    "MATERIAL": "UNKNOWN"
+   }
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "folkberlin.com",
+   "humanGt": null,
+   "changedAxes": [
+    "PRODUCT_TYPE"
+   ],
+   "before": {
+    "PRODUCT_TYPE": "MATCH"
+   },
+   "after": {
+    "PRODUCT_TYPE": "UNKNOWN"
+   }
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "folkberlin.com",
+   "humanGt": null,
+   "changedAxes": [
+    "PRODUCT_TYPE",
+    "PRINT_PATTERN",
+    "SLEEVE_FORM"
+   ],
+   "before": {
+    "PRODUCT_TYPE": "MISMATCH",
+    "PRINT_PATTERN": "UNKNOWN",
+    "SLEEVE_FORM": "UNKNOWN"
+   },
+   "after": {
+    "PRODUCT_TYPE": "UNKNOWN",
+    "PRINT_PATTERN": "NOT_APPLICABLE",
+    "SLEEVE_FORM": "NOT_APPLICABLE"
+   }
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "folkberlin.com",
+   "humanGt": null,
+   "changedAxes": [
+    "PRODUCT_TYPE"
+   ],
+   "before": {
+    "PRODUCT_TYPE": "MATCH"
+   },
+   "after": {
+    "PRODUCT_TYPE": "UNKNOWN"
+   }
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "junioredition.com",
+   "humanGt": null,
+   "changedAxes": [
+    "SLEEVE_FORM"
+   ],
+   "before": {
+    "SLEEVE_FORM": "UNKNOWN"
+   },
+   "after": {
+    "SLEEVE_FORM": "NOT_APPLICABLE"
+   }
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "junioredition.com",
+   "humanGt": null,
+   "changedAxes": [
+    "COLOR"
+   ],
+   "before": {
+    "COLOR": "MATCH"
+   },
+   "after": {
+    "COLOR": "UNKNOWN"
+   }
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "junioredition.com",
+   "humanGt": null,
+   "changedAxes": [
+    "COLOR"
+   ],
+   "before": {
+    "COLOR": "MATCH"
+   },
+   "after": {
+    "COLOR": "MISMATCH"
+   }
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "kidbizkid.com",
+   "humanGt": null,
+   "changedAxes": [
+    "SLEEVE_FORM"
+   ],
+   "before": {
+    "SLEEVE_FORM": "UNKNOWN"
+   },
+   "after": {
+    "SLEEVE_FORM": "NOT_APPLICABLE"
+   }
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "kidbizkid.com",
+   "humanGt": null,
+   "changedAxes": [
+    "COLOR"
+   ],
+   "before": {
+    "COLOR": "MATCH"
+   },
+   "after": {
+    "COLOR": "UNKNOWN"
+   }
+  }
+ ]
+}
