@@ -155,6 +155,17 @@ describe.skipIf(!LIVE)("SPRINT 2 라이브 — B226AC038 · HTTP 6건 단일 실
             price: c.price ?? null,
             priceStatus: c.priceStatus ?? null,
             soldOut: c.soldOut ?? null,
+            /**
+             * 🔵 **재실측(CPO 2026-11-16) — 후보 facts «전문» 을 보존한다.**
+             *
+             * 🔴 1차 실행이 이것을 저장하지 않아 **오프라인 반사실이 불가능** 했다
+             *    (「브랜드 연결이 SAME 까지 올리는가」를 HTTP 없이 다시 계산할 수 없었다).
+             * 🟢 이 칸이 있으면 다음부터 그 계산이 **HTTP 0** 으로 가능하다.
+             */
+            facts: c.facts ?? null,
+            crossSellerReasons: c.crossSellerReasons ?? null,
+            crossSellerConflicts: c.crossSellerConflicts ?? null,
+            matchTruth: c.matchTruth ?? null,
           };
         }),
       );
@@ -162,6 +173,23 @@ describe.skipIf(!LIVE)("SPRINT 2 라이브 — B226AC038 · HTTP 6건 단일 실
       const out = {
         approvedHttpBudget: HTTP_BUDGET,
         httpUsed,
+        /**
+         * 🔴 **URL 당 호출 수를 따로 낸다**(CPO 재실측 경계: 「각 URL 최대 1회 요청」).
+         *
+         * 🔴 하니스는 각 URL 을 **정확히 한 번** 부른다. 그런데 운영 `factsFromProductUrl`
+         *    내부에 **헤더초과 복구 재시도**(WU-084)가 있어 `httpCalls` 가 2 로 올 수 있다 —
+         *    1차 실행의 junioredition 이 그것이다. 🟢 **내 재시도가 아니고** 운영 동작이며,
+         *    운영 코드 변경은 승인 범위 밖이라 **고치지 않았다**. 누적 상한으로 묶는다.
+         */
+        perUrlCalls: fetchLog.map((f) => ({ url: f.url, httpCalls: f.httpCalls })),
+        /** 🟢 외부 AI/검색 provider 호출 — 이 경로는 **구조상 0** 이다. */
+        providerCalls: pool.metrics.providerCalls,
+        /**
+         * 🔴 **상세 요청(품번 상세확인·가격 보강) 0** — 이 하니스는 `judgeDomesticCandidate`
+         *    와 `enrichCandidatePrices` 를 **부르지 않는다**(승인 6건을 넘기기 때문).
+         *    ⟹ 그래서 아래 verdict 는 **cross-seller 판정** 이고 운영 최종 tier 가 아니다.
+         */
+        detailRequests: 0,
         origin: {
           snapshotId: dump.snapshotId,
           url: ORIGIN_URL,
@@ -185,8 +213,13 @@ describe.skipIf(!LIVE)("SPRINT 2 라이브 — B226AC038 · HTTP 6건 단일 실
         rows: rowsOut,
       };
 
+      /**
+       * 🔴 **1차 실행 산출을 덮어쓰지 않는다**(CPO: 「계측 결과와 기존 실행 결과를 구분해서
+       *    보고」). 파일명을 환경변수로 받아 **두 실행을 나란히** 남긴다.
+       */
+      const outName = process.env.SPRINT2_OUT_NAME ?? "SPRINT2-LIVE-AC038-2026-11-16.json";
       writeFileSync(
-        join(__dirname, "../../../../../../../../docs/SPRINT2-LIVE-AC038-2026-11-16.json"),
+        join(__dirname, "../../../../../../../../docs", outName),
         JSON.stringify(out, null, 1),
         "utf8",
       );
