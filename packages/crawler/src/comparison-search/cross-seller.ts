@@ -312,7 +312,17 @@ function sharedTokens(a: Set<string>, b: Set<string>): string[] {
  * "Konges Sløjd A/S" ↔ "Konges Sløjd Clothing 30% Off Sale" 가 불일치였고,
  * 그것이 SAME 도달을 막는 단일 최대 원인이었다(실측: core>=5 인 7쌍 «전부»).
  */
-function brandsCompatible(a: string, b: string): boolean {
+/**
+ * 🔵 **SPRINT 2 — `export` 만 더했다. 본문은 한 글자도 바뀌지 않았다.**
+ *
+ * 🔴 CPO ①「기존 `compareModelCode` + 브랜드 비교 **재사용**(새 함수 금지)」 때문이다.
+ *    `domestic-stage-metrics.ts` 의 1차 식별 신호가 브랜드 비교를 **직접 만들면**
+ *    브랜드 정책 owner 가 둘이 되고, 여기 주석이 기록한 그 실측
+ *    (「Konges Sløjd A/S」↔「… 30% Off Sale」)을 그쪽은 모른 채 판단한다.
+ * 🔴 공개된다고 **판정 축이 되는 것은 아니다** — 그 신호는 관측 전용이고
+ *    `judgeDomesticCandidate` 를 대체하지 않는다(그 파일 머리 주석 · 계약으로 잠겼다).
+ */
+export function brandsCompatible(a: string, b: string): boolean {
   return brandIdentitiesCompatible(resolveBrandIdentity(a), resolveBrandIdentity(b));
 }
 

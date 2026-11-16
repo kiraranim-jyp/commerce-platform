@@ -108,8 +108,19 @@ describe("④ 🔴 한 사이트 실패가 전체 시장조사를 «실패시키
 
   it("국내·해외 모두 allSettled 로 «사이트별» 로 받는다 — 이미 그렇게 돼 있었다", () => {
     expect(CRAWLER).toContain("Promise.allSettled(shops.map((shop) => searchOneShop(shop, query)))");
-    expect(CRAWLER).toContain(
-      "Promise.allSettled(sources.map((source) => searchOneDomesticShop(source, query)))",
+    /**
+     * 🔵 **SPRINT 2 에서 이 앵커를 갱신했다 — 성질은 그대로이고 인자가 하나 늘었다.**
+     *
+     * 🔴 바뀐 것은 `searchOneDomesticShop(source, query)` →
+     *    `searchOneDomesticShop(source, query, observer)` 이고, 이 계약이 지키는 성질
+     *    (「한 사이트 실패가 전체를 실패시키지 않는다」= **사이트별 allSettled**)은
+     *    한 글자도 바뀌지 않았다. 그래서 **느슨하게 하지 않고 갱신·강화** 한다.
+     * 🟢 **강화** — 계측 관측자가 그 자리에 **같이** 꽂혀 있는지도 본다. 관측자를
+     *    끊으면 CEO 완료 조건(「확보 시점에 멈췄다를 실행 기록으로 증명」)이 무너지는데,
+     *    그 끊김은 동작 테스트로는 보이지 않는다(기록만 사라진다).
+     */
+    expect(CRAWLER).toMatch(
+      /Promise\.allSettled\(sources\.map\(\(source\) => searchOneDomesticShop\(source, query, observer\)\)\)/,
     );
   });
 

@@ -22,6 +22,13 @@ import {
   EXCLUDED_BRAND_NOTICE,
   refreshDomesticProductPrice,
   searchDomesticShops,
+  /**
+   * 🔵🔵 **SPRINT 2 — 단계별 실행 기록**(CEO 완료 조건: 「구현했다」가 아니라
+   *    「확보 시점에 나머지가 멈췄다」를 **실행 기록으로** 증명한다).
+   * 🔴 수집기는 **기록만** 한다 — 검색 범위·멈춤 조건·판정은 이 값으로 바뀌지 않는다.
+   */
+  createDomesticStageCollector,
+  type DomesticStageSummary,
   withConfidence,
   enrichCandidatePrices,
   supportsDomesticIdentifierExtraction,
@@ -576,6 +583,32 @@ export interface DomesticPriceCheckResult {
    * (foretforet.com 전용이 아니게 됐으므로 — bobochoses.com 등 URL 기반
    * 추출은 실제 HTTP fetch가 없지만 "시도 횟수"라는 의미는 동일하다). */
   domesticModelCodeFetchCount: number;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵 **SPRINT 2 — 단계별 실행 기록 요약**(CEO 완료 조건 · CPO 구현 방향 ⑥)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * CEO 가 요구한 증명 세 칸이 여기 있다 —
+   * **검색 요청 수**(`providerCalls`) · **상세 페이지 요청 수**(`detailModelCodeFetches`) ·
+   * **단계별 소요 시간**(`elapsedMsTotal` + 칸별 기록).
+   *
+   * 🔴 `null` 은 「등록부 검색 경로가 **돌지 않았다**」다 — 「요청 0 회」가 아니다
+   *    (기존 다섯 계측 칸이 쓰는 그 규칙 그대로).
+   * 🔴🔴 `primaryIdentityHits` 를 **SAME 수로 읽지 않는다**(CPO 명시) — 그것은
+   *    「브랜드+품번이 둘 다 일치한 후보 수」이고 **검색 우선순위·후보 식별 전용** 이다.
+   *    실제 SAME 은 `judgeDomesticCandidate` 결과뿐이다.
+   */
+  domesticStageMetrics?:
+    | (DomesticStageSummary & {
+        /** P0 검색이 남긴 기록 수. 🔴 아래 칸과 **합산하지 않는다**(「P0 에서 끝났다」가 사라진다). */
+        p0Records: number;
+        /** P0 이후(P1+) 검색이 남긴 기록 수. `0` 이면 **그 검색을 아예 보내지 않았다**. */
+        laterRecords: number;
+        /** 국내 품번 **상세** 확인 시도 수 — 기존 `domesticModelCodeFetchCount` 와 **같은 값** 이다
+         *  (새 카운터를 만들지 않았다). */
+        detailModelCodeFetches: number;
+      })
+    | null;
 }
 
 /** N-4.07 3차(실측 발견, 2026-08-23) — 개발/테스트용으로 제목 앞에 붙는
@@ -1408,10 +1441,39 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     categoryScopes: input.categoryScopes ?? null,
   }).catch(() => null);
 
-  const p0Results = await searchDomesticShops(query, p0Sources.map(toRef));
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 **SPRINT 2 — 단계별 비용 계측**(CPO 구현 방향 ⑥ · 2026-11-16)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 **P0 와 그 뒤 검색을 «같은» 수집기로 받는다** — 두 수집기를 쓰면 「P0 에서
+   *    끝났다」와 「P1 까지 갔다」를 숫자로 구분할 수 없게 된다(아래 로그가 그 둘을 가른다).
+   * 🟢 수집기는 **이 파일 안에서만** 산다 — DB 쓰기 0 · 응답 계약 외 노출 0.
+   */
+  const stageCollector = createDomesticStageCollector();
+  const p0Results = await searchDomesticShops(query, p0Sources.map(toRef), stageCollector.observer);
+  const p0StageRecordCount = stageCollector.records.length;
+  /**
+   * 🔴🔴 **이 줄을 «되살리지» 않는다**(CPO 지정 제약 · SPRINT 2).
+   *
+   * `foundVeryHighInP0` 는 **사실상 죽어 있다** — WU-095 가 거짓 `very_high`(모든
+   * Cafe24 URL 이 `…/display/1/` 로 끝나 slug 가 「1」로 충돌해 0.95 바닥값이
+   * 무조건 발화하던 것)를 제거한 뒤의 **정상 상태** 이고, SPRINT 1 라이브에서
+   * 국내 후보는 **전건 `low` · confidence 0** 이었다.
+   *
+   * 🔴 그리고 **CEO 전략의 축(「동일 후보 수」)으로 바꿀 수도 없다** — 이 시점에는
+   *    SAME verdict 가 **존재하지 않는다**. 판정은 `judgeDomesticCandidate`(:2087 호출)
+   *    이고 여기서 **676줄 뒤** 다. 그 순서를 뒤집는 것은 「수집↔판정 교대」 구조
+   *    변경이고 **CPO 가 SPRINT 2 범위에서 불허(⒜)** 했다 ⟹ 제약으로 보고한다.
+   * 🟢 대신 **진짜 조기 종료는 샵 사다리 안에 이미 있다**(`comparison-search/index.ts`)
+   *    — 거기서 멈추는 조건은 `crossSellerVerdict === "SAME"`(자기참조 제외)이고,
+   *      SIMILAR·PRESUMED_SAME 은 그 조건을 **만족하지 못한다**(CPO ③④ 그대로).
+   */
   const foundVeryHighInP0 = p0Results.some((r) => r.candidates.some((c) => c.matchLevel === "very_high"));
   const otherResults =
-    otherSources.length > 0 && !foundVeryHighInP0 ? await searchDomesticShops(query, otherSources.map(toRef)) : [];
+    otherSources.length > 0 && !foundVeryHighInP0
+      ? await searchDomesticShops(query, otherSources.map(toRef), stageCollector.observer)
+      : [];
   const overseasAuto = await overseasAutoPromise;
   overseasAutoMetrics = overseasAuto?.metrics ?? null;
   if (overseasAutoMetrics) {
@@ -2515,11 +2577,52 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
   const saveResult = await recordPriceObservations(observations);
   if (!saveResult.ok) sourceErrors.push(`가격 저장 실패: ${saveResult.error}`);
 
+  /**
+   * ════════════════════════════════════════════════════════════════════════════
+   * 🔵🔵 **SPRINT 2 — 실행 기록을 «여기서» 낸다**(CPO 구현 방향 ⑥)
+   * ════════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 **왜 검색 직후가 아니라 여기인가** — 상세 확인(`domesticModelCodeFetchCount`)은
+   *    판정 루프 안에서 올라간다. 검색 직후에 적으면 그 칸이 **항상 0** 이고,
+   *    CEO 완료 조건의 「상세 페이지 요청 수」가 **거짓으로 0** 이 된다.
+   * 🔴 로그로 내보내는 이유 — Production 화면은 로그인 뒤라 CTO 가 응답을 읽을 수
+   *    없다(메모 `production-payload-is-unreachable`). 기존 `[WU-130-overseas]` ·
+   *    `[MI-016-gate]` 와 **같은 규약** 이고 **계산하지 않는다**(수집기가 낸 값을 옮긴다).
+   */
+  const stageSummary = stageCollector.records.length > 0 ? stageCollector.summary() : null;
+  const domesticStageMetrics = stageSummary
+    ? {
+        ...stageSummary,
+        p0Records: p0StageRecordCount,
+        laterRecords: stageCollector.records.length - p0StageRecordCount,
+        detailModelCodeFetches: domesticModelCodeFetchCount,
+      }
+    : null;
+  if (domesticStageMetrics) {
+    console.log(
+      `[SPRINT2-stage] ${JSON.stringify({
+        snapshot: input.snapshotId,
+        ...domesticStageMetrics,
+        /** 🔴 칸별 기록을 **그대로** 싣는다 — 「어느 단계에서 멈췄는가」는 합계로 알 수 없다. */
+        records: stageCollector.records.map((r) => ({
+          domain: r.domain,
+          termIndex: r.termIndex,
+          calls: r.providerCalls,
+          added: r.newCandidates,
+          primaryHits: r.primaryIdentityHits,
+          ms: r.elapsedMs,
+          stopped: r.stoppedAfter,
+        })),
+      })}`,
+    );
+  }
+
   return {
     linksCreatedOrUpdated,
     pricesRecorded: saveResult.ok ? saveResult.count : 0,
     sourceErrors,
     domesticModelCodeFetchCount,
+    domesticStageMetrics,
     /** 🔴 flag OFF 면 `null` — 「Gemini 0회」가 아니라 「경로가 안 돌았다」다(§7). */
     geminiMetrics,
     /** 🔴 같은 원칙 — flag OFF 면 `null`, 켰는데 후보가 없으면 `[]`. */

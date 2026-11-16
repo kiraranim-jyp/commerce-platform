@@ -1,0 +1,138 @@
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 **SPRINT 2 — 단계별 검색의 «실행 기록» 과 1차 식별 신호**(CPO 확정 2026-11-16)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * CEO 전략(CLAUDE.md §5-D-2)의 완료 조건이 「구현했다」가 아니라
+ * **「동일 후보를 확보한 시점에 나머지 작업이 «실제로» 멈췄다를 실행 기록으로 증명」**
+ * 이다. 그 기록을 남기는 칸이 이 파일이다.
+ *
+ * ── 🔴 이 파일이 «하지 않는» 것 ──────────────────────────────────────────────
+ * ```
+ * ❌ 판정하지 않는다        SAME / SIMILAR / PRESUMED_SAME 을 만들지도 바꾸지도 않는다
+ * ❌ 멈추지 않는다          사다리를 멈추는 조건은 `index.ts` 의 기존 한 줄
+ *                          (`crossSellerVerdict === "SAME"` · 자기참조 제외)이고
+ *                          이 파일은 그 사실을 **적을 뿐** 이다
+ * ❌ 새 비교 규칙을 만들지 않는다  품번은 `compareModelCode` · 브랜드는 `brandsCompatible`
+ *                          **운영이 쓰는 그 두 함수** 를 그대로 부른다(CPO ①「새 함수 금지」)
+ * ❌ HTTP 를 쓰지 않는다    이미 받은 후보의 가벼운 필드만 읽는다(§5-D-2 「저비용 식별」)
+ * ```
+ *
+ * ── 🔴🔴 `primaryIdentityHits` 를 «SAME 수» 로 읽지 않는다 (CPO 명시) ─────────
+ * ```
+ * CPO 결정 원문 — 「품번 exact + 브랜드 일치만으로 «SAME 후보» 라 부르거나
+ *                  CEO 의 SAME 기반 조기 종료 조건을 «충족했다» 로 간주 금지」
+ * ⟹ 이 숫자는 **검색 우선순위·후보 식별** 용 관측값이다.
+ * ⟹ 실제 SAME 은 `judgeDomesticCandidate` 결과만 인정한다(CPO ③).
+ * 🔴 그래서 이 파일은 **그 함수를 부르지도, import 하지도 않는다** — 계약으로 잠근다.
+ * ```
+ *
+ * 🔴 왜 「브랜드 **그리고** 품번」인가 — §5-D 가 「100%」를 그렇게 정의한다:
+ *    「브랜드 단독 일치나 **품번처럼 보이는 문자열 하나** 로 100% 동일상품 판정을
+ *     하지 않는다」. 그래서 둘 중 하나만 맞으면 이 신호는 **서지 않는다**.
+ */
+import { brandsCompatible } from "./cross-seller";
+import { compareModelCode } from "./model-code";
+import type { ComparisonCandidate } from "./types";
+import type { ProductFacts } from "@commerce/shared";
+
+/**
+ * 🔵 **1차 식별 신호** — 「브랜드 + 제조사 품번」이 **둘 다** 일치하는가.
+ *
+ * 🔴 한쪽 칸이 비면 `false` 다. 「없다」를 「일치한다」로도 「다르다」로도 읽지 않는다
+ *    (`compareModelCode` 가 그 상태를 `unavailable` 로 돌려주고, 그것은 exact 가 아니다).
+ * 🔴 판매처 자신의 재고번호(`sellerSku`)는 **보지 않는다** — `ProductFacts` 주석이
+ *    「그 둘을 섞은 것이 『SKU 가 다르니 다른 상품』이라는 틀린 규칙의 출발점」이라고
+ *    적어 뒀고, 실제로 SPRINT 1 라이브에서 looxloo 후보 5건의 품번이 전부
+ *    `76A7D-xxx-xx`(판매처 자체 SKU)였다.
+ */
+export function hasPrimaryIdentitySignal(origin: ProductFacts | undefined, candidate: ProductFacts | undefined): boolean {
+  if (!origin || !candidate) return false;
+  if (!origin.brand || !candidate.brand) return false;
+  if (!brandsCompatible(origin.brand, candidate.brand)) return false;
+  return compareModelCode(origin.brandModelCode, candidate.brandModelCode) === "exact";
+}
+
+/** 🔴 `facts` 가 없는 후보는 세지 않는다(「0 건」이고 「측정 실패」가 아니다 — 그 경로는
+ *  애초에 판정 근거를 들고 오지 않는다). */
+export function countPrimaryIdentitySignals(
+  origin: ProductFacts | undefined,
+  candidates: readonly ComparisonCandidate[],
+): number {
+  let n = 0;
+  for (const c of candidates) {
+    if (hasPrimaryIdentitySignal(origin, c.facts)) n += 1;
+  }
+  return n;
+}
+
+/**
+ * 사다리 한 칸(또는 alias 폴백 한 번)의 실행 기록.
+ *
+ * 🔴 **칸마다 한 줄** 이다 — 합산한 값을 적지 않는다. 기존 비용 계측이 같은 규칙을
+ *    쓴다(`run-domestic-price-check.ts` 「다섯 경로의 HTTP 를 합산하지 않는다 —
+ *    비용 보고가 출처를 잃는다」). 합산은 읽는 쪽이 필요할 때 한다.
+ */
+export interface DomesticStageRecord {
+  shopId: string;
+  domain: string;
+  /**
+   * 사다리 칸 번호(0-based). 🔴 `null` 은 **alias 폴백** 이다 — 사다리 칸이 아니라
+   * 「사다리를 다 쓰고도 0건일 때」 도는 별도 경로다(index.ts 의 기존 주석).
+   */
+  termIndex: number | null;
+  term: string;
+  /** 이 기록이 실제로 보낸 provider 검색 요청 수. */
+  providerCalls: number;
+  /** 이 칸이 **새로** 더한 후보 수(URL 중복 제거 «후»). */
+  newCandidates: number;
+  /** 🔴 관측 전용 — 위 `hasPrimaryIdentitySignal` 을 만족한 **새 후보** 수. */
+  primaryIdentityHits: number;
+  elapsedMs: number;
+  /**
+   * 이 칸 **뒤에 사다리가 멈췄는가.**
+   *
+   * 🔴 멈춤의 «이유» 를 이 파일이 정하지 않는다 — `index.ts` 의 기존 조건이 참이
+   *    됐다는 사실만 적는다. 그래서 이 칸의 이름에 판정 어휘를 쓰지 않는다.
+   */
+  stoppedAfter: boolean;
+}
+
+/** 🔴 관측자는 **선택** 이다. 넘기지 않으면 한 줄도 돌지 않고 기존 동작과 완전히 같다. */
+export type DomesticStageObserver = (record: DomesticStageRecord) => void;
+
+export interface DomesticStageSummary {
+  /** provider 검색 요청 **총합**(= CEO 완료 조건의 「검색 요청 수」). */
+  providerCalls: number;
+  /** 실제로 사용된 사다리 칸 수(샵별 칸을 모두 합친 수 — 샵 수가 아니다). */
+  stagesUsed: number;
+  /** 🔴 관측 전용 1차 식별 신호 합계. **SAME 수가 아니다.** */
+  primaryIdentityHits: number;
+  /** 사다리가 중간에 멈춘 샵 수(= 동일상품이 확정돼 뒤 칸을 **안 보낸** 샵). */
+  shopsStoppedEarly: number;
+  /** 검색에 쓴 벽시계 시간 합(샵이 병렬이라 **벽시계 총시간이 아니다**). */
+  elapsedMsTotal: number;
+}
+
+export interface DomesticStageCollector {
+  observer: DomesticStageObserver;
+  records: DomesticStageRecord[];
+  summary(): DomesticStageSummary;
+}
+
+export function createDomesticStageCollector(): DomesticStageCollector {
+  const records: DomesticStageRecord[] = [];
+  return {
+    observer: (record) => {
+      records.push(record);
+    },
+    records,
+    summary: () => ({
+      providerCalls: records.reduce((n, r) => n + r.providerCalls, 0),
+      stagesUsed: records.filter((r) => r.termIndex !== null).length,
+      primaryIdentityHits: records.reduce((n, r) => n + r.primaryIdentityHits, 0),
+      shopsStoppedEarly: new Set(records.filter((r) => r.stoppedAfter).map((r) => r.shopId)).size,
+      elapsedMsTotal: records.reduce((n, r) => n + r.elapsedMs, 0),
+    }),
+  };
+}

@@ -2,6 +2,8 @@ import type { ShippingPolicyStatus } from "@commerce/pricing";
 import { extractShopifyHandle, fetchShopifyProductJson, stripShopifyLocalePrefix } from "../shopify-product-json";
 import { lookupBrandAlias } from "./brand-alias";
 import { fetchChocoelProductPrice } from "./chocoel";
+/** 🔵 SPRINT 2 — 기록 전용. 🔴 판정 함수를 부르지 않는다(그 파일이 그것을 금지한다). */
+import { countPrimaryIdentitySignals, type DomesticStageObserver } from "./domestic-stage-metrics";
 import { fetchDeuxbebeProductPrice } from "./deuxbebe";
 import { fetchForetforetProductPrice } from "./foretforet";
 import { fetchLooxlooProductPrice } from "./looxloo";
@@ -19,6 +21,17 @@ import type {
 } from "./types";
 
 export * from "./types";
+/**
+ * 🔵🔵 **SPRINT 2 — 단계별 실행 기록 + 1차 식별 신호**(CPO 확정 2026-11-16).
+ * 🔴 `hasPrimaryIdentitySignal` 은 **관측 전용** 이다 — 「SAME」이 아니고,
+ *    `judgeDomesticCandidate` 를 대체하지 않는다(그 파일 머리 주석 · 계약으로 잠겼다).
+ */
+export {
+  countPrimaryIdentitySignals,
+  createDomesticStageCollector,
+  hasPrimaryIdentitySignal,
+} from "./domestic-stage-metrics";
+export type { DomesticStageCollector, DomesticStageObserver, DomesticStageRecord, DomesticStageSummary } from "./domestic-stage-metrics";
 export { scoreCandidate, withConfidence } from "./match";
 /** 🔴 WU-037 — 「같은 브랜드 스토어의 같은 listing(시장만 다름)」 판별기. 하니스가
  *  운영과 **같은 술어** 를 쓰게 하려고 노출한다(복제 금지). */
@@ -314,6 +327,15 @@ export function supportsDomesticShopSearch(domain: string): boolean {
 async function searchOneDomesticShop(
   source: DomesticSourceRef,
   query: ComparisonQuery,
+  /**
+   * 🔵 **SPRINT 2 — 실행 기록 관측자(선택)**.
+   *
+   * 🔴 **선택인 것이 설계다.** 넘기지 않으면 아래 `observer?.(…)` 가 한 줄도 돌지
+   *    않으므로 기존 호출부(패널 자기검색 · 테스트 · 해외 경로)의 동작이 **불변** 이다.
+   * 🔴 이 인자는 **기록만** 받는다 — 사다리를 멈추는 조건도, 후보 선별도, 판정도
+   *    이 인자로 바뀌지 않는다(계약으로 잠갔다).
+   */
+  observer?: DomesticStageObserver,
 ): Promise<ComparisonSearchResult> {
   const base = { shopId: source.id, shopName: source.name, domain: source.domain };
   if (source.collectionStrategy !== "AUTO_API" && source.collectionStrategy !== "AUTO_SCRAPE") {
@@ -375,25 +397,61 @@ async function searchOneDomesticShop(
     const canJudgeSame = query.facts != null;
     const seenUrls = new Set<string>();
     const collected: ComparisonCandidate[] = [];
-    for (const term of terms) {
+    /**
+     * 🔵 **SPRINT 2 — 칸마다 한 줄씩 적는다**(CEO 완료 조건: 「실행 기록으로 증명」).
+     *
+     * 🔴 `termIndex` 를 세는 것이 이 루프의 **유일한 추가 상태** 다 — 사다리의 순서도,
+     *    멈추는 조건도, 후보 집합도 바뀌지 않았다.
+     * 🔴 `searchWith` 가 **던지면 이 칸은 기록되지 않는다**(아래 `catch` 로 간다) —
+     *    그때 결과는 `status: "error"` 이므로 「요청 0」으로 읽히지 않는다. 측정 한계다.
+     */
+    for (const [termIndex, term] of terms.entries()) {
+      const startedAt = Date.now();
       const got = await searchWith(term);
+      const emit = (newCandidates: number, primaryIdentityHits: number, stoppedAfter: boolean) =>
+        observer?.({
+          shopId: source.id,
+          domain: source.domain,
+          termIndex,
+          term,
+          providerCalls: 1,
+          newCandidates,
+          primaryIdentityHits,
+          elapsedMs: Date.now() - startedAt,
+          stoppedAfter,
+        });
       if (!canJudgeSame) {
         // 하위호환 — 판정할 근거가 없으면 예전 규칙 그대로 첫 결과에서 멈춘다.
+        /**
+         * 🔴 이 분기의 `primaryIdentityHits` 는 **0 이고 그것이 정확하다** — 원상품
+         *    `facts` 가 없어 「브랜드+품번 일치」를 **셀 수 없다**. 「신호가 없었다」가
+         *    아니라 **「측정할 근거가 없었다」** 다(§5-B 「측정불가 ≠ 0」).
+         */
         if (got.length > 0) {
           collected.push(...got);
+          emit(got.length, 0, true);
           break;
         }
+        emit(0, 0, false);
         continue;
       }
       // 🔴 여러 칸이 같은 상품을 다시 집는다 — URL 로 합친다(판매처는 이미 하나다).
+      /** 🔵 이 칸이 **새로** 더한 후보만 따로 쥔다 — 중복을 두 번 세면 칸별 기여가 거짓이 된다. */
+      const added: ComparisonCandidate[] = [];
       for (const candidate of withConfidence(query, got)) {
         if (seenUrls.has(candidate.url)) continue;
         seenUrls.add(candidate.url);
         collected.push(candidate);
+        added.push(candidate);
       }
       const confirmedExternalSame = collected.some(
         (c) => c.crossSellerVerdict === "SAME" && !isSelfReferenceCandidate(query.sourceUrl, c.url),
       );
+      /**
+       * 🔴 1차 식별 신호는 **점수를 매긴 뒤** 센다 — 어댑터가 돌려준 날것 후보에는
+       *    `facts` 가 없다(`withConfidence` 가 붙인다). 날것으로 세면 **전건 0** 이 된다.
+       */
+      emit(added.length, countPrimaryIdentitySignals(query.facts, added), confirmedExternalSame);
       if (confirmedExternalSame) break;
     }
     // 🔴 이미 점수를 매긴 후보를 다시 매기지 않는다. 하위호환 경로는 아직 점수가
@@ -425,12 +483,47 @@ async function searchOneDomesticShop(
     if (!alias) return { ...base, status: "ok", candidates: [] };
     const { color } = splitModelColor(query.title);
     const aliasQuery = color ? `${alias} ${color}` : alias;
+    const aliasStartedAt = Date.now();
+    let aliasProviderCalls = 1;
     const fallback = await searchWith(aliasQuery);
     // 색상을 붙인 쿼리가 결과 0건이면(사이트 검색이 AND 매칭이라 너무 좁아졌을 수
     // 있음) alias 단독으로 한 번 더 시도한다 — 이것도 실패하면 빈 결과 유지.
-    const finalFallback = fallback.length > 0 || !color ? fallback : await searchWith(alias);
-    if (finalFallback.length === 0) return { ...base, status: "ok", candidates: [] };
+    /**
+     * 🔵 **SPRINT 2 — 조건을 그대로 두고 호출 수만 센다.**
+     * 🔴 원래 식은 `fallback.length > 0 || !color ? fallback : await searchWith(alias)`
+     *    였다. 두 번째 호출이 도는 조건(`length === 0 && color`)을 **글자 그대로** 옮겼다 —
+     *    이 자리에서 조건을 「정리」하면 alias 폴백 정책이 조용히 바뀐다.
+     */
+    let finalFallback = fallback;
+    if (fallback.length === 0 && color) {
+      aliasProviderCalls += 1;
+      finalFallback = await searchWith(alias);
+    }
+    /**
+     * 🔴 `termIndex: null` 이 **alias 폴백** 이라는 뜻이다 — 사다리 칸이 아니라
+     *    「사다리를 다 쓰고도 0건일 때」만 도는 별도 경로다. 사다리 칸으로 세면
+     *    「2차 상품명 질의」 수가 부풀어 CEO 단계 전략의 숫자가 거짓이 된다.
+     * 🟢 0건으로 끝나는 경로에서도 **적는다** — 「요청을 보냈고 0건이었다」와
+     *    「요청을 보내지 않았다」는 다른 사실이다.
+     */
+    const emitAlias = (scored: readonly ComparisonCandidate[]) =>
+      observer?.({
+        shopId: source.id,
+        domain: source.domain,
+        termIndex: null,
+        term: aliasQuery,
+        providerCalls: aliasProviderCalls,
+        newCandidates: scored.length,
+        primaryIdentityHits: countPrimaryIdentitySignals(query.facts, scored),
+        elapsedMs: Date.now() - aliasStartedAt,
+        stoppedAfter: false,
+      });
+    if (finalFallback.length === 0) {
+      emitAlias([]);
+      return { ...base, status: "ok", candidates: [] };
+    }
     const fallbackScored = withConfidence(query, finalFallback);
+    emitAlias(fallbackScored);
     const enrichedFallback = await enrich(fallbackScored);
     return {
       ...base,
@@ -454,8 +547,21 @@ async function searchOneDomesticShop(
 export async function searchDomesticShops(
   query: ComparisonQuery,
   sources: DomesticSourceRef[],
+  /** 🔵 SPRINT 2 — 선택 인자. 안 넘기면 기존 동작 그대로다(기존 호출부 변경 0). */
+  observer?: DomesticStageObserver,
 ): Promise<ComparisonSearchResult[]> {
-  const settled = await Promise.allSettled(sources.map((source) => searchOneDomesticShop(source, query)));
+  /**
+   * 🔴🔴 **여기가 CEO 조기 종료의 구조적 한계다 — 보고에 그대로 싣는다.**
+   *
+   * 샵은 `Promise.allSettled` 로 **동시에** 출발한다. 그래서 샵 A 에서 동일상품이
+   * 확정돼도 **샵 B~F 의 첫 요청은 이미 나갔다** — 「확보 시점에 나머지 provider
+   * 호출까지 멈춘다」가 **샵 «안» 에서는 성립하고 샵 «사이» 에서는 성립하지 않는다**.
+   *
+   * 🔴 그것을 고치려면 샵을 순차로 돌리며 판정과 교대해야 하고, 그 구조 변경은
+   *    **CPO 가 SPRINT 2 범위에서 불허(⒜)** 했다 ⟹ 임의로 바꾸지 않고 제약으로 적는다.
+   * 🟢 대신 이 관측자가 **그 한계를 숫자로 드러낸다**(샵별 칸 수 · 멈춘 샵 수).
+   */
+  const settled = await Promise.allSettled(sources.map((source) => searchOneDomesticShop(source, query, observer)));
   return settled.map((result, i) =>
     result.status === "fulfilled"
       ? result.value
