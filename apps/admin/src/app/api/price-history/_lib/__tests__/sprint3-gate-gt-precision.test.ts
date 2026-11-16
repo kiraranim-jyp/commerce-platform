@@ -262,6 +262,103 @@ describe("E. 편향·측정불가 명시", () => {
   });
 });
 
+/* ═══ G. 🔵🔵 운영 blocker × GT 교차표 (CPO 보완 지시 A · 2026-11-16) ═══ */
+
+describe("G. 운영 blocker × GT — 🔴 shadow axisStatus 와 섞지 않는다", () => {
+  /** 🔴 **운영 「최초 blocker」** 열을 읽는다. shadow 축(`axisStatus`)이 아니다. */
+  const pairRows = readFileSync(join(DOCS, "MI-DESC-COMPARE-PAIRS.md"), "utf8")
+    .split("\n")
+    .filter((l) => /^\|\s*\d+\s*\|/.test(l))
+    .map((l) => {
+      const c = l.split("|").map((s) => s.trim());
+      return { n: Number(c[1]), code: c[2], domain: c[4], blocker: c[7], gt: c[20] };
+    });
+  const withGt = pairRows.filter((r) => r.gt && r.gt !== "—");
+  const has = (blocker: string, s: string) => new RegExp(`(^| )${blocker}( |$)`).test(s);
+
+  it("G-1 분모는 **GT 보유 36** 이다(라벨 없는 73 은 넣지 않는다)", () => {
+    expect(pairRows.length).toBe(109);
+    expect(withGt.length).toBe(36);
+  });
+
+  it("G-2 🟢 `COLOR_VARIANT` 는 **GT=SAME 를 막은 사례가 0** 이다", () => {
+    const hit = withGt.filter((r) => has("COLOR_VARIANT", r.blocker));
+    expect(hit.length).toBe(2);
+    /** 🔴 중복 집계(2)와 **고유 원상품**(1)을 가른다. */
+    expect(new Set(hit.map((r) => r.code)).size).toBe(1);
+    expect(hit.filter((r) => r.gt === "SAME").map((r) => r.n)).toEqual([]);
+    expect(hit.filter((r) => r.gt === "DIFFERENT").length).toBe(2);
+  });
+
+  it("G-3 🔴 `FIT` 은 **GT=SAME 를 막은 사례가 1건** 있다 — 단독 원인은 아니다", () => {
+    const hit = withGt.filter((r) => has("FIT", r.blocker));
+    expect(hit.length).toBe(1);
+    expect(hit[0].gt).toBe("SAME");
+    expect(hit[0].code).toBe("B226AC009");
+    /** 🔴 그 행의 blocker 는 **둘** 이다 ⟹ FIT 단독 기여를 분리하지 못했다. */
+    expect(hit[0].blocker).toContain("BRAND_UNCONFIRMED");
+  });
+
+  it("G-4 🔴🔴 **이 교차표는 «하한» 이다** — blocker 칸이 잘려 있다", () => {
+    const truncated = pairRows.filter((r) => /…$/.test(r.blocker));
+    expect(truncated.length).toBe(46);
+    /**
+     * 🔴 잘림이 **최소 3건을 숨긴다**는 것은 확정이다 — 표에서 센 `FIT` 은 109 중 **1**
+     *    인데 REPORT 는 **4** 라고 적는다. 전건 원본은 세션 임시 디렉터리에 있었고
+     *    지금 없다 ⟹ 원문 재수집(HTTP) 없이는 복원할 수 없다.
+     */
+    expect(pairRows.filter((r) => has("FIT", r.blocker)).length).toBe(1);
+    expect(readFileSync(join(DOCS, "MI-DESC-COMPARE-REPORT.md"), "utf8")).toContain("| `FIT` | 4 |");
+  });
+
+  it("G-5 🔴 A군은 **쌍 단위 운영 blocker 칸이 없다** ⟹ 전수 교차표 측정불가", () => {
+    const keys = Object.keys(shadow.pairsA[0]);
+    expect(keys).not.toContain("blocker");
+    expect(keys).not.toContain("blockers");
+    expect(keys).not.toContain("crossSellerBlockers");
+  });
+
+  it("G-6 🔵 두 blocker 의 **위험도가 다르다** — 이것이 이 교차표의 결론이다", () => {
+    const cvRisk = withGt.filter((r) => has("COLOR_VARIANT", r.blocker) && r.gt === "SAME").length;
+    const fitRisk = withGt.filter((r) => has("FIT", r.blocker) && r.gt === "SAME").length;
+    expect(cvRisk).toBe(0);
+    expect(fitRisk).toBeGreaterThan(0);
+    /** 🔴 동결 사유는 둘을 **한 묶음** 으로 적는다 ⟹ 그 둘을 가르는 것이 CPO 판정 재료다. */
+  });
+});
+
+/* ═══ H. 🔴 CPO 판단 요청 8개가 «원문 그대로» 남아 있다 (CPO 보완 지시 B) ═══ */
+
+describe("H. STEP5·STEP6 의 CPO 질문 — 요약하거나 바꾸지 않았다", () => {
+  const step5 = readFileSync(join(DOCS, "MI-REEVAL-STEP5-SHADOW.md"), "utf8");
+  const step6 = readFileSync(join(DOCS, "MI-REEVAL-STEP6-HOLD-AND-COLOR.md"), "utf8");
+  const handoff = readFileSync(join(DOCS, "HANDOFF-P0-MI-ACCURACY-RECOVERY.md"), "utf8");
+
+  it("H-1 두 문서가 각각 「CPO 판단 요청 — 넷」을 들고 있다", () => {
+    expect(step5).toContain("CPO 판단 요청 — **넷**");
+    expect(step6).toContain("CPO 판단 요청 — **넷**");
+  });
+
+  it("H-2 🔴 인수인계가 **원문 문장을 그대로** 옮겼다(요약 금지)", () => {
+    const verbatim = [
+      "어느 분모를 기준으로 볼 것인가",
+      "V1 은 FN 5(TP 12)에 FP 1(S1-6 · 반팔↔긴팔), V2 는 FN 8(TP 9)에 FP 0",
+      "folkberlin` COLOR **추출 결함**(브랜드명 오염)을 고칠 것인가",
+      "무조건 승격 ⟹ **전부 위험**(과거 저하 조건이 재현됐다 · FP 1→8)",
+      "상태 승격 3건(C11 · C48 · C37)을 허용할 것인가",
+      "단어 경계 결함을 고칠 것인가",
+      "`B-shadow-v2` 를 이후 기준으로 쓸 것인가",
+    ];
+    for (const s of verbatim) expect(handoff, s).toContain(s);
+  });
+
+  it("H-3 🟢 CPO 가 이미 답한 둘은 **질문에서 내렸다**(분모 · V1↔V2)", () => {
+    expect(handoff).toContain("A군 33 기본");
+    expect(handoff).toContain("V2 안전 기준");
+    expect(handoff).toContain("남은 질문은 다섯");
+  });
+});
+
 /* ═══ F. 🔴 동결은 «그대로» 다 — 이 WU 가 운영에 연결하지 않았다 ═══ */
 
 describe("F. 운영 판정 경로 연결 0 (CPO 제한)", () => {
