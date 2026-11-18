@@ -52,6 +52,11 @@ import {
   type UnifiedPriceDecision,
   type PriceObservationRecord,
 } from "@commerce/pricing";
+/**
+ * 🔵 MI-CASE-ACCURACY-06 — 추천 입력 구성의 **순수 진입점**(운영·테스트 공용).
+ * 🔴 계산식은 그 파일에 **없다** — 거기서 기존 `computePriceRecommendation` 을 그대로 부른다.
+ */
+import { buildRecommendationFromInput } from "./recommendation-input";
 import { fetchLiveExchangeRates } from "@/lib/exchange-rates";
 import { getSearchInterestRatio } from "./market-signals-cache";
 import { getDefaultSellerProfile } from "@/app/api/coupang/_lib/seller-profile";
@@ -953,21 +958,31 @@ export async function computeMarketIntelligence(
      * 🔴 원본 금액·통화는 **보존** 한다(CPO 정책) — 지우는 것은 «추천/수익성» 뿐이다.
      * 🔴 환율이 **확인된** 통화는 경로가 그대로다(대조군 불변).
      */
+    /**
+     * 🔵🔵🔵 MI-CASE-ACCURACY-06 — **인자 묶음을 순수 함수로 옮겼다**(CPO 선택지 A 승인).
+     *
+     * 🔴 **계산식은 한 글자도 바뀌지 않았다** — `buildRecommendationFromInput` 안에서
+     *    부르는 것은 기존 `computePriceRecommendation` 그대로고 넘기는 값도 같다
+     *    (`minimumMarginPercent: 10` 은 `MI_MINIMUM_MARGIN_PERCENT` 로 **드러냈을 뿐**).
+     * 🟢 **왜 옮겼는가** — 이 함수는 머리에서 DB 를 세 번 부르므로 테스트가 이 지점에
+     *    **도달조차 못 했다**(MI-CASE-05 가 확정). 그래서 GT 검증이 fixture 의 **손으로 쓴
+     *    스텁** 을 기준으로 쓰게 됐고, 그 스텁은 운영 로직과 **실제로 달랐다**
+     *    (`brandMedian × 0.95` 미적용 — 84,459 ↔ 80,236).
+     *    ⟹ 🟢 이제 **운영과 테스트가 같은 함수** 를 지난다.
+     * 🔴 `isRateEstimate` 게이트는 **여기 그대로 둔다** — 그것은 「계산하지 말라」는 «정책»
+     *    이고 입력 구성이 아니다. 순수 함수로 끌어가면 두 곳이 같은 판단을 하게 된다.
+     */
     if (!cost.isRateEstimate)
-      recommendation = computePriceRecommendation({
-      totalCostKrw: cost.landedCostKrw,
-      currentSellingPriceKrw: currentSellingPriceKrw ?? undefined,
-      domesticLowestPriceKrw: domesticSummary.lowestPriceKrw,
-      domesticAveragePriceKrw: domesticSummary.averagePriceKrw,
-      domesticBasis: domesticMarketSplit.basis,
-      minimumMarginPercent: 10,
-      targetMarginPercent: breakdownInput.marginPercent,
-      // 🔴 MI-P0-COST-02 — 손익 경계를 Net 으로 옮기는 단 하나의 입력.
-      //    「예상 수수료」이지 특정 채널의 실제 요율이 «아니다».
-      expectedFeePercent: breakdownInput.feePercent,
-      // P-13A — EXACT 시장가가 없을 때(CASE D)만 이 값이 실제로 쓰인다.
-      brandMedianPriceKrw: usableBrandMarketProfile?.medianPriceKrw ?? null,
-    });
+      recommendation = buildRecommendationFromInput({
+        landedCostKrw: cost.landedCostKrw,
+        currentSellingPriceKrw: currentSellingPriceKrw ?? undefined,
+        domesticLowestPriceKrw: domesticSummary.lowestPriceKrw,
+        domesticAveragePriceKrw: domesticSummary.averagePriceKrw,
+        domesticBasis: domesticMarketSplit.basis,
+        targetMarginPercent: breakdownInput.marginPercent,
+        expectedFeePercent: breakdownInput.feePercent,
+        brandMedianPriceKrw: usableBrandMarketProfile?.medianPriceKrw ?? null,
+      });
   }
 
   // P-1-3 STEP 6/7(대표님 지시, 2026-08-28) — "PriceEditor와 Market Intelligence가

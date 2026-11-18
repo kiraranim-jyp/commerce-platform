@@ -37,8 +37,15 @@ const SRC = RAW.split(String.fromCharCode(13))
 
 describe("SPRINT2-① 환율 미확인 원가 차단", () => {
   it("A-1 🔴 가드가 **추천가 호출보다 앞에** 있다", () => {
-    const call = SRC.indexOf("recommendation = computePriceRecommendation({");
+    /**
+     * 🔵 MI-CASE-06 — 호출명이 **`buildRecommendationFromInput`**(순수 진입점)으로 바뀌었다.
+     * 🔴 **환율 가드는 호출부에 그대로 남아 있다** — 그것이 이 계약이 보는 바로 그 성질이다.
+     *    (순수 함수로 끌어가지 «않았다» — 가드는 「계산하지 말라」는 정책이고 입력 구성이 아니다)
+     * 🔴 옛 직접 호출 부활 금지도 같이 잠근다.
+     */
+    const call = SRC.indexOf("recommendation = buildRecommendationFromInput({");
     expect(call, "🔴 추천가 호출 지점이 사라졌다").toBeGreaterThan(0);
+    expect(SRC).not.toContain("recommendation = computePriceRecommendation({");
     const guard = SRC.lastIndexOf("cost.isRateEstimate", call);
     expect(guard, "🔴 환율 미확인 가드가 없다 — CAD ₩84 가 CASE A 를 만든다").toBeGreaterThan(0);
     expect(guard).toBeLessThan(call);

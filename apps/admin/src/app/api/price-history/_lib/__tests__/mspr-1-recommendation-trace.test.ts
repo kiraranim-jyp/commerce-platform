@@ -388,8 +388,14 @@ describe("MSPR-1 A — 🔴 추천가격은 «국내 EXACT 근거» 위에서만
     const RAW = readFileSync(path.join(__dirname, "..", "market-intelligence.ts"), "utf8");
     const SRC = stripComments(RAW.split("\r\n").join("\n"));
     /** 🔴 `canComputeCost && shippingKrw != null` 안에서만 recommendation 이 만들어진다. */
-    const at = SRC.indexOf("recommendation = computePriceRecommendation({");
-    expect(at).toBeGreaterThan(0);
+    /**
+     * 🔵 MI-CASE-06 — 호출명이 **`buildRecommendationFromInput`**(순수 진입점)으로 바뀌었다.
+     * 🔴 **가드 의도는 한 글자도 안 바뀐다** — 「원가 가드 «안»에서만 추천이 난다」.
+     * 🔴 아래 `not.toContain` 으로 **옛 직접 호출 부활을 막는다**(부활하면 운영·테스트가 갈린다).
+     */
+    const at = SRC.indexOf("recommendation = buildRecommendationFromInput({");
+    expect(at, "🔴 추천 생성 지점을 못 찾았다 — 계약이 대상을 잃었다").toBeGreaterThan(0);
+    expect(SRC).not.toContain("recommendation = computePriceRecommendation({");
     const guard = SRC.lastIndexOf("if (canComputeCost", 0 + at);
     expect(guard, "🔴 원가 가드 밖에서 추천가를 만들면 환율 없이 숫자가 난다").toBeGreaterThan(0);
     expect(guard).toBeLessThan(at);
