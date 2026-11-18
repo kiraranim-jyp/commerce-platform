@@ -376,7 +376,20 @@ describe("⑥ 🔴 판정·가격 계산에 손대지 않았다 — 소스 계�
      *    🔴 **강화** — 「접혔다」까지 단언한다. 접힘을 떼면 후보가 다시 펼쳐지고
      *       그것이 2026-09-19 사고(「유력 후보 5건」)의 기전이다.
      */
-    expect(panel).toMatch(/<GeminiTransientCandidates evidence=\{webRest\}\s+collapsed\s*\/>/);
+    /**
+     * 🔵🔵 UIRD-3 A — **앵커를 갱신하고 «강화» 했다**(CPO 승인 2026-11-18).
+     *
+     * 🔴 왜 FAIL 했나 — 이 정규식이 그 호출부를 **「evidence + collapsed 뿐」** 으로
+     *    고정했다. UIRD-3 가 `originImageUrl`·`originTitle` 을 더하자 깨졌다.
+     * 🟢 **의도된 변경** 이다 — prop 이 없으면 `showImagePair` 가 false 라 그 구역은
+     *    실제 이미지도 `NO IMAGE` 도 못 그린다(CEO 가 「국내 이미지 안 나옴」이라 한 그 결함).
+     * 🔴🔴 **느슨하게 풀지 않고 둘을 같이 단언한다** —
+     *    ⒜ 그 호출부가 **여전히 접힘(`collapsed`)** 이다(WU-136 §D · 2026-09-19 사고 계약)
+     *    ⒝ 그 호출부가 **원본 이미지 prop 을 넘긴다**(UIRD-3 A)
+     *    ⟹ 둘 중 하나라도 빠지면 FAIL 한다 — **전보다 강해졌다**.
+     */
+    expect(panel).toMatch(/<GeminiTransientCandidates evidence=\{webRest\}[^/]*collapsed/);
+    expect(panel).toMatch(/<GeminiTransientCandidates evidence=\{webRest\}[^/]*originImageUrl=\{originImageUrl\}/);
     expect(panel).toContain("const webRest = (web ?? []).filter(");
     /**
      * 🔴 국내 구역도 **transient 입력에서만** 나온다(새 데이터 출처를 만들지 않았다).

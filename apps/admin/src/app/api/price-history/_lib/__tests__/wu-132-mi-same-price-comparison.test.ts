@@ -882,3 +882,59 @@ describe("F. 🔴 범위 밖을 건드리지 않았다", () => {
     }
   });
 });
+
+/* ═════════ 🔵🔵🔵 UIRD-3 A. 호출부 전수 — **prop 이 빠지면 칸이 사라진다** ═════════ */
+
+describe("UIRD-3 A. 원본 이미지 prop 은 «모든» 후보 구역에 간다", () => {
+  const PANEL = path.join(
+    process.cwd(),
+    "src",
+    "app",
+    "pipeline",
+    "commerce",
+    "DomesticPriceIntelligencePanel.tsx",
+  );
+
+  /**
+   * 🔴🔴🔴 **이 계약이 왜 필요한가 — 내 UIRD-2 계약이 뚫린 자리다.**
+   *
+   * UIRD-2 는 컴포넌트 **안** 을 통일했다(`cardImage` 하나 · `IMAGE_BOX_CLASS` 하나)
+   * 그리고 계약 42건이 **전부 PASS** 였다. 🔴 그런데 **실제 Production 화면은 비대칭**
+   * 이었다 — 호출부 **여덟 중 셋** 만 `originImageUrl` 을 넘겼고,
+   * `showImagePair = originImageUrl != null` 이라 **prop 이 없으면 이미지쌍 칸 자체가
+   * 생기지 않는다** ⟹ 실제 이미지도 **`NO IMAGE` 도 둘 다** 사라졌다.
+   *
+   * 🔴 **교훈 — 「같은 컴포넌트를 쓴다」가 「같게 보인다」를 보장하지 않는다.**
+   *    컴포넌트 안만 보는 계약은 **호출부의 prop 누락을 못 본다.**
+   * 🟢 그래서 **개수가 아니라 «전수 일치»** 를 단언한다(한 곳만 빠져도 FAIL).
+   */
+  it("A-1 🔴🔴 `<GeminiTransientCandidates` 호출부 **전수** 가 `originImageUrl` 을 넘긴다", () => {
+    const src = readFileSync(PANEL, "utf8");
+    /** 🔴 주석을 벗긴다 — 주석 속 예시가 호출부로 세어지면 계약이 거짓이 된다. */
+    const bare = src.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/[^\n]*/g, " ");
+    const sites = bare.split("<GeminiTransientCandidates").slice(1);
+    expect(sites.length, "🔴 호출부를 하나도 못 찾았다 — 계약이 대상을 잃었다").toBeGreaterThanOrEqual(8);
+    const missing: string[] = [];
+    sites.forEach((tail, i) => {
+      /** 🔴 그 호출의 **닫는 괄호까지** 만 본다 — 다음 호출부로 넘어가면 거짓 통과한다. */
+      const end = tail.indexOf("/>");
+      const attrs = end >= 0 ? tail.slice(0, end) : tail.slice(0, 400);
+      if (!attrs.includes("originImageUrl")) {
+        missing.push(`#${i + 1} ${(attrs.match(/evidence=\{[^}]*\}/) ?? ["?"])[0]}`);
+      }
+    });
+    expect(missing, `🔴 prop 이 빠진 구역 — 그 구역은 NO IMAGE 도 못 그린다: ${missing.join(" · ")}`).toEqual([]);
+  });
+
+  it("A-2 🔴 `showImagePair` 가 그 prop 에 달려 있다는 사실을 고정한다", () => {
+    const src = readFileSync(
+      path.join(process.cwd(), "src", "app", "pipeline", "commerce", "GeminiTransientCandidates.tsx"),
+      "utf8",
+    );
+    /**
+     * 🔴 이 줄이 **A-1 을 필요하게 만드는 이유** 다. 술어가 바뀌면(예: 후보 이미지만 봐도
+     *    서게 되면) A-1 의 전수 요구는 과할 수 있다 ⟹ 그때 **둘을 같이** 다시 본다.
+     */
+    expect(src).toContain("const showImagePair = originImageUrl != null;");
+  });
+});

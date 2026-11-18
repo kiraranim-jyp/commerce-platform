@@ -3712,22 +3712,46 @@ export function TransientCandidateSections({
        * 🟢 같은 컴포넌트 · 같은 표시 규칙 · 기본 접힘 — **새 개념을 만들지 않았다.**
        * 🔴 `onReview` 를 주지 않는다 — 사람 검토 블록은 🇰🇷 구역의 계약이다(WU-081).
        */}
+      {/**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔵🔵🔵 UIRD-3 A — **원본 이미지 prop 을 «모든» 구역에 넘긴다**(CPO 승인 2026-11-18)
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * 🔴🔴 **고친 결함** — 호출부 **여덟 곳 중 셋** 만 `originImageUrl` 을 넘겼다.
+       *    그런데 `showImagePair = originImageUrl != null`(GeminiTransientCandidates:557)
+       *    이라 **prop 이 없으면 이미지쌍 칸 자체가 생기지 않는다** ⟹ 실제 이미지도,
+       *    **`NO IMAGE` 대체 표시도 «둘 다» 사라졌다.**
+       *    🔴 그래서 CEO 화면에서 **해외(:3677)는 이미지가 보이고 국내 목록 탐색(여기)은
+       *       텍스트만** 보였다. CPO 가 「NO IMAGE 도 안 보인다」고 한 것이 이 기전이다.
+       *
+       * 🔴🔴 **교훈 — 「같은 컴포넌트를 쓴다」가 「같게 보인다」를 보장하지 않는다.**
+       *    UIRD-2 는 컴포넌트 **안** 을 통일했고 계약 42건이 PASS 였는데, **호출부가 prop 을
+       *    다르게 주어** 화면은 비대칭이었다. 🟢 그래서 이번에 **호출부 전수 계약** 을 같이 둔다.
+       *
+       * 🟢 바뀌는 것은 **prop 전달뿐** 이다 — 이미지 URL 생성 **0** · 정규화 **0** ·
+       *    판정 **0** · 가격 **0** · CSS **0** · 기존 `cardImage()` 를 그대로 쓴다.
+       */}
       <GeminiTransientCandidates
         evidence={webSearchRest}
         heading={AI_SEARCH_HEADING}
         testId="ai-search-transient"
         collapsed
+        originImageUrl={originImageUrl}
+        originTitle={originTitle}
       />
-      {/** 🔴 E2E-04 — 국내 목록 탐색 후보(CORE-2R-4). 같은 이유로 빠져 있었다. */}
+      {/** 🔴 E2E-04 — 국내 목록 탐색 후보(CORE-2R-4). 같은 이유로 빠져 있었다.
+       *  🔴🔴 UIRD-3 — **CEO 가 「국내 이미지 안 나옴」이라 한 구역이 바로 이것이다.** */}
       <GeminiTransientCandidates
         evidence={domesticListingRest}
         heading={DOMESTIC_LISTING_HEADING}
         testId="domestic-listing-transient"
         collapsed
+        originImageUrl={originImageUrl}
+        originTitle={originTitle}
       />
       {/* 🔴 WU-022 — 「지금 확인」이 돌려준 **이번 확인 한정** 후보. DB 링크와
           데이터 수명이 다르므로 구역을 가른다. 판매판정·국내 최저가에 영향 0. */}
-      <GeminiTransientCandidates evidence={webRest} collapsed />
+      <GeminiTransientCandidates evidence={webRest} collapsed originImageUrl={originImageUrl} originTitle={originTitle} />
       {/* 🔴 WU-024 — 같은 컴포넌트 · 다른 구역 · 다른 머리 문구. 표시 규칙(통화
           그대로 · UNKNOWN 시장 뱃지 없음 · 승격 버튼 없음)은 한 글자도 다르지 않다. */}
       <GeminiTransientCandidates
@@ -3736,6 +3760,8 @@ export function TransientCandidateSections({
         testId="url-candidate-transient"
         /** 🔴 WU-136 §D — 기본 접힘(삭제 0). */
         collapsed
+        originImageUrl={originImageUrl}
+        originTitle={originTitle}
       />
       {notice && (
         <p data-testid="url-candidate-notice" className="mt-1 text-[11px] text-text-tertiary">
@@ -3759,6 +3785,9 @@ export function TransientCandidateSections({
         heading={WEAK_CANDIDATE_HEADING}
         testId="weak-candidate-transient"
         collapsed
+        /** 🔵 UIRD-3 A — 이 구역도 같은 이미지 규칙을 쓴다(호출부 전수 계약). */
+        originImageUrl={originImageUrl}
+        originTitle={originTitle}
         /**
          * 🔵🔵 CANDIDATE-UX-REFINE-03 — 🔴 **이 구역만 진단 모드다**(CPO §5).
          *    「🧪 증거 부족으로 «판정하지 못한» 후보」는 이름 그대로 **왜 판정하지
