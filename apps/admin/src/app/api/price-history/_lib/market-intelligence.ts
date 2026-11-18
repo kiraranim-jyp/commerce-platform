@@ -972,7 +972,38 @@ export async function computeMarketIntelligence(
      * 🔴 `isRateEstimate` 게이트는 **여기 그대로 둔다** — 그것은 「계산하지 말라」는 «정책»
      *    이고 입력 구성이 아니다. 순수 함수로 끌어가면 두 곳이 같은 판단을 하게 된다.
      */
-    if (!cost.isRateEstimate)
+    /**
+     * 🔵🔵🔵 MI-CASE-INPUT — **운영이 실제로 넣는 원가 입력을 «한 줄» 로 관측한다**(CTO 선택).
+     *
+     * 🔴🔴 남은 공백이 이것이었다 — 계산 «경로» 는 순수 함수로 열렸지만 **운영이 넣는
+     *    `landedCostKrw` 실제 값** 은 아무 데서도 볼 수 없었다(응답에 안 실리고, 테스트는
+     *    DB 때문에 이 지점에 도달 못 한다). 그래서 GT 검증이 fixture 의 **손으로 쓴 스텁** 을
+     *    기준으로 쓰는 일이 생겼다(그 스텁은 ×0.95 를 빠뜨려 4,223원 틀렸다).
+     *
+     * 🟢 **왜 로그를 골랐나** — 셋 중 가장 안전하고 작다:
+     * ```
+     * 합성 스냅샷 mock  🔴 «내가 넣은 값을 내가 확인» 하는 구조(이 트랙이 네 번 밟은 함정)
+     * 응답에 입력 에코  🔴 **응답 스키마 변경** — 소비처 전수 영향
+     * 🟢 로그 한 줄     응답 불변 · 운영 «실제» 값 · Vercel 런타임 로그로 읽힌다
+     *                   (메모 `vercel-runtime-logs-are-reachable`)
+     * ```
+     * 🔴🔴 **고객 식별정보를 담지 않는다** — 담는 것은 **금액·비율·basis** 뿐이다.
+     *    `snapshotId` · `workspaceId` · URL · 상품명 · 브랜드 **전부 넣지 않는다.**
+     * 🔴 계산·판정·응답에 **영향 0** — 반환값을 건드리지 않는다.
+     */
+    if (!cost.isRateEstimate) {
+      console.info(
+        `[MI-CASE-INPUT] ${JSON.stringify({
+          landedCostKrw: cost.landedCostKrw,
+          domesticBasis: domesticMarketSplit.basis,
+          domesticLowestPriceKrw: domesticSummary.lowestPriceKrw,
+          domesticAveragePriceKrw: domesticSummary.averagePriceKrw,
+          brandMedianPriceKrw: usableBrandMarketProfile?.medianPriceKrw ?? null,
+          targetMarginPercent: breakdownInput.marginPercent,
+          expectedFeePercent: breakdownInput.feePercent,
+          currentSellingPriceKrw: currentSellingPriceKrw ?? null,
+        })}`,
+      );
       recommendation = buildRecommendationFromInput({
         landedCostKrw: cost.landedCostKrw,
         currentSellingPriceKrw: currentSellingPriceKrw ?? undefined,
@@ -983,6 +1014,7 @@ export async function computeMarketIntelligence(
         expectedFeePercent: breakdownInput.feePercent,
         brandMedianPriceKrw: usableBrandMarketProfile?.medianPriceKrw ?? null,
       });
+    }
   }
 
   // P-1-3 STEP 6/7(대표님 지시, 2026-08-28) — "PriceEditor와 Market Intelligence가
