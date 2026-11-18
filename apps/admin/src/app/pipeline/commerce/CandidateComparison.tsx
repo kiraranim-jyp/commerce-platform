@@ -71,7 +71,7 @@ function ProductImage({ url, alt }: { url: string | null; alt: string }) {
   if (!url) {
     return (
       <div className="flex h-32 w-full items-center justify-center rounded border border-border bg-background text-[11px] text-text-tertiary">
-        이미지 없음
+        NO IMAGE
       </div>
     );
   }
@@ -92,7 +92,7 @@ function ProductImage({ url, alt }: { url: string | null; alt: string }) {
         img.style.display = "none";
         img.insertAdjacentHTML(
           "afterend",
-          '<div class="flex h-32 w-full items-center justify-center rounded border border-border bg-background text-[11px] text-text-tertiary">이미지 확인 불가</div>',
+          '<div class="flex h-32 w-full items-center justify-center rounded border border-border bg-background text-[11px] text-text-tertiary">NO IMAGE</div>',
         );
       }}
     />
