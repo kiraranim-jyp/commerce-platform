@@ -396,7 +396,70 @@ export interface GeminiTransientCandidatesProps {
 }
 
 /** 🔴 이미지가 없을 때 적는 말. 🔴 빈 칸으로 두지 않는다(「없다」와 「못 그렸다」를 가른다). */
-export const IMAGE_MISSING_TEXT = "이미지 없음";
+/**
+ * 🔵🔵🔵 UIRD-2 — **「NO IMAGE」**(CPO 판정 ② 2026-11-18).
+ *
+ * 🔴 **대체 사진 금지 원칙은 그대로다** — 바뀌는 것은 **글자** 뿐이고, 다른 상품 사진으로
+ *    메우지 않는다(:366 의 그 계약 · 「그러면 판단 자체가 거짓이 된다」).
+ * 🔴 이 상수의 **소유자는 이 파일 하나** 다 — 화면이 사본을 만들지 않는다.
+ */
+export const IMAGE_MISSING_TEXT = "NO IMAGE";
+/**
+ * 🔵🔵 UIRD-2 — **원본·후보 이미지 칸의 «같은» 크기 규칙.**
+ *
+ * 🔴🔴 상수를 **하나** 로 둔 이유 — 전에는 두 칸의 클래스가 **따로** 적혀 있었고
+ *    원본 쪽에는 대체 칸이 **아예 없었다**(= 비대칭의 실체). 사본을 두면 한쪽만
+ *    고쳐져 다시 벌어진다. 🟢 계약이 **이 상수를 두 칸에서 쓰는지** 를 본다.
+ * 🔴 `object-contain` 을 여기 넣지 않는다 — 그것은 `<img>` 만의 속성이고 대체 칸엔 없다.
+ */
+export const IMAGE_BOX_CLASS = "h-24 w-full rounded border border-border/60";
+const IMAGE_MISSING_CLASS = `${IMAGE_BOX_CLASS} flex items-center justify-center border-dashed text-[10px] text-text-tertiary`;
+
+/**
+ * 🔵🔵🔵 UIRD-2 — **이미지 칸 하나.** 원본·후보가 **이 함수 하나** 를 쓴다.
+ *
+ * ── 🔴🔴 왜 훅(useState)을 쓰지 않는가 ──────────────────────────────────────
+ * ```
+ * 이 파일은 **서버 모듈도 import** 한다(`run-domestic-price-check.ts` 가 타입·상수를
+ * 가져간다 · 실측). ⟹ `"use client"` 를 붙이면 서버 그래프가 클라이언트 모듈을
+ * **값으로** 끌어온다. 🔴 그 위험을 작은 UI 개선과 바꾸지 않는다.
+ * 🟢 그래서 `onError` 에서 **형제 노드를 드러내는** 최소 명령형 방식을 쓴다.
+ * ```
+ * 🔴 URL 이 **없으면 `<img>` 를 아예 만들지 않는다** — 깨진 이미지를 그리지 않는다
+ *    (전에는 원본 쪽이 `src={undefined}` 로 깨진 `<img>` 를 그렸다 = 이번에 고친 결함).
+ * 🔴 **대체 사진을 쓰지 않는다** — 자리만 지키고 「NO IMAGE」라고 적는다.
+ * 🟢 두 칸이 **같은 `IMAGE_BOX_CLASS`** 를 쓰므로 크기·비율이 구조적으로 같다.
+ */
+function cardImage(testId: string, src: string | null | undefined, alt: string): JSX.Element {
+  const missing = (hidden: boolean) => (
+    <p data-testid={`${testId}-missing`} hidden={hidden} className={IMAGE_MISSING_CLASS}>
+      {IMAGE_MISSING_TEXT}
+    </p>
+  );
+  if (src == null || src === "") return missing(false);
+  return (
+    <>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        data-testid={testId}
+        src={src}
+        alt={alt}
+        /**
+         * 🔴 로딩 **실패** 도 「없음」과 같게 다룬다(CPO 판정 ②) — 그 둘을 가르면
+         *    셀러는 깨진 칸을 보고 「우리 화면이 고장났다」로 읽는다.
+         */
+        onError={(e) => {
+          const el = e.currentTarget;
+          el.hidden = true;
+          const sib = el.nextElementSibling as HTMLElement | null;
+          if (sib) sib.hidden = false;
+        }}
+        className={`${IMAGE_BOX_CLASS} object-contain`}
+      />
+      {missing(true)}
+    </>
+  );
+}
 export const ORIGIN_IMAGE_LABEL = "원본 상품";
 export const CANDIDATE_IMAGE_LABEL = "이 후보";
 
@@ -631,34 +694,14 @@ export function GeminiTransientCandidates({
                */}
               {showImagePair && (
                 <div data-testid="gt-image-pair" className="mt-1 grid grid-cols-2 gap-2">
+                  {/* 🔵 UIRD-2 — 두 칸이 **같은 `cardImage`** 를 쓴다(크기·실패 처리 동일). */}
                   <figure className="m-0">
                     <figcaption className="text-[10px] text-text-tertiary">{ORIGIN_IMAGE_LABEL}</figcaption>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      data-testid="gt-origin-image"
-                      src={originImageUrl ?? undefined}
-                      alt={originTitle ?? ORIGIN_IMAGE_LABEL}
-                      className="h-24 w-full rounded border border-border/60 object-contain"
-                    />
+                    {cardImage("gt-origin-image", originImageUrl, originTitle ?? ORIGIN_IMAGE_LABEL)}
                   </figure>
                   <figure className="m-0">
                     <figcaption className="text-[10px] text-text-tertiary">{CANDIDATE_IMAGE_LABEL}</figcaption>
-                    {row.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        data-testid="gt-candidate-image"
-                        src={row.imageUrl}
-                        alt={row.title ?? CANDIDATE_IMAGE_LABEL}
-                        className="h-24 w-full rounded border border-border/60 object-contain"
-                      />
-                    ) : (
-                      <p
-                        data-testid="gt-candidate-image-missing"
-                        className="flex h-24 w-full items-center justify-center rounded border border-dashed border-border/60 text-[10px] text-text-tertiary"
-                      >
-                        {IMAGE_MISSING_TEXT}
-                      </p>
-                    )}
+                    {cardImage("gt-candidate-image", row.imageUrl, row.title ?? CANDIDATE_IMAGE_LABEL)}
                   </figure>
                 </div>
               )}

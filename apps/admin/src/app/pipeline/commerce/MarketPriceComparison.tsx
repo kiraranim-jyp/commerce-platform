@@ -561,6 +561,39 @@ export function MarketPriceComparison({
   const references: MarketReferencePrices = { domestic: domesticReference, overseas: overseasReference };
   const decision = marketDecisionLines(judgement, references);
   /**
+   * 🔵 UIRD-1 — **통합 「판단 근거」 접힘의 게이트 하나.**
+   *
+   * 🔴 넷 중 **하나라도** 있으면 선다 — 전에는 네 블록이 각자 자기 조건으로 서고 있었다.
+   * 🔴 **빈 근거를 짓지 않는다** — 넷 다 없으면 영역을 **만들지 않는다**(기존 계약 유지:
+   *    「서버가 주지 않으면 영역을 만들지 않는다」).
+   * 🟢 새 계산 **0** — 이미 내려온 값의 유무만 본다(판정·집계·fetch 0).
+   */
+  const hasJudgmentBasis = Boolean(
+    (confidenceBasis && confidenceBasis.items.length > 0) ||
+      (sellerActionReasons && sellerActionReasons.length > 0) ||
+      (sellingGuidance && sellingGuidance.length > 0),
+  );
+  /**
+   * 🔴🔴 UIRD-1 — **`brandMarketProfile` 은 게이트에 넣지 않는다.**
+   *
+   * 🔴 처음엔 넣었다가 기존 계약이 잡았다 — 그 줄만 있는 상태에서 **「판단 근거」 접힘이
+   *    생겼고**, 「서버가 주지 않으면 영역을 만들지 않는다」가 FAIL 했다. 🟢 가드가 맞았다:
+   *    설명이 하나도 없는데 **설명 접힘을 세우면** 셀러는 펼쳐 보고 빈손으로 돌아온다.
+   * 🟢 그래서 **설명성 셋만** 게이트이고, 이 줄은 **접힘이 있으면 그 안에 · 없으면 제자리에**
+   *    선다 ⟹ 🔴 **정보를 삭제하지 않는다**(CPO 조건) · 🔴 두 자리에 **동시에** 뜨지 않는다.
+   * 🟢 JSX 를 **변수 하나** 로 두어 사본을 만들지 않는다.
+   */
+  const brandProfileLine = brandMarketProfile ? (
+    <p
+      data-testid="brand-market-profile"
+      className={hasJudgmentBasis ? "mt-1 pl-2 text-[11px] text-text-tertiary" : "mb-2 text-[11px] text-text-tertiary"}
+    >
+      브랜드 시장 참고 · 표본 {brandMarketProfile.sampleCount}건 · 중앙값{" "}
+      {formatKrw(brandMarketProfile.medianPriceKrw)} ({formatKrw(brandMarketProfile.minPriceKrw)}~
+      {formatKrw(brandMarketProfile.maxPriceKrw)})
+    </p>
+  ) : null;
+  /**
    * 🔴🔴 CORE-2S §5-③ — **「그 가격이 왜 그 가격인가」.** 🔴 금액 0 · 내부 토큰 0 ·
    *    전부 **조건부** 다(상태와 무관한 안내문은 WU-146 이 지운 모양이다).
    */
@@ -666,72 +699,88 @@ export function MarketPriceComparison({
           </p>
         </div>
       ) : null}
-      {/* ══ 🔵 S5-WIRE-3 — **브랜드 시장 참고**(국내 동일상품이 없을 때) ═══════════
-          🔴 서버가 표본 1~2개면 **이미 null 로 걸러** 보낸다(P-13A) — 다시 거르지 않는다.
-          🔴 새 브랜드 판정·새 시장 점수 **만들지 않는다**. 🔴 「동일상품 가격」이라고
-             부르지 않는다 — 그건 다른 축이고 이것은 **참고**다. */}
-      {brandMarketProfile ? (
-        <p data-testid="brand-market-profile" className="mb-2 text-[11px] text-text-tertiary">
-          브랜드 시장 참고 · 표본 {brandMarketProfile.sampleCount}건 · 중앙값{" "}
-          {formatKrw(brandMarketProfile.medianPriceKrw)} ({formatKrw(brandMarketProfile.minPriceKrw)}~
-          {formatKrw(brandMarketProfile.maxPriceKrw)})
-        </p>
-      ) : null}
-      {/* ══ 🔵 S5-WIRE-3 — **「왜 이 추천인가」**(`sellerAction.reasons`) ═══════════
-          🔴 결론(`sellerDecision.finalVerdict`)은 **이미 화면에 있다** ⟹ 여기서
-             다시 적지 않는다(CPO 중복 금지). 이 접힘은 **이유만** 담는다. */}
-      {sellerActionReasons && sellerActionReasons.length > 0 ? (
-        <details data-testid="seller-action-reasons" className="mb-2">
-          <summary className="cursor-pointer text-[11px] text-text-tertiary">▸ 이 추천이 나온 이유</summary>
-          <ul data-testid="seller-action-reason-items" className="mt-1 space-y-0.5 pl-2">
-            {sellerActionReasons.map((line) => (
-              <li key={line} data-testid="seller-action-reason-item" className="text-[11px] text-text-tertiary">
-                {line}
-              </li>
-            ))}
-          </ul>
-        </details>
-      ) : null}
-      {sellingGuidance && sellingGuidance.length > 0 ? (
-        <details data-testid="selling-guidance" className="mb-2">
-          <summary className="cursor-pointer text-[11px] text-text-tertiary">▸ 판단 설명</summary>
-          <ul data-testid="selling-guidance-items" className="mt-1 space-y-0.5 pl-2">
-            {sellingGuidance.map((line) => (
-              <li key={line} data-testid="selling-guidance-item" className="text-[11px] text-text-tertiary">
-                {line}
-              </li>
-            ))}
-          </ul>
-        </details>
-      ) : null}
-      {/* ══ 🔵🔵 S5-WIRE — **「왜 그 판단인지」를 셀러가 펼쳐 볼 수 있게 한다** ══════
-          🔴 실측 근거: 국내 71 스냅샷에서 **83%가 CASE C(적자 47)·D(보류 12)** 다.
-             결론만 보이고 이유가 없으면 셀러는 「왜 안 된다는 건지」를 알 수 없다.
-          🟢 서버(`buildConfidenceBasis`)가 이미 낸 값을 **읽기만** 한다 —
-             새 계산 0 · 새 판정 0 · 새 fetch 0 · 서버 응답 변경 0.
-          🔴 `open` 을 붙이지 않는다 — 1차 화면은 «판단» 이고 근거는 접힘이다
-             (WU-136 §D · 2026-09-19 사고 기전과 같은 계약).
-          🔴🔴 **`checkRan` 게이트 «앞» 에 둔다** — 후보가 0건일 때야말로 「왜 0인지」가
-             필요하고 그 상태가 바로 CASE D 다. 뒤에 두면 **데이터가 없을 때 근거도
-             사라져** 셀러가 가장 답답한 순간에 아무 설명이 없다(실측으로 확인했다). */}
-      {confidenceBasis && confidenceBasis.items.length > 0 ? (
-        <details data-testid="confidence-basis" className="mb-2">
+      {/**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔵🔵🔵 UIRD-1 — **설명성 접힘 셋을 「판단 근거」 하나로 합친다**(CPO 승인 2026-11-18)
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * 🔴🔴 **왜 합치는가.** 1차 화면에 설명성 접힘이 **셋**(`▸ 이 추천이 나온 이유` ·
+       *    `▸ 판단 설명` · `▸ 판단 근거`)이었고 이름이 서로 가까웠다 ⟹ 셀러는 「무엇을
+       *    펼쳐야 이유가 나오는가」를 **고르는 일**부터 해야 했다. CPO 가 지목한 것이 그것이다.
+       *
+       * ── 🟢 합치는 방식 — **삭제가 아니라 이동** ─────────────────────────────
+       * ```
+       * 문구 삭제 **0** · 항목 삭제 **0** · 근거 데이터 삭제 **0** · 서버 응답 변경 **0**
+       * 세 그룹의 `*-items` / `*-item` testid 를 **그대로** 유지한다 ⟹ 내용 계약이 산다
+       * 바뀌는 것은 **접힘이 셋 → 하나** 와 그 안의 «순서» 뿐이다
+       * ```
+       * 🔴 순서는 **근거 → 이유 → 설명** 이다. `confidenceBasis` 가 「무엇이 확인됐나」라서
+       *    먼저 오고, 그 다음이 「그래서 왜 이 추천인가」, 마지막이 서술형 설명이다.
+       *
+       * ── 🔴 `brand-market-profile` 도 이 안으로 «이동» 했다 ──────────────────
+       * ```
+       * CPO: 「무조건 삭제하지 않는다 · 필요한 내용은 적절한 상세 영역으로 이동한다」
+       * 그 줄은 **참고 표본**(브랜드 중앙값)이고 **1차 판단 숫자가 아니다** ⟹ 근거 영역이
+       * 그 자리다. 🔴 「동일상품 가격」이라고 부르지 않는다(다른 축이다 · S5-WIRE-3 유지).
+       * 🔴 서버가 표본 1~2개면 **이미 null 로 걸러** 보낸다(P-13A) — 다시 거르지 않는다.
+       * ```
+       * 🔴 `market-price-basis` 는 **옮기지 않았다** — 그것은 설명이 아니라 **가격 블록의
+       *    기준 줄** 이고 바로 아래 🇰🇷/🌎 숫자와 같은 자리에서 읽혀야 한다.
+       *
+       * 🔴 `open` 을 붙이지 않는다 — 1차 화면은 «판단» 이고 근거는 접힘이다
+       *    (WU-136 §D · 2026-09-19 사고 기전과 같은 계약).
+       * 🔴🔴 **`checkRan` 게이트 «앞» 에 둔다** — 후보가 0건일 때야말로 「왜 0인지」가
+       *    필요하고 그 상태가 바로 CASE D 다(기존 주석의 실측 근거 그대로 유지).
+       * 🔴 내부 토큰(tier · blocker · PRESUMED_SAME)을 **새로 노출하지 않는다** — 서버가
+       *    이미 셀러 말로 만들어 보낸 문장을 **읽기만** 한다.
+       */}
+      {hasJudgmentBasis ? (
+        <details data-testid="judgment-basis" className="mb-2">
           <summary className="cursor-pointer text-[11px] text-text-tertiary">
-            ▸ 판단 근거 {confidenceBasis.confirmedCount}/{confidenceBasis.totalCount} 확인됨
+            ▸ 판단 근거
+            {confidenceBasis && confidenceBasis.items.length > 0
+              ? ` ${confidenceBasis.confirmedCount}/${confidenceBasis.totalCount} 확인됨`
+              : ""}
           </summary>
-          <ul data-testid="confidence-basis-items" className="mt-1 space-y-0.5 pl-2">
-            {confidenceBasis.items.map((item) => (
-              <li key={item.label} data-testid="confidence-basis-item" className="text-[11px] text-text-tertiary">
-                <span data-testid="confidence-basis-label">
-                  {item.confirmed ? "✓" : "—"} {item.label}
-                </span>
-                {/* 🔴 확인 못 한 «이유» 가 이 줄의 존재 이유다 — 결론만 적지 않는다. */}
-                {item.note ? <span data-testid="confidence-basis-note"> · {item.note}</span> : null}
-              </li>
-            ))}
-          </ul>
+          {confidenceBasis && confidenceBasis.items.length > 0 ? (
+            <ul data-testid="confidence-basis-items" className="mt-1 space-y-0.5 pl-2">
+              {confidenceBasis.items.map((item) => (
+                <li key={item.label} data-testid="confidence-basis-item" className="text-[11px] text-text-tertiary">
+                  <span data-testid="confidence-basis-label">
+                    {item.confirmed ? "✓" : "—"} {item.label}
+                  </span>
+                  {/* 🔴 확인 못 한 «이유» 가 이 줄의 존재 이유다 — 결론만 적지 않는다. */}
+                  {item.note ? <span data-testid="confidence-basis-note"> · {item.note}</span> : null}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {/* 🔴 결론(`sellerDecision.finalVerdict`)은 **이미 화면에 있다** ⟹ 여기서
+              다시 적지 않는다(CPO 중복 금지). 이 그룹은 **이유만** 담는다. */}
+          {sellerActionReasons && sellerActionReasons.length > 0 ? (
+            <ul data-testid="seller-action-reason-items" className="mt-1 space-y-0.5 pl-2">
+              {sellerActionReasons.map((line) => (
+                <li key={line} data-testid="seller-action-reason-item" className="text-[11px] text-text-tertiary">
+                  {line}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {sellingGuidance && sellingGuidance.length > 0 ? (
+            <ul data-testid="selling-guidance-items" className="mt-1 space-y-0.5 pl-2">
+              {sellingGuidance.map((line) => (
+                <li key={line} data-testid="selling-guidance-item" className="text-[11px] text-text-tertiary">
+                  {line}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {brandProfileLine}
         </details>
-      ) : null}
+      ) : (
+        /* 🔴 접힘이 없으면 그 줄은 **제자리에** 선다 — 삭제하지 않는다(위 주석의 이유). */
+        brandProfileLine
+      )}
       {/**
        * ══════════════════════════════════════════════════════════════════════
        * 🔴🔴🔴 CORE-2AO-R2 — **첫 화면 = 판단 · 상세 화면 = 근거**(CPO 2026-10-26)

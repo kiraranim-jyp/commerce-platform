@@ -647,6 +647,75 @@ describe("D. 🔴 원본 ↔ 후보 이미지 비교 (CPO ④)", () => {
     expect(html).not.toContain("gt-image-pair");
   });
 
+  /* ── 🔵🔵🔵 UIRD-2 — 이미지 실패 처리의 **비대칭 제거**(CPO 판정 ② 2026-11-18) ──
+   * 🔴🔴 고친 결함: 전에는 **원본 쪽에 대체 칸이 «없었다»** — `src={originImageUrl ?? undefined}`
+   *    라서 URL 이 없으면 **깨진 `<img>`** 가 떴다. 후보 쪽엔 대체 칸이 있었다 ⟹ 그 자체가 비대칭.
+   * 🔴 「대체 사진 금지」 원칙은 그대로다 — 바뀐 것은 **자리를 지키고 「NO IMAGE」라고 적는다** 뿐이다.
+   */
+  it("U2-1 🔵 후보 URL 이 없으면 후보 칸이 「NO IMAGE」 다(원본은 정상 `<img>`)", () => {
+    const html = renderToStaticMarkup(
+      GeminiTransientCandidates({
+        evidence: [row({ imageUrl: null })],
+        onReview: () => {},
+        originImageUrl: "https://origin.example/o.jpg",
+        originTitle: "원상품",
+      }) as never,
+    );
+    expect(html).toContain("gt-image-pair");
+    expect(html).toContain('data-testid="gt-origin-image"');
+    expect(html).toContain("gt-candidate-image-missing");
+    expect(html).not.toContain('data-testid="gt-candidate-image"');
+  });
+
+  it("U2-2 🔵🔵 원본·후보가 **같은 함수·같은 크기 규칙** 을 쓴다(사본 금지)", () => {
+    const src = readFileSync(
+      path.join(process.cwd(), "src", "app", "pipeline", "commerce", "GeminiTransientCandidates.tsx"),
+      "utf8",
+    );
+    /** 🟢 두 칸이 **한 함수** 를 쓰는지 본다 — 사본을 두면 한쪽만 고쳐져 다시 벌어진다. */
+    expect(src).toContain('cardImage("gt-origin-image"');
+    expect(src).toContain('cardImage("gt-candidate-image"');
+    /** 🔴 크기 규칙의 owner 가 **상수 하나** 여야 한다. */
+    expect(src).toContain("export const IMAGE_BOX_CLASS");
+    /** 🔴🔴 옛 하드코딩 클래스가 되살아나면 FAIL — 그것이 비대칭의 원인이었다. */
+    expect(src).not.toContain('className="h-24 w-full rounded border border-border/60 object-contain"');
+    /** 🔴 원본 쪽의 옛 깨진 배선(`?? undefined`)이 되살아나면 FAIL. */
+    expect(src).not.toContain("src={originImageUrl ?? undefined}");
+  });
+
+  it("U2-3 🔴 로딩 **실패** 도 「NO IMAGE」 로 간다(onError 배선이 살아 있다)", () => {
+    const src = readFileSync(
+      path.join(process.cwd(), "src", "app", "pipeline", "commerce", "GeminiTransientCandidates.tsx"),
+      "utf8",
+    );
+    /**
+     * 🔴 왜 소스 앵커인가 — `renderToStaticMarkup` 은 이벤트를 발화시키지 못하고 jsdom 은
+     *    실제 이미지를 **로드하지 않는다** ⟹ 「로딩 실패」를 행동으로 재현할 수 없다.
+     * 🟢 그래서 **배선의 존재** 를 잠근다(지우면 FAIL). 🔴 「실패 시 NO IMAGE 가 실제로
+     *    보인다」는 **측정불가** 로 남긴다 — 보고서에 그렇게 적는다.
+     */
+    expect(src).toContain("onError={(e) => {");
+    expect(src).toContain("el.hidden = true;");
+    expect(src).toContain("sib.hidden = false;");
+    /** 🔴 URL 이 있을 때 **대체 칸이 숨겨진 형제로 같이** 렌더돼야 onError 가 드러낼 수 있다. */
+    expect(src).toContain("{missing(true)}");
+  });
+
+  it("U2-4 🔴 「NO IMAGE」 는 **대체 사진이 아니다**(원칙 보존)", () => {
+    const html = renderToStaticMarkup(
+      GeminiTransientCandidates({
+        evidence: [row({ imageUrl: null })],
+        onReview: () => {},
+        originImageUrl: "https://origin.example/o.jpg",
+      }) as never,
+    );
+    expect(html).toContain(IMAGE_MISSING_TEXT);
+    expect(IMAGE_MISSING_TEXT, "🔴 CPO 판정 ② 의 글자").toBe("NO IMAGE");
+    /** 🔴🔴 원본 URL 이 **후보 칸으로 새지 않는다** — 그러면 같은 사진 두 장이 된다. */
+    const candidateCell = html.slice(html.indexOf("gt-candidate-image-missing"));
+    expect(candidateCell).not.toContain("origin.example");
+  });
+
   it("D-4 🔴 세 상태(동일/다름/보류)가 **저장 경로를 그대로** 쓴다", () => {
     /** 🟢 WU-131 의 네 버튼을 그대로 쓴다 — CPO 의 셋은 그 **부분집합** 이다. */
     const html = renderToStaticMarkup(

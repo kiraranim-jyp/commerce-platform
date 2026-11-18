@@ -133,9 +133,21 @@ describe("S5-WIRE 판단 근거 — CommerceWorkspace 마운트 DOM", () => {
     stubFetch(withBasis());
     await mount();
 
-    const region = container.querySelector('[data-testid="confidence-basis"]');
+    /** 🔵 UIRD-1 — 영역 이름이 `judgment-basis`(통합 접힘) 로 바뀌었다. 내용 계약은 그대로다. */
+    const region = container.querySelector('[data-testid="judgment-basis"]');
     expect(region, "🔴 판단 근거 영역이 셀러 화면에 서지 않았다").not.toBeNull();
     expect(container.querySelectorAll('[data-testid="confidence-basis-item"]').length).toBe(4);
+    /** 🔴🔴 UIRD-1 강화 — 네 그룹이 **그 접힘 «안»** 에 있어야 한다(밖으로 새면 1차가 다시 길어진다). */
+    for (const id of [
+      "confidence-basis-items",
+      "seller-action-reason-items",
+      "selling-guidance-items",
+      "brand-market-profile",
+    ]) {
+      const el = container.querySelector(`[data-testid="${id}"]`);
+      expect(el, `🔴 ${id} 가 화면에 없다`).not.toBeNull();
+      expect(region!.contains(el!), `🔴 ${id} 가 통합 접힘 «밖» 에 있다`).toBe(true);
+    }
   });
 
   it("🔴🔴 «확인 못 한 이유» 가 실제로 보인다 — 결론만 적지 않는다", async () => {
@@ -153,9 +165,31 @@ describe("S5-WIRE 판단 근거 — CommerceWorkspace 마운트 DOM", () => {
     stubFetch(withBasis());
     await mount();
 
-    const region = container.querySelector('[data-testid="confidence-basis"]');
+    const region = container.querySelector('[data-testid="judgment-basis"]');
     expect(region?.tagName.toLowerCase()).toBe("details");
     expect(region?.hasAttribute("open"), "🔴 열어 두면 2026-09-19 사고 기전으로 되돌아간다").toBe(false);
+  });
+
+  /**
+   * 🔵🔵🔵 UIRD-1 — **설명성 접힘은 「하나」 다.**
+   *
+   * 🔴 전에는 `▸ 이 추천이 나온 이유` · `▸ 판단 설명` · `▸ 판단 근거` **셋** 이 1차에
+   *    나란히 섰다. 셀러가 「어느 것을 펼쳐야 이유가 나오나」를 고르는 일부터 해야 했다.
+   * 🔴 이 단언이 **셋으로 되돌아가는 것을 막는다** — 되돌리면 숫자가 1 → 3 이 되어 FAIL 한다.
+   * 🟢 가격 축의 접힘(`▸ MI 상세 분석` 등)은 **다른 축** 이라 세지 않는다 — 설명성 세 축의
+   *    옛 testid 가 `details` 로 다시 나타나는지만 본다.
+   */
+  it("🔵🔵 UIRD-1 — 설명성 접힘이 **하나뿐** 이다(셋으로 되돌아가면 FAIL)", async () => {
+    stubFetch(withBasis());
+    await mount();
+
+    expect(container.querySelectorAll('[data-testid="judgment-basis"]').length).toBe(1);
+    for (const old of ["confidence-basis", "selling-guidance", "seller-action-reasons"]) {
+      expect(
+        container.querySelector(`details[data-testid="${old}"]`),
+        `🔴 옛 접힘 ${old} 가 되살아났다 — 설명성 접힘은 하나여야 한다`,
+      ).toBeNull();
+    }
   });
 
   it("🟢🟢 S5-WIRE-2 — **CASE 별 결론·숫자·행동**이 실제 화면에 선다", async () => {
@@ -173,10 +207,13 @@ describe("S5-WIRE 판단 근거 — CommerceWorkspace 마운트 DOM", () => {
     stubFetch(withBasis());
     await mount();
 
-    const fold = container.querySelector('[data-testid="selling-guidance"]');
+    /** 🔵 UIRD-1 — 설명 문장은 이제 **통합 접힘 안의 한 그룹** 이다(항목 수 계약은 그대로). */
+    const fold = container.querySelector('[data-testid="judgment-basis"]');
     expect(fold?.tagName.toLowerCase()).toBe("details");
     expect(fold?.hasAttribute("open")).toBe(false);
     expect(container.querySelectorAll('[data-testid="selling-guidance-item"]').length).toBe(2);
+    const group = container.querySelector('[data-testid="selling-guidance-items"]');
+    expect(fold!.contains(group!), "🔴 설명 문장이 접힘 밖으로 나왔다").toBe(true);
   });
 
   it("🟢🟢 S5-WIRE-3 — `sellerAction.reasons` 와 브랜드 시장 참고가 화면에 선다", async () => {
@@ -197,16 +234,70 @@ describe("S5-WIRE 판단 근거 — CommerceWorkspace 마운트 DOM", () => {
     //    이 배선이 같은 말을 한 번 더 적으면 안 된다.
     const text = wholeText(container);
     expect((text.match(/판매가격을 조정하세요/g) ?? []).length).toBeLessThanOrEqual(1);
-    // 🔴 이유 접힘은 **접힌 채** 로 선다.
-    const fold = container.querySelector('[data-testid="seller-action-reasons"]');
+    // 🔴 이유는 **접힌 채** 로 선다(UIRD-1 이후 통합 접힘이 그 owner 다).
+    const fold = container.querySelector('[data-testid="judgment-basis"]');
     expect(fold?.hasAttribute("open")).toBe(false);
+    const group = container.querySelector('[data-testid="seller-action-reason-items"]');
+    expect(fold!.contains(group!), "🔴 이유가 접힘 밖으로 나왔다").toBe(true);
   });
 
   it("🟢 서버가 주지 않으면 영역을 **만들지 않는다**(빈 근거를 짓지 않는다)", async () => {
     stubFetch(productionData());
     await mount();
 
-    expect(container.querySelector('[data-testid="confidence-basis"]')).toBeNull();
+    /**
+     * 🔵 UIRD-1 — 「빈 근거를 짓지 않는다」의 **정확한 뜻**.
+     *
+     * 🔴🔴 내가 처음에 `judgment-basis` 자체를 null 로 단언했고 **그것이 과했다** —
+     *    이 fixture 는 `confidenceBasis.items: []`(빈 배열)이지만 `sellingGuidance` 는
+     *    **비어 있지 않다**. 즉 설명이 **있는** 상태라 접힘이 서는 것이 맞다.
+     *    (옛 코드도 그 상태에서 `▸ 판단 설명` 접힘을 세웠고, 옛 단언이 그것을 **안 봤을** 뿐이다)
+     * 🟢 그래서 원래 의도를 **그 축에서** 잠근다 — 「`items` 가 비면 그 **그룹** 을 만들지 않는다」.
+     */
+    expect(container.querySelector('[data-testid="confidence-basis-items"]')).toBeNull();
+    expect(container.querySelectorAll('[data-testid="confidence-basis-item"]').length).toBe(0);
+    /** 🔴 그리고 그 상태에서도 **요약 숫자(「n/m 확인됨」)를 지어내지 않는다.** */
+    expect(wholeText(container)).not.toContain("1/4 확인됨");
+  });
+
+  /**
+   * 🔴🔴🔴 UIRD-1 — **세 축이 «전부» 비면 접힘 자체를 만들지 않는다.**
+   *
+   * 🔴🔴 이 케이스가 **없어서 내 가드가 뚫렸다** — 음성 대조에서 게이트를
+   *    `Boolean(true || …)` 로 바꿨는데 **10/10 이 그대로 통과** 했다. 기존 fixture 둘은
+   *    `sellingGuidance` 가 비어 있지 않아 **어느 쪽이든 접힘이 서기 때문** 이었다.
+   * 🟢 그래서 세 축을 **모두 비운** fixture 를 만든다 ⟹ 이제 게이트를 무력화하면
+   *    「빈 판단 근거」 접힘이 서고 **FAIL 한다**.
+   * 🔴 `brandMarketProfile` 은 게이트가 아니므로 이 케이스에서 **그 줄은 제자리에** 서야 한다
+   *    (정보를 삭제하지 않는다는 CPO 조건).
+   */
+  it("🔴🔴 UIRD-1 — 설명 세 축이 전부 비면 접힘을 **만들지 않는다**(게이트 무력화 시 FAIL)", async () => {
+    stubFetch({
+      ...productionData(),
+      sellingGuidance: [],
+      confidenceBasis: { confirmedCount: 0, totalCount: 0, items: [] },
+      sellerAction: { status: "PRICE_KEEP", icon: "🟡", title: "조건부 판매", signals: [], reasons: [] },
+      brandMarketProfile: {
+        market: "KR",
+        sampleCount: 7,
+        minPriceKrw: 90000,
+        p25PriceKrw: 100000,
+        medianPriceKrw: 110000,
+        p75PriceKrw: 120000,
+        maxPriceKrw: 130000,
+        confidence: "MEDIUM",
+      },
+    } as unknown as PriceHistoryResponse);
+    await mount();
+
+    expect(
+      container.querySelector('[data-testid="judgment-basis"]'),
+      "🔴 설명이 하나도 없는데 「판단 근거」 접힘을 세웠다 — 셀러가 펼쳐 보고 빈손으로 돌아온다",
+    ).toBeNull();
+    /** 🟢 그런데 브랜드 참고 줄은 **살아 있어야** 한다(삭제 금지). */
+    const brand = container.querySelector('[data-testid="brand-market-profile"]');
+    expect(brand, "🔴 접힘이 없을 때 브랜드 참고 줄이 사라졌다").not.toBeNull();
+    expect(wholeText(container)).toContain("표본 7건");
   });
 
   /**
@@ -235,7 +326,10 @@ describe("S5-WIRE 판단 근거 — CommerceWorkspace 마운트 DOM", () => {
     expect(ws).toContain("confidenceBasis={marketComparison?.confidenceBasis ?? null}");
     // ③ 결론 컴포넌트가 받아서 그린다
     expect(mpc).toContain("confidenceBasis,");
-    expect(mpc).toContain('data-testid="confidence-basis"');
+    expect(mpc).toContain('data-testid="judgment-basis"');
+    /** 🔵🔵 UIRD-1 — 통합 게이트가 **살아 있어야** 한다(술어를 지우면 영역이 조건 없이 선다). */
+    expect(mpc).toContain("const hasJudgmentBasis = Boolean(");
+    expect(mpc).toContain("{hasJudgmentBasis ? (");
 
     // 🔵 S5-WIRE-2 — 같은 세 자리를 두 필드에 대해서도 잠근다.
     for (const field of ["sellingSummary", "sellingGuidance"] as const) {
@@ -246,6 +340,17 @@ describe("S5-WIRE 판단 근거 — CommerceWorkspace 마운트 DOM", () => {
       );
     }
     expect(mpc).toContain('data-testid="selling-summary"');
-    expect(mpc).toContain('data-testid="selling-guidance"');
+    /**
+     * 🔵 UIRD-1 — 설명 그룹의 **항목 testid** 로 잠근다(옛 `selling-guidance` 접힘은 사라졌다).
+     * 🔴 네 그룹이 **전부** 소스에 있어야 한다 — 하나를 지우면 근거가 조용히 사라진다.
+     */
+    for (const id of [
+      "confidence-basis-items",
+      "seller-action-reason-items",
+      "selling-guidance-items",
+      "brand-market-profile",
+    ]) {
+      expect(mpc, `🔴 ${id} 가 운영 소스에서 사라졌다`).toContain(`data-testid="${id}"`);
+    }
   });
 });
