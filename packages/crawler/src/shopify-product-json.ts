@@ -620,14 +620,57 @@ export async function fetchPlainHtmlWithFinalUrl(
       headers: { "User-Agent": CHROME_UA },
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      recordPlainHtmlFailure(url, `HTTP_${response.status}`);
+      return null;
+    }
     const html = await response.text();
     // 🔴 `response.url` 이 빈 문자열인 구현도 있다. 그때는 요청 URL 로 둔다 —
     //    「모른다」를 「다른 곳에 도착했다」로 읽지 않는다.
     return { html, finalUrl: response.url || url };
-  } catch {
+  } catch (error) {
+    /**
+     * 🔴 **예외 «종류» 를 보존한다.** `TypeError: fetch failed` 는 DNS 실패·연결 거부·
+     *    타임아웃이 **전부 같은 문구** 라 문구로 가르지 않는다(WU-084 가 적어 둔 함정).
+     *    `cause.code`(undici) → `name`(`TimeoutError`) 순으로 읽는다.
+     */
+    const cause = (error as { cause?: { code?: unknown } } | null)?.cause?.code;
+    const name = (error as { name?: unknown } | null)?.name;
+    recordPlainHtmlFailure(
+      url,
+      typeof cause === "string" ? cause : typeof name === "string" ? name : "UNKNOWN_ERROR",
+    );
     return null;
   }
+}
+
+/**
+ * 🔵🔵🔵 CASE-01 실행단위 4 — **`UNREACHABLE` 이 «왜» 났는지 보존한다.**
+ *
+ * 🔴🔴 **실측으로 확정된 사실**(AC033 · 2026-11-18): `global.trenbe.com` 은 이 파일의
+ *    `CHROME_UA` 를 보내면 **HTTP 429** 를 돌려준다(UA 없이는 **200 · 690KB · 582ms**).
+ *    그러면 도메인 limiter 가 429 backoff 재시도를 반복하고(실측 **65초**) 끝내
+ *    `!response.ok` 로 `null` 이 되어 호출부가 **`UNREACHABLE`** 을 적는다.
+ *    ⟹ 그 상품은 **국내 상세 URL · 품번 · JSON-LD 를 다 갖고도** MI 판정에 **도달하지
+ *       못했다.** 그런데 「닿지 못했다」로만 적혀 **원인을 볼 수 없었다** — WU-105 가
+ *       「`UNREACHABLE` 은 거부(4xx)와 미도달을 뭉갠다」로 이미 관측한 그 자리다.
+ *
+ * 🔴 **하지 않은 것 — UA 를 바꿔 429 를 피하지 않는다.** 그것은 접근 차단 «우회» 이고
+ *    제품 정책 결정 사안이다(CTO 가 임의로 열지 않는다 · 포털 약관 메모와 같은 축).
+ * 🔴 **`status` union 을 바꾸지 않는다** — 소비자 영향 0. 「이름만 바꿔 완료」 금지.
+ * 🔴 **재시도를 늘리지도 타임아웃을 늘리지도 않는다** — 실패는 그대로 실패다.
+ * 🔴 로그에 **URL 원문 · 인증정보 · 개인정보를 넣지 않는다** — **host 와 사유** 까지다.
+ * 🟢 **임시 계측이 아니다** — WU-141-R1 이 같은 이유로 「실패 사유를 더는 삼키지
+ *    않는다」를 영구 코드로 남겼다(그 전까지 쓰기 실패가 조용히 살아 있었다).
+ */
+function recordPlainHtmlFailure(url: string, reason: string): void {
+  let host = "(unparsed)";
+  try {
+    host = new URL(url).hostname;
+  } catch {
+    /* 🔴 못 파싱해도 **조용히 버리지 않는다** — 사유는 남긴다. */
+  }
+  console.warn(`[PLAIN-HTML-FAIL] ${JSON.stringify({ host, reason })}`);
 }
 
 /**
