@@ -79,6 +79,53 @@ export async function POST(request: Request) {
       .filter((u) => u.length > 0 && u.length <= MAX_CANDIDATE_URL_LENGTH);
   }
 
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 CASE-01 실행단위 1 — **브라우저가 보낸 후보 입력을 «관측» 한다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 **왜 이 자리인가.** AI Search 는 **사용자 브라우저에서** 일어나고 서버는
+   *    `candidateUrls[]` **만** 받는다(`pipeline/page.tsx:309`). 그리고 검색 원문을
+   *    저장하는 칸이 **코드에 없다**(전수 grep 0 · WU-102 와 같은 결론).
+   *    ⟹ 「국내 상세 URL 이 검색 결과에 있었는가」를 볼 수 있는 **유일한 지점이 여기** 다.
+   *    그것이 없어서 CASE-01 의 ①이 측정불가였다.
+   *
+   * 🔴 **URL 원문을 찍지 않는다** — 담는 것은 **개수와 «성질»** 뿐이다:
+   * ```
+   * total     받은 개수        kr   국내 신호(`.kr`) 개수   hosts   고유 호스트 수
+   * ```
+   * 🔴 URL · 상품명 · 사용자·워크스페이스 식별자 **전부 넣지 않는다**(로그는 고객 데이터
+   *    저장소가 아니다 · MI-CASE-INPUT 에서 CPO 가 고정한 그 기준 그대로).
+   * 🔴 **임시 계측이다** — 원인이 확정되면 계약과 함께 제거한다(MI-CASE-INPUT 선례).
+   *
+   * ── 🔴🔴 **URL «분류» 는 여기서 하지 않는다 — 가드가 그것을 막았고 가드가 맞다** ──
+   * ```
+   * 1차 구현이 `classifyUrlShape` 를 이 자리에서 불러 detail/listing 을 셌다.
+   * `wu-024-url-candidate-pool` 계약이 **FAIL** 했다 —
+   *    「🔴 라우트가 «판정» 을 하지 않는다 — **입력 경계는 pool 이 소유한다**」
+   * 🟢 가드를 풀지 않고 **분류를 뺐다.** 그리고 그것이 더 정확하다 —
+   *    상세/목록 분류의 «실제» 결과는 `collectUrlCandidatePool` 의 산출
+   *    (`metrics.dropped` · accepted/usable)이고, 라우트가 따로 세면 **두 벌** 이 된다.
+   * ⟹ 이 자리는 **「무엇이 들어왔는가」** 만 센다. 「어떻게 분류됐는가」는 pool 축이다.
+   * ```
+   */
+  if (candidateUrls && candidateUrls.length > 0) {
+    let kr = 0;
+    const hosts = new Set<string>();
+    for (const u of candidateUrls) {
+      try {
+        const h = new URL(u).hostname.toLowerCase();
+        hosts.add(h);
+        if (h.endsWith(".kr")) kr += 1;
+      } catch {
+        /* 🔴 파싱 실패는 세지 않는다 — 추측해서 국내로 몰지 않는다. */
+      }
+    }
+    console.info(
+      `[CASE-01-INPUT] ${JSON.stringify({ total: candidateUrls.length, hosts: hosts.size, kr })}`,
+    );
+  }
+
   const snapshot = await getSnapshot(snapshotId, auth.user.workspaceId);
   if (!snapshot) {
     return NextResponse.json({ ok: false, error: "스냅샷을 찾을 수 없습니다." }, { status: 404 });
