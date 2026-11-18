@@ -41,6 +41,14 @@ const GT_FIXTURE_INPUT: RecommendationInput = {
   brandMedianPriceKrw: 84459,
 };
 
+/**
+ * 🔵 MI-CASE-INPUT(임시 관측 로그)과 그 계약 4건은 **실제 입력값을 확보한 뒤 제거했다**
+ *    (CPO 완료 조건 · 2026-11-18). 확보한 운영 입력 —
+ *    landedCostKrw **95,443** · domesticBasis COMPARISON/NONE · targetMargin 12% · fee 10%
+ *    ⟹ CASE **D** · minimumPrice **106,048** · targetPrice **108,458**(산술 검산 일치).
+ * 🔴 원가·판매가·수수료 조합은 상품명이 없어도 **영업상 민감** 하므로 관측이 끝나면 남기지 않는다.
+ * 🟢 아래 A-1~A-5 는 **영구 자산** 이다 — 순수 진입점과 ×0.95 상한을 잠근다.
+ */
 describe("MI-CASE-06 — 추천 입력의 순수 진입점", () => {
   it("A-1 🟢 fixture 입력으로 **실제 계산 결과** 를 낸다(DB 0 · HTTP 0)", () => {
     const r = buildRecommendationFromInput(GT_FIXTURE_INPUT);
@@ -99,91 +107,5 @@ describe("MI-CASE-06 — 추천 입력의 순수 진입점", () => {
     const a = buildRecommendationFromInput(GT_FIXTURE_INPUT);
     const b = buildRecommendationFromInput({ ...GT_FIXTURE_INPUT });
     expect(a).toEqual(b);
-  });
-});
-
-/* ═════════ 🔵🔵🔵 MI-CASE-INPUT — 운영 원가 입력 관측 로그 ═════════ */
-
-describe("MI-CASE-INPUT — 운영이 실제로 넣는 원가 입력을 로그로 관측한다", () => {
-  const read = async () => {
-    const { readFileSync } = await import("node:fs");
-    const path = await import("node:path");
-    return readFileSync(
-      path.join(process.cwd(), "src", "app", "api", "price-history", "_lib", "market-intelligence.ts"),
-      "utf8",
-    );
-  };
-  /** 🔴 주석을 벗긴다 — 주석 속 예시 문자열이 「구현됐다」로 세어지는 함정(여덟 번 걸렸다). */
-  const bare = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/[^\n]*/g, " ");
-
-  it("B-1 🟢 `[MI-CASE-INPUT]` 로그가 **추천 계산 자리** 에 있다", async () => {
-    const src = bare(await read());
-    expect(src).toContain("[MI-CASE-INPUT]");
-    /** 🔴 환율 게이트 «안» 이어야 한다 — 추정 환율일 때 찍으면 쓸 수 없는 값이 섞인다. */
-    const guard = src.indexOf("if (!cost.isRateEstimate) {");
-    const log = src.indexOf("[MI-CASE-INPUT]");
-    const call = src.indexOf("recommendation = buildRecommendationFromInput({");
-    expect(guard, "🔴 환율 게이트를 못 찾았다").toBeGreaterThan(0);
-    expect(log).toBeGreaterThan(guard);
-    expect(log, "🔴 로그가 추천 계산보다 뒤에 있으면 그 호출의 입력이 아니다").toBeLessThan(call);
-  });
-
-  it("B-2 🟢 로그에 담기는 칸이 **순수 함수 입력과 같은 여덟** 이다", async () => {
-    const src = bare(await read());
-    const at = src.indexOf("[MI-CASE-INPUT]");
-    const seg = src.slice(at, at + 900);
-    for (const f of [
-      "landedCostKrw",
-      "domesticBasis",
-      "domesticLowestPriceKrw",
-      "domesticAveragePriceKrw",
-      "brandMedianPriceKrw",
-      "targetMarginPercent",
-      "expectedFeePercent",
-      "currentSellingPriceKrw",
-    ]) {
-      expect(seg, `🔴 로그에 ${f} 가 없다 — 입력을 전부 봐야 재현된다`).toContain(f);
-    }
-  });
-
-  /**
-   * 🔴🔴🔴 **이 단언이 가장 중요하다 — 로그는 고객 데이터 저장소가 아니다.**
-   *
-   * 🔴 담는 것은 **금액·비율·basis** 뿐이다. 식별자나 URL·상품명이 들어가면
-   *    런타임 로그가 **고객 데이터 사본** 이 된다 ⟹ 그 자리에서 FAIL 시킨다.
-   */
-  it("B-3 🔴🔴 로그에 **고객 식별정보가 없다**(식별자·URL·상품명 금지)", async () => {
-    const src = bare(await read());
-    const at = src.indexOf("[MI-CASE-INPUT]");
-    const seg = src.slice(at, at + 900);
-    /**
-     * 🔴 **키 단위로 본다**(`brand:` 가 아니라 `brand` 로 찾으면 금액 칸
-     *    `brandMedianPriceKrw` 가 걸린다 — 1차 구현에서 실제로 FAIL 했고 **가드가 맞았다**).
-     * 🟢 그래서 「키 이름 + `:`」로 좁힌다 — 진짜 누출만 잡고 금액 칸은 통과한다.
-     */
-    for (const banned of [
-      "snapshotId:",
-      "workspaceId:",
-      "sourceUrl:",
-      "discoveredUrl:",
-      "productId:",
-      "title:",
-      "brand:",
-      "email:",
-      "shopName:",
-      "domain:",
-    ]) {
-      expect(seg, `🔴 로그에 ${banned} 가 섞였다 — 고객 식별정보를 담지 않는다`).not.toContain(banned);
-    }
-    /** 🔴 URL 문자열이 템플릿으로 끼어드는 것도 막는다. */
-    expect(seg).not.toMatch(/https?:\/\//);
-  });
-
-  it("B-4 🟢 로그가 **반환값을 건드리지 않는다**(console.info 한 줄)", async () => {
-    const src = bare(await read());
-    expect(src).toContain("console.info(");
-    /** 🔴 `recommendation =` 가 로그 뒤에 그대로 살아 있어야 한다(로그가 대입을 가로채면 안 된다). */
-    const at = src.indexOf("[MI-CASE-INPUT]");
-    expect(src.slice(at).indexOf("recommendation = buildRecommendationFromInput({")).toBeGreaterThan(0);
   });
 });
