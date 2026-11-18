@@ -116,3 +116,61 @@ describe("CASE-01 실행단위 1 — 후보 입력 관측", () => {
     expect(src).toContain("if (candidateUrls && candidateUrls.length > 0) {");
   });
 });
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 CASE-01 실행단위 2 — **탈락은 «어디서» 났는지와 함께 적는다**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 `__url_candidates__` 가 CASE-01 의 **주경로** 다(브라우저 AI Search → candidateUrls).
+ *    그 풀의 탈락 로그가 **`reason` 만** 이라 「국내가 빠졌나 해외가 빠졌나」를 **가를 수
+ *    없었다** ⟹ 「국내 소싱 후보 0」의 원인이 ②인지 ③인지 구조적으로 미측정이었다.
+ * 🟢 형제 생산자 `[SP07-pool]` 은 처음부터 `host:reason` 을 찍고 있었다 — 같은 모양으로 맞췄다.
+ * 🔴 이 계약은 **두 생산자를 같이** 본다. 한쪽만 되돌리면 FAIL 한다.
+ */
+describe("CASE-01 실행단위 2 — 탈락 관측의 모양", () => {
+  const RUNNER = path.join(
+    process.cwd(),
+    "src", "app", "api", "price-history", "_lib", "run-domestic-price-check.ts",
+  );
+  const runner = () =>
+    readFileSync(RUNNER, "utf8").replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/[^\n]*/g, " ");
+
+  /** 🟢 주경로와 형제 생산자가 **둘 다** host 를 붙인다. */
+  it.each([
+    ["[WU-024-urlpool]", "__url_candidates__ — CASE-01 주경로"],
+    ["[SP07-pool]", "__web_search__ — 형제 생산자"],
+  ])("B-1 %s 의 dropped 가 **host 와 함께** 적힌다 (%s)", (tag) => {
+    const src = runner();
+    const at = src.indexOf(tag);
+    expect(at, `🔴 ${tag} 로그가 사라졌다`).toBeGreaterThan(0);
+    const end = src.indexOf("})}", at);
+    const seg = src.slice(at, end > at ? end : at + 2500);
+    expect(seg, `🔴 ${tag} 이 dropped 를 안 적는다`).toContain("dropped:");
+    expect(seg, `🔴 ${tag} 이 host 없이 reason 만 적는다 — 원인이 안 갈린다`).toContain(
+      "new URL(d.url).hostname",
+    );
+    expect(seg).toContain("${host}:${d.reason}");
+  });
+
+  /** 🔴🔴 URL 원문을 로그에 싣지 않는다 — host 까지다. */
+  it("B-2 🔴🔴 dropped 에 **URL 원문을 그대로 싣지 않는다**", () => {
+    const src = runner();
+    const at = src.indexOf("[WU-024-urlpool]");
+    const end = src.indexOf("})}", at);
+    const seg = src.slice(at, end);
+    expect(seg, "🔴 d.url 을 그대로 내보내고 있다").not.toMatch(/=>\s*d\.url\b/);
+    expect(seg).not.toContain("d.url}:");
+  });
+
+  /** 🔴 파싱 실패를 **조용히 버리지 않는다** — 그것도 관측값이다. */
+  it("B-3 🔴 파싱 실패한 URL 을 탈락 목록에서 **지우지 않는다**", () => {
+    const src = runner();
+    const at = src.indexOf("[WU-024-urlpool]");
+    const end = src.indexOf("})}", at);
+    const seg = src.slice(at, end);
+    const c = seg.slice(seg.indexOf("} catch {"));
+    expect(seg).toContain("let host = d.url;");
+    expect(c.slice(0, 160), "🔴 catch 에서 걸러내면 분모가 줄어든다").not.toContain("return null");
+  });
+});

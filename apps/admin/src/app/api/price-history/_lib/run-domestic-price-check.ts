@@ -1609,7 +1609,27 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
         fetchCalls: urlCandidateMetrics.fetchCalls,
         providerCalls: urlCandidateMetrics.providerCalls,
         overLimit: urlCandidateMetrics.notFetchedOverLimit.length,
-        dropped: urlCandidateMetrics.dropped.map((d) => d.reason),
+        /**
+         * 🔵🔵🔵 CASE-01 실행단위 2 — **이 칸이 `reason` «만» 이라 원인이 안 보였다.**
+         *
+         * 🔴 이 생산자(`__url_candidates__`)가 **CASE-01 의 주경로** 다 — 사용자 브라우저의
+         *    AI Search 결과가 `candidateUrls[]` 로 들어오는 바로 그 풀이다. 그런데 탈락을
+         *    **이유만** 적어서 「국내 상세 URL 이 빠졌는가, 해외가 빠졌는가」를 **가를 수 없었다.**
+         *    ⟹ 「국내 소싱 후보가 없다」의 원인이 ②인지 ③인지 **구조적으로 미측정** 이었다.
+         * 🟢 형제 생산자 `[SP07-pool]`(:1888)은 **처음부터 `host:reason`** 을 찍고 있었다 —
+         *    같은 모양으로 맞춘다(새 계산 0 · 새 칸 0 · 외부 호출 0 · 동작 변화 0).
+         * 🔴 **URL 원문이 아니라 host 다** — 로그는 고객 데이터 저장소가 아니다.
+         * 🔴 못 파싱하면 **원문 그대로** 남긴다(조용히 버리지 않는다 · SP07 과 같은 규칙).
+         */
+        dropped: urlCandidateMetrics.dropped.map((d) => {
+          let host = d.url;
+          try {
+            host = new URL(d.url).hostname;
+          } catch {
+            /* 🔴 파싱 실패를 지우지 않는다 — 그것도 관측값이다. */
+          }
+          return `${host}:${d.reason}`;
+        }),
       })}`,
     );
     transientPools.push(...urlPool.searchResults);
