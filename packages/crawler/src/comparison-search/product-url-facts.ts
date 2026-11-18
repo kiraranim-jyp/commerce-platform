@@ -611,7 +611,26 @@ async function htmlPath(
        */
       price: priced,
       regularPrice: null,
-      imageUrl: null,
+      /**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔵🔵🔵 UIRD-5 — **PLAIN_HTML 경로가 이미지를 «읽지 않고 있었다»**
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * 🔴🔴 **이 한 줄이 `null` 하드코딩이었다.** 바로 위 `SHOPIFY_JSON` 분기(:439)는
+       *    `imageUrl: suppliedFacts.imageUrls[0] ?? null` 로 **채우는데** 이 경로는 비웠다
+       *    ⟹ **국내 후보가 대부분 이 경로** 라서 셀러 화면에 이미지가 서지 못했다
+       *    (메모 `plain-html-asymmetry-is-data-availability` 가 가리킨 그 비대칭이다).
+       *
+       * 🟢 **이미 받은 `html` 에서만 읽는다** — 추가 HTTP **0** · Playwright **0** ·
+       *    `universalExtract` **0**. 바로 위 가격(`priced`)이 쓰는 방식과 **같은 모양** 이다.
+       * 🟢 근거 — WU-100 이 이 방식을 측정했다: 「`og:image` 우선 · **사이트별 규칙 0**」으로
+       *    검토 화면 이미지가 **15 → 25/26** 로 회수됐다.
+       * 🔴 `extractFromOpenGraph` 를 쓰지 «않는다» — 그 함수는 보호 계약이 **원상품 전용**
+       *    으로 묶어 둔 «가격» 경로다(후보에 끌어오면 가격 불일치가 난다). 🟢 그래서
+       *    **이미지만 읽는 지역 함수** 를 따로 둔다 — 그 계약을 건드리지 않는다.
+       * 🔴 **대체 사진을 만들지 않는다** — 못 읽으면 `null` 이고 화면이 「NO IMAGE」를 적는다.
+       */
+      imageUrl: imageFromHtmlMeta(html),
       confidence: 0,
       brand: brand ?? undefined,
       /**
@@ -701,6 +720,34 @@ function priceFromJsonLd(html: string): { amount: number; currency: string } | n
  * 같은 금액이 페이지에 **「…원」** 으로도 적혀 있을 때만 `KRW` 로 확정한다.
  * 🔴 동의가 없으면 **null** 이다(가격을 만들지 않는다).
  */
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 UIRD-5 — **이미 받은 HTML 에서 «대표 이미지» 만 읽는다**(추가 HTTP 0)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 왜 지역 함수인가 — `extractFromOpenGraph` 는 보호 계약이 **원상품 전용** 으로 묶어
+ *    둔 «가격» 경로다(후보에 끌어오면 가격 불일치). 🟢 그래서 **이미지만** 읽는 함수를
+ *    따로 둔다 — 그 계약을 한 글자도 건드리지 않는다.
+ * 🟢 축은 둘뿐이다 — `og:image` → `twitter:image`. 🔴 사이트별 규칙 **0**(WU-100 과 같은 방식).
+ * 🔴 **절대 URL 만** 받는다 — 상대경로를 base 로 합치지 않는다(그건 추측이고, 틀리면
+ *    «다른 상품 사진» 이 뜬다 ⟹ 이 저장소가 금지한 바로 그 사고다).
+ * 🔴 못 읽으면 `null` — 대체 사진을 만들지 않는다.
+ */
+export function imageFromHtmlMeta(html: string): string | null {
+  for (const re of [
+    /<meta[^>]+property=["']og:image["'][^>]*content=["']([^"']+)["']/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]*property=["']og:image["']/i,
+    /<meta[^>]+name=["']twitter:image["'][^>]*content=["']([^"']+)["']/i,
+  ]) {
+    const raw = re.exec(html)?.[1]?.trim();
+    if (!raw) continue;
+    /** 🔴 프로토콜 상대(`//cdn…`)는 https 로만 올린다 — 그 외 상대경로는 버린다. */
+    const url = raw.startsWith("//") ? `https:${raw}` : raw;
+    if (/^https?:\/\//i.test(url)) return url;
+  }
+  return null;
+}
+
 const GODO_SALE_PRICE_RE = /<input[^>]+name=["']set_goods_price["'][^>]+value=["']([0-9]+(?:\.[0-9]+)?)["']/i;
 
 export function priceFromGodoSaleField(html: string): { amount: number; currency: string } | null {
