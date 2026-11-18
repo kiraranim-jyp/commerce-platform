@@ -42,7 +42,21 @@ export const SELLER_CANDIDATES_TITLE = "🛒 소싱 후보";
 export const SELLER_DOMESTIC_LABEL = "🇰🇷 국내 소싱 후보";
 export const SELLER_OVERSEAS_LABEL = "🌎 해외 소싱 후보";
 /** 🔴 값이 없을 때 쓰는 말 — **지어내지 않는다**는 사실을 화면이 직접 말한다. */
-export const SELLER_NO_IMAGE = "이미지 없음";
+/**
+ * 🔵 UIRD-4 — **「NO IMAGE」**(CPO 판정 ②). 🔴 「대체 «사진» 금지」 원칙은 그대로다 —
+ *    바뀌는 것은 **글자** 뿐이고 다른 상품 사진으로 메우지 않는다.
+ */
+export const SELLER_NO_IMAGE = "NO IMAGE";
+/** 🔵 UIRD-4 — 승인된 다섯 중 하나. 🔴 상품명 칸이 **아예 없어서** 새로 만든 문구다. */
+export const SELLER_NO_TITLE = "상품명 확인 필요";
+/**
+ * 🔵🔵 UIRD-4 — **이미지 칸의 크기 규칙 owner 하나.**
+ * 🔴 사본을 두면 「있을 때」와 「없을 때」의 칸 크기가 갈려 카드가 흔들린다 —
+ *    국내·해외가 같은 컴포넌트라도 **그 둘이 달라지면 화면은 비대칭으로 보인다**.
+ */
+export const SELLER_IMAGE_BOX_CLASS = "h-24 w-full rounded";
+export const SELLER_IMAGE_MISSING_CLASS =
+  `${SELLER_IMAGE_BOX_CLASS} flex items-center justify-center bg-slate-50 text-[11px] text-slate-400`;
 export const SELLER_NO_PRICE = "가격 확인 필요";
 export const SELLER_NO_URL = "상품 주소 없음";
 export const SELLER_NO_VERDICT = "판정 없음";
@@ -66,47 +80,79 @@ function SellerCard({ row }: { row: Row }) {
   const url = (row.discoveredUrl ?? "").trim();
   return (
     <li data-testid="seller-card" className="rounded border border-slate-200 bg-white p-2">
-      {/* 🔴 ① 사진 — 없으면 **만들지 않고** 그 사실을 적는다. */}
+      {/**
+       * 🔵🔵🔵 UIRD-4 — **승인된 다섯 정보를 «그 순서» 로 둔다**(CEO 고정 · CPO 승인)
+       *   ① 상품 이미지 → ② 상품명 → ③ 판매처·링크 → ④ 가격·통화 → ⑤ 동일상품 판정
+       *
+       * 🔴🔴 **UIRD-2/3 은 «다른 컴포넌트» 를 고쳤다** — `GeminiTransientCandidates` 를
+       *    통일하고 계약 46건이 PASS 였는데, CEO 화면의 「국내/해외 소싱 후보」 카드는
+       *    **이 파일** 이었다. 그래서 화면이 한 번도 바뀌지 않았다. 같은 실수를 반복하지 않는다.
+       * 🔴 고친 것 — ⒜ **상품명 칸이 «아예 없었다»**(다섯 중 하나가 빠져 있었다)
+       *    ⒝ `onError` 가 없어 **로딩 실패 시 빈 칸** 이 남았다 ⒞ 「이미지 없음」 → **「NO IMAGE」**
+       *    ⒟ 순서를 승인안대로. 🟢 국내·해외가 **같은 컴포넌트** 라 한 곳이 둘을 고친다
+       * 🔴 환산 0 · 기호 변환 0 · 판정 라벨 **그대로**(WU-091) · 새 판정 어휘 0
+       */}
+      {/* ① 상품 이미지 — 🔴 없거나 **로딩 실패** 면 NO IMAGE. 대체 «사진» 은 쓰지 않는다. */}
       {row.imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          data-testid="seller-card-image"
-          src={row.imageUrl}
-          alt=""
-          className="h-24 w-full rounded object-contain"
-        />
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            data-testid="seller-card-image"
+            src={row.imageUrl}
+            alt=""
+            /**
+             * 🔴 로딩 **실패** 를 「없음」과 같게 다룬다 — 가르면 셀러는 빈 칸을 보고
+             *    「화면이 고장났다」로 읽는다. 🟢 숨겨 둔 형제 칸을 드러낸다(훅 0).
+             */
+            onError={(e) => {
+              const el = e.currentTarget;
+              el.hidden = true;
+              const sib = el.nextElementSibling as HTMLElement | null;
+              if (sib) sib.hidden = false;
+            }}
+            className={`${SELLER_IMAGE_BOX_CLASS} object-contain`}
+          />
+          <div data-testid="seller-card-image-missing" hidden className={SELLER_IMAGE_MISSING_CLASS}>
+            {SELLER_NO_IMAGE}
+          </div>
+        </>
       ) : (
-        <div data-testid="seller-card-image-missing" className="flex h-24 items-center justify-center rounded bg-slate-50 text-[11px] text-slate-400">
+        <div data-testid="seller-card-image-missing" className={SELLER_IMAGE_MISSING_CLASS}>
           {SELLER_NO_IMAGE}
         </div>
       )}
 
-      {/* 🔴 ② 가격 — **원문 그대로**(환산 0). 없으면 「가격 확인 필요」. */}
-      <p data-testid="seller-card-price" className="mt-1 text-sm font-semibold text-slate-900">
-        {price || SELLER_NO_PRICE}
+      {/* ② 상품명 — 🔴 **없던 칸이다**(승인된 다섯 중 하나). 없으면 그 사실을 적는다. */}
+      <p data-testid="seller-card-title" className="mt-1 truncate text-[12px] font-medium text-slate-900">
+        {(row.title ?? "").trim() || SELLER_NO_TITLE}
       </p>
 
-      {/* 🔴🔴 ③ WU-091 — **행마다 실제 판정 라벨**. 이 줄을 지우면 2026-09-19 사고로 돌아간다. */}
-      <p data-testid="seller-card-verdict" className="text-[11px] text-slate-500">
-        {verdictLabel(row)}
-      </p>
-
-      {/* 🔴 ④ 원문 URL — 없으면 **클릭 불가능한 링크를 만들지 않는다**. */}
+      {/* ③ 판매처 및 링크 — 🔴 없으면 **클릭 불가능한 링크를 만들지 않는다**. */}
       {url ? (
         <a
           data-testid="seller-card-url"
           href={url}
           target="_blank"
           rel="noreferrer"
-          className="mt-1 inline-block text-[11px] text-sky-700 underline"
+          className="mt-0.5 inline-block text-[11px] text-sky-700 underline"
         >
-          상품 페이지 열기 ↗
+          {(row.domain ?? "").trim() || "상품 페이지"} ↗
         </a>
       ) : (
-        <span data-testid="seller-card-url-missing" className="mt-1 inline-block text-[11px] text-slate-400">
+        <span data-testid="seller-card-url-missing" className="mt-0.5 inline-block text-[11px] text-slate-400">
           {SELLER_NO_URL}
         </span>
       )}
+
+      {/* ④ 가격·통화 — **원문 그대로**(환산 0). 없으면 「가격 확인 필요」. */}
+      <p data-testid="seller-card-price" className="mt-1 text-sm font-semibold text-slate-900">
+        {price || SELLER_NO_PRICE}
+      </p>
+
+      {/* 🔴🔴 ⑤ WU-091 — **행마다 실제 판정 라벨**. 이 줄을 지우면 2026-09-19 사고로 돌아간다. */}
+      <p data-testid="seller-card-verdict" className="text-[11px] text-slate-500">
+        {verdictLabel(row)}
+      </p>
     </li>
   );
 }
