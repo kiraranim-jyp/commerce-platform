@@ -1,0 +1,327 @@
+{
+  "note": "🔴 관찰 실험이다 — verdict 재계산 0 · 정밀도 0 · SAME 판정 변경 0. 추출 필드만 저장(원시 HTML 0).",
+  "source": "docs/MI-REEVAL-STEP5-SHADOW.json#pairsA (GT=SAME 16 + DIFFERENT 6)",
+  "attempted": 22,
+  "reached": 8,
+  "withDescription": 7,
+  "byGt": {
+    "SAME": {
+      "attempted": 16,
+      "withDescription": 4
+    },
+    "DIFFERENT": {
+      "attempted": 6,
+      "withDescription": 3
+    }
+  },
+  "axisTallyGuardsOff": {
+    "BRAND": {
+      "NOT_APPLICABLE": 1,
+      "UNKNOWN": 6
+    },
+    "MODEL_CODE": {
+      "MISMATCH": 3,
+      "UNKNOWN": 4
+    },
+    "PRODUCT_TYPE": {
+      "UNKNOWN": 6,
+      "NOT_APPLICABLE": 1
+    },
+    "DESIGN": {
+      "UNKNOWN": 7
+    },
+    "PRINT_PATTERN": {
+      "UNKNOWN": 3,
+      "NOT_APPLICABLE": 4
+    },
+    "COLOR": {
+      "NOT_APPLICABLE": 4,
+      "UNKNOWN": 3
+    },
+    "MATERIAL": {
+      "NOT_APPLICABLE": 3,
+      "UNKNOWN": 4
+    },
+    "SLEEVE_FORM": {
+      "NOT_APPLICABLE": 6,
+      "UNKNOWN": 1
+    },
+    "FIT": {
+      "NOT_APPLICABLE": 6,
+      "UNKNOWN": 1
+    },
+    "AUDIENCE": {
+      "NOT_APPLICABLE": 5,
+      "UNKNOWN": 2
+    },
+    "SIZE_OPTION": {
+      "NOT_APPLICABLE": 7
+    }
+  },
+  "axisTallyGuardsOn": {
+    "BRAND": {
+      "NOT_APPLICABLE": 1,
+      "UNKNOWN": 6
+    },
+    "MODEL_CODE": {
+      "MISMATCH": 3,
+      "UNKNOWN": 4
+    },
+    "PRODUCT_TYPE": {
+      "UNKNOWN": 6,
+      "NOT_APPLICABLE": 1
+    },
+    "DESIGN": {
+      "UNKNOWN": 7
+    },
+    "PRINT_PATTERN": {
+      "UNKNOWN": 3,
+      "NOT_APPLICABLE": 4
+    },
+    "COLOR": {
+      "NOT_APPLICABLE": 4,
+      "UNKNOWN": 3
+    },
+    "MATERIAL": {
+      "NOT_APPLICABLE": 3,
+      "UNKNOWN": 4
+    },
+    "SLEEVE_FORM": {
+      "NOT_APPLICABLE": 6,
+      "UNKNOWN": 1
+    },
+    "FIT": {
+      "NOT_APPLICABLE": 6,
+      "UNKNOWN": 1
+    },
+    "AUDIENCE": {
+      "NOT_APPLICABLE": 5,
+      "UNKNOWN": 2
+    },
+    "SIZE_OPTION": {
+      "NOT_APPLICABLE": 7
+    }
+  },
+  "rows": [
+    {
+      "pairId": "C27",
+      "host": "www.beaumonde.co.kr",
+      "gt": "SAME",
+      "reached": true,
+      "hasDescription": false,
+      "descriptionLength": 0,
+      "title": "보보쇼즈 26FW 아동 긴팔 티셔츠 Booty Ghosts T-shirt B226AC010",
+      "description": null
+    },
+    {
+      "pairId": "C51",
+      "host": "www.ladida.com",
+      "gt": "DIFFERENT",
+      "reached": false,
+      "hasDescription": false,
+      "descriptionLength": 0,
+      "title": null,
+      "description": null
+    },
+    {
+      "pairId": "C22",
+      "host": "www.donokids.com",
+      "gt": "DIFFERENT",
+      "reached": true,
+      "hasDescription": true,
+      "descriptionLength": 53,
+      "title": "[[메인스토리] Bubble Sweatshirt _Conker Stripe #AW26MS185]",
+      "description": "[[메인스토리] Bubble Sweatshirt _Conker Stripe #AW26MS185]"
+    },
+    {
+      "pairId": "C11",
+      "host": "bobochoses.co.jp",
+      "gt": "SAME",
+      "reached": false,
+      "hasDescription": false,
+      "descriptionLength": 0,
+      "title": null,
+      "description": null
+    },
+    {
+      "pairId": "C48",
+      "host": "bobochoses.com",
+      "gt": "SAME",
+      "reached": false,
+      "hasDescription": false,
+      "descriptionLength": 0,
+      "title": null,
+      "description": null
+    },
+    {
+      "pairId": "C05",
+      "host": "www.tinyapple.net",
+      "gt": "SAME",
+      "reached": false,
+      "hasDescription": false,
+      "descriptionLength": 0,
+      "title": null,
+      "description": null
+    },
+    {
+      "pairId": "C19",
+      "host": "www.junioredition.com",
+      "gt": "DIFFERENT",
+      "reached": false,
+      "hasDescription": false,
+      "descriptionLength": 0,
+      "title": null,
+      "description": null
+    },
+    {
+      "pairId": "C20",
+      "host": "www.junioredition.com",
+      "gt": "DIFFERENT",
+      "reached": false,
+      "hasDescription": false,
+      "descriptionLength": 0,
+      "title": null,
+      "description": null
+    },
+    {
+      "pairId": "C14",
+      "host": "kihanan.com",
+      "gt": "SAME",
+      "reached": false,
+      "hasDescription": false,
+      "descriptionLength": 0,
+      "title": null,
+      "description": null
+    },
+    {
+      "pairId": "C37",
+      "host": "bobochoses.co.jp",
+      "gt": "SAME",
+      "reached": true,
+      "hasDescription": true,
+      "descriptionLength": 67,
+      "title": "B126AI018 Curious Turnip all over swim cap | Bobo Choses",
+      "description": "Green cap. Made in China. Composition: Polyester 88%, Elastane 12%."
+    },
+    {
+      "pairId": "S1-1",
+      "host": "www.rboutique.com",
+      "gt": "SAME",
+      "reached": false,
+      "hasDescription": false,
+      "descriptionLength": 0,
+      "title": null,
+      "description": null
+    },
+    {
+      "pairId": "S1-2",
+      "host": "www.eraldo.com",
+      "gt": "SAME",
+      "reached": false,
+      "hasDescription": false,
+      "descriptionLength": 0,
+      "title": null,
+      "description": null
+    },
+    {
+      "pairId": "S1-3",
+      "host": "cissywears.com",
+      "gt": "SAME",
+      "reached": false,
+      "hasDescription": false,
+      "descriptionLength": 0,
+      "title": null,
+      "description": null
+    },
+    {
+      "pairId": "S1-4",
+      "host": "kolkid.ca",
+      "gt": "SAME",
+      "reached": false,
+      "hasDescription": false,
+      "descriptionLength": 0,
+      "title": null,
+      "description": null
+    },
+    {
+      "pairId": "S1-5",
+      "host": "www.junioredition.com",
+      "gt": "DIFFERENT",
+      "reached": true,
+      "hasDescription": true,
+      "descriptionLength": 163,
+      "title": "Booty Ghosts T-Shirt | Bobo Choses | Junior Edition",
+      "description": "Bobo Choses Booty Ghosts T-Shirt in Light Blue. Relaxed fit tee with ribbed neck and booty ghosts design on chest, for kids aged 1–13. Shop AW26 at Junior Edition."
+    },
+    {
+      "pairId": "S1-6",
+      "host": "www.tinyapple.net",
+      "gt": "DIFFERENT",
+      "reached": true,
+      "hasDescription": true,
+      "descriptionLength": 155,
+      "title": "Bobo Choses Booty Ghosts T-shirt",
+      "description": "Tinyapple | FW26 Bobo Choses | Booty Ghosts T-shirt 100% Organic CottonWash Cold-30°Do Not BleachDo Not IronDo not Dry-cleanDo Not Tumble DryREF: B226AC141"
+    },
+    {
+      "pairId": "S1-7",
+      "host": "bobochoses.com",
+      "gt": "SAME",
+      "reached": true,
+      "hasDescription": true,
+      "descriptionLength": 89,
+      "title": "Booty Ghosts baby T-shirt | Bobo Choses for Babies",
+      "description": "Light heather grey t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal."
+    },
+    {
+      "pairId": "S2-1",
+      "host": "www.stockmann.ee",
+      "gt": "SAME",
+      "reached": true,
+      "hasDescription": true,
+      "descriptionLength": 148,
+      "title": "BOBO CHOSES Trikoos&auml;rk Hug Monster | Stockmann",
+      "description": "BOBO CHOSES Trikoosärk Hug Monster nüüd saadaval Stockmannis. Tutvuge Stockmanni laia valikuga ja tellige juba täna mugavalt MyStockmanni äpi kaudu!"
+    },
+    {
+      "pairId": "S2-2",
+      "host": "www.thefrontshop.com",
+      "gt": "SAME",
+      "reached": false,
+      "hasDescription": false,
+      "descriptionLength": 0,
+      "title": null,
+      "description": null
+    },
+    {
+      "pairId": "S2-3",
+      "host": "bobochoses.com",
+      "gt": "SAME",
+      "reached": false,
+      "hasDescription": false,
+      "descriptionLength": 0,
+      "title": null,
+      "description": null
+    },
+    {
+      "pairId": "S2-4",
+      "host": "kids21.com",
+      "gt": "SAME",
+      "reached": true,
+      "hasDescription": true,
+      "descriptionLength": 127,
+      "title": "Bobo Choses Hug Hairy Monster T-shirt",
+      "description": "Description: Short sleeves. Round neckline. Graphic print at the front. Straight fit. Material composition: 100% Organic Cotton"
+    },
+    {
+      "pairId": "S3-1",
+      "host": "www.stadtlandkind.ch",
+      "gt": "SAME",
+      "reached": false,
+      "hasDescription": false,
+      "descriptionLength": 0,
+      "title": null,
+      "description": null
+    }
+  ]
+}
