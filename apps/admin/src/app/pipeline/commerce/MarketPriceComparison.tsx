@@ -113,6 +113,9 @@ import {
   /** 🔵 U3 그룹 순서 owner · U4 이미지/링크/근거. 🔴 순서·문장을 화면에서 복제하지 않는다. */
   CANDIDATE_GROUP_ORDER,
   CANDIDATE_IMAGE_NONE,
+  /** 🔵 UIRD-6 — 세 상태(성공·실패·없음)가 같은 크기를 쓰게 하는 상수 둘. */
+  MI_CANDIDATE_IMAGE_BOX,
+  MI_CANDIDATE_IMAGE_MISSING,
   CANDIDATE_LINK_TEXT,
   /**
    * 🔵🔵 SOURCING-CARD-MINIMAL-1 — **근거 접힘이 제거되어 둘을 더는 쓰지 않는다.**
@@ -2509,18 +2512,59 @@ function MarketColumn({
                           *    **12건이 「이미지가 없어서」 측정불가** 로 돌아온 그 자리다.
                           * 🔴 없으면 **「이미지 없음」을 적는다**(대체 사진 금지 · WU-132 ④).
                           */}
+                        {/**
+                          * ══════════════════════════════════════════════════════════════
+                          * 🔵🔵🔵 UIRD-6 — **셀러 화면의 «실제» 이미지 칸**(CPO 승인)
+                          * ══════════════════════════════════════════════════════════════
+                          *
+                          * 🔴🔴 **이 자리를 찾는 데 배포를 세 번 썼다.** UIRD-2/3 는
+                          *    `GeminiTransientCandidates`, UIRD-4 는 `SellerCandidateCards`
+                          *    (🔴 WU-149 가 렌더를 **제거** 해 호출 0), UIRD-5 는
+                          *    `CandidateComparison`(🔴 그 부모 두 패널도 WU-149 가 셀러 화면에서
+                          *    제거)을 고쳤다 — **전부 셀러 화면에 마운트되지 않는다.**
+                          * 🔴 **공통 실수 하나** — 「문구가 있는 파일」을 찾았고
+                          *    **「그 컴포넌트가 실제로 마운트되는가」를 보지 않았다.**
+                          *    🟢 렌더 호출 grep 한 줄이 즉시 답을 줬다. 다음엔 그것부터 한다.
+                          *
+                          * 🟢 고친 것 **셋**(CPO 범위 그대로):
+                          * ```
+                          * ⒜ 「이미지 없음」 → **NO IMAGE**(`CANDIDATE_IMAGE_NONE` 의 값을 바꿨다)
+                          * ⒝ **`onError` 추가** — 로딩 «실패» 도 NO IMAGE 로 간다
+                          *    (전까지 실패하면 **빈 칸** 이 남았다 — 셀러는 고장으로 읽는다)
+                          * ⒞ 세 상태(성공·실패·없음)가 **같은 `h-20 w-20`** — 없음 분기에
+                          *    크기 클래스가 **아예 없어서** 카드가 흔들렸다
+                          * ```
+                          * 🔴 순서(이미지 → 등급 → 가격 → 상품명 → 판매처 → 근거 → 링크)는
+                          *    **건드리지 않았다** — U4 가 확정한 CEO 승인 순서다.
+                          * 🔴 대체 사진 금지(WU-132 ④) 그대로 · 가격·등급·판정·데이터 계약 **0**.
+                          */}
                         {row.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            data-testid="mi-candidate-image"
-                            src={row.imageUrl}
-                            alt=""
-                            className="mb-1 h-20 w-20 rounded border border-border/40 object-contain"
-                          />
+                          <>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              data-testid="mi-candidate-image"
+                              src={row.imageUrl}
+                              alt=""
+                              /**
+                               * 🔴 실패를 「없음」과 **같게** 다룬다 — 가르면 빈 칸이 남는다.
+                               * 🟢 숨겨 둔 형제 칸을 드러낸다(훅 0 · 추가 요청 0).
+                               */
+                              onError={(e) => {
+                                const el = e.currentTarget;
+                                el.hidden = true;
+                                const sib = el.nextElementSibling as HTMLElement | null;
+                                if (sib) sib.hidden = false;
+                              }}
+                              className={`mb-1 ${MI_CANDIDATE_IMAGE_BOX} object-contain`}
+                            />
+                            <p hidden className={`mb-1 ${MI_CANDIDATE_IMAGE_MISSING}`}>
+                              {CANDIDATE_IMAGE_NONE}
+                            </p>
+                          </>
                         ) : (
                           <p
                             data-testid="mi-candidate-image"
-                            className="mb-1 text-[11px] text-text-tertiary"
+                            className={`mb-1 ${MI_CANDIDATE_IMAGE_MISSING}`}
                           >
                             {CANDIDATE_IMAGE_NONE}
                           </p>

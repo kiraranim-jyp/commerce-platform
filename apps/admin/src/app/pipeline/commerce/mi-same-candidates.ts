@@ -528,7 +528,23 @@ export const CANDIDATE_PRICE_UNKNOWN = "가격 확인 필요";
 export const CANDIDATE_PRICE_UNVERIFIED = "판매처 표시가 · 상세 검증 전";
 
 /** 🔴 사진이 없으면 **없다고 적는다** — 대체 사진을 넣지 않는다(WU-132 ④). */
-export const CANDIDATE_IMAGE_NONE = "이미지 없음";
+/**
+ * 🔵 UIRD-6 — **「NO IMAGE」**(CPO 승인 2026-11-18).
+ * 🔴 「대체 «사진» 금지」(WU-132 ④)는 그대로다 — 바뀌는 것은 **글자** 뿐이고
+ *    다른 상품 사진으로 메우지 않는다.
+ */
+export const CANDIDATE_IMAGE_NONE = "NO IMAGE";
+/**
+ * 🔵🔵 UIRD-6 — **후보 이미지 칸의 «같은» 크기 규칙.**
+ *
+ * 🔴🔴 고친 결함 — 「없음」 분기가 `<p className="mb-1 text-[11px] …">` 로
+ *    **크기 클래스를 아예 갖고 있지 않았다** ⟹ 이미지가 있는 행과 없는 행의 높이가
+ *    달라 카드가 흔들렸다. 🟢 상수를 **하나** 로 둬 세 상태(성공·실패·없음)가 같아진다.
+ * 🔴 사본을 만들지 않는다 — 한쪽만 고쳐지면 다시 벌어진다.
+ */
+export const MI_CANDIDATE_IMAGE_BOX = "h-20 w-20 rounded border border-border/40";
+export const MI_CANDIDATE_IMAGE_MISSING =
+  `${MI_CANDIDATE_IMAGE_BOX} flex items-center justify-center text-[11px] text-text-tertiary`;
 /** 🟢 링크의 말. 🔴 도메인을 두 번 적지 않는다(판매처 줄이 이미 그것을 말한다). */
 export const CANDIDATE_LINK_TEXT = "판매 페이지 열기";
 /**
