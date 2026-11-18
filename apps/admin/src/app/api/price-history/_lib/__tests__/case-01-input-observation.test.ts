@@ -1,15 +1,20 @@
 /**
  * ════════════════════════════════════════════════════════════════════════════
- * 🔵🔵🔵 CASE-01 실행단위 1 — **브라우저 후보 입력 관측 계약**
+ * 🔵🔵🔵 CASE-01 — **탈락 관측 계약**(영구) + **임시 계측 제거 계약**
  * ════════════════════════════════════════════════════════════════════════════
  *
- * 🔴🔴 **왜 이 계측이 필요했나.** AI Search 는 **사용자 브라우저에서** 일어나고 서버는
- *    `candidateUrls[]` **만** 받는다(`pipeline/page.tsx:309`). 검색 원문을 저장하는 칸은
- *    **코드에 없다**(전수 grep 0). ⟹ 「국내 상세 URL 이 검색 결과에 있었는가」를 볼 수 있는
- *    **유일한 지점이 `/check` 진입부** 이고, 그것이 없어서 CASE-01 의 ①이 측정불가였다.
+ * 🟢 **실행단위 1 의 임시 계측(`[CASE-01-INPUT]`)은 제거됐다** — 할 일을 끝냈다.
+ *    CASE-01 의 원인이 ①공급이 아니라 **②수집** 으로 확정됐다: `global.trenbe.com` 이
+ *    운영 `CHROME_UA` 에 **HTTP 429** 를 주고, 도메인 limiter 의 429 backoff 재시도가
+ *    **10초 타임아웃을 넘겨** `TimeoutError` → `UNREACHABLE` 이 된다.
+ *    🔴 **MI 매칭 결함이 아니었다.**
  *
- * 🟢 이 파일은 그 계측의 **성질** 을 잠근다 — 일회성 console 출력으로 끝내지 않는다(§4).
- * 🔴 **임시 계측이다** — 원인이 확정되면 이 계약과 함께 제거한다(MI-CASE-INPUT 선례).
+ * 🔴 이 파일에 남는 것은 **영구 가치가 있는 둘** 이다:
+ * ```
+ * A  `[CASE-01-INPUT]` 이 **되살아나지 않는다**(라우트는 관측·판정을 소유하지 않는다)
+ * B  주경로 탈락이 **host:reason** 으로 적힌다 — 형제 생산자와 «같은 모양»
+ * ```
+ * 🟢 실패 «사유» 보존 계약은 `case-01-fetch-failure-reason.test.ts` 가 소유한다.
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
@@ -20,106 +25,37 @@ const ROUTE = path.join(process.cwd(), "src", "app", "api", "price-history", "ch
 const bare = () =>
   readFileSync(ROUTE, "utf8").replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/[^\n]*/g, " ");
 
-describe("CASE-01 실행단위 1 — 후보 입력 관측", () => {
-  it("A-1 🟢 `[CASE-01-INPUT]` 이 `/check` 진입부에 있다", () => {
-    const src = bare();
-    expect(src).toContain("[CASE-01-INPUT]");
-    /** 🔴 `candidateUrls` 정규화 «뒤» 여야 한다 — 앞이면 필터 전 숫자를 세게 된다. */
-    const norm = src.indexOf("candidateUrls = body.candidateUrls");
-    const log = src.indexOf("[CASE-01-INPUT]");
-    expect(norm).toBeGreaterThan(0);
-    expect(log, "🔴 정규화 앞에서 세면 필터 전 개수가 찍힌다").toBeGreaterThan(norm);
+/**
+ * 🔴🔴🔴 **임시 계측이 되살아나지 않는다.**
+ *
+ * 그 로그는 ①(브라우저 AI Search 원문)의 공백을 메우는 **임시 수단** 이었고, 원인이
+ * ②로 확정된 뒤에는 **고객 요청마다 운영 로그에 한 줄을 더 남기는 비용** 만 남는다.
+ * 🔴 그리고 이 라우트는 **판정을 하지 않는다** — 입력 경계는 pool 이 소유한다(`wu-024`).
+ */
+describe("CASE-01 — 임시 입력 계측이 제거된 상태", () => {
+  it("A-1 🔴🔴 `[CASE-01-INPUT]` 이 **코드에 없다**(주석 기록은 허용)", () => {
+    expect(bare(), "🔴 임시 계측이 되살아났다").not.toContain("[CASE-01-INPUT]");
   });
 
-  it("A-2 🟢 세는 칸이 **셋**이다(들어온 것의 개수와 «성질» 만)", () => {
+  it("A-2 🔴 라우트가 후보 URL 을 **세지도 분류하지도 않는다**", () => {
     const src = bare();
-    const at = src.indexOf("[CASE-01-INPUT]");
-    /**
-     * 🔴 **로그 블록만 잘라낸다.** 1차 구현은 400자를 잘랐는데 그 창이 블록을 넘어
-     *    뒤의 `getSnapshot(snapshotId, …)` 를 읽어 **거짓 FAIL** 이 났다 — 가드가 맞았고
-     *    내 창이 거칠었다. 🟢 `JSON.stringify` 의 닫는 `})}` 까지만 본다.
-     */
-    const end = src.indexOf("})}", at);
-    expect(end, "🔴 로그 블록의 끝을 못 찾았다").toBeGreaterThan(at);
-    const seg = src.slice(at, end);
-    for (const k of ["total", "hosts", "kr"]) {
-      expect(seg, `🔴 ${k} 가 없다 — 들어온 수량을 봐야 원인이 갈린다`).toContain(k);
+    for (const banned of ["classifyUrlShape", "PRODUCT_PAGE", "LISTING_PAGE", "hosts.size"]) {
+      expect(src, `🔴 ${banned} — 입력 경계는 pool 이 소유한다`).not.toContain(banned);
     }
   });
 
-  /**
-   * 🔴🔴🔴 **라우트는 «판정» 을 하지 않는다 — 이 계약이 그것을 잠근다.**
-   *
-   * 1차 구현이 이 자리에서 `classifyUrlShape` 를 불러 detail/listing 을 셌고
-   * `wu-024-url-candidate-pool` 이 **FAIL** 했다 — 「입력 경계는 pool 이 소유한다」.
-   * 🟢 가드를 풀지 않고 **분류를 뺐다.** 그리고 그것이 더 정확하다 — 상세/목록 분류의
-   *    실제 결과는 `collectUrlCandidatePool` 의 산출이고, 라우트가 또 세면 **두 벌** 이 된다.
-   * 🔴 되살아나면 이 단언과 wu-024 가 **둘 다** FAIL 한다(양방향 잠금).
-   */
-  it("A-2b 🔴🔴 라우트가 URL 을 **분류하지 않는다**(pool 소유 경계 보존)", () => {
+  /** 🟢 제거가 **입력 경계 자체** 를 건드리지 않았음을 같이 잠근다(보존 단언). */
+  it("A-3 🟢 `candidateUrls` 정규화와 상한은 **그대로** 다", () => {
     const src = bare();
-    expect(src, "🔴 라우트가 다시 분류를 하고 있다").not.toContain("classifyUrlShape");
-    expect(src).not.toContain("PRODUCT_PAGE");
-    expect(src).not.toContain("LISTING_PAGE");
-  });
-
-  /**
-   * 🔴🔴🔴 **이 단언이 가장 중요하다 — 로그는 고객 데이터 저장소가 아니다.**
-   *
-   * URL 원문·상품명·사용자/워크스페이스 식별자가 들어가면 런타임 로그가 고객 데이터
-   * 사본이 된다. CPO 가 MI-CASE-INPUT 에서 고정한 그 기준을 그대로 적용한다.
-   */
-  it("A-3 🔴🔴 로그에 **URL 원문·식별자가 없다**", () => {
-    const src = bare();
-    const at = src.indexOf("[CASE-01-INPUT]");
-    /**
-     * 🔴 **로그 블록만 잘라낸다.** 1차 구현은 400자를 잘랐는데 그 창이 블록을 넘어
-     *    뒤의 `getSnapshot(snapshotId, …)` 를 읽어 **거짓 FAIL** 이 났다 — 가드가 맞았고
-     *    내 창이 거칠었다. 🟢 `JSON.stringify` 의 닫는 `})}` 까지만 본다.
-     */
-    const end = src.indexOf("})}", at);
-    expect(end, "🔴 로그 블록의 끝을 못 찾았다").toBeGreaterThan(at);
-    const seg = src.slice(at, end);
-    for (const banned of ["url:", "urls:", "snapshotId", "workspaceId", "hostname:", "title"]) {
-      expect(seg, `🔴 로그에 ${banned} 가 섞였다`).not.toContain(banned);
-    }
-    /** 🔴 호스트 «이름» 을 적지 않는다 — 개수(`hosts.size`)만 센다. */
-    expect(seg).toContain("hosts: hosts.size");
-  });
-
-  it("A-4 🔴 국내 신호는 **`.kr` 단독** 이다(통화·추측으로 국내를 만들지 않는다)", () => {
-    const src = bare();
-    expect(src).toContain('h.endsWith(".kr")');
-    /**
-     * 🔴 통화나 도메인 추측으로 국내를 세지 않는다 — `classifyCandidateMarket` 의
-     *    보호 계약(「통화 단독 KR 결정 금지」)과 같은 방향이다. 이 계측은 **관측** 이고
-     *    시장 «판정» 이 아니므로 `.kr` 한 축만 센다.
-     */
-    const at = src.indexOf("[CASE-01-INPUT]");
-    const seg = src.slice(Math.max(0, at - 700), at);
-    expect(seg).not.toContain("KRW");
-    expect(seg).not.toContain("classifyCandidateMarket");
-  });
-
-  it("A-5 🔴 URL 파싱 실패를 **국내로 몰지 않는다**(추측 금지)", () => {
-    const src = bare();
-    const at = src.indexOf("[CASE-01-INPUT]");
-    /** 🟢 try/catch 가 있고 catch 에서 kr 을 올리지 않는다. */
-    const seg = src.slice(Math.max(0, at - 900), at);
-    expect(seg).toContain("} catch {");
-    const c = seg.slice(seg.indexOf("} catch {"));
-    expect(c.slice(0, 120)).not.toContain("kr +=");
-  });
-
-  it("A-6 🟢 후보가 **없으면 찍지 않는다**(빈 로그를 만들지 않는다)", () => {
-    const src = bare();
-    expect(src).toContain("if (candidateUrls && candidateUrls.length > 0) {");
+    expect(src).toContain("candidateUrls = body.candidateUrls");
+    expect(src).toContain("MAX_CANDIDATE_URL_PAYLOAD");
+    expect(src).toContain("MAX_CANDIDATE_URL_LENGTH");
   });
 });
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
- * 🔵🔵🔵 CASE-01 실행단위 2 — **탈락은 «어디서» 났는지와 함께 적는다**
+ * 🔵🔵🔵 CASE-01 실행단위 2 — **탈락은 «어디서» 났는지와 함께 적는다**(영구)
  * ════════════════════════════════════════════════════════════════════════════
  *
  * 🔴 `__url_candidates__` 가 CASE-01 의 **주경로** 다(브라우저 AI Search → candidateUrls).

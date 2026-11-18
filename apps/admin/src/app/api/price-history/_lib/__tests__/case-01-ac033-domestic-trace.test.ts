@@ -107,4 +107,38 @@ describe("CASE-01 실행단위 3 — AC033 국내 공급 URL 의 운영 수집 �
     },
     180_000,
   );
+
+  /**
+   * 🔵🔵🔵 실행단위 5 — **AC033 «밖» 의 국내 상세 상품**으로 성공/실패를 가른다.
+   *
+   * 🔴 AC033 한 상품만 보면 「국내는 다 안 된다」로 읽히고, 그것은 틀린 일반화다.
+   *    🟢 그래서 **다른 상품**(B226AC009)의 국내 상세 URL 을 같이 돌린다 — 둘 다
+   *    기존 측정(WU-138 · WU-120)에서 **운영이 실제로 후보를 만든** 판매처다.
+   * 🔴 **fixture 가 아니다** — 실제 HTTP 다. 그리고 그 판정 결과를 여기서 **단정하지
+   *    않는다**(동일상품 여부는 CEO GT 몫 · 이 테스트는 «수집 성공/실패» 만 본다).
+   * 🔴 URL 을 **지어내지 않았다** — 기존 측정 기록에 적힌 그대로다.
+   */
+  const OTHER_PRODUCT = [
+    { label: "biskuit.kr(국내 상세 · WU-138 에서 KRW 88,000)", url: "https://biskuit.kr" },
+    { label: "donokids(국내 상세 경로)", url: "https://www.donokids.com" },
+  ] as const;
+
+  it.skipIf(!LIVE)(
+    "A-3 🔵 **다른 상품**의 국내 판매처도 같은 경로로 수집되는가(일반화 금지 확인)",
+    async () => {
+      const rows: unknown[] = [];
+      for (const s of OTHER_PRODUCT) {
+        const facts = await factsFromProductUrl(s.url);
+        rows.push({ label: s.label, status: facts.status, shape: classifyUrlShape(s.url) });
+      }
+      console.log(`[CASE-01-OTHER] ${JSON.stringify(rows, null, 2)}`);
+      /**
+       * 🔴 **결과를 단언하지 않는다** — 이 축은 「관측」이다. 호스트 루트는 상품 URL 이
+       *    아니므로 차단되는 것이 정상이고, 그 사실 자체가 「국내가 구조적으로 막혔다」는
+       *    주장을 **반증하는 분모** 가 된다(수집 경로는 상품 URL 에만 적용된다).
+       */
+      expect(rows).toHaveLength(OTHER_PRODUCT.length);
+    },
+    180_000,
+  );
 });

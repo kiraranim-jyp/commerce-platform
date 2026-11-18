@@ -81,8 +81,25 @@ export async function POST(request: Request) {
 
   /**
    * ══════════════════════════════════════════════════════════════════════════
-   * 🔵🔵🔵 CASE-01 실행단위 1 — **브라우저가 보낸 후보 입력을 «관측» 한다**
+   * 🔵 CASE-01 — **여기 있던 임시 입력 계측(`[CASE-01-INPUT]`)은 «제거됐다».**
    * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🟢 **그 계측은 할 일을 끝냈다.** CASE-01 의 원인이 ①공급이 아니라 **②수집** 으로
+   *    확정됐다 — `global.trenbe.com` 이 운영 `CHROME_UA` 에 **HTTP 429** 를 주고,
+   *    도메인 limiter 의 429 backoff 재시도가 **10초 타임아웃을 넘겨** 수집이 죽는다
+   *    (실측 사유 `TimeoutError`). 국내 상세 URL · 품번 · JSON-LD 를 다 갖춘 후보가
+   *    그래서 MI 판정에 도달하지 못했다. ⟹ **MI 매칭 결함이 아니었다.**
+   *
+   * 🟢 그래서 **영구 관측기는 다른 자리에 남았다**(이 라우트가 아니다):
+   * ```
+   * [PLAIN-HTML-FAIL]   shopify-product-json.ts — 수집 실패의 «사유» (HTTP_429 · TimeoutError …)
+   * [WU-024-urlpool]    run-domestic-price-check — 주경로 탈락을 **host:reason** 으로
+   * [SP07-pool]         형제 생산자 — 같은 모양(두 생산자를 계약이 같이 본다)
+   * ```
+   * 🔴 **이 자리에 로그를 되살리지 않는다** — ①(브라우저 AI Search 원문)은 서버에서
+   *    구조적으로 측정불가이고, 그 공백을 로그로 메우는 것은 **임시 수단** 이었다.
+   *    🔴 그리고 이 라우트는 **판정을 하지 않는다**(입력 경계는 pool 소유 · `wu-024`).
+   * ── 아래는 제거된 계측의 설계 기록이다(다시 필요해지면 그 조건을 먼저 본다) ──
    *
    * 🔴🔴 **왜 이 자리인가.** AI Search 는 **사용자 브라우저에서** 일어나고 서버는
    *    `candidateUrls[]` **만** 받는다(`pipeline/page.tsx:309`). 그리고 검색 원문을
@@ -109,22 +126,6 @@ export async function POST(request: Request) {
    * ⟹ 이 자리는 **「무엇이 들어왔는가」** 만 센다. 「어떻게 분류됐는가」는 pool 축이다.
    * ```
    */
-  if (candidateUrls && candidateUrls.length > 0) {
-    let kr = 0;
-    const hosts = new Set<string>();
-    for (const u of candidateUrls) {
-      try {
-        const h = new URL(u).hostname.toLowerCase();
-        hosts.add(h);
-        if (h.endsWith(".kr")) kr += 1;
-      } catch {
-        /* 🔴 파싱 실패는 세지 않는다 — 추측해서 국내로 몰지 않는다. */
-      }
-    }
-    console.info(
-      `[CASE-01-INPUT] ${JSON.stringify({ total: candidateUrls.length, hosts: hosts.size, kr })}`,
-    );
-  }
 
   const snapshot = await getSnapshot(snapshotId, auth.user.workspaceId);
   if (!snapshot) {
