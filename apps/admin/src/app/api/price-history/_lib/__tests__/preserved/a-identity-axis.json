@@ -1,0 +1,669 @@
+{
+  "note": "🔴 평가 전용 · 운영 변경 0 · HTTP 0 · verdict 재계산 0. 🔴 분모는 C 가 가른 IDENTITY_AXIS 26쌍이며 109·16·7 과 **합산하지 않는다**. 🔴 UNKNOWN 은 「모른다」이고 오판이 아니다.",
+  "denominator": {
+    "identityAxisPairs": 26,
+    "hosts": 9,
+    "humanGtLabeled": 13,
+    "unlabeled": 13,
+    "otherDenominatorsNotMerged": {
+      "bGroupPairs": 109,
+      "b16FullText": 16,
+      "aGroupFullText": 7
+    }
+  },
+  "axisTally": {
+    "modelCode": {
+      "MISMATCH": 7,
+      "MATCH": 17,
+      "UNKNOWN": 2
+    },
+    "productName": {
+      "MATCH": 12,
+      "UNKNOWN": 13,
+      "MISMATCH": 1
+    },
+    "brand": {
+      "MATCH": 16,
+      "UNKNOWN": 10
+    }
+  },
+  "causeTally": {
+    "code": {
+      "CODE_PRESENT_BUT_DIFFERENT": 7,
+      "TITLE_APPROVED": 5,
+      "DESCRIPTION_ONLY": 11,
+      "NOT_PRESENT": 1,
+      "ORIGIN_CODE_ABSENT": 2
+    },
+    "name": {
+      "TOKENS_SHARED": 17,
+      "ORIGIN_TITLE_ABSENT": 8,
+      "SCRIPT_DIFFERENCE_PARTIAL": 1
+    }
+  },
+  "baselineVerdict": {
+    "CONFLICT": 2,
+    "BASELINE_NOT_REPRODUCED": 5,
+    "PRESUMED_SAME": 10,
+    "SAME": 9
+  },
+  "axisByGt": {
+    "SAME": {
+      "n": 9,
+      "modelCode": {
+        "MATCH": 8,
+        "MISMATCH": 1
+      },
+      "productName": {
+        "UNKNOWN": 6,
+        "MATCH": 3
+      },
+      "brand": {
+        "UNKNOWN": 6,
+        "MATCH": 3
+      },
+      "codeCause": {
+        "TITLE_APPROVED": 2,
+        "DESCRIPTION_ONLY": 6,
+        "CODE_PRESENT_BUT_DIFFERENT": 1
+      },
+      "nameCause": {
+        "ORIGIN_TITLE_ABSENT": 5,
+        "TOKENS_SHARED": 4
+      }
+    },
+    "DIFFERENT": {
+      "n": 3,
+      "modelCode": {
+        "MISMATCH": 2,
+        "MATCH": 1
+      },
+      "productName": {
+        "UNKNOWN": 3
+      },
+      "brand": {
+        "UNKNOWN": 3
+      },
+      "codeCause": {
+        "CODE_PRESENT_BUT_DIFFERENT": 2,
+        "TITLE_APPROVED": 1
+      },
+      "nameCause": {
+        "ORIGIN_TITLE_ABSENT": 3
+      }
+    },
+    "SIMILAR": {
+      "n": 1,
+      "modelCode": {
+        "MISMATCH": 1
+      },
+      "productName": {
+        "UNKNOWN": 1
+      },
+      "brand": {
+        "MATCH": 1
+      },
+      "codeCause": {
+        "CODE_PRESENT_BUT_DIFFERENT": 1
+      },
+      "nameCause": {
+        "TOKENS_SHARED": 1
+      }
+    }
+  },
+  "leverSafety": {
+    "leverCodeOnlyInDescription": {
+      "pairs": 20,
+      "hosts": 4,
+      "gt": {
+        "ABSENT": 10,
+        "DIFFERENT": 2,
+        "SAME": 7,
+        "SIMILAR": 1
+      },
+      "opensGtDifferent": 2
+    },
+    "leverPrefixlessCode": {
+      "pairs": 0,
+      "hosts": 0,
+      "gt": {},
+      "opensGtDifferent": 0
+    }
+  },
+  "closedLevers": {
+    "titleTokenPromotion": "REJECT(기존) — 제목 토큰을 후보 brandModelCode 로 승격하면 판매처 SKU 가 같이 올라가 false SAME. 되돌린 커밋 32a0f374 · 재시도 방지 계약 11건",
+    "codeOnlyInDescription": "REJECT(이번 측정) — 20쌍 · 4 호스트인데 GT DIFFERENT **2건을 같이 연다**",
+    "prefixlessCode": "해당 없음 — 이 분모에 **0쌍**(관측값 0 · 측정불가가 아니다)",
+    "originSideRecovery": {
+      "verdict": "효과 0 — **이미 측정됐다**(재조사 금지)",
+      "gainedByExistingDetailRecovery": 0,
+      "titleFilledFromDb": 0,
+      "unchanged": true,
+      "note": "🔴 그래서 `ORIGIN_TITLE_ABSENT` 를 **제품 결함으로 적지 않는다** — 그 공백은 **하니스 입력** 기준이고 운영 DB 에는 27/27 있다"
+    }
+  },
+  "confirmedByOperationalOwner": 6,
+  "scriptDifferencePairs": 3,
+  "rows": [
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/stamp-bloom-all-over-reversible-jacket-by-bobo-choses",
+      "humanGt": null,
+      "baselineSystemVerdict": "CONFLICT",
+      "axisModelCode": "MISMATCH",
+      "axisProductName": "MATCH",
+      "brandAxis": "MATCH",
+      "axesAfter": {
+        "brand": "MATCH",
+        "code": "CONFLICT",
+        "name": "MATCH"
+      },
+      "codeCause": "CODE_PRESENT_BUT_DIFFERENT",
+      "nameCause": "TOKENS_SHARED",
+      "confirmedByOperationalOwner": false,
+      "scriptDifference": false,
+      "leverCodeOnlyInDescription": true,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": "biskuit.kr",
+      "candidateUrl": "https://biskuit.kr/product/%eb%b3%b4%eb%b3%b4%ec%87%bc%ec%a6%88-%ed%97%88%ea%b7%b8-%ed%97%a4%ec%96%b4%eb%a6%ac-%eb%aa%ac%ec%8a%a4%ed%84%b0-%ed%8b%b0%ec%85%94%ec%b8%a0-b226ac009/8891/category/367/display/1/",
+      "humanGt": "SAME",
+      "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+      "axisModelCode": "MATCH",
+      "axisProductName": "UNKNOWN",
+      "brandAxis": "UNKNOWN",
+      "axesAfter": {
+        "brand": "UNKNOWN",
+        "code": "MATCH",
+        "name": "UNKNOWN"
+      },
+      "codeCause": "TITLE_APPROVED",
+      "nameCause": "ORIGIN_TITLE_ABSENT",
+      "confirmedByOperationalOwner": true,
+      "scriptDifference": true,
+      "leverCodeOnlyInDescription": false,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": "cemarose.ca",
+      "candidateUrl": "https://cemarose.ca/products/bobo-choses-kids-booty-ghosts-sweatshirt-light-blue-c7907",
+      "humanGt": "DIFFERENT",
+      "baselineSystemVerdict": "PRESUMED_SAME",
+      "axisModelCode": "MISMATCH",
+      "axisProductName": "UNKNOWN",
+      "brandAxis": "UNKNOWN",
+      "axesAfter": {
+        "brand": "UNKNOWN",
+        "code": "CONFLICT",
+        "name": "UNKNOWN"
+      },
+      "codeCause": "CODE_PRESENT_BUT_DIFFERENT",
+      "nameCause": "ORIGIN_TITLE_ABSENT",
+      "confirmedByOperationalOwner": false,
+      "scriptDifference": false,
+      "leverCodeOnlyInDescription": true,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": "global.trenbe.com",
+      "candidateUrl": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+      "humanGt": "SAME",
+      "baselineSystemVerdict": "SAME",
+      "axisModelCode": "MATCH",
+      "axisProductName": "MATCH",
+      "brandAxis": "MATCH",
+      "axesAfter": {
+        "brand": "MATCH",
+        "code": "MATCH",
+        "name": "MATCH"
+      },
+      "codeCause": "TITLE_APPROVED",
+      "nameCause": "TOKENS_SHARED",
+      "confirmedByOperationalOwner": true,
+      "scriptDifference": false,
+      "leverCodeOnlyInDescription": false,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": "global.trenbe.com",
+      "candidateUrl": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+      "humanGt": null,
+      "baselineSystemVerdict": "SAME",
+      "axisModelCode": "MATCH",
+      "axisProductName": "MATCH",
+      "brandAxis": "MATCH",
+      "axesAfter": {
+        "brand": "MATCH",
+        "code": "MATCH",
+        "name": "MATCH"
+      },
+      "codeCause": "TITLE_APPROVED",
+      "nameCause": "TOKENS_SHARED",
+      "confirmedByOperationalOwner": true,
+      "scriptDifference": false,
+      "leverCodeOnlyInDescription": false,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "baselineSystemVerdict": "SAME",
+      "axisModelCode": "MATCH",
+      "axisProductName": "MATCH",
+      "brandAxis": "MATCH",
+      "axesAfter": {
+        "brand": "MATCH",
+        "code": "MATCH",
+        "name": "MATCH"
+      },
+      "codeCause": "DESCRIPTION_ONLY",
+      "nameCause": "TOKENS_SHARED",
+      "confirmedByOperationalOwner": false,
+      "scriptDifference": false,
+      "leverCodeOnlyInDescription": true,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "humanGt": null,
+      "baselineSystemVerdict": "SAME",
+      "axisModelCode": "MATCH",
+      "axisProductName": "MATCH",
+      "brandAxis": "MATCH",
+      "axesAfter": {
+        "brand": "MATCH",
+        "code": "MATCH",
+        "name": "MATCH"
+      },
+      "codeCause": "DESCRIPTION_ONLY",
+      "nameCause": "TOKENS_SHARED",
+      "confirmedByOperationalOwner": false,
+      "scriptDifference": false,
+      "leverCodeOnlyInDescription": true,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://www.junioredition.com/products/hug-hairy-monster-baby-t-shirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+      "axisModelCode": "MISMATCH",
+      "axisProductName": "UNKNOWN",
+      "brandAxis": "UNKNOWN",
+      "axesAfter": {
+        "brand": "UNKNOWN",
+        "code": "CONFLICT",
+        "name": "UNKNOWN"
+      },
+      "codeCause": "CODE_PRESENT_BUT_DIFFERENT",
+      "nameCause": "ORIGIN_TITLE_ABSENT",
+      "confirmedByOperationalOwner": false,
+      "scriptDifference": false,
+      "leverCodeOnlyInDescription": true,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "baselineSystemVerdict": "SAME",
+      "axisModelCode": "MATCH",
+      "axisProductName": "UNKNOWN",
+      "brandAxis": "UNKNOWN",
+      "axesAfter": {
+        "brand": "UNKNOWN",
+        "code": "MATCH",
+        "name": "UNKNOWN"
+      },
+      "codeCause": "DESCRIPTION_ONLY",
+      "nameCause": "ORIGIN_TITLE_ABSENT",
+      "confirmedByOperationalOwner": false,
+      "scriptDifference": false,
+      "leverCodeOnlyInDescription": true,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": "m.luxboy.com",
+      "candidateUrl": "https://m.luxboy.com/product/a14338197cb8698cd92c86431cce8d05",
+      "humanGt": "DIFFERENT",
+      "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+      "axisModelCode": "MATCH",
+      "axisProductName": "UNKNOWN",
+      "brandAxis": "UNKNOWN",
+      "axesAfter": {
+        "brand": "UNKNOWN",
+        "code": "MATCH",
+        "name": "UNKNOWN"
+      },
+      "codeCause": "TITLE_APPROVED",
+      "nameCause": "ORIGIN_TITLE_ABSENT",
+      "confirmedByOperationalOwner": true,
+      "scriptDifference": true,
+      "leverCodeOnlyInDescription": false,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": "miniboutique.co.kr",
+      "candidateUrl": "https://miniboutique.co.kr/product/bobo-chosest-shirt-b226ac009/28043/",
+      "humanGt": null,
+      "baselineSystemVerdict": "PRESUMED_SAME",
+      "axisModelCode": "MATCH",
+      "axisProductName": "UNKNOWN",
+      "brandAxis": "MATCH",
+      "axesAfter": {
+        "brand": "MATCH",
+        "code": "MATCH",
+        "name": "UNKNOWN"
+      },
+      "codeCause": "TITLE_APPROVED",
+      "nameCause": "SCRIPT_DIFFERENCE_PARTIAL",
+      "confirmedByOperationalOwner": true,
+      "scriptDifference": true,
+      "leverCodeOnlyInDescription": false,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": "tinyapple.net",
+      "candidateUrl": "https://www.tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+      "humanGt": "SAME",
+      "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+      "axisModelCode": "MATCH",
+      "axisProductName": "UNKNOWN",
+      "brandAxis": "UNKNOWN",
+      "axesAfter": {
+        "brand": "UNKNOWN",
+        "code": "MATCH",
+        "name": "UNKNOWN"
+      },
+      "codeCause": "DESCRIPTION_ONLY",
+      "nameCause": "ORIGIN_TITLE_ABSENT",
+      "confirmedByOperationalOwner": false,
+      "scriptDifference": false,
+      "leverCodeOnlyInDescription": true,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": "tinyapple.net",
+      "candidateUrl": "https://www.tinyapple.net/en-kr/products/bobo-choses-bobo-choses-pop-t-shirt-blue",
+      "humanGt": "DIFFERENT",
+      "baselineSystemVerdict": "PRESUMED_SAME",
+      "axisModelCode": "MISMATCH",
+      "axisProductName": "UNKNOWN",
+      "brandAxis": "UNKNOWN",
+      "axesAfter": {
+        "brand": "UNKNOWN",
+        "code": "CONFLICT",
+        "name": "UNKNOWN"
+      },
+      "codeCause": "CODE_PRESENT_BUT_DIFFERENT",
+      "nameCause": "ORIGIN_TITLE_ABSENT",
+      "confirmedByOperationalOwner": false,
+      "scriptDifference": false,
+      "leverCodeOnlyInDescription": true,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": "tinyapple.net",
+      "candidateUrl": "https://www.tinyapple.net/en-kr/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+      "humanGt": "SAME",
+      "baselineSystemVerdict": "SAME",
+      "axisModelCode": "MATCH",
+      "axisProductName": "UNKNOWN",
+      "brandAxis": "UNKNOWN",
+      "axesAfter": {
+        "brand": "UNKNOWN",
+        "code": "MATCH",
+        "name": "UNKNOWN"
+      },
+      "codeCause": "DESCRIPTION_ONLY",
+      "nameCause": "ORIGIN_TITLE_ABSENT",
+      "confirmedByOperationalOwner": false,
+      "scriptDifference": false,
+      "leverCodeOnlyInDescription": true,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": null,
+      "candidateUrl": "https://www.junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+      "axisModelCode": "MATCH",
+      "axisProductName": "MATCH",
+      "brandAxis": "UNKNOWN",
+      "axesAfter": {
+        "brand": "UNKNOWN",
+        "code": "MATCH",
+        "name": "MATCH"
+      },
+      "codeCause": "DESCRIPTION_ONLY",
+      "nameCause": "TOKENS_SHARED",
+      "confirmedByOperationalOwner": false,
+      "scriptDifference": false,
+      "leverCodeOnlyInDescription": true,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/booty-ghosts-t-shirt-by-bobo-choses",
+      "humanGt": null,
+      "baselineSystemVerdict": "CONFLICT",
+      "axisModelCode": "MISMATCH",
+      "axisProductName": "MATCH",
+      "brandAxis": "MATCH",
+      "axesAfter": {
+        "brand": "MATCH",
+        "code": "CONFLICT",
+        "name": "MATCH"
+      },
+      "codeCause": "CODE_PRESENT_BUT_DIFFERENT",
+      "nameCause": "TOKENS_SHARED",
+      "confirmedByOperationalOwner": false,
+      "scriptDifference": false,
+      "leverCodeOnlyInDescription": true,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+      "humanGt": null,
+      "baselineSystemVerdict": "SAME",
+      "axisModelCode": "MATCH",
+      "axisProductName": "MATCH",
+      "brandAxis": "MATCH",
+      "axesAfter": {
+        "brand": "MATCH",
+        "code": "MATCH",
+        "name": "MATCH"
+      },
+      "codeCause": "DESCRIPTION_ONLY",
+      "nameCause": "TOKENS_SHARED",
+      "confirmedByOperationalOwner": false,
+      "scriptDifference": false,
+      "leverCodeOnlyInDescription": true,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+      "humanGt": null,
+      "baselineSystemVerdict": "SAME",
+      "axisModelCode": "MATCH",
+      "axisProductName": "MATCH",
+      "brandAxis": "MATCH",
+      "axesAfter": {
+        "brand": "MATCH",
+        "code": "MATCH",
+        "name": "MATCH"
+      },
+      "codeCause": "DESCRIPTION_ONLY",
+      "nameCause": "TOKENS_SHARED",
+      "confirmedByOperationalOwner": false,
+      "scriptDifference": false,
+      "leverCodeOnlyInDescription": true,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/bobo-choses-pop-sweatshirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "baselineSystemVerdict": "PRESUMED_SAME",
+      "axisModelCode": "MATCH",
+      "axisProductName": "UNKNOWN",
+      "brandAxis": "MATCH",
+      "axesAfter": {
+        "brand": "MATCH",
+        "code": "MATCH",
+        "name": "MATCH"
+      },
+      "codeCause": "DESCRIPTION_ONLY",
+      "nameCause": "TOKENS_SHARED",
+      "confirmedByOperationalOwner": false,
+      "scriptDifference": false,
+      "leverCodeOnlyInDescription": true,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": "tiptoeboutique.com",
+      "candidateUrl": "https://tiptoeboutique.com/products/b226ac033-midnight-blue",
+      "humanGt": null,
+      "baselineSystemVerdict": "SAME",
+      "axisModelCode": "MATCH",
+      "axisProductName": "UNKNOWN",
+      "brandAxis": "MATCH",
+      "axesAfter": {
+        "brand": "MATCH",
+        "code": "MATCH",
+        "name": "MATCH"
+      },
+      "codeCause": "NOT_PRESENT",
+      "nameCause": "TOKENS_SHARED",
+      "confirmedByOperationalOwner": true,
+      "scriptDifference": false,
+      "leverCodeOnlyInDescription": false,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/mush-monster-duo-baby-sweatshirt-by-bobo-choses",
+      "humanGt": null,
+      "baselineSystemVerdict": "PRESUMED_SAME",
+      "axisModelCode": "MISMATCH",
+      "axisProductName": "MATCH",
+      "brandAxis": "MATCH",
+      "axesAfter": {
+        "brand": "MATCH",
+        "code": "CONFLICT",
+        "name": "MATCH"
+      },
+      "codeCause": "CODE_PRESENT_BUT_DIFFERENT",
+      "nameCause": "TOKENS_SHARED",
+      "confirmedByOperationalOwner": false,
+      "scriptDifference": false,
+      "leverCodeOnlyInDescription": true,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/hidden-monster-sweatshirt-by-bobo-choses",
+      "humanGt": null,
+      "baselineSystemVerdict": "PRESUMED_SAME",
+      "axisModelCode": "MATCH",
+      "axisProductName": "MATCH",
+      "brandAxis": "MATCH",
+      "axesAfter": {
+        "brand": "MATCH",
+        "code": "MATCH",
+        "name": "MATCH"
+      },
+      "codeCause": "DESCRIPTION_ONLY",
+      "nameCause": "TOKENS_SHARED",
+      "confirmedByOperationalOwner": false,
+      "scriptDifference": false,
+      "leverCodeOnlyInDescription": true,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/taxi-saurus-tag-denim-pants-by-bobo-choses",
+      "humanGt": null,
+      "baselineSystemVerdict": "PRESUMED_SAME",
+      "axisModelCode": "MATCH",
+      "axisProductName": "MATCH",
+      "brandAxis": "MATCH",
+      "axesAfter": {
+        "brand": "MATCH",
+        "code": "MATCH",
+        "name": "MATCH"
+      },
+      "codeCause": "DESCRIPTION_ONLY",
+      "nameCause": "TOKENS_SHARED",
+      "confirmedByOperationalOwner": false,
+      "scriptDifference": false,
+      "leverCodeOnlyInDescription": true,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/bobo-choses-embossed-t-shirt-by-bobo-choses",
+      "humanGt": "SIMILAR",
+      "baselineSystemVerdict": "PRESUMED_SAME",
+      "axisModelCode": "MISMATCH",
+      "axisProductName": "UNKNOWN",
+      "brandAxis": "MATCH",
+      "axesAfter": {
+        "brand": "MATCH",
+        "code": "CONFLICT",
+        "name": "MATCH"
+      },
+      "codeCause": "CODE_PRESENT_BUT_DIFFERENT",
+      "nameCause": "TOKENS_SHARED",
+      "confirmedByOperationalOwner": false,
+      "scriptDifference": false,
+      "leverCodeOnlyInDescription": true,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/everyday-ghosts-all-over-baby-t-shirt-by-bobo-choses",
+      "humanGt": null,
+      "baselineSystemVerdict": "PRESUMED_SAME",
+      "axisModelCode": "UNKNOWN",
+      "axisProductName": "MISMATCH",
+      "brandAxis": "MATCH",
+      "axesAfter": {
+        "brand": "MATCH",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "codeCause": "ORIGIN_CODE_ABSENT",
+      "nameCause": "TOKENS_SHARED",
+      "confirmedByOperationalOwner": false,
+      "scriptDifference": false,
+      "leverCodeOnlyInDescription": true,
+      "leverPrefixlessCode": false
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/pixel-abduction-all-over-reversible-jacket-by-bobo-choses",
+      "humanGt": null,
+      "baselineSystemVerdict": "PRESUMED_SAME",
+      "axisModelCode": "UNKNOWN",
+      "axisProductName": "UNKNOWN",
+      "brandAxis": "UNKNOWN",
+      "axesAfter": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "codeCause": "ORIGIN_CODE_ABSENT",
+      "nameCause": "TOKENS_SHARED",
+      "confirmedByOperationalOwner": false,
+      "scriptDifference": false,
+      "leverCodeOnlyInDescription": true,
+      "leverPrefixlessCode": false
+    }
+  ]
+}
