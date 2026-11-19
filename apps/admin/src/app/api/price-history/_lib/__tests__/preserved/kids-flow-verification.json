@@ -1,0 +1,101 @@
+{
+  "note": "🔴 ③ 흐름 검증 — 운영 변경 0 · HTTP 0 · verdict 재계산 0 · 동결 변경 0. 🔴 검증불가를 0 으로 적지 않는다. 🔴 분모 축을 섞지 않는다.",
+  "denominatorAxes": {
+    "rows": 109,
+    "uniqueOriginCandidatePairs": 103,
+    "uniqueCandidateUrls": 95,
+    "note": "🔴 C·A 보고의 「109쌍」은 **행 109 · 고유 쌍 103 · 고유 후보 95** 로 읽는다(집계는 행 단위라 숫자는 유효하다)"
+  },
+  "joinIntegrity": {
+    "aSubsetOfC": true,
+    "causesMatchesC": true,
+    "gtDiffByPairKey": 2,
+    "gtDiffAllMarkedSuperseded": true,
+    "gtConflictsByUrlKey": 2,
+    "note": "🔴 URL 단독 조인은 **라벨 상충을 만든다** — 키는 (원상품, 후보) 다. 🔴🔴 그리고 쌍 축 차이 2건은 **상충이 아니라 CEO 판정 «갱신»** 이다 ⟹ `mi-reeval-03-keyword-input.json` 의 `humanGt` 는 **대체 전(낡은) 라벨** 이고 C·A 가 그것을 썼다. 🟢 단 그 2건은 A 의 레버 거부 근거와 **겹치지 않는다**(F-7)."
+  },
+  "staleGtExposure": {
+    "supersededRows": 2,
+    "supersededHosts": [
+      "bornyesterdaykids.com",
+      "m.luxboy.com"
+    ],
+    "rejectionBasisHosts": [
+      "cemarose.ca",
+      "www.tinyapple.net"
+    ],
+    "overlap": 0,
+    "impactOnAConclusion": "🟢 없다 — 거부 근거 2건이 **갱신 대상이 아니다**",
+    "remainingDebt": "🔴 C·A 의 `humanGt` 는 낡은 라벨을 들고 있다. 🟡 최신 truth 로 재집계할지는 **CPO 판정 사안** 이고 이 WU 가 열지 않았다(③ 은 검증 단계다)"
+  },
+  "joinLimitation": "🔴 A 의 축 조인은 **URL 축** 이라 중복 URL(10개 · 14행)에서 **첫 행을 집는다** ⟹ 그 쌍의 축 값은 **다른 원상품의 것일 수 있다**. 🟢 이번에 `originCode` 를 산출물에 더해 다음 세션이 쌍 축으로 되짚을 수 있게 했다.",
+  "unconnectedEvidence": {
+    "aGroupCandidatesAlsoInBFixture": 6,
+    "allHaveCandidateDescription": true,
+    "alreadyCountedInA22": 2,
+    "addableWithoutNewHttp": 4,
+    "impactOnAConclusion": "🔴 **없다** — 레버 ②는 「GT DIFFERENT 를 하나라도 여는가」로 거부됐고 분모가 늘어도 이미 관측된 2건은 사라지지 않는다",
+    "note": "🟡 A④ 분모 7 은 **과소** 다. 재측정 여부는 **CPO 판정 사안** 이고 이 WU 가 열지 않았다"
+  },
+  "leverStatus": {
+    "leverCodeOnlyInDescription": {
+      "pairs": 20,
+      "hosts": 4,
+      "gt": {
+        "ABSENT": 10,
+        "DIFFERENT": 2,
+        "SAME": 7,
+        "SIMILAR": 1
+      },
+      "opensGtDifferent": 2
+    },
+    "leverPrefixlessCode": {
+      "pairs": 0,
+      "hosts": 0,
+      "gt": {},
+      "opensGtDifferent": 0
+    }
+  },
+  "stages": [
+    {
+      "stage": "① MI 입력(후보 URL 경계)",
+      "status": "PARTIAL",
+      "verified": "입력 경계는 pool 이 소유한다(라우트는 모양 검사만) — 계약 `wu-024` F절",
+      "unverifiable": "🔴 **AI Search 는 사용자 브라우저에서 돈다** — 서버는 `candidateUrls[]` 만 받고 검색 원문을 담는 칸이 코드에 없다 ⟹ 이 단계는 **구조적 측정불가**(0% 아님)"
+    },
+    {
+      "stage": "② 후보 수집",
+      "status": "PARTIAL",
+      "verified": "실패 사유가 호출부까지 온다(계약 17 · 429/404/Timeout/ENOTFOUND/Shopify 폴백) · 라이브 실측 시도 22 → 도달 8 → 설명문 7",
+      "unverifiable": "🔴 **Production API 발화 미검증** — 셀러가 재분석을 눌러야 찍히고 `vercel logs` 는 라이브 테일이다"
+    },
+    {
+      "stage": "③ 식별 근거(후보 품질)",
+      "status": "VERIFIED",
+      "verified": "행 109 기준 — 상품페이지 109/109 · 제목 109/109 · 품번 어느 축이든 26 · 품질 83 ↔ 식별 26",
+      "unverifiable": "🔴 `PRODUCT_PAGE 109/109` 은 **이미 쌍이 된 후보** 분모다(선별 편향) ⟹ 실제 수집 단계의 URL 품질로 일반화 금지"
+    },
+    {
+      "stage": "④ 판정(SAME/SIMILAR/DIFFERENT/UNKNOWN)",
+      "status": "PARTIAL",
+      "verified": "식별 축 26쌍 — modelCode {\"MISMATCH\":7,\"MATCH\":17,\"UNKNOWN\":2} · A군 baseline 재현 33/33",
+      "unverifiable": "🔴 그 26 안에 **BASELINE_NOT_REPRODUCED 5쌍** 이 있다 ⟹ 그 쌍의 축 수치는 「운영이 지금 그 값을 낸다」로 쓸 수 없다 · GT 라벨은 13/26"
+    },
+    {
+      "stage": "⑤ 가격 비교",
+      "status": "FROZEN_NOT_MEASURED",
+      "verified": "🔴 이 WU 에서 **측정하지 않았다** — A/B 가격 표시는 동결이고 통화 분리·환산 금지 계약이 그 경계를 지킨다",
+      "unverifiable": "🔴 「국내 SAME 0」 상태도 이 WU 가 열지 않았다 ⟹ 성공도 실패도 아닌 **미측정**"
+    }
+  ],
+  "artifactsPresent": {
+    "keywordInput": true,
+    "cQuality": true,
+    "aIdentity": true,
+    "a33": true,
+    "a22": true,
+    "a07": true,
+    "codeNameCauses": true,
+    "shadow": true
+  }
+}

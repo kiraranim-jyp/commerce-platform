@@ -29,6 +29,7 @@ const read = (p: string) => JSON.parse(readFileSync(p, "utf8"));
 
 type CRow = { candidateUrl: string; candidateDomain: string; humanGt: string | null; bucket: string };
 type CauseRow = {
+  originCode: string | null;
   candidateUrl: string;
   humanGt: string | null;
   baselineSystemVerdict: string | null;
@@ -95,6 +96,12 @@ describe("A 과제 — 식별 축 평가(기존 실측 재사용 · HTTP 0)", ()
           0 &&
         (c?.code?.approvedInTitle?.length ?? 0) + (c?.code?.approvedInDescription?.length ?? 0) === 0;
       return {
+        /**
+         * 🔴🔴 **조인 키를 버리지 않는다** — ③ 흐름 검증이 그 결함을 잡았다.
+         *    `candidateUrl` 단독으로는 **같은 후보가 다른 원상품과 짝인 경우** 를 가를 수
+         *    없어 GT 를 되짚을 수 없었다(실제로 내 재조인이 전건 `undefined` 가 됐다).
+         */
+        originCode: c?.originCode ?? null,
         candidateDomain: r.candidateDomain,
         candidateUrl: r.candidateUrl,
         humanGt: r.humanGt ?? null,
