@@ -1,0 +1,177 @@
+{
+  "note": "🔴 평가 전용 — 운영 변경 0 · HTTP 0 · verdict 재계산 0 · 새 WU 0. 🔴 **진입 기준을 먼저 적고 채웠다**(사후 합리화 금지). 🔴 기준은 새로 만든 것이 아니라 CPO 가 고정한 원칙에서 가져왔다.",
+  "pathSeparation": {
+    "verified": [
+      "③ 식별 근거(후보 품질)"
+    ],
+    "partial": [
+      "① MI 입력(후보 URL 경계)",
+      "② 후보 수집",
+      "④ 판정(SAME/SIMILAR/DIFFERENT/UNKNOWN)"
+    ],
+    "frozenNotMeasured": [
+      "⑤ 가격 비교"
+    ],
+    "stageStatus": {
+      "① MI 입력(후보 URL 경계)": "PARTIAL",
+      "② 후보 수집": "PARTIAL",
+      "③ 식별 근거(후보 품질)": "VERIFIED",
+      "④ 판정(SAME/SIMILAR/DIFFERENT/UNKNOWN)": "PARTIAL",
+      "⑤ 가격 비교": "FROZEN_NOT_MEASURED"
+    },
+    "note": "🔴 PARTIAL 을 「검증됨」으로 올리지 않는다 — 각 단계가 한계를 들고 있다"
+  },
+  "notConfirmedInProduction": [
+    "🔴 전략이 실제로 내는 verdict 분포(SAME/PRESUMED_SAME/SIMILAR/UNKNOWN/CONFLICT)",
+    "🔴 수집 실패 사유(`failureReason`)의 **운영 발화** — 계약·대역으로만 증명됐다",
+    "🔴 셀러 화면에 그 결과가 보이는 모양 — 실제 따져 화면은 CTO 가 볼 수 없다",
+    "🔴 가격 비교 단계의 운영 산출 — ⑤ 가 FROZEN_NOT_MEASURED 다"
+  ],
+  "priceStage": {
+    "status": "FROZEN_NOT_MEASURED",
+    "maintained": true,
+    "note": "🔴 이 WU 는 ⑤ 를 **열지 않았다** — 성공도 실패도 아닌 **미측정** 으로 유지한다"
+  },
+  "entryGates": [
+    {
+      "id": "G1 단계별 상태와 «검증불가» 가 빈칸이 아니다",
+      "requirement": "다섯 단계 전부 상태와 한계를 들고 있다",
+      "met": true,
+      "evidence": "단계 5 · 한계 기록 전건",
+      "owner": "CTO"
+    },
+    {
+      "id": "G2 거부 레버가 닫혀 있다",
+      "requirement": "거부 레버마다 소유자 계약이 실재한다",
+      "met": true,
+      "evidence": "레버 8종 · 소유자 계약 실재",
+      "owner": "CTO"
+    },
+    {
+      "id": "G3 식별 전략이 숫자로 고정됐다",
+      "requirement": "축·문턱·blocker 의미가 계약으로 잠겼다",
+      "met": true,
+      "evidence": "축 9 · 문턱 5/3 · 「모른다 ↔ 달랐다」 집합 분리",
+      "owner": "CTO"
+    },
+    {
+      "id": "G4 안전성 기준이 완화되지 않았다",
+      "requirement": "상세설명 품번 레버의 거부 근거가 최신 GT 에서도 살아 있다",
+      "met": true,
+      "evidence": "opensGtDifferent 2 · 거부 유지",
+      "owner": "CTO"
+    },
+    {
+      "id": "G5 🔴 Production 에서 전략의 실제 verdict 분포가 확인됐다",
+      "requirement": "운영 경로가 내는 판정 분포를 관측했다",
+      "met": false,
+      "evidence": "🔴 미검증 — `vercel logs` 는 라이브 테일이고 계측은 셀러가 재분석을 눌러야 찍힌다. 실제 따져 화면은 CTO 가 볼 수 없다",
+      "owner": "CEO"
+    },
+    {
+      "id": "G6 🔴 가격 비교 단계가 측정됐다",
+      "requirement": "⑤ 단계가 측정 상태다",
+      "met": false,
+      "evidence": "⑤ 상태 = FROZEN_NOT_MEASURED — 🔴 CPO 가 유지를 지시한 동결이다",
+      "owner": "FROZEN_BY_POLICY"
+    },
+    {
+      "id": "G7 🔴 GT 라벨 분모가 안전성 판정을 지지한다",
+      "requirement": "식별축·양쪽원문 분모에서 최신 라벨이 충분하다",
+      "met": false,
+      "evidence": "식별축 26 중 라벨 13 · 양쪽원문 11 중 **최신 라벨 5** ⟹ 🔴 「작다」를 비율로 희석하지 않는다",
+      "owner": "CEO"
+    },
+    {
+      "id": "G8 🔴 baseline 재현이 전건이다",
+      "requirement": "식별축 분모에 재현 실패가 없다",
+      "met": false,
+      "evidence": "BASELINE_NOT_REPRODUCED 5쌍 ⟹ 그 쌍의 축 수치는 「운영이 지금 그 값을 낸다」로 쓸 수 없다",
+      "owner": "CTO"
+    }
+  ],
+  "entryVerdict": {
+    "met": 4,
+    "unmet": 4,
+    "decision": "CANNOT_ENTER_YET",
+    "unmetByOwner": {
+      "CTO": [
+        "G8 🔴 baseline 재현이 전건이다"
+      ],
+      "CPO": [],
+      "CEO": [
+        "G5 🔴 Production 에서 전략의 실제 verdict 분포가 확인됐다",
+        "G7 🔴 GT 라벨 분모가 안전성 판정을 지지한다"
+      ],
+      "FROZEN_BY_POLICY": [
+        "G6 🔴 가격 비교 단계가 측정됐다"
+      ]
+    },
+    "note": "🔴 **「대체로 충족」을 진입으로 읽지 않는다.** 미충족이 하나라도 있으면 진입하지 않는다 — 그것이 이 트랙이 여덟 축에서 배운 방식이다(완화하면 반드시 대가가 따라온다)."
+  },
+  "prerequisites": [
+    {
+      "need": "운영 verdict 분포 관측",
+      "owner": "CEO",
+      "how": "🟡 CEO 가 실제 상품에서 「새 분석」을 **1회** 수행하고 그 화면/응답을 전달한다",
+      "ctoCanOpen": false
+    },
+    {
+      "need": "수집 실패 사유의 운영 발화 확인",
+      "owner": "CEO",
+      "how": "🟡 위와 같은 1회 수행에서 같이 확인된다(추가 작업 없음)",
+      "ctoCanOpen": false
+    },
+    {
+      "need": "GT 라벨 보강",
+      "owner": "CEO",
+      "how": "🟡 CEO 육안 판정 추가 — 🔴 CTO 가 라벨을 만들 수 없다(기준 truth 는 CEO 다)",
+      "ctoCanOpen": false
+    },
+    {
+      "need": "baseline 재현 실패 5쌍의 원인 구분",
+      "owner": "CTO",
+      "how": "🟢 기존 하니스로 **재조사 없이** 가를 수 있다 — 🔴 단 CPO 가 범위를 지정해야 한다",
+      "ctoCanOpen": true
+    },
+    {
+      "need": "가격 비교 단계",
+      "owner": "FROZEN_BY_POLICY",
+      "how": "🔴 **동결 유지** — 이 WU 가 열지 않는다(CPO 지시)",
+      "ctoCanOpen": false
+    }
+  ],
+  "carriedOverFindings": {
+    "denominatorAxes": {
+      "rows": 109,
+      "uniqueOriginCandidatePairs": 103,
+      "uniqueCandidateUrls": 95,
+      "note": "🔴 C·A 보고의 「109쌍」은 **행 109 · 고유 쌍 103 · 고유 후보 95** 로 읽는다(집계는 행 단위라 숫자는 유효하다)"
+    },
+    "staleGtExposure": {
+      "supersededRows": 2,
+      "supersededHosts": [
+        "bornyesterdaykids.com",
+        "m.luxboy.com"
+      ],
+      "rejectionBasisHosts": [
+        "cemarose.ca",
+        "www.tinyapple.net"
+      ],
+      "overlap": 0,
+      "impactOnAConclusion": "🟢 없다 — 거부 근거 2건이 **갱신 대상이 아니다**",
+      "remainingDebt": "🔴 C·A 의 `humanGt` 는 낡은 라벨을 들고 있다. 🟡 최신 truth 로 재집계할지는 **CPO 판정 사안** 이고 이 WU 가 열지 않았다(③ 은 검증 단계다)"
+    },
+    "unconnectedEvidence": {
+      "aGroupCandidatesAlsoInBFixture": 6,
+      "allHaveCandidateDescription": true,
+      "alreadyCountedInA22": 2,
+      "addableWithoutNewHttp": 4,
+      "impactOnAConclusion": "🔴 **없다** — 레버 ②는 「GT DIFFERENT 를 하나라도 여는가」로 거부됐고 분모가 늘어도 이미 관측된 2건은 사라지지 않는다",
+      "note": "🟡 A④ 분모 7 은 **과소** 다. 재측정 여부는 **CPO 판정 사안** 이고 이 WU 가 열지 않았다"
+    },
+    "riskCodeMatchButHumanDifferent_identityAxis26_latest": 0,
+    "stabilizable": 5,
+    "needsMoreEvidence": 6
+  }
+}
