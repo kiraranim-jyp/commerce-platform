@@ -1,0 +1,122 @@
+{
+  "note": "🔴 G8 **보완** 전용 — HTTP 0 · DB 0 · GT 변경 0 · verdict 0 · 운영 변경 0 · 기존 산출물 **덮어쓰기 0**. 🔴 baseline 재현 자체를 목표로 하지 않는다(CPO 기준 재정의).",
+  "joinIntegrity": {
+    "repro13Key": "(candidate_url, origin_code) — 🟢 호스트가 아니다(method.step2 원문)",
+    "hostMergeRisk": "🟢 없다 — 같은 호스트의 **다른 상품 URL 이 별도 행** 으로 남아 있다(junioredition ×2)",
+    "myJoinAxis": "URL 축(G8·이 파일) — 🔴 정규화 호스트는 **집계 전용** 이고 조인 키가 아니다",
+    "domainAxisDrift": "🔴 실측 — A 산출물 `junioredition.com` ↔ REPRO-13 `www.junioredition.com`",
+    "tracedBreak": "🔴🔴 `BASELINE_NOT_REPRODUCED` **생산지 입력이 `os.tmpdir()/mi-url-evidence/step1-targets.json`** 이고 **리포 밖 · 현재 부재** 다 ⟹ 그 라벨이 왜 비었는지 **코드로 재현할 수 없다**. 🟢 연결 가능성은 **REPRO-13 의 DB 실측 기록으로만** 성립한다(rows 11 · `[\"SAME\"]`)",
+    "connectFailRows": [
+      {
+        "host": "global.trenbe.com",
+        "rowsWithSystemVerdict": 1,
+        "actualBaselineInOtherRow": [
+          "SAME"
+        ],
+        "verifiedHere": false,
+        "verifiedBy": "REPRO-13 (DB 읽기 전용 · 이 WU 는 DB 0)"
+      },
+      {
+        "host": "www.tinyapple.net",
+        "rowsWithSystemVerdict": 11,
+        "actualBaselineInOtherRow": [
+          "SAME"
+        ],
+        "verifiedHere": false,
+        "verifiedBy": "REPRO-13 (DB 읽기 전용 · 이 WU 는 DB 0)"
+      }
+    ]
+  },
+  "hostTally": {
+    "kwNullDomainRows": 5,
+    "kwNullRowsHostsFromUrl": [
+      "www.junioredition.com",
+      "scoutandcokids.com",
+      "www.beaumonde.co.kr",
+      "www.donokids.com",
+      "www.donokids.com"
+    ],
+    "unextractableRows": 0,
+    "identityAxis26": {
+      "byDomainField": 9,
+      "byUrlHost": 9,
+      "normalized": 8,
+      "normalizedList": [
+        "biskuit.kr",
+        "cemarose.ca",
+        "global.trenbe.com",
+        "junioredition.com",
+        "m.luxboy.com",
+        "miniboutique.co.kr",
+        "tinyapple.net",
+        "tiptoeboutique.com"
+      ]
+    },
+    "bGroup109": {
+      "byDomainField": 24,
+      "byUrlHost": 26,
+      "normalized": 25
+    },
+    "correction": "🔴🔴 **③ 보고의 「도메인 축 9 = URL 축 9 ⟹ 영향 0」을 정정한다** — 정규화하면 **8** 이다(`www.junioredition.com` ↔ `junioredition.com` 을 둘로 셌고 그 자리에 `null` 이 하나 끼어 **숫자가 우연히 같았다**). 🟢 **누락은 0** 이다(null 행도 URL 에서 나온다)",
+    "rule": "🔴 「호스트 수」를 적을 때 **어느 축인지 같이 적는다** — 세 축이 전부 다르다"
+  },
+  "g8Rows": [
+    {
+      "originCode": "B226AC009",
+      "host": "biskuit.kr",
+      "candidateUrl": "https://biskuit.kr/product/%eb%b3%b4%eb%b3%b4%ec%87%bc%ec%a6%88-%ed%97%88%ea%b7%b8-%ed%97%a4%ec%96%b4%eb%a6%ac-%eb%aa%ac%ec%8a%a4%ed%84%b0-%ed%8b%b0%ec%85%94%ec%b8%a0-b226ac009/8891/category/367/display/1/",
+      "priorClass": "INPUT_MISSING",
+      "finalClass": "INPUT_MISSING",
+      "confirmed": true,
+      "reproducible": false,
+      "unchangedByThisWu": true
+    },
+    {
+      "originCode": "B226AC009",
+      "host": "www.junioredition.com",
+      "candidateUrl": "https://www.junioredition.com/products/hug-hairy-monster-baby-t-shirt-by-bobo-choses",
+      "priorClass": "INPUT_MISSING",
+      "finalClass": "INPUT_MISSING",
+      "confirmed": true,
+      "reproducible": false,
+      "unchangedByThisWu": true
+    },
+    {
+      "originCode": "B226AC009",
+      "host": "m.luxboy.com",
+      "candidateUrl": "https://m.luxboy.com/product/a14338197cb8698cd92c86431cce8d05",
+      "priorClass": "NOT_IN_REPRO13",
+      "finalClass": "UNKNOWN",
+      "confirmed": false,
+      "reproducible": null,
+      "unchangedByThisWu": true
+    },
+    {
+      "originCode": "B226AC009",
+      "host": "www.tinyapple.net",
+      "candidateUrl": "https://www.tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+      "priorClass": "CONNECT_FAIL",
+      "finalClass": "CONNECT_FAIL",
+      "confirmed": true,
+      "reproducible": true,
+      "unchangedByThisWu": true
+    },
+    {
+      "originCode": "B226AC009",
+      "host": "www.junioredition.com",
+      "candidateUrl": "https://www.junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "priorClass": "INPUT_MISSING",
+      "finalClass": "INPUT_MISSING",
+      "confirmed": true,
+      "reproducible": false,
+      "unchangedByThisWu": true
+    }
+  ],
+  "denominators": {
+    "repro13": 13,
+    "g8": 5,
+    "overlap": 4,
+    "note": "🔴 합산하거나 한쪽으로 대체하지 않는다"
+  },
+  "ctoVerdict": "🔴 **G8 기준 부분 충족** — 추적 가능성·분류·구조적 구분·UNKNOWN 보존은 충족되나 `m.luxboy.com` 원인은 **UNKNOWN** 이고 그 해소에는 DB(금지)가 필요하다. 🔴 전체 충족 선언은 **CPO 판정 사안** 이다(CTO 가 선언하지 않는다)."
+}
