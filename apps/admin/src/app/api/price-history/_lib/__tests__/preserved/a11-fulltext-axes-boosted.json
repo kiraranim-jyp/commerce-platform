@@ -1,0 +1,901 @@
+{
+  "note": "🔴 평가 전용 — 새 HTTP 0 · 운영 변경 0 · verdict 재계산 0 · **기존 산출물 덮어쓰기 0**. 🔴 목표는 11 이 아니라 **양쪽 원문이 실제로 있는 쌍** 이다. 🔴 `ceoLatest` 가 없는 쌍은 **NO_LATEST_JUDGEMENT** 로 적고 과거 라벨을 truth 로 쓰지 않는다.",
+  "priorArtifact": {
+    "file": "preserved/a07-both-fulltext-axes.json",
+    "denominator": {
+      "aGroup": 33,
+      "candidateFullTextFromA22": 7,
+      "bothFullText": 7
+    },
+    "gtDistribution": {
+      "SAME": 4,
+      "DIFFERENT": 3
+    }
+  },
+  "denominator": {
+    "aGroupPairs": 33,
+    "existingFromA22": 7,
+    "addedFromBFixture": 4,
+    "total": 11,
+    "addableCandidates": 4,
+    "note": "🔴 「추가 후보 4」와 「실제 추가」를 구분한다 — 원본측 설명문이 없으면 넣지 않는다"
+  },
+  "gtLatest": {
+    "all": {
+      "DIFFERENT": 3,
+      "NO_LABEL": 6,
+      "SAME": 2
+    },
+    "existing": {
+      "DIFFERENT": 3,
+      "NO_LABEL": 4
+    },
+    "added": {
+      "SAME": 2,
+      "NO_LABEL": 2
+    },
+    "supersededPairs": [],
+    "labelSource": {
+      "CEO_LATEST": 5,
+      "NO_LATEST_JUDGEMENT": 6
+    }
+  },
+  "axisTallyGuardsOff": {
+    "BRAND": {
+      "UNKNOWN": 2,
+      "MATCH": 9
+    },
+    "MODEL_CODE": {
+      "MATCH": 4,
+      "UNKNOWN": 6,
+      "MISMATCH": 1
+    },
+    "PRODUCT_TYPE": {
+      "MATCH": 10,
+      "UNKNOWN": 1
+    },
+    "DESIGN": {
+      "MATCH": 11
+    },
+    "PRINT_PATTERN": {
+      "MISMATCH": 1,
+      "MATCH": 2,
+      "UNKNOWN": 8
+    },
+    "COLOR": {
+      "UNKNOWN": 5,
+      "MATCH": 5,
+      "MISMATCH": 1
+    },
+    "MATERIAL": {
+      "UNKNOWN": 4,
+      "MATCH": 7
+    },
+    "SLEEVE_FORM": {
+      "NOT_APPLICABLE": 2,
+      "UNKNOWN": 6,
+      "MISMATCH": 1,
+      "MATCH": 2
+    },
+    "FIT": {
+      "UNKNOWN": 8,
+      "NOT_APPLICABLE": 1,
+      "MATCH": 2
+    },
+    "AUDIENCE": {
+      "NOT_APPLICABLE": 8,
+      "UNKNOWN": 3
+    },
+    "SIZE_OPTION": {
+      "NOT_APPLICABLE": 11
+    }
+  },
+  "axisTallyGuardsOn": {
+    "BRAND": {
+      "UNKNOWN": 2,
+      "MATCH": 9
+    },
+    "MODEL_CODE": {
+      "MATCH": 4,
+      "UNKNOWN": 6,
+      "MISMATCH": 1
+    },
+    "PRODUCT_TYPE": {
+      "MATCH": 10,
+      "UNKNOWN": 1
+    },
+    "DESIGN": {
+      "MATCH": 11
+    },
+    "PRINT_PATTERN": {
+      "MISMATCH": 1,
+      "MATCH": 2,
+      "UNKNOWN": 8
+    },
+    "COLOR": {
+      "UNKNOWN": 5,
+      "MATCH": 5,
+      "MISMATCH": 1
+    },
+    "MATERIAL": {
+      "UNKNOWN": 4,
+      "MATCH": 7
+    },
+    "SLEEVE_FORM": {
+      "NOT_APPLICABLE": 2,
+      "UNKNOWN": 6,
+      "MISMATCH": 1,
+      "MATCH": 2
+    },
+    "FIT": {
+      "UNKNOWN": 8,
+      "NOT_APPLICABLE": 1,
+      "MATCH": 2
+    },
+    "AUDIENCE": {
+      "NOT_APPLICABLE": 8,
+      "UNKNOWN": 3
+    },
+    "SIZE_OPTION": {
+      "NOT_APPLICABLE": 11
+    }
+  },
+  "guardChangedPairs": 0,
+  "byGtLatest": {
+    "all": {
+      "DIFFERENT": {
+        "n": 3,
+        "design": {
+          "MATCH": 3
+        },
+        "productType": {
+          "MATCH": 3
+        },
+        "modelCode": {
+          "MATCH": 1,
+          "UNKNOWN": 1,
+          "MISMATCH": 1
+        }
+      },
+      "NO_LABEL": {
+        "n": 6,
+        "design": {
+          "MATCH": 6
+        },
+        "productType": {
+          "MATCH": 5,
+          "UNKNOWN": 1
+        },
+        "modelCode": {
+          "MATCH": 1,
+          "UNKNOWN": 5
+        }
+      },
+      "SAME": {
+        "n": 2,
+        "design": {
+          "MATCH": 2
+        },
+        "productType": {
+          "MATCH": 2
+        },
+        "modelCode": {
+          "MATCH": 2
+        }
+      }
+    },
+    "existing": {
+      "DIFFERENT": {
+        "n": 3,
+        "design": {
+          "MATCH": 3
+        },
+        "productType": {
+          "MATCH": 3
+        },
+        "modelCode": {
+          "MATCH": 1,
+          "UNKNOWN": 1,
+          "MISMATCH": 1
+        }
+      },
+      "NO_LABEL": {
+        "n": 4,
+        "design": {
+          "MATCH": 4
+        },
+        "productType": {
+          "MATCH": 3,
+          "UNKNOWN": 1
+        },
+        "modelCode": {
+          "MATCH": 1,
+          "UNKNOWN": 3
+        }
+      }
+    },
+    "added": {
+      "SAME": {
+        "n": 2,
+        "design": {
+          "MATCH": 2
+        },
+        "productType": {
+          "MATCH": 2
+        },
+        "modelCode": {
+          "MATCH": 2
+        }
+      },
+      "NO_LABEL": {
+        "n": 2,
+        "design": {
+          "MATCH": 2
+        },
+        "productType": {
+          "MATCH": 2
+        },
+        "modelCode": {
+          "UNKNOWN": 2
+        }
+      }
+    }
+  },
+  "rows": [
+    {
+      "pairId": "C22",
+      "originS": "S4",
+      "originCodeFromCandidateSource": null,
+      "host": "www.donokids.com",
+      "group": "EXISTING_A22",
+      "gtLatest": "DIFFERENT",
+      "gtPrior": "DIFFERENT",
+      "gtSource": "CEO_LATEST",
+      "gtSuperseded": false,
+      "originDescriptionLength": 291,
+      "candidateDescriptionLength": 53,
+      "axes": {
+        "BRAND": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "MODEL_CODE": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "PRODUCT_TYPE": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "DESIGN": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "PRINT_PATTERN": {
+          "off": "MISMATCH",
+          "on": "MISMATCH"
+        },
+        "COLOR": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "MATERIAL": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "SLEEVE_FORM": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        },
+        "FIT": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "AUDIENCE": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        },
+        "SIZE_OPTION": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        }
+      }
+    },
+    {
+      "pairId": "C37",
+      "originS": "S3",
+      "originCodeFromCandidateSource": null,
+      "host": "bobochoses.co.jp",
+      "group": "EXISTING_A22",
+      "gtLatest": null,
+      "gtPrior": "SAME",
+      "gtSource": "NO_LATEST_JUDGEMENT",
+      "gtSuperseded": false,
+      "originDescriptionLength": 199,
+      "candidateDescriptionLength": 67,
+      "axes": {
+        "BRAND": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "MODEL_CODE": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "PRODUCT_TYPE": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "DESIGN": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "PRINT_PATTERN": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "COLOR": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "MATERIAL": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "SLEEVE_FORM": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        },
+        "FIT": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        },
+        "AUDIENCE": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        },
+        "SIZE_OPTION": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        }
+      }
+    },
+    {
+      "pairId": "S1-5",
+      "originS": "S1",
+      "originCodeFromCandidateSource": null,
+      "host": "www.junioredition.com",
+      "group": "EXISTING_A22",
+      "gtLatest": "DIFFERENT",
+      "gtPrior": "DIFFERENT",
+      "gtSource": "CEO_LATEST",
+      "gtSuperseded": false,
+      "originDescriptionLength": 263,
+      "candidateDescriptionLength": 163,
+      "axes": {
+        "BRAND": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "MODEL_CODE": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "PRODUCT_TYPE": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "DESIGN": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "PRINT_PATTERN": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "COLOR": {
+          "off": "MISMATCH",
+          "on": "MISMATCH"
+        },
+        "MATERIAL": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "SLEEVE_FORM": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "FIT": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "AUDIENCE": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "SIZE_OPTION": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        }
+      }
+    },
+    {
+      "pairId": "S1-6",
+      "originS": "S1",
+      "originCodeFromCandidateSource": null,
+      "host": "www.tinyapple.net",
+      "group": "EXISTING_A22",
+      "gtLatest": "DIFFERENT",
+      "gtPrior": "DIFFERENT",
+      "gtSource": "CEO_LATEST",
+      "gtSuperseded": false,
+      "originDescriptionLength": 263,
+      "candidateDescriptionLength": 155,
+      "axes": {
+        "BRAND": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "MODEL_CODE": {
+          "off": "MISMATCH",
+          "on": "MISMATCH"
+        },
+        "PRODUCT_TYPE": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "DESIGN": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "PRINT_PATTERN": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "COLOR": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "MATERIAL": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "SLEEVE_FORM": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "FIT": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "AUDIENCE": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        },
+        "SIZE_OPTION": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        }
+      }
+    },
+    {
+      "pairId": "S1-7",
+      "originS": "S1",
+      "originCodeFromCandidateSource": null,
+      "host": "bobochoses.com",
+      "group": "EXISTING_A22",
+      "gtLatest": null,
+      "gtPrior": "SAME",
+      "gtSource": "NO_LATEST_JUDGEMENT",
+      "gtSuperseded": false,
+      "originDescriptionLength": 263,
+      "candidateDescriptionLength": 89,
+      "axes": {
+        "BRAND": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "MODEL_CODE": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "PRODUCT_TYPE": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "DESIGN": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "PRINT_PATTERN": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "COLOR": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "MATERIAL": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "SLEEVE_FORM": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "FIT": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "AUDIENCE": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "SIZE_OPTION": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        }
+      }
+    },
+    {
+      "pairId": "S2-1",
+      "originS": "S2",
+      "originCodeFromCandidateSource": null,
+      "host": "www.stockmann.ee",
+      "group": "EXISTING_A22",
+      "gtLatest": null,
+      "gtPrior": "SAME",
+      "gtSource": "NO_LATEST_JUDGEMENT",
+      "gtSuperseded": false,
+      "originDescriptionLength": 246,
+      "candidateDescriptionLength": 148,
+      "axes": {
+        "BRAND": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "MODEL_CODE": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "PRODUCT_TYPE": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "DESIGN": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "PRINT_PATTERN": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "COLOR": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "MATERIAL": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "SLEEVE_FORM": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "FIT": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "AUDIENCE": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        },
+        "SIZE_OPTION": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        }
+      }
+    },
+    {
+      "pairId": "S2-4",
+      "originS": "S2",
+      "originCodeFromCandidateSource": null,
+      "host": "kids21.com",
+      "group": "EXISTING_A22",
+      "gtLatest": null,
+      "gtPrior": "SAME",
+      "gtSource": "NO_LATEST_JUDGEMENT",
+      "gtSuperseded": false,
+      "originDescriptionLength": 246,
+      "candidateDescriptionLength": 127,
+      "axes": {
+        "BRAND": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "MODEL_CODE": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "PRODUCT_TYPE": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "DESIGN": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "PRINT_PATTERN": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "COLOR": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "MATERIAL": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "SLEEVE_FORM": {
+          "off": "MISMATCH",
+          "on": "MISMATCH"
+        },
+        "FIT": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "AUDIENCE": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        },
+        "SIZE_OPTION": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        }
+      }
+    },
+    {
+      "pairId": "C05",
+      "originS": "S2",
+      "originCodeFromCandidateSource": "B226AC009",
+      "host": "www.tinyapple.net",
+      "group": "ADDED_FROM_B_FIXTURE",
+      "gtLatest": "SAME",
+      "gtPrior": "SAME",
+      "gtSource": "CEO_LATEST",
+      "gtSuperseded": false,
+      "originDescriptionLength": 246,
+      "candidateDescriptionLength": 170,
+      "axes": {
+        "BRAND": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "MODEL_CODE": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "PRODUCT_TYPE": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "DESIGN": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "PRINT_PATTERN": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "COLOR": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "MATERIAL": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "SLEEVE_FORM": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "FIT": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "AUDIENCE": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        },
+        "SIZE_OPTION": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        }
+      }
+    },
+    {
+      "pairId": "C06",
+      "originS": "S2",
+      "originCodeFromCandidateSource": "B226AC009",
+      "host": "global.trenbe.com",
+      "group": "ADDED_FROM_B_FIXTURE",
+      "gtLatest": "SAME",
+      "gtPrior": "SAME",
+      "gtSource": "CEO_LATEST",
+      "gtSuperseded": false,
+      "originDescriptionLength": 246,
+      "candidateDescriptionLength": 211,
+      "axes": {
+        "BRAND": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "MODEL_CODE": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "PRODUCT_TYPE": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "DESIGN": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "PRINT_PATTERN": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "COLOR": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "MATERIAL": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "SLEEVE_FORM": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "FIT": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "AUDIENCE": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "SIZE_OPTION": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        }
+      }
+    },
+    {
+      "pairId": "S2-2",
+      "originS": "S2",
+      "originCodeFromCandidateSource": "B226AC009",
+      "host": "www.thefrontshop.com",
+      "group": "ADDED_FROM_B_FIXTURE",
+      "gtLatest": null,
+      "gtPrior": "SAME",
+      "gtSource": "NO_LATEST_JUDGEMENT",
+      "gtSuperseded": false,
+      "originDescriptionLength": 246,
+      "candidateDescriptionLength": 353,
+      "axes": {
+        "BRAND": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "MODEL_CODE": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "PRODUCT_TYPE": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "DESIGN": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "PRINT_PATTERN": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "COLOR": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "MATERIAL": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "SLEEVE_FORM": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "FIT": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "AUDIENCE": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        },
+        "SIZE_OPTION": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        }
+      }
+    },
+    {
+      "pairId": "S2-3",
+      "originS": "S2",
+      "originCodeFromCandidateSource": "B226AC009",
+      "host": "bobochoses.com",
+      "group": "ADDED_FROM_B_FIXTURE",
+      "gtLatest": null,
+      "gtPrior": "SAME",
+      "gtSource": "NO_LATEST_JUDGEMENT",
+      "gtSuperseded": false,
+      "originDescriptionLength": 246,
+      "candidateDescriptionLength": 81,
+      "axes": {
+        "BRAND": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "MODEL_CODE": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "PRODUCT_TYPE": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "DESIGN": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "PRINT_PATTERN": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "COLOR": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "MATERIAL": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "SLEEVE_FORM": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "FIT": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "AUDIENCE": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        },
+        "SIZE_OPTION": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "🔴 추가 쌍의 후보 설명문은 **B군 fixture** 출처다 — 수집 시점이 A22 와 다르다(원문 동일성 보장 없음)",
+    "🔴 A군 33 중 양쪽 원문이 없는 쌍은 **여전히 비교 불가** 다(0% 로 적지 않는다)",
+    "🔴 `ceoLatest` 없는 쌍은 안전성 판정 분모에 넣지 않는다"
+  ],
+  "leverRejectionUnchanged": "🔴 상세설명 품번 레버의 거부 근거는 **A 평가(IDENTITY_AXIS 26쌍 · cemarose.ca · tinyapple.net)** 에 있고 **이 분모가 아니다** ⟹ 이 보강은 그 거부를 **건드리지 않는다**(안전성 기준 완화 0)."
+}
