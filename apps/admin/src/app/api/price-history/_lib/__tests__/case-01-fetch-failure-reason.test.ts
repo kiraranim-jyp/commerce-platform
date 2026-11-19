@@ -80,13 +80,26 @@ describe("CASE-01 실행단위 4 — fetch 실패 사유", () => {
     }
   });
 
-  /** 🔴 실패를 성공으로 만들지 않는다 · 무차별 재시도·타임아웃 상향을 하지 않는다. */
+  /**
+   * 🔴 실패를 성공으로 만들지 않는다 · 무차별 재시도·타임아웃 상향을 하지 않는다.
+   *
+   * 🔴🔴 **[범용 MI 에서 갱신 · 의도된 변경]** 이 단언은 원래 「두 실패 경로가 **둘 다
+   *    `return null;`**」이었고 **FAIL 로 뒤집혔다.** 이유: 이제 owner 가
+   *    `fetchPlainHtmlWithFinalUrlDetailed` 이고 실패를 **`{ ok: false, reason }` 으로
+   *    돌려준다**(사유를 호출부까지 보낸다). 🟢 **성질은 한 글자도 안 바뀌었다** —
+   *    실패는 그대로 실패고, 재시도·타임아웃·UA 는 불변이다.
+   * 🟢 그래서 **느슨하게 하지 않고 모양만 갈아** 끼웠다 — 「성공으로 바꾸지 않는다」를
+   *    `ok: false` **두 번** 으로 단언하고, 껍데기의 `null` 도 **같이** 잠근다.
+   */
   it("C-5 🔴 실패 처리 정책이 **보존**된다", () => {
     const src = bare();
-    const at = src.indexOf("export async function fetchPlainHtmlWithFinalUrl");
+    const at = src.indexOf("export async function fetchPlainHtmlWithFinalUrlDetailed");
+    expect(at, "🔴 fetch owner 가 사라졌다").toBeGreaterThan(0);
     const seg = src.slice(at, src.indexOf("function recordPlainHtmlFailure"));
-    /** 🟢 !ok 와 catch 둘 다 여전히 null 이다 — 실패는 그대로 실패다. */
-    expect((seg.match(/return null;/g) ?? []).length).toBe(2);
+    /** 🟢 !ok 와 catch 둘 다 여전히 **실패** 다 — 성공으로 바꾸지 않았다. */
+    expect((seg.match(/return \{ ok: false, reason \}/g) ?? []).length).toBe(2);
+    /** 🟢 기존 호출부가 받는 모양(`null`)은 껍데기가 **그대로** 유지한다. */
+    expect(seg).toContain(": null;");
     expect(seg).toContain("AbortSignal.timeout(FETCH_TIMEOUT_MS)");
     expect(seg, "🔴 이 함수가 스스로 재시도하면 limiter 와 둘로 갈린다").not.toContain("while (");
   });

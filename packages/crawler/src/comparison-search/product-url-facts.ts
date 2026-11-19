@@ -10,7 +10,11 @@ import { attachProductEvidence } from "./product-evidence";
 import { productFactsFromListing, productFactsFromShopifyProduct } from "./seller-facts";
 import { jsonLdProductDescription, jsonLdProductImages } from "./jsonld-product-description";
 import { classifyUrlShape, toCrawlerUrl } from "./url-shape";
-import { extractShopifyHandle, fetchPlainHtmlWithFinalUrl } from "../shopify-product-json";
+import {
+  extractShopifyHandle,
+  fetchPlainHtmlWithFinalUrl,
+  fetchPlainHtmlWithFinalUrlDetailed,
+} from "../shopify-product-json";
 import { extractSiteBrandName } from "../site-brand-name";
 import { fetchWithDomainRateLimit } from "../rate-limit/domain-rate-limiter";
 /** 🔴 MI-020 — **순수 함수** 하나만 가져온다(HTML 문자열 → JSON-LD). Playwright 없다. */
@@ -83,6 +87,18 @@ export interface ProductUrlFactsResult {
   httpCalls: number;
   /** Shopify JSON 경로를 썼는가(8KB) vs HTML 경로(188~256KB 실측). */
   fetchPath: "SHOPIFY_JSON" | "PLAIN_HTML" | "NONE";
+  /**
+   * 🔵🔵 범용 MI — **`UNREACHABLE` 이 «왜» 났는지**(`HTTP_429` · `HTTP_404` ·
+   *    `TimeoutError` · undici code). 🟢 fetch owner 가 이미 계산해 **로그로만 버리던**
+   *    값을 그대로 받아 온다(추가 HTTP 0 · 새 판정 0).
+   *
+   * 🔴🔴 **`status` union 을 늘리지 않았다** — 소비자 영향 **0**. `UNREACHABLE` 을
+   *    쪼개면 `AiUrlDropReason`·`UrlCandidateDropReason`·화면 집계가 **같이** 갈라진다.
+   *    ⟹ 상태는 하나로 두고 **사유를 옵셔널 칸으로** 붙인다.
+   * 🔴 성공·비(非)fetch 경로에서는 **없다**(`undefined`) — 「모른다」를 빈 문자열로
+   *    만들지 않는다.
+   */
+  failureReason?: string;
 }
 
 const CHROME_UA = CRAWLER_USER_AGENT;
@@ -466,10 +482,22 @@ async function htmlPath(
   _domain: string,
   priorCalls: number,
 ): Promise<ProductUrlFactsResult> {
-  const fetched = await fetchPlainHtmlWithFinalUrl(crawlerUrl);
+  const fetched = await fetchPlainHtmlWithFinalUrlDetailed(crawlerUrl);
   const calls = priorCalls + 1;
-  if (fetched === null) {
-    return { status: "UNREACHABLE", crawlerUrl, dedupeKey, candidate: null, httpCalls: calls, fetchPath: "PLAIN_HTML" };
+  if (!fetched.ok) {
+    /**
+     * 🔵 범용 MI — 상태는 **`UNREACHABLE` 그대로** 고, **사유를 같이** 돌려준다.
+     *    🔴 사유를 보고 재시도하거나 성공으로 만들지 않는다 — 실패는 그대로 실패다.
+     */
+    return {
+      status: "UNREACHABLE",
+      crawlerUrl,
+      dedupeKey,
+      candidate: null,
+      httpCalls: calls,
+      fetchPath: "PLAIN_HTML",
+      failureReason: fetched.reason,
+    };
   }
   const { html, finalUrl } = fetched;
 

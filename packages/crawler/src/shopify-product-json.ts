@@ -612,22 +612,47 @@ export async function fetchShopifyProductJs(url: string): Promise<ShopifyProduct
  * 🔴 여기서 «판별» 하지 않는다. 이 함수는 받아오기만 하고, 상품 여부는
  *    `product-url-facts.ts` 가 `classifyUrlShape` 로 정한다(규칙 소유자를 늘리지 않는다).
  */
-export async function fetchPlainHtmlWithFinalUrl(
+export type PlainHtmlFetchOutcome =
+  | { ok: true; html: string; finalUrl: string }
+  /**
+   * 🔴 `reason` 은 **지어내지 않는다** — 아래 두 실패 경로가 **이미 계산해서 로그로만
+   *    버리던 그 값** 이다(`HTTP_429` · `HTTP_404` · `TimeoutError` · undici code).
+   */
+  | { ok: false; reason: string };
+
+/**
+ * 🔵🔵🔵 범용 MI — **실패 사유를 «돌려준다».** (추가 HTTP 0 · 새 값 0)
+ *
+ * 🔴🔴 **왜 필요했나**(실측 · 분모 22 · 호스트 12곳): PLAIN_HTML 수집 실패 14건 중
+ *    **HTTP_429 가 12 · TimeoutError 2** 다. 그런데 호출부가 받는 것은 `null` 하나뿐이라
+ *    `UNREACHABLE` 로 뭉개졌다 — 「그 판매처가 **우리를 막는다**(4xx)」와 「우리가
+ *    **닿지 못했다**(타임아웃·DNS)」가 **같은 글자** 가 된다(WU-105 가 이미 관측한 자리).
+ *
+ * 🟢 **값을 만드는 작업이 아니라 「버리는 것을 멈추는」 작업이다** — 사유는
+ *    `recordPlainHtmlFailure` 가 **이미** 만들고 있었고 `console.warn` 으로만 나갔다.
+ *    (운영 로그는 CTO 가 과거 이력을 꺼낼 수 없다 — `vercel logs` 는 라이브 테일이다.)
+ *
+ * 🔴 **정책은 한 글자도 바꾸지 않았다** — UA 하나·고정 · `FETCH_TIMEOUT_MS` 10000 ·
+ *    재시도 추가 0 · 429 우회 0 · 실패는 **그대로 실패** 다(`ok: false`).
+ * 🔴 여기서 «판별» 하지 않는다(상품 여부는 `product-url-facts.ts` 소관 · 규칙 owner 불변).
+ */
+export async function fetchPlainHtmlWithFinalUrlDetailed(
   url: string,
-): Promise<{ html: string; finalUrl: string } | null> {
+): Promise<PlainHtmlFetchOutcome> {
   try {
     const response = await fetchWithDomainRateLimit(url, {
       headers: { "User-Agent": CHROME_UA },
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
     if (!response.ok) {
-      recordPlainHtmlFailure(url, `HTTP_${response.status}`);
-      return null;
+      const reason = `HTTP_${response.status}`;
+      recordPlainHtmlFailure(url, reason);
+      return { ok: false, reason };
     }
     const html = await response.text();
     // 🔴 `response.url` 이 빈 문자열인 구현도 있다. 그때는 요청 URL 로 둔다 —
     //    「모른다」를 「다른 곳에 도착했다」로 읽지 않는다.
-    return { html, finalUrl: response.url || url };
+    return { ok: true, html, finalUrl: response.url || url };
   } catch (error) {
     /**
      * 🔴 **예외 «종류» 를 보존한다.** `TypeError: fetch failed` 는 DNS 실패·연결 거부·
@@ -636,12 +661,25 @@ export async function fetchPlainHtmlWithFinalUrl(
      */
     const cause = (error as { cause?: { code?: unknown } } | null)?.cause?.code;
     const name = (error as { name?: unknown } | null)?.name;
-    recordPlainHtmlFailure(
-      url,
-      typeof cause === "string" ? cause : typeof name === "string" ? name : "UNKNOWN_ERROR",
-    );
-    return null;
+    const reason =
+      typeof cause === "string" ? cause : typeof name === "string" ? name : "UNKNOWN_ERROR";
+    recordPlainHtmlFailure(url, reason);
+    return { ok: false, reason };
   }
+}
+
+/**
+ * 🔴 **fetch 규칙의 owner 는 위 `…Detailed` 하나다.** 이 함수는 기존 호출부
+ *    (site-strategy · 브랜드 회수 · 라이브 하니스 여럿)를 위해 **모양만 맞춰 주는
+ *    얇은 껍데기** 다 — WU-075 가 `fetchPlainHtml` 에 쓴 그 패턴이다.
+ *    🔴 여기에 헤더·타임아웃·상태코드 규칙을 **다시 적지 않는다**(둘로 갈리면
+ *       한쪽만 고쳐져 조용히 달라진다).
+ */
+export async function fetchPlainHtmlWithFinalUrl(
+  url: string,
+): Promise<{ html: string; finalUrl: string } | null> {
+  const outcome = await fetchPlainHtmlWithFinalUrlDetailed(url);
+  return outcome.ok ? { html: outcome.html, finalUrl: outcome.finalUrl } : null;
 }
 
 /**
