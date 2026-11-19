@@ -1,0 +1,305 @@
+{
+  "note": "🔴 평가·우선순위 도출 전용 — **구현 0** · HTTP 0 · DB 0 · 가격 측정 0(G6 동결) · 덮어쓰기 0. 🔴 특정 사이트 전용 개선은 후보에서 **제외** 했다.",
+  "engine": {
+    "stages": [
+      {
+        "stage": "① MI 입력(후보 URL 경계)",
+        "status": "PARTIAL"
+      },
+      {
+        "stage": "② 후보 수집",
+        "status": "PARTIAL"
+      },
+      {
+        "stage": "③ 식별 근거(후보 품질)",
+        "status": "VERIFIED"
+      },
+      {
+        "stage": "④ 판정(SAME/SIMILAR/DIFFERENT/UNKNOWN)",
+        "status": "PARTIAL"
+      },
+      {
+        "stage": "⑤ 가격 비교",
+        "status": "FROZEN_NOT_MEASURED"
+      }
+    ],
+    "strategy": {
+      "sameMinAxes": 5,
+      "presumedSameMinAxes": 3,
+      "axes": [
+        "AUDIENCE",
+        "CATEGORY",
+        "COLOR",
+        "FIT",
+        "IMAGE",
+        "MATERIAL",
+        "MODEL_CODE",
+        "SIZE",
+        "TITLE"
+      ],
+      "axisCount": 9,
+      "imageExcludedFromSameQuota": true,
+      "weakTitleExcludedFromSameQuota": true,
+      "quotaFilterMechanism": "축 배열 필터 — `axis.axis !== \"IMAGE\" && !(axis.axis === \"TITLE\" && axis.points === 1)` (🔴 주석의 `coreAxisCount` 는 **코드에 없는 낡은 이름** 이다 — 주석을 근거로 쓰면 틀린다)",
+      "blockers": [
+        "AUDIENCE_LINE",
+        "BRAND_MISMATCH",
+        "BRAND_UNCONFIRMED",
+        "COLOR_VARIANT",
+        "FIT",
+        "GARMENT_FORM",
+        "MATERIAL",
+        "MODEL_CODE_AGE_LINE",
+        "NO_TITLE_OVERLAP",
+        "SAME_SELLER_DISTINCT_LISTING"
+      ],
+      "blockersPushedCount": 10,
+      "observedDifferenceBlockers": [
+        "AUDIENCE_LINE",
+        "BRAND_MISMATCH",
+        "FIT",
+        "GARMENT_FORM",
+        "MATERIAL",
+        "MODEL_CODE_AGE_LINE",
+        "NO_TITLE_OVERLAP",
+        "SAME_SELLER_DISTINCT_LISTING",
+        "SIZE_SYSTEM"
+      ],
+      "notADifference": [
+        "BRAND_UNCONFIRMED",
+        "COLOR_VARIANT"
+      ],
+      "declaredButNeverPushed": [
+        "SIZE_SYSTEM"
+      ],
+      "confirmAxis": "품번은 **추출하지 않고 확인** 한다 — `confirmBrandCodeInEvidence(원본품번, {title,url,sku})` ⟹ 산출이 `foreignCode` 또는 `null` 뿐이라 **지어낸 충돌 0**"
+    },
+    "candidateQuality": {
+      "IDENTITY_AXIS": 26,
+      "QUALITY_NO_CODE": 83
+    },
+    "identityAxis": {
+      "denominator": {
+        "identityAxisPairs": 26,
+        "hosts": 9,
+        "humanGtLabeled": 13,
+        "unlabeled": 13,
+        "otherDenominatorsNotMerged": {
+          "bGroupPairs": 109,
+          "b16FullText": 16,
+          "aGroupFullText": 7
+        }
+      },
+      "axisTally": {
+        "modelCode": {
+          "MISMATCH": 7,
+          "MATCH": 17,
+          "UNKNOWN": 2
+        },
+        "productName": {
+          "MATCH": 12,
+          "UNKNOWN": 13,
+          "MISMATCH": 1
+        },
+        "brand": {
+          "MATCH": 16,
+          "UNKNOWN": 10
+        }
+      }
+    },
+    "collection": {
+      "attempted": 22,
+      "reached": 8,
+      "withDescription": 7
+    }
+  },
+  "priceExposureStructure": {
+    "displayGate": "`isPriceDisplayable` — **VERIFIED_CURRENT && price != null**(owner 하나)",
+    "sameVsSimilar": "🟢 **구분된다** — 금액 자격 집합이 `SAME`+`PRESUMED_SAME` 뿐이고 `SIMILAR`·`CONFLICT`·`UNKNOWN` 은 **없다**",
+    "provenance": "🟢 `priceStatus` 3상태 + `priceSource`(detail) + 통화 분리 · 환산은 단일 FX · 없으면 null",
+    "comparability": "🟢 `priceTier`(EXACT/COMPARISON) 로 적재 · `EXCLUDED` 는 금액에서 제외",
+    "marketBand": "🟢 `basis` **SINGLE ↔ RANGE** — 1건을 「가격대」로 적지 않는다",
+    "insufficiency": "🟢 「가격 확인 필요」 · verdict 4상태 · 재고 UNKNOWN 을 판매중으로 세지 않는다",
+    "autoPricing": "🟡 **추천가 칸은 존재한다**(`recommendedPrice`·`estimatedMarginPercent`) — 🟢 그 성질은 **원가 역산(A축)** 이고 **근거 없으면 null** 이다. 🔴 시장 가격을 평균해 「적정가」를 만드는 구조는 **없다**(시장 블록이 그 어휘를 쓰지 않는다) ⟹ 🔴 「AI 자동 결정 구조 0」으로 **단정하지 않고** 위와 같이 적는다",
+    "measuredHere": false
+  },
+  "problems": {
+    "universal": [
+      {
+        "id": "P1 후보 품번 부재",
+        "evidence": "품질 버킷 QUALITY_NO_CODE 83건 · **17 호스트**",
+        "repeatedAcrossHosts": true,
+        "knownLever": "제목 토큰 승격 — 🔴 REJECT(false SAME · 되돌린 선례 있음)"
+      },
+      {
+        "id": "P2 수집 접근 제한(4xx·타임아웃)",
+        "evidence": "A22 실측 시도 22 → 도달 8 · 실패 **12 호스트**",
+        "repeatedAcrossHosts": true,
+        "knownLever": "🟢 사유 반환은 구현됨(⑤⑥) · 🔴 우회는 금지"
+      },
+      {
+        "id": "P3 식별 축의 UNKNOWN 지배",
+        "evidence": "축 UNKNOWN — brand 10 · name 13 / 26",
+        "repeatedAcrossHosts": true,
+        "knownLever": "🔴 「모른다」는 완화 대상이 아니다 — 입력 확보 축이다"
+      },
+      {
+        "id": "P4 평가 산출물의 조인 키 소실",
+        "evidence": "C 산출물에 `originCode` 없음 · 호스트 축 3종(도메인 24 / URL 26 / 정규화 25)",
+        "repeatedAcrossHosts": true,
+        "knownLever": "🟢 산출 시 키·URL 축 보존(이미 A·G8 에 적용)"
+      },
+      {
+        "id": "P5 라벨 truth 버전 혼재",
+        "evidence": "fixture `humanGt` 가 대체 전 라벨 · 갱신 2건(① 에서 정정)",
+        "repeatedAcrossHosts": true,
+        "knownLever": "🟢 최신 truth 를 분리 보존(① 산출물)"
+      }
+    ],
+    "siteSpecific": [
+      {
+        "id": "S1 단일 호스트 설명문 부재",
+        "evidence": "A22 에서 도달했으나 설명문 없음 **1건 · 1 호스트**",
+        "note": "🔴 반복 없음 ⟹ **패스**(개별 과제로 승격하지 않는다)"
+      }
+    ],
+    "unclassifiable": [
+      {
+        "id": "X1 baseline 미재현 1건의 원인",
+        "evidence": "생산지 입력이 `os.tmpdir()` 에 있었고 부재 · 확정엔 DB 필요(금지)",
+        "note": "🔴 **UNKNOWN 보존** — 추정으로 확정하지 않는다"
+      },
+      {
+        "id": "X2 간헐 회귀 실패 1회",
+        "evidence": "직전 WU 에서 1회 관측 · 파일명 미포착 · 이후 재현 0",
+        "note": "🔴 「없었다」로 적지 않는다"
+      }
+    ]
+  },
+  "candidates": [
+    {
+      "id": "C1 평가 산출물의 조인 키·호스트 축 표준화",
+      "reusability": "HIGH — 모든 상품군·호스트에 같은 방식",
+      "categoryScalability": "HIGH",
+      "marketDataContribution": "INDIRECT — 데이터가 늘지 않지만 **숫자가 정확해진다**",
+      "identityReliability": "NEUTRAL",
+      "operationalSafety": "HIGH — HTTP·DB 0",
+      "sellerValue": "INDIRECT — 잘못된 집계로 판단을 흐리지 않는다",
+      "frozenConflict": "없음",
+      "neededEvidence": "없음(이미 실측)",
+      "ifNotDone": "🔴 호스트 수·분모가 보고마다 달라진다(실제로 내 ③ 보고를 정정했다)",
+      "implementNow": false
+    },
+    {
+      "id": "C2 수집 실패 사유의 «운영» 발화 확인",
+      "reusability": "HIGH — 모든 PLAIN_HTML 후보",
+      "categoryScalability": "HIGH",
+      "marketDataContribution": "HIGH — 「막힌 것」과 「없는 것」을 가르면 재시도 대상이 정해진다",
+      "identityReliability": "NEUTRAL",
+      "operationalSafety": "HIGH — 우회 0(이미 계약으로 잠김)",
+      "sellerValue": "MEDIUM — 왜 가격이 없는지 설명할 수 있다",
+      "frozenConflict": "없음",
+      "neededEvidence": "🔴 **CEO 1회 수행**(G5 와 동일 작업으로 같이 닫힌다)",
+      "implementNow": false
+    },
+    {
+      "id": "C3 후보측 식별 정보 «확보» 경로 확대(추출 아님)",
+      "reusability": "HIGH",
+      "categoryScalability": "HIGH",
+      "marketDataContribution": "HIGH — 품번 부재 83건이 지배 병목이다",
+      "identityReliability": "🔴 위험 — 승격형 접근은 false SAME(REJECT 선례)",
+      "operationalSafety": "조건부 — 추가 HTTP 없이 가능한 범위만",
+      "sellerValue": "HIGH",
+      "frozenConflict": "🔴 **있다** — 제목 토큰 승격·상세설명 연결은 **거부된 레버**",
+      "neededEvidence": "🔴 **GT 라벨 보강**(CEO) — 지금 분모로는 안전성을 가를 수 없다",
+      "implementNow": false
+    },
+    {
+      "id": "C4 가격 부족 상태의 셀러 표현 보강",
+      "reusability": "HIGH",
+      "categoryScalability": "HIGH",
+      "marketDataContribution": "NONE — 데이터가 늘지 않는다",
+      "identityReliability": "NEUTRAL",
+      "operationalSafety": "HIGH",
+      "sellerValue": "MEDIUM — 「가격 확인 필요」의 **이유** 를 말할 수 있다",
+      "frozenConflict": "🔴 **있다** — 가격 표시 축은 **G6 동결** 이다",
+      "neededEvidence": "동결 해제 판단(CPO)",
+      "implementNow": false
+    }
+  ],
+  "entryStatus": {
+    "verdict": {
+      "met": 4,
+      "unmet": 4,
+      "decision": "CANNOT_ENTER_YET",
+      "unmetByOwner": {
+        "CTO": [
+          "G8 🔴 baseline 재현이 전건이다"
+        ],
+        "CPO": [],
+        "CEO": [
+          "G5 🔴 Production 에서 전략의 실제 verdict 분포가 확인됐다",
+          "G7 🔴 GT 라벨 분모가 안전성 판정을 지지한다"
+        ],
+        "FROZEN_BY_POLICY": [
+          "G6 🔴 가격 비교 단계가 측정됐다"
+        ]
+      },
+      "note": "🔴 **「대체로 충족」을 진입으로 읽지 않는다.** 미충족이 하나라도 있으면 진입하지 않는다 — 그것이 이 트랙이 여덟 축에서 배운 방식이다(완화하면 반드시 대가가 따라온다)."
+    },
+    "gates": [
+      {
+        "id": "G1 단계별 상태와 «검증불가» 가 빈칸이 아니다",
+        "met": true,
+        "owner": "CTO"
+      },
+      {
+        "id": "G2 거부 레버가 닫혀 있다",
+        "met": true,
+        "owner": "CTO"
+      },
+      {
+        "id": "G3 식별 전략이 숫자로 고정됐다",
+        "met": true,
+        "owner": "CTO"
+      },
+      {
+        "id": "G4 안전성 기준이 완화되지 않았다",
+        "met": true,
+        "owner": "CTO"
+      },
+      {
+        "id": "G5 🔴 Production 에서 전략의 실제 verdict 분포가 확인됐다",
+        "met": false,
+        "owner": "CEO"
+      },
+      {
+        "id": "G6 🔴 가격 비교 단계가 측정됐다",
+        "met": false,
+        "owner": "FROZEN_BY_POLICY"
+      },
+      {
+        "id": "G7 🔴 GT 라벨 분모가 안전성 판정을 지지한다",
+        "met": false,
+        "owner": "CEO"
+      },
+      {
+        "id": "G8 🔴 baseline 재현이 전건이다",
+        "met": false,
+        "owner": "CTO"
+      }
+    ],
+    "g8": {
+      "causeTally": {
+        "INPUT_MISSING": 3,
+        "UNKNOWN": 1,
+        "CONNECT_FAIL": 1
+      },
+      "ctoVerdict": "🔴 **G8 기준 부분 충족** — 추적 가능성·분류·구조적 구분·UNKNOWN 보존은 충족되나 `m.luxboy.com` 원인은 **UNKNOWN** 이고 그 해소에는 DB(금지)가 필요하다. 🔴 전체 충족 선언은 **CPO 판정 사안** 이다(CTO 가 선언하지 않는다)."
+    },
+    "unchangedByThisWu": true
+  },
+  "ctoProposal": "🔴 **②번 — 범용 개선 후보 발견 · CPO 승인 후 별도 실행 필요.** 🔴 동시에 **③번(진입 불가)** 도 유효하다 — G5·G7 은 CEO · G6 은 동결 · G8 은 부분 충족이다. 🔴 네 후보 중 **지금 구현 가능한 것은 0** 이다",
+  "stabilizable": 5,
+  "needsMoreEvidence": 6
+}
