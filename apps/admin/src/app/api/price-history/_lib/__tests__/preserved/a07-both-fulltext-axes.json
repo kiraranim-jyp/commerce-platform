@@ -1,0 +1,581 @@
+{
+  "note": "🔴 관찰 실험 — verdict 재계산 0 · 정밀도 0 · SAME 정책 변경 0 · 운영 연결 0. 표본 7쌍은 모집단을 대표하지 않는다.",
+  "denominator": {
+    "aGroup": 33,
+    "candidateFullTextFromA22": 7,
+    "bothFullText": 7
+  },
+  "gtDistribution": {
+    "SAME": 4,
+    "DIFFERENT": 3
+  },
+  "guardChangedPairs": 0,
+  "axisTallyGuardsOff": {
+    "BRAND": {
+      "UNKNOWN": 1,
+      "MATCH": 6
+    },
+    "MODEL_CODE": {
+      "MATCH": 2,
+      "UNKNOWN": 4,
+      "MISMATCH": 1
+    },
+    "PRODUCT_TYPE": {
+      "MATCH": 6,
+      "UNKNOWN": 1
+    },
+    "DESIGN": {
+      "MATCH": 7
+    },
+    "PRINT_PATTERN": {
+      "MISMATCH": 1,
+      "MATCH": 2,
+      "UNKNOWN": 4
+    },
+    "COLOR": {
+      "UNKNOWN": 4,
+      "MATCH": 2,
+      "MISMATCH": 1
+    },
+    "MATERIAL": {
+      "UNKNOWN": 3,
+      "MATCH": 4
+    },
+    "SLEEVE_FORM": {
+      "NOT_APPLICABLE": 2,
+      "UNKNOWN": 4,
+      "MISMATCH": 1
+    },
+    "FIT": {
+      "UNKNOWN": 5,
+      "NOT_APPLICABLE": 1,
+      "MATCH": 1
+    },
+    "AUDIENCE": {
+      "NOT_APPLICABLE": 5,
+      "UNKNOWN": 2
+    },
+    "SIZE_OPTION": {
+      "NOT_APPLICABLE": 7
+    }
+  },
+  "axisTallyGuardsOn": {
+    "BRAND": {
+      "UNKNOWN": 1,
+      "MATCH": 6
+    },
+    "MODEL_CODE": {
+      "MATCH": 2,
+      "UNKNOWN": 4,
+      "MISMATCH": 1
+    },
+    "PRODUCT_TYPE": {
+      "MATCH": 6,
+      "UNKNOWN": 1
+    },
+    "DESIGN": {
+      "MATCH": 7
+    },
+    "PRINT_PATTERN": {
+      "MISMATCH": 1,
+      "MATCH": 2,
+      "UNKNOWN": 4
+    },
+    "COLOR": {
+      "UNKNOWN": 4,
+      "MATCH": 2,
+      "MISMATCH": 1
+    },
+    "MATERIAL": {
+      "UNKNOWN": 3,
+      "MATCH": 4
+    },
+    "SLEEVE_FORM": {
+      "NOT_APPLICABLE": 2,
+      "UNKNOWN": 4,
+      "MISMATCH": 1
+    },
+    "FIT": {
+      "UNKNOWN": 5,
+      "NOT_APPLICABLE": 1,
+      "MATCH": 1
+    },
+    "AUDIENCE": {
+      "NOT_APPLICABLE": 5,
+      "UNKNOWN": 2
+    },
+    "SIZE_OPTION": {
+      "NOT_APPLICABLE": 7
+    }
+  },
+  "byGtGuardsOff": {
+    "SAME": {
+      "BRAND": {
+        "MATCH": 4
+      },
+      "MODEL_CODE": {
+        "MATCH": 1,
+        "UNKNOWN": 3
+      },
+      "PRODUCT_TYPE": {
+        "MATCH": 3,
+        "UNKNOWN": 1
+      },
+      "DESIGN": {
+        "MATCH": 4
+      },
+      "PRINT_PATTERN": {
+        "MATCH": 2,
+        "UNKNOWN": 2
+      },
+      "COLOR": {
+        "MATCH": 2,
+        "UNKNOWN": 2
+      },
+      "MATERIAL": {
+        "MATCH": 3,
+        "UNKNOWN": 1
+      },
+      "SLEEVE_FORM": {
+        "NOT_APPLICABLE": 1,
+        "UNKNOWN": 2,
+        "MISMATCH": 1
+      },
+      "FIT": {
+        "NOT_APPLICABLE": 1,
+        "UNKNOWN": 3
+      },
+      "AUDIENCE": {
+        "NOT_APPLICABLE": 3,
+        "UNKNOWN": 1
+      },
+      "SIZE_OPTION": {
+        "NOT_APPLICABLE": 4
+      }
+    },
+    "DIFFERENT": {
+      "BRAND": {
+        "UNKNOWN": 1,
+        "MATCH": 2
+      },
+      "MODEL_CODE": {
+        "MATCH": 1,
+        "UNKNOWN": 1,
+        "MISMATCH": 1
+      },
+      "PRODUCT_TYPE": {
+        "MATCH": 3
+      },
+      "DESIGN": {
+        "MATCH": 3
+      },
+      "PRINT_PATTERN": {
+        "MISMATCH": 1,
+        "UNKNOWN": 2
+      },
+      "COLOR": {
+        "UNKNOWN": 2,
+        "MISMATCH": 1
+      },
+      "MATERIAL": {
+        "UNKNOWN": 2,
+        "MATCH": 1
+      },
+      "SLEEVE_FORM": {
+        "NOT_APPLICABLE": 1,
+        "UNKNOWN": 2
+      },
+      "FIT": {
+        "UNKNOWN": 2,
+        "MATCH": 1
+      },
+      "AUDIENCE": {
+        "NOT_APPLICABLE": 2,
+        "UNKNOWN": 1
+      },
+      "SIZE_OPTION": {
+        "NOT_APPLICABLE": 3
+      }
+    }
+  },
+  "rows": [
+    {
+      "pairId": "C22",
+      "origin": "S4",
+      "host": "www.donokids.com",
+      "gt": "DIFFERENT",
+      "originDescriptionLength": 291,
+      "candidateDescriptionLength": 53,
+      "axes": {
+        "BRAND": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "MODEL_CODE": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "PRODUCT_TYPE": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "DESIGN": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "PRINT_PATTERN": {
+          "off": "MISMATCH",
+          "on": "MISMATCH"
+        },
+        "COLOR": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "MATERIAL": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "SLEEVE_FORM": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        },
+        "FIT": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "AUDIENCE": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        },
+        "SIZE_OPTION": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        }
+      }
+    },
+    {
+      "pairId": "C37",
+      "origin": "S3",
+      "host": "bobochoses.co.jp",
+      "gt": "SAME",
+      "originDescriptionLength": 199,
+      "candidateDescriptionLength": 67,
+      "axes": {
+        "BRAND": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "MODEL_CODE": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "PRODUCT_TYPE": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "DESIGN": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "PRINT_PATTERN": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "COLOR": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "MATERIAL": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "SLEEVE_FORM": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        },
+        "FIT": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        },
+        "AUDIENCE": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        },
+        "SIZE_OPTION": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        }
+      }
+    },
+    {
+      "pairId": "S1-5",
+      "origin": "S1",
+      "host": "www.junioredition.com",
+      "gt": "DIFFERENT",
+      "originDescriptionLength": 263,
+      "candidateDescriptionLength": 163,
+      "axes": {
+        "BRAND": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "MODEL_CODE": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "PRODUCT_TYPE": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "DESIGN": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "PRINT_PATTERN": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "COLOR": {
+          "off": "MISMATCH",
+          "on": "MISMATCH"
+        },
+        "MATERIAL": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "SLEEVE_FORM": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "FIT": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "AUDIENCE": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "SIZE_OPTION": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        }
+      }
+    },
+    {
+      "pairId": "S1-6",
+      "origin": "S1",
+      "host": "www.tinyapple.net",
+      "gt": "DIFFERENT",
+      "originDescriptionLength": 263,
+      "candidateDescriptionLength": 155,
+      "axes": {
+        "BRAND": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "MODEL_CODE": {
+          "off": "MISMATCH",
+          "on": "MISMATCH"
+        },
+        "PRODUCT_TYPE": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "DESIGN": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "PRINT_PATTERN": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "COLOR": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "MATERIAL": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "SLEEVE_FORM": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "FIT": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "AUDIENCE": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        },
+        "SIZE_OPTION": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        }
+      }
+    },
+    {
+      "pairId": "S1-7",
+      "origin": "S1",
+      "host": "bobochoses.com",
+      "gt": "SAME",
+      "originDescriptionLength": 263,
+      "candidateDescriptionLength": 89,
+      "axes": {
+        "BRAND": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "MODEL_CODE": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "PRODUCT_TYPE": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "DESIGN": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "PRINT_PATTERN": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "COLOR": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "MATERIAL": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "SLEEVE_FORM": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "FIT": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "AUDIENCE": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "SIZE_OPTION": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        }
+      }
+    },
+    {
+      "pairId": "S2-1",
+      "origin": "S2",
+      "host": "www.stockmann.ee",
+      "gt": "SAME",
+      "originDescriptionLength": 246,
+      "candidateDescriptionLength": 148,
+      "axes": {
+        "BRAND": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "MODEL_CODE": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "PRODUCT_TYPE": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "DESIGN": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "PRINT_PATTERN": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "COLOR": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "MATERIAL": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "SLEEVE_FORM": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "FIT": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "AUDIENCE": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        },
+        "SIZE_OPTION": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        }
+      }
+    },
+    {
+      "pairId": "S2-4",
+      "origin": "S2",
+      "host": "kids21.com",
+      "gt": "SAME",
+      "originDescriptionLength": 246,
+      "candidateDescriptionLength": 127,
+      "axes": {
+        "BRAND": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "MODEL_CODE": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "PRODUCT_TYPE": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "DESIGN": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "PRINT_PATTERN": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "COLOR": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "MATERIAL": {
+          "off": "MATCH",
+          "on": "MATCH"
+        },
+        "SLEEVE_FORM": {
+          "off": "MISMATCH",
+          "on": "MISMATCH"
+        },
+        "FIT": {
+          "off": "UNKNOWN",
+          "on": "UNKNOWN"
+        },
+        "AUDIENCE": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        },
+        "SIZE_OPTION": {
+          "off": "NOT_APPLICABLE",
+          "on": "NOT_APPLICABLE"
+        }
+      }
+    }
+  ]
+}
