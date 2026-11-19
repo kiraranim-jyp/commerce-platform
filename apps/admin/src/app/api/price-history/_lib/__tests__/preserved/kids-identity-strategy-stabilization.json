@@ -1,0 +1,260 @@
+{
+  "note": "🔴 평가 전용 — 운영 변경 0 · HTTP 0 · verdict 재계산 0 · 새 계약 복제 0. 🔴 **결론을 먼저 정하지 않았다**. 🔴 분모가 다른 숫자를 **합산하지 않는다**.",
+  "strategy": {
+    "sameMinAxes": 5,
+    "presumedSameMinAxes": 3,
+    "axes": [
+      "AUDIENCE",
+      "CATEGORY",
+      "COLOR",
+      "FIT",
+      "IMAGE",
+      "MATERIAL",
+      "MODEL_CODE",
+      "SIZE",
+      "TITLE"
+    ],
+    "axisCount": 9,
+    "imageExcludedFromSameQuota": true,
+    "weakTitleExcludedFromSameQuota": true,
+    "quotaFilterMechanism": "축 배열 필터 — `axis.axis !== \"IMAGE\" && !(axis.axis === \"TITLE\" && axis.points === 1)` (🔴 주석의 `coreAxisCount` 는 **코드에 없는 낡은 이름** 이다 — 주석을 근거로 쓰면 틀린다)",
+    "blockers": [
+      "AUDIENCE_LINE",
+      "BRAND_MISMATCH",
+      "BRAND_UNCONFIRMED",
+      "COLOR_VARIANT",
+      "FIT",
+      "GARMENT_FORM",
+      "MATERIAL",
+      "MODEL_CODE_AGE_LINE",
+      "NO_TITLE_OVERLAP",
+      "SAME_SELLER_DISTINCT_LISTING"
+    ],
+    "blockersPushedCount": 10,
+    "observedDifferenceBlockers": [
+      "AUDIENCE_LINE",
+      "BRAND_MISMATCH",
+      "FIT",
+      "GARMENT_FORM",
+      "MATERIAL",
+      "MODEL_CODE_AGE_LINE",
+      "NO_TITLE_OVERLAP",
+      "SAME_SELLER_DISTINCT_LISTING",
+      "SIZE_SYSTEM"
+    ],
+    "notADifference": [
+      "BRAND_UNCONFIRMED",
+      "COLOR_VARIANT"
+    ],
+    "declaredButNeverPushed": [
+      "SIZE_SYSTEM"
+    ],
+    "confirmAxis": "품번은 **추출하지 않고 확인** 한다 — `confirmBrandCodeInEvidence(원본품번, {title,url,sku})` ⟹ 산출이 `foreignCode` 또는 `null` 뿐이라 **지어낸 충돌 0**"
+  },
+  "scopeByGt": {
+    "identityAxis26_priorLabels": {
+      "SAME": {
+        "n": 9,
+        "modelCode": {
+          "MATCH": 8,
+          "MISMATCH": 1
+        },
+        "productName": {
+          "UNKNOWN": 6,
+          "MATCH": 3
+        },
+        "brand": {
+          "UNKNOWN": 6,
+          "MATCH": 3
+        },
+        "codeCause": {
+          "TITLE_APPROVED": 2,
+          "DESCRIPTION_ONLY": 6,
+          "CODE_PRESENT_BUT_DIFFERENT": 1
+        },
+        "nameCause": {
+          "ORIGIN_TITLE_ABSENT": 5,
+          "TOKENS_SHARED": 4
+        }
+      },
+      "DIFFERENT": {
+        "n": 3,
+        "modelCode": {
+          "MISMATCH": 2,
+          "MATCH": 1
+        },
+        "productName": {
+          "UNKNOWN": 3
+        },
+        "brand": {
+          "UNKNOWN": 3
+        },
+        "codeCause": {
+          "CODE_PRESENT_BUT_DIFFERENT": 2,
+          "TITLE_APPROVED": 1
+        },
+        "nameCause": {
+          "ORIGIN_TITLE_ABSENT": 3
+        }
+      },
+      "SIMILAR": {
+        "n": 1,
+        "modelCode": {
+          "MISMATCH": 1
+        },
+        "productName": {
+          "UNKNOWN": 1
+        },
+        "brand": {
+          "MATCH": 1
+        },
+        "codeCause": {
+          "CODE_PRESENT_BUT_DIFFERENT": 1
+        },
+        "nameCause": {
+          "TOKENS_SHARED": 1
+        }
+      }
+    },
+    "identityAxis26_latestLabels": {
+      "SAME": {
+        "n": 10,
+        "modelCode": {
+          "MATCH": 9,
+          "MISMATCH": 1
+        }
+      },
+      "DIFFERENT": {
+        "n": 2,
+        "modelCode": {
+          "MISMATCH": 2
+        }
+      },
+      "SIMILAR": {
+        "n": 1,
+        "modelCode": {
+          "MISMATCH": 1
+        }
+      },
+      "UNCERTAIN": {
+        "n": 0,
+        "modelCode": {}
+      }
+    },
+    "bothFullText11_latestLabels": {
+      "DIFFERENT": {
+        "n": 3,
+        "design": {
+          "MATCH": 3
+        },
+        "productType": {
+          "MATCH": 3
+        },
+        "modelCode": {
+          "MATCH": 1,
+          "UNKNOWN": 1,
+          "MISMATCH": 1
+        }
+      },
+      "NO_LABEL": {
+        "n": 6,
+        "design": {
+          "MATCH": 6
+        },
+        "productType": {
+          "MATCH": 5,
+          "UNKNOWN": 1
+        },
+        "modelCode": {
+          "MATCH": 1,
+          "UNKNOWN": 5
+        }
+      },
+      "SAME": {
+        "n": 2,
+        "design": {
+          "MATCH": 2
+        },
+        "productType": {
+          "MATCH": 2
+        },
+        "modelCode": {
+          "MATCH": 2
+        }
+      }
+    },
+    "denominators": {
+      "identityAxisPairs": 26,
+      "identityAxisGtLabeled": 13,
+      "bothFullTextPairs": 11,
+      "bothFullTextLatestLabeled": 5,
+      "note": "🔴 26 ↔ 11 은 **다른 집합** 이다(겹침은 있으나 합산 금지)"
+    }
+  },
+  "unknownHandling": {
+    "principle": "🟢 운영이 「모른다」와 「달랐다」를 **집합으로** 가른다 — 관찰된 차이 9종만 `OBSERVED_DIFFERENCE_BLOCKERS` 에 들어가고 `BRAND_UNCONFIRMED`·`COLOR_VARIANT` 는 **보류** 다",
+    "measured": "A 평가 26쌍에서 비(非)MATCH 의 **지배 성분이 UNKNOWN** 이었다(brand 10 · code 2 · name 13) ⟹ 🔴 「MI 가 틀렸다」가 아니라 **「입력을 모른다」** 다",
+    "rule": "🔴 UNKNOWN 을 오판으로도 성공으로도 세지 않는다(CPO 명시)"
+  },
+  "rejectedLeversStillClosed": {
+    "count": 8,
+    "guardsPresent": true,
+    "note": "🔴 이 WU 는 **가드를 복제하지 않았다** — 소유자 실재와 술어 보유만 확인했다"
+  },
+  "stabilizable": [
+    "🟢 축 9 · 문턱 5/3 · blocker 11 · 관찰된차이 9 — **숫자로 고정됐다**(S-1·S-2 가 잠근다)",
+    "🟢 「모른다 ↔ 달랐다」 분리 — 집합이 코드에 있고 계약으로 잠겼다",
+    "🟢 거부 레버 8종 — 소유자 계약 실재 확인(S-3)",
+    "🟢 품번 **확인 축**(추출 아님) — 지어낸 충돌이 구조적으로 0",
+    "🟢 상세설명은 SAME 을 **막지 않지만 DIFFERENT 를 가르지도 못한다** — 분모 7·11·26 에서 재현"
+  ],
+  "needsMoreEvidence": [
+    "🔴 GT 라벨이 작다 — 식별축 26 중 13 · 양쪽원문 11 중 **최신 5**(비율로 희석하지 않는다)",
+    "🔴 `BASELINE_NOT_REPRODUCED` 5쌍 — 그 쌍의 축 수치는 「운영이 지금 그 값을 낸다」로 쓸 수 없다",
+    "🔴 `COLOR_VARIANT` 는 한글 색상 표기 표본이 **없다**(소스 주석이 미측정이라 적는다)",
+    "🔴 `IMAGE` 축의 운영 기여도 — SAME 정원 밖이라 이 자산들로 **측정되지 않았다**",
+    "🔴 A군 33 중 22쌍은 **양쪽 원문 없음** ⟹ 비교 불가(0% 아님)",
+    "🔴 Production API 에서 전략이 실제로 내는 verdict 분포 — **미검증**(CTO 가 꺼낼 수 없다)"
+  ],
+  "consistency": {
+    "boostedGuardChangedPairs": 0,
+    "leverSafetyUnchanged": {
+      "leverCodeOnlyInDescription": {
+        "pairs": 20,
+        "hosts": 4,
+        "gt": {
+          "ABSENT": 10,
+          "DIFFERENT": 2,
+          "SAME": 7,
+          "SIMILAR": 1
+        },
+        "opensGtDifferent": 2
+      },
+      "leverPrefixlessCode": {
+        "pairs": 0,
+        "hosts": 0,
+        "gt": {},
+        "opensGtDifferent": 0
+      }
+    },
+    "riskCodeMatchButHumanDifferent": {
+      "identityAxis26_latest": 0,
+      "bothFullText11_latest": 1,
+      "note": "🔴 **분모가 다르다** — 26 에서는 최신 GT 로 0 이 됐고, 11 에서는 `C22/donokids` 1건이다. 🟢 그 1건은 `PRINT_PATTERN MISMATCH` 가 막는다(한 축으로 판정하지 않는 원칙이 작동)"
+    },
+    "candidateQuality": {
+      "buckets": {
+        "IDENTITY_AXIS": 26,
+        "QUALITY_NO_CODE": 83
+      },
+      "hosts": {
+        "QUALITY_SHAPE": 0,
+        "QUALITY_NO_TITLE": 0,
+        "QUALITY_NO_CODE": 17,
+        "IDENTITY_AXIS": 9,
+        "USABLE": 0
+      }
+    }
+  },
+  "verdict": "🔴 **안정화 가능 항목 5 · 추가 근거 필요 항목 6.** 운영 변경 0 이고, **안전한 범용 개선 레버는 이 단계에서도 발견되지 않았다**(C·A 결론 유지)."
+}

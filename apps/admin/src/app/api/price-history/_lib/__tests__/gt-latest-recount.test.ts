@@ -218,12 +218,21 @@ describe("① 최신 GT 기준 재집계(HTTP 0 · 덮어쓰기 0)", () => {
         .replace(/\/\*[\s\S]*?\*\//g, " ")
         .replace(/\/\/[^\n]*/g, " ");
       /**
-       * 🔴🔴 **1차 탐지가 틀렸고 FAIL 로 드러났다** — 리터럴 파일명을 찾았는데 이 하니스는
-       *    경로를 **상수(`OUT`)** 로 들고 있어 **0** 이 나왔다. 🟢 「쓰기 주체 0」을
-       *    「안전하다」로 읽지 않고 **탐지 실패** 로 보고 고쳤다.
-       * 🟢 이제 「쓰기 호출이 있고 **그 파일명을 언급** 한다」로 센다(상수든 리터럴이든 잡힌다).
+       * 🔴🔴 **탐지를 두 번 고쳤고 둘 다 적는다.**
+       *    1차 — 리터럴 파일명을 찾았는데 이 하니스는 경로를 **상수(`OUT`)** 로 들고 있어
+       *          **0** 이 나왔다. 「쓰기 주체 0」을 「안전」으로 읽지 않고 고쳤다.
+       *    2차 — 「쓰기 호출 **＋** 파일명 언급」으로 느슨하게 세자, 그 파일을 **읽기만** 하는
+       *          다른 하니스(로드맵 ② 전략 검증)가 **거짓 양성** 으로 잡혀 회귀가 FAIL 했다.
+       * 🟢 지금은 **상수를 따라간다** — 그 파일명을 담은 상수 이름을 찾아
+       *    `writeFileSync(<그 상수>` 인지 본다(리터럴 형태도 같이 본다).
+       *    ⟹ **읽기는 잡지 않고 쓰기만** 잡는다.
        */
-      if (/writeFileSync\(/.test(bare) && bare.includes("gt-latest-recount.json")) writers += 1;
+      const names = [...bare.matchAll(/const\s+(\w+)\s*=\s*path\.join\([^;]*gt-latest-recount\.json[^;]*\)/g)].map(
+        (m) => m[1],
+      );
+      const writesViaConst = names.some((n) => new RegExp(`writeFileSync\\(\\s*${n}\\b`).test(bare));
+      const writesLiteral = /writeFileSync\([^)]*gt-latest-recount\.json/.test(bare);
+      if (writesViaConst || writesLiteral) writers += 1;
       /** 🔴 이 하니스가 **다른 산출물에 쓰면** 과거 기록이 사라진다. */
       if (f === "gt-latest-recount.test.ts") {
         for (const victim of ["c-candidate-quality", "a-identity-axis", "MI-KIDS", "fixtures"]) {
