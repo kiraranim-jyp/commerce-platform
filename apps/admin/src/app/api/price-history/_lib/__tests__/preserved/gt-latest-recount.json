@@ -1,0 +1,151 @@
+{
+  "note": "🔴 기준 truth 정합성 작업이다 — **정확도 개선이 아니다**. 새 HTTP 0 · verdict 재계산 0 · 기존 산출물 **덮어쓰기 0**(읽기만 했다).",
+  "latestTruthSource": "core-2m-ceo-visual-gt(2026-10-24 · CPO 확정 · `gtSuperseded: true` 로 표시된 행)",
+  "supersededPairs": [
+    {
+      "originCode": "B226AC009",
+      "host": "bornyesterdaykids.com",
+      "prior": "SAME",
+      "latest": "UNCERTAIN",
+      "source": "core-2m-ceo-visual-gt(최신 · 대체)",
+      "joinUniqueInDenominator": true
+    },
+    {
+      "originCode": "B226AC009",
+      "host": "m.luxboy.com",
+      "prior": "DIFFERENT",
+      "latest": "SAME",
+      "source": "core-2m-ceo-visual-gt(최신 · 대체)",
+      "joinUniqueInDenominator": true
+    }
+  ],
+  "c": {
+    "prior": {
+      "withGt": 35,
+      "byGt": {
+        "SAME": {
+          "n": 20,
+          "buckets": {
+            "IDENTITY_AXIS": 9,
+            "QUALITY_NO_CODE": 11
+          }
+        },
+        "DIFFERENT": {
+          "n": 15,
+          "buckets": {
+            "IDENTITY_AXIS": 3,
+            "QUALITY_NO_CODE": 12
+          }
+        }
+      },
+      "otherLabels": {
+        "SIMILAR": 1
+      }
+    },
+    "latest": {
+      "withGt": 34,
+      "byGt": {
+        "SAME": {
+          "n": 20,
+          "buckets": {
+            "IDENTITY_AXIS": 10,
+            "QUALITY_NO_CODE": 10
+          }
+        },
+        "DIFFERENT": {
+          "n": 14,
+          "buckets": {
+            "IDENTITY_AXIS": 2,
+            "QUALITY_NO_CODE": 12
+          }
+        }
+      },
+      "otherLabels": {
+        "UNCERTAIN": 1,
+        "SIMILAR": 1
+      }
+    }
+  },
+  "a": {
+    "prior": {
+      "byGt": {
+        "SAME": {
+          "n": 9,
+          "modelCode": {
+            "MATCH": 8,
+            "MISMATCH": 1
+          }
+        },
+        "DIFFERENT": {
+          "n": 3,
+          "modelCode": {
+            "MISMATCH": 2,
+            "MATCH": 1
+          }
+        },
+        "SIMILAR": {
+          "n": 1,
+          "modelCode": {
+            "MISMATCH": 1
+          }
+        },
+        "UNCERTAIN": {
+          "n": 0,
+          "modelCode": {}
+        }
+      },
+      "riskCodeMatchButHumanDifferent": 1,
+      "lever": {
+        "pairs": 20,
+        "hosts": 4,
+        "opensGtDifferent": 2,
+        "rejectionHosts": [
+          "cemarose.ca",
+          "tinyapple.net"
+        ]
+      }
+    },
+    "latest": {
+      "byGt": {
+        "SAME": {
+          "n": 10,
+          "modelCode": {
+            "MATCH": 9,
+            "MISMATCH": 1
+          }
+        },
+        "DIFFERENT": {
+          "n": 2,
+          "modelCode": {
+            "MISMATCH": 2
+          }
+        },
+        "SIMILAR": {
+          "n": 1,
+          "modelCode": {
+            "MISMATCH": 1
+          }
+        },
+        "UNCERTAIN": {
+          "n": 0,
+          "modelCode": {}
+        }
+      },
+      "riskCodeMatchButHumanDifferent": 0,
+      "lever": {
+        "pairs": 20,
+        "hosts": 4,
+        "opensGtDifferent": 2,
+        "rejectionHosts": [
+          "cemarose.ca",
+          "tinyapple.net"
+        ]
+      }
+    }
+  },
+  "conclusionsUnchanged": {
+    "cPromotion": "승격 0 — 변경 없음(품질 ↔ 식별 버킷은 GT 와 무관하게 계산된다)",
+    "aPromotion": "승격 0 — 변경 없음(레버 ② 거부 근거가 **갱신 대상이 아니다**)",
+    "leverRejectionHostsIntersectSuperseded": 0
+  }
+}
