@@ -1,0 +1,67 @@
+{
+  "note": "🔴 **STEP A-1 측정 전용** — 구현 0 · 게이트 미적용 · HTTP 0 · DB 0 · GT 0 · verdict 0 · SAME 기준 0 · G6 동결 유지 · 덮어쓰기 0 · 사이트 전용 처리 0.",
+  "policy": {
+    "source": "CEO 확정 — 신품(NEW)만 관리·비교 · REFURBISHED/USED/UNKNOWN 제외",
+    "litmus": "「명시적으로 신품임이 확인된 후보만 NEW」 + 「UNKNOWN 은 비교 대상 제외」"
+  },
+  "evidenceAvailability": {
+    "structured": {
+      "itemConditionExtracted": false,
+      "fieldOnCandidateType": false,
+      "note": "🔴 `itemCondition`(schema.org)·상태 칸이 운영 타입·추출기에 **없다** ⟹ 구조화 상태 근거는 **수집되고 있지 않다**(추출 축 신설은 이 WU 범위 밖)"
+    },
+    "textual": {
+      "denominatorRows": 116,
+      "bGroupRows": 109,
+      "aGroupRows": 7,
+      "withTitle": 116,
+      "withDescription": 105,
+      "tally": {
+        "UNKNOWN": 116
+      },
+      "note": "🔴 **전건 UNKNOWN** 이다 — 명시 신품 어휘도 리퍼·중고 어휘도 **0** 이다. 🟢 「제목·설명문이 없어서」가 아니다(제목 116/116 · 설명문 다수 보유)"
+    }
+  },
+  "eligibleIfPolicyApplied": {
+    "total": 116,
+    "NEW": 0,
+    "REFURBISHED": 0,
+    "USED": 0,
+    "UNKNOWN": 116,
+    "excluded": 116,
+    "consequence": "🔴🔴 **비교 집합이 0 이 된다** — 국내만의 문제가 아니다. 기존에 해외에서 보이던 비교 근거(동일상품 가격)까지 **전부 사라진다**"
+  },
+  "unmeasurable": [
+    {
+      "axis": "라이브 페이지의 JSON-LD `itemCondition`",
+      "why": "추출되지 않고(코드) **HTTP 0** 이라 확인할 수 없다",
+      "note": "🟡 schema.org 표준 칸이므로 **존재 가능성** 은 있다 — 🔴 있다고 가정하지 않는다"
+    },
+    {
+      "axis": "Shopify `tags` 의 상태 표기",
+      "why": "`tags` 는 facts 로 들어가지만 **산출물에 보존되지 않았다**",
+      "note": "🔴 0 으로 세지 않는다"
+    },
+    {
+      "axis": "등록부/DB 의 판매처 성격(리퍼 전문 여부)",
+      "why": "**DB 금지** · 그리고 도메인 성격으로 상태를 추정하는 것은 **사이트 전용 처리** 다",
+      "note": "🔴 금지 축이므로 열지 않았다"
+    }
+  ],
+  "prerequisitesForStepA": [
+    {
+      "need": "상태 근거 **수집 축** 신설(예: JSON-LD `itemCondition` 읽기)",
+      "owner": "CPO",
+      "why": "STEP A 는 「**기존** 후보 데이터에서 판별」이 범위다 — 추출기 변경은 그 범위 밖이다",
+      "ctoCanOpen": false
+    },
+    {
+      "need": "근거가 없을 때의 **제품 동작 결정**",
+      "owner": "CEO",
+      "why": "「UNKNOWN 제외」를 지금 켜면 **비교 기능이 사라진다** ⟹ 그 손실을 받아들일지, 아니면 근거 확보까지 **관측 전용** 으로 둘지는 **사업 결정** 이다",
+      "ctoCanOpen": false
+    }
+  ],
+  "stepBStatus": "🔴 **착수하지 않았다** — CPO 가 「STEP A 검증이 통과하지 않으면 STEP B 를 완료 처리하지 않는다」고 명시했고, STEP A 가 **차단** 됐다",
+  "ctoVerdict": "🔴 **BLOCKED** — 정책은 명확하고 구현 난이도도 낮지만, **판별 근거가 0** 이라 적용 즉시 제품 기능이 사라진다. 🔴 임의로 「NEW 추정」을 넣지 않았다(정책 3번 위반) · 🔴 게이트를 끈 채 「적용 완료」로 적지도 않았다."
+}
