@@ -1,0 +1,1924 @@
+{
+  "note": "🔴 평가 전용 · 운영 코드 변경 0 · HTTP 0 · 판정 재계산 0. 🔴 B군 109쌍 기준이며 A군(33)·KIDS 전체로 확대 해석하지 않는다.",
+  "denominators": {
+    "bGroupPairs": 109,
+    "withHumanGt": 35,
+    "aGroupCoordinates": 33,
+    "aGroupLiveReach": {
+      "attempted": 22,
+      "reached": 8,
+      "withDescription": 7
+    },
+    "note": "🔴 B군과 A군을 **합산하지 않는다**(다른 집합 · A∩B = 0 으로 기록됨)"
+  },
+  "urlShape": {
+    "PRODUCT_PAGE": 109
+  },
+  "facts": {
+    "hasTitle": 109,
+    "hasDescription": 98,
+    "codeExtracted": 25,
+    "codeConfirmed": 6,
+    "codeEitherAxis": 26,
+    "codeConfirmedButNotExtracted": 1,
+    "nameTokenPresent": 73
+  },
+  "axisTally": {
+    "brand": {
+      "MATCH": 26,
+      "UNKNOWN": 83
+    },
+    "code": {
+      "CONFLICT": 7,
+      "UNKNOWN": 85,
+      "MATCH": 17
+    },
+    "name": {
+      "MATCH": 45,
+      "UNKNOWN": 44,
+      "NO_OVERLAP": 20
+    }
+  },
+  "buckets": {
+    "IDENTITY_AXIS": 26,
+    "QUALITY_NO_CODE": 83
+  },
+  "hostsPerBucket": {
+    "QUALITY_SHAPE": 0,
+    "QUALITY_NO_TITLE": 0,
+    "QUALITY_NO_CODE": 17,
+    "IDENTITY_AXIS": 9,
+    "USABLE": 0
+  },
+  "byGt": {
+    "SAME": {
+      "n": 20,
+      "buckets": {
+        "IDENTITY_AXIS": 9,
+        "QUALITY_NO_CODE": 11
+      }
+    },
+    "DIFFERENT": {
+      "n": 15,
+      "buckets": {
+        "IDENTITY_AXIS": 3,
+        "QUALITY_NO_CODE": 12
+      }
+    }
+  },
+  "rows": [
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/stamp-bloom-all-over-reversible-jacket-by-bobo-choses",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 4,
+      "axes": {
+        "brand": "MATCH",
+        "code": "CONFLICT",
+        "name": "MATCH"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": "nickis.com",
+      "candidateUrl": "https://nickis.com/products/colmar-daunenjacke-reversible-quilted-marineblau-7404628282",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "biskuit.kr",
+      "candidateUrl": "https://biskuit.kr/product/%eb%b3%b4%eb%b3%b4%ec%87%bc%ec%a6%88-%ed%97%88%ea%b7%b8-%ed%97%a4%ec%96%b4%eb%a6%ac-%eb%aa%ac%ec%8a%a4%ed%84%b0-%ed%8b%b0%ec%85%94%ec%b8%a0-b226ac009/8891/category/367/display/1/",
+      "humanGt": "SAME",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": true,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "MATCH",
+        "name": "UNKNOWN"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": "bobochoses.com",
+      "candidateUrl": "https://bobochoses.com/products/b226ab040-hug-hairy-monster-t-shirt",
+      "humanGt": "SAME",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "bornyesterdaykids.com",
+      "candidateUrl": "https://bornyesterdaykids.com/products/bobo-choses-baby-hug-hairy-monster-l-s-t-shirt-booo-bo-choses-tag-denim-pants-set-light-blue-red",
+      "humanGt": "SAME",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": false,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "cemarose.ca",
+      "candidateUrl": "https://cemarose.ca/products/bobo-choses-kids-booty-ghosts-sweatshirt-light-blue-c7907",
+      "humanGt": "DIFFERENT",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "CONFLICT",
+        "name": "UNKNOWN"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": "cissywears.com",
+      "candidateUrl": "https://cissywears.com/products/bobo-choses-babyhug-hairy-monster-t-shirt",
+      "humanGt": "SAME",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "global.trenbe.com",
+      "candidateUrl": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+      "humanGt": "SAME",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": true,
+      "nameSharedTokenCount": 4,
+      "axes": {
+        "brand": "MATCH",
+        "code": "MATCH",
+        "name": "MATCH"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": "global.trenbe.com",
+      "candidateUrl": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": true,
+      "nameSharedTokenCount": 4,
+      "axes": {
+        "brand": "MATCH",
+        "code": "MATCH",
+        "name": "MATCH"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 4,
+      "axes": {
+        "brand": "MATCH",
+        "code": "MATCH",
+        "name": "MATCH"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 4,
+      "axes": {
+        "brand": "MATCH",
+        "code": "MATCH",
+        "name": "MATCH"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://www.junioredition.com/products/hug-hairy-monster-baby-t-shirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "CONFLICT",
+        "name": "UNKNOWN"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "MATCH",
+        "name": "UNKNOWN"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": "kids21.com",
+      "candidateUrl": "https://kids21.com/products/700005621lbl",
+      "humanGt": "SAME",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "m.luxboy.com",
+      "candidateUrl": "https://m.luxboy.com/product/a14338197cb8698cd92c86431cce8d05",
+      "humanGt": "DIFFERENT",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": true,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "MATCH",
+        "name": "UNKNOWN"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": "miniboutique.co.kr",
+      "candidateUrl": "https://miniboutique.co.kr/product/bobo-chosest-shirt-b226ac009/28043/",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": true,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "MATCH",
+        "code": "MATCH",
+        "name": "UNKNOWN"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": "parkette.ca",
+      "candidateUrl": "https://www.parkette.ca/products/hug-hairy-monster-sweatshirt",
+      "humanGt": "DIFFERENT",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "scoutandcokids.com",
+      "candidateUrl": "https://scoutandcokids.com/collections/bobo-choses/products/bobo-choses-hug-hairy-monster-t-shirt",
+      "humanGt": "SAME",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "stockmann.ee",
+      "candidateUrl": "https://www.stockmann.ee/et-ee/bobo-choses-trikoosark-hug-monster/18119748633-1.html",
+      "humanGt": "SAME",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "thefrontshop.com",
+      "candidateUrl": "https://www.thefrontshop.com/products/hug-hairy-monster-t-shirt",
+      "humanGt": "SAME",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "tinyapple.net",
+      "candidateUrl": "https://www.tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+      "humanGt": "SAME",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "MATCH",
+        "name": "UNKNOWN"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": "tinyapple.net",
+      "candidateUrl": "https://www.tinyapple.net/en-kr/products/bobo-choses-bobo-choses-pop-t-shirt-blue",
+      "humanGt": "DIFFERENT",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "CONFLICT",
+        "name": "UNKNOWN"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": "tinyapple.net",
+      "candidateUrl": "https://www.tinyapple.net/en-kr/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+      "humanGt": "SAME",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "MATCH",
+        "name": "UNKNOWN"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/pale-blue-3d-logo-t-shirt",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": false,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/pale-blue-3d-logo-t-shirt",
+      "humanGt": "DIFFERENT",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": false,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/blue-tie-dye-polo-bear-t-shirt",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": false,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": null,
+      "candidateUrl": "https://www.junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 4,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "MATCH",
+        "name": "MATCH"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": null,
+      "candidateUrl": "https://scoutandcokids.com/products/bobo-choses-hug-hairy-monster-t-shirt",
+      "humanGt": "SAME",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 4,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/booty-ghosts-t-shirt-by-bobo-choses",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 4,
+      "axes": {
+        "brand": "MATCH",
+        "code": "CONFLICT",
+        "name": "MATCH"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 4,
+      "axes": {
+        "brand": "MATCH",
+        "code": "MATCH",
+        "name": "MATCH"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 4,
+      "axes": {
+        "brand": "MATCH",
+        "code": "MATCH",
+        "name": "MATCH"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/hugo-boss-baby-boys-double-b-graphic-t-shirt",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "nickis.com",
+      "candidateUrl": "https://nickis.com/products/bobo-choses-t-shirt-cremeweiss-3006678709",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "MATCH",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "petitemaisonkids.com",
+      "candidateUrl": "https://petitemaisonkids.com/products/charlie-white-mandarin-collar-shirt",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/white-stripe-graphic-t-shirt",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": false,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "designerkidswear.com",
+      "candidateUrl": "https://designerkidswear.com/products/michael-kors-kids-girls-sweater-pink-r15223-44v",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "NO_OVERLAP"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "designerkidswear.com",
+      "candidateUrl": "https://designerkidswear.com/products/fendi-baby-boys-sweatshirt-blue-buh088-8ra-f19j4",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "designerkidswear.com",
+      "candidateUrl": "https://designerkidswear.com/products/stone-island-junior-kids-boys-sweatshirt-blue-6100001-s0a20-v004b",
+      "humanGt": "DIFFERENT",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+      "humanGt": "DIFFERENT",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "NO_OVERLAP"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/bobo-choses-pop-sweatshirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 4,
+      "axes": {
+        "brand": "MATCH",
+        "code": "MATCH",
+        "name": "MATCH"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/hugo-boss-navy-zip-sweatshirt",
+      "humanGt": "DIFFERENT",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/lacoste-navy-sweatshirt",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "petitemaisonkids.com",
+      "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+      "humanGt": "DIFFERENT",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "NO_OVERLAP"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "shoppiccoliandco.com",
+      "candidateUrl": "https://shoppiccoliandco.com/products/jude-navy-baby-boy-anchor-sweater",
+      "humanGt": "DIFFERENT",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "NO_OVERLAP"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "tiptoeboutique.com",
+      "candidateUrl": "https://tiptoeboutique.com/products/b226ac033-midnight-blue",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": true,
+      "nameSharedTokenCount": 4,
+      "axes": {
+        "brand": "MATCH",
+        "code": "MATCH",
+        "name": "MATCH"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "NO_OVERLAP"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/mush-monster-duo-baby-sweatshirt-by-bobo-choses",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 4,
+      "axes": {
+        "brand": "MATCH",
+        "code": "CONFLICT",
+        "name": "MATCH"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": null,
+      "candidateUrl": "https://www.beaumonde.co.kr/goods/goods_view.php?goodsno=1000014013",
+      "humanGt": "SAME",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": false,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "NO_OVERLAP"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": null,
+      "candidateUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362797&type=x&current_category=058",
+      "humanGt": "SAME",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 4,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "NO_OVERLAP"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/hidden-monster-sweatshirt-by-bobo-choses",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 3,
+      "axes": {
+        "brand": "MATCH",
+        "code": "MATCH",
+        "name": "MATCH"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/fendi-blue-ff-sweater",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "NO_OVERLAP"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "petitemaisonkids.com",
+      "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "NO_OVERLAP"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "designerkidswear.com",
+      "candidateUrl": "https://designerkidswear.com/products/ea7-emporio-armani-kids-boys-polo-navy-7b000023-af1290-ub102",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "NO_OVERLAP"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/fendi-blue-ff-sweater",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "NO_OVERLAP"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/navy-logo-rugby-sweatshirt",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": false,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "NO_OVERLAP"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/stone-island-blue-sweatshirt",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "petitemaisonkids.com",
+      "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "NO_OVERLAP"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "shoppiccoliandco.com",
+      "candidateUrl": "https://shoppiccoliandco.com/products/blue-bears-knitted-sweater",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "NO_OVERLAP"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/blue-half-zip-sweatshirt",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": false,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 2,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "designerkidswear.com",
+      "candidateUrl": "https://designerkidswear.com/products/versace-kids-baby-boys-denim-blue-1009197-1a08511-1d200",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/gingham-woven-trousers",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "NO_OVERLAP"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/taxi-saurus-tag-denim-pants-by-bobo-choses",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 4,
+      "axes": {
+        "brand": "MATCH",
+        "code": "MATCH",
+        "name": "MATCH"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/diesel-viker-jeans",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "NO_OVERLAP"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "nickis.com",
+      "candidateUrl": "https://nickis.com/products/polo-ralph-lauren-jeans-blau-3402271700",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "NO_OVERLAP"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "petitemaisonkids.com",
+      "candidateUrl": "https://petitemaisonkids.com/products/sparkle-blue-denim-jeans",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/denim-blue-jeans",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": false,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": null,
+      "candidateUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362810&type=x&current_category=058",
+      "humanGt": "SAME",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 4,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "designerkidswear.com",
+      "candidateUrl": "https://designerkidswear.com/products/dolce-gabbana-kids-boys-dg-t-shirt-white-l4jthvg7nvc-s9000",
+      "humanGt": "DIFFERENT",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 2,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/bobo-choses-embossed-t-shirt-by-bobo-choses",
+      "humanGt": "SIMILAR",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 4,
+      "axes": {
+        "brand": "MATCH",
+        "code": "CONFLICT",
+        "name": "MATCH"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/marc-jacobs-black-t-shirt",
+      "humanGt": "DIFFERENT",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/white-multi-sequin-logo-crop-t-shirt",
+      "humanGt": "DIFFERENT",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": false,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "nickis.com",
+      "candidateUrl": "https://nickis.com/products/levis-sweatshirt-rot-7401897725",
+      "humanGt": "DIFFERENT",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "shoppiccoliandco.com",
+      "candidateUrl": "https://shoppiccoliandco.com/products/rudolph-knitted-sweater",
+      "humanGt": "DIFFERENT",
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "NO_OVERLAP"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/baby-sweater-suit-biscuit-organic-cotton",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "NO_OVERLAP"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/double-deerstalker-cap-in-blue-soft-tan-by-wynken",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 4,
+      "axes": {
+        "brand": "MATCH",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/mixed-media-jacket-in-blue-mix-by-wynken",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 4,
+      "axes": {
+        "brand": "MATCH",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "nickis.com",
+      "candidateUrl": "https://nickis.com/products/wynken-jacke-mixed-media-mehrfarbig-7400851022",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 2,
+      "axes": {
+        "brand": "MATCH",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/black-puffer-coat-4",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": false,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 0,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "NO_OVERLAP"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "designerkidswear.com",
+      "candidateUrl": "https://designerkidswear.com/products/givenchy-baby-girls-dress-pink-h31301-46g",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "designerkidswear.com",
+      "candidateUrl": "https://designerkidswear.com/products/moncler-kids-enfant-baby-k2f-jacket-brown-1a00024-597z8-246",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 2,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "designerkidswear.com",
+      "candidateUrl": "https://designerkidswear.com/products/mackage-kids-jesse-blue-jesse-bl",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 2,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/color-block-jacket-pastel-blue-mellow-yellow",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 2,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/baby-ribbed-booties-grey-melange-organic-cotton",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 2,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/kim-shirt-organic-cotton-sleet-check",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 3,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/baby-ribbed-booties-grey-melange-organic-cotton",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 2,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/faux-fur-reversible-jacket-in-blue-ode-to-rose-by-wynken",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 3,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/everyday-ghosts-all-over-baby-t-shirt-by-bobo-choses",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 3,
+      "axes": {
+        "brand": "MATCH",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/tunique-with-hair-clip-in-garden-flowers-print-by-bonjour",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 4,
+      "axes": {
+        "brand": "MATCH",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/pixel-abduction-all-over-reversible-jacket-by-bobo-choses",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 1,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 2,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "IDENTITY_AXIS"
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/bubble-sweatshirt-in-grey-melange-by-main-story",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 4,
+      "axes": {
+        "brand": "MATCH",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/mixed-media-jacket-in-ecru-mix-by-wynken",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 4,
+      "axes": {
+        "brand": "MATCH",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/bubble-sweatshirt-in-grey-melange-by-main-story",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 4,
+      "axes": {
+        "brand": "MATCH",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/handsmock-apron-dress-in-natural-by-bonjour",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 3,
+      "axes": {
+        "brand": "MATCH",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/exclusive-handsmock-dress-in-pink-tapestry-by-bonjour",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 3,
+      "axes": {
+        "brand": "MATCH",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/patachou-ecru-tweed-coat",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/mackage-jesse-blue-jacket",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 2,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/givenchy-lilac-dress",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/billieblush-reversible-leopard-jacket",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 2,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "nickis.com",
+      "candidateUrl": "https://nickis.com/products/colmar-daunenjacke-reversible-quilted-marineblau-7404628282",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "petitemaisonkids.com",
+      "candidateUrl": "https://petitemaisonkids.com/products/azalea-pink-flower-hair-clip",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 2,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "petitemaisonkids.com",
+      "candidateUrl": "https://petitemaisonkids.com/products/georgina-tartan-print-dress-with-red-bow",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 2,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "shoppiccoliandco.com",
+      "candidateUrl": "https://shoppiccoliandco.com/products/preorder-beatrice-burgundy-handsmocked-girl-sleeves-dress-ships-end-of-october",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 2,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/lemon-print-dress",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 2,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/blue-t-shirt",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/copy-of-coral-pink-broderie-anglaise-dress",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 1,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "UNKNOWN"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    },
+    {
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/blue-knitted-jacket",
+      "humanGt": null,
+      "urlShape": "PRODUCT_PAGE",
+      "hasTitle": true,
+      "hasDescription": true,
+      "codeCount": 0,
+      "codeConfirmed": false,
+      "nameSharedTokenCount": 2,
+      "axes": {
+        "brand": "UNKNOWN",
+        "code": "UNKNOWN",
+        "name": "MATCH"
+      },
+      "bucket": "QUALITY_NO_CODE"
+    }
+  ]
+}
