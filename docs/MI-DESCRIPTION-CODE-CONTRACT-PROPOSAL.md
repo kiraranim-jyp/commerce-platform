@@ -387,6 +387,54 @@ AC↔AB (라인 다름)         **1** — `B226AC009 ↔ B226AB040`(bobochoses.c
 
 ---
 
+## 5-F. 🔵🔵🔵 [2026-11-20] **작업 A 의 답은 기존 계약에 있다 — `AGE-LINE-POLICY-01`(CPO GO)**
+
+🔴 **새 측정이 필요하지 않았다.** `MODEL_CODE_AGE_LINE` 를 단언하는 **기존 계약이 9개** 다
+(`core-2an-identity-engine` · `dif-02-identity-funnel` · `kids-identity-strategy-stabilization` ·
+`mi-g-safety-shadow` · `mt-01-match-truth-price` · `pe-01a-price-eligibility` ·
+`pp-01-conditional-price` · `stage7-2-price-eligibility-cf` · `-split`) ·
+그리고 `core-2ag-title-strong-audience-boundary.test.ts:28` 이 **그 쌍**(`b226ab046`·`b226ab040`)을
+「AB(baby) 라인 · 같은 그래픽」으로 **표본에 고정** 한다. 🟢 전부 **회귀 PASS**(932 files · 0 failed).
+
+### 계약 원문이 적어 둔 정책(`core-2an-identity-engine.test.ts:321`)
+
+```
+🔵 **AGE-LINE-POLICY-01(CPO GO)** — 「품번 단독 충돌 + 연령어휘 제거 후 핵심 상품명 완전일치면
+   **조기 반환을 건너뛴다**. 🔴 그래도 **blocker(MODEL_CODE_AGE_LINE)가 SAME 을 막고**,
+   matchTruth 는 MODEL_CODE 충돌을 그대로 보아 **tier 는 EXCLUDED 유지** 다(**가격 축 미유입**).」
+잠긴 발화 조건 **셋**(계약이 문자열로 고정)
+  ① `ageLineDesignMatch && conflicts.length === 1 && conflicts[0].conflict === "MODEL_CODE"`
+  ② `modelCode === "conflict" && sameDesignIgnoringAgeWords(x, y)`
+  ③ `blocker: "MODEL_CODE_AGE_LINE"`
+```
+
+🔴🔴 **그래서 CPO 질문 1의 답이 확정된다** — AC↔AB 에서 예외가 발화하면:
+
+```
+🟢 CONFLICT **조기 반환을 건너뛴다**      ⟹ 자동 DIFFERENT 가 아니다(CPO 정책 충족)
+🔴 그러나 **blocker 가 SAME 을 막는다**   ⟹ 등급은 PRESUMED_SAME 이하
+🔴 그리고 **tier 는 EXCLUDED 유지**       ⟹ **가격 비교에 들어가지 않는다**
+⟹ 🔴 **「AC↔AB 동일상품 가능성 보존」은 «판정 보존» 까지이고 «가격 축 진입» 이 아니다.**
+   그것이 이미 **CPO GO 된 정책** 이다 — 새로 열 사안이 아니다
+```
+
+🔴 **발화 «실측» 은 여전히 내 분모에서 측정불가다**(유효 분모에 AC↔AB 0건 · 그 쌍은 **후보 제목이
+어느 fixture 에도 없다** — `mi-reeval-01-db-human` 은 `origin_title` 만 있고 `candidate_title` 이 없다).
+🟢 그러나 **「검증되지 않았다」는 과장이다** — 기존 계약 9건이 그 축을 잠그고 있다.
+
+### 작업 B — 🔴 **0건 확정**(추가 수집 없음)
+
+```
+후보 **라벨** 품번 불일치 + GT DIFFERENT   **0건**
+후보 **맨문자열** 품번 불일치 + GT DIFFERENT **0건**
+스캔 범위  mi-reeval-03(109) · mi-reeval-01-db-human(38) · core-2al · core-2m ·
+          wu-112 · wu-125 · core-same03 · preserved/a-identity-axis(26)
+🔴 기전 — GT DIFFERENT 후보는 **품번을 어디에도 들고 오지 않는다**(멀티브랜드 리테일러)
+🔴 429 우회 **0** · 새 수집 **0** · GT 추정·임의 라벨 **0**
+```
+
+---
+
 ## 6. CTO 권고
 
 ```
