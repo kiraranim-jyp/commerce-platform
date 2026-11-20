@@ -1,4 +1,108 @@
-# TTAEJYO — 다음 세션 인수인계 (§B-38 실행)
+# TTAEJYO — 다음 세션 인수인계 (CTO)
+
+## 🔵🔵🔵 0-HANDOFF. **[2026-11-20 갱신] 이 블록만 읽고 시작한다**
+
+### ① 지금 좌표 — 🔴 **CTO 가 할 작업이 «없다». 새 WU 를 스스로 만들지 않는다**
+
+```
+직전 트랙   KIDS MI 핵심 식별 증거 검증 — **전부 종결**(CPO 최종 검토 완료)
+최종 커밋   `317a8346` · 브랜치 `uird-deploy-01` · origin 동기 **(0 0)**
+            🔴 `origin/main` **behind** — 머지 미실행(**승인 사항**) ⟹ Production 배포 **0**
+작업트리    **120건**(사용자 수정 15 + untracked) — 🔴 **이것이 기준선이다. 종료 시 같은 수로 돌린다**
+운영 코드    이 트랙에서 **0줄** 변경 · DB **0** · 배포 **0**
+다음 범위    🔴 **CPO 가 지정한다** — 기준은 「**현재 확인 가능한 증거로 개선 효과를 입증할 수
+            있는 과제**」(미규명 문제를 다시 열지 않는다)
+```
+
+### ② 🔴🔴 다시 열지 않는 것 (CPO 확정 · 재조사 금지)
+
+```
+B-38 후보 품번 복구(`productFactsFromListing` brandModelCode)   **NO-GO**(§0 전문)
+AC↔AB · `AGE-LINE-POLICY-01`                                  기존 계약 **9건** 으로 종결
+상품유형 토큰 운영 반영                                          **불승인** — 🔵 운영 판정 효과 **0** 측정됨
+`sources.size >= 2`(PRODUCT_NAME 2출처) 완화                   **불승인**
+점수 · threshold · blocker 정책 · 가격 자격                      **변경 불승인**
+저장 `PRESUMED_SAME` 13건의 3점 구성                           **원인 미규명 종결**(후보 facts 미보존)
+브랜드 별칭 사전 확대                                            **보류**(후보 어휘 8종은 목록만 보존)
+카테고리 확장(WOMEN/ACCESSORIES/HOME)                          🔴 **보류** — KIDS 먼저
+```
+
+### ③ 작업 방식 (헌장 §4 요약 — 이것을 그대로 지킨다)
+
+```
+🔴 **착수 전 「기존 구현 확인」** — 이 트랙에서 「이미 있었다」가 **5번** 나왔다(§A-MI 전부)
+🔴 **WU 는 한 덩어리** — 조사→원인확정→전수검토→구현→E2E→회귀→배포→**보고 1회**
+   단계마다 승인 요청 금지 · 중간 진행 보고 금지
+🔴 **용량은 WU 단위로 판단** — 못 끝낼 크기면 **안전 종료 지점**까지 가고 **clean handoff**
+🔴 **운영 owner 를 그대로 호출** — 재구현 금지 · **운영 순서대로** 부른다
+   (`compareModelCode` 만 보고 `compareCrossSellerProducts` 를 안 봐서 **틀렸다**)
+🔴 **칸 이름을 추측하지 않는다** — 타입/소스에서 **읽는다**(이 트랙에서 `snake_case` 로 1회 틀렸다)
+🔴 **0 을 결과로 읽지 않는다** — 스캔이 0 이면 **하니스부터 의심**(실제로 1회 났다)
+🔴 **CONTROL** — 저장된 운영 결과를 재현하지 못하면 그 숫자를 **전략 판단에 쓰지 않는다**
+🔴 **측정불가 ≠ 0** · 분모를 **합산하지 않는다**(109 · 92 · 19 · 16 · 26 은 서로 다른 집합)
+🔴 **내 지표 ↔ 운영 축을 갈라 적는다** — 이 구분이 **거짓 개선 보고를 막았다**(63.6%→9.1% 사건)
+🔴 산출물은 **`preserved/`** 에만 쓴다 — `fixtures/` 에 쓰면 **사용자 계약이 FAIL** 한다
+```
+
+### ④ Git · 보존 (절대 규칙)
+
+```
+🔴 `git add .` · `reset --hard` · `clean` · `stash` · 강제 checkout **전부 금지**
+🔴 **내 파일만 명시적으로** `git add <path>` · 사용자 수정/untracked **전부 보존**
+🔴 보호 문서 수정 금지 — `docs/START-HERE.md` · `docs/STANDARD-V1.md` · `CLAUDE.md`
+🔴 동결 브랜치 `mi-locale-link-01` = **`7b093ef4`**(수정·머지·배포 금지)
+🔴 `origin/main` 머지 · Production 배포 — **승인 없이 하지 않는다**
+🟢 순서 — 테스트 → typecheck → **회귀** → commit → push (회귀 전 커밋 금지)
+```
+
+### ⑤ 회귀 실행 명령 (🔴 사용자 untracked 테스트 2개 제외)
+
+```bash
+cd apps/admin && npx vitest run \
+  --exclude "src/app/pipeline/__tests__/golf01-wire-page-chain.test.ts" \
+  --exclude "../../packages/crawler/src/comparison-search/__tests__/kids-locale-link-integration-design.test.ts"
+# 🟢 기준선 — 936 files / 11,462 passed / 0 failed · typecheck 0 errors
+# 🔴 그 두 파일은 **사용자 untracked** 이고 기준선에서 이미 실패한다(내 변경과 무관 · 손대지 않는다)
+```
+
+### ⑥ 보고 방식
+
+```
+🔴 **중간 보고 없이 완료 보고 1회.** 「진행 중」 보고를 하지 않는다
+🔴 필수 — 숫자 + **측정 방법** + **재현 가능성**(파일·칸 이름·조인 키)
+🔴 **PASS 등급을 구분** — Code / Test / Type / Build / Deploy / Production UI / Production API
+   🔴 「테스트 PASS」를 「Production PASS」로 쓰지 않는다
+🔴 **UNMEASURED 를 PASS 로 적지 않는다** · 추정으로 칸을 채우지 않는다
+🔴 내가 틀린 것은 **그대로 적는다**(이 트랙에서 **5번** 정정했고 그것이 신뢰의 근거다)
+🔴 보고 끝에 **「현재 좌표 + 다음 한 수」** 를 적고 **이 문서 §0-HANDOFF 를 갱신** 한다
+🔴 CEO 에게는 **실제 화면 확인이 필요한 순간에만** 올린다(§3 게이트) · 단계별 승인 요청 금지
+```
+
+### ⑦ 이 트랙이 남긴 자산 (🟢 재사용 · 재조사 금지)
+
+```
+전략 상시 규칙   `docs/CTO-SESSION-START.DRAFT.md` **§A-MI-1 ~ §A-MI-11**
+계약 개정안      `docs/MI-DESCRIPTION-CODE-CONTRACT-PROPOSAL.md`(§0 = NO-GO 결정)
+측정 하니스 7종   `__tests__/` — `mi-composite-identity-eval` · `mi-code-typology-eval` ·
+                `mi-operational-code-counterfactual` · `kids-core-evidence-audit` ·
+                `kids-conflict-gate-counterfactual` · `kids-evidence-store-design` ·
+                `kids-origin-name-nonpromotion`(4 tests)
+산출물 10종      `__tests__/preserved/*.json`
+🔵 핵심 수치     BRAND ABSENT **83%** · MODEL_CODE ABSENT **79%** ·
+                GT DIFFERENT **13/13** 이 저장 `PRESUMED_SAME`(그중 **10건 tier COMPARISON**) ·
+                blocker 는 **SAME 게이트에만** 걸린다(`PRESUMED_SAME` 을 막지 않는다)
+```
+
+### ⑧ 새 세션 첫 메시지
+
+```
+docs/START-HERE.md §0-NOW → docs/NEXT-SESSION-B38.md §0-HANDOFF 를 읽고 시작해.
+CTO 작업은 없는 상태다 — 다음 범위를 지정해 주면 그 범위만 한 묶음으로 수행해.
+```
+
+---
+
+# [이전 기록] §B-38 실행 (🔴 **종결됨** — 아래는 근거 보존이다)
 
 > 🟢 **진입 문서는 여전히 하나다** — 공식 진입점 `docs/START-HERE.md` 의 **§0-NOW(311줄)가 이 문서를 가리킨다**(2026-11-20).
 > 🔴 **이 문서 하나로 시작한다.** 전략 재조사·재논의·확인 질문 없이 **STEP 1 부터** 실행한다.
