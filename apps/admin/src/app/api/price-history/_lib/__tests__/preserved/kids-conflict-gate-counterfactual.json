@@ -1,0 +1,735 @@
+{
+ "note": "🔴 평가 전용 · 운영 변경 0 · verdict 재계산 0 · 점수/threshold 0 · 가격 자격 0 · B-38 재개 0. 기준은 저장된 운영 verdict(system_verdict · price_tier) 다. 게이트는 «가정» 이다 — 코드에 넣지 않았다. 🔴 유형 ③(토큰 불일치 단독)은 CPO 명시대로 정체성 충돌로 쓰지 않는다 — 측정만 한다. productTypes 는 고유 이름이 아니다(owner 분류). 분모는 조인·GT·저장 verdict 가 셋 다 있는 행이다.",
+ "denominator": {
+  "scope": 19,
+  "gt": {
+   "DIFFERENT": 13,
+   "SAME": 5,
+   "SIMILAR": 1
+  },
+  "storedVerdict": {
+   "PRESUMED_SAME": 16,
+   "SAME": 3
+  },
+  "notMerged": {
+   "evidencePairs": 109,
+   "bothSideFullText": 16,
+   "identityAxisPairs": 26
+  }
+ },
+ "byType": {
+  "6_INSUFFICIENT": {
+   "DIFFERENT": 9,
+   "SAME": 5
+  },
+  "3_TITLE_TOKEN_CONFLICT_ONLY": {
+   "DIFFERENT": 4
+  },
+  "2_MODEL_CODE_CONFLICT": {
+   "SIMILAR": 1
+  }
+ },
+ "gates": [
+  {
+   "gate": "①_BRAND_CONFLICT",
+   "presumedBefore": 16,
+   "flipped": 0,
+   "presumedAfter": 16,
+   "gtDifferentContaminationRemoved": 0,
+   "gtSameLost": 0,
+   "gtSimilarChanged": 0,
+   "comparisonTierRemoved": 0,
+   "cases": []
+  },
+  {
+   "gate": "②_MODEL_CODE_CONFLICT",
+   "presumedBefore": 16,
+   "flipped": 1,
+   "presumedAfter": 15,
+   "gtDifferentContaminationRemoved": 0,
+   "gtSameLost": 0,
+   "gtSimilarChanged": 1,
+   "comparisonTierRemoved": 1,
+   "cases": [
+    {
+     "host": "junioredition.com",
+     "gt": "SIMILAR",
+     "tier": "COMPARISON",
+     "type": "2_MODEL_CODE_CONFLICT"
+    }
+   ]
+  },
+  {
+   "gate": "⑤_DESCRIPTION_IDENTITY_CONFLICT",
+   "presumedBefore": 16,
+   "flipped": 0,
+   "presumedAfter": 16,
+   "gtDifferentContaminationRemoved": 0,
+   "gtSameLost": 0,
+   "gtSimilarChanged": 0,
+   "comparisonTierRemoved": 0,
+   "cases": []
+  },
+  {
+   "gate": "①+②",
+   "presumedBefore": 16,
+   "flipped": 1,
+   "presumedAfter": 15,
+   "gtDifferentContaminationRemoved": 0,
+   "gtSameLost": 0,
+   "gtSimilarChanged": 1,
+   "comparisonTierRemoved": 1,
+   "cases": [
+    {
+     "host": "junioredition.com",
+     "gt": "SIMILAR",
+     "tier": "COMPARISON",
+     "type": "2_MODEL_CODE_CONFLICT"
+    }
+   ]
+  },
+  {
+   "gate": "①+②+⑤",
+   "presumedBefore": 16,
+   "flipped": 1,
+   "presumedAfter": 15,
+   "gtDifferentContaminationRemoved": 0,
+   "gtSameLost": 0,
+   "gtSimilarChanged": 1,
+   "comparisonTierRemoved": 1,
+   "cases": [
+    {
+     "host": "junioredition.com",
+     "gt": "SIMILAR",
+     "tier": "COMPARISON",
+     "type": "2_MODEL_CODE_CONFLICT"
+    }
+   ]
+  },
+  {
+   "gate": "🔴참고_③_TITLE_TOKEN_ONLY",
+   "presumedBefore": 16,
+   "flipped": 4,
+   "presumedAfter": 12,
+   "gtDifferentContaminationRemoved": 4,
+   "gtSameLost": 0,
+   "gtSimilarChanged": 0,
+   "comparisonTierRemoved": 4,
+   "cases": [
+    {
+     "host": "folkberlin.com",
+     "gt": "DIFFERENT",
+     "tier": "COMPARISON",
+     "type": "3_TITLE_TOKEN_CONFLICT_ONLY"
+    },
+    {
+     "host": "petitemaisonkids.com",
+     "gt": "DIFFERENT",
+     "tier": "COMPARISON",
+     "type": "3_TITLE_TOKEN_CONFLICT_ONLY"
+    },
+    {
+     "host": "shoppiccoliandco.com",
+     "gt": "DIFFERENT",
+     "tier": "COMPARISON",
+     "type": "3_TITLE_TOKEN_CONFLICT_ONLY"
+    },
+    {
+     "host": "shoppiccoliandco.com",
+     "gt": "DIFFERENT",
+     "tier": "COMPARISON",
+     "type": "3_TITLE_TOKEN_CONFLICT_ONLY"
+    }
+   ]
+  }
+ ],
+ "unmeasurable": {
+  "note": "🔴 0 으로 세지 않는다 — 조인/GT/저장 verdict 중 하나라도 없는 행은 분모 밖이다. 유형 ④⑤ 는 양쪽 «확증 제품명» 이 둘 다 있어야 가를 수 있다.",
+  "bothCorroboratedAbsent": 19
+ },
+ "rows": [
+  {
+   "originCode": "B226AC009",
+   "host": "cemarose.ca",
+   "candidateUrl": "https://cemarose.ca/products/bobo-choses-kids-booty-ghosts-sweatshirt-light-blue-c7907",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": null,
+   "type": "6_INSUFFICIENT",
+   "signals": {
+    "brandConflict": false,
+    "codeConflict": false,
+    "titleTokenConflict": false,
+    "descriptionIdentityConflict": false,
+    "titleOnlyConflict": false,
+    "originBrand": null,
+    "candidateBrands": [
+     "Bobo Choses"
+    ],
+    "candidateOwnCode": null,
+    "compareModelCode": "unavailable",
+    "originCorroboratedName": null,
+    "candidateCorroboratedName": null,
+    "originProductTypes": [],
+    "candidateProductTypes": [
+     "SWEATSHIRT"
+    ],
+    "sharedTitleTokens": []
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "gt": "SAME",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "type": "6_INSUFFICIENT",
+   "signals": {
+    "brandConflict": false,
+    "codeConflict": false,
+    "titleTokenConflict": false,
+    "descriptionIdentityConflict": false,
+    "titleOnlyConflict": false,
+    "originBrand": null,
+    "candidateBrands": [
+     "Bobo Choses"
+    ],
+    "candidateOwnCode": "B226AC009",
+    "compareModelCode": "exact",
+    "originCorroboratedName": null,
+    "candidateCorroboratedName": null,
+    "originProductTypes": [
+     "SHIRT"
+    ],
+    "candidateProductTypes": [
+     "SHIRT"
+    ],
+    "sharedTitleTokens": [
+     "hug",
+     "hairy",
+     "monster",
+     "shirt"
+    ]
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "junioredition.com",
+   "candidateUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "gt": "SAME",
+   "storedVerdict": "SAME",
+   "storedTier": null,
+   "type": "6_INSUFFICIENT",
+   "signals": {
+    "brandConflict": false,
+    "codeConflict": false,
+    "titleTokenConflict": false,
+    "descriptionIdentityConflict": false,
+    "titleOnlyConflict": false,
+    "originBrand": null,
+    "candidateBrands": [
+     "Bobo Choses"
+    ],
+    "candidateOwnCode": "B226AC009",
+    "compareModelCode": "exact",
+    "originCorroboratedName": null,
+    "candidateCorroboratedName": null,
+    "originProductTypes": [],
+    "candidateProductTypes": [
+     "SHIRT"
+    ],
+    "sharedTitleTokens": []
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "scoutandcokids.com",
+   "candidateUrl": "https://scoutandcokids.com/collections/bobo-choses/products/bobo-choses-hug-hairy-monster-t-shirt",
+   "gt": "SAME",
+   "storedVerdict": "SAME",
+   "storedTier": null,
+   "type": "6_INSUFFICIENT",
+   "signals": {
+    "brandConflict": false,
+    "codeConflict": false,
+    "titleTokenConflict": false,
+    "descriptionIdentityConflict": false,
+    "titleOnlyConflict": false,
+    "originBrand": null,
+    "candidateBrands": [
+     "Bobo Choses"
+    ],
+    "candidateOwnCode": null,
+    "compareModelCode": "unavailable",
+    "originCorroboratedName": null,
+    "candidateCorroboratedName": null,
+    "originProductTypes": [],
+    "candidateProductTypes": [
+     "TOP"
+    ],
+    "sharedTitleTokens": []
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "tinyapple.net",
+   "candidateUrl": "https://www.tinyapple.net/en-kr/products/bobo-choses-bobo-choses-pop-t-shirt-blue",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": null,
+   "type": "6_INSUFFICIENT",
+   "signals": {
+    "brandConflict": false,
+    "codeConflict": false,
+    "titleTokenConflict": false,
+    "descriptionIdentityConflict": false,
+    "titleOnlyConflict": false,
+    "originBrand": null,
+    "candidateBrands": [
+     "Bobo Choses"
+    ],
+    "candidateOwnCode": null,
+    "compareModelCode": "unavailable",
+    "originCorroboratedName": null,
+    "candidateCorroboratedName": null,
+    "originProductTypes": [],
+    "candidateProductTypes": [
+     "SHIRT"
+    ],
+    "sharedTitleTokens": []
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "tinyapple.net",
+   "candidateUrl": "https://www.tinyapple.net/en-kr/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+   "gt": "SAME",
+   "storedVerdict": "SAME",
+   "storedTier": null,
+   "type": "6_INSUFFICIENT",
+   "signals": {
+    "brandConflict": false,
+    "codeConflict": false,
+    "titleTokenConflict": false,
+    "descriptionIdentityConflict": false,
+    "titleOnlyConflict": false,
+    "originBrand": null,
+    "candidateBrands": [
+     "Bobo Choses"
+    ],
+    "candidateOwnCode": null,
+    "compareModelCode": "unavailable",
+    "originCorroboratedName": null,
+    "candidateCorroboratedName": null,
+    "originProductTypes": [],
+    "candidateProductTypes": [
+     "SHIRT"
+    ],
+    "sharedTitleTokens": []
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/pale-blue-3d-logo-t-shirt",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "type": "6_INSUFFICIENT",
+   "signals": {
+    "brandConflict": false,
+    "codeConflict": false,
+    "titleTokenConflict": false,
+    "descriptionIdentityConflict": false,
+    "titleOnlyConflict": false,
+    "originBrand": null,
+    "candidateBrands": [],
+    "candidateOwnCode": null,
+    "compareModelCode": "unavailable",
+    "originCorroboratedName": null,
+    "candidateCorroboratedName": null,
+    "originProductTypes": [
+     "SHIRT"
+    ],
+    "candidateProductTypes": [
+     "SHIRT"
+    ],
+    "sharedTitleTokens": [
+     "shirt"
+    ]
+   }
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/stone-island-junior-kids-boys-sweatshirt-blue-6100001-s0a20-v004b",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "type": "6_INSUFFICIENT",
+   "signals": {
+    "brandConflict": false,
+    "codeConflict": false,
+    "titleTokenConflict": false,
+    "descriptionIdentityConflict": false,
+    "titleOnlyConflict": false,
+    "originBrand": "Bobo Choses",
+    "candidateBrands": [],
+    "candidateOwnCode": null,
+    "compareModelCode": "unavailable",
+    "originCorroboratedName": null,
+    "candidateCorroboratedName": null,
+    "originProductTypes": [
+     "SWEATSHIRT"
+    ],
+    "candidateProductTypes": [
+     "SWEATSHIRT"
+    ],
+    "sharedTitleTokens": [
+     "sweatshirt"
+    ]
+   }
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "type": "3_TITLE_TOKEN_CONFLICT_ONLY",
+   "signals": {
+    "brandConflict": false,
+    "codeConflict": false,
+    "titleTokenConflict": true,
+    "descriptionIdentityConflict": false,
+    "titleOnlyConflict": false,
+    "originBrand": "Bobo Choses",
+    "candidateBrands": [],
+    "candidateOwnCode": null,
+    "compareModelCode": "unavailable",
+    "originCorroboratedName": null,
+    "candidateCorroboratedName": null,
+    "originProductTypes": [
+     "SWEATSHIRT"
+    ],
+    "candidateProductTypes": [],
+    "sharedTitleTokens": []
+   }
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/bobo-choses-pop-sweatshirt-by-bobo-choses",
+   "gt": "SAME",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "type": "6_INSUFFICIENT",
+   "signals": {
+    "brandConflict": false,
+    "codeConflict": false,
+    "titleTokenConflict": false,
+    "descriptionIdentityConflict": false,
+    "titleOnlyConflict": false,
+    "originBrand": "Bobo Choses",
+    "candidateBrands": [
+     "Bobo Choses"
+    ],
+    "candidateOwnCode": "B226AC033",
+    "compareModelCode": "exact",
+    "originCorroboratedName": null,
+    "candidateCorroboratedName": null,
+    "originProductTypes": [
+     "SWEATSHIRT"
+    ],
+    "candidateProductTypes": [
+     "SWEATSHIRT"
+    ],
+    "sharedTitleTokens": [
+     "pop",
+     "sweatshirt"
+    ]
+   }
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/hugo-boss-navy-zip-sweatshirt",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "type": "6_INSUFFICIENT",
+   "signals": {
+    "brandConflict": false,
+    "codeConflict": false,
+    "titleTokenConflict": false,
+    "descriptionIdentityConflict": false,
+    "titleOnlyConflict": false,
+    "originBrand": "Bobo Choses",
+    "candidateBrands": [],
+    "candidateOwnCode": null,
+    "compareModelCode": "unavailable",
+    "originCorroboratedName": null,
+    "candidateCorroboratedName": null,
+    "originProductTypes": [
+     "SWEATSHIRT"
+    ],
+    "candidateProductTypes": [
+     "JACKET",
+     "SWEATSHIRT"
+    ],
+    "sharedTitleTokens": [
+     "sweatshirt"
+    ]
+   }
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "petitemaisonkids.com",
+   "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "type": "3_TITLE_TOKEN_CONFLICT_ONLY",
+   "signals": {
+    "brandConflict": false,
+    "codeConflict": false,
+    "titleTokenConflict": true,
+    "descriptionIdentityConflict": false,
+    "titleOnlyConflict": false,
+    "originBrand": "Bobo Choses",
+    "candidateBrands": [],
+    "candidateOwnCode": null,
+    "compareModelCode": "unavailable",
+    "originCorroboratedName": null,
+    "candidateCorroboratedName": null,
+    "originProductTypes": [
+     "SWEATSHIRT"
+    ],
+    "candidateProductTypes": [
+     "TOP"
+    ],
+    "sharedTitleTokens": []
+   }
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "shoppiccoliandco.com",
+   "candidateUrl": "https://shoppiccoliandco.com/products/jude-navy-baby-boy-anchor-sweater",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "type": "3_TITLE_TOKEN_CONFLICT_ONLY",
+   "signals": {
+    "brandConflict": false,
+    "codeConflict": false,
+    "titleTokenConflict": true,
+    "descriptionIdentityConflict": false,
+    "titleOnlyConflict": false,
+    "originBrand": "Bobo Choses",
+    "candidateBrands": [],
+    "candidateOwnCode": null,
+    "compareModelCode": "unavailable",
+    "originCorroboratedName": null,
+    "candidateCorroboratedName": null,
+    "originProductTypes": [
+     "SWEATSHIRT"
+    ],
+    "candidateProductTypes": [
+     "BODYSUIT",
+     "PANTS",
+     "ROMPER"
+    ],
+    "sharedTitleTokens": []
+   }
+  },
+  {
+   "originCode": "B226AC110",
+   "host": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/dolce-gabbana-kids-boys-dg-t-shirt-white-l4jthvg7nvc-s9000",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "type": "6_INSUFFICIENT",
+   "signals": {
+    "brandConflict": false,
+    "codeConflict": false,
+    "titleTokenConflict": false,
+    "descriptionIdentityConflict": false,
+    "titleOnlyConflict": false,
+    "originBrand": "Bobo Choses",
+    "candidateBrands": [],
+    "candidateOwnCode": null,
+    "compareModelCode": "unavailable",
+    "originCorroboratedName": null,
+    "candidateCorroboratedName": null,
+    "originProductTypes": [
+     "SHIRT"
+    ],
+    "candidateProductTypes": [
+     "SHIRT"
+    ],
+    "sharedTitleTokens": [
+     "embossed",
+     "shirt"
+    ]
+   }
+  },
+  {
+   "originCode": "B226AC110",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/bobo-choses-embossed-t-shirt-by-bobo-choses",
+   "gt": "SIMILAR",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "type": "2_MODEL_CODE_CONFLICT",
+   "signals": {
+    "brandConflict": false,
+    "codeConflict": true,
+    "titleTokenConflict": false,
+    "descriptionIdentityConflict": false,
+    "titleOnlyConflict": false,
+    "originBrand": "Bobo Choses",
+    "candidateBrands": [
+     "Bobo Choses"
+    ],
+    "candidateOwnCode": "B226AC111",
+    "compareModelCode": "conflict",
+    "originCorroboratedName": null,
+    "candidateCorroboratedName": null,
+    "originProductTypes": [
+     "SHIRT"
+    ],
+    "candidateProductTypes": [
+     "SHIRT"
+    ],
+    "sharedTitleTokens": [
+     "embossed",
+     "shirt"
+    ]
+   }
+  },
+  {
+   "originCode": "B226AC110",
+   "host": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/marc-jacobs-black-t-shirt",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "type": "6_INSUFFICIENT",
+   "signals": {
+    "brandConflict": false,
+    "codeConflict": false,
+    "titleTokenConflict": false,
+    "descriptionIdentityConflict": false,
+    "titleOnlyConflict": false,
+    "originBrand": "Bobo Choses",
+    "candidateBrands": [],
+    "candidateOwnCode": null,
+    "compareModelCode": "unavailable",
+    "originCorroboratedName": null,
+    "candidateCorroboratedName": null,
+    "originProductTypes": [
+     "SHIRT"
+    ],
+    "candidateProductTypes": [
+     "SHIRT"
+    ],
+    "sharedTitleTokens": [
+     "shirt"
+    ]
+   }
+  },
+  {
+   "originCode": "B226AC110",
+   "host": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/white-multi-sequin-logo-crop-t-shirt",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "type": "6_INSUFFICIENT",
+   "signals": {
+    "brandConflict": false,
+    "codeConflict": false,
+    "titleTokenConflict": false,
+    "descriptionIdentityConflict": false,
+    "titleOnlyConflict": false,
+    "originBrand": "Bobo Choses",
+    "candidateBrands": [],
+    "candidateOwnCode": null,
+    "compareModelCode": "unavailable",
+    "originCorroboratedName": null,
+    "candidateCorroboratedName": null,
+    "originProductTypes": [
+     "SHIRT"
+    ],
+    "candidateProductTypes": [
+     "SHIRT"
+    ],
+    "sharedTitleTokens": [
+     "shirt"
+    ]
+   }
+  },
+  {
+   "originCode": "B226AC170",
+   "host": "nickis.com",
+   "candidateUrl": "https://nickis.com/products/levis-sweatshirt-rot-7401897725",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "type": "6_INSUFFICIENT",
+   "signals": {
+    "brandConflict": false,
+    "codeConflict": false,
+    "titleTokenConflict": false,
+    "descriptionIdentityConflict": false,
+    "titleOnlyConflict": false,
+    "originBrand": "Bobo Choses",
+    "candidateBrands": [],
+    "candidateOwnCode": null,
+    "compareModelCode": "unavailable",
+    "originCorroboratedName": null,
+    "candidateCorroboratedName": null,
+    "originProductTypes": [
+     "SWEATSHIRT"
+    ],
+    "candidateProductTypes": [
+     "BODYSUIT",
+     "SWEATSHIRT"
+    ],
+    "sharedTitleTokens": [
+     "sweatshirt"
+    ]
+   }
+  },
+  {
+   "originCode": "B226AC170",
+   "host": "shoppiccoliandco.com",
+   "candidateUrl": "https://shoppiccoliandco.com/products/rudolph-knitted-sweater",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "type": "3_TITLE_TOKEN_CONFLICT_ONLY",
+   "signals": {
+    "brandConflict": false,
+    "codeConflict": false,
+    "titleTokenConflict": true,
+    "descriptionIdentityConflict": false,
+    "titleOnlyConflict": false,
+    "originBrand": "Bobo Choses",
+    "candidateBrands": [],
+    "candidateOwnCode": null,
+    "compareModelCode": "unavailable",
+    "originCorroboratedName": null,
+    "candidateCorroboratedName": null,
+    "originProductTypes": [
+     "SWEATSHIRT"
+    ],
+    "candidateProductTypes": [],
+    "sharedTitleTokens": []
+   }
+  }
+ ]
+}
