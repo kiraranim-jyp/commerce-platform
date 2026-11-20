@@ -67,6 +67,10 @@
 ```
 
 🔵 **MI 식별 전략 상시 규칙은 `docs/CTO-SESSION-START.DRAFT.md` §A-MI 다**(CPO 확정 2026-11-20).
+🔵 **상세설명 품번의 계약 충돌·개정안은 `docs/MI-DESCRIPTION-CODE-CONTRACT-PROPOSAL.md` 다**
+   — 🔴 변경 지점이 **`productFactsFromListing`(seller-facts.ts:380) `brandModelCode: null`** 한 줄로
+   특정됐다(Shopify 팩토리 `:247` 은 **이미** 설명에서 라벨 품번을 복구한다 · 팩토리 비대칭).
+   🔴 운영 연결은 **CPO 보류** · 선행 조건 둘은 그 문서 §5 에 있다.
 🔴 아래 STEP 1~5 는 **집행 기록으로 보존** 한다 — 재실행 지시가 아니다.
 
 ---
