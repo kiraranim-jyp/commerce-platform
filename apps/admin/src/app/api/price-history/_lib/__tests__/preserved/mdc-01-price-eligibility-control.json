@@ -1,0 +1,856 @@
+{
+  "note": "MI-DOMESTIC-CONTROL-01 — 운영 저장분(candidate_reviews)으로 §A-MI-9 핵심 수치를 CONTROL 검증한 산출물. 🔴 DB 쓰기 0 · HTTP 0 · 운영 코드 0줄. 🔴 판정은 운영이 저장한 값 그대로이고 재계산하지 않았다.",
+  "measuredAt": "2026-11-20",
+  "method": {
+    "source": "candidate_reviews (운영 DB · read-only) · human_verdict IS NOT NULL 전수",
+    "joinKey": "(origin_code, candidate_url)",
+    "columns": "system_verdict · match_truth · price_tier · blockers · price_amount · price_currency · market",
+    "eligibilityOwner": "summarizeCandidateOverseasPrices (candidate-market.ts:516) 의 자격 퍼널 5단 — ① tier EXCLUDED ② verdict ∉ {SAME,PRESUMED_SAME} ③ blockers ∩ PRICE_DISQUALIFYING_BLOCKERS ④ 금액 없음 ⑤ priceStatus ≠ VERIFIED_CURRENT",
+    "unmeasured": "⑤ priceStatus 는 candidate_reviews 에 칸이 없다 ⟹ 이 산출물은 ①~④ 까지다(⑤는 더 좁히는 방향이므로 '통과' 집합의 상한이다)"
+  },
+  "denominators": {
+    "GT 라벨 전수": 39,
+    "DIFFERENT": 15,
+    "SAME": 23,
+    "SIMILAR": 1,
+    "🔴 분모 주의": "109쌍 fixture · 16쌍 양쪽전문 · 이 39행은 서로 다른 집합이다 — 합산하지 않는다"
+  },
+  "sourceCensus": [
+    {
+      "source": "DOMESTIC_LISTING",
+      "rows": 34,
+      "with_human": 0,
+      "with_price": 34,
+      "with_blockers": 34
+    },
+    {
+      "source": "GT_IMPORT",
+      "rows": 17,
+      "with_human": 17,
+      "with_price": 1,
+      "with_blockers": 0
+    },
+    {
+      "source": "OVERSEAS_AUTO",
+      "rows": 269,
+      "with_human": 17,
+      "with_price": 269,
+      "with_blockers": 269
+    },
+    {
+      "source": "SELLER_URL",
+      "rows": 7,
+      "with_human": 5,
+      "with_price": 2,
+      "with_blockers": 2
+    },
+    {
+      "source": "WEB_SEARCH",
+      "rows": 54,
+      "with_human": 0,
+      "with_price": 53,
+      "with_blockers": 54
+    }
+  ],
+  "humanVerdictCensus": [
+    {
+      "human_verdict": "DIFFERENT",
+      "system_verdict": "PRESUMED_SAME",
+      "price_tier": "COMPARISON",
+      "n": 11
+    },
+    {
+      "human_verdict": "DIFFERENT",
+      "system_verdict": "PRESUMED_SAME",
+      "price_tier": null,
+      "n": 2
+    },
+    {
+      "human_verdict": "DIFFERENT",
+      "system_verdict": null,
+      "price_tier": null,
+      "n": 2
+    },
+    {
+      "human_verdict": "SAME",
+      "system_verdict": "PRESUMED_SAME",
+      "price_tier": "COMPARISON",
+      "n": 5
+    },
+    {
+      "human_verdict": "SAME",
+      "system_verdict": "SAME",
+      "price_tier": null,
+      "n": 3
+    },
+    {
+      "human_verdict": "SAME",
+      "system_verdict": null,
+      "price_tier": "EXACT",
+      "n": 1
+    },
+    {
+      "human_verdict": "SAME",
+      "system_verdict": null,
+      "price_tier": null,
+      "n": 14
+    },
+    {
+      "human_verdict": "SIMILAR",
+      "system_verdict": "PRESUMED_SAME",
+      "price_tier": "COMPARISON",
+      "n": 1
+    }
+  ],
+  "blockerVocab": [
+    {
+      "blocker": "BRAND_MISMATCH",
+      "n": 163,
+      "with_price": 163,
+      "with_human": 10
+    },
+    {
+      "blocker": "NO_TITLE_OVERLAP",
+      "n": 139,
+      "with_price": 139,
+      "with_human": 11
+    },
+    {
+      "blocker": "MATERIAL",
+      "n": 126,
+      "with_price": 126,
+      "with_human": 9
+    },
+    {
+      "blocker": "AUDIENCE_LINE",
+      "n": 105,
+      "with_price": 105,
+      "with_human": 7
+    },
+    {
+      "blocker": "FIT",
+      "n": 53,
+      "with_price": 53,
+      "with_human": 3
+    },
+    {
+      "blocker": "BRAND_UNCONFIRMED",
+      "n": 47,
+      "with_price": 47,
+      "with_human": 4
+    },
+    {
+      "blocker": "MODEL_CODE",
+      "n": 40,
+      "with_price": 40,
+      "with_human": 2
+    },
+    {
+      "blocker": "SAME_SELLER_DISTINCT_LISTING",
+      "n": 39,
+      "with_price": 39,
+      "with_human": 1
+    },
+    {
+      "blocker": "MODEL_CODE_AGE_LINE",
+      "n": 37,
+      "with_price": 37,
+      "with_human": 2
+    },
+    {
+      "blocker": "COLOR_VARIANT",
+      "n": 30,
+      "with_price": 30,
+      "with_human": 2
+    },
+    {
+      "blocker": "GARMENT_FORM",
+      "n": 15,
+      "with_price": 15,
+      "with_human": 1
+    },
+    {
+      "blocker": "COLOR",
+      "n": 2,
+      "with_price": 2,
+      "with_human": 0
+    }
+  ],
+  "tierMarket": [
+    {
+      "price_tier": "COMPARISON",
+      "market": "KR",
+      "n": 40,
+      "with_price": 40
+    },
+    {
+      "price_tier": "COMPARISON",
+      "market": "OVERSEAS",
+      "n": 231,
+      "with_price": 231
+    },
+    {
+      "price_tier": "COMPARISON",
+      "market": "UNKNOWN",
+      "n": 2,
+      "with_price": 2
+    },
+    {
+      "price_tier": "EXACT",
+      "market": "KR",
+      "n": 1,
+      "with_price": 1
+    },
+    {
+      "price_tier": "EXACT",
+      "market": "OVERSEAS",
+      "n": 66,
+      "with_price": 66
+    },
+    {
+      "price_tier": "EXACT",
+      "market": "UNKNOWN",
+      "n": 16,
+      "with_price": 15
+    },
+    {
+      "price_tier": "EXACT",
+      "market": null,
+      "n": 1,
+      "with_price": 1
+    },
+    {
+      "price_tier": "EXCLUDED",
+      "market": "OVERSEAS",
+      "n": 3,
+      "with_price": 3
+    },
+    {
+      "price_tier": null,
+      "market": null,
+      "n": 21,
+      "with_price": 0
+    }
+  ],
+  "rows": [
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "cemarose.ca",
+      "candidateUrl": "https://cemarose.ca/products/bobo-choses-kids-booty-ghosts-sweatshirt-light-blue-c7907",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "storedMatchTruth": null,
+      "storedPriceTier": null,
+      "storedBlockers": null,
+      "market": null,
+      "currency": null,
+      "amount": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "m.luxboy.com",
+      "candidateUrl": "https://m.luxboy.com/product/a14338197cb8698cd92c86431cce8d05",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": null,
+      "storedMatchTruth": null,
+      "storedPriceTier": null,
+      "storedBlockers": null,
+      "market": null,
+      "currency": null,
+      "amount": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "parkette.ca",
+      "candidateUrl": "https://www.parkette.ca/products/hug-hairy-monster-sweatshirt",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": null,
+      "storedMatchTruth": null,
+      "storedPriceTier": null,
+      "storedBlockers": null,
+      "market": null,
+      "currency": null,
+      "amount": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "tinyapple.net",
+      "candidateUrl": "https://www.tinyapple.net/en-kr/products/bobo-choses-bobo-choses-pop-t-shirt-blue",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "storedMatchTruth": null,
+      "storedPriceTier": null,
+      "storedBlockers": null,
+      "market": null,
+      "currency": null,
+      "amount": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/pale-blue-3d-logo-t-shirt",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "storedMatchTruth": "TEXT_CONFIRMED",
+      "storedPriceTier": "COMPARISON",
+      "storedBlockers": [
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE",
+        "BRAND_UNCONFIRMED"
+      ],
+      "market": "OVERSEAS",
+      "currency": "GBP",
+      "amount": 21.2,
+      "source": "OVERSEAS_AUTO"
+    },
+    {
+      "originCode": "B226AC033",
+      "candidateDomain": "designerkidswear.com",
+      "candidateUrl": "https://designerkidswear.com/products/stone-island-junior-kids-boys-sweatshirt-blue-6100001-s0a20-v004b",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "storedMatchTruth": "TEXT_CONFIRMED",
+      "storedPriceTier": "COMPARISON",
+      "storedBlockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL"
+      ],
+      "market": "OVERSEAS",
+      "currency": "CAD",
+      "amount": 260,
+      "source": "OVERSEAS_AUTO"
+    },
+    {
+      "originCode": "B226AC033",
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "storedMatchTruth": "TEXT_CONFIRMED",
+      "storedPriceTier": "COMPARISON",
+      "storedBlockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ],
+      "market": "OVERSEAS",
+      "currency": "EUR",
+      "amount": 39,
+      "source": "OVERSEAS_AUTO"
+    },
+    {
+      "originCode": "B226AC033",
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/hugo-boss-navy-zip-sweatshirt",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "storedMatchTruth": "TEXT_CONFIRMED",
+      "storedPriceTier": "COMPARISON",
+      "storedBlockers": [
+        "BRAND_MISMATCH",
+        "COLOR_VARIANT",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ],
+      "market": "OVERSEAS",
+      "currency": "CAD",
+      "amount": 27100,
+      "source": "OVERSEAS_AUTO"
+    },
+    {
+      "originCode": "B226AC033",
+      "candidateDomain": "petitemaisonkids.com",
+      "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "storedMatchTruth": "TEXT_CONFIRMED",
+      "storedPriceTier": "COMPARISON",
+      "storedBlockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE",
+        "GARMENT_FORM"
+      ],
+      "market": "OVERSEAS",
+      "currency": "USD",
+      "amount": 12700,
+      "source": "OVERSEAS_AUTO"
+    },
+    {
+      "originCode": "B226AC033",
+      "candidateDomain": "shoppiccoliandco.com",
+      "candidateUrl": "https://shoppiccoliandco.com/products/jude-navy-baby-boy-anchor-sweater",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "storedMatchTruth": "TEXT_CONFIRMED",
+      "storedPriceTier": "COMPARISON",
+      "storedBlockers": [
+        "BRAND_MISMATCH",
+        "COLOR_VARIANT",
+        "NO_TITLE_OVERLAP",
+        "AUDIENCE_LINE"
+      ],
+      "market": "OVERSEAS",
+      "currency": "USD",
+      "amount": 9700,
+      "source": "OVERSEAS_AUTO"
+    },
+    {
+      "originCode": "B226AC110",
+      "candidateDomain": "designerkidswear.com",
+      "candidateUrl": "https://designerkidswear.com/products/dolce-gabbana-kids-boys-dg-t-shirt-white-l4jthvg7nvc-s9000",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "storedMatchTruth": "TEXT_CONFIRMED",
+      "storedPriceTier": "COMPARISON",
+      "storedBlockers": [
+        "BRAND_MISMATCH"
+      ],
+      "market": "OVERSEAS",
+      "currency": "CAD",
+      "amount": 325,
+      "source": "OVERSEAS_AUTO"
+    },
+    {
+      "originCode": "B226AC110",
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/marc-jacobs-black-t-shirt",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "storedMatchTruth": "TEXT_CONFIRMED",
+      "storedPriceTier": "COMPARISON",
+      "storedBlockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "AUDIENCE_LINE"
+      ],
+      "market": "OVERSEAS",
+      "currency": "CAD",
+      "amount": 18500,
+      "source": "OVERSEAS_AUTO"
+    },
+    {
+      "originCode": "B226AC110",
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/white-multi-sequin-logo-crop-t-shirt",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "storedMatchTruth": "TEXT_CONFIRMED",
+      "storedPriceTier": "COMPARISON",
+      "storedBlockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP"
+      ],
+      "market": "OVERSEAS",
+      "currency": "GBP",
+      "amount": 10.5,
+      "source": "OVERSEAS_AUTO"
+    },
+    {
+      "originCode": "B226AC170",
+      "candidateDomain": "nickis.com",
+      "candidateUrl": "https://nickis.com/products/levis-sweatshirt-rot-7401897725",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "storedMatchTruth": "TEXT_CONFIRMED",
+      "storedPriceTier": "COMPARISON",
+      "storedBlockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL"
+      ],
+      "market": "OVERSEAS",
+      "currency": "EUR",
+      "amount": 50,
+      "source": "OVERSEAS_AUTO"
+    },
+    {
+      "originCode": "B226AC170",
+      "candidateDomain": "shoppiccoliandco.com",
+      "candidateUrl": "https://shoppiccoliandco.com/products/rudolph-knitted-sweater",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "storedMatchTruth": "TEXT_CONFIRMED",
+      "storedPriceTier": "COMPARISON",
+      "storedBlockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL"
+      ],
+      "market": "OVERSEAS",
+      "currency": "USD",
+      "amount": 11300,
+      "source": "OVERSEAS_AUTO"
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "biskuit.kr",
+      "candidateUrl": "https://biskuit.kr/product/%eb%b3%b4%eb%b3%b4%ec%87%bc%ec%a6%88-%ed%97%88%ea%b7%b8-%ed%97%a4%ec%96%b4%eb%a6%ac-%eb%aa%ac%ec%8a%a4%ed%84%b0-%ed%8b%b0%ec%85%94%ec%b8%a0-b226ac009/8891/category/367/display/1/",
+      "humanGt": "SAME",
+      "storedVerdict": null,
+      "storedMatchTruth": null,
+      "storedPriceTier": null,
+      "storedBlockers": null,
+      "market": null,
+      "currency": null,
+      "amount": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "bobochoses.com",
+      "candidateUrl": "https://bobochoses.com/products/b226ab040-hug-hairy-monster-t-shirt",
+      "humanGt": "SAME",
+      "storedVerdict": null,
+      "storedMatchTruth": null,
+      "storedPriceTier": null,
+      "storedBlockers": null,
+      "market": null,
+      "currency": null,
+      "amount": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "bornyesterdaykids.com",
+      "candidateUrl": "https://bornyesterdaykids.com/products/bobo-choses-baby-hug-hairy-monster-l-s-t-shirt-booo-bo-choses-tag-denim-pants-set-light-blue-red",
+      "humanGt": "SAME",
+      "storedVerdict": null,
+      "storedMatchTruth": null,
+      "storedPriceTier": null,
+      "storedBlockers": null,
+      "market": null,
+      "currency": null,
+      "amount": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "cissywears.com",
+      "candidateUrl": "https://cissywears.com/products/bobo-choses-babyhug-hairy-monster-t-shirt",
+      "humanGt": "SAME",
+      "storedVerdict": null,
+      "storedMatchTruth": null,
+      "storedPriceTier": null,
+      "storedBlockers": null,
+      "market": null,
+      "currency": null,
+      "amount": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "global.trenbe.com",
+      "candidateUrl": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+      "humanGt": "SAME",
+      "storedVerdict": null,
+      "storedMatchTruth": null,
+      "storedPriceTier": "EXACT",
+      "storedBlockers": null,
+      "market": null,
+      "currency": "USD",
+      "amount": 84,
+      "source": "GT_IMPORT"
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/hug-hairy-monster-baby-t-shirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "storedVerdict": "PRESUMED_SAME",
+      "storedMatchTruth": "TEXT_CONFIRMED",
+      "storedPriceTier": "COMPARISON",
+      "storedBlockers": [
+        "MODEL_CODE_AGE_LINE",
+        "FIT",
+        "SAME_SELLER_DISTINCT_LISTING",
+        "MODEL_CODE"
+      ],
+      "market": "OVERSEAS",
+      "currency": "GBP",
+      "amount": 33,
+      "source": "OVERSEAS_AUTO"
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "storedVerdict": "PRESUMED_SAME",
+      "storedMatchTruth": "TEXT_CONFIRMED",
+      "storedPriceTier": "COMPARISON",
+      "storedBlockers": [
+        "FIT",
+        "BRAND_UNCONFIRMED"
+      ],
+      "market": "OVERSEAS",
+      "currency": "GBP",
+      "amount": 37,
+      "source": "OVERSEAS_AUTO"
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "storedVerdict": "PRESUMED_SAME",
+      "storedMatchTruth": "TEXT_CONFIRMED",
+      "storedPriceTier": "COMPARISON",
+      "storedBlockers": [
+        "FIT",
+        "BRAND_UNCONFIRMED"
+      ],
+      "market": "OVERSEAS",
+      "currency": "GBP",
+      "amount": 37,
+      "source": "OVERSEAS_AUTO"
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "storedVerdict": "SAME",
+      "storedMatchTruth": null,
+      "storedPriceTier": null,
+      "storedBlockers": null,
+      "market": null,
+      "currency": null,
+      "amount": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://www.junioredition.com/products/hug-hairy-monster-baby-t-shirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "storedVerdict": null,
+      "storedMatchTruth": null,
+      "storedPriceTier": null,
+      "storedBlockers": null,
+      "market": null,
+      "currency": null,
+      "amount": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "kids21.com",
+      "candidateUrl": "https://kids21.com/products/700005621lbl",
+      "humanGt": "SAME",
+      "storedVerdict": null,
+      "storedMatchTruth": null,
+      "storedPriceTier": null,
+      "storedBlockers": null,
+      "market": null,
+      "currency": null,
+      "amount": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "scoutandcokids.com",
+      "candidateUrl": "https://scoutandcokids.com/collections/bobo-choses/products/bobo-choses-hug-hairy-monster-t-shirt",
+      "humanGt": "SAME",
+      "storedVerdict": "SAME",
+      "storedMatchTruth": null,
+      "storedPriceTier": null,
+      "storedBlockers": null,
+      "market": null,
+      "currency": null,
+      "amount": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "stockmann.ee",
+      "candidateUrl": "https://www.stockmann.ee/et-ee/bobo-choses-trikoosark-hug-monster/18119748633-1.html",
+      "humanGt": "SAME",
+      "storedVerdict": null,
+      "storedMatchTruth": null,
+      "storedPriceTier": null,
+      "storedBlockers": null,
+      "market": null,
+      "currency": null,
+      "amount": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "thefrontshop.com",
+      "candidateUrl": "https://www.thefrontshop.com/products/hug-hairy-monster-t-shirt",
+      "humanGt": "SAME",
+      "storedVerdict": null,
+      "storedMatchTruth": null,
+      "storedPriceTier": null,
+      "storedBlockers": null,
+      "market": null,
+      "currency": null,
+      "amount": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "tinyapple.net",
+      "candidateUrl": "https://www.tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+      "humanGt": "SAME",
+      "storedVerdict": null,
+      "storedMatchTruth": null,
+      "storedPriceTier": null,
+      "storedBlockers": null,
+      "market": null,
+      "currency": null,
+      "amount": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "tinyapple.net",
+      "candidateUrl": "https://www.tinyapple.net/en-kr/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+      "humanGt": "SAME",
+      "storedVerdict": "SAME",
+      "storedMatchTruth": null,
+      "storedPriceTier": null,
+      "storedBlockers": null,
+      "market": null,
+      "currency": null,
+      "amount": null,
+      "source": "GT_IMPORT"
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/pale-blue-3d-logo-t-shirt",
+      "humanGt": "SAME",
+      "storedVerdict": "PRESUMED_SAME",
+      "storedMatchTruth": "TEXT_CONFIRMED",
+      "storedPriceTier": "COMPARISON",
+      "storedBlockers": [
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE",
+        "BRAND_UNCONFIRMED"
+      ],
+      "market": "OVERSEAS",
+      "currency": "GBP",
+      "amount": 21.2,
+      "source": "OVERSEAS_AUTO"
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": null,
+      "candidateUrl": "https://www.junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "storedVerdict": null,
+      "storedMatchTruth": null,
+      "storedPriceTier": null,
+      "storedBlockers": null,
+      "market": null,
+      "currency": null,
+      "amount": null,
+      "source": "SELLER_URL"
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": null,
+      "candidateUrl": "https://scoutandcokids.com/products/bobo-choses-hug-hairy-monster-t-shirt",
+      "humanGt": "SAME",
+      "storedVerdict": null,
+      "storedMatchTruth": null,
+      "storedPriceTier": null,
+      "storedBlockers": null,
+      "market": null,
+      "currency": null,
+      "amount": null,
+      "source": "SELLER_URL"
+    },
+    {
+      "originCode": "B226AC033",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/bobo-choses-pop-sweatshirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "storedVerdict": "PRESUMED_SAME",
+      "storedMatchTruth": "TEXT_CONFIRMED",
+      "storedPriceTier": "COMPARISON",
+      "storedBlockers": [
+        "MATERIAL"
+      ],
+      "market": "OVERSEAS",
+      "currency": "GBP",
+      "amount": 58,
+      "source": "OVERSEAS_AUTO"
+    },
+    {
+      "originCode": "B226AC036",
+      "candidateDomain": null,
+      "candidateUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362797&type=x&current_category=058",
+      "humanGt": "SAME",
+      "storedVerdict": null,
+      "storedMatchTruth": null,
+      "storedPriceTier": null,
+      "storedBlockers": null,
+      "market": null,
+      "currency": null,
+      "amount": null,
+      "source": "SELLER_URL"
+    },
+    {
+      "originCode": "B226AC036",
+      "candidateDomain": null,
+      "candidateUrl": "https://www.beaumonde.co.kr/goods/goods_view.php?goodsno=1000014013",
+      "humanGt": "SAME",
+      "storedVerdict": null,
+      "storedMatchTruth": null,
+      "storedPriceTier": null,
+      "storedBlockers": null,
+      "market": null,
+      "currency": null,
+      "amount": null,
+      "source": "SELLER_URL"
+    },
+    {
+      "originCode": "B226AC073",
+      "candidateDomain": null,
+      "candidateUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362810&type=x&current_category=058",
+      "humanGt": "SAME",
+      "storedVerdict": null,
+      "storedMatchTruth": null,
+      "storedPriceTier": null,
+      "storedBlockers": null,
+      "market": null,
+      "currency": null,
+      "amount": null,
+      "source": "SELLER_URL"
+    },
+    {
+      "originCode": "B226AC110",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/bobo-choses-embossed-t-shirt-by-bobo-choses",
+      "humanGt": "SIMILAR",
+      "storedVerdict": "PRESUMED_SAME",
+      "storedMatchTruth": "TEXT_CONFIRMED",
+      "storedPriceTier": "COMPARISON",
+      "storedBlockers": [
+        "MODEL_CODE_AGE_LINE",
+        "MODEL_CODE"
+      ],
+      "market": "OVERSEAS",
+      "currency": "GBP",
+      "amount": 37,
+      "source": "OVERSEAS_AUTO"
+    }
+  ],
+  "observations": {
+    "저장 금액에 ×100 꼴 이상치가 있다": "CAD 27100 · CAD 18500 · USD 12700 · USD 11300 · USD 9700 — 🔴 이 산출물의 판정에는 영향이 없다(그 행들은 ③에서 막힌다) · 기존 기록과 같은 현상",
+    "blockers 칸이 null 인 행이 있다": "22행 — 판정 경로를 거치지 않은 저장분"
+  }
+}

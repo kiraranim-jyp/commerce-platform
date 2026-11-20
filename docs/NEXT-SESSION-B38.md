@@ -5,7 +5,10 @@
 ### ① 지금 좌표 — 🔴 **CTO 가 할 작업이 «없다». 새 WU 를 스스로 만들지 않는다**
 
 ```
-직전 트랙   KIDS MI 핵심 식별 증거 검증 — **전부 종결**(CPO 최종 검토 완료)
+직전 트랙   **`MI-DOMESTIC-CONTROL-01`**(가격 자격 CONTROL) — **종결 · §0-MDC01 참조**
+            🔴 그 WU 가 인수인계 ⑦의 「10건 tier COMPARISON = 가격 비교 유입」을 **정정** 했다
+            🟡 남은 것은 **CPO 판단 1건**(국내 금액 축에 「관측된 차이」 필터 여부 · §0-MDC01 ⑥)
+그 전 트랙   KIDS MI 핵심 식별 증거 검증 — **전부 종결**(CPO 최종 검토 완료)
 최종 커밋   `317a8346` · 브랜치 `uird-deploy-01` · origin 동기 **(0 0)**
             🔴 `origin/main` **behind** — 머지 미실행(**승인 사항**) ⟹ Production 배포 **0**
 작업트리    **120건**(사용자 수정 15 + untracked) — 🔴 **이것이 기준선이다. 종료 시 같은 수로 돌린다**
@@ -88,9 +91,14 @@ cd apps/admin && npx vitest run \
                 `kids-conflict-gate-counterfactual` · `kids-evidence-store-design` ·
                 `kids-origin-name-nonpromotion`(4 tests)
 산출물 10종      `__tests__/preserved/*.json`
-🔵 핵심 수치     BRAND ABSENT **83%** · MODEL_CODE ABSENT **79%** ·
-                GT DIFFERENT **13/13** 이 저장 `PRESUMED_SAME`(그중 **10건 tier COMPARISON**) ·
+🔵 핵심 수치     BRAND ABSENT **83%** · MODEL_CODE ABSENT **79%**(🔴 **fixture 축** 109쌍) ·
+                GT DIFFERENT **13/13** 이 저장 `PRESUMED_SAME` ·
                 blocker 는 **SAME 게이트에만** 걸린다(`PRESUMED_SAME` 을 막지 않는다)
+🔴🔴 **[2026-11-20 MDC-01 정정] 위의 「10건 tier COMPARISON(가격 비교 유입)」을 «폐기» 한다**
+   실측 **11건** 이고(운영 저장분 전수) 그 11건은 운영 금액 자격 퍼널에서 **전건 탈락** 한다
+   ⟹ 🔴 **`priceTier` 를 「가격 비교 유입」으로 읽은 것이 틀렸다** — tier 는 관측/분류다
+   🟢 GT 라벨 39행 금액 오염 — DIFFERENT **0/15** · 통과 5건 중 DIFFERENT **0**
+   전문 §0-MDC01 · 산출물 `preserved/mdc-01-price-eligibility-control.json`
 ```
 
 ### ⑧ 새 세션 첫 메시지
@@ -98,6 +106,94 @@ cd apps/admin && npx vitest run \
 ```
 docs/START-HERE.md §0-NOW → docs/NEXT-SESSION-B38.md §0-HANDOFF 를 읽고 시작해.
 CTO 작업은 없는 상태다 — 다음 범위를 지정해 주면 그 범위만 한 묶음으로 수행해.
+```
+
+---
+
+## 🔵🔵🔵 §0-MDC01. **[2026-11-20] `MI-DOMESTIC-CONTROL-01` — 가격 자격 CONTROL · 코드 0줄**
+
+🔴 **CPO 지시(국내 동일상품 매칭 다음 과제 확정)의 산출이다.** 🔴 **재조사 금지.**
+🟢 운영 코드 **0줄** · DB 쓰기 **0** · HTTP **0** · 정책(threshold·정원·blocker 집합·가격 자격) **0**.
+
+### ① 왜 이 과제였나 — backlog 분류 결과
+
+```
+① 국내 후보 공급        🔴 **CPO 동결** — 「공급을 다시 재지 않는다」 · 남은 칸은
+                       `NO_TITLE_OVERLAP` **정책 질문** 하나(memory 2026-10-22)
+② precision/recall 분모  🔴 분모 확장용 HTTP **불승인** · A군 후보 원문 **0/33**
+③ 판정 구분 근거         🟡 보류 — 후보측 원문 **HTTP 429**(호스트 12곳)가 선행 블로커
+④ 가격 비교 대상 제한     🟢 **여기가 열려 있었다** — 「유입」이 **tier 로만** 주장돼 있었다
+⑤ MI 화면 전달          🟢 종결(배포 `d28d01c9`)
+⟹ ④ 가 유일하게 **기존 자료 · HTTP 0 · 정책 변경 0** 으로 검증 가능했다
+```
+
+### ② 🔴🔴 정정한 것 — 인수인계 ⑦의 「핵심 수치」가 틀렸다
+
+```
+🔴 적혀 있던 것   「GT DIFFERENT 13/13 저장 PRESUMED_SAME · 그중 **10건 tier
+                 COMPARISON**(= 가격 비교 **유입**)」
+🟢 실측          tier COMPARISON 은 **11건** · 그 11건은 금액 자격 퍼널 **③에서 전건 탈락**
+🔴 오독의 이름    `priceTier` 는 **관측/분류** 이고 **가격 자격이 아니다**
+                 (memory `tier-is-not-price-eligibility` 가 기록한 **그 오독의 두 번째 재발**)
+🟢 자격 owner    `summarizeCandidateOverseasPrices`(candidate-market.ts:516) 퍼널 5단 —
+                 ① tier EXCLUDED ② verdict ∉{SAME,PRESUMED_SAME}
+                 ③ blockers ∩ `PRICE_DISQUALIFYING_BLOCKERS` ④ 금액 없음 ⑤ priceStatus
+🔴 ⑤ 미측정      `candidate_reviews` 에 `price_status` **칸이 없다** ⟹ ①~④ 까지다
+                 (⑤는 **더 좁히는** 방향이라 「오염 0」 결론은 뒤집히지 않는다)
+```
+
+### ③ 측정 — 운영 저장분 `candidate_reviews` 전수 (분모 **39**)
+
+```
+GT 라벨 39 = DIFFERENT **15** · SAME **23** · SIMILAR **1**   (조인 키 `(origin_code, candidate_url)`)
+금액 축 유입   DIFFERENT **0/15** · SAME **4/23** · SIMILAR **1/1**
+DIFFERENT 탈락 사유   ③ 관측된 차이 blocker **11** · ④ 금액 없음 **4**
+통과 집합 5건의 GT    SAME 4 · SIMILAR 1 · **DIFFERENT 0**  ⟹ 🟢 **오염 0**
+🔴 분모를 합산하지 않는다 — 109쌍 fixture · 16쌍 양쪽전문 · 이 **39행** 은 서로 다른 집합이다
+🔴 저장 금액에 **×100 꼴 이상치**(CAD 27100 · USD 12700 …)가 있다 — 🟢 판정에는 영향 0
+   (그 행들은 ③에서 막힌다) · 기존 기록과 같은 현상
+```
+
+### ④ 🔴🔴 새로 확정한 사실 — **국내/해외 비대칭** (고치지 않았다)
+
+```
+해외 축   `summarizeCandidateOverseasPrices` 가 `blockers` 를 받아 ③에서 막는다
+국내 축   `market-intelligence.ts:332·333` 이 **tier 둘만** 본다 —
+          버킷 타입 `PriceObservationRecord`(pricing/price-history.ts:24)에
+          🔴 **`blockers` 칸이 애초에 없다** ⟹ 구조적으로 그 필터를 가질 수 없다
+🔴 반사실  같은 11건이 **국내 시장이었다면 tier 만으로 전건 유입된다**
+🟢 현재 실제 오염은 **0** — GT 라벨 39행 중 `market === "KR"` 이 **0건**
+   🔴 「안전하다」가 아니라 **「그 모양의 표본이 없다」**(측정불가 ≠ 안전)
+🔴🔴 **좁히면 손실이 난다 — 그래서 CTO 가 고르지 않았다**
+   human **SAME** 인데 그 차단축을 든 행이 **2건** 실재한다 ⟹ 국내에 같은 필터를 넣으면
+   **정답 2건이 금액에서 사라진다**(기존 실측: 국내 레코드 1 → 0 · 비스킷 ₩88,000)
+⟹ 🟡 **precision ↔ recall 교환이고 CPO 판단 사안** 이다
+```
+
+### ⑤ 산출물 · 검증
+
+```
+산출물   `apps/admin/src/app/api/price-history/_lib/__tests__/preserved/
+          mdc-01-price-eligibility-control.json`(GT 39행 + 분모 + 측정 범위 + 관측)
+계약     `__tests__/mdc-01-price-eligibility-control.test.ts` — **12 tests**
+         A(오염) 5 · B(비대칭) 4 · C(손실·owner) 3 · 🟢 운영 집계기를 **직접 호출** 한다
+음성대조  M1 차단축 목록에서 `BRAND_MISMATCH` 제거 → **4 FAIL**
+         M2 집계기 ③ 분기의 `continue` 제거 → **4 FAIL**
+         M3 `PriceObservationRecord` 에 `blockers` 칸 추가 → **1 FAIL**
+         🟢 세 파일 전부 **바이트 동일 복구**(`git diff` 비어 있음) → 12/12 재통과
+🔴 기존 계약과 중복이 아니다 — `brand-conflict-price-real`(브랜드축 · TEMP 덤프라
+   머신 밖에서는 SKIP) · `stage7-2`(손으로 만든 레코드)에는 **GT 라벨 교차와
+   국내 비대칭 단언이 없다**
+```
+
+### ⑥ 🔵 다음 한 수 (CPO 판단 1건 · CTO 작업 없음)
+
+```
+🟡 결정 필요 — 「국내 금액 축에 「관측된 차이」 필터를 넣을 것인가」
+   넣으면   DIFFERENT 11건의 잠재 유입이 닫힌다 ↔ 🔴 human SAME **2건** 이 사라진다
+   안 넣으면 현재 오염 **0** 유지 ↔ 🔴 KR 표본이 생기면 그때 유입된다
+🔴 CTO 는 둘 중 아무것도 구현하지 않았다 — 계약이 **현재 상태를 사실로 고정** 했을 뿐이다
+🔴 그리고 ③축(판정 구분 근거)을 열려면 **후보측 원문 확보**(HTTP 429)가 선행이다
 ```
 
 ---
