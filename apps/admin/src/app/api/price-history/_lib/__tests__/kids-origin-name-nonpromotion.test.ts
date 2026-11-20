@@ -311,4 +311,163 @@ describe("원상품 PRODUCT_NAME 미승격 사유 분류 (평가 전용 · 승�
     // 🔴 승격 0 — owner 상태를 바꾸지 않았다.
     expect(rows.every((r) => r.ownerState !== "CORROBORATED")).toBe(true);
   });
+
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * §A-MI-8 반사실 — 상품유형 토큰을 **제외하면** 제목 공유 신호가 어떻게 바뀌는가
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴 `coreTitleTokens` **운영 로직 변경 0** · 점수/threshold/SAME 정책 **0** ·
+   *    verdict 재계산 **0** · 운영 판정 연결 **0** · **상품유형 사전 확장 0** · DB **0**.
+   * 🔵🔵 **새 사전을 만들지 않는다** — 상품유형 어휘는 운영 owner 가 산출한
+   *    `analyzeProductNameDescriptionEvidence(...).productTypes` **그 값** 에서 파생한다.
+   * 🔴 원상품·후보에 **같은 규칙** 을 적용한다(대칭).
+   * 🔴 **CPO 통계 정정 수용** — 원시 건수와 **GT별 비율** 을 갈라 적는다(분모가 다르다).
+   */
+  it("상품유형 토큰 제외 전후를 비교한다 (A ↔ B)", () => {
+    const tokenize = (v: string | null): string[] =>
+      v
+        ? v
+            .toLowerCase()
+            .normalize("NFKC")
+            .replace(/[^a-z0-9가-힣]+/g, " ")
+            .trim()
+            .split(" ")
+            .filter((t) => t.length > 1)
+        : [];
+
+    const rows = evid.map((p) => {
+      const oTitle = s(p.origin.title);
+      const oDesc = s(p.origin.description);
+      const cand = (p as unknown as { candidate?: { title?: string | null; description?: string | null } }).candidate;
+      const cTitle = s(cand?.title);
+      const cDesc = s(cand?.description);
+      const oEv = analyzeProductNameDescriptionEvidence({ title: oTitle, description: oDesc });
+      const cEv = analyzeProductNameDescriptionEvidence({ title: cTitle, description: cDesc });
+
+      const firstDirect = (e: ReturnType<typeof analyzeProductNameDescriptionEvidence>) => {
+        const obs = e.observations as unknown as Array<{
+          raw: string; source: string; contextKind?: string;
+          productAttributable?: boolean; genericTypeOnly?: boolean;
+        }>;
+        return (
+          obs.find(
+            (o) => o.productAttributable === true && o.genericTypeOnly !== true && o.contextKind === "DIRECT",
+          )?.raw ?? null
+        );
+      };
+      const oName = firstDirect(oEv);
+      const cName = firstDirect(cEv);
+
+      /** 🔵 상품유형 어휘 — **owner 산출값에서만** 만든다(새 사전 0). */
+      const typeTokens = new Set(
+        [...oEv.productTypes, ...cEv.productTypes].flatMap((t) => tokenize(t)),
+      );
+      /** 🔴 토큰이 유형 어휘를 **포함** 하면 유형으로 본다(`sweatshirt` ⊃ `shirt`). */
+      const isType = (tok: string) => [...typeTokens].some((ty) => tok.includes(ty) || ty.includes(tok));
+
+      const ot = tokenize(oName);
+      const ct = tokenize(cName);
+      const sharedA = ot.filter((t) => ct.includes(t));
+      const removed = sharedA.filter((t) => isType(t));
+      const sharedB = sharedA.filter((t) => !isType(t));
+
+      const st = byKey.get(key(p.originCode, p.candidateUrl));
+      return {
+        originCode: s(p.originCode),
+        host: p.candidateDomain,
+        gt: p.humanGt,
+        storedVerdict: st?.system_verdict ?? null,
+        ownerState: oEv.state,
+        originName: oName,
+        candidateName: cName,
+        productTypes: [...new Set([...oEv.productTypes, ...cEv.productTypes])],
+        typeTokens: [...typeTokens],
+        sharedA,
+        removedAsType: removed,
+        sharedB,
+        /** A 에서는 공유했는데 B 에서 사라진다 = **상품유형만 공유하던 사례**. */
+        onlyProductTypeShared: sharedA.length > 0 && sharedB.length === 0,
+        /** 유형 제거 후에도 남는 공유 = 고유 디자인명/모델명 신호. */
+        stillSharesUnique: sharedB.length > 0,
+      };
+    });
+
+    const observed = rows.filter((r) => r.ownerState === "OBSERVED");
+    const gtRows = observed.filter((r) => has(r.gt));
+    const byGt = (gt: string) => gtRows.filter((r) => r.gt === gt);
+    const rate = (n: number, d: number) => (d === 0 ? null : Math.round((n / d) * 1000) / 10);
+
+    const compare = (gt: string) => {
+      const src = byGt(gt);
+      const a = src.filter((r) => r.sharedA.length > 0).length;
+      const b = src.filter((r) => r.sharedB.length > 0).length;
+      return {
+        denominator: src.length,
+        A_shared: a,
+        A_ratePct: rate(a, src.length),
+        B_shared: b,
+        B_ratePct: rate(b, src.length),
+        onlyProductTypeShared: src.filter((r) => r.onlyProductTypeShared).length,
+      };
+    };
+
+    const artifact = {
+      note:
+        "🔴 평가 전용 — coreTitleTokens 운영 변경 0 · 점수/threshold/SAME 정책 0 · verdict 재계산 0 · " +
+        "운영 판정 연결 0 · 상품유형 **사전 확장 0**(owner 의 productTypes 산출에서만 파생) · DB 0 · 수집 0. " +
+        "🔴 CPO 통계 정정 수용 — 원시 건수와 GT별 «비율» 을 갈라 적는다(분모가 다르다). " +
+        "🔴 토큰 공유는 **동일성 결론이 아니다**. 표본이 작아 변별력을 확정하지 않는다. " +
+        "🔴 원상품·후보에 **같은 규칙** 을 적용했다(대칭).",
+      correctionAccepted: {
+        statedByCpo: { SAME: "6/7 = 85.7%", DIFFERENT: "7/11 = 63.6%", SIMILAR: "1/1 (표본 1)" },
+        ctoPreviousClaim: "🔴 「DIFFERENT 가 더 많아 변별력이 없다」 — **분모를 무시한 해석이었다. 철회한다**",
+        corrected:
+          "상품유형 토큰 공유가 DIFFERENT 에서도 빈번하다 · 토큰 공유만으로 동일성을 확증할 수 없다 · " +
+          "그러나 이 표로 「전혀 구분하지 못한다」고 단정할 수도 없다",
+      },
+      denominator: {
+        rows: rows.length,
+        observed: observed.length,
+        observedGtLabeled: gtRows.length,
+        observedGtAndStored: observed.filter((r) => has(r.gt) && has(r.storedVerdict)).length,
+      },
+      /** 🔵 핵심 비교 — A(기존) ↔ B(상품유형 제외) */
+      comparison: { SAME: compare("SAME"), DIFFERENT: compare("DIFFERENT"), SIMILAR: compare("SIMILAR") },
+      productTypeVocabulary: {
+        note: "🟢 owner `productTypes` 산출에서 파생한 **실제 어휘** 다 — 내가 만든 사전이 아니다",
+        types: [...new Set(observed.flatMap((r) => r.productTypes))].sort(),
+        tokens: [...new Set(observed.flatMap((r) => r.typeTokens))].sort(),
+        removedTokens: [...new Set(observed.flatMap((r) => r.removedAsType))].sort(),
+      },
+      onlyProductTypeSharedCases: gtRows
+        .filter((r) => r.onlyProductTypeShared)
+        .map((r) => ({ host: r.host, gt: r.gt, origin: r.originName, candidate: r.candidateName, removed: r.removedAsType })),
+      stillSharesUniqueCases: gtRows
+        .filter((r) => r.stillSharesUnique)
+        .map((r) => ({ host: r.host, gt: r.gt, sharedB: r.sharedB, origin: r.originName, candidate: r.candidateName })),
+      /** 🔴 **유효 고유명까지 제외될 가능성** — 제거된 토큰이 고유명의 일부였는지 사람이 볼 수 있게 둔다. */
+      overRemovalRisk: {
+        note:
+          "🔴 포함 규칙(`tok.includes(ty)`)은 넓다 — 고유명 안에 유형 낱말이 들어간 경우까지 지운다. " +
+          "아래는 **GT SAME 인데 B 에서 공유가 사라진** 사례다(유효 신호 상실 후보).",
+        cases: byGt("SAME")
+          .filter((r) => r.onlyProductTypeShared)
+          .map((r) => ({ host: r.host, origin: r.originName, candidate: r.candidateName, removed: r.removedAsType })),
+      },
+      unmeasured: {
+        note:
+          "🔴 UNMEASURED — ⒜ 미라벨 73건 ⒝ 상품유형 제외가 **운영 verdict** 에 주는 영향(반사실 금지) " +
+          "⒞ 표본 규모(GT SAME 7 · DIFFERENT 11 · SIMILAR 1)로는 변별력을 확정할 수 없다",
+      },
+      rows,
+    };
+
+    const OUT3 = path.join(OUT_DIR, "kids-product-type-token-split.json");
+    if (!existsSync(OUT_DIR)) mkdirSync(OUT_DIR, { recursive: true });
+    writeFileSync(OUT3, JSON.stringify(artifact, null, 1), "utf8");
+
+    expect(observed.length).toBe(92);
+    // 🔴 이 측정은 verdict 를 만들지 않는다.
+    expect(rows.every((r) => !("recomputedVerdict" in r))).toBe(true);
+  });
 });

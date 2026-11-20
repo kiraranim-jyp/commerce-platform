@@ -1,0 +1,3009 @@
+{
+ "note": "🔴 평가 전용 — coreTitleTokens 운영 변경 0 · 점수/threshold/SAME 정책 0 · verdict 재계산 0 · 운영 판정 연결 0 · 상품유형 **사전 확장 0**(owner 의 productTypes 산출에서만 파생) · DB 0 · 수집 0. 🔴 CPO 통계 정정 수용 — 원시 건수와 GT별 «비율» 을 갈라 적는다(분모가 다르다). 🔴 토큰 공유는 **동일성 결론이 아니다**. 표본이 작아 변별력을 확정하지 않는다. 🔴 원상품·후보에 **같은 규칙** 을 적용했다(대칭).",
+ "correctionAccepted": {
+  "statedByCpo": {
+   "SAME": "6/7 = 85.7%",
+   "DIFFERENT": "7/11 = 63.6%",
+   "SIMILAR": "1/1 (표본 1)"
+  },
+  "ctoPreviousClaim": "🔴 「DIFFERENT 가 더 많아 변별력이 없다」 — **분모를 무시한 해석이었다. 철회한다**",
+  "corrected": "상품유형 토큰 공유가 DIFFERENT 에서도 빈번하다 · 토큰 공유만으로 동일성을 확증할 수 없다 · 그러나 이 표로 「전혀 구분하지 못한다」고 단정할 수도 없다"
+ },
+ "denominator": {
+  "rows": 109,
+  "observed": 92,
+  "observedGtLabeled": 19,
+  "observedGtAndStored": 14
+ },
+ "comparison": {
+  "SAME": {
+   "denominator": 7,
+   "A_shared": 6,
+   "A_ratePct": 85.7,
+   "B_shared": 6,
+   "B_ratePct": 85.7,
+   "onlyProductTypeShared": 0
+  },
+  "DIFFERENT": {
+   "denominator": 11,
+   "A_shared": 7,
+   "A_ratePct": 63.6,
+   "B_shared": 1,
+   "B_ratePct": 9.1,
+   "onlyProductTypeShared": 6
+  },
+  "SIMILAR": {
+   "denominator": 1,
+   "A_shared": 1,
+   "A_ratePct": 100,
+   "B_shared": 1,
+   "B_ratePct": 100,
+   "onlyProductTypeShared": 0
+  }
+ },
+ "productTypeVocabulary": {
+  "note": "🟢 owner `productTypes` 산출에서 파생한 **실제 어휘** 다 — 내가 만든 사전이 아니다",
+  "types": [
+   "BODYSUIT",
+   "DRESS",
+   "JACKET",
+   "PANTS",
+   "ROMPER",
+   "SHIRT",
+   "SKIRT",
+   "SOCKS",
+   "SWEATSHIRT",
+   "TOP"
+  ],
+  "tokens": [
+   "bodysuit",
+   "dress",
+   "jacket",
+   "pants",
+   "romper",
+   "shirt",
+   "skirt",
+   "socks",
+   "sweatshirt",
+   "top"
+  ],
+  "removedTokens": [
+   "dress",
+   "jacket",
+   "pants",
+   "shirt",
+   "sweatshirt"
+  ]
+ },
+ "onlyProductTypeSharedCases": [
+  {
+   "host": "villagekids.co.uk",
+   "gt": "DIFFERENT",
+   "origin": "Hug Hairy Monster T-shirt",
+   "candidate": "Pale Blue 3D Logo T-Shirt",
+   "removed": [
+    "shirt"
+   ]
+  },
+  {
+   "host": "designerkidswear.com",
+   "gt": "DIFFERENT",
+   "origin": "Bobo Choses Pop sweatshirt",
+   "candidate": "Boys Blue Cotton Sweatshirt",
+   "removed": [
+    "sweatshirt"
+   ]
+  },
+  {
+   "host": "kidbizkid.com",
+   "gt": "DIFFERENT",
+   "origin": "Bobo Choses Pop sweatshirt",
+   "candidate": "Hugo Boss Navy Zip Sweatshirt",
+   "removed": [
+    "sweatshirt"
+   ]
+  },
+  {
+   "host": "kidbizkid.com",
+   "gt": "DIFFERENT",
+   "origin": "Bobo Choses Embossed T-shirt",
+   "candidate": "Marc Jacobs Black T-Shirt",
+   "removed": [
+    "shirt"
+   ]
+  },
+  {
+   "host": "villagekids.co.uk",
+   "gt": "DIFFERENT",
+   "origin": "Bobo Choses Embossed T-shirt",
+   "candidate": "White Multi Sequin Logo Crop T-Shirt",
+   "removed": [
+    "shirt"
+   ]
+  },
+  {
+   "host": "nickis.com",
+   "gt": "DIFFERENT",
+   "origin": "Lake Monster sweatshirt",
+   "candidate": "Sweatshirt Rot",
+   "removed": [
+    "sweatshirt"
+   ]
+  }
+ ],
+ "stillSharesUniqueCases": [
+  {
+   "host": "junioredition.com",
+   "gt": "SAME",
+   "sharedB": [
+    "hug",
+    "hairy",
+    "monster"
+   ],
+   "origin": "Hug Hairy Monster T-shirt",
+   "candidate": "Hug Hairy Monster T-Shirt by Bobo Choses"
+  },
+  {
+   "host": null,
+   "gt": "SAME",
+   "sharedB": [
+    "hug",
+    "hairy",
+    "monster"
+   ],
+   "origin": "Hug Hairy Monster T-shirt",
+   "candidate": "Hug Hairy Monster T-Shirt by Bobo Choses"
+  },
+  {
+   "host": null,
+   "gt": "SAME",
+   "sharedB": [
+    "hug",
+    "hairy",
+    "monster"
+   ],
+   "origin": "Hug Hairy Monster T-shirt",
+   "candidate": "Bobo Choses - Hug Hairy Monster T-shirt"
+  },
+  {
+   "host": "junioredition.com",
+   "gt": "SAME",
+   "sharedB": [
+    "bobo",
+    "choses",
+    "pop"
+   ],
+   "origin": "Bobo Choses Pop sweatshirt",
+   "candidate": "Bobo Choses Pop Sweatshirt by Bobo Choses"
+  },
+  {
+   "host": null,
+   "gt": "SAME",
+   "sharedB": [
+    "mush",
+    "monster",
+    "duo"
+   ],
+   "origin": "Mush Monster Duo sweatshirt",
+   "candidate": "[[보보쇼즈] Mush Monster Duo sweatshirt #226AC036]"
+  },
+  {
+   "host": null,
+   "gt": "SAME",
+   "sharedB": [
+    "taxi",
+    "saurus",
+    "tag",
+    "denim"
+   ],
+   "origin": "Taxi Saurus Tag denim pants",
+   "candidate": "[[보보쇼즈] Taxi Saurus Tag denim pants #226AC073]"
+  },
+  {
+   "host": "designerkidswear.com",
+   "gt": "DIFFERENT",
+   "sharedB": [
+    "embossed"
+   ],
+   "origin": "Bobo Choses Embossed T-shirt",
+   "candidate": "Boys Embossed DG Logo T-Shirt"
+  },
+  {
+   "host": "junioredition.com",
+   "gt": "SIMILAR",
+   "sharedB": [
+    "bobo",
+    "choses",
+    "embossed"
+   ],
+   "origin": "Bobo Choses Embossed T-shirt",
+   "candidate": "Bobo Choses Embossed T-Shirt by Bobo Choses"
+  }
+ ],
+ "overRemovalRisk": {
+  "note": "🔴 포함 규칙(`tok.includes(ty)`)은 넓다 — 고유명 안에 유형 낱말이 들어간 경우까지 지운다. 아래는 **GT SAME 인데 B 에서 공유가 사라진** 사례다(유효 신호 상실 후보).",
+  "cases": []
+ },
+ "unmeasured": {
+  "note": "🔴 UNMEASURED — ⒜ 미라벨 73건 ⒝ 상품유형 제외가 **운영 verdict** 에 주는 영향(반사실 금지) ⒞ 표본 규모(GT SAME 7 · DIFFERENT 11 · SIMILAR 1)로는 변별력을 확정할 수 없다"
+ },
+ "rows": [
+  {
+   "originCode": "B226AB097",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Stamp Bloom all over reversible anorak",
+   "candidateName": "Stamp Bloom All Over Reversible Jacket by Bobo Choses",
+   "productTypes": [
+    "JACKET"
+   ],
+   "typeTokens": [
+    "jacket"
+   ],
+   "sharedA": [
+    "stamp",
+    "bloom",
+    "all",
+    "over",
+    "reversible"
+   ],
+   "removedAsType": [],
+   "sharedB": [
+    "stamp",
+    "bloom",
+    "all",
+    "over",
+    "reversible"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "B226AB097",
+   "host": "nickis.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Stamp Bloom all over reversible anorak",
+   "candidateName": "Daunenjacke Reversible Quilted Marineblau",
+   "productTypes": [],
+   "typeTokens": [],
+   "sharedA": [
+    "reversible"
+   ],
+   "removedAsType": [],
+   "sharedB": [
+    "reversible"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "biskuit.kr",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "ownerState": "UNKNOWN",
+   "originName": null,
+   "candidateName": "[보보쇼즈] 허그 헤어리 몬스터 티셔츠 B226AC009 - 비스킷",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "bobochoses.com",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "ownerState": "UNKNOWN",
+   "originName": null,
+   "candidateName": "Hug Hairy Monster T-shirt",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "bornyesterdaykids.com",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "ownerState": "UNKNOWN",
+   "originName": null,
+   "candidateName": "Bobo Choses Baby Hug Hairy Monster l/s T-shirt & Booo Bo Choses Denim Pants Set ~ Light Blue/Red",
+   "productTypes": [
+    "PANTS",
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "pants",
+    "shirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "cemarose.ca",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "UNKNOWN",
+   "originName": null,
+   "candidateName": "Bobo Choses-Kids Booty Ghosts Sweatshirt Light Blue",
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "sweatshirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "cissywears.com",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "ownerState": "UNKNOWN",
+   "originName": null,
+   "candidateName": "Bobo Choses Baby Hug Hairy Monster T-Shirt",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "global.trenbe.com",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "ownerState": "UNKNOWN",
+   "originName": null,
+   "candidateName": "Bobo Choses Kids Hug Hairy Monster Long Sleeve T-Shirt (Light Blue) B226AC009 451 160484657 [P]",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "global.trenbe.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Hug Hairy Monster T-shirt",
+   "candidateName": "Bobo Choses Kids Hug Hairy Monster Long Sleeve T-Shirt (Light Blue) B226AC009 451 160484657 [P]",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [
+    "hug",
+    "hairy",
+    "monster",
+    "shirt"
+   ],
+   "removedAsType": [
+    "shirt"
+   ],
+   "sharedB": [
+    "hug",
+    "hairy",
+    "monster"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "junioredition.com",
+   "gt": "SAME",
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "originName": "Hug Hairy Monster T-shirt",
+   "candidateName": "Hug Hairy Monster T-Shirt by Bobo Choses",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [
+    "hug",
+    "hairy",
+    "monster",
+    "shirt"
+   ],
+   "removedAsType": [
+    "shirt"
+   ],
+   "sharedB": [
+    "hug",
+    "hairy",
+    "monster"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "originName": "Hug Hairy Monster T-shirt",
+   "candidateName": "Hug Hairy Monster T-Shirt by Bobo Choses",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [
+    "hug",
+    "hairy",
+    "monster",
+    "shirt"
+   ],
+   "removedAsType": [
+    "shirt"
+   ],
+   "sharedB": [
+    "hug",
+    "hairy",
+    "monster"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "junioredition.com",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "ownerState": "UNKNOWN",
+   "originName": null,
+   "candidateName": "Hug Hairy Monster Baby T-Shirt by Bobo Choses",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "junioredition.com",
+   "gt": "SAME",
+   "storedVerdict": "SAME",
+   "ownerState": "UNKNOWN",
+   "originName": null,
+   "candidateName": "Hug Hairy Monster T-Shirt by Bobo Choses",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "kids21.com",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "ownerState": "UNKNOWN",
+   "originName": null,
+   "candidateName": "Bobo Choses Hug Hairy Monster T-shirt",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "m.luxboy.com",
+   "gt": "DIFFERENT",
+   "storedVerdict": null,
+   "ownerState": "UNKNOWN",
+   "originName": null,
+   "candidateName": "보보쇼즈(BOBO CHOSES) 키즈 긴팔티셔츠 B226AC009 | SINCE 2002 No.1 명품쇼핑, 럭스보이",
+   "productTypes": [],
+   "typeTokens": [],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "miniboutique.co.kr",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Hug Hairy Monster T-shirt",
+   "candidateName": "[BOBO CHOSES]T-Shirt - B226AC009 - 미니부띠끄 miniboutique",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [
+    "shirt"
+   ],
+   "removedAsType": [
+    "shirt"
+   ],
+   "sharedB": [],
+   "onlyProductTypeShared": true,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "parkette.ca",
+   "gt": "DIFFERENT",
+   "storedVerdict": null,
+   "ownerState": "UNKNOWN",
+   "originName": null,
+   "candidateName": "Hug Hairy Monster Sweatshirt",
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "sweatshirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "scoutandcokids.com",
+   "gt": "SAME",
+   "storedVerdict": "SAME",
+   "ownerState": "UNKNOWN",
+   "originName": null,
+   "candidateName": "Bobo Choses - Hug Hairy Monster T-shirt",
+   "productTypes": [
+    "TOP"
+   ],
+   "typeTokens": [
+    "top"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "stockmann.ee",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "ownerState": "UNKNOWN",
+   "originName": null,
+   "candidateName": "BOBO CHOSES Trikoos&auml;rk Hug Monster | Stockmann",
+   "productTypes": [],
+   "typeTokens": [],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "thefrontshop.com",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "ownerState": "UNKNOWN",
+   "originName": null,
+   "candidateName": "Bobo Choses - Hug Hairy Monster T-Shirt",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "tinyapple.net",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "ownerState": "UNKNOWN",
+   "originName": null,
+   "candidateName": "Bobo Choses Hug Hairy Monster T-shirt, Light Blue",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "tinyapple.net",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "UNKNOWN",
+   "originName": null,
+   "candidateName": "Bobo Choses Bobo Choses Pop T-shirt, Blue",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "tinyapple.net",
+   "gt": "SAME",
+   "storedVerdict": "SAME",
+   "ownerState": "UNKNOWN",
+   "originName": null,
+   "candidateName": "Bobo Choses Hug Hairy Monster T-shirt, Light Blue",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "originName": "Hug Hairy Monster T-shirt",
+   "candidateName": "Pale Blue 3D Logo T-Shirt",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [
+    "shirt"
+   ],
+   "removedAsType": [
+    "shirt"
+   ],
+   "sharedB": [],
+   "onlyProductTypeShared": true,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "villagekids.co.uk",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "originName": "Hug Hairy Monster T-shirt",
+   "candidateName": "Pale Blue 3D Logo T-Shirt",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [
+    "shirt"
+   ],
+   "removedAsType": [
+    "shirt"
+   ],
+   "sharedB": [],
+   "onlyProductTypeShared": true,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Hug Hairy Monster T-shirt",
+   "candidateName": "Blue Tie-Dye Polo Bear T-Shirt",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [
+    "shirt"
+   ],
+   "removedAsType": [
+    "shirt"
+   ],
+   "sharedB": [],
+   "onlyProductTypeShared": true,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": null,
+   "gt": "SAME",
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Hug Hairy Monster T-shirt",
+   "candidateName": "Hug Hairy Monster T-Shirt by Bobo Choses",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [
+    "hug",
+    "hairy",
+    "monster",
+    "shirt"
+   ],
+   "removedAsType": [
+    "shirt"
+   ],
+   "sharedB": [
+    "hug",
+    "hairy",
+    "monster"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "B226AC009",
+   "host": null,
+   "gt": "SAME",
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Hug Hairy Monster T-shirt",
+   "candidateName": "Bobo Choses - Hug Hairy Monster T-shirt",
+   "productTypes": [
+    "SHIRT",
+    "TOP"
+   ],
+   "typeTokens": [
+    "shirt",
+    "top"
+   ],
+   "sharedA": [
+    "hug",
+    "hairy",
+    "monster",
+    "shirt"
+   ],
+   "removedAsType": [
+    "shirt"
+   ],
+   "sharedB": [
+    "hug",
+    "hairy",
+    "monster"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "B226AC010",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+   "candidateName": "Booty Ghosts T-Shirt by Bobo Choses",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [
+    "booty",
+    "ghosts",
+    "shirt",
+    "by",
+    "bobo",
+    "choses"
+   ],
+   "removedAsType": [
+    "shirt"
+   ],
+   "sharedB": [
+    "booty",
+    "ghosts",
+    "by",
+    "bobo",
+    "choses"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "B226AC010",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Booty Ghosts T-shirt",
+   "candidateName": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [
+    "booty",
+    "ghosts",
+    "shirt"
+   ],
+   "removedAsType": [
+    "shirt"
+   ],
+   "sharedB": [
+    "booty",
+    "ghosts"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "B226AC010",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+   "candidateName": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [
+    "booty",
+    "ghosts",
+    "long",
+    "sleeve",
+    "shirt",
+    "by",
+    "bobo",
+    "choses"
+   ],
+   "removedAsType": [
+    "shirt"
+   ],
+   "sharedB": [
+    "booty",
+    "ghosts",
+    "long",
+    "sleeve",
+    "by",
+    "bobo",
+    "choses"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "B226AC017",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Booo Bo Choses T-shirt",
+   "candidateName": "Hugo Boss Baby Boys Double B Graphic T-Shirt",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [
+    "shirt"
+   ],
+   "removedAsType": [
+    "shirt"
+   ],
+   "sharedB": [],
+   "onlyProductTypeShared": true,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC017",
+   "host": "nickis.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Booo Bo Choses T-shirt",
+   "candidateName": "T-Shirt Cremeweiß",
+   "productTypes": [
+    "SHIRT",
+    "TOP"
+   ],
+   "typeTokens": [
+    "shirt",
+    "top"
+   ],
+   "sharedA": [
+    "shirt"
+   ],
+   "removedAsType": [
+    "shirt"
+   ],
+   "sharedB": [],
+   "onlyProductTypeShared": true,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC017",
+   "host": "petitemaisonkids.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Booo Bo Choses T-shirt",
+   "candidateName": "Charlie White Mandarin Collar Shirt",
+   "productTypes": [
+    "SHIRT",
+    "TOP"
+   ],
+   "typeTokens": [
+    "shirt",
+    "top"
+   ],
+   "sharedA": [
+    "shirt"
+   ],
+   "removedAsType": [
+    "shirt"
+   ],
+   "sharedB": [],
+   "onlyProductTypeShared": true,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC017",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Booo Bo Choses T-shirt",
+   "candidateName": "White Stripe Graphic T-Shirt",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [
+    "shirt"
+   ],
+   "removedAsType": [
+    "shirt"
+   ],
+   "sharedB": [],
+   "onlyProductTypeShared": true,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC029",
+   "host": "designerkidswear.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Softpaw Monster sweatshirt",
+   "candidateName": "Girls Pink Knit Sweater",
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "sweatshirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "designerkidswear.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Bobo Choses Pop sweatshirt",
+   "candidateName": "Baby Boys Blue Cotton Bear Sweatshirt",
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "sweatshirt"
+   ],
+   "sharedA": [
+    "sweatshirt"
+   ],
+   "removedAsType": [
+    "sweatshirt"
+   ],
+   "sharedB": [],
+   "onlyProductTypeShared": true,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "designerkidswear.com",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "originName": "Bobo Choses Pop sweatshirt",
+   "candidateName": "Boys Blue Cotton Sweatshirt",
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "sweatshirt"
+   ],
+   "sharedA": [
+    "sweatshirt"
+   ],
+   "removedAsType": [
+    "sweatshirt"
+   ],
+   "sharedB": [],
+   "onlyProductTypeShared": true,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "folkberlin.com",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "originName": "Bobo Choses Pop sweatshirt",
+   "candidateName": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "sweatshirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "junioredition.com",
+   "gt": "SAME",
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "originName": "Bobo Choses Pop sweatshirt",
+   "candidateName": "Bobo Choses Pop Sweatshirt by Bobo Choses",
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "sweatshirt"
+   ],
+   "sharedA": [
+    "bobo",
+    "choses",
+    "pop",
+    "sweatshirt"
+   ],
+   "removedAsType": [
+    "sweatshirt"
+   ],
+   "sharedB": [
+    "bobo",
+    "choses",
+    "pop"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "kidbizkid.com",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "originName": "Bobo Choses Pop sweatshirt",
+   "candidateName": "Hugo Boss Navy Zip Sweatshirt",
+   "productTypes": [
+    "SWEATSHIRT",
+    "JACKET"
+   ],
+   "typeTokens": [
+    "sweatshirt",
+    "jacket"
+   ],
+   "sharedA": [
+    "sweatshirt"
+   ],
+   "removedAsType": [
+    "sweatshirt"
+   ],
+   "sharedB": [],
+   "onlyProductTypeShared": true,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Bobo Choses Pop sweatshirt",
+   "candidateName": "Lacoste Navy Sweatshirt",
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "sweatshirt"
+   ],
+   "sharedA": [
+    "sweatshirt"
+   ],
+   "removedAsType": [
+    "sweatshirt"
+   ],
+   "sharedB": [],
+   "onlyProductTypeShared": true,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "petitemaisonkids.com",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "originName": "Bobo Choses Pop sweatshirt",
+   "candidateName": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers",
+   "productTypes": [
+    "SWEATSHIRT",
+    "TOP"
+   ],
+   "typeTokens": [
+    "sweatshirt",
+    "top"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "shoppiccoliandco.com",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "originName": "Bobo Choses Pop sweatshirt",
+   "candidateName": "Jude Navy Baby Boy Anchor Sweater",
+   "productTypes": [
+    "SWEATSHIRT",
+    "BODYSUIT",
+    "PANTS",
+    "ROMPER"
+   ],
+   "typeTokens": [
+    "sweatshirt",
+    "bodysuit",
+    "pants",
+    "romper"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "tiptoeboutique.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Bobo Choses Pop sweatshirt",
+   "candidateName": "Bobo Choses Midnight Blue Pop Long Sleeve Sweatshirt",
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "sweatshirt"
+   ],
+   "sharedA": [
+    "bobo",
+    "choses",
+    "pop",
+    "sweatshirt"
+   ],
+   "removedAsType": [
+    "sweatshirt"
+   ],
+   "sharedB": [
+    "bobo",
+    "choses",
+    "pop"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "B226AC036",
+   "host": "folkberlin.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Mush Monster Duo sweatshirt",
+   "candidateName": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "sweatshirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC036",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Mush Monster Duo sweatshirt",
+   "candidateName": "Mush Monster Duo Baby Sweatshirt by Bobo Choses",
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "sweatshirt"
+   ],
+   "sharedA": [
+    "mush",
+    "monster",
+    "duo",
+    "sweatshirt"
+   ],
+   "removedAsType": [
+    "sweatshirt"
+   ],
+   "sharedB": [
+    "mush",
+    "monster",
+    "duo"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "B226AC036",
+   "host": null,
+   "gt": "SAME",
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Mush Monster Duo sweatshirt",
+   "candidateName": "결과",
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "sweatshirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC036",
+   "host": null,
+   "gt": "SAME",
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Mush Monster Duo sweatshirt",
+   "candidateName": "[[보보쇼즈] Mush Monster Duo sweatshirt #226AC036]",
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "sweatshirt"
+   ],
+   "sharedA": [
+    "mush",
+    "monster",
+    "duo",
+    "sweatshirt"
+   ],
+   "removedAsType": [
+    "sweatshirt"
+   ],
+   "sharedB": [
+    "mush",
+    "monster",
+    "duo"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "B226AC038",
+   "host": "folkberlin.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Hidden Monster sweatshirt",
+   "candidateName": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "sweatshirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC038",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Hidden Monster sweatshirt",
+   "candidateName": "Hidden Monster Sweatshirt by Bobo Choses",
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "sweatshirt"
+   ],
+   "sharedA": [
+    "hidden",
+    "monster",
+    "sweatshirt"
+   ],
+   "removedAsType": [
+    "sweatshirt"
+   ],
+   "sharedB": [
+    "hidden",
+    "monster"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "B226AC038",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Hidden Monster sweatshirt",
+   "candidateName": "Fendi Blue FF Sweater",
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "sweatshirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC038",
+   "host": "petitemaisonkids.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Hidden Monster sweatshirt",
+   "candidateName": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers",
+   "productTypes": [
+    "SWEATSHIRT",
+    "TOP"
+   ],
+   "typeTokens": [
+    "sweatshirt",
+    "top"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC041",
+   "host": "designerkidswear.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Beast Tag polo sweatshirt",
+   "candidateName": "Boys Navy Cotton Logo Polo",
+   "productTypes": [
+    "SHIRT",
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "shirt",
+    "sweatshirt"
+   ],
+   "sharedA": [
+    "polo"
+   ],
+   "removedAsType": [],
+   "sharedB": [
+    "polo"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "B226AC041",
+   "host": "folkberlin.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Beast Tag polo sweatshirt",
+   "candidateName": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+   "productTypes": [
+    "SHIRT",
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "shirt",
+    "sweatshirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC041",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Beast Tag polo sweatshirt",
+   "candidateName": "Fendi Blue FF Sweater",
+   "productTypes": [
+    "SHIRT",
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "shirt",
+    "sweatshirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC041",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Beast Tag polo sweatshirt",
+   "candidateName": "Navy Logo Rugby Sweatshirt",
+   "productTypes": [
+    "SHIRT",
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "shirt",
+    "sweatshirt"
+   ],
+   "sharedA": [
+    "sweatshirt"
+   ],
+   "removedAsType": [
+    "sweatshirt"
+   ],
+   "sharedB": [],
+   "onlyProductTypeShared": true,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC043",
+   "host": "folkberlin.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Mystery BC half zipped sweatshirt",
+   "candidateName": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "sweatshirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC043",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Mystery BC half zipped sweatshirt",
+   "candidateName": "Stone Island Baby Blue Sweatshirt",
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "sweatshirt"
+   ],
+   "sharedA": [
+    "sweatshirt"
+   ],
+   "removedAsType": [
+    "sweatshirt"
+   ],
+   "sharedB": [],
+   "onlyProductTypeShared": true,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC043",
+   "host": "petitemaisonkids.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Mystery BC half zipped sweatshirt",
+   "candidateName": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers",
+   "productTypes": [
+    "SWEATSHIRT",
+    "TOP"
+   ],
+   "typeTokens": [
+    "sweatshirt",
+    "top"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC043",
+   "host": "shoppiccoliandco.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Mystery BC half zipped sweatshirt",
+   "candidateName": "Blue Bears Knitted Sweater",
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "sweatshirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC043",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Mystery BC half zipped sweatshirt",
+   "candidateName": "Blue Half Zip Sweatshirt",
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "sweatshirt"
+   ],
+   "sharedA": [
+    "half",
+    "sweatshirt"
+   ],
+   "removedAsType": [
+    "sweatshirt"
+   ],
+   "sharedB": [
+    "half"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "designerkidswear.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Taxi Saurus Tag denim pants",
+   "candidateName": "Baby Boys Blue Denim",
+   "productTypes": [
+    "PANTS"
+   ],
+   "typeTokens": [
+    "pants"
+   ],
+   "sharedA": [
+    "denim"
+   ],
+   "removedAsType": [],
+   "sharedB": [
+    "denim"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "folkberlin.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Taxi Saurus Tag denim pants",
+   "candidateName": "Gingham Woven Trousers, Super Soft , 116 - 122 / 6 - 7 Years",
+   "productTypes": [
+    "PANTS"
+   ],
+   "typeTokens": [
+    "pants"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Taxi Saurus Tag denim pants",
+   "candidateName": "Taxi Saurus Tag Denim Pants by Bobo Choses",
+   "productTypes": [
+    "PANTS"
+   ],
+   "typeTokens": [
+    "pants"
+   ],
+   "sharedA": [
+    "taxi",
+    "saurus",
+    "tag",
+    "denim",
+    "pants"
+   ],
+   "removedAsType": [
+    "pants"
+   ],
+   "sharedB": [
+    "taxi",
+    "saurus",
+    "tag",
+    "denim"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Taxi Saurus Tag denim pants",
+   "candidateName": "Diesel Viker Jeans",
+   "productTypes": [
+    "PANTS"
+   ],
+   "typeTokens": [
+    "pants"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "nickis.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Taxi Saurus Tag denim pants",
+   "candidateName": "Jeans Blau",
+   "productTypes": [
+    "PANTS",
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "pants",
+    "shirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "petitemaisonkids.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Taxi Saurus Tag denim pants",
+   "candidateName": "Sparkle Blue Denim Jeans",
+   "productTypes": [
+    "PANTS",
+    "JACKET"
+   ],
+   "typeTokens": [
+    "pants",
+    "jacket"
+   ],
+   "sharedA": [
+    "denim"
+   ],
+   "removedAsType": [],
+   "sharedB": [
+    "denim"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Taxi Saurus Tag denim pants",
+   "candidateName": "Denim Blue Jeans",
+   "productTypes": [
+    "PANTS"
+   ],
+   "typeTokens": [
+    "pants"
+   ],
+   "sharedA": [
+    "denim"
+   ],
+   "removedAsType": [],
+   "sharedB": [
+    "denim"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "B226AC073",
+   "host": null,
+   "gt": "SAME",
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Taxi Saurus Tag denim pants",
+   "candidateName": "[[보보쇼즈] Taxi Saurus Tag denim pants #226AC073]",
+   "productTypes": [
+    "PANTS"
+   ],
+   "typeTokens": [
+    "pants"
+   ],
+   "sharedA": [
+    "taxi",
+    "saurus",
+    "tag",
+    "denim",
+    "pants"
+   ],
+   "removedAsType": [
+    "pants"
+   ],
+   "sharedB": [
+    "taxi",
+    "saurus",
+    "tag",
+    "denim"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "B226AC110",
+   "host": "designerkidswear.com",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "originName": "Bobo Choses Embossed T-shirt",
+   "candidateName": "Boys Embossed DG Logo T-Shirt",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [
+    "embossed",
+    "shirt"
+   ],
+   "removedAsType": [
+    "shirt"
+   ],
+   "sharedB": [
+    "embossed"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "B226AC110",
+   "host": "junioredition.com",
+   "gt": "SIMILAR",
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "originName": "Bobo Choses Embossed T-shirt",
+   "candidateName": "Bobo Choses Embossed T-Shirt by Bobo Choses",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [
+    "bobo",
+    "choses",
+    "embossed",
+    "shirt"
+   ],
+   "removedAsType": [
+    "shirt"
+   ],
+   "sharedB": [
+    "bobo",
+    "choses",
+    "embossed"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "B226AC110",
+   "host": "kidbizkid.com",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "originName": "Bobo Choses Embossed T-shirt",
+   "candidateName": "Marc Jacobs Black T-Shirt",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [
+    "shirt"
+   ],
+   "removedAsType": [
+    "shirt"
+   ],
+   "sharedB": [],
+   "onlyProductTypeShared": true,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC110",
+   "host": "villagekids.co.uk",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "originName": "Bobo Choses Embossed T-shirt",
+   "candidateName": "White Multi Sequin Logo Crop T-Shirt",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [
+    "shirt"
+   ],
+   "removedAsType": [
+    "shirt"
+   ],
+   "sharedB": [],
+   "onlyProductTypeShared": true,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC170",
+   "host": "nickis.com",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "originName": "Lake Monster sweatshirt",
+   "candidateName": "Sweatshirt Rot",
+   "productTypes": [
+    "SWEATSHIRT",
+    "BODYSUIT"
+   ],
+   "typeTokens": [
+    "sweatshirt",
+    "bodysuit"
+   ],
+   "sharedA": [
+    "sweatshirt"
+   ],
+   "removedAsType": [
+    "sweatshirt"
+   ],
+   "sharedB": [],
+   "onlyProductTypeShared": true,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226AC170",
+   "host": "shoppiccoliandco.com",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "originName": "Lake Monster sweatshirt",
+   "candidateName": "Rudolph Knitted Sweater",
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "sweatshirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "B226TC175",
+   "host": "folkberlin.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Dog sweatshirt",
+   "candidateName": "Baby Sweater Suit ''Biscuit'' Organic Cotton",
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "sweatshirt"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "WK21A165",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Double Deerstalker Cap in Blue / Soft Tan by Wynken",
+   "candidateName": "Double Deerstalker Cap in Blue / Soft Tan by Wynken",
+   "productTypes": [],
+   "typeTokens": [],
+   "sharedA": [
+    "double",
+    "deerstalker",
+    "cap",
+    "in",
+    "blue",
+    "soft",
+    "tan",
+    "by",
+    "wynken"
+   ],
+   "removedAsType": [],
+   "sharedB": [
+    "double",
+    "deerstalker",
+    "cap",
+    "in",
+    "blue",
+    "soft",
+    "tan",
+    "by",
+    "wynken"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "WK21W97",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Mixed Media Jacket in Ecru Mix by Wynken",
+   "candidateName": "Mixed Media Jacket in Blue Mix by Wynken",
+   "productTypes": [
+    "JACKET"
+   ],
+   "typeTokens": [
+    "jacket"
+   ],
+   "sharedA": [
+    "mixed",
+    "media",
+    "jacket",
+    "in",
+    "mix",
+    "by",
+    "wynken"
+   ],
+   "removedAsType": [
+    "jacket"
+   ],
+   "sharedB": [
+    "mixed",
+    "media",
+    "in",
+    "mix",
+    "by",
+    "wynken"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "WK21W97",
+   "host": "nickis.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Mixed Media Jacket in Ecru Mix by Wynken",
+   "candidateName": "Jacke Mixed Media Mehrfarbig",
+   "productTypes": [
+    "JACKET"
+   ],
+   "typeTokens": [
+    "jacket"
+   ],
+   "sharedA": [
+    "mixed",
+    "media"
+   ],
+   "removedAsType": [],
+   "sharedB": [
+    "mixed",
+    "media"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "WK21W97",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Mixed Media Jacket in Ecru Mix by Wynken",
+   "candidateName": "Black Puffer Coat",
+   "productTypes": [
+    "JACKET"
+   ],
+   "typeTokens": [
+    "jacket"
+   ],
+   "sharedA": [],
+   "removedAsType": [],
+   "sharedB": [],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "",
+   "host": "designerkidswear.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Handsmock Dress in Little Bouquet by Bonjour",
+   "candidateName": "Baby Girls Pink Piqué Cotton Polo Dress",
+   "productTypes": [
+    "DRESS",
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "dress",
+    "shirt"
+   ],
+   "sharedA": [
+    "dress"
+   ],
+   "removedAsType": [
+    "dress"
+   ],
+   "sharedB": [],
+   "onlyProductTypeShared": true,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "",
+   "host": "designerkidswear.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Reversible Jacket no03 in Otter Brown by True Artist",
+   "candidateName": "Baby Brown K2F Down Jacket",
+   "productTypes": [
+    "JACKET"
+   ],
+   "typeTokens": [
+    "jacket"
+   ],
+   "sharedA": [
+    "jacket",
+    "brown"
+   ],
+   "removedAsType": [
+    "jacket"
+   ],
+   "sharedB": [
+    "brown"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "",
+   "host": "designerkidswear.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+   "candidateName": "Blue Jesse Jacket",
+   "productTypes": [
+    "JACKET"
+   ],
+   "typeTokens": [
+    "jacket"
+   ],
+   "sharedA": [
+    "jacket",
+    "blue"
+   ],
+   "removedAsType": [
+    "jacket"
+   ],
+   "sharedB": [
+    "blue"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "",
+   "host": "folkberlin.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+   "candidateName": "Color Block Jacket, Pastel Blue / Mellow Yellow",
+   "productTypes": [
+    "JACKET"
+   ],
+   "typeTokens": [
+    "jacket"
+   ],
+   "sharedA": [
+    "jacket",
+    "blue"
+   ],
+   "removedAsType": [
+    "jacket"
+   ],
+   "sharedB": [
+    "blue"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "",
+   "host": "folkberlin.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Bubble Sweatshirt - Grey Melange",
+   "candidateName": "Baby Ribbed Booties ''Grey Melange'' Organic Cotton",
+   "productTypes": [
+    "SWEATSHIRT",
+    "SOCKS"
+   ],
+   "typeTokens": [
+    "sweatshirt",
+    "socks"
+   ],
+   "sharedA": [
+    "grey",
+    "melange"
+   ],
+   "removedAsType": [],
+   "sharedB": [
+    "grey",
+    "melange"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "",
+   "host": "folkberlin.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Bobo Choses Organic Cotton T-shirt | Ecru",
+   "candidateName": "Kim Shirt Organic Cotton ''Sleet Check''",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [
+    "organic",
+    "cotton",
+    "shirt"
+   ],
+   "removedAsType": [
+    "shirt"
+   ],
+   "sharedB": [
+    "organic",
+    "cotton"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "",
+   "host": "folkberlin.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Bubble Sweatshirt - Grey Melange",
+   "candidateName": "Baby Ribbed Booties ''Grey Melange'' Organic Cotton",
+   "productTypes": [
+    "SWEATSHIRT",
+    "SOCKS"
+   ],
+   "typeTokens": [
+    "sweatshirt",
+    "socks"
+   ],
+   "sharedA": [
+    "grey",
+    "melange"
+   ],
+   "removedAsType": [],
+   "sharedB": [
+    "grey",
+    "melange"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+   "candidateName": "Faux Fur Reversible Jacket in Blue / Ode To Rose by Wynken",
+   "productTypes": [
+    "JACKET"
+   ],
+   "typeTokens": [
+    "jacket"
+   ],
+   "sharedA": [
+    "reversible",
+    "jacket",
+    "blue"
+   ],
+   "removedAsType": [
+    "jacket"
+   ],
+   "sharedB": [
+    "reversible",
+    "blue"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Bobo Choses Organic Cotton T-shirt | Ecru",
+   "candidateName": "Everyday Ghosts All Over Baby T-Shirt by Bobo Choses",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [
+    "bobo",
+    "choses",
+    "shirt"
+   ],
+   "removedAsType": [
+    "shirt"
+   ],
+   "sharedB": [
+    "bobo",
+    "choses"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Tunique With Hair Clip in Little Bouquet by Bonjour",
+   "candidateName": "Tunique With Hair Clip in Garden Flowers Print by Bonjour - Last Ones In Stock - 8-12 Years",
+   "productTypes": [
+    "DRESS",
+    "SHIRT",
+    "TOP"
+   ],
+   "typeTokens": [
+    "dress",
+    "shirt",
+    "top"
+   ],
+   "sharedA": [
+    "tunique",
+    "with",
+    "hair",
+    "clip",
+    "in",
+    "by",
+    "bonjour"
+   ],
+   "removedAsType": [],
+   "sharedB": [
+    "tunique",
+    "with",
+    "hair",
+    "clip",
+    "in",
+    "by",
+    "bonjour"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Reversible Jacket no03 in Otter Brown by True Artist",
+   "candidateName": "Pixel Abduction All Over Reversible Jacket by Bobo Choses",
+   "productTypes": [
+    "JACKET"
+   ],
+   "typeTokens": [
+    "jacket"
+   ],
+   "sharedA": [
+    "reversible",
+    "jacket",
+    "by"
+   ],
+   "removedAsType": [
+    "jacket"
+   ],
+   "sharedB": [
+    "reversible",
+    "by"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Bubble Sweatshirt - Grey Melange",
+   "candidateName": "Bubble Sweatshirt in Grey Melange by Main Story",
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "sweatshirt"
+   ],
+   "sharedA": [
+    "bubble",
+    "sweatshirt",
+    "grey",
+    "melange"
+   ],
+   "removedAsType": [
+    "sweatshirt"
+   ],
+   "sharedB": [
+    "bubble",
+    "grey",
+    "melange"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Mixed Media Jacket - Ecru Mix",
+   "candidateName": "Mixed Media Jacket in Ecru Mix by Wynken",
+   "productTypes": [
+    "JACKET"
+   ],
+   "typeTokens": [
+    "jacket"
+   ],
+   "sharedA": [
+    "mixed",
+    "media",
+    "jacket",
+    "ecru",
+    "mix"
+   ],
+   "removedAsType": [
+    "jacket"
+   ],
+   "sharedB": [
+    "mixed",
+    "media",
+    "ecru",
+    "mix"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Bubble Sweatshirt - Grey Melange",
+   "candidateName": "Bubble Sweatshirt in Grey Melange by Main Story",
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "typeTokens": [
+    "sweatshirt"
+   ],
+   "sharedA": [
+    "bubble",
+    "sweatshirt",
+    "grey",
+    "melange"
+   ],
+   "removedAsType": [
+    "sweatshirt"
+   ],
+   "sharedB": [
+    "bubble",
+    "grey",
+    "melange"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+   "candidateName": "Handsmock Apron Dress in Natural by Bonjour - Last Ones In Stock - 2-8 Years",
+   "productTypes": [
+    "DRESS"
+   ],
+   "typeTokens": [
+    "dress"
+   ],
+   "sharedA": [
+    "handsmock",
+    "dress",
+    "in",
+    "by",
+    "bonjour"
+   ],
+   "removedAsType": [
+    "dress"
+   ],
+   "sharedB": [
+    "handsmock",
+    "in",
+    "by",
+    "bonjour"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Handsmock Dress in Little Bouquet by Bonjour",
+   "candidateName": "Handsmock Dress in Pink Tapestry by Bonjour - Last Ones In Stock - 6-12 Years",
+   "productTypes": [
+    "DRESS"
+   ],
+   "typeTokens": [
+    "dress"
+   ],
+   "sharedA": [
+    "handsmock",
+    "dress",
+    "in",
+    "by",
+    "bonjour"
+   ],
+   "removedAsType": [
+    "dress"
+   ],
+   "sharedB": [
+    "handsmock",
+    "in",
+    "by",
+    "bonjour"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Mixed Media Jacket - Ecru Mix",
+   "candidateName": "Patachou Ecru Tweed Coat",
+   "productTypes": [
+    "JACKET"
+   ],
+   "typeTokens": [
+    "jacket"
+   ],
+   "sharedA": [
+    "ecru"
+   ],
+   "removedAsType": [],
+   "sharedB": [
+    "ecru"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+   "candidateName": "Mackage Jesse Blue Jacket",
+   "productTypes": [
+    "JACKET"
+   ],
+   "typeTokens": [
+    "jacket"
+   ],
+   "sharedA": [
+    "jacket",
+    "blue"
+   ],
+   "removedAsType": [
+    "jacket"
+   ],
+   "sharedB": [
+    "blue"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Handsmock Dress in Little Bouquet by Bonjour",
+   "candidateName": "Givenchy Lilac Dress",
+   "productTypes": [
+    "DRESS"
+   ],
+   "typeTokens": [
+    "dress"
+   ],
+   "sharedA": [
+    "dress"
+   ],
+   "removedAsType": [
+    "dress"
+   ],
+   "sharedB": [],
+   "onlyProductTypeShared": true,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Reversible Jacket no03 in Otter Brown by True Artist",
+   "candidateName": "Billieblush Reversible Leopard Jacket",
+   "productTypes": [
+    "JACKET"
+   ],
+   "typeTokens": [
+    "jacket"
+   ],
+   "sharedA": [
+    "reversible",
+    "jacket"
+   ],
+   "removedAsType": [
+    "jacket"
+   ],
+   "sharedB": [
+    "reversible"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "",
+   "host": "nickis.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+   "candidateName": "Daunenjacke Reversible Quilted Marineblau",
+   "productTypes": [
+    "JACKET"
+   ],
+   "typeTokens": [
+    "jacket"
+   ],
+   "sharedA": [
+    "reversible"
+   ],
+   "removedAsType": [],
+   "sharedB": [
+    "reversible"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "",
+   "host": "petitemaisonkids.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Tunique With Hair Clip in Little Bouquet by Bonjour",
+   "candidateName": "Azalea Pink Flower Hair Clip",
+   "productTypes": [
+    "DRESS",
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "dress",
+    "shirt"
+   ],
+   "sharedA": [
+    "hair",
+    "clip"
+   ],
+   "removedAsType": [],
+   "sharedB": [
+    "hair",
+    "clip"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "",
+   "host": "petitemaisonkids.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+   "candidateName": "Georgina Tartan Print Dress with Red Bow",
+   "productTypes": [
+    "DRESS"
+   ],
+   "typeTokens": [
+    "dress"
+   ],
+   "sharedA": [
+    "dress",
+    "print"
+   ],
+   "removedAsType": [
+    "dress"
+   ],
+   "sharedB": [
+    "print"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "",
+   "host": "shoppiccoliandco.com",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+   "candidateName": "Beatrice Burgundy Handsmocked Girl Sleeves Dress",
+   "productTypes": [
+    "DRESS",
+    "SKIRT"
+   ],
+   "typeTokens": [
+    "dress",
+    "skirt"
+   ],
+   "sharedA": [
+    "dress",
+    "burgundy"
+   ],
+   "removedAsType": [
+    "dress"
+   ],
+   "sharedB": [
+    "burgundy"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+   "candidateName": "Lemon Print Dress",
+   "productTypes": [
+    "DRESS"
+   ],
+   "typeTokens": [
+    "dress"
+   ],
+   "sharedA": [
+    "dress",
+    "print"
+   ],
+   "removedAsType": [
+    "dress"
+   ],
+   "sharedB": [
+    "print"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  },
+  {
+   "originCode": "",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Bobo Choses Organic Cotton T-shirt | Ecru",
+   "candidateName": "Blue T-Shirt",
+   "productTypes": [
+    "SHIRT"
+   ],
+   "typeTokens": [
+    "shirt"
+   ],
+   "sharedA": [
+    "shirt"
+   ],
+   "removedAsType": [
+    "shirt"
+   ],
+   "sharedB": [],
+   "onlyProductTypeShared": true,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Handsmock Dress in Little Bouquet by Bonjour",
+   "candidateName": "White Broderie Anglaise Dress",
+   "productTypes": [
+    "DRESS"
+   ],
+   "typeTokens": [
+    "dress"
+   ],
+   "sharedA": [
+    "dress"
+   ],
+   "removedAsType": [
+    "dress"
+   ],
+   "sharedB": [],
+   "onlyProductTypeShared": true,
+   "stillSharesUnique": false
+  },
+  {
+   "originCode": "",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "originName": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+   "candidateName": "Blue Knitted Jacket",
+   "productTypes": [
+    "JACKET"
+   ],
+   "typeTokens": [
+    "jacket"
+   ],
+   "sharedA": [
+    "jacket",
+    "blue"
+   ],
+   "removedAsType": [
+    "jacket"
+   ],
+   "sharedB": [
+    "blue"
+   ],
+   "onlyProductTypeShared": false,
+   "stillSharesUnique": true
+  }
+ ]
+}
