@@ -18,6 +18,8 @@ import path from "node:path";
 import { analyzeProductNameDescriptionEvidence } from "@commerce/crawler/src/comparison-search/product-name-description-evidence";
 import { findBrandAliasMentions } from "@commerce/crawler/src/comparison-search/brand-alias";
 import { extractLabeledProductCodes } from "@commerce/shared/src/product-facts";
+import { compareCrossSellerProducts } from "@commerce/crawler/src/comparison-search/cross-seller";
+import { productFactsFromListing } from "@commerce/crawler/src/comparison-search/seller-facts";
 
 const DIR = __dirname;
 const EVID = path.join(DIR, "fixtures", "mi-reeval-03-keyword-input.json");
@@ -469,5 +471,164 @@ describe("원상품 PRODUCT_NAME 미승격 사유 분류 (평가 전용 · 승�
     expect(observed.length).toBe(92);
     // 🔴 이 측정은 verdict 를 만들지 않는다.
     expect(rows.every((r) => !("recomputedVerdict" in r))).toBe(true);
+  });
+
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * §A-MI-8 — **실제 운영 판정 함수** BASE ↔ NOISE-ADDED 반사실 (평가 전용)
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴 **운영 코드 변경 0** — `compareCrossSellerProducts` 를 **그대로** 부르고
+   *    두 설정의 차이는 **facts 입력의 `coreTitleTokens` 한 칸** 뿐이다(대칭 적용).
+   * 🔴 **저장 verdict 를 바꾸지 않는다** — 반사실 산출은 `cf*` 이름으로 **분리** 한다.
+   * 🔴 threshold · 점수 · blocker 정책 · 상품유형 사전 **전부 변경 0**.
+   * 🔴 분모를 섞지 않는다 — 92(OBSERVED) ↔ 19(GT) ↔ 저장 verdict 보유를 **갈라** 센다.
+   */
+  it("실제 compareCrossSellerProducts 로 BASE ↔ NOISE-ADDED 를 비교한다", () => {
+    const tok = (v: string) =>
+      v.toLowerCase().normalize("NFKC").replace(/[^a-z0-9가-힣]+/g, " ").trim().split(" ").filter((t) => t.length > 1);
+
+    const rows = evid.map((p) => {
+      const oTitle = s(p.origin.title);
+      const oDesc = s(p.origin.description);
+      const cand = (p as unknown as { candidate?: { title?: string | null; description?: string | null } }).candidate;
+      const cTitle = s(cand?.title);
+      const cDesc = s(cand?.description);
+      const oEv = analyzeProductNameDescriptionEvidence({ title: oTitle, description: oDesc });
+      const cEv = analyzeProductNameDescriptionEvidence({ title: cTitle, description: cDesc });
+
+      /** 🟢 상품유형 어휘 — owner 산출값에서만 파생(사전 신설 0). */
+      const typeTokens = [...new Set([...oEv.productTypes, ...cEv.productTypes].flatMap((t) => tok(t)))];
+      const isType = (t: string) => typeTokens.some((ty) => t.includes(ty) || ty.includes(t));
+
+      const baseOrigin = productFactsFromListing({
+        title: oTitle || "(없음)",
+        url: s(p.candidateUrl) || "about:blank",
+        description: oDesc || null,
+      });
+      const baseCand = productFactsFromListing({
+        title: cTitle || "(없음)",
+        url: s(p.candidateUrl) || "about:blank",
+        description: cDesc || null,
+      });
+      /** 🔴 NOISE-ADDED — **양쪽 모두** 에서 상품유형 토큰을 뺀다(대칭). */
+      const cfOrigin = { ...baseOrigin, coreTitleTokens: baseOrigin.coreTitleTokens.filter((t) => !isType(t)) };
+      const cfCand = { ...baseCand, coreTitleTokens: baseCand.coreTitleTokens.filter((t) => !isType(t)) };
+
+      const read = (m: ReturnType<typeof compareCrossSellerProducts>) => ({
+        verdict: m.verdict,
+        axes: m.axes.map((a) => `${a.axis}:${a.points}`),
+        totalPoints: m.axes.reduce((n, a) => n + a.points, 0),
+        blockers: m.blockers.map((b) => b.blocker),
+        conflicts: m.conflicts.map((c) => c.conflict),
+      });
+      const base = read(compareCrossSellerProducts(baseOrigin, baseCand));
+      const cf = read(compareCrossSellerProducts(cfOrigin, cfCand));
+
+      const st = byKey.get(key(p.originCode, p.candidateUrl));
+      return {
+        originCode: s(p.originCode),
+        host: p.candidateDomain,
+        gt: p.humanGt,
+        /** 🔴 저장된 운영 결과 — 참조만 한다. */
+        storedVerdict: st?.system_verdict ?? null,
+        joinedToStored: Boolean(st),
+        ownerState: oEv.state,
+        removedTypeTokens: [
+          ...new Set([
+            ...baseOrigin.coreTitleTokens.filter((t) => isType(t)),
+            ...baseCand.coreTitleTokens.filter((t) => isType(t)),
+          ]),
+        ],
+        base,
+        cf,
+        changed: base.verdict !== cf.verdict,
+      };
+    });
+
+    const gtRows = rows.filter((r) => has(r.gt));
+    const dist = (src: typeof rows, pick: (r: (typeof rows)[number]) => string) =>
+      src.reduce<Record<string, number>>((a, r) => {
+        const k = pick(r);
+        a[k] = (a[k] ?? 0) + 1;
+        return a;
+      }, {});
+    const byGt = (gt: string) => gtRows.filter((r) => r.gt === gt);
+    const pair = (gt: string) => {
+      const src = byGt(gt);
+      return {
+        denominator: src.length,
+        base: dist(src, (r) => r.base.verdict),
+        noiseAdded: dist(src, (r) => r.cf.verdict),
+        changed: src.filter((r) => r.changed).length,
+      };
+    };
+
+    const sameFam = (v: string) => v === "SAME" || v === "PRESUMED_SAME";
+    const improved = byGt("DIFFERENT").filter((r) => sameFam(r.base.verdict) && !sameFam(r.cf.verdict));
+    const lost = byGt("SAME").filter((r) => sameFam(r.base.verdict) && !sameFam(r.cf.verdict));
+    const residual = byGt("DIFFERENT").filter((r) => sameFam(r.cf.verdict));
+
+    const artifact = {
+      note:
+        "🔴 평가 전용 — 운영 코드 변경 0 · 저장 verdict 변경 0 · threshold/점수/blocker 정책 0 · " +
+        "상품유형 사전 확장 0 · 계약/DB/ProductFacts 0 · 수집 0 · 배포 0. " +
+        "두 설정의 차이는 facts 의 coreTitleTokens 한 칸뿐이고 **원상품·후보에 대칭** 적용했다. " +
+        "🔴 반사실 산출(cf)과 저장 verdict(storedVerdict)는 **다른 칸** 이다. " +
+        "🔴 분모를 섞지 않는다 — 109(행) · GT 라벨 36 · 저장 verdict 보유를 갈라 센다. " +
+        "🔴 이전 19건/92건 집합과도 혼합하지 않는다(이 표는 GT 라벨 기준이다).",
+      denominator: {
+        rows: rows.length,
+        gtLabeled: gtRows.length,
+        gtUnlabeled: rows.length - gtRows.length,
+        joinedToStored: rows.filter((r) => r.joinedToStored).length,
+        notJoined: rows.filter((r) => !r.joinedToStored).length,
+        ownerState: dist(rows, (r) => r.ownerState as string),
+      },
+      verdictByGt: { SAME: pair("SAME"), DIFFERENT: pair("DIFFERENT"), SIMILAR: pair("SIMILAR") },
+      verdictAll: { base: dist(rows, (r) => r.base.verdict), noiseAdded: dist(rows, (r) => r.cf.verdict) },
+      outcome: {
+        gtDifferentImproved: improved.length,
+        gtDifferentResidualMisjudged: residual.length,
+        gtSameLost: lost.length,
+        totalChanged: rows.filter((r) => r.changed).length,
+      },
+      improvedCases: improved.map((r) => ({
+        host: r.host, originCode: r.originCode, from: r.base.verdict, to: r.cf.verdict,
+        removed: r.removedTypeTokens, baseAxes: r.base.axes, cfAxes: r.cf.axes,
+        basePoints: r.base.totalPoints, cfPoints: r.cf.totalPoints,
+      })),
+      lostCases: lost.map((r) => ({
+        host: r.host, originCode: r.originCode, from: r.base.verdict, to: r.cf.verdict,
+        removed: r.removedTypeTokens, baseAxes: r.base.axes, cfAxes: r.cf.axes,
+      })),
+      residualCases: residual.map((r) => ({
+        host: r.host, gt: r.gt, verdict: r.cf.verdict, cfAxes: r.cf.axes, blockers: r.cf.blockers,
+      })),
+      /** 🔴 상품유형 외 축·blocker 에 준 영향 — 변화가 TITLE 축에만 국한되는지 본다. */
+      sideEffects: {
+        axisChangedPairs: rows.filter((r) => r.base.axes.join("|") !== r.cf.axes.join("|")).length,
+        blockerChangedPairs: rows.filter((r) => r.base.blockers.join("|") !== r.cf.blockers.join("|")).length,
+        conflictChangedPairs: rows.filter((r) => r.base.conflicts.join("|") !== r.cf.conflicts.join("|")).length,
+        nonTitleAxisChanged: rows.filter((r) => {
+          const strip = (a: string[]) => a.filter((x) => !x.startsWith("TITLE:")).join("|");
+          return strip(r.base.axes) !== strip(r.cf.axes);
+        }).length,
+      },
+      unmeasured: {
+        note:
+          "🔴 UNMEASURED — ⒜ GT 미라벨 행의 정확도 ⒝ 운영 facts(풍부한 색상·소재·사이즈)에서의 효과 " +
+          "— 이 하니스 facts 는 title/url/description 기반이라 CONTROL 이 성립하지 않는다(기록된 한계) " +
+          "⒞ 표본 규모(GT SAME 20 · DIFFERENT 15 · SIMILAR 1 중 측정 가능분)",
+      },
+      rows,
+    };
+
+    const OUT4 = path.join(OUT_DIR, "kids-product-type-verdict-counterfactual.json");
+    if (!existsSync(OUT_DIR)) mkdirSync(OUT_DIR, { recursive: true });
+    writeFileSync(OUT4, JSON.stringify(artifact, null, 1), "utf8");
+
+    expect(rows.length).toBe(evid.length);
+    // 🔴 저장 verdict 를 바꾸지 않았다 — 반사실은 별도 칸이다.
+    expect(rows.every((r) => "storedVerdict" in r && "cf" in r)).toBe(true);
   });
 });

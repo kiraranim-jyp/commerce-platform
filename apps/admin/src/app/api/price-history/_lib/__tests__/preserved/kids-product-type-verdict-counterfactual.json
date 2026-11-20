@@ -1,0 +1,3931 @@
+{
+ "note": "🔴 평가 전용 — 운영 코드 변경 0 · 저장 verdict 변경 0 · threshold/점수/blocker 정책 0 · 상품유형 사전 확장 0 · 계약/DB/ProductFacts 0 · 수집 0 · 배포 0. 두 설정의 차이는 facts 의 coreTitleTokens 한 칸뿐이고 **원상품·후보에 대칭** 적용했다. 🔴 반사실 산출(cf)과 저장 verdict(storedVerdict)는 **다른 칸** 이다. 🔴 분모를 섞지 않는다 — 109(행) · GT 라벨 36 · 저장 verdict 보유를 갈라 센다. 🔴 이전 19건/92건 집합과도 혼합하지 않는다(이 표는 GT 라벨 기준이다).",
+ "denominator": {
+  "rows": 109,
+  "gtLabeled": 36,
+  "gtUnlabeled": 73,
+  "joinedToStored": 39,
+  "notJoined": 70,
+  "ownerState": {
+   "OBSERVED": 92,
+   "UNKNOWN": 17
+  }
+ },
+ "verdictByGt": {
+  "SAME": {
+   "denominator": 20,
+   "base": {
+    "UNKNOWN": 13,
+    "CONFLICT": 1,
+    "PRESUMED_SAME": 6
+   },
+   "noiseAdded": {
+    "UNKNOWN": 13,
+    "CONFLICT": 1,
+    "PRESUMED_SAME": 6
+   },
+   "changed": 0
+  },
+  "DIFFERENT": {
+   "denominator": 15,
+   "base": {
+    "UNKNOWN": 4,
+    "SIMILAR": 11
+   },
+   "noiseAdded": {
+    "UNKNOWN": 4,
+    "SIMILAR": 11
+   },
+   "changed": 0
+  },
+  "SIMILAR": {
+   "denominator": 1,
+   "base": {
+    "PRESUMED_SAME": 1
+   },
+   "noiseAdded": {
+    "PRESUMED_SAME": 1
+   },
+   "changed": 0
+  }
+ },
+ "verdictAll": {
+  "base": {
+   "SIMILAR": 69,
+   "UNKNOWN": 18,
+   "CONFLICT": 1,
+   "PRESUMED_SAME": 21
+  },
+  "noiseAdded": {
+   "SIMILAR": 69,
+   "UNKNOWN": 18,
+   "CONFLICT": 1,
+   "PRESUMED_SAME": 21
+  }
+ },
+ "outcome": {
+  "gtDifferentImproved": 0,
+  "gtDifferentResidualMisjudged": 0,
+  "gtSameLost": 0,
+  "totalChanged": 0
+ },
+ "improvedCases": [],
+ "lostCases": [],
+ "residualCases": [],
+ "sideEffects": {
+  "axisChangedPairs": 0,
+  "blockerChangedPairs": 0,
+  "conflictChangedPairs": 0,
+  "nonTitleAxisChanged": 0
+ },
+ "unmeasured": {
+  "note": "🔴 UNMEASURED — ⒜ GT 미라벨 행의 정확도 ⒝ 운영 facts(풍부한 색상·소재·사이즈)에서의 효과 — 이 하니스 facts 는 title/url/description 기반이라 CONTROL 이 성립하지 않는다(기록된 한계) ⒞ 표본 규모(GT SAME 20 · DIFFERENT 15 · SIMILAR 1 중 측정 가능분)"
+ },
+ "rows": [
+  {
+   "originCode": "B226AB097",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "jacket"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:2"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:2"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AB097",
+   "host": "nickis.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "biskuit.kr",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "joinedToStored": true,
+   "ownerState": "UNKNOWN",
+   "removedTypeTokens": [],
+   "base": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "bobochoses.com",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "joinedToStored": true,
+   "ownerState": "UNKNOWN",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "bornyesterdaykids.com",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "joinedToStored": true,
+   "ownerState": "UNKNOWN",
+   "removedTypeTokens": [
+    "shirt",
+    "pants"
+   ],
+   "base": {
+    "verdict": "CONFLICT",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [],
+    "conflicts": [
+     "COMPOSITION"
+    ]
+   },
+   "cf": {
+    "verdict": "CONFLICT",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [],
+    "conflicts": [
+     "COMPOSITION"
+    ]
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "cemarose.ca",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "joinedToStored": true,
+   "ownerState": "UNKNOWN",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "cissywears.com",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "joinedToStored": true,
+   "ownerState": "UNKNOWN",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "global.trenbe.com",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "joinedToStored": true,
+   "ownerState": "UNKNOWN",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "global.trenbe.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": true,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "junioredition.com",
+   "gt": "SAME",
+   "storedVerdict": "PRESUMED_SAME",
+   "joinedToStored": true,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": "PRESUMED_SAME",
+   "joinedToStored": true,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "junioredition.com",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "joinedToStored": true,
+   "ownerState": "UNKNOWN",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "junioredition.com",
+   "gt": "SAME",
+   "storedVerdict": "SAME",
+   "joinedToStored": true,
+   "ownerState": "UNKNOWN",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "kids21.com",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "joinedToStored": true,
+   "ownerState": "UNKNOWN",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "m.luxboy.com",
+   "gt": "DIFFERENT",
+   "storedVerdict": null,
+   "joinedToStored": true,
+   "ownerState": "UNKNOWN",
+   "removedTypeTokens": [],
+   "base": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "miniboutique.co.kr",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "parkette.ca",
+   "gt": "DIFFERENT",
+   "storedVerdict": null,
+   "joinedToStored": true,
+   "ownerState": "UNKNOWN",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "scoutandcokids.com",
+   "gt": "SAME",
+   "storedVerdict": "SAME",
+   "joinedToStored": true,
+   "ownerState": "UNKNOWN",
+   "removedTypeTokens": [],
+   "base": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "stockmann.ee",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "joinedToStored": true,
+   "ownerState": "UNKNOWN",
+   "removedTypeTokens": [],
+   "base": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "thefrontshop.com",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "joinedToStored": true,
+   "ownerState": "UNKNOWN",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "tinyapple.net",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "joinedToStored": true,
+   "ownerState": "UNKNOWN",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "tinyapple.net",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "joinedToStored": true,
+   "ownerState": "UNKNOWN",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "tinyapple.net",
+   "gt": "SAME",
+   "storedVerdict": "SAME",
+   "joinedToStored": true,
+   "ownerState": "UNKNOWN",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "storedVerdict": "PRESUMED_SAME",
+   "joinedToStored": true,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "villagekids.co.uk",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "joinedToStored": true,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": null,
+   "gt": "SAME",
+   "storedVerdict": null,
+   "joinedToStored": true,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "host": null,
+   "gt": "SAME",
+   "storedVerdict": null,
+   "joinedToStored": true,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC010",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC010",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC010",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC017",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC017",
+   "host": "nickis.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC017",
+   "host": "petitemaisonkids.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC017",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC029",
+   "host": "designerkidswear.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "designerkidswear.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "designerkidswear.com",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "joinedToStored": true,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "folkberlin.com",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "joinedToStored": true,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "junioredition.com",
+   "gt": "SAME",
+   "storedVerdict": "PRESUMED_SAME",
+   "joinedToStored": true,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "kidbizkid.com",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "joinedToStored": true,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "petitemaisonkids.com",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "joinedToStored": true,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt",
+    "top"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "GARMENT_FORM",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "GARMENT_FORM",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "shoppiccoliandco.com",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "joinedToStored": true,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "tiptoeboutique.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC036",
+   "host": "folkberlin.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC036",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC036",
+   "host": null,
+   "gt": "SAME",
+   "storedVerdict": null,
+   "joinedToStored": true,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC036",
+   "host": null,
+   "gt": "SAME",
+   "storedVerdict": null,
+   "joinedToStored": true,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC038",
+   "host": "folkberlin.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC038",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC038",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC038",
+   "host": "petitemaisonkids.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt",
+    "top"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "GARMENT_FORM",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "GARMENT_FORM",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC041",
+   "host": "designerkidswear.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC041",
+   "host": "folkberlin.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC041",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC041",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC043",
+   "host": "folkberlin.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC043",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC043",
+   "host": "petitemaisonkids.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt",
+    "top"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "GARMENT_FORM",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "GARMENT_FORM",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC043",
+   "host": "shoppiccoliandco.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC043",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "designerkidswear.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "pants"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "folkberlin.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "pants"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "pants"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "pants"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "nickis.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "pants"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "petitemaisonkids.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "pants"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "pants"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC073",
+   "host": null,
+   "gt": "SAME",
+   "storedVerdict": null,
+   "joinedToStored": true,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "pants"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC110",
+   "host": "designerkidswear.com",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "joinedToStored": true,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC110",
+   "host": "junioredition.com",
+   "gt": "SIMILAR",
+   "storedVerdict": "PRESUMED_SAME",
+   "joinedToStored": true,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC110",
+   "host": "kidbizkid.com",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "joinedToStored": true,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC110",
+   "host": "villagekids.co.uk",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "joinedToStored": true,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC170",
+   "host": "nickis.com",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "joinedToStored": true,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC170",
+   "host": "shoppiccoliandco.com",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "joinedToStored": true,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226TC175",
+   "host": "folkberlin.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "WK21A165",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "COLOR:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "COLOR:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "WK21W97",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "jacket"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "WK21W97",
+   "host": "nickis.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "jacket",
+    "jacke"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "WK21W97",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "jacket"
+   ],
+   "base": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "UNKNOWN",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "designerkidswear.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "dress"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "designerkidswear.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "jacket"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1",
+     "COLOR:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1",
+     "COLOR:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "designerkidswear.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "jacket"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1",
+     "COLOR:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1",
+     "COLOR:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "folkberlin.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "jacket"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1",
+     "COLOR:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1",
+     "COLOR:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "folkberlin.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "COLOR:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "COLOR:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "folkberlin.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "folkberlin.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "COLOR:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "COLOR:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "jacket"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1",
+     "COLOR:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1",
+     "COLOR:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "jacket"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1",
+     "COLOR:1"
+    ],
+    "totalPoints": 4,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1",
+     "COLOR:1"
+    ],
+    "totalPoints": 4,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "jacket"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1",
+     "COLOR:1"
+    ],
+    "totalPoints": 4,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1",
+     "COLOR:1"
+    ],
+    "totalPoints": 4,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "dress"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "dress"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "jacket"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "jacket"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1",
+     "COLOR:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1",
+     "COLOR:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "dress"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "jacket"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "nickis.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "jacket"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "petitemaisonkids.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "petitemaisonkids.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "dress"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1",
+     "COLOR:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "COLOR_VARIANT",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "PRESUMED_SAME",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1",
+     "COLOR:1"
+    ],
+    "totalPoints": 3,
+    "blockers": [
+     "COLOR_VARIANT",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "shoppiccoliandco.com",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "dress"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1",
+     "COLOR:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1",
+     "COLOR:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "dress"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "shirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "dress"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "totalPoints": 1,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  },
+  {
+   "originCode": "",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "storedVerdict": null,
+   "joinedToStored": false,
+   "ownerState": "OBSERVED",
+   "removedTypeTokens": [
+    "jacket"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1",
+     "COLOR:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "cf": {
+    "verdict": "SIMILAR",
+    "axes": [
+     "CATEGORY:1",
+     "COLOR:1"
+    ],
+    "totalPoints": 2,
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": []
+   },
+   "changed": false
+  }
+ ]
+}
