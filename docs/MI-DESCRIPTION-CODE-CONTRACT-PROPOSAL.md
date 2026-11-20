@@ -340,6 +340,53 @@ AC↔AB (라인 다름)         **1** — `B226AC009 ↔ B226AB040`(bobochoses.c
 
 ---
 
+## 5-E. 🟢🟢 [2026-11-20] **운영 판정 경로 반사실 — 오염 0 · B-38 대상이 개선됐다**
+
+🟢 산출 `preserved/mi-operational-code-counterfactual.json` · 하니스
+`mi-operational-code-counterfactual.test.ts`. 🔴 운영 변경 **0** · 수집 **0** · HTTP **0**.
+🔵 두 설정의 차이는 **후보 facts 의 `brandModelCode` 한 칸** 뿐이고, 판정은 **운영
+`compareCrossSellerProducts`** 가 한다(직접 호출값은 `directCompareModelCode` 로 **따로** 적었다).
+
+### 🔴🔴 1차 측정을 «무효» 로 만든 하니스 결함 — 먼저 적는다
+
+```
+`origin.title` 이 빈 행에 폴백 「(제목 없음)」을 넣었더니 원상품 `coreTitleTokens` 가
+**`["제목","없음"]`** 이 됐다 ⟹ `ageLineDesignMatch` 조건 ②(연령 어휘 뺀 토큰 **완전 일치**)가
+**당연히** 실패했다. 🔴 그 값을 「운영에서도 CONFLICT 로 떨어진다」로 읽으면 **거짓 결론** 이다.
+🟢 그래서 **원상품 제목이 있는 행만** 유효 분모로 삼았다 — 32 → **16** · **측정불가 16**.
+```
+
+### 결과 (분모 16 · SAME 6 · DIFFERENT 9 · SIMILAR 1 · 후보 코드 복구 4)
+
+| GT | BASE(후보 코드 null) | FILLED(후보 라벨 품번 채움) |
+|---|---|---|
+| SAME 6 | PRESUMED_SAME 5 · SIMILAR 1 | 🟢 **PRESUMED_SAME 6** |
+| 🔴 DIFFERENT 9 | SIMILAR 9 | 🟢 **SIMILAR 9 (완전 불변 = 오염 0)** |
+| SIMILAR 1 | SIMILAR 1 | 🟡 **CONFLICT 1** |
+
+```
+바뀐 쌍 **2건**
+🟢 `B226AC033 ↔ B226AC033`  GT SAME · **SIMILAR → PRESUMED_SAME**  ⟸ 🔵 **B-38 대상 페어다**
+🟡 `B226AC110 ↔ B226AC111`  GT SIMILAR · SIMILAR → **CONFLICT**
+   ⟹ 🟢 **같은 라인·다른 번호(일반 충돌 보호)가 올바르게 발화했다**(1건 · 방향 정확)
+🟢🟢 **GT DIFFERENT 9건이 두 설정에서 한 건도 바뀌지 않았다** — 계약으로 잠갔다
+   (`expect(filled.DIFFERENT).toEqual(base.DIFFERENT)` ⟹ 오염이 생기면 **FAIL 로 드러난다**)
+```
+
+### 🔴 작업 A(`ageLineDesignMatch` 발화 검증) = **측정불가**
+
+```
+유효 분모(원상품 제목 보유)에 **AC↔AB 사례가 0건** 이다 ⟹ 예외 발화를 잴 수 없다
+🔴 그러므로 **§5-D 의 「운영에서는 blocker 로 전환될 수 있다」도 확정하지 않는다** —
+   그 쌍(B226AC009↔B226AB040)은 **원상품 제목이 없어 측정 자체가 불가** 했다
+🟢 확정된 것은 하나 — 그 예외의 **코드 경로와 조건 둘** 이고, **발화 실측은 남아 있다**
+```
+
+⟹ 🟢 **이 분모에서 개정안의 순효과** — SAME 회수 **+1**(B-38 대상) · 🟢 **오염 0/9** ·
+🟡 GT SIMILAR 1건이 CONFLICT(일반 보호의 **올바른** 동작) · AC↔AB **측정불가**.
+
+---
+
 ## 6. CTO 권고
 
 ```

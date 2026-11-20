@@ -1,0 +1,851 @@
+{
+ "note": "🔴 평가 전용 · 운영 변경 0 · verdict 변경 0 · HTTP 0 · 수집 0. 두 설정의 차이는 후보 facts 의 brandModelCode 한 칸뿐이다(BASE 는 listing 팩토리의 null). directCompareModelCode 는 **직접 호출값** 이고 base/filled 는 **운영 판정기 산출** 이다 — 섞지 않는다. 분모는 GT 라벨 ∩ 후보 설명 ∩ originCode 이며 16쌍·A군 7·IDENTITY_AXIS 26 과 합산하지 않는다.",
+ "denominator": {
+  "scope": 16,
+  "unmeasurableNoOriginTitle": 16,
+  "gt": {
+   "SAME": 6,
+   "DIFFERENT": 9,
+   "SIMILAR": 1
+  },
+  "candidateOwnCodeRecovered": 4,
+  "notMerged": {
+   "bothSideFullText": 16,
+   "aGroupFullText": 7,
+   "identityAxisPairs": 26
+  }
+ },
+ "verdictByGt": {
+  "base": {
+   "SAME": {
+    "PRESUMED_SAME": 5,
+    "SIMILAR": 1
+   },
+   "DIFFERENT": {
+    "SIMILAR": 9
+   },
+   "SIMILAR": {
+    "SIMILAR": 1
+   }
+  },
+  "filled": {
+   "SAME": {
+    "PRESUMED_SAME": 6
+   },
+   "DIFFERENT": {
+    "SIMILAR": 9
+   },
+   "SIMILAR": {
+    "CONFLICT": 1
+   }
+  }
+ },
+ "changedPairs": [
+  {
+   "host": "junioredition.com",
+   "humanGt": "SAME",
+   "originCode": "B226AC033",
+   "candidateOwnCode": "B226AC033",
+   "directCompareModelCode": "exact",
+   "from": "SIMILAR",
+   "to": "PRESUMED_SAME",
+   "ageLineBlockerFired": false,
+   "modelCodeConflictRecorded": false
+  },
+  {
+   "host": "junioredition.com",
+   "humanGt": "SIMILAR",
+   "originCode": "B226AC110",
+   "candidateOwnCode": "B226AC111",
+   "directCompareModelCode": "conflict",
+   "from": "SIMILAR",
+   "to": "CONFLICT",
+   "ageLineBlockerFired": false,
+   "modelCodeConflictRecorded": true
+  }
+ ],
+ "acAbCases": [],
+ "sameLineDifferentNumberCases": 1,
+ "rows": [
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "humanGt": "SAME",
+   "candidateOwnCode": "B226AC009",
+   "directCompareModelCode": "exact",
+   "isAcAbLine": false,
+   "isSameLineDifferentNumber": false,
+   "originCoreTitleTokens": [
+    "hug",
+    "hairy",
+    "monster",
+    "shirt"
+   ],
+   "candidateCoreTitleTokens": [
+    "hug",
+    "hairy",
+    "monster",
+    "shirt",
+    "bobo",
+    "choses"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "filled": {
+    "verdict": "PRESUMED_SAME",
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "TITLE:2",
+     "MODEL_CODE:3",
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": true
+   },
+   "ageLineBlockerFired": false,
+   "modelCodeConflictRecorded": false,
+   "verdictChanged": false
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": null,
+   "candidateUrl": "https://www.junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "humanGt": "SAME",
+   "candidateOwnCode": "B226AC009",
+   "directCompareModelCode": "exact",
+   "isAcAbLine": false,
+   "isSameLineDifferentNumber": false,
+   "originCoreTitleTokens": [
+    "hug",
+    "hairy",
+    "monster",
+    "shirt"
+   ],
+   "candidateCoreTitleTokens": [
+    "hug",
+    "hairy",
+    "monster",
+    "shirt",
+    "bobo",
+    "choses"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "filled": {
+    "verdict": "PRESUMED_SAME",
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "TITLE:2",
+     "MODEL_CODE:3",
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": true
+   },
+   "ageLineBlockerFired": false,
+   "modelCodeConflictRecorded": false,
+   "verdictChanged": false
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": null,
+   "candidateUrl": "https://scoutandcokids.com/products/bobo-choses-hug-hairy-monster-t-shirt",
+   "humanGt": "SAME",
+   "candidateOwnCode": null,
+   "directCompareModelCode": "unavailable",
+   "isAcAbLine": false,
+   "isSameLineDifferentNumber": false,
+   "originCoreTitleTokens": [
+    "hug",
+    "hairy",
+    "monster",
+    "shirt"
+   ],
+   "candidateCoreTitleTokens": [
+    "bobo",
+    "choses",
+    "hug",
+    "hairy",
+    "monster",
+    "shirt"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "filled": {
+    "verdict": "PRESUMED_SAME",
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "ageLineBlockerFired": false,
+   "modelCodeConflictRecorded": false,
+   "verdictChanged": false
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/stone-island-junior-kids-boys-sweatshirt-blue-6100001-s0a20-v004b",
+   "humanGt": "DIFFERENT",
+   "candidateOwnCode": null,
+   "directCompareModelCode": "unavailable",
+   "isAcAbLine": false,
+   "isSameLineDifferentNumber": false,
+   "originCoreTitleTokens": [
+    "pop",
+    "sweatshirt"
+   ],
+   "candidateCoreTitleTokens": [
+    "boys",
+    "cotton",
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "filled": {
+    "verdict": "SIMILAR",
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "ageLineBlockerFired": false,
+   "modelCodeConflictRecorded": false,
+   "verdictChanged": false
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "humanGt": "DIFFERENT",
+   "candidateOwnCode": null,
+   "directCompareModelCode": "unavailable",
+   "isAcAbLine": false,
+   "isSameLineDifferentNumber": false,
+   "originCoreTitleTokens": [
+    "pop",
+    "sweatshirt"
+   ],
+   "candidateCoreTitleTokens": [
+    "baby",
+    "sweater",
+    "suit",
+    "moon",
+    "organic",
+    "cotton"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "filled": {
+    "verdict": "SIMILAR",
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "ageLineBlockerFired": false,
+   "modelCodeConflictRecorded": false,
+   "verdictChanged": false
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/bobo-choses-pop-sweatshirt-by-bobo-choses",
+   "humanGt": "SAME",
+   "candidateOwnCode": "B226AC033",
+   "directCompareModelCode": "exact",
+   "isAcAbLine": false,
+   "isSameLineDifferentNumber": false,
+   "originCoreTitleTokens": [
+    "pop",
+    "sweatshirt"
+   ],
+   "candidateCoreTitleTokens": [
+    "bobo",
+    "choses",
+    "pop",
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "filled": {
+    "verdict": "PRESUMED_SAME",
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "TITLE:1",
+     "MODEL_CODE:3",
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": true
+   },
+   "ageLineBlockerFired": false,
+   "modelCodeConflictRecorded": false,
+   "verdictChanged": true
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/hugo-boss-navy-zip-sweatshirt",
+   "humanGt": "DIFFERENT",
+   "candidateOwnCode": null,
+   "directCompareModelCode": "unavailable",
+   "isAcAbLine": false,
+   "isSameLineDifferentNumber": false,
+   "originCoreTitleTokens": [
+    "pop",
+    "sweatshirt"
+   ],
+   "candidateCoreTitleTokens": [
+    "hugo",
+    "boss",
+    "zip",
+    "sweatshirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "filled": {
+    "verdict": "SIMILAR",
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "ageLineBlockerFired": false,
+   "modelCodeConflictRecorded": false,
+   "verdictChanged": false
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "petitemaisonkids.com",
+   "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+   "humanGt": "DIFFERENT",
+   "candidateOwnCode": null,
+   "directCompareModelCode": "unavailable",
+   "isAcAbLine": false,
+   "isSameLineDifferentNumber": false,
+   "originCoreTitleTokens": [
+    "pop",
+    "sweatshirt"
+   ],
+   "candidateCoreTitleTokens": [
+    "maya",
+    "girls",
+    "cotton",
+    "sweater",
+    "top",
+    "handmade",
+    "flowers"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "GARMENT_FORM",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "filled": {
+    "verdict": "SIMILAR",
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "GARMENT_FORM",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "ageLineBlockerFired": false,
+   "modelCodeConflictRecorded": false,
+   "verdictChanged": false
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "shoppiccoliandco.com",
+   "candidateUrl": "https://shoppiccoliandco.com/products/jude-navy-baby-boy-anchor-sweater",
+   "humanGt": "DIFFERENT",
+   "candidateOwnCode": null,
+   "directCompareModelCode": "unavailable",
+   "isAcAbLine": false,
+   "isSameLineDifferentNumber": false,
+   "originCoreTitleTokens": [
+    "pop",
+    "sweatshirt"
+   ],
+   "candidateCoreTitleTokens": [
+    "jude",
+    "baby",
+    "boy",
+    "anchor",
+    "sweater"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "filled": {
+    "verdict": "SIMILAR",
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "ageLineBlockerFired": false,
+   "modelCodeConflictRecorded": false,
+   "verdictChanged": false
+  },
+  {
+   "originCode": "B226AC036",
+   "candidateDomain": null,
+   "candidateUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362797&type=x&current_category=058",
+   "humanGt": "SAME",
+   "candidateOwnCode": null,
+   "directCompareModelCode": "unavailable",
+   "isAcAbLine": false,
+   "isSameLineDifferentNumber": false,
+   "originCoreTitleTokens": [
+    "mush",
+    "monster",
+    "duo",
+    "sweatshirt"
+   ],
+   "candidateCoreTitleTokens": [
+    "보보쇼즈",
+    "mush",
+    "monster",
+    "duo",
+    "sweatshirt",
+    "226ac036"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "filled": {
+    "verdict": "PRESUMED_SAME",
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "ageLineBlockerFired": false,
+   "modelCodeConflictRecorded": false,
+   "verdictChanged": false
+  },
+  {
+   "originCode": "B226AC073",
+   "candidateDomain": null,
+   "candidateUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362810&type=x&current_category=058",
+   "humanGt": "SAME",
+   "candidateOwnCode": null,
+   "directCompareModelCode": "unavailable",
+   "isAcAbLine": false,
+   "isSameLineDifferentNumber": false,
+   "originCoreTitleTokens": [
+    "taxi",
+    "saurus",
+    "tag",
+    "denim",
+    "pants"
+   ],
+   "candidateCoreTitleTokens": [
+    "보보쇼즈",
+    "taxi",
+    "saurus",
+    "tag",
+    "denim",
+    "pants",
+    "226ac073"
+   ],
+   "base": {
+    "verdict": "PRESUMED_SAME",
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "filled": {
+    "verdict": "PRESUMED_SAME",
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "TITLE:2",
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "ageLineBlockerFired": false,
+   "modelCodeConflictRecorded": false,
+   "verdictChanged": false
+  },
+  {
+   "originCode": "B226AC110",
+   "candidateDomain": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/dolce-gabbana-kids-boys-dg-t-shirt-white-l4jthvg7nvc-s9000",
+   "humanGt": "DIFFERENT",
+   "candidateOwnCode": null,
+   "directCompareModelCode": "unavailable",
+   "isAcAbLine": false,
+   "isSameLineDifferentNumber": false,
+   "originCoreTitleTokens": [
+    "embossed",
+    "shirt"
+   ],
+   "candidateCoreTitleTokens": [
+    "boys",
+    "embossed",
+    "dg",
+    "logo",
+    "shirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "filled": {
+    "verdict": "SIMILAR",
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "ageLineBlockerFired": false,
+   "modelCodeConflictRecorded": false,
+   "verdictChanged": false
+  },
+  {
+   "originCode": "B226AC110",
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/bobo-choses-embossed-t-shirt-by-bobo-choses",
+   "humanGt": "SIMILAR",
+   "candidateOwnCode": "B226AC111",
+   "directCompareModelCode": "conflict",
+   "isAcAbLine": false,
+   "isSameLineDifferentNumber": true,
+   "originCoreTitleTokens": [
+    "embossed",
+    "shirt"
+   ],
+   "candidateCoreTitleTokens": [
+    "bobo",
+    "choses",
+    "embossed",
+    "shirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "TITLE:1",
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "filled": {
+    "verdict": "CONFLICT",
+    "blockers": [],
+    "conflicts": [
+     "MODEL_CODE"
+    ],
+    "axes": [],
+    "identifierConfirmed": false
+   },
+   "ageLineBlockerFired": false,
+   "modelCodeConflictRecorded": true,
+   "verdictChanged": true
+  },
+  {
+   "originCode": "B226AC110",
+   "candidateDomain": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/marc-jacobs-black-t-shirt",
+   "humanGt": "DIFFERENT",
+   "candidateOwnCode": null,
+   "directCompareModelCode": "unavailable",
+   "isAcAbLine": false,
+   "isSameLineDifferentNumber": false,
+   "originCoreTitleTokens": [
+    "embossed",
+    "shirt"
+   ],
+   "candidateCoreTitleTokens": [
+    "marc",
+    "jacobs",
+    "shirt"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "filled": {
+    "verdict": "SIMILAR",
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "ageLineBlockerFired": false,
+   "modelCodeConflictRecorded": false,
+   "verdictChanged": false
+  },
+  {
+   "originCode": "B226AC170",
+   "candidateDomain": "nickis.com",
+   "candidateUrl": "https://nickis.com/products/levis-sweatshirt-rot-7401897725",
+   "humanGt": "DIFFERENT",
+   "candidateOwnCode": null,
+   "directCompareModelCode": "unavailable",
+   "isAcAbLine": false,
+   "isSameLineDifferentNumber": false,
+   "originCoreTitleTokens": [
+    "lake",
+    "monster",
+    "sweatshirt"
+   ],
+   "candidateCoreTitleTokens": [
+    "sweatshirt",
+    "rot"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "filled": {
+    "verdict": "SIMILAR",
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "ageLineBlockerFired": false,
+   "modelCodeConflictRecorded": false,
+   "verdictChanged": false
+  },
+  {
+   "originCode": "B226AC170",
+   "candidateDomain": "shoppiccoliandco.com",
+   "candidateUrl": "https://shoppiccoliandco.com/products/rudolph-knitted-sweater",
+   "humanGt": "DIFFERENT",
+   "candidateOwnCode": null,
+   "directCompareModelCode": "unavailable",
+   "isAcAbLine": false,
+   "isSameLineDifferentNumber": false,
+   "originCoreTitleTokens": [
+    "lake",
+    "monster",
+    "sweatshirt"
+   ],
+   "candidateCoreTitleTokens": [
+    "rudolph",
+    "knitted",
+    "sweater"
+   ],
+   "base": {
+    "verdict": "SIMILAR",
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "filled": {
+    "verdict": "SIMILAR",
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "conflicts": [],
+    "axes": [
+     "CATEGORY:1"
+    ],
+    "identifierConfirmed": false
+   },
+   "ageLineBlockerFired": false,
+   "modelCodeConflictRecorded": false,
+   "verdictChanged": false
+  }
+ ]
+}
