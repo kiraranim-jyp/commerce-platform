@@ -144,6 +144,58 @@ GT SIMILAR 1         PRESUMED_SAME 1(과도)
 기존 불변식의 버그 수정으로 볼 것인가.** 🔴 CTO 가 고르지 않았다.
 🔴 열 때의 선행 측정 — GT SAME 측정가능 **7** 과 DIFFERENT **13** 에서 **변경 전후 verdict 대조**.
 
+### A-MI-9. 🔴🔴🔴 [2026-11-20] **핵심 증거 전수 감사 — 둘은 「없고」, 충돌도 보류를 못 막는다**
+
+🟢 산출 `preserved/kids-core-evidence-audit.json` · 하니스 `kids-core-evidence-audit.test.ts`.
+🔴 **verdict 재계산 0** — 저장된 운영 결과(`system_verdict`·`price_tier`)와 원문 증거를
+`(origin_code, candidate_url)` 로 **조인** 했다(하니스 재구성값을 운영값으로 쓰지 않는다).
+
+```
+기준선  증거쌍 **109** · 저장행 38 · 조인 **39** · GT 라벨 36 · 저장 verdict 21 ·
+       🟢 **대조 가능 19** · 🔴 측정불가 — 미조인 **70** · GT 있는데 verdict 없음 **17**
+       설명 보유 — 원상품 92 · 후보 98 · 양쪽 82 · 🔴 **원상품 제목 없음 17**
+```
+
+🔴🔴 **증거 추출률(분모 109) — 핵심 셋 중 «둘» 이 대부분 없다**:
+
+```
+BRAND       PRESENT **17** · **ABSENT 91(83%)** · CONFLICT 1
+            🔴 비대칭이 원인 — 원상품은 **목록 필드 88/109** 로 받는데
+               후보는 **텍스트 추출**(제목 35 · 설명 29)에 의존한다
+MODEL_CODE  PRESENT **18** · **ABSENT 86(79%)** · CONFLICT 5
+            (후보 설명 라벨 26 · 후보 설명 맨문자열 15 · 후보 제목 맨문자열 5)
+PRODUCT_NAME PRESENT **72(66%)** · ABSENT 17 · CONFLICT 20
+⟹ 🔵🔵 **유일하게 자주 PRESENT 인 축이 PRODUCT_NAME 하나다** — 그것이 `PRESUMED_SAME`(3점)을
+   채우는 주력이고 §A-MI-8 의 이중계산과 **같은 자리** 를 가리킨다
+```
+
+🔴🔴🔴 **정답 대조(분모 19) 와 오판 14건의 증거 조합 — 이것이 핵심이다**:
+
+```
+GT DIFFERENT 13 → **전부 PRESUMED_SAME**(오염 13/13) · GT SAME 5 → SAME 3 · PRESUMED 2(놓침 **0**) ·
+GT SIMILAR 1 → PRESUMED_SAME(과도 1) · 🔴 오판 14 중 **12건이 tier COMPARISON**(가격 유입)
+
+오판의 증거 조합
+  7건  DIFFERENT · brand ABSENT · code ABSENT · **name PRESENT**   · COMPARISON
+  4건  DIFFERENT · brand ABSENT · code ABSENT · 🔴 **name CONFLICT** · COMPARISON
+  2건  DIFFERENT · brand ABSENT · code ABSENT · name ABSENT        · tier 없음
+  1건  SIMILAR   · brand PRESENT · 🔴 **code CONFLICT** · name PRESENT · COMPARISON
+```
+
+🔴🔴 **그래서 결론이 「증거가 없어서 보류」가 아니다 — 「증거가 «달랐는데도» 보류」 다**:
+
+```
+구조   `!blocked && brandOk && corePoints >= 5 → SAME`  /  `totalPoints >= 3 → PRESUMED_SAME`
+🔴🔴 **blocker 는 SAME 게이트에만 걸린다 — `PRESUMED_SAME` 은 막지 않는다**
+⟹ 관측된 차이(NO_TITLE_OVERLAP · MODEL_CODE 충돌)가 있어도 **PRESUMED_SAME 이 되고**
+   그것이 **tier COMPARISON 으로 가격 비교에 들어간다**
+🟢 WU-123/125 가 이미 같은 자리를 지적했고 §00-B 가 **가격 사안으로 보류** 했다
+```
+
+🔴 **수정하지 않았다 — 두 길 다 금지축이다**: ⒜ blocker 가 `PRESUMED_SAME` 도 막게 =
+**판정 정책 변경**(§6 STOP) ⒝ blocker 있는 보류를 가격에서 제외 = **가격 자격 변경**(§1 금지).
+🟡 **CPO 판단 사안** 이고 CTO 가 고르지 않았다.
+
 ### A-MI-7. 바꾸지 않는 것 (동결 — 이 전략 정리가 승인이 아니다)
 
 ```
