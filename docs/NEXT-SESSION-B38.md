@@ -7,6 +7,48 @@
 
 ---
 
+## 0-NEXT. 🔵🔵🔵 **[2026-11-20] 다음 WU = 복합 식별 근거 평가 · PHASE 1 «완료» · 분모 확정**
+
+🔴 전략 상시 규칙은 `docs/CTO-SESSION-START.DRAFT.md` **§A-MI** 다. 🔴 **PHASE 1 을 다시 하지 않는다.**
+
+```
+🟢🟢 **직전 보고의 「후보측 원문 미확보」를 정정한다** — 그것은 **DB/운영 저장** 축의 사실이고
+   **평가용 원문은 이미 있다**(수집 0 · 429 무관):
+   `fixtures/mi-reeval-03-keyword-input.json` **109쌍** (`pairs[]` · humanGt 내장)
+   칸  origin.{title,description,descriptionKo,brand,color,material} · candidate.{title,description}
+   확보 원상품 **92/109** · 후보 **98/109** · **양쪽 82/109**
+
+🔴🔴 **그러나 GT 라벨과 교차하면 평가 분모는 «16» 이다**(= B16 집합과 동일):
+   GT SAME      20 → 양쪽전문 **6**     🔴 회수 분모가 **6** 이다
+   GT DIFFERENT 15 → 양쪽전문 **9**     🟢 오염 시험대는 9
+   GT SIMILAR    1 → 양쪽전문 **1**
+   미라벨       73 → 양쪽전문 66        🔴 **0 이 아니라 측정불가**
+   호스트  junioredition(SAME 2·SIMILAR 1) · null(SAME 4 · 🔴 도메인 공백) ·
+          **designerkidswear(DIFFERENT 2 ← CPO 지정 대조군)** · kidbizkid 2 ·
+          shoppiccoliandco 2 · folkberlin 1 · petitemaisonkids 1 · nickis 1
+🔴 분모 합산 금지 — 109 · 16 · A군 7 · IDENTITY_AXIS 26 은 **서로 다른 집합** 이다
+```
+
+🔴🔴 **그래서 PHASE 4 의 한계를 먼저 적는다** — 어떤 조합이든 **SAME 회수 분모가 6** 이다.
+🟢 반대로 **DIFFERENT 오염 검출력은 9** 라 **기각 판정은 신뢰할 수 있다**(CPO 기준이 「오염 0」이므로).
+⟹ 🔴 「복합 근거가 recall 을 올린다」는 **이 분모로 입증할 수 없다**. 입증 가능한 것은
+   **「오염을 일으키지 않는다」** 와 **「6쌍에서 몇 건을 회수한다」** 까지다.
+
+### 🔵 다음 세션의 첫 명령 (PHASE 2 · 조사 0)
+
+```
+대상    위 16쌍 · 대조군 designerkidswear.com 2건
+방법    🔴 운영 owner 를 그대로 부른다(재구현 금지 · §5-B)
+        품번  `confirmBrandCodeInEvidence`(domestic-identifiers.ts:199) ← 건초더미에 **설명 추가**
+        브랜드 `brandsCompatible` + `brand-alias.ts`
+        상품명 `coreTitleTokens`(cross-seller.ts)
+산출    조합 8개 × {분모 · 평가가능 · SAME회수 · DIFFERENT오염 · SIMILAR오인 · 미측정 · 호스트별}
+보존    🟢 `preserved/` 에 쓴다 — 🔴 `fixtures/` 에 두면 사용자 계약이 FAIL 한다
+금지    429 우회 · UA 변경 · 어댑터 신설 · DB schema · 운영 연결 · 설명 품번 단독 SAME 승격
+```
+
+---
+
 ## 0-RESULT. 🔴🔴 **[2026-11-20 집행 완료] STEP 1 끝남 · 수정안 «기각» — 다시 하지 않는다**
 
 ```
