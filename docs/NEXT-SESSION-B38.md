@@ -5,7 +5,13 @@
 ### ① 지금 좌표 — 🔴 **CTO 가 할 작업이 «없다». 새 WU 를 스스로 만들지 않는다**
 
 ```
-직전 트랙   **`MI-DESCRIPTION-COMPARISON-01`** — **측정 종료 · §0-MDCP01 참조**
+직전 트랙   **`MI-IDENTITY-DATA-FLOW-01`** — **조사 단계 종료(CPO 확정) · §0-FLOW01 참조**
+            🟢🟢 **이 트랙의 반복 관측이 «하나의 구조적 원인» 으로 설명됐다** —
+            판매처별 `ProductFacts` 생성 경로의 **비대칭**(Shopify ↔ Listing · 최대 7점 손실)
+            🔴 **CPO: 같은 현황을 다시 조사하지 않는다** · 다음은 **원인 해결 단계** 다
+            🔴 결정 — Smallable `description` 칸 **보류**(정확도 개선이 아니다) ·
+               동결 순위 1~4 **승인 보류** · 코드/DB/Git(문서 외) **변경 0**
+그 전 트랙   **`MI-DESCRIPTION-COMPARISON-01`** — 측정 종료 · §0-MDCP01 참조
             🔴🔴 **기존 「상세설명 효과 0」은 CONTROL 실패(1/16) 상태의 값이라 결론이 아니었다**
             🟢 원인 둘로 갈림 — ⒜ 하니스가 후보 brand 를 판정기에 안 넘김(**복구 가능** · 2→4/24)
             ⒝ fixture 에 후보 구조화 facts 없음(**복구 불가** · 15건 축 1개)
@@ -34,6 +40,11 @@ AC↔AB · `AGE-LINE-POLICY-01`                                  기존 계약 *
 저장 `PRESUMED_SAME` 13건의 3점 구성                           **원인 미규명 종결**(후보 facts 미보존)
 브랜드 별칭 사전 확대                                            **보류**(후보 어휘 8종은 목록만 보존)
 카테고리 확장(WOMEN/ACCESSORIES/HOME)                          🔴 **보류** — KIDS 먼저
+🔴🔴 **[2026-11-21 추가 · CPO 확정] 아래 «현황 조사» 를 다시 하지 않는다**
+   상세설명 비교 효과 재측정 · 제목↔설명 제품명 충돌 축 · 미라벨 GT 자료상태 재분류 ·
+   가격 자격 국내/해외 비대칭 · **식별정보 데이터 흐름 재추적**
+   ⟹ 🟢 결론은 §0-FLOW01 · §0-MDCP01 · §0-MDC01 에 있다. **원인은 특정됐다.**
+   🔴 다음은 조사가 아니라 **원인 해결** 이고 범위는 **CPO 가 지정** 한다
 ```
 
 ### ③ 작업 방식 (헌장 §4 요약 — 이것을 그대로 지킨다)
@@ -112,6 +123,78 @@ cd apps/admin && npx vitest run \
 ```
 docs/START-HERE.md §0-NOW → docs/NEXT-SESSION-B38.md §0-HANDOFF 를 읽고 시작해.
 CTO 작업은 없는 상태다 — 다음 범위를 지정해 주면 그 범위만 한 묶음으로 수행해.
+```
+
+---
+
+## 🔵🔵🔵 §0-FLOW01. **[2026-11-21] `MI-IDENTITY-DATA-FLOW-01` — 구조적 원인 확정 · 조사 단계 종료**
+
+🔴 **CPO 가 이 단계를 종료했다.** 🔴 **같은 현황을 다시 조사하지 않는다.** 운영 코드 **0** · DB **0** · 배포 **0**.
+
+### ① 🟢🟢 확정된 구조적 원인 — 반복 관측 셋이 하나로 설명된다
+
+```
+🔴 원인은 「상세설명이 판정기에 전달되지 않는 것」이 **아니다** —
+   `ProductFacts` 에 `description`·`evidence` 칸이 **있고** 판정기 입력까지 **도달한다**.
+🔴🔴 원인은 **판매처별 `ProductFacts` 생성 경로의 비대칭** 이다:
+   Shopify  `productFactsFromShopifyProduct`(seller-facts.ts:179)
+            :247 `extractLabeledProductCode(description)` 로 **설명에서 품번을 복구** ·
+            materialText·fitText 조건부 추출
+   Listing  `productFactsFromListing`(seller-facts.ts:371) — **같은 설명을 입력받고도**
+            `brandModelCode: null`(:380) · `materialText: null`(:388) · `fitText: null` ·
+            `ageRangeText: null` · `sizeLabels: []` **고정**
+   판정기    **Contract P2**(product-facts.ts:801-803)가 `description`·`evidence` 읽기를 금지 ·
+            `evidence` 소비처는 설명/요약 **3파일** 뿐(판정기 grep **0**)
+점수표(cross-seller.ts 실측) TITLE 2|1 · MODEL_CODE 3|2 · CATEGORY/COLOR/MATERIAL/FIT/
+            AUDIENCE/SIZE/IMAGE 각 1 · 정원 SAME ≥5 · PRESUMED_SAME ≥3(IMAGE·1점 TITLE 제외)
+⟹ 🔴 Listing 후보는 **최대 7점**(품번 3 + 보조 4)을 잃는다 ⟹ 남는 최대 **4~5**
+⟹ 🔴🔴 **PRESUMED_SAME(3) 에는 쉽게 닿고 SAME(5) 에는 거의 못 닿는다**
+   그리고 blocker 는 **SAME 게이트만** 막으므로 전부 PRESUMED_SAME 으로 고인다
+🟢 이 하나로 설명되는 것 — 「GT DIFFERENT 13/13 저장 PRESUMED_SAME」 · 「국내 SAME 0」 ·
+   「MDCP-01 CONTROL 4/24 · A1 PRESUMED_SAME 9/24 · SAME 0」
+🔴 **영향률은 미측정** 이다 — 운영 후보 전체에서 경로별 비중을 세지 않았다(추정 금지)
+```
+
+### ② 유실·미사용 지점(유형별 · 코드 위치)
+
+```
+STRUCTURING_GAP  Listing 팩토리 5칸 null 고정                seller-facts.ts:380·388
+STRUCTURING_GAP  Smallable 팩토리가 `description` 칸 미제공    seller-facts.ts:511-552
+CONSUMPTION_GAP  Contract P2 — 설명·evidence 읽기 금지        product-facts.ts:801-803
+CONSUMPTION_GAP  BRAND 는 **점수 0**(blocker 발화/해제 전용)   cross-seller.ts 축 목록
+EXTRACTION_GAP   `confirmBrandCodeInEvidence` 건초더미 = title·url·sku  domestic-identifiers.ts:185
+EXTRACTION_GAP   등록부 밖 브랜드는 전건 UNKNOWN(등록부 4건)  brand-alias.ts
+PERSISTENCE_GAP  `candidate_reviews`·`product_snapshots` 에 후보 facts/description 칸 **0**
+NO_GAP           설명 확보·전달 · MODEL_CODE/TITLE 점수 반영 · tier 산출
+```
+
+### ③ 🔴 CPO 결정 — 둘 다 지금 하지 않는다
+
+```
+Smallable `description` 칸 추가   **보류** — 근거 표시 개선일 뿐 **판정 정확도 개선이 아니다**
+동결 순위 1~4 변경                **승인 보류** — 기존 보호 계약과 오판 방지 조건이 있다
+```
+
+### ④ 🔵 다음 방향(CPO 확정) — **Listing 경로의 구조화 정보 부족 해결** · 원칙 5
+
+```
+① 판매처 SKU 와 실제 모델코드를 혼동하지 않는다
+② 소재·핏 등 추출 근거가 불확실하면 **UNKNOWN 을 유지** 한다
+③ 설명 원문을 **무조건 판정 입력으로 풀어주지 않는다**
+④ 기존 SAME / DIFFERENT 보호 기준을 유지한다
+⑤ 기존 **B-38 NO-GO 를 우회하거나 되살리지 않는다**
+🔴 필요한 정책 변경은 **별도 승인 없이 진행하지 않는다** · 범위는 **CPO 가 지정** 한다
+```
+
+### ⑤ 🟡 CPO 판단 재료 1건 (CTO 제안 아님 · 재추진 안 했다)
+
+```
+B-38 재개 조건은 「일반 품번 불일치 GT DIFFERENT 표본」이었고, 이 트랙이 그 표본 **2건** 을 찾았다 —
+  `cemarose.ca` 설명 품번 **B226AC031** · `tinyapple.net` **B226AC142**
+  (원상품 B226AC009 · 둘 다 GT DIFFERENT)
+🟢 `compareModelCode(AC009, AC031)` 은 공통 접두 6자 후 분기 ⟹ **conflict(보호 방향)** 이다
+🔴 비용은 `B226AB040`(GT SAME · AC↔AB 라인)이 함께 막히는 **기존에 측정된 교환** 이다
+🔴 CTO 는 이것을 **열지 않았다** — 사실만 기록한다
 ```
 
 ---
