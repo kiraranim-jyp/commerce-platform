@@ -1,0 +1,4082 @@
+{
+ "note": "🔴 평가 전용 — 승격 조건 변경 0 · OBSERVED→CORROBORATED 승격 0 · verdict 재계산 0 · 운영 판정 연결 0 · 계약 0 · DB 0 · 수집 0 · HTTP 0. 🔴 재현 한계 — owner 의 `usable` 은 비공개 `uniqueOf()` 를 쓰므로 호출할 수 없다. 이 분류는 관측 가능한 칸(productAttributable · genericTypeOnly · contextKind · source)의 **대용치** 이고, 그 범위를 넘는 행은 UNDETERMINED 로 둔다. state 는 owner 값 그대로다. 분모 109(행 단위)는 16·19·26 과 합산하지 않는다.",
+ "denominator": {
+  "rows": 109,
+  "ownerState": {
+   "OBSERVED": 92,
+   "UNKNOWN": 17
+  },
+  "observedRows": 92,
+  "joinedToStored": 39,
+  "gtLabeled": 36
+ },
+ "observedReasonBreakdown": {
+  "DIRECT_SINGLE_SOURCE": 92
+ },
+ "allReasonBreakdown": {
+  "DIRECT_SINGLE_SOURCE": 92,
+  "NO_UNIQUE_NAME_OBSERVED": 17
+ },
+ "gtLinkage": {
+  "observedWithGt": {
+   "SAME": 7,
+   "DIFFERENT": 11,
+   "SIMILAR": 1
+  },
+  "observedWithGtAndStored": 14
+ },
+ "singleSourceUniqueName": {
+  "count": 92,
+  "note": "🟡 「두 출처 요건이 불필요해 보이는 사례」의 **근거 모음** 이다 — 🔴 CTO 가 불필요하다고 판정하지 않았다. 완화 승인은 CPO 사안이다.",
+  "cases": [
+   {
+    "host": "junioredition.com",
+    "originCode": "B226AB097",
+    "gt": null,
+    "source": "TITLE",
+    "uniqueNameObservations": [
+     "TITLE:Stamp Bloom all over reversible anorak"
+    ],
+    "productTypes": []
+   },
+   {
+    "host": "nickis.com",
+    "originCode": "B226AB097",
+    "gt": null,
+    "source": "TITLE",
+    "uniqueNameObservations": [
+     "TITLE:Stamp Bloom all over reversible anorak"
+    ],
+    "productTypes": []
+   },
+   {
+    "host": "global.trenbe.com",
+    "originCode": "B226AC009",
+    "gt": null,
+    "source": "TITLE",
+    "uniqueNameObservations": [
+     "TITLE:Hug Hairy Monster T-shirt"
+    ],
+    "productTypes": [
+     "SHIRT"
+    ]
+   },
+   {
+    "host": "junioredition.com",
+    "originCode": "B226AC009",
+    "gt": "SAME",
+    "source": "TITLE",
+    "uniqueNameObservations": [
+     "TITLE:Hug Hairy Monster T-shirt"
+    ],
+    "productTypes": [
+     "SHIRT"
+    ]
+   },
+   {
+    "host": "junioredition.com",
+    "originCode": "B226AC009",
+    "gt": null,
+    "source": "TITLE",
+    "uniqueNameObservations": [
+     "TITLE:Hug Hairy Monster T-shirt"
+    ],
+    "productTypes": [
+     "SHIRT"
+    ]
+   },
+   {
+    "host": "miniboutique.co.kr",
+    "originCode": "B226AC009",
+    "gt": null,
+    "source": "TITLE",
+    "uniqueNameObservations": [
+     "TITLE:Hug Hairy Monster T-shirt"
+    ],
+    "productTypes": [
+     "SHIRT"
+    ]
+   },
+   {
+    "host": "villagekids.co.uk",
+    "originCode": "B226AC009",
+    "gt": null,
+    "source": "TITLE",
+    "uniqueNameObservations": [
+     "TITLE:Hug Hairy Monster T-shirt"
+    ],
+    "productTypes": [
+     "SHIRT"
+    ]
+   },
+   {
+    "host": "villagekids.co.uk",
+    "originCode": "B226AC009",
+    "gt": "DIFFERENT",
+    "source": "TITLE",
+    "uniqueNameObservations": [
+     "TITLE:Hug Hairy Monster T-shirt"
+    ],
+    "productTypes": [
+     "SHIRT"
+    ]
+   },
+   {
+    "host": "villagekids.co.uk",
+    "originCode": "B226AC009",
+    "gt": null,
+    "source": "TITLE",
+    "uniqueNameObservations": [
+     "TITLE:Hug Hairy Monster T-shirt"
+    ],
+    "productTypes": [
+     "SHIRT"
+    ]
+   },
+   {
+    "host": null,
+    "originCode": "B226AC009",
+    "gt": "SAME",
+    "source": "TITLE",
+    "uniqueNameObservations": [
+     "TITLE:Hug Hairy Monster T-shirt"
+    ],
+    "productTypes": [
+     "SHIRT"
+    ]
+   },
+   {
+    "host": null,
+    "originCode": "B226AC009",
+    "gt": "SAME",
+    "source": "TITLE",
+    "uniqueNameObservations": [
+     "TITLE:Hug Hairy Monster T-shirt"
+    ],
+    "productTypes": [
+     "SHIRT"
+    ]
+   },
+   {
+    "host": "junioredition.com",
+    "originCode": "B226AC010",
+    "gt": null,
+    "source": "TITLE",
+    "uniqueNameObservations": [
+     "TITLE:Booty Ghosts Long Sleeve T-Shirt by Bobo Choses"
+    ],
+    "productTypes": [
+     "SHIRT"
+    ]
+   },
+   {
+    "host": "junioredition.com",
+    "originCode": "B226AC010",
+    "gt": null,
+    "source": "TITLE",
+    "uniqueNameObservations": [
+     "TITLE:Booty Ghosts T-shirt"
+    ],
+    "productTypes": [
+     "SHIRT"
+    ]
+   },
+   {
+    "host": "junioredition.com",
+    "originCode": "B226AC010",
+    "gt": null,
+    "source": "TITLE",
+    "uniqueNameObservations": [
+     "TITLE:Booty Ghosts Long Sleeve T-Shirt by Bobo Choses"
+    ],
+    "productTypes": [
+     "SHIRT"
+    ]
+   },
+   {
+    "host": "kidbizkid.com",
+    "originCode": "B226AC017",
+    "gt": null,
+    "source": "TITLE",
+    "uniqueNameObservations": [
+     "TITLE:Booo Bo Choses T-shirt"
+    ],
+    "productTypes": [
+     "SHIRT"
+    ]
+   },
+   {
+    "host": "nickis.com",
+    "originCode": "B226AC017",
+    "gt": null,
+    "source": "TITLE",
+    "uniqueNameObservations": [
+     "TITLE:Booo Bo Choses T-shirt"
+    ],
+    "productTypes": [
+     "SHIRT"
+    ]
+   },
+   {
+    "host": "petitemaisonkids.com",
+    "originCode": "B226AC017",
+    "gt": null,
+    "source": "TITLE",
+    "uniqueNameObservations": [
+     "TITLE:Booo Bo Choses T-shirt"
+    ],
+    "productTypes": [
+     "SHIRT"
+    ]
+   },
+   {
+    "host": "villagekids.co.uk",
+    "originCode": "B226AC017",
+    "gt": null,
+    "source": "TITLE",
+    "uniqueNameObservations": [
+     "TITLE:Booo Bo Choses T-shirt"
+    ],
+    "productTypes": [
+     "SHIRT"
+    ]
+   },
+   {
+    "host": "designerkidswear.com",
+    "originCode": "B226AC029",
+    "gt": null,
+    "source": "TITLE",
+    "uniqueNameObservations": [
+     "TITLE:Softpaw Monster sweatshirt"
+    ],
+    "productTypes": [
+     "SWEATSHIRT"
+    ]
+   },
+   {
+    "host": "designerkidswear.com",
+    "originCode": "B226AC033",
+    "gt": null,
+    "source": "TITLE",
+    "uniqueNameObservations": [
+     "TITLE:Bobo Choses Pop sweatshirt"
+    ],
+    "productTypes": [
+     "SWEATSHIRT"
+    ]
+   }
+  ]
+ },
+ "ownerReasonTexts": [
+  "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+ ],
+ "rows": [
+  {
+   "originCode": "B226AB097",
+   "host": "junioredition.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "Stamp Bloom all over reversible anorak",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Stamp Bloom all over reversible anorak",
+   "rawDescription": "Navy blue anorak. Relaxed fit. Responsibly made in China. Exterior A: 100% Recycled Polyamide Exterior B: 100% Recycled Polyamide"
+  },
+  {
+   "originCode": "B226AB097",
+   "host": "nickis.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "Stamp Bloom all over reversible anorak",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Stamp Bloom all over reversible anorak",
+   "rawDescription": "Navy blue anorak. Relaxed fit. Responsibly made in China. Exterior A: 100% Recycled Polyamide Exterior B: 100% Recycled Polyamide"
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "biskuit.kr",
+   "gt": "SAME",
+   "joinedToStored": true,
+   "storedVerdict": null,
+   "ownerState": "UNKNOWN",
+   "reason": "NO_UNIQUE_NAME_OBSERVED",
+   "ownerReasons": [],
+   "productTypes": [],
+   "directSources": [],
+   "observations": [],
+   "rawTitle": "",
+   "rawDescription": ""
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "bobochoses.com",
+   "gt": "SAME",
+   "joinedToStored": true,
+   "storedVerdict": null,
+   "ownerState": "UNKNOWN",
+   "reason": "NO_UNIQUE_NAME_OBSERVED",
+   "ownerReasons": [],
+   "productTypes": [],
+   "directSources": [],
+   "observations": [],
+   "rawTitle": "",
+   "rawDescription": ""
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "bornyesterdaykids.com",
+   "gt": "SAME",
+   "joinedToStored": true,
+   "storedVerdict": null,
+   "ownerState": "UNKNOWN",
+   "reason": "NO_UNIQUE_NAME_OBSERVED",
+   "ownerReasons": [],
+   "productTypes": [],
+   "directSources": [],
+   "observations": [],
+   "rawTitle": "",
+   "rawDescription": ""
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "cemarose.ca",
+   "gt": "DIFFERENT",
+   "joinedToStored": true,
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "UNKNOWN",
+   "reason": "NO_UNIQUE_NAME_OBSERVED",
+   "ownerReasons": [],
+   "productTypes": [],
+   "directSources": [],
+   "observations": [],
+   "rawTitle": "",
+   "rawDescription": ""
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "cissywears.com",
+   "gt": "SAME",
+   "joinedToStored": true,
+   "storedVerdict": null,
+   "ownerState": "UNKNOWN",
+   "reason": "NO_UNIQUE_NAME_OBSERVED",
+   "ownerReasons": [],
+   "productTypes": [],
+   "directSources": [],
+   "observations": [],
+   "rawTitle": "",
+   "rawDescription": ""
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "global.trenbe.com",
+   "gt": "SAME",
+   "joinedToStored": true,
+   "storedVerdict": null,
+   "ownerState": "UNKNOWN",
+   "reason": "NO_UNIQUE_NAME_OBSERVED",
+   "ownerReasons": [],
+   "productTypes": [],
+   "directSources": [],
+   "observations": [],
+   "rawTitle": "",
+   "rawDescription": ""
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "global.trenbe.com",
+   "gt": null,
+   "joinedToStored": true,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Hug Hairy Monster T-shirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Hug Hairy Monster T-shirt",
+   "rawDescription": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "junioredition.com",
+   "gt": "SAME",
+   "joinedToStored": true,
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Hug Hairy Monster T-shirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Hug Hairy Monster T-shirt",
+   "rawDescription": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "junioredition.com",
+   "gt": null,
+   "joinedToStored": true,
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Hug Hairy Monster T-shirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Hug Hairy Monster T-shirt",
+   "rawDescription": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "junioredition.com",
+   "gt": "SAME",
+   "joinedToStored": true,
+   "storedVerdict": null,
+   "ownerState": "UNKNOWN",
+   "reason": "NO_UNIQUE_NAME_OBSERVED",
+   "ownerReasons": [],
+   "productTypes": [],
+   "directSources": [],
+   "observations": [],
+   "rawTitle": "",
+   "rawDescription": ""
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "junioredition.com",
+   "gt": "SAME",
+   "joinedToStored": true,
+   "storedVerdict": "SAME",
+   "ownerState": "UNKNOWN",
+   "reason": "NO_UNIQUE_NAME_OBSERVED",
+   "ownerReasons": [],
+   "productTypes": [],
+   "directSources": [],
+   "observations": [],
+   "rawTitle": "",
+   "rawDescription": ""
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "kids21.com",
+   "gt": "SAME",
+   "joinedToStored": true,
+   "storedVerdict": null,
+   "ownerState": "UNKNOWN",
+   "reason": "NO_UNIQUE_NAME_OBSERVED",
+   "ownerReasons": [],
+   "productTypes": [],
+   "directSources": [],
+   "observations": [],
+   "rawTitle": "",
+   "rawDescription": ""
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "m.luxboy.com",
+   "gt": "DIFFERENT",
+   "joinedToStored": true,
+   "storedVerdict": null,
+   "ownerState": "UNKNOWN",
+   "reason": "NO_UNIQUE_NAME_OBSERVED",
+   "ownerReasons": [],
+   "productTypes": [],
+   "directSources": [],
+   "observations": [],
+   "rawTitle": "",
+   "rawDescription": ""
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "miniboutique.co.kr",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Hug Hairy Monster T-shirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Hug Hairy Monster T-shirt",
+   "rawDescription": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "parkette.ca",
+   "gt": "DIFFERENT",
+   "joinedToStored": true,
+   "storedVerdict": null,
+   "ownerState": "UNKNOWN",
+   "reason": "NO_UNIQUE_NAME_OBSERVED",
+   "ownerReasons": [],
+   "productTypes": [],
+   "directSources": [],
+   "observations": [],
+   "rawTitle": "",
+   "rawDescription": ""
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "scoutandcokids.com",
+   "gt": "SAME",
+   "joinedToStored": true,
+   "storedVerdict": "SAME",
+   "ownerState": "UNKNOWN",
+   "reason": "NO_UNIQUE_NAME_OBSERVED",
+   "ownerReasons": [],
+   "productTypes": [],
+   "directSources": [],
+   "observations": [],
+   "rawTitle": "",
+   "rawDescription": ""
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "stockmann.ee",
+   "gt": "SAME",
+   "joinedToStored": true,
+   "storedVerdict": null,
+   "ownerState": "UNKNOWN",
+   "reason": "NO_UNIQUE_NAME_OBSERVED",
+   "ownerReasons": [],
+   "productTypes": [],
+   "directSources": [],
+   "observations": [],
+   "rawTitle": "",
+   "rawDescription": ""
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "thefrontshop.com",
+   "gt": "SAME",
+   "joinedToStored": true,
+   "storedVerdict": null,
+   "ownerState": "UNKNOWN",
+   "reason": "NO_UNIQUE_NAME_OBSERVED",
+   "ownerReasons": [],
+   "productTypes": [],
+   "directSources": [],
+   "observations": [],
+   "rawTitle": "",
+   "rawDescription": ""
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "tinyapple.net",
+   "gt": "SAME",
+   "joinedToStored": true,
+   "storedVerdict": null,
+   "ownerState": "UNKNOWN",
+   "reason": "NO_UNIQUE_NAME_OBSERVED",
+   "ownerReasons": [],
+   "productTypes": [],
+   "directSources": [],
+   "observations": [],
+   "rawTitle": "",
+   "rawDescription": ""
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "tinyapple.net",
+   "gt": "DIFFERENT",
+   "joinedToStored": true,
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "UNKNOWN",
+   "reason": "NO_UNIQUE_NAME_OBSERVED",
+   "ownerReasons": [],
+   "productTypes": [],
+   "directSources": [],
+   "observations": [],
+   "rawTitle": "",
+   "rawDescription": ""
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "tinyapple.net",
+   "gt": "SAME",
+   "joinedToStored": true,
+   "storedVerdict": "SAME",
+   "ownerState": "UNKNOWN",
+   "reason": "NO_UNIQUE_NAME_OBSERVED",
+   "ownerReasons": [],
+   "productTypes": [],
+   "directSources": [],
+   "observations": [],
+   "rawTitle": "",
+   "rawDescription": ""
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "joinedToStored": true,
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Hug Hairy Monster T-shirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Hug Hairy Monster T-shirt",
+   "rawDescription": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "villagekids.co.uk",
+   "gt": "DIFFERENT",
+   "joinedToStored": true,
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Hug Hairy Monster T-shirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Hug Hairy Monster T-shirt",
+   "rawDescription": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Hug Hairy Monster T-shirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Hug Hairy Monster T-shirt",
+   "rawDescription": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC009",
+   "host": null,
+   "gt": "SAME",
+   "joinedToStored": true,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Hug Hairy Monster T-shirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Hug Hairy Monster T-shirt",
+   "rawDescription": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC009",
+   "host": null,
+   "gt": "SAME",
+   "joinedToStored": true,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Hug Hairy Monster T-shirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Hug Hairy Monster T-shirt",
+   "rawDescription": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC010",
+   "host": "junioredition.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "Bobo Choses",
+     "source": "DESCRIPTION",
+     "producer": "BRAND_MENTION",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": false
+    },
+    {
+     "raw": "Bobo Choses",
+     "source": "DESCRIPTION",
+     "producer": "BRAND_MENTION",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": false
+    },
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+   "rawDescription": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses. Relaxed fit tee in heather grey, featuring long sleeves, a round neck and a large Bobo Choses ghosts print across the front. Colour - Heather Grey. 100% Organic Cotton. Pr…"
+  },
+  {
+   "originCode": "B226AC010",
+   "host": "junioredition.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Booty Ghosts T-shirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Booty Ghosts T-shirt",
+   "rawDescription": "Heather grey t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC010",
+   "host": "junioredition.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "Bobo Choses",
+     "source": "DESCRIPTION",
+     "producer": "BRAND_MENTION",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": false
+    },
+    {
+     "raw": "Bobo Choses",
+     "source": "DESCRIPTION",
+     "producer": "BRAND_MENTION",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": false
+    },
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+   "rawDescription": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses. Relaxed fit tee in heather grey, featuring long sleeves, a round neck and a large Bobo Choses ghosts print across the front. Colour - Heather Grey. 100% Organic Cotton. Pr…"
+  },
+  {
+   "originCode": "B226AC017",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Booo Bo Choses T-shirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Booo Bo Choses T-shirt",
+   "rawDescription": "Off-white t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC017",
+   "host": "nickis.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Booo Bo Choses T-shirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Booo Bo Choses T-shirt",
+   "rawDescription": "Off-white t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC017",
+   "host": "petitemaisonkids.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Booo Bo Choses T-shirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Booo Bo Choses T-shirt",
+   "rawDescription": "Off-white t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC017",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Booo Bo Choses T-shirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Booo Bo Choses T-shirt",
+   "rawDescription": "Off-white t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC029",
+   "host": "designerkidswear.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Softpaw Monster sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Softpaw Monster sweatshirt",
+   "rawDescription": "Pink sweatshirt. Organic Cotton 66%, Recycled Polyester 17%, Cotton 17%. Loose fit. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "designerkidswear.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Bobo Choses Pop sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Bobo Choses Pop sweatshirt",
+   "rawDescription": "Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "designerkidswear.com",
+   "gt": "DIFFERENT",
+   "joinedToStored": true,
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Bobo Choses Pop sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Bobo Choses Pop sweatshirt",
+   "rawDescription": "Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "folkberlin.com",
+   "gt": "DIFFERENT",
+   "joinedToStored": true,
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Bobo Choses Pop sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Bobo Choses Pop sweatshirt",
+   "rawDescription": "Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "junioredition.com",
+   "gt": "SAME",
+   "joinedToStored": true,
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Bobo Choses Pop sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Bobo Choses Pop sweatshirt",
+   "rawDescription": "Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "kidbizkid.com",
+   "gt": "DIFFERENT",
+   "joinedToStored": true,
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Bobo Choses Pop sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Bobo Choses Pop sweatshirt",
+   "rawDescription": "Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Bobo Choses Pop sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Bobo Choses Pop sweatshirt",
+   "rawDescription": "Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "petitemaisonkids.com",
+   "gt": "DIFFERENT",
+   "joinedToStored": true,
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Bobo Choses Pop sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Bobo Choses Pop sweatshirt",
+   "rawDescription": "Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "shoppiccoliandco.com",
+   "gt": "DIFFERENT",
+   "joinedToStored": true,
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Bobo Choses Pop sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Bobo Choses Pop sweatshirt",
+   "rawDescription": "Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "tiptoeboutique.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Bobo Choses Pop sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Bobo Choses Pop sweatshirt",
+   "rawDescription": "Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226AC036",
+   "host": "folkberlin.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Mush Monster Duo sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Mush Monster Duo sweatshirt",
+   "rawDescription": "Light heather grey sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC036",
+   "host": "junioredition.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Mush Monster Duo sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Mush Monster Duo sweatshirt",
+   "rawDescription": "Light heather grey sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC036",
+   "host": null,
+   "gt": "SAME",
+   "joinedToStored": true,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Mush Monster Duo sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Mush Monster Duo sweatshirt",
+   "rawDescription": "Light heather grey sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC036",
+   "host": null,
+   "gt": "SAME",
+   "joinedToStored": true,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Mush Monster Duo sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Mush Monster Duo sweatshirt",
+   "rawDescription": "Light heather grey sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC038",
+   "host": "folkberlin.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Hidden Monster sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Hidden Monster sweatshirt",
+   "rawDescription": "Blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226AC038",
+   "host": "junioredition.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Hidden Monster sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Hidden Monster sweatshirt",
+   "rawDescription": "Blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226AC038",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Hidden Monster sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Hidden Monster sweatshirt",
+   "rawDescription": "Blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226AC038",
+   "host": "petitemaisonkids.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Hidden Monster sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Hidden Monster sweatshirt",
+   "rawDescription": "Blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226AC041",
+   "host": "designerkidswear.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT",
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Beast Tag polo sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Beast Tag polo sweatshirt",
+   "rawDescription": "Light blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226AC041",
+   "host": "folkberlin.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT",
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Beast Tag polo sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Beast Tag polo sweatshirt",
+   "rawDescription": "Light blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226AC041",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT",
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Beast Tag polo sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Beast Tag polo sweatshirt",
+   "rawDescription": "Light blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226AC041",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT",
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Beast Tag polo sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Beast Tag polo sweatshirt",
+   "rawDescription": "Light blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226AC043",
+   "host": "folkberlin.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Mystery BC half zipped sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Mystery BC half zipped sweatshirt",
+   "rawDescription": "Navy blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226AC043",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Mystery BC half zipped sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Mystery BC half zipped sweatshirt",
+   "rawDescription": "Navy blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226AC043",
+   "host": "petitemaisonkids.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Mystery BC half zipped sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Mystery BC half zipped sweatshirt",
+   "rawDescription": "Navy blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226AC043",
+   "host": "shoppiccoliandco.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Mystery BC half zipped sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Mystery BC half zipped sweatshirt",
+   "rawDescription": "Navy blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226AC043",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Mystery BC half zipped sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Mystery BC half zipped sweatshirt",
+   "rawDescription": "Navy blue sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Loose fit. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "designerkidswear.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "PANTS"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "PANTS",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Taxi Saurus Tag denim pants",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Taxi Saurus Tag denim pants",
+   "rawDescription": "Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "folkberlin.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "PANTS"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "PANTS",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Taxi Saurus Tag denim pants",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Taxi Saurus Tag denim pants",
+   "rawDescription": "Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "junioredition.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "PANTS"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "PANTS",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Taxi Saurus Tag denim pants",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Taxi Saurus Tag denim pants",
+   "rawDescription": "Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "PANTS"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "PANTS",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Taxi Saurus Tag denim pants",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Taxi Saurus Tag denim pants",
+   "rawDescription": "Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "nickis.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "PANTS"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "PANTS",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Taxi Saurus Tag denim pants",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Taxi Saurus Tag denim pants",
+   "rawDescription": "Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "petitemaisonkids.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "PANTS"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "PANTS",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Taxi Saurus Tag denim pants",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Taxi Saurus Tag denim pants",
+   "rawDescription": "Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "PANTS"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "PANTS",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Taxi Saurus Tag denim pants",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Taxi Saurus Tag denim pants",
+   "rawDescription": "Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC073",
+   "host": null,
+   "gt": "SAME",
+   "joinedToStored": true,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "PANTS"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "PANTS",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Taxi Saurus Tag denim pants",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Taxi Saurus Tag denim pants",
+   "rawDescription": "Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC110",
+   "host": "designerkidswear.com",
+   "gt": "DIFFERENT",
+   "joinedToStored": true,
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Bobo Choses Embossed T-shirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Bobo Choses Embossed T-shirt",
+   "rawDescription": "Multicolor t-shirt. Cotton 100%. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC110",
+   "host": "junioredition.com",
+   "gt": "SIMILAR",
+   "joinedToStored": true,
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Bobo Choses Embossed T-shirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Bobo Choses Embossed T-shirt",
+   "rawDescription": "Multicolor t-shirt. Cotton 100%. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC110",
+   "host": "kidbizkid.com",
+   "gt": "DIFFERENT",
+   "joinedToStored": true,
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Bobo Choses Embossed T-shirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Bobo Choses Embossed T-shirt",
+   "rawDescription": "Multicolor t-shirt. Cotton 100%. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC110",
+   "host": "villagekids.co.uk",
+   "gt": "DIFFERENT",
+   "joinedToStored": true,
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Bobo Choses Embossed T-shirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Bobo Choses Embossed T-shirt",
+   "rawDescription": "Multicolor t-shirt. Cotton 100%. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "B226AC170",
+   "host": "nickis.com",
+   "gt": "DIFFERENT",
+   "joinedToStored": true,
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Lake Monster sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Lake Monster sweatshirt",
+   "rawDescription": "Red sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226AC170",
+   "host": "shoppiccoliandco.com",
+   "gt": "DIFFERENT",
+   "joinedToStored": true,
+   "storedVerdict": "PRESUMED_SAME",
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Lake Monster sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Lake Monster sweatshirt",
+   "rawDescription": "Red sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Responsibly made in Spain."
+  },
+  {
+   "originCode": "B226TC175",
+   "host": "folkberlin.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Dog sweatshirt",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Dog sweatshirt",
+   "rawDescription": "Light yellow sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal."
+  },
+  {
+   "originCode": "WK21A165",
+   "host": "junioredition.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "Double Deerstalker Cap in Blue / Soft Tan by Wynken",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Double Deerstalker Cap in Blue / Soft Tan by Wynken",
+   "rawDescription": "Double Deerstalker Cap by Wynken. The Double Deerstalker is a two-in-one cap, featuring an outer cap in ultramarine blue 100% nylon with subtle tone-on-tone “wynken” embroidery, and an inner cap in soft tan faux fur with…"
+  },
+  {
+   "originCode": "WK21W97",
+   "host": "junioredition.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "JACKET"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "JACKET",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Mixed Media Jacket in Ecru Mix by Wynken",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Mixed Media Jacket in Ecru Mix by Wynken",
+   "rawDescription": "Mixed Media Jacket by Wynken. This mixed media jacket is perfect for colder days, combining warmth with playful style. The ecru faux fur exterior adds texture and character, while the Wynken stitching in a painter’s pale…"
+  },
+  {
+   "originCode": "WK21W97",
+   "host": "nickis.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "JACKET"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "JACKET",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Mixed Media Jacket in Ecru Mix by Wynken",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Mixed Media Jacket in Ecru Mix by Wynken",
+   "rawDescription": "Mixed Media Jacket by Wynken. This mixed media jacket is perfect for colder days, combining warmth with playful style. The ecru faux fur exterior adds texture and character, while the Wynken stitching in a painter’s pale…"
+  },
+  {
+   "originCode": "WK21W97",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "JACKET"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "JACKET",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Mixed Media Jacket in Ecru Mix by Wynken",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Mixed Media Jacket in Ecru Mix by Wynken",
+   "rawDescription": "Mixed Media Jacket by Wynken. This mixed media jacket is perfect for colder days, combining warmth with playful style. The ecru faux fur exterior adds texture and character, while the Wynken stitching in a painter’s pale…"
+  },
+  {
+   "originCode": "",
+   "host": "designerkidswear.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "DRESS"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "DRESS",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Handsmock Dress in Little Bouquet by Bonjour",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Handsmock Dress in Little Bouquet by Bonjour",
+   "rawDescription": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful floral fabric with removable crochet collar. Colour - Little Bouquet. 100% Cotton. Size Guide: 2 Years: Length 56cm, C…"
+  },
+  {
+   "originCode": "",
+   "host": "designerkidswear.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "JACKET"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "JACKET",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Reversible Jacket no03 in Otter Brown by True Artist",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Reversible Jacket nº03 in Otter Brown by True Artist",
+   "rawDescription": "Reversible Jacket nº03 by True Artist. Reversible Jacket nº03 in Otter Brown is made of 100% polyamide in one face and 100% polyester polar fleece on the other face. This reversible style features different details and c…"
+  },
+  {
+   "originCode": "",
+   "host": "designerkidswear.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "JACKET"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "JACKET",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+   "rawDescription": "SIZE AND FIT    Relaxed fit    COMPOSITION    100% Recycled Polyamide    Find out more    Wash Cold-Gentle  Made in China"
+  },
+  {
+   "originCode": "",
+   "host": "folkberlin.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "JACKET"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "JACKET",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+   "rawDescription": "SIZE AND FIT    Relaxed fit    COMPOSITION    100% Recycled Polyamide    Find out more    Wash Cold-Gentle  Made in China"
+  },
+  {
+   "originCode": "",
+   "host": "folkberlin.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Bubble Sweatshirt - Grey Melange",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Bubble Sweatshirt - Grey Melange",
+   "rawDescription": "Our Grey Melange oversized Bubble Sweatshirt is made from soft organic cotton jersey fleece, with a relaxed, wide fit and dropped shoulders that combines comfort and a laid-back look. Garment-dyed for extra softness, it …"
+  },
+  {
+   "originCode": "",
+   "host": "folkberlin.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Bobo Choses Organic Cotton T-shirt | Ecru",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Bobo Choses Organic Cotton T-shirt | Ecru",
+   "rawDescription": "COMPOSITION    100% Organic Cotton    Find out more    Wash Cold-30°  Made in Portugal"
+  },
+  {
+   "originCode": "",
+   "host": "folkberlin.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Bubble Sweatshirt - Grey Melange",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Bubble Sweatshirt - Grey Melange",
+   "rawDescription": "Our Grey Melange oversized Bubble Sweatshirt is made from soft organic cotton jersey fleece, with a relaxed, wide fit and dropped shoulders that combines comfort and a laid-back look. Garment-dyed for extra softness, it …"
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "JACKET"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "JACKET",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+   "rawDescription": "SIZE AND FIT    Relaxed fit    COMPOSITION    100% Recycled Polyamide    Find out more    Wash Cold-Gentle  Made in China"
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Bobo Choses Organic Cotton T-shirt | Ecru",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Bobo Choses Organic Cotton T-shirt | Ecru",
+   "rawDescription": "COMPOSITION    100% Organic Cotton    Find out more    Wash Cold-30°  Made in Portugal"
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "DRESS",
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "DRESS",
+     "source": "DESCRIPTION",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "SHIRT",
+     "source": "DESCRIPTION",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Tunique With Hair Clip in Little Bouquet by Bonjour",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Tunique With Hair Clip in Little Bouquet by Bonjour",
+   "rawDescription": "Tunique with hair clip by Bonjour. Pretty burgundy blouse which can be worn as a dress. Beautiful hand smocked navy collar tied with a red bow, elasticated puff sleeves and Bonjour's signature smocking. Complete with mat…"
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "JACKET"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "JACKET",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Reversible Jacket no03 in Otter Brown by True Artist",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Reversible Jacket nº03 in Otter Brown by True Artist",
+   "rawDescription": "Reversible Jacket nº03 by True Artist. Reversible Jacket nº03 in Otter Brown is made of 100% polyamide in one face and 100% polyester polar fleece on the other face. This reversible style features different details and c…"
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Bubble Sweatshirt - Grey Melange",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Bubble Sweatshirt - Grey Melange",
+   "rawDescription": "Our Grey Melange oversized Bubble Sweatshirt is made from soft organic cotton jersey fleece, with a relaxed, wide fit and dropped shoulders that combines comfort and a laid-back look. Garment-dyed for extra softness, it …"
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "JACKET"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "JACKET",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Mixed Media Jacket - Ecru Mix",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Mixed Media Jacket - Ecru Mix",
+   "rawDescription": "This mixed media jacket is perfect for colder days, combining warmth with playful style. The ecru faux fur exterior adds texture and character, while the Wynken stitching in a painter’s palette shape gives a subtle, crea…"
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SWEATSHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SWEATSHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Bubble Sweatshirt - Grey Melange",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Bubble Sweatshirt - Grey Melange",
+   "rawDescription": "Our Grey Melange oversized Bubble Sweatshirt is made from soft organic cotton jersey fleece, with a relaxed, wide fit and dropped shoulders that combines comfort and a laid-back look. Garment-dyed for extra softness, it …"
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "DRESS"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "DRESS",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+   "rawDescription": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful floral fabric with removable crochet collar. Colour - Burgundy Cashmere. 100% Cotton. Size Guide: 2 Years: Length 56cm…"
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "DRESS"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "DRESS",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Handsmock Dress in Little Bouquet by Bonjour",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Handsmock Dress in Little Bouquet by Bonjour",
+   "rawDescription": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful floral fabric with removable crochet collar. Colour - Little Bouquet. 100% Cotton. Size Guide: 2 Years: Length 56cm, C…"
+  },
+  {
+   "originCode": "",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "JACKET"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "JACKET",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Mixed Media Jacket - Ecru Mix",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Mixed Media Jacket - Ecru Mix",
+   "rawDescription": "This mixed media jacket is perfect for colder days, combining warmth with playful style. The ecru faux fur exterior adds texture and character, while the Wynken stitching in a painter’s palette shape gives a subtle, crea…"
+  },
+  {
+   "originCode": "",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "JACKET"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "JACKET",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+   "rawDescription": "SIZE AND FIT    Relaxed fit    COMPOSITION    100% Recycled Polyamide    Find out more    Wash Cold-Gentle  Made in China"
+  },
+  {
+   "originCode": "",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "DRESS"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "DRESS",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Handsmock Dress in Little Bouquet by Bonjour",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Handsmock Dress in Little Bouquet by Bonjour",
+   "rawDescription": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful floral fabric with removable crochet collar. Colour - Little Bouquet. 100% Cotton. Size Guide: 2 Years: Length 56cm, C…"
+  },
+  {
+   "originCode": "",
+   "host": "kidbizkid.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "JACKET"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "JACKET",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Reversible Jacket no03 in Otter Brown by True Artist",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Reversible Jacket nº03 in Otter Brown by True Artist",
+   "rawDescription": "Reversible Jacket nº03 by True Artist. Reversible Jacket nº03 in Otter Brown is made of 100% polyamide in one face and 100% polyester polar fleece on the other face. This reversible style features different details and c…"
+  },
+  {
+   "originCode": "",
+   "host": "nickis.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "JACKET"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "JACKET",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+   "rawDescription": "SIZE AND FIT    Relaxed fit    COMPOSITION    100% Recycled Polyamide    Find out more    Wash Cold-Gentle  Made in China"
+  },
+  {
+   "originCode": "",
+   "host": "petitemaisonkids.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "DRESS",
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "DRESS",
+     "source": "DESCRIPTION",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "SHIRT",
+     "source": "DESCRIPTION",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Tunique With Hair Clip in Little Bouquet by Bonjour",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Tunique With Hair Clip in Little Bouquet by Bonjour",
+   "rawDescription": "Tunique with hair clip by Bonjour. Pretty burgundy blouse which can be worn as a dress. Beautiful hand smocked navy collar tied with a red bow, elasticated puff sleeves and Bonjour's signature smocking. Complete with mat…"
+  },
+  {
+   "originCode": "",
+   "host": "petitemaisonkids.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "DRESS"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "DRESS",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+   "rawDescription": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful floral fabric with removable crochet collar. Colour - Burgundy Cashmere. 100% Cotton. Size Guide: 2 Years: Length 56cm…"
+  },
+  {
+   "originCode": "",
+   "host": "shoppiccoliandco.com",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "DRESS"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "DRESS",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+   "rawDescription": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful floral fabric with removable crochet collar. Colour - Burgundy Cashmere. 100% Cotton. Size Guide: 2 Years: Length 56cm…"
+  },
+  {
+   "originCode": "",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "DRESS"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "DRESS",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+   "rawDescription": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful floral fabric with removable crochet collar. Colour - Burgundy Cashmere. 100% Cotton. Size Guide: 2 Years: Length 56cm…"
+  },
+  {
+   "originCode": "",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "SHIRT"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "SHIRT",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Bobo Choses Organic Cotton T-shirt | Ecru",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Bobo Choses Organic Cotton T-shirt | Ecru",
+   "rawDescription": "COMPOSITION    100% Organic Cotton    Find out more    Wash Cold-30°  Made in Portugal"
+  },
+  {
+   "originCode": "",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "DRESS"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "DRESS",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Handsmock Dress in Little Bouquet by Bonjour",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Handsmock Dress in Little Bouquet by Bonjour",
+   "rawDescription": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful floral fabric with removable crochet collar. Colour - Little Bouquet. 100% Cotton. Size Guide: 2 Years: Length 56cm, C…"
+  },
+  {
+   "originCode": "",
+   "host": "villagekids.co.uk",
+   "gt": null,
+   "joinedToStored": false,
+   "storedVerdict": null,
+   "ownerState": "OBSERVED",
+   "reason": "DIRECT_SINGLE_SOURCE",
+   "ownerReasons": [
+    "상품명 후보를 한 출처에서만 읽었다 — 독립 근거가 부족하다"
+   ],
+   "productTypes": [
+    "JACKET"
+   ],
+   "directSources": [
+    "TITLE"
+   ],
+   "observations": [
+    {
+     "raw": "JACKET",
+     "source": "TITLE",
+     "producer": "PRODUCT_TYPE",
+     "contextKind": "DIRECT",
+     "productAttributable": false,
+     "genericTypeOnly": true
+    },
+    {
+     "raw": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+     "source": "TITLE",
+     "producer": "TITLE_TEXT",
+     "contextKind": "DIRECT",
+     "productAttributable": true,
+     "genericTypeOnly": false
+    }
+   ],
+   "rawTitle": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+   "rawDescription": "SIZE AND FIT    Relaxed fit    COMPOSITION    100% Recycled Polyamide    Find out more    Wash Cold-Gentle  Made in China"
+  }
+ ]
+}
