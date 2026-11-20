@@ -7,6 +7,28 @@
 
 ---
 
+## 0-RESULT. 🔴🔴 **[2026-11-20 집행 완료] STEP 1 끝남 · 수정안 «기각» — 다시 하지 않는다**
+
+```
+원인 확정 🟢 `junioredition.com × B226AC033` 은 품번이 **설명에만** 있다(`DESCRIPTION_ONLY`)
+          운영 확인 owner `confirmBrandCodeInEvidence`(match.ts:635)의 건초더미가
+          **title · url · sku 셋**(domestic-identifiers.ts:185)이라 **설명을 보지 않는다**
+          ⟹ 품번 축 인정 0 ⟹ 정원 5 미달 ⟹ `PRESUMED_SAME`
+대조군    🟢 같은 원상품의 `tiptoeboutique.com` 은 품번이 **URL** 에 있어 그대로 `SAME`
+기각 사유 🔴 그 레버(설명 품번 단독 확인)는 **이미 측정·REJECT** 됐다 —
+          20쌍 · 4호스트 · **실제 이득 1 ↔ GT DIFFERENT 오염 2**(cemarose.ca · tinyapple.net)
+          ⟹ 이 문서 §1 절대 기준(「대조군 DIFFERENT 유지」)에 **2건 실패** ⟹ 전체 기각
+잠금      🟢 `a-identity-axis.test.ts`(6 tests PASS)가 그 결론을 기계로 잠근다
+남은 길   🔴 네 레버 전부 닫혔다(제목토큰 · 설명품번 · 선행문자없는품번 · 원상품측복구)
+          🟡 열려 있는 것은 **복합 근거**(브랜드+품번+상품명을 설명에서 «함께» 문맥 검증)이고
+             선행 조건은 **후보측 원문 확보** 다 — 🔴 지금 **HTTP 429 호스트 12곳** 이 막는다
+```
+
+🔵 **MI 식별 전략 상시 규칙은 `docs/CTO-SESSION-START.DRAFT.md` §A-MI 다**(CPO 확정 2026-11-20).
+🔴 아래 STEP 1~5 는 **집행 기록으로 보존** 한다 — 재실행 지시가 아니다.
+
+---
+
 ## 0. 이번 세션의 목표 — 한 건
 
 **`junioredition.com × B226AC033` 의 해외 MI 판정을 바로잡거나, 근거에 따라 수정안을 기각한다.**
