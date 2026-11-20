@@ -1,0 +1,8006 @@
+{
+ "note": "🔴 평가 전용 — 운영 판정 경로 연결 0 · verdict 변경 0 · 점수/threshold 0 · 가격 자격 0 · 브랜드 사전 운영 반영 0 · B-38 재개 0 · DB 0 · 수집 0 · HTTP 0. 기존 계약 2건은 운영 owner 5개/3개의 import 를 금지하며 이 파일은 그 owner 가 아니다(테스트). 원문을 유지하고 정규화값은 별도 칸(normalized)에 둔다. productTypes 는 고유 이름이 아니다. brandVocabCandidates 는 «출현을 센 목록» 이고 별칭 사전에 넣지 않았다. 분모 109 는 16·19·26 과 합산하지 않는다.",
+ "denominator": {
+  "pairs": 109,
+  "joinedToStored": 39,
+  "gtLabeled": 36,
+  "gtAndStored": 19,
+  "rawPresence": {
+   "originTitle": 92,
+   "originDescription": 92,
+   "candidateTitle": 109,
+   "candidateDescription": 98
+  },
+  "notMerged": {
+   "bothSideFullText": 16,
+   "gtComparable": 19,
+   "identityAxisPairs": 26
+  }
+ },
+ "states": {
+  "brand": {
+   "PRESENT": 17,
+   "ABSENT": 89,
+   "UNKNOWN": 2,
+   "CONFLICT": 1
+  },
+  "modelCode": {
+   "CONFLICT": 15,
+   "ABSENT": 65,
+   "PRESENT": 18,
+   "UNKNOWN": 11
+  },
+  "productName": {
+   "UNKNOWN": 107,
+   "ABSENT": 2
+  }
+ },
+ "productNameOwnerState": {
+  "origin": {
+   "OBSERVED": 92,
+   "UNKNOWN": 17
+  },
+  "candidate": {
+   "OBSERVED": 107,
+   "CORROBORATED": 2
+  },
+  "bothCorroborated": 0
+ },
+ "brandVocabCandidates": [
+  {
+   "brand": "Hugo Boss",
+   "occurrences": 2,
+   "recognizedByExistingAlias": 0,
+   "gtLinked": 1,
+   "gtDistribution": {
+    "(미라벨)": 1,
+    "DIFFERENT": 1
+   },
+   "hosts": [
+    "kidbizkid.com"
+   ]
+  },
+  {
+   "brand": "Marc Jacobs",
+   "occurrences": 1,
+   "recognizedByExistingAlias": 0,
+   "gtLinked": 1,
+   "gtDistribution": {
+    "DIFFERENT": 1
+   },
+   "hosts": [
+    "kidbizkid.com"
+   ]
+  },
+  {
+   "brand": "Dolce",
+   "occurrences": 1,
+   "recognizedByExistingAlias": 0,
+   "gtLinked": 1,
+   "gtDistribution": {
+    "DIFFERENT": 1
+   },
+   "hosts": [
+    "designerkidswear.com"
+   ]
+  },
+  {
+   "brand": "Gabbana",
+   "occurrences": 1,
+   "recognizedByExistingAlias": 0,
+   "gtLinked": 1,
+   "gtDistribution": {
+    "DIFFERENT": 1
+   },
+   "hosts": [
+    "designerkidswear.com"
+   ]
+  },
+  {
+   "brand": "Moncler",
+   "occurrences": 1,
+   "recognizedByExistingAlias": 0,
+   "gtLinked": 0,
+   "gtDistribution": {
+    "(미라벨)": 1
+   },
+   "hosts": [
+    "designerkidswear.com"
+   ]
+  },
+  {
+   "brand": "Ralph Lauren",
+   "occurrences": 1,
+   "recognizedByExistingAlias": 0,
+   "gtLinked": 0,
+   "gtDistribution": {
+    "(미라벨)": 1
+   },
+   "hosts": [
+    "nickis.com"
+   ]
+  },
+  {
+   "brand": "Mini Rodini",
+   "occurrences": 1,
+   "recognizedByExistingAlias": 0,
+   "gtLinked": 0,
+   "gtDistribution": {
+    "(미라벨)": 1
+   },
+   "hosts": [
+    "folkberlin.com"
+   ]
+  },
+  {
+   "brand": "Konges",
+   "occurrences": 1,
+   "recognizedByExistingAlias": 0,
+   "gtLinked": 0,
+   "gtDistribution": {
+    "(미라벨)": 1
+   },
+   "hosts": [
+    "folkberlin.com"
+   ]
+  }
+ ],
+ "unmeasurable": {
+  "note": "🔴 0 으로 세지 않는다 — UNKNOWN 은 「양쪽 다 없다」이고 ABSENT 는 「한쪽만 없다」다",
+  "originTitleMissing": 17,
+  "candidateDescriptionMissing": 11
+ },
+ "rows": [
+  {
+   "originCode": "B226AB097",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/stamp-bloom-all-over-reversible-jacket-by-bobo-choses",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 42
+     },
+     "state": "PRESENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AB097",
+      "normalized": "b226ab097",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "B226AC097",
+      "normalized": "b226ac097",
+      "source": "DESCRIPTION",
+      "at": 332
+     },
+     "state": "CONFLICT",
+     "candidateLabeledAll": [
+      "Product code=B226AC097"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [],
+     "candidateProductTypes": [
+      "JACKET"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AB097",
+   "host": "nickis.com",
+   "candidateUrl": "https://nickis.com/products/colmar-daunenjacke-reversible-quilted-marineblau-7404628282",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AB097",
+      "normalized": "b226ab097",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [],
+     "candidateProductTypes": [],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "biskuit.kr",
+   "candidateUrl": "https://biskuit.kr/product/%eb%b3%b4%eb%b3%b4%ec%87%bc%ec%a6%88-%ed%97%88%ea%b7%b8-%ed%97%a4%ec%96%b4%eb%a6%ac-%eb%aa%ac%ec%8a%a4%ed%84%b0-%ed%8b%b0%ec%85%94%ec%b8%a0-b226ac009/8891/category/367/display/1/",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": -1
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "TITLE",
+      "at": 22
+     },
+     "state": "PRESENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "UNKNOWN",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": false,
+    "originDescription": false,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "bobochoses.com",
+   "candidateUrl": "https://bobochoses.com/products/b226ab040-hug-hairy-monster-t-shirt",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "UNKNOWN",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": false,
+    "originDescription": false,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "bornyesterdaykids.com",
+   "candidateUrl": "https://bornyesterdaykids.com/products/bobo-choses-baby-hug-hairy-monster-l-s-t-shirt-booo-bo-choses-tag-denim-pants-set-light-blue-red",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 0
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [],
+     "candidateProductTypes": [
+      "PANTS",
+      "SHIRT"
+     ],
+     "originState": "UNKNOWN",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": false,
+    "originDescription": false,
+    "candidateTitle": true,
+    "candidateDescription": false
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "cemarose.ca",
+   "candidateUrl": "https://cemarose.ca/products/bobo-choses-kids-booty-ghosts-sweatshirt-light-blue-c7907",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": null,
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 0
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [],
+     "candidateProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "originState": "UNKNOWN",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": false,
+    "originDescription": false,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "cissywears.com",
+   "candidateUrl": "https://cissywears.com/products/bobo-choses-babyhug-hairy-monster-t-shirt",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 0
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "UNKNOWN",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": false,
+    "originDescription": false,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "global.trenbe.com",
+   "candidateUrl": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "storedTier": "EXACT",
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 0
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "TITLE",
+      "at": 68
+     },
+     "state": "PRESENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses Kids Hug Hairy Monster Long Sleeve T-Shirt (Light Blue) B226AC009 451 160484657 [P]",
+      "normalized": "bobo choses kids hug hairy monster long sleeve t shirt light blue b226ac009 451 160484657 p",
+      "source": "DESCRIPTION",
+      "at": 48
+     },
+     "state": "ABSENT",
+     "originProductTypes": [],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "UNKNOWN",
+     "candidateState": "CORROBORATED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": false,
+    "originDescription": false,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "global.trenbe.com",
+   "candidateUrl": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": "EXACT",
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 0
+     },
+     "state": "PRESENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "TITLE",
+      "at": 68
+     },
+     "state": "PRESENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses Kids Hug Hairy Monster Long Sleeve T-Shirt (Light Blue) B226AC009 451 160484657 [P]",
+      "normalized": "bobo choses kids hug hairy monster long sleeve t shirt light blue b226ac009 451 160484657 p",
+      "source": "DESCRIPTION",
+      "at": 48
+     },
+     "state": "ABSENT",
+     "originProductTypes": [
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "CORROBORATED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "gt": "SAME",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 29
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "DESCRIPTION",
+      "at": 214
+     },
+     "state": "PRESENT",
+     "candidateLabeledAll": [
+      "Product code=B226AC009"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "gt": null,
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 29
+     },
+     "state": "PRESENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "DESCRIPTION",
+      "at": 214
+     },
+     "state": "PRESENT",
+     "candidateLabeledAll": [
+      "Product code=B226AC009"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "junioredition.com",
+   "candidateUrl": "https://www.junioredition.com/products/hug-hairy-monster-baby-t-shirt-by-bobo-choses",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 34
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "B226AB040",
+      "normalized": "b226ab040",
+      "source": "DESCRIPTION",
+      "at": 263
+     },
+     "state": "CONFLICT",
+     "candidateLabeledAll": [
+      "Product code=B226AB040"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "UNKNOWN",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": false,
+    "originDescription": false,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "junioredition.com",
+   "candidateUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "gt": "SAME",
+   "storedVerdict": "SAME",
+   "storedTier": null,
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 29
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "DESCRIPTION",
+      "at": 214
+     },
+     "state": "PRESENT",
+     "candidateLabeledAll": [
+      "Product code=B226AC009"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "UNKNOWN",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": false,
+    "originDescription": false,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "kids21.com",
+   "candidateUrl": "https://kids21.com/products/700005621lbl",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 0
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "UNKNOWN",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": false,
+    "originDescription": false,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "m.luxboy.com",
+   "candidateUrl": "https://m.luxboy.com/product/a14338197cb8698cd92c86431cce8d05",
+   "gt": "DIFFERENT",
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 5
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "TITLE",
+      "at": 27
+     },
+     "state": "PRESENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [],
+     "candidateProductTypes": [],
+     "originState": "UNKNOWN",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": false,
+    "originDescription": false,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "miniboutique.co.kr",
+   "candidateUrl": "https://miniboutique.co.kr/product/bobo-chosest-shirt-b226ac009/28043/",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 1
+     },
+     "state": "PRESENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "TITLE",
+      "at": 23
+     },
+     "state": "PRESENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "parkette.ca",
+   "candidateUrl": "https://www.parkette.ca/products/hug-hairy-monster-sweatshirt",
+   "gt": "DIFFERENT",
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "DESCRIPTION",
+      "at": 36
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [],
+     "candidateProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "originState": "UNKNOWN",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": false,
+    "originDescription": false,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "scoutandcokids.com",
+   "candidateUrl": "https://scoutandcokids.com/collections/bobo-choses/products/bobo-choses-hug-hairy-monster-t-shirt",
+   "gt": "SAME",
+   "storedVerdict": "SAME",
+   "storedTier": null,
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 0
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [],
+     "candidateProductTypes": [
+      "TOP"
+     ],
+     "originState": "UNKNOWN",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": false,
+    "originDescription": false,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "stockmann.ee",
+   "candidateUrl": "https://www.stockmann.ee/et-ee/bobo-choses-trikoosark-hug-monster/18119748633-1.html",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 0
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [],
+     "candidateProductTypes": [],
+     "originState": "UNKNOWN",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": false,
+    "originDescription": false,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "thefrontshop.com",
+   "candidateUrl": "https://www.thefrontshop.com/products/hug-hairy-monster-t-shirt",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 0
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "UNKNOWN",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": false,
+    "originDescription": false,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "tinyapple.net",
+   "candidateUrl": "https://www.tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 0
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "DESCRIPTION",
+      "at": 161
+     },
+     "state": "PRESENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "UNKNOWN",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": false,
+    "originDescription": false,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "tinyapple.net",
+   "candidateUrl": "https://www.tinyapple.net/en-kr/products/bobo-choses-bobo-choses-pop-t-shirt-blue",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": null,
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 0
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "UNKNOWN",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": false,
+    "originDescription": false,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "tinyapple.net",
+   "candidateUrl": "https://www.tinyapple.net/en-kr/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+   "gt": "SAME",
+   "storedVerdict": "SAME",
+   "storedTier": null,
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 0
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "DESCRIPTION",
+      "at": 161
+     },
+     "state": "PRESENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "UNKNOWN",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": false,
+    "originDescription": false,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/pale-blue-3d-logo-t-shirt",
+   "gt": null,
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": false
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/pale-blue-3d-logo-t-shirt",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": false
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/blue-tie-dye-polo-bear-t-shirt",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": false
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": null,
+   "candidateUrl": "https://www.junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 29
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "DESCRIPTION",
+      "at": 214
+     },
+     "state": "PRESENT",
+     "candidateLabeledAll": [
+      "Product code=B226AC009"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC009",
+   "host": null,
+   "candidateUrl": "https://scoutandcokids.com/products/bobo-choses-hug-hairy-monster-t-shirt",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 0
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC009",
+      "normalized": "b226ac009",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "TOP"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC010",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/booty-ghosts-t-shirt-by-bobo-choses",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 24
+     },
+     "state": "PRESENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC010",
+      "normalized": "b226ac010",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "B226AC141",
+      "normalized": "b226ac141",
+      "source": "DESCRIPTION",
+      "at": 236
+     },
+     "state": "CONFLICT",
+     "candidateLabeledAll": [
+      "Product code=B226AC141"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC010",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 36
+     },
+     "state": "PRESENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC010",
+      "normalized": "b226ac010",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "B226AC010",
+      "normalized": "b226ac010",
+      "source": "DESCRIPTION",
+      "at": 231
+     },
+     "state": "PRESENT",
+     "candidateLabeledAll": [
+      "Product code=B226AC010"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC010",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 36
+     },
+     "state": "PRESENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC010",
+      "normalized": "b226ac010",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "B226AC010",
+      "normalized": "b226ac010",
+      "source": "DESCRIPTION",
+      "at": 231
+     },
+     "state": "PRESENT",
+     "candidateLabeledAll": [
+      "Product code=B226AC010"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC017",
+   "host": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/hugo-boss-baby-boys-double-b-graphic-t-shirt",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC017",
+      "normalized": "b226ac017",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [
+    "Hugo Boss"
+   ],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC017",
+   "host": "nickis.com",
+   "candidateUrl": "https://nickis.com/products/bobo-choses-t-shirt-cremeweiss-3006678709",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "DESCRIPTION",
+      "at": 7
+     },
+     "state": "PRESENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC017",
+      "normalized": "b226ac017",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "SHIRT",
+      "TOP"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC017",
+   "host": "petitemaisonkids.com",
+   "candidateUrl": "https://petitemaisonkids.com/products/charlie-white-mandarin-collar-shirt",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC017",
+      "normalized": "b226ac017",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "SHIRT",
+      "TOP"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC017",
+   "host": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/white-stripe-graphic-t-shirt",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC017",
+      "normalized": "b226ac017",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": false
+   }
+  },
+  {
+   "originCode": "B226AC029",
+   "host": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/michael-kors-kids-girls-sweater-pink-r15223-44v",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC029",
+      "normalized": "b226ac029",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/fendi-baby-boys-sweatshirt-blue-buh088-8ra-f19j4",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC033",
+      "normalized": "b226ac033",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/stone-island-junior-kids-boys-sweatshirt-blue-6100001-s0a20-v004b",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC033",
+      "normalized": "b226ac033",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC033",
+      "normalized": "b226ac033",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/bobo-choses-pop-sweatshirt-by-bobo-choses",
+   "gt": "SAME",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 0
+     },
+     "state": "PRESENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC033",
+      "normalized": "b226ac033",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "B226AC033",
+      "normalized": "b226ac033",
+      "source": "DESCRIPTION",
+      "at": 331
+     },
+     "state": "PRESENT",
+     "candidateLabeledAll": [
+      "Product code=B226AC033"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/hugo-boss-navy-zip-sweatshirt",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC033",
+      "normalized": "b226ac033",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [
+      "JACKET",
+      "SWEATSHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [
+    "Hugo Boss"
+   ],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/lacoste-navy-sweatshirt",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC033",
+      "normalized": "b226ac033",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "petitemaisonkids.com",
+   "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC033",
+      "normalized": "b226ac033",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [
+      "TOP"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "shoppiccoliandco.com",
+   "candidateUrl": "https://shoppiccoliandco.com/products/jude-navy-baby-boy-anchor-sweater",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC033",
+      "normalized": "b226ac033",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [
+      "BODYSUIT",
+      "PANTS",
+      "ROMPER"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC033",
+   "host": "tiptoeboutique.com",
+   "candidateUrl": "https://tiptoeboutique.com/products/b226ac033-midnight-blue",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 0
+     },
+     "state": "PRESENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC033",
+      "normalized": "b226ac033",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC036",
+   "host": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC036",
+      "normalized": "b226ac036",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC036",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/mush-monster-duo-baby-sweatshirt-by-bobo-choses",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 36
+     },
+     "state": "PRESENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC036",
+      "normalized": "b226ac036",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "B226AB059",
+      "normalized": "b226ab059",
+      "source": "DESCRIPTION",
+      "at": 308
+     },
+     "state": "CONFLICT",
+     "candidateLabeledAll": [
+      "Product code=B226AB059"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC036",
+   "host": null,
+   "candidateUrl": "https://www.beaumonde.co.kr/goods/goods_view.php?goodsno=1000014013",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC036",
+      "normalized": "b226ac036",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": false
+   }
+  },
+  {
+   "originCode": "B226AC036",
+   "host": null,
+   "candidateUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362797&type=x&current_category=058",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": -1
+     },
+     "state": "PRESENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC036",
+      "normalized": "b226ac036",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC038",
+   "host": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC038",
+      "normalized": "b226ac038",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC038",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/hidden-monster-sweatshirt-by-bobo-choses",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 29
+     },
+     "state": "PRESENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC038",
+      "normalized": "b226ac038",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "B226AC038",
+      "normalized": "b226ac038",
+      "source": "DESCRIPTION",
+      "at": 303
+     },
+     "state": "PRESENT",
+     "candidateLabeledAll": [
+      "Product code=B226AC038"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC038",
+   "host": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/fendi-blue-ff-sweater",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC038",
+      "normalized": "b226ac038",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC038",
+   "host": "petitemaisonkids.com",
+   "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC038",
+      "normalized": "b226ac038",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [
+      "TOP"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC041",
+   "host": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/ea7-emporio-armani-kids-boys-polo-navy-7b000023-af1290-ub102",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "BOBO CHOSES",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC041",
+      "normalized": "b226ac041",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT",
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC041",
+   "host": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "BOBO CHOSES",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC041",
+      "normalized": "b226ac041",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT",
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC041",
+   "host": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/fendi-blue-ff-sweater",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "BOBO CHOSES",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC041",
+      "normalized": "b226ac041",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT",
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC041",
+   "host": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/navy-logo-rugby-sweatshirt",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "BOBO CHOSES",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC041",
+      "normalized": "b226ac041",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT",
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": false
+   }
+  },
+  {
+   "originCode": "B226AC043",
+   "host": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC043",
+      "normalized": "b226ac043",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC043",
+   "host": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/stone-island-blue-sweatshirt",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC043",
+      "normalized": "b226ac043",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC043",
+   "host": "petitemaisonkids.com",
+   "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC043",
+      "normalized": "b226ac043",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [
+      "TOP"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC043",
+   "host": "shoppiccoliandco.com",
+   "candidateUrl": "https://shoppiccoliandco.com/products/blue-bears-knitted-sweater",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC043",
+      "normalized": "b226ac043",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC043",
+   "host": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/blue-half-zip-sweatshirt",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC043",
+      "normalized": "b226ac043",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": false
+   }
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/versace-kids-baby-boys-denim-blue-1009197-1a08511-1d200",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC073",
+      "normalized": "b226ac073",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "PANTS"
+     ],
+     "candidateProductTypes": [],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/gingham-woven-trousers",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC073",
+      "normalized": "b226ac073",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "PANTS"
+     ],
+     "candidateProductTypes": [
+      "PANTS"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [
+    "Mini Rodini"
+   ],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/taxi-saurus-tag-denim-pants-by-bobo-choses",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 31
+     },
+     "state": "PRESENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC073",
+      "normalized": "b226ac073",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "B226AC073",
+      "normalized": "b226ac073",
+      "source": "DESCRIPTION",
+      "at": 203
+     },
+     "state": "PRESENT",
+     "candidateLabeledAll": [
+      "Product code=B226AC073"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "PANTS"
+     ],
+     "candidateProductTypes": [
+      "PANTS"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/diesel-viker-jeans",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC073",
+      "normalized": "b226ac073",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "PANTS"
+     ],
+     "candidateProductTypes": [],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "nickis.com",
+   "candidateUrl": "https://nickis.com/products/polo-ralph-lauren-jeans-blau-3402271700",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC073",
+      "normalized": "b226ac073",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "PANTS"
+     ],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [
+    "Ralph Lauren"
+   ],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "petitemaisonkids.com",
+   "candidateUrl": "https://petitemaisonkids.com/products/sparkle-blue-denim-jeans",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC073",
+      "normalized": "b226ac073",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "PANTS"
+     ],
+     "candidateProductTypes": [
+      "JACKET"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC073",
+   "host": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/denim-blue-jeans",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC073",
+      "normalized": "b226ac073",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "PANTS"
+     ],
+     "candidateProductTypes": [],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": false
+   }
+  },
+  {
+   "originCode": "B226AC073",
+   "host": null,
+   "candidateUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362810&type=x&current_category=058",
+   "gt": "SAME",
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": -1
+     },
+     "state": "PRESENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC073",
+      "normalized": "b226ac073",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "PANTS"
+     ],
+     "candidateProductTypes": [
+      "PANTS"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC110",
+   "host": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/dolce-gabbana-kids-boys-dg-t-shirt-white-l4jthvg7nvc-s9000",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC110",
+      "normalized": "b226ac110",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [
+    "Dolce",
+    "Gabbana"
+   ],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC110",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/bobo-choses-embossed-t-shirt-by-bobo-choses",
+   "gt": "SIMILAR",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 0
+     },
+     "state": "PRESENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC110",
+      "normalized": "b226ac110",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "B226AC111",
+      "normalized": "b226ac111",
+      "source": "DESCRIPTION",
+      "at": 244
+     },
+     "state": "CONFLICT",
+     "candidateLabeledAll": [
+      "Product code=B226AC111"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC110",
+   "host": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/marc-jacobs-black-t-shirt",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC110",
+      "normalized": "b226ac110",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [
+    "Marc Jacobs"
+   ],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC110",
+   "host": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/white-multi-sequin-logo-crop-t-shirt",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC110",
+      "normalized": "b226ac110",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": false
+   }
+  },
+  {
+   "originCode": "B226AC170",
+   "host": "nickis.com",
+   "candidateUrl": "https://nickis.com/products/levis-sweatshirt-rot-7401897725",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC170",
+      "normalized": "b226ac170",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [
+      "BODYSUIT",
+      "SWEATSHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226AC170",
+   "host": "shoppiccoliandco.com",
+   "candidateUrl": "https://shoppiccoliandco.com/products/rudolph-knitted-sweater",
+   "gt": "DIFFERENT",
+   "storedVerdict": "PRESUMED_SAME",
+   "storedTier": "COMPARISON",
+   "joinedToStored": true,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226AC170",
+      "normalized": "b226ac170",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "B226TC175",
+   "host": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweater-suit-biscuit-organic-cotton",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "B226TC175",
+      "normalized": "b226tc175",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "WK21A165",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/double-deerstalker-cap-in-blue-soft-tan-by-wynken",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Wynken",
+      "normalized": "wynken",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "WK21A165",
+      "normalized": "wk21a165",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "WK21A165",
+      "normalized": "wk21a165",
+      "source": "DESCRIPTION",
+      "at": 698
+     },
+     "state": "PRESENT",
+     "candidateLabeledAll": [
+      "Product Code=WK21A165"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [],
+     "candidateProductTypes": [],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "WK21W97",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/mixed-media-jacket-in-blue-mix-by-wynken",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Wynken",
+      "normalized": "wynken",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "WK21W97",
+      "normalized": "wk21w97",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "WK21W97",
+      "normalized": "wk21w97",
+      "source": "DESCRIPTION",
+      "at": 610
+     },
+     "state": "PRESENT",
+     "candidateLabeledAll": [
+      "Product Code=WK21W97"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "JACKET"
+     ],
+     "candidateProductTypes": [
+      "JACKET"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "WK21W97",
+   "host": "nickis.com",
+   "candidateUrl": "https://nickis.com/products/wynken-jacke-mixed-media-mehrfarbig-7400851022",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Wynken",
+      "normalized": "wynken",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "WK21W97",
+      "normalized": "wk21w97",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "JACKET"
+     ],
+     "candidateProductTypes": [],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "WK21W97",
+   "host": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/black-puffer-coat-4",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Wynken",
+      "normalized": "wynken",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "WK21W97",
+      "normalized": "wk21w97",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "JACKET"
+     ],
+     "candidateProductTypes": [
+      "JACKET"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": false
+   }
+  },
+  {
+   "originCode": "",
+   "host": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/givenchy-baby-girls-dress-pink-h31301-46g",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bonjour",
+      "normalized": "bonjour",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "BJ21",
+      "normalized": "bj21",
+      "source": "DESCRIPTION",
+      "at": 536
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "DRESS"
+     ],
+     "candidateProductTypes": [
+      "DRESS",
+      "SHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/moncler-kids-enfant-baby-k2f-jacket-brown-1a00024-597z8-246",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "True Artist",
+      "normalized": "true artist",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "JACKET"
+     ],
+     "candidateProductTypes": [
+      "JACKET"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [
+    "Moncler"
+   ],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/mackage-kids-jesse-blue-jesse-bl",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "JACKET"
+     ],
+     "candidateProductTypes": [
+      "JACKET"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/color-block-jacket-pastel-blue-mellow-yellow",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "SS25-250",
+      "normalized": "ss25 250",
+      "source": "DESCRIPTION",
+      "at": 236
+     },
+     "state": "CONFLICT",
+     "candidateLabeledAll": [
+      "Product code=SS25-250"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "JACKET"
+     ],
+     "candidateProductTypes": [
+      "JACKET"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/baby-ribbed-booties-grey-melange-organic-cotton",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Main Story",
+      "normalized": "main story",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [
+      "SOCKS"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/kim-shirt-organic-cotton-sleet-check",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [
+    "Konges"
+   ],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/baby-ribbed-booties-grey-melange-organic-cotton",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Main Story",
+      "normalized": "main story",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [
+      "SOCKS"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/faux-fur-reversible-jacket-in-blue-ode-to-rose-by-wynken",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "WK21W112",
+      "normalized": "wk21w112",
+      "source": "DESCRIPTION",
+      "at": 681
+     },
+     "state": "CONFLICT",
+     "candidateLabeledAll": [
+      "Product Code=WK21W112"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "JACKET"
+     ],
+     "candidateProductTypes": [
+      "JACKET"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/everyday-ghosts-all-over-baby-t-shirt-by-bobo-choses",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 41
+     },
+     "state": "PRESENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "B226AB039",
+      "normalized": "b226ab039",
+      "source": "DESCRIPTION",
+      "at": 228
+     },
+     "state": "CONFLICT",
+     "candidateLabeledAll": [
+      "Product code=B226AB039"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/tunique-with-hair-clip-in-garden-flowers-print-by-bonjour",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bonjour",
+      "normalized": "bonjour",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "BJ20",
+      "normalized": "bj20",
+      "source": "DESCRIPTION",
+      "at": 645
+     },
+     "candidate": {
+      "value": "BJ11-SS26",
+      "normalized": "bj11 ss26",
+      "source": "DESCRIPTION",
+      "at": 501
+     },
+     "state": "CONFLICT",
+     "candidateLabeledAll": [
+      "Product Code=BJ11-SS26"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "DRESS",
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "DRESS",
+      "TOP"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/pixel-abduction-all-over-reversible-jacket-by-bobo-choses",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "True Artist",
+      "normalized": "true artist",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "TITLE",
+      "at": 46
+     },
+     "state": "CONFLICT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "B226AC098",
+      "normalized": "b226ac098",
+      "source": "DESCRIPTION",
+      "at": 290
+     },
+     "state": "CONFLICT",
+     "candidateLabeledAll": [
+      "Product code=B226AC098"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "JACKET"
+     ],
+     "candidateProductTypes": [
+      "JACKET"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/bubble-sweatshirt-in-grey-melange-by-main-story",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Main Story",
+      "normalized": "main story",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "AW26MS185",
+      "normalized": "aw26ms185",
+      "source": "DESCRIPTION",
+      "at": 264
+     },
+     "state": "CONFLICT",
+     "candidateLabeledAll": [
+      "Product code=AW26MS185"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/mixed-media-jacket-in-ecru-mix-by-wynken",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Wynken",
+      "normalized": "wynken",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "WK21W97",
+      "normalized": "wk21w97",
+      "source": "DESCRIPTION",
+      "at": 616
+     },
+     "state": "CONFLICT",
+     "candidateLabeledAll": [
+      "Product Code=WK21W97"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "JACKET"
+     ],
+     "candidateProductTypes": [
+      "JACKET"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/bubble-sweatshirt-in-grey-melange-by-main-story",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Main Story",
+      "normalized": "main story",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": "AW26MS185",
+      "normalized": "aw26ms185",
+      "source": "DESCRIPTION",
+      "at": 264
+     },
+     "state": "CONFLICT",
+     "candidateLabeledAll": [
+      "Product code=AW26MS185"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "candidateProductTypes": [
+      "SWEATSHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/handsmock-apron-dress-in-natural-by-bonjour",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bonjour",
+      "normalized": "bonjour",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "BJ44",
+      "normalized": "bj44",
+      "source": "DESCRIPTION",
+      "at": 539
+     },
+     "candidate": {
+      "value": "BJ35-SS26",
+      "normalized": "bj35 ss26",
+      "source": "DESCRIPTION",
+      "at": 434
+     },
+     "state": "CONFLICT",
+     "candidateLabeledAll": [
+      "Product Code=BJ35-SS26"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "DRESS"
+     ],
+     "candidateProductTypes": [
+      "DRESS"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/exclusive-handsmock-dress-in-pink-tapestry-by-bonjour",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bonjour",
+      "normalized": "bonjour",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "BJ21",
+      "normalized": "bj21",
+      "source": "DESCRIPTION",
+      "at": 536
+     },
+     "candidate": {
+      "value": "BJ87",
+      "normalized": "bj87",
+      "source": "DESCRIPTION",
+      "at": 494
+     },
+     "state": "CONFLICT",
+     "candidateLabeledAll": [
+      "Product Code=BJ87"
+     ]
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "DRESS"
+     ],
+     "candidateProductTypes": [
+      "DRESS"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/patachou-ecru-tweed-coat",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Wynken",
+      "normalized": "wynken",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "JACKET"
+     ],
+     "candidateProductTypes": [
+      "JACKET"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/mackage-jesse-blue-jacket",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "JACKET"
+     ],
+     "candidateProductTypes": [
+      "JACKET"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/givenchy-lilac-dress",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bonjour",
+      "normalized": "bonjour",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "BJ21",
+      "normalized": "bj21",
+      "source": "DESCRIPTION",
+      "at": 536
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "DRESS"
+     ],
+     "candidateProductTypes": [
+      "DRESS"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/billieblush-reversible-leopard-jacket",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "True Artist",
+      "normalized": "true artist",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "JACKET"
+     ],
+     "candidateProductTypes": [
+      "JACKET"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "nickis.com",
+   "candidateUrl": "https://nickis.com/products/colmar-daunenjacke-reversible-quilted-marineblau-7404628282",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "JACKET"
+     ],
+     "candidateProductTypes": [],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "petitemaisonkids.com",
+   "candidateUrl": "https://petitemaisonkids.com/products/azalea-pink-flower-hair-clip",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bonjour",
+      "normalized": "bonjour",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "BJ20",
+      "normalized": "bj20",
+      "source": "DESCRIPTION",
+      "at": 645
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "DRESS",
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "DRESS"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "petitemaisonkids.com",
+   "candidateUrl": "https://petitemaisonkids.com/products/georgina-tartan-print-dress-with-red-bow",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bonjour",
+      "normalized": "bonjour",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "BJ44",
+      "normalized": "bj44",
+      "source": "DESCRIPTION",
+      "at": 539
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "DRESS"
+     ],
+     "candidateProductTypes": [
+      "DRESS"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "shoppiccoliandco.com",
+   "candidateUrl": "https://shoppiccoliandco.com/products/preorder-beatrice-burgundy-handsmocked-girl-sleeves-dress-ships-end-of-october",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bonjour",
+      "normalized": "bonjour",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "BJ44",
+      "normalized": "bj44",
+      "source": "DESCRIPTION",
+      "at": 539
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "DRESS"
+     ],
+     "candidateProductTypes": [
+      "DRESS",
+      "SKIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/lemon-print-dress",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bonjour",
+      "normalized": "bonjour",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "BJ44",
+      "normalized": "bj44",
+      "source": "DESCRIPTION",
+      "at": 539
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "DRESS"
+     ],
+     "candidateProductTypes": [
+      "DRESS"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/blue-t-shirt",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "SHIRT"
+     ],
+     "candidateProductTypes": [
+      "SHIRT"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/copy-of-coral-pink-broderie-anglaise-dress",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bonjour",
+      "normalized": "bonjour",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": "BJ21",
+      "normalized": "bj21",
+      "source": "DESCRIPTION",
+      "at": 536
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "DRESS"
+     ],
+     "candidateProductTypes": [
+      "DRESS"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  },
+  {
+   "originCode": "",
+   "host": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/blue-knitted-jacket",
+   "gt": null,
+   "storedVerdict": null,
+   "storedTier": null,
+   "joinedToStored": false,
+   "evidence": {
+    "brand": {
+     "origin": {
+      "value": "Bobo Choses",
+      "normalized": "bobo choses",
+      "source": "LIST",
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "ABSENT"
+    },
+    "modelCode": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "candidateLabeledAll": []
+    },
+    "productName": {
+     "origin": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "candidate": {
+      "value": null,
+      "normalized": null,
+      "source": null,
+      "at": null
+     },
+     "state": "UNKNOWN",
+     "originProductTypes": [
+      "JACKET"
+     ],
+     "candidateProductTypes": [
+      "JACKET"
+     ],
+     "originState": "OBSERVED",
+     "candidateState": "OBSERVED"
+    }
+   },
+   "brandVocabCandidates": [],
+   "rawPresence": {
+    "originTitle": true,
+    "originDescription": true,
+    "candidateTitle": true,
+    "candidateDescription": true
+   }
+  }
+ ]
+}
