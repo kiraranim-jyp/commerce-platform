@@ -286,6 +286,60 @@ AC↔AB (라인 다름)         **1** — `B226AC009 ↔ B226AB040`(bobochoses.c
 
 ---
 
+## 5-D. 🔵🔵🔵 [2026-11-20 정정] **CPO 정책이 코드에 «이미» 있다 — `ageLineDesignMatch`**
+
+🔴🔴 **내 직전 보고의 「AC↔AB 안전한 예외가 없다」를 정정한다.** 예외는 **이미 구현돼 있다**
+(`cross-seller.ts:1067` · blocker `MODEL_CODE_AGE_LINE` · 헌장 「관측된 차이 9」 중 하나).
+
+```
+발화 조건 **둘 다** 필요(:1050 주석 원문)
+  ① modelCode === "conflict"  (= 접두 공유 후 분기 · compareModelCode **그대로**)
+  ② **연령 어휘를 뺀 `coreTitleTokens` 가 완전 일치**(집합 동일 · 부분일치 ❌ · fuzzy ❌)
+     🟢 연령 어휘 판단은 **기존 owner** `resolveAudienceLine` 이 한다(새 사전 0 · threshold 0)
+거동   🔴 **충돌은 «언제나» 적는다** — 예외가 발화해도 `conflicts.MODEL_CODE` 를 그대로 push
+      🔴 **점수를 주지 않는다** — `identifierConfirmed` 는 `exact` 만 보므로 MODEL_CODE 축 **0점**
+      🟢 최종 등급은 **기존 축·blocker 가** 결정한다(자동 DIFFERENT 확정이 아니다)
+보호 유지(주석 원문)  `B226AC042 ↔ B226AC043` 디자인명이 달라 **미발화** ·
+      WU-143 false SAME 13건 **미발화** · 같은 디자인·다른 색상은 **COLOR 충돌이 위에서** 막는다 ·
+      세트 구성 차이는 **COMPOSITION 충돌** 이 막는다 · `cemarose.ca` 는 토큰이 하나 더 많아 **미발화**
+```
+
+### CPO 정책 ↔ 현행 코드 정합성 — 🟢 **여섯 항 전부 이미 충족**
+
+| CPO 정책 | 현행 코드 | 판정 |
+|---|---|---|
+| 품번 일치 = SAME 뒷받침 | `MODEL_CODE` 축 **3점**(`IDENTIFIER_AXIS_POINTS`) | 🟢 충족 |
+| 일반 불일치 = **충돌로 기록** 하고 함께 판단 | `conflicts.MODEL_CODE` **항상 push** | 🟢 충족 |
+| 불일치 하나로 **자동 확정 금지** | 예외 시 blocker 로 전환 · 등급은 다른 축이 결정 | 🟢 충족 |
+| AC↔AB 동일상품 가능성 **보존** | `MODEL_CODE_AGE_LINE` blocker | 🟢 충족 |
+| `AC042↔AC043` 보호 **유지** | 디자인명 달라 **미발화** | 🟢 충족 |
+| 복수 품번 Contract M · 품번 없음 UNKNOWN | `extractLabeledProductCode` · `"unavailable"` | 🟢 충족 |
+
+⟹ 🔴🔴 **그래서 코드 변경이 필요한 항목이 «없다».** 비대칭 사용(일치할 때만 쓰기)도 **애초에
+코드에 없다** — 충돌은 언제나 기록된다.
+
+### 🔴 그리고 내 「비용 1건」 수치를 **미확정으로 내린다**
+
+```
+§5-B 에서 「B226AC009 ↔ B226AB040 이 GT SAME 인데 conflict 로 막힌다」고 적었다.
+🔴 그 측정은 `compareModelCode` 를 **직접** 불렀고 **운영 경로(cross-seller)를 거치지 않았다**
+⟹ 운영에서는 `ageLineDesignMatch` 가 발화하면 **blocker 로 전환** 되고 **DIFFERENT 확정이 아니다**
+🔴 발화 여부는 「연령 어휘를 뺀 핵심 상품명 완전 일치」에 달려 있고 **이 세션에서 측정하지 않았다**
+⟹ 🔴 **「GT SAME 1건 손실」을 확정 비용으로 쓰지 않는다 — 미측정이다**(§5-B 표를 그렇게 읽는다)
+```
+
+### 표본 구출 시도 — 🔴 **실패(미측정 유지)**
+
+```
+`core-2al-human-gt.json` 의 bobochoses.com GT DIFFERENT 2건(`b226ab043` · `b226ab048`)을
+쓰려면 원상품 `SM430632` 의 **제조사 품번** 이 필요하다.
+🔴 `gt-master-origins.json` 실측 — `canonicalProduct.sku = "AAA1804532"`(**Smallable 자체 SKU**) ·
+   brand `Bobo Choses` · 🔴 **B226A* 형식 품번이 없다**
+⟹ 🔴 그 2건은 품번 축 검증에 **쓸 수 없다**(판매처 SKU 오인 금지) ⟹ 요구 표본 **여전히 0건**
+```
+
+---
+
 ## 6. CTO 권고
 
 ```
