@@ -107,6 +107,43 @@
 🔴 그 측정의 선행 조건은 **후보측 원문 확보** 이고 지금 **429 12호스트** 가 막는다
 ```
 
+### A-MI-8. 🔴🔴🔴 [2026-11-20 발견] **지배적 오판은 recall 이 아니라 precision 이다**
+
+🟢 근거는 **저장된 운영 verdict** 다(하니스 재구성 아님 · CONTROL 문제 없음) —
+`fixtures/mi-reeval-01-db-human.json` **38행**(`human_verdict` ↔ `system_verdict` ↔ `price_tier`).
+
+```
+GT SAME **22**       sys null **15**(🔴 측정불가) · SAME 3 · PRESUMED_SAME 4
+                     ⟹ 측정가능 **7** · 오판 **0**   🟢 동일상품을 놓치지 않는다
+🔴🔴 GT DIFFERENT **15**  sys null 2 · **PRESUMED_SAME 13**
+                     ⟹ 측정가능 **13** · **오판 13/13 (100%)**
+                     🔴 그중 **10건이 `tier COMPARISON`** ⟹ **가격 비교에 들어간다**
+GT SIMILAR 1         PRESUMED_SAME 1(과도)
+🔴 분모 합산 금지 — 이 38행은 16·32·A군 7·IDENTITY_AXIS 26 과 **다른 집합** 이다
+```
+
+🔵🔵🔵 **기전 — 파일 자신의 불변식이 깨져 있다**(이 발견이 핵심이다):
+
+```
+`buildCoreTitleTokens(title, [brand, color, fabrics])`   걷어내는 것이 **셋** 뿐이다
+  (seller-facts.ts:40 · product-identity-dna.ts:162 — **두 곳 다 같다**)
+그런데 `product-facts.ts:753` 주석이 그 원칙을 명시한다 —
+  「그 셋은 **각자 별도 축으로 이미 세고 있어서**, 제목에 남겨두면 **같은 근거를 두 번 세게 된다**」
+🔴🔴 **`CATEGORY` 도 별도 축(1점) 인데 상품유형 낱말(`sweatshirt`·`t-shirt`)은 걷어내지 않는다**
+⟹ 같은 근거가 **TITLE 2점 + CATEGORY 1점 = 3점** ⟹ 정확히 `PRESUMED_SAME_MIN_AXES(3)`
+🟢 독립 재현 — 같은 세션의 조합 평가에서 **PRODUCT_NAME 단독이 GT DIFFERENT 5/9 를 오염** 시켰고
+   그 후보들은 **Hugo Boss · Marc Jacobs · DG · 무브랜드** 였다(상품유형 토큰으로만 겹친다)
+```
+
+🔴🔴 **수정하지 않았다 — §6 STOP 조건이다.** 상품유형 낱말을 `noiseSources` 에 더하는 것은
+**TITLE 축의 실효 점수를 바꾼다** ⟹ 「판정 점수·축 가중치 변경 금지」에 걸리고, GT SAME 쌍도
+같은 낱말을 공유하므로 **recall 손실을 먼저 측정해야** 한다(미측정).
+
+🟡 **CPO 판단 사안 하나** — 「별도 축으로 세는 낱말을 제목에서 걷어낸다」는 **그 파일이 이미
+선언한 불변식** 이다. 그 불변식을 `CATEGORY` 까지 확장하는 것을 **정책 변경으로 볼 것인가,
+기존 불변식의 버그 수정으로 볼 것인가.** 🔴 CTO 가 고르지 않았다.
+🔴 열 때의 선행 측정 — GT SAME 측정가능 **7** 과 DIFFERENT **13** 에서 **변경 전후 verdict 대조**.
+
 ### A-MI-7. 바꾸지 않는 것 (동결 — 이 전략 정리가 승인이 아니다)
 
 ```
