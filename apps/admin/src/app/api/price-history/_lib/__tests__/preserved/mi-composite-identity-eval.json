@@ -1,0 +1,808 @@
+{
+ "note": "🔴 평가 전용 · 운영 변경 0 · HTTP 0 · 수집 0. 분모는 GT 라벨 ∩ 양쪽 전문 16쌍이며 109 · A군 7 · IDENTITY_AXIS 26 과 합산하지 않는다. UNKNOWN 은 「모른다」이고 오판이 아니다. PRODUCT_NAME 은 이 하니스의 지표(핵심 토큰 공유 ≥1)이고 운영 TITLE 점수가 아니다.",
+ "denominator": {
+  "fixturePairs": 109,
+  "scope": 16,
+  "gt": {
+   "SAME": 6,
+   "DIFFERENT": 9,
+   "SIMILAR": 1
+  },
+  "notMerged": {
+   "bGroupPairs": 109,
+   "aGroupFullText": 7,
+   "identityAxisPairs": 26
+  }
+ },
+ "control": {
+  "reproduced": 1,
+  "mismatched": 15,
+  "noStored": 0,
+  "mismatchDetail": [
+   "(공백)|stored=BASELINE_NOT_REPRODUCED|base=PRESUMED_SAME",
+   "(공백)|stored=BASELINE_NOT_REPRODUCED|base=PRESUMED_SAME",
+   "designerkidswear.com|stored=PRESUMED_SAME|base=SIMILAR",
+   "folkberlin.com|stored=PRESUMED_SAME|base=SIMILAR",
+   "junioredition.com|stored=PRESUMED_SAME|base=SIMILAR",
+   "kidbizkid.com|stored=PRESUMED_SAME|base=SIMILAR",
+   "petitemaisonkids.com|stored=PRESUMED_SAME|base=SIMILAR",
+   "shoppiccoliandco.com|stored=PRESUMED_SAME|base=SIMILAR",
+   "(공백)|stored=BASELINE_NOT_REPRODUCED|base=PRESUMED_SAME",
+   "(공백)|stored=BASELINE_NOT_REPRODUCED|base=PRESUMED_SAME",
+   "designerkidswear.com|stored=PRESUMED_SAME|base=SIMILAR",
+   "junioredition.com|stored=PRESUMED_SAME|base=SIMILAR",
+   "kidbizkid.com|stored=PRESUMED_SAME|base=SIMILAR",
+   "nickis.com|stored=PRESUMED_SAME|base=SIMILAR",
+   "shoppiccoliandco.com|stored=PRESUMED_SAME|base=SIMILAR"
+  ]
+ },
+ "combos": {
+  "base": {
+   "1_BRAND": {
+    "denominator": 16,
+    "evaluable": 4,
+    "sameRecovered": 3,
+    "differentContaminated": 0,
+    "similarMisread": 1,
+    "unmeasured": 12,
+    "byHost": {
+     "junioredition.com": "SAME,SIMILAR",
+     "(도메인 공백)": "SAME,SAME"
+    }
+   },
+   "2_MODEL_CODE": {
+    "denominator": 16,
+    "evaluable": 0,
+    "sameRecovered": 0,
+    "differentContaminated": 0,
+    "similarMisread": 0,
+    "unmeasured": 16,
+    "byHost": {}
+   },
+   "3_PRODUCT_NAME": {
+    "denominator": 16,
+    "evaluable": 16,
+    "sameRecovered": 6,
+    "differentContaminated": 5,
+    "similarMisread": 1,
+    "unmeasured": 0,
+    "byHost": {
+     "junioredition.com": "SAME,SAME,SIMILAR",
+     "(도메인 공백)": "SAME,SAME,SAME,SAME",
+     "designerkidswear.com": "DIFFERENT,DIFFERENT",
+     "kidbizkid.com": "DIFFERENT,DIFFERENT",
+     "nickis.com": "DIFFERENT"
+    }
+   },
+   "4_BRAND+MODEL_CODE": {
+    "denominator": 16,
+    "evaluable": 0,
+    "sameRecovered": 0,
+    "differentContaminated": 0,
+    "similarMisread": 0,
+    "unmeasured": 16,
+    "byHost": {}
+   },
+   "5_BRAND+PRODUCT_NAME": {
+    "denominator": 16,
+    "evaluable": 4,
+    "sameRecovered": 3,
+    "differentContaminated": 0,
+    "similarMisread": 1,
+    "unmeasured": 12,
+    "byHost": {
+     "junioredition.com": "SAME,SIMILAR",
+     "(도메인 공백)": "SAME,SAME"
+    }
+   },
+   "6_MODEL_CODE+PRODUCT_NAME": {
+    "denominator": 16,
+    "evaluable": 0,
+    "sameRecovered": 0,
+    "differentContaminated": 0,
+    "similarMisread": 0,
+    "unmeasured": 16,
+    "byHost": {}
+   },
+   "7_BRAND+MODEL_CODE+PRODUCT_NAME": {
+    "denominator": 16,
+    "evaluable": 0,
+    "sameRecovered": 0,
+    "differentContaminated": 0,
+    "similarMisread": 0,
+    "unmeasured": 16,
+    "byHost": {}
+   }
+  },
+  "desc": {
+   "1_BRAND": {
+    "denominator": 16,
+    "evaluable": 4,
+    "sameRecovered": 3,
+    "differentContaminated": 0,
+    "similarMisread": 1,
+    "unmeasured": 12,
+    "byHost": {
+     "junioredition.com": "SAME,SIMILAR",
+     "(도메인 공백)": "SAME,SAME"
+    }
+   },
+   "2_MODEL_CODE": {
+    "denominator": 16,
+    "evaluable": 3,
+    "sameRecovered": 3,
+    "differentContaminated": 0,
+    "similarMisread": 0,
+    "unmeasured": 13,
+    "byHost": {
+     "junioredition.com": "SAME,SAME",
+     "(도메인 공백)": "SAME"
+    }
+   },
+   "3_PRODUCT_NAME": {
+    "denominator": 16,
+    "evaluable": 16,
+    "sameRecovered": 6,
+    "differentContaminated": 5,
+    "similarMisread": 1,
+    "unmeasured": 0,
+    "byHost": {
+     "junioredition.com": "SAME,SAME,SIMILAR",
+     "(도메인 공백)": "SAME,SAME,SAME,SAME",
+     "designerkidswear.com": "DIFFERENT,DIFFERENT",
+     "kidbizkid.com": "DIFFERENT,DIFFERENT",
+     "nickis.com": "DIFFERENT"
+    }
+   },
+   "4_BRAND+MODEL_CODE": {
+    "denominator": 16,
+    "evaluable": 1,
+    "sameRecovered": 1,
+    "differentContaminated": 0,
+    "similarMisread": 0,
+    "unmeasured": 15,
+    "byHost": {
+     "junioredition.com": "SAME"
+    }
+   },
+   "5_BRAND+PRODUCT_NAME": {
+    "denominator": 16,
+    "evaluable": 4,
+    "sameRecovered": 3,
+    "differentContaminated": 0,
+    "similarMisread": 1,
+    "unmeasured": 12,
+    "byHost": {
+     "junioredition.com": "SAME,SIMILAR",
+     "(도메인 공백)": "SAME,SAME"
+    }
+   },
+   "6_MODEL_CODE+PRODUCT_NAME": {
+    "denominator": 16,
+    "evaluable": 3,
+    "sameRecovered": 3,
+    "differentContaminated": 0,
+    "similarMisread": 0,
+    "unmeasured": 13,
+    "byHost": {
+     "junioredition.com": "SAME,SAME",
+     "(도메인 공백)": "SAME"
+    }
+   },
+   "7_BRAND+MODEL_CODE+PRODUCT_NAME": {
+    "denominator": 16,
+    "evaluable": 1,
+    "sameRecovered": 1,
+    "differentContaminated": 0,
+    "similarMisread": 0,
+    "unmeasured": 15,
+    "byHost": {
+     "junioredition.com": "SAME"
+    }
+   }
+  }
+ },
+ "operationalVerdict": {
+  "base": {
+   "denominator": 16,
+   "sameAsSame": 0,
+   "differentAsSame": 0,
+   "similarAsSame": 0,
+   "verdicts": {
+    "PRESUMED_SAME": 5,
+    "SIMILAR": 11
+   }
+  },
+  "desc": {
+   "denominator": 16,
+   "sameAsSame": 0,
+   "differentAsSame": 0,
+   "similarAsSame": 0,
+   "verdicts": {
+    "PRESUMED_SAME": 5,
+    "SIMILAR": 11
+   }
+  }
+ },
+ "changedPairs": [],
+ "rows": [
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "humanGt": "SAME",
+   "storedBaselineVerdict": "PRESUMED_SAME",
+   "base": {
+    "brand": "UNKNOWN",
+    "modelCode": "UNKNOWN",
+    "productName": "CONFIRMED",
+    "verdict": "PRESUMED_SAME",
+    "axisPoints": {
+     "TITLE": 2,
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "desc": {
+    "brand": "UNKNOWN",
+    "modelCode": "CONFIRMED",
+    "productName": "CONFIRMED",
+    "verdict": "PRESUMED_SAME",
+    "axisPoints": {
+     "TITLE": 2,
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": null,
+   "candidateUrl": "https://www.junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "humanGt": "SAME",
+   "storedBaselineVerdict": "BASELINE_NOT_REPRODUCED",
+   "base": {
+    "brand": "UNKNOWN",
+    "modelCode": "UNKNOWN",
+    "productName": "CONFIRMED",
+    "verdict": "PRESUMED_SAME",
+    "axisPoints": {
+     "TITLE": 2,
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "desc": {
+    "brand": "UNKNOWN",
+    "modelCode": "CONFIRMED",
+    "productName": "CONFIRMED",
+    "verdict": "PRESUMED_SAME",
+    "axisPoints": {
+     "TITLE": 2,
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": null,
+   "candidateUrl": "https://scoutandcokids.com/products/bobo-choses-hug-hairy-monster-t-shirt",
+   "humanGt": "SAME",
+   "storedBaselineVerdict": "BASELINE_NOT_REPRODUCED",
+   "base": {
+    "brand": "UNKNOWN",
+    "modelCode": "UNKNOWN",
+    "productName": "CONFIRMED",
+    "verdict": "PRESUMED_SAME",
+    "axisPoints": {
+     "TITLE": 2,
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "desc": {
+    "brand": "UNKNOWN",
+    "modelCode": "UNKNOWN",
+    "productName": "CONFIRMED",
+    "verdict": "PRESUMED_SAME",
+    "axisPoints": {
+     "TITLE": 2,
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/stone-island-junior-kids-boys-sweatshirt-blue-6100001-s0a20-v004b",
+   "humanGt": "DIFFERENT",
+   "storedBaselineVerdict": "PRESUMED_SAME",
+   "base": {
+    "brand": "UNKNOWN",
+    "modelCode": "UNKNOWN",
+    "productName": "CONFIRMED",
+    "verdict": "SIMILAR",
+    "axisPoints": {
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "desc": {
+    "brand": "UNKNOWN",
+    "modelCode": "UNKNOWN",
+    "productName": "CONFIRMED",
+    "verdict": "SIMILAR",
+    "axisPoints": {
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "humanGt": "DIFFERENT",
+   "storedBaselineVerdict": "PRESUMED_SAME",
+   "base": {
+    "brand": "UNKNOWN",
+    "modelCode": "UNKNOWN",
+    "productName": "MISMATCH",
+    "verdict": "SIMILAR",
+    "axisPoints": {
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "desc": {
+    "brand": "UNKNOWN",
+    "modelCode": "UNKNOWN",
+    "productName": "MISMATCH",
+    "verdict": "SIMILAR",
+    "axisPoints": {
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/bobo-choses-pop-sweatshirt-by-bobo-choses",
+   "humanGt": "SAME",
+   "storedBaselineVerdict": "PRESUMED_SAME",
+   "base": {
+    "brand": "CONFIRMED",
+    "modelCode": "UNKNOWN",
+    "productName": "CONFIRMED",
+    "verdict": "SIMILAR",
+    "axisPoints": {
+     "TITLE": 1,
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "desc": {
+    "brand": "CONFIRMED",
+    "modelCode": "CONFIRMED",
+    "productName": "CONFIRMED",
+    "verdict": "SIMILAR",
+    "axisPoints": {
+     "TITLE": 1,
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/hugo-boss-navy-zip-sweatshirt",
+   "humanGt": "DIFFERENT",
+   "storedBaselineVerdict": "PRESUMED_SAME",
+   "base": {
+    "brand": "UNKNOWN",
+    "modelCode": "UNKNOWN",
+    "productName": "CONFIRMED",
+    "verdict": "SIMILAR",
+    "axisPoints": {
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "desc": {
+    "brand": "UNKNOWN",
+    "modelCode": "UNKNOWN",
+    "productName": "CONFIRMED",
+    "verdict": "SIMILAR",
+    "axisPoints": {
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "petitemaisonkids.com",
+   "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+   "humanGt": "DIFFERENT",
+   "storedBaselineVerdict": "PRESUMED_SAME",
+   "base": {
+    "brand": "UNKNOWN",
+    "modelCode": "UNKNOWN",
+    "productName": "MISMATCH",
+    "verdict": "SIMILAR",
+    "axisPoints": {
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "GARMENT_FORM",
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "desc": {
+    "brand": "UNKNOWN",
+    "modelCode": "UNKNOWN",
+    "productName": "MISMATCH",
+    "verdict": "SIMILAR",
+    "axisPoints": {
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "GARMENT_FORM",
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "shoppiccoliandco.com",
+   "candidateUrl": "https://shoppiccoliandco.com/products/jude-navy-baby-boy-anchor-sweater",
+   "humanGt": "DIFFERENT",
+   "storedBaselineVerdict": "PRESUMED_SAME",
+   "base": {
+    "brand": "UNKNOWN",
+    "modelCode": "UNKNOWN",
+    "productName": "MISMATCH",
+    "verdict": "SIMILAR",
+    "axisPoints": {
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "desc": {
+    "brand": "UNKNOWN",
+    "modelCode": "UNKNOWN",
+    "productName": "MISMATCH",
+    "verdict": "SIMILAR",
+    "axisPoints": {
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC036",
+   "candidateDomain": null,
+   "candidateUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362797&type=x&current_category=058",
+   "humanGt": "SAME",
+   "storedBaselineVerdict": "BASELINE_NOT_REPRODUCED",
+   "base": {
+    "brand": "CONFIRMED",
+    "modelCode": "UNKNOWN",
+    "productName": "CONFIRMED",
+    "verdict": "PRESUMED_SAME",
+    "axisPoints": {
+     "TITLE": 2,
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "desc": {
+    "brand": "CONFIRMED",
+    "modelCode": "UNKNOWN",
+    "productName": "CONFIRMED",
+    "verdict": "PRESUMED_SAME",
+    "axisPoints": {
+     "TITLE": 2,
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC073",
+   "candidateDomain": null,
+   "candidateUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362810&type=x&current_category=058",
+   "humanGt": "SAME",
+   "storedBaselineVerdict": "BASELINE_NOT_REPRODUCED",
+   "base": {
+    "brand": "CONFIRMED",
+    "modelCode": "UNKNOWN",
+    "productName": "CONFIRMED",
+    "verdict": "PRESUMED_SAME",
+    "axisPoints": {
+     "TITLE": 2,
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "desc": {
+    "brand": "CONFIRMED",
+    "modelCode": "UNKNOWN",
+    "productName": "CONFIRMED",
+    "verdict": "PRESUMED_SAME",
+    "axisPoints": {
+     "TITLE": 2,
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC110",
+   "candidateDomain": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/dolce-gabbana-kids-boys-dg-t-shirt-white-l4jthvg7nvc-s9000",
+   "humanGt": "DIFFERENT",
+   "storedBaselineVerdict": "PRESUMED_SAME",
+   "base": {
+    "brand": "UNKNOWN",
+    "modelCode": "UNKNOWN",
+    "productName": "CONFIRMED",
+    "verdict": "SIMILAR",
+    "axisPoints": {
+     "TITLE": 1,
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "desc": {
+    "brand": "UNKNOWN",
+    "modelCode": "UNKNOWN",
+    "productName": "CONFIRMED",
+    "verdict": "SIMILAR",
+    "axisPoints": {
+     "TITLE": 1,
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC110",
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/bobo-choses-embossed-t-shirt-by-bobo-choses",
+   "humanGt": "SIMILAR",
+   "storedBaselineVerdict": "PRESUMED_SAME",
+   "base": {
+    "brand": "CONFIRMED",
+    "modelCode": "UNKNOWN",
+    "productName": "CONFIRMED",
+    "verdict": "SIMILAR",
+    "axisPoints": {
+     "TITLE": 1,
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "desc": {
+    "brand": "CONFIRMED",
+    "modelCode": "UNKNOWN",
+    "productName": "CONFIRMED",
+    "verdict": "SIMILAR",
+    "axisPoints": {
+     "TITLE": 1,
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC110",
+   "candidateDomain": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/marc-jacobs-black-t-shirt",
+   "humanGt": "DIFFERENT",
+   "storedBaselineVerdict": "PRESUMED_SAME",
+   "base": {
+    "brand": "UNKNOWN",
+    "modelCode": "UNKNOWN",
+    "productName": "CONFIRMED",
+    "verdict": "SIMILAR",
+    "axisPoints": {
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "desc": {
+    "brand": "UNKNOWN",
+    "modelCode": "UNKNOWN",
+    "productName": "CONFIRMED",
+    "verdict": "SIMILAR",
+    "axisPoints": {
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC170",
+   "candidateDomain": "nickis.com",
+   "candidateUrl": "https://nickis.com/products/levis-sweatshirt-rot-7401897725",
+   "humanGt": "DIFFERENT",
+   "storedBaselineVerdict": "PRESUMED_SAME",
+   "base": {
+    "brand": "UNKNOWN",
+    "modelCode": "UNKNOWN",
+    "productName": "CONFIRMED",
+    "verdict": "SIMILAR",
+    "axisPoints": {
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "desc": {
+    "brand": "UNKNOWN",
+    "modelCode": "UNKNOWN",
+    "productName": "CONFIRMED",
+    "verdict": "SIMILAR",
+    "axisPoints": {
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "changed": false
+  },
+  {
+   "originCode": "B226AC170",
+   "candidateDomain": "shoppiccoliandco.com",
+   "candidateUrl": "https://shoppiccoliandco.com/products/rudolph-knitted-sweater",
+   "humanGt": "DIFFERENT",
+   "storedBaselineVerdict": "PRESUMED_SAME",
+   "base": {
+    "brand": "UNKNOWN",
+    "modelCode": "UNKNOWN",
+    "productName": "MISMATCH",
+    "verdict": "SIMILAR",
+    "axisPoints": {
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "desc": {
+    "brand": "UNKNOWN",
+    "modelCode": "UNKNOWN",
+    "productName": "MISMATCH",
+    "verdict": "SIMILAR",
+    "axisPoints": {
+     "CATEGORY": 1
+    },
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "identifierConfirmed": false
+   },
+   "changed": false
+  }
+ ]
+}
