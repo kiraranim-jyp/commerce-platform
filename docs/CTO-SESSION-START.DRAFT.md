@@ -196,6 +196,35 @@ GT SIMILAR 1 → PRESUMED_SAME(과도 1) · 🔴 오판 14 중 **12건이 tier C
 **판정 정책 변경**(§6 STOP) ⒝ blocker 있는 보류를 가격에서 제외 = **가격 자격 변경**(§1 금지).
 🟡 **CPO 판단 사안** 이고 CTO 가 고르지 않았다.
 
+### A-MI-10. 🔵🔵🔵 [2026-11-20] **후보측 증거 — 추출은 거의 완벽하다. 없는 것이 없다**
+
+```
+후보 설명 보유 **98** · 그 안에 「Bobo Choses」 문자열이 **실제로 있는 건수 30** ·
+별칭 owner 가 읽은 건수 **29**
+⟹ 🟢🟢 **추출 성능 29/30 ≈ 완벽** — 나머지 68건은 **추출 실패가 아니라 실제 부재** 다
+🔴 그래서 「추출을 개선하면 BRAND 83% 결손이 메워진다」는 **사실이 아니다**
+```
+
+🔵🔵 **BRAND 충돌이 0/19 인 진짜 이유** — 별칭 사전이 **원상품 브랜드 계열 중심** 이라
+후보 «자신의» 다른 브랜드(Hugo Boss · Marc Jacobs · DG)를 **모른다** ⟹ `CONFLICT` 가 아니라
+`ABSENT` 로 떨어진다. 🔴 그것을 메우는 것은 **브랜드 별칭 사전 확대** 이고 Registry 확대 금지축과 인접하다.
+
+🔴 **계약 2건의 실제 보호 범위(원문 확인)**:
+```
+① `brand-1-description-evidence.test.ts` **④-1** — owner **5개**
+   (`product-url-facts` · `product-identity-dna` · `brand-identity` · `cross-seller` · `seller-facts`)가
+   `brand-description-evidence` · `analyzeBrandDescriptionEvidence` 를 **import 하지 않는다**
+② `sprint3-gate-gt-precision.test.ts` **F-1** — owner **3개** 가 brand **그리고**
+   `product-name-description-evidence` · `analyzeProductNameDescriptionEvidence` 를 **import 하지 않는다**
+🔴🔴 **금지 축은 「import」 다** ⟹ **「단순 저장」과 「판정 사용」이 계약상 구분되지 않는다.**
+   `ProductFacts` 를 만드는 owner 가 전부 금지 대상이므로 **보관만 하려 해도 계약 위반** 이다
+🟢 단 **원문 자체는 이미 보관된다** — `ProductFacts.description`(seller-facts:412 · product-url-facts:594)
+```
+
+🔴 `corroborated` **0/19** — 그 값은 `product-name-description-evidence.ts:298` **한 분기에서만**
+세워지고 `UNKNOWN`(:275) · `CONFLICT`(:286) · `OBSERVED`(:309)는 **전부 null** 이다.
+🔴 이 분모의 `state` 분포는 **측정하지 않았다**(내가 `corroborated` 만 기록했다) ⟹ **미측정**.
+
 ### A-MI-7. 바꾸지 않는 것 (동결 — 이 전략 정리가 승인이 아니다)
 
 ```
