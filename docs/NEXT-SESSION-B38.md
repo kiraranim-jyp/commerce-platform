@@ -67,6 +67,10 @@
 ```
 
 🔵 **MI 식별 전략 상시 규칙은 `docs/CTO-SESSION-START.DRAFT.md` §A-MI 다**(CPO 확정 2026-11-20).
+🔴🔴🔴 **[CPO 최종 결정 2026-11-20] 운영 연결 NO-GO — B-38 트랙 종결.**
+   `productFactsFromListing` 품번 복구는 **연결하지 않는다** · AC↔AB 는 `AGE-LINE-POLICY-01` +
+   기존 계약 **9건** 으로 **잠긴 것으로 종결** · 🔴 **같은 경로 재조사 금지 · 새 조사 WU 금지** ·
+   재개 조건은 **일반 품번 불일치 GT DIFFERENT 표본 확보** 하나다(전문 §0).
 🔵 **상세설명 품번의 계약 충돌·개정안은 `docs/MI-DESCRIPTION-CODE-CONTRACT-PROPOSAL.md` 다**
    — 🔴 변경 지점이 **`productFactsFromListing`(seller-facts.ts:380) `brandModelCode: null`** 한 줄로
    특정됐다(Shopify 팩토리 `:247` 은 **이미** 설명에서 라벨 품번을 복구한다 · 팩토리 비대칭).
