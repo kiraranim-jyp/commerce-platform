@@ -1,0 +1,1410 @@
+{
+  "note": "MI-DESCRIPTION-COMPARISON-01 — 상세설명 비교 효과 측정. 🔴 BASELINE 은 운영 저장 system_verdict(candidate_reviews)이고 내가 계산하지 않았다. 🔴 운영 코드 0 · HTTP 0 · 수집 0 · verdict 저장 0 · 정책 0. 🔴 A0 는 기존 하니스의 CONTROL 실패를 재현한 팔이다.",
+  "priorArtifact": "preserved/mi-composite-identity-eval.json — 조합 7개 측정이 이미 있으나 control reproduced 1/16 이라 그 수치는 전략 판단에 쓸 수 없다(이 파일이 그 원인을 고친다)",
+  "denominator": {
+    "fixturePairs": 109,
+    "storedGtRows": 37,
+    "scope": 24,
+    "notMerged": "109 · 16 · 39 · 24 는 서로 다른 집합이다 — 합산하지 않는다"
+  },
+  "control": {
+    "A0_reproduced": 2,
+    "A1_reproduced": 4,
+    "A2_reproduced": 2,
+    "of": 24,
+    "cause": "A0 는 후보 brand 를 판정기에 넘기지 않아 전건 BRAND_UNCONFIRMED 로 축이 붕괴한다 (mi-composite-identity-eval.test.ts:78-84). A1 이 그것을 되먹인다.",
+    "residualCause": "A1 에서도 남는 미재현은 후보측 구조화 facts(색상·소재·대상)가 fixture 에 없기 때문이고 기존 자료로는 복구 불가다 — 측정불가로 적는다(0 이 아니다)"
+  },
+  "verdictTally": {
+    "A0": {
+      "PRESUMED_SAME": 7,
+      "SIMILAR": 17
+    },
+    "A1": {
+      "PRESUMED_SAME": 9,
+      "SIMILAR": 15
+    },
+    "A2": {
+      "PRESUMED_SAME": 7,
+      "SAME": 2,
+      "SIMILAR": 15
+    }
+  },
+  "descriptionEffect": {
+    "changedRows": 2,
+    "changedWithinReproduced": 2,
+    "codeConfirmGained": 4,
+    "brandGained": 0,
+    "differentPushedToSame": 0
+  },
+  "limitations": [
+    "🔴🔴 CONTROL 이 복구 후에도 4/24 다 ⟹ 헌장 §5-B 로 **이 분모의 효과 수치를 전략 판단에 쓰지 않는다**. 쓸 수 있는 것은 「원인이 무엇인가」까지다.",
+    "🔴 미재현 15건은 전부 축 **1개**(`{CATEGORY:1}`)에 `BRAND_UNCONFIRMED` 다 — 운영은 같은 쌍에서 ≥3축을 얻었다. 차이는 fixture 에 **후보측 구조화 facts(색상·소재·대상)가 없다** 는 것이고 기존 자료로 복구 불가다(측정불가 · 0 이 아니다).",
+    "🔴🔴 **`differentPushedToSame: 0` 을 「안전」으로 읽지 않는다.** 기존 REJECT(§0-RESULT)의 오염 호스트 `cemarose.ca`·`tinyapple.net` 이 이 분모에 **없고 있을 수도 없다** (109 fixture 에서 양쪽 설명 0건 · 운영 저장분 조인 0건) ⟹ 이 측정은 그 REJECT 를 **뒤집지 않는다**. 같은 레버를 다시 열려면 그 두 호스트가 든 분모가 필요하다.",
+    "🔴 SAME 으로 올라간 2건은 **같은 호스트(junioredition.com)** 다 ⟹ 호스트 1곳의 현상이고 일반화하지 않는다. 그 둘은 품번이 설명에만 있는 `DESCRIPTION_ONLY` 유형이다.",
+    "🔴 `brandGained: 0` 은 별칭 등록부가 **4개 브랜드** 뿐이기 때문이다(brand-alias.ts) — 「설명에 브랜드가 없다」가 아니다."
+  ],
+  "minimalOperationalChange": "🔴 CTO 가 구현하지 않았다(측정 종료 지시). 변경 지점은 한 곳으로 특정된다 — `confirmBrandCodeInEvidence`(domestic-identifiers.ts:185)의 건초더미 `title·url·sku` 에 **후보 상세설명을 더하는 것**. 🔴 그 레버는 `a-identity-axis.test.ts` 가 **기각 결론으로 잠그고 있다** ⟹ 연결은 계약 개정을 동반하고 CPO 승인 사안이다.",
+  "rows": [
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "global.trenbe.com",
+      "candidateUrl": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+      "humanGt": "SAME",
+      "storedVerdict": null,
+      "arms": {
+        "A0": {
+          "verdict": "PRESUMED_SAME",
+          "axes": 3,
+          "axisPoints": {
+            "TITLE": 1,
+            "MODEL_CODE": 3,
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": true,
+          "brandCompatible": true
+        },
+        "A1": {
+          "verdict": "PRESUMED_SAME",
+          "axes": 3,
+          "axisPoints": {
+            "TITLE": 1,
+            "MODEL_CODE": 3,
+            "CATEGORY": 1
+          },
+          "blockers": [],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": true,
+          "brandCompatible": true
+        },
+        "A2": {
+          "verdict": "PRESUMED_SAME",
+          "axes": 3,
+          "axisPoints": {
+            "TITLE": 1,
+            "MODEL_CODE": 3,
+            "CATEGORY": 1
+          },
+          "blockers": [],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": true,
+          "brandCompatible": true
+        }
+      },
+      "reproduced": {
+        "A0": false,
+        "A1": false,
+        "A2": false
+      },
+      "changedByDescription": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "storedVerdict": "PRESUMED_SAME",
+      "arms": {
+        "A0": {
+          "verdict": "PRESUMED_SAME",
+          "axes": 2,
+          "axisPoints": {
+            "TITLE": 2,
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A1": {
+          "verdict": "PRESUMED_SAME",
+          "axes": 2,
+          "axisPoints": {
+            "TITLE": 2,
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A2": {
+          "verdict": "PRESUMED_SAME",
+          "axes": 3,
+          "axisPoints": {
+            "TITLE": 2,
+            "MODEL_CODE": 3,
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": true,
+          "brandCompatible": null
+        }
+      },
+      "reproduced": {
+        "A0": true,
+        "A1": true,
+        "A2": true
+      },
+      "changedByDescription": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "storedVerdict": "PRESUMED_SAME",
+      "arms": {
+        "A0": {
+          "verdict": "PRESUMED_SAME",
+          "axes": 2,
+          "axisPoints": {
+            "TITLE": 2,
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": false,
+          "brandCompatible": true
+        },
+        "A1": {
+          "verdict": "PRESUMED_SAME",
+          "axes": 2,
+          "axisPoints": {
+            "TITLE": 2,
+            "CATEGORY": 1
+          },
+          "blockers": [],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": false,
+          "brandCompatible": true
+        },
+        "A2": {
+          "verdict": "SAME",
+          "axes": 3,
+          "axisPoints": {
+            "TITLE": 2,
+            "MODEL_CODE": 3,
+            "CATEGORY": 1
+          },
+          "blockers": [],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": true,
+          "brandCompatible": true
+        }
+      },
+      "reproduced": {
+        "A0": true,
+        "A1": true,
+        "A2": false
+      },
+      "changedByDescription": true
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": null,
+      "candidateUrl": "https://www.junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "storedVerdict": null,
+      "arms": {
+        "A0": {
+          "verdict": "PRESUMED_SAME",
+          "axes": 2,
+          "axisPoints": {
+            "TITLE": 2,
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A1": {
+          "verdict": "PRESUMED_SAME",
+          "axes": 2,
+          "axisPoints": {
+            "TITLE": 2,
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A2": {
+          "verdict": "PRESUMED_SAME",
+          "axes": 3,
+          "axisPoints": {
+            "TITLE": 2,
+            "MODEL_CODE": 3,
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": true,
+          "brandCompatible": null
+        }
+      },
+      "reproduced": {
+        "A0": false,
+        "A1": false,
+        "A2": false
+      },
+      "changedByDescription": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": null,
+      "candidateUrl": "https://scoutandcokids.com/products/bobo-choses-hug-hairy-monster-t-shirt",
+      "humanGt": "SAME",
+      "storedVerdict": null,
+      "arms": {
+        "A0": {
+          "verdict": "PRESUMED_SAME",
+          "axes": 2,
+          "axisPoints": {
+            "TITLE": 2,
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A1": {
+          "verdict": "PRESUMED_SAME",
+          "axes": 2,
+          "axisPoints": {
+            "TITLE": 2,
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A2": {
+          "verdict": "PRESUMED_SAME",
+          "axes": 2,
+          "axisPoints": {
+            "TITLE": 2,
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": false,
+          "brandCompatible": null
+        }
+      },
+      "reproduced": {
+        "A0": false,
+        "A1": false,
+        "A2": false
+      },
+      "changedByDescription": false
+    },
+    {
+      "originCode": "B226AC033",
+      "candidateDomain": "designerkidswear.com",
+      "candidateUrl": "https://designerkidswear.com/products/stone-island-junior-kids-boys-sweatshirt-blue-6100001-s0a20-v004b",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "arms": {
+        "A0": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A1": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A2": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        }
+      },
+      "reproduced": {
+        "A0": false,
+        "A1": false,
+        "A2": false
+      },
+      "changedByDescription": false
+    },
+    {
+      "originCode": "B226AC033",
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "arms": {
+        "A0": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A1": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A2": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        }
+      },
+      "reproduced": {
+        "A0": false,
+        "A1": false,
+        "A2": false
+      },
+      "changedByDescription": false
+    },
+    {
+      "originCode": "B226AC033",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/bobo-choses-pop-sweatshirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "storedVerdict": "PRESUMED_SAME",
+      "arms": {
+        "A0": {
+          "verdict": "SIMILAR",
+          "axes": 2,
+          "axisPoints": {
+            "TITLE": 1,
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": false,
+          "brandCompatible": true
+        },
+        "A1": {
+          "verdict": "PRESUMED_SAME",
+          "axes": 2,
+          "axisPoints": {
+            "TITLE": 2,
+            "CATEGORY": 1
+          },
+          "blockers": [],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": false,
+          "brandCompatible": true
+        },
+        "A2": {
+          "verdict": "SAME",
+          "axes": 3,
+          "axisPoints": {
+            "TITLE": 2,
+            "MODEL_CODE": 3,
+            "CATEGORY": 1
+          },
+          "blockers": [],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": true,
+          "brandCompatible": true
+        }
+      },
+      "reproduced": {
+        "A0": false,
+        "A1": true,
+        "A2": false
+      },
+      "changedByDescription": true
+    },
+    {
+      "originCode": "B226AC033",
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/hugo-boss-navy-zip-sweatshirt",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "arms": {
+        "A0": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A1": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A2": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        }
+      },
+      "reproduced": {
+        "A0": false,
+        "A1": false,
+        "A2": false
+      },
+      "changedByDescription": false
+    },
+    {
+      "originCode": "B226AC033",
+      "candidateDomain": "petitemaisonkids.com",
+      "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "arms": {
+        "A0": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "GARMENT_FORM",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A1": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "GARMENT_FORM",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A2": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "GARMENT_FORM",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        }
+      },
+      "reproduced": {
+        "A0": false,
+        "A1": false,
+        "A2": false
+      },
+      "changedByDescription": false
+    },
+    {
+      "originCode": "B226AC033",
+      "candidateDomain": "shoppiccoliandco.com",
+      "candidateUrl": "https://shoppiccoliandco.com/products/jude-navy-baby-boy-anchor-sweater",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "arms": {
+        "A0": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A1": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A2": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        }
+      },
+      "reproduced": {
+        "A0": false,
+        "A1": false,
+        "A2": false
+      },
+      "changedByDescription": false
+    },
+    {
+      "originCode": "B226AC036",
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "arms": {
+        "A0": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A1": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A2": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        }
+      },
+      "reproduced": {
+        "A0": false,
+        "A1": false,
+        "A2": false
+      },
+      "changedByDescription": false
+    },
+    {
+      "originCode": "B226AC036",
+      "candidateDomain": null,
+      "candidateUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362797&type=x&current_category=058",
+      "humanGt": "SAME",
+      "storedVerdict": null,
+      "arms": {
+        "A0": {
+          "verdict": "PRESUMED_SAME",
+          "axes": 2,
+          "axisPoints": {
+            "TITLE": 2,
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": false,
+          "brandCompatible": true
+        },
+        "A1": {
+          "verdict": "PRESUMED_SAME",
+          "axes": 2,
+          "axisPoints": {
+            "TITLE": 2,
+            "CATEGORY": 1
+          },
+          "blockers": [],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": false,
+          "brandCompatible": true
+        },
+        "A2": {
+          "verdict": "PRESUMED_SAME",
+          "axes": 2,
+          "axisPoints": {
+            "TITLE": 2,
+            "CATEGORY": 1
+          },
+          "blockers": [],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": false,
+          "brandCompatible": true
+        }
+      },
+      "reproduced": {
+        "A0": false,
+        "A1": false,
+        "A2": false
+      },
+      "changedByDescription": false
+    },
+    {
+      "originCode": "B226AC038",
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "arms": {
+        "A0": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A1": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A2": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        }
+      },
+      "reproduced": {
+        "A0": false,
+        "A1": false,
+        "A2": false
+      },
+      "changedByDescription": false
+    },
+    {
+      "originCode": "B226AC038",
+      "candidateDomain": "petitemaisonkids.com",
+      "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "arms": {
+        "A0": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "GARMENT_FORM",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A1": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "GARMENT_FORM",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A2": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "GARMENT_FORM",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        }
+      },
+      "reproduced": {
+        "A0": false,
+        "A1": false,
+        "A2": false
+      },
+      "changedByDescription": false
+    },
+    {
+      "originCode": "B226AC041",
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "arms": {
+        "A0": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A1": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A2": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        }
+      },
+      "reproduced": {
+        "A0": false,
+        "A1": false,
+        "A2": false
+      },
+      "changedByDescription": false
+    },
+    {
+      "originCode": "B226AC043",
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "arms": {
+        "A0": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A1": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A2": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        }
+      },
+      "reproduced": {
+        "A0": false,
+        "A1": false,
+        "A2": false
+      },
+      "changedByDescription": false
+    },
+    {
+      "originCode": "B226AC043",
+      "candidateDomain": "petitemaisonkids.com",
+      "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "arms": {
+        "A0": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "GARMENT_FORM",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A1": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "GARMENT_FORM",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A2": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "GARMENT_FORM",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        }
+      },
+      "reproduced": {
+        "A0": false,
+        "A1": false,
+        "A2": false
+      },
+      "changedByDescription": false
+    },
+    {
+      "originCode": "B226AC073",
+      "candidateDomain": null,
+      "candidateUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362810&type=x&current_category=058",
+      "humanGt": "SAME",
+      "storedVerdict": null,
+      "arms": {
+        "A0": {
+          "verdict": "PRESUMED_SAME",
+          "axes": 2,
+          "axisPoints": {
+            "TITLE": 2,
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": false,
+          "brandCompatible": true
+        },
+        "A1": {
+          "verdict": "PRESUMED_SAME",
+          "axes": 2,
+          "axisPoints": {
+            "TITLE": 2,
+            "CATEGORY": 1
+          },
+          "blockers": [],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": false,
+          "brandCompatible": true
+        },
+        "A2": {
+          "verdict": "PRESUMED_SAME",
+          "axes": 2,
+          "axisPoints": {
+            "TITLE": 2,
+            "CATEGORY": 1
+          },
+          "blockers": [],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": false,
+          "brandCompatible": true
+        }
+      },
+      "reproduced": {
+        "A0": false,
+        "A1": false,
+        "A2": false
+      },
+      "changedByDescription": false
+    },
+    {
+      "originCode": "B226AC110",
+      "candidateDomain": "designerkidswear.com",
+      "candidateUrl": "https://designerkidswear.com/products/dolce-gabbana-kids-boys-dg-t-shirt-white-l4jthvg7nvc-s9000",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "arms": {
+        "A0": {
+          "verdict": "SIMILAR",
+          "axes": 2,
+          "axisPoints": {
+            "TITLE": 1,
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A1": {
+          "verdict": "SIMILAR",
+          "axes": 2,
+          "axisPoints": {
+            "TITLE": 1,
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A2": {
+          "verdict": "SIMILAR",
+          "axes": 2,
+          "axisPoints": {
+            "TITLE": 1,
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        }
+      },
+      "reproduced": {
+        "A0": false,
+        "A1": false,
+        "A2": false
+      },
+      "changedByDescription": false
+    },
+    {
+      "originCode": "B226AC110",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/bobo-choses-embossed-t-shirt-by-bobo-choses",
+      "humanGt": "SIMILAR",
+      "storedVerdict": "PRESUMED_SAME",
+      "arms": {
+        "A0": {
+          "verdict": "SIMILAR",
+          "axes": 2,
+          "axisPoints": {
+            "TITLE": 1,
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": false,
+          "brandCompatible": true
+        },
+        "A1": {
+          "verdict": "PRESUMED_SAME",
+          "axes": 2,
+          "axisPoints": {
+            "TITLE": 2,
+            "CATEGORY": 1
+          },
+          "blockers": [],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": false,
+          "brandCompatible": true
+        },
+        "A2": {
+          "verdict": "PRESUMED_SAME",
+          "axes": 2,
+          "axisPoints": {
+            "TITLE": 2,
+            "CATEGORY": 1
+          },
+          "blockers": [],
+          "candidateBrand": "Bobo Choses",
+          "codeConfirmed": false,
+          "brandCompatible": true
+        }
+      },
+      "reproduced": {
+        "A0": false,
+        "A1": true,
+        "A2": true
+      },
+      "changedByDescription": false
+    },
+    {
+      "originCode": "B226AC110",
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/marc-jacobs-black-t-shirt",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "arms": {
+        "A0": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A1": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A2": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        }
+      },
+      "reproduced": {
+        "A0": false,
+        "A1": false,
+        "A2": false
+      },
+      "changedByDescription": false
+    },
+    {
+      "originCode": "B226AC170",
+      "candidateDomain": "nickis.com",
+      "candidateUrl": "https://nickis.com/products/levis-sweatshirt-rot-7401897725",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "arms": {
+        "A0": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A1": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A2": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        }
+      },
+      "reproduced": {
+        "A0": false,
+        "A1": false,
+        "A2": false
+      },
+      "changedByDescription": false
+    },
+    {
+      "originCode": "B226AC170",
+      "candidateDomain": "shoppiccoliandco.com",
+      "candidateUrl": "https://shoppiccoliandco.com/products/rudolph-knitted-sweater",
+      "humanGt": "DIFFERENT",
+      "storedVerdict": "PRESUMED_SAME",
+      "arms": {
+        "A0": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A1": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        },
+        "A2": {
+          "verdict": "SIMILAR",
+          "axes": 1,
+          "axisPoints": {
+            "CATEGORY": 1
+          },
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "candidateBrand": null,
+          "codeConfirmed": false,
+          "brandCompatible": null
+        }
+      },
+      "reproduced": {
+        "A0": false,
+        "A1": false,
+        "A2": false
+      },
+      "changedByDescription": false
+    }
+  ]
+}

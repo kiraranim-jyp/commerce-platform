@@ -5,7 +5,13 @@
 ### ① 지금 좌표 — 🔴 **CTO 가 할 작업이 «없다». 새 WU 를 스스로 만들지 않는다**
 
 ```
-직전 트랙   **`MI-DOMESTIC-CONTROL-01`**(가격 자격 CONTROL) — **종결 · §0-MDC01 참조**
+직전 트랙   **`MI-DESCRIPTION-COMPARISON-01`** — **측정 종료 · §0-MDCP01 참조**
+            🔴🔴 **기존 「상세설명 효과 0」은 CONTROL 실패(1/16) 상태의 값이라 결론이 아니었다**
+            🟢 원인 둘로 갈림 — ⒜ 하니스가 후보 brand 를 판정기에 안 넘김(**복구 가능** · 2→4/24)
+            ⒝ fixture 에 후보 구조화 facts 없음(**복구 불가** · 15건 축 1개)
+            🔴 복구 후에도 CONTROL **4/24** ⟹ 이 분모의 효과 수치는 전략 판단에 쓰지 않는다
+            🟡 CPO 판단 — 같은 레버의 기존 REJECT 를 열려면 **오염 호스트가 든 분모** 가 필요하다
+그 전 트랙   **`MI-DOMESTIC-CONTROL-01`**(가격 자격 CONTROL) — 종결 · §0-MDC01 참조
             🔴 그 WU 가 인수인계 ⑦의 「10건 tier COMPARISON = 가격 비교 유입」을 **정정** 했다
             🟡 남은 것은 **CPO 판단 1건**(국내 금액 축에 「관측된 차이」 필터 여부 · §0-MDC01 ⑥)
 그 전 트랙   KIDS MI 핵심 식별 증거 검증 — **전부 종결**(CPO 최종 검토 완료)
@@ -106,6 +112,96 @@ cd apps/admin && npx vitest run \
 ```
 docs/START-HERE.md §0-NOW → docs/NEXT-SESSION-B38.md §0-HANDOFF 를 읽고 시작해.
 CTO 작업은 없는 상태다 — 다음 범위를 지정해 주면 그 범위만 한 묶음으로 수행해.
+```
+
+---
+
+## 🔵🔵🔵 §0-MDCP01. **[2026-11-20] `MI-DESCRIPTION-COMPARISON-01` — 상세설명 비교 효과 · 측정 종료**
+
+🔴 **CPO 지시(상세설명 비교로 국내 동일상품 매칭이 개선되는지 측정)의 산출이다.**
+🟢 운영 코드 **0줄** · HTTP **0** · 수집 **0** · verdict 저장 **0** · 정책(SAME 기준 · 2출처 ·
+blocker · 가격 자격 · 이미지) **전부 0** · `ProductFacts` 운영 연결 **0**.
+
+### ① 🔴🔴 먼저 — 그 측정은 **이미 있었고, 그 CONTROL 이 실패했다**
+
+```
+기존 산출물  `preserved/mi-composite-identity-eval.json`
+            조합 7개(BRAND·MODEL_CODE·PRODUCT_NAME 및 조합) × base/desc · 분모 **16** ·
+            `changedPairs` **0** ⟹ 「상세설명 효과 0」으로 읽힐 수 있었다
+🔴 그 산출물의 `control` 이 **reproduced 1 / mismatched 15** 다
+⟹ 헌장 §5-B: **CONTROL 이 실패하면 그 숫자를 전략 판단에 쓰지 않는다**
+⟹ 🔴 「효과 0」은 **결론이 아니었다**(= 하니스가 운영을 재현하지 못한 상태의 값)
+```
+
+### ② 🟢 CONTROL 실패의 원인 — **둘로 갈렸다**
+
+```
+⒜ 🟢 **복구 가능** — 하니스가 후보 브랜드를 «판정기에 넘기지 않았다»
+   `mi-composite-identity-eval.test.ts:78-84` `candidateFacts()` 가
+   `productFactsFromListing({title,url,description})` 로만 만든다(**brand 없음**)
+   ⟹ `brandKnown` false ⟹ 전건 `BRAND_UNCONFIRMED` ⟹ 축이 `{CATEGORY:1}` 로 붕괴
+   ⟹ 운영 저장 `PRESUMED_SAME`(≥3축) 대신 **`SIMILAR`**(≥1축)
+   🔴 그 하니스는 후보 브랜드를 **이미 텍스트에서 읽고 있었다**(`brandFromText`) —
+      자기 지표에만 쓰고 판정기에 되먹이지 않았다. **그것이 버그다**
+⒝ 🔴 **복구 불가** — fixture 에 **후보측 구조화 facts(색상·소재·대상)가 없다**
+   미재현 **15건이 전부 축 1개**(`{CATEGORY:1}`)인데 운영은 같은 쌍에서 ≥3축을 얻었다
+   ⟹ 기존 자료로는 메울 수 없다 — **측정불가**(0 이 아니다)
+```
+
+### ③ 측정 — BASELINE 은 **운영 저장 verdict** 이고 내가 계산하지 않았다
+
+```
+분모  109 fixture → 운영 저장분(`candidate_reviews` GT 37) 조인 **45** →
+      ∩ 양쪽 상세설명 **24**   🔴 109 · 16 · 39 · 24 는 서로 다른 집합(합산 금지)
+상세설명 확보율(109 기준)  원상품 **92** · 후보 **98** · 양쪽 **82**
+팔 셋  A0 현 하니스 모양 / A1 **복구**(후보 brand 되먹임) / A2 **상세설명 비교**
+CONTROL 재현   A0 **2/24** → A1 **4/24** → A2 2/24
+🔴🔴 **복구 후에도 4/24 다** ⟹ 이 분모의 «효과 수치» 를 전략 판단에 쓰지 않는다
+verdict 분포  A0 {PRESUMED_SAME 7 · SIMILAR 17} · A1 {9 · 15} · A2 {7 · **SAME 2** · 15}
+```
+
+### ④ 그래도 «관측» 된 것 — 🔴 결론이 아니라 관측이다
+
+```
+🟢 품번 확인 **+4** — 설명을 품번 건초더미에 더하면 `confirmBrandCodeInEvidence` 가 4건 더 확인
+🟢 GT **SAME 2건** 이 `MODEL_CODE` **3점** 을 얻어 SAME 으로 올라갔다
+   junioredition.com × B226AC009 · B226AC033 — 둘 다 품번이 **설명에만** 있는 `DESCRIPTION_ONLY`
+   A1 {TITLE 2 · CATEGORY 1} → A2 {TITLE 2 · **MODEL_CODE 3** · CATEGORY 1}
+🟢 GT DIFFERENT → SAME **0건**
+🔴 브랜드 신규 획득 **0** — 별칭 등록부가 **4개 브랜드** 뿐이다(brand-alias.ts) ·
+   「설명에 브랜드가 없다」가 **아니다**
+```
+
+### ⑤ 🔴🔴 **그러나 이것이 기존 REJECT 를 «뒤집지 않는다»**
+
+```
+기존 REJECT(§0-RESULT) — 같은 레버(설명 품번)를 20쌍·4호스트에서 재서
+  **실제 이득 1 ↔ GT DIFFERENT 오염 2**(`cemarose.ca` · `tinyapple.net`) ⟹ 전체 기각
+🔴 그 **두 호스트가 이 분모에 없고, 있을 수도 없다** —
+  109 fixture 에서 cemarose 1건·tinyapple 3건이 **양쪽 설명 0 · 운영 저장분 조인 0**
+⟹ 🔴 **내 「오염 0」은 안전의 증거가 아니라 «분모의 성질» 이다**
+⟹ 🔴 같은 레버를 다시 열려면 **그 두 호스트가 든 분모** 가 필요하다(현재 확보 불가)
+```
+
+### ⑥ 운영 연결 최소 변경 범위 (🔴 구현 0 · CPO 승인 사안)
+
+```
+변경 지점 **한 곳** — `confirmBrandCodeInEvidence`(domestic-identifiers.ts:185)의 건초더미
+  `title · url · sku` 에 **후보 상세설명을 더한다**
+🔴 그 레버는 `a-identity-axis.test.ts`(6 tests)가 **기각 결론으로 잠그고 있다**
+   ⟹ 연결은 **계약 개정을 동반** 하고 CPO 승인 사안이다
+🔴 그리고 ②⒝(후보 구조화 facts 부재)는 그 연결과 **무관하게 남는다** —
+   `§A-MI-2` 의 재개 조건(후보 원문 · HTTP 429)과 **같은 벽** 이다
+```
+
+### ⑦ 산출물 · 검증
+
+```
+산출물  `preserved/mdcp-01-description-comparison-control.json`
+        (분모 · CONTROL 3팔 · verdict 분포 · 효과 · **limitations 5** · minimalOperationalChange · rows 24)
+계약    `__tests__/mdcp-01-description-comparison-control.test.ts` — **8 tests**
+        A(CONTROL) 4 · B(효과·오염 0 절대조건) 3 · C(산출물 보존) 1
+음성대조 복구 지점(후보 brand 되먹임)을 되돌리면 **A-2 가 1 FAIL** → 복구 후 8/8
 ```
 
 ---
