@@ -1,0 +1,2405 @@
+{
+  "note": "🔵 MI-REGRESSION-PORTABILITY-01 — brand-conflict-price-real 계약의 «저장소 내부» 입력. 🔴 운영 저장분(candidate_reviews 가격 보유 159건)을 packages/database/scripts/brand-conflict-price-dump.mjs 가 뽑은 것이고 이 파일은 그 덤프를 «그대로» 옮긴 것이다. 🔴 값은 한 글자도 바꾸지 않았다(records 159 · 민감문자열 0). 🔴 이 파일은 테스트 «입력» 이고 런타임에 쓰지 않는다(writeFileSync 0).",
+  "at": "2026-11-05T07:30:36.043Z",
+  "census": {
+    "total": 159,
+    "BRAND_MISMATCH": 89,
+    "BRAND_UNCONFIRMED": 8,
+    "NO_TITLE_OVERLAP": 83,
+    "SAME_SELLER_DISTINCT_LISTING": 4,
+    "BRAND_MISMATCH_AND_MODEL_CODE": 0,
+    "noDisqualifyingBlocker": 58,
+    "byVerdict": {
+      "PRESUMED_SAME": 114,
+      "SAME": 41,
+      "null": 1,
+      "CONFLICT": 3
+    },
+    "byPriceStatus": {
+      "UNVERIFIED_SEARCH": 43,
+      "null": 104,
+      "VERIFIED_CURRENT": 12
+    }
+  },
+  "records": [
+    {
+      "domain": "designerkidswear.com",
+      "title": "Girls Pink Knit Sweater",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 80.4,
+      "currency": "CAD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "FIT"
+      ]
+    },
+    {
+      "domain": "designerkidswear.com",
+      "title": "Boys Navy Cotton Logo Polo",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 95,
+      "currency": "CAD",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "COLOR_VARIANT",
+        "MATERIAL"
+      ]
+    },
+    {
+      "domain": "designerkidswear.com",
+      "title": "Boys Blue Cotton Sweatshirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 260,
+      "currency": "CAD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL"
+      ]
+    },
+    {
+      "domain": "designerkidswear.com",
+      "title": "Boys Blue Cotton Sweatshirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 260,
+      "currency": "CAD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL"
+      ]
+    },
+    {
+      "domain": "designerkidswear.com",
+      "title": "Boys Embossed DG Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 325,
+      "currency": "CAD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH"
+      ]
+    },
+    {
+      "domain": "designerkidswear.com",
+      "title": "Baby Girls Pink Piqué Cotton Polo Dress",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 345,
+      "currency": "CAD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP"
+      ]
+    },
+    {
+      "domain": "designerkidswear.com",
+      "title": "Baby Boys Blue Denim",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 370,
+      "currency": "CAD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "designerkidswear.com",
+      "title": "Blue Jesse Jacket",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 500,
+      "currency": "CAD",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "folkberlin.com",
+      "title": "Baby Ribbed Booties ''Grey Melange'' Organic Cotton",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 19.6,
+      "currency": "EUR",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH"
+      ]
+    },
+    {
+      "domain": "folkberlin.com",
+      "title": "Baby Ribbed Booties ''Grey Melange'' Organic Cotton",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 19.6,
+      "currency": "EUR",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH"
+      ]
+    },
+    {
+      "domain": "folkberlin.com",
+      "title": "Kim Shirt Organic Cotton ''Sleet Check''",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 35.21,
+      "currency": "EUR",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "folkberlin.com",
+      "title": "Kim Shirt Organic Cotton ''Sleet Check''",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 35.21,
+      "currency": "EUR",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "folkberlin.com",
+      "title": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 39,
+      "currency": "EUR",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "folkberlin.com",
+      "title": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 39,
+      "currency": "EUR",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "folkberlin.com",
+      "title": "Baby Sweater Suit ''Biscuit'' Organic Cotton",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 39,
+      "currency": "EUR",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "folkberlin.com",
+      "title": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 39,
+      "currency": "EUR",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "folkberlin.com",
+      "title": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 39,
+      "currency": "EUR",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "folkberlin.com",
+      "title": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 39,
+      "currency": "EUR",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "folkberlin.com",
+      "title": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 39,
+      "currency": "EUR",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "folkberlin.com",
+      "title": "Gingham Woven Trousers, Super Soft , 116 - 122 / 6 - 7 Years",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 42,
+      "currency": "EUR",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP"
+      ]
+    },
+    {
+      "domain": "folkberlin.com",
+      "title": "Color Block Jacket, Pastel Blue / Mellow Yellow",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 49,
+      "currency": "EUR",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL"
+      ]
+    },
+    {
+      "domain": "global.trenbe.com",
+      "title": "Bobo Choses Kids Hug Hairy Monster Long Sleeve T-Shirt (Light Blue) B226AC009 451 160484657 [P]",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 80,
+      "currency": "USD",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "global.trenbe.com",
+      "title": "Bobo Choses Kids Hug Hairy Monster Long Sleeve T-Shirt (Light Blue) B226AC009",
+      "market": null,
+      "verdict": null,
+      "matchTruth": null,
+      "priceTier": "EXACT",
+      "amount": 84,
+      "currency": "USD",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Handsmock Dress in Pink Tapestry by Bonjour - Last Ones In Stock - 6-12 Years",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 29.7,
+      "currency": "GBP",
+      "priceStatus": "VERIFIED_CURRENT",
+      "blockers": [
+        "SAME_SELLER_DISTINCT_LISTING"
+      ]
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Tunique With Hair Clip in Garden Flowers Print by Bonjour - Last Ones In Stock - 8-12 Years",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 34,
+      "currency": "GBP",
+      "priceStatus": "VERIFIED_CURRENT",
+      "blockers": [
+        "SAME_SELLER_DISTINCT_LISTING"
+      ]
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Booty Ghosts T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "CONFLICT",
+      "matchTruth": "CONFLICT",
+      "priceTier": "EXCLUDED",
+      "amount": 35,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "COLOR",
+        "MODEL_CODE"
+      ]
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Booty Ghosts T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "CONFLICT",
+      "matchTruth": "CONFLICT",
+      "priceTier": "EXCLUDED",
+      "amount": 35,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "COLOR",
+        "MODEL_CODE"
+      ]
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "FIT",
+        "BRAND_UNCONFIRMED"
+      ]
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "FIT",
+        "BRAND_UNCONFIRMED"
+      ]
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "FIT",
+        "BRAND_UNCONFIRMED"
+      ]
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "FIT",
+        "BRAND_UNCONFIRMED"
+      ]
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": "VERIFIED_CURRENT",
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hug Hairy Monster T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": "VERIFIED_CURRENT",
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": "VERIFIED_CURRENT",
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": "VERIFIED_CURRENT",
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Bobo Choses Embossed T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 37,
+      "currency": "GBP",
+      "priceStatus": "VERIFIED_CURRENT",
+      "blockers": [
+        "MODEL_CODE_AGE_LINE",
+        "MODEL_CODE"
+      ]
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Mush Monster Duo Baby Sweatshirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 52,
+      "currency": "GBP",
+      "priceStatus": "VERIFIED_CURRENT",
+      "blockers": [
+        "MODEL_CODE_AGE_LINE",
+        "MATERIAL",
+        "AUDIENCE_LINE",
+        "MODEL_CODE"
+      ]
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Double Deerstalker Cap in Blue / Soft Tan by Wynken",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 52,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "MATERIAL"
+      ]
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Bobo Choses Pop Sweatshirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 58,
+      "currency": "GBP",
+      "priceStatus": "VERIFIED_CURRENT",
+      "blockers": [
+        "MATERIAL"
+      ]
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Bobo Choses Pop Sweatshirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 58,
+      "currency": "GBP",
+      "priceStatus": "VERIFIED_CURRENT",
+      "blockers": [
+        "MATERIAL"
+      ]
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Hidden Monster Sweatshirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 61,
+      "currency": "GBP",
+      "priceStatus": "VERIFIED_CURRENT",
+      "blockers": [
+        "MATERIAL"
+      ]
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Taxi Saurus Tag Denim Pants by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 75,
+      "currency": "GBP",
+      "priceStatus": "VERIFIED_CURRENT",
+      "blockers": [
+        "COLOR_VARIANT"
+      ]
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Mixed Media Jacket in Ecru Mix by Wynken",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 91,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Mixed Media Jacket in Blue Mix by Wynken",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 91,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "MATERIAL",
+        "SAME_SELLER_DISTINCT_LISTING"
+      ]
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Stamp Bloom All Over Reversible Jacket by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "CONFLICT",
+      "matchTruth": "CONFLICT",
+      "priceTier": "EXCLUDED",
+      "amount": 151,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "MODEL_CODE"
+      ]
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Handsmock Apron Dress in Natural by Bonjour - Last Ones In Stock - 2-8 Years",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 8100,
+      "currency": "GBP",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "SAME_SELLER_DISTINCT_LISTING"
+      ]
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Everyday Ghosts All Over Baby T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 8800,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "NO_TITLE_OVERLAP",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Everyday Ghosts All Over Baby T-Shirt by Bobo Choses",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 8800,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "NO_TITLE_OVERLAP",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Bubble Sweatshirt in Grey Melange by Main Story",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 15100,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Bubble Sweatshirt in Grey Melange by Main Story",
+      "market": "OVERSEAS",
+      "verdict": "SAME",
+      "matchTruth": "STRONG_IDENTIFIER",
+      "priceTier": "EXACT",
+      "amount": 15200,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": []
+    },
+    {
+      "domain": "junioredition.com",
+      "title": "Faux Fur Reversible Jacket in Blue / Ode To Rose by Wynken",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 30200,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "MATERIAL"
+      ]
+    },
+    {
+      "domain": "kidbizkid.com",
+      "title": "Lacoste Navy Sweatshirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 10400,
+      "currency": "CAD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "COLOR_VARIANT",
+        "NO_TITLE_OVERLAP",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "kidbizkid.com",
+      "title": "Hugo Boss Baby Boys Double B Graphic T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 11000,
+      "currency": "CAD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "FIT",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "kidbizkid.com",
+      "title": "Marc Jacobs Black T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 18500,
+      "currency": "CAD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "kidbizkid.com",
+      "title": "Diesel Viker Jeans",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 19100,
+      "currency": "CAD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "COLOR_VARIANT",
+        "NO_TITLE_OVERLAP",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "kidbizkid.com",
+      "title": "Patachou Ecru Tweed Coat",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21800,
+      "currency": "CAD",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "kidbizkid.com",
+      "title": "Stone Island Baby Blue Sweatshirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 26300,
+      "currency": "CAD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "kidbizkid.com",
+      "title": "Hugo Boss Navy Zip Sweatshirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 27100,
+      "currency": "CAD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "COLOR_VARIANT",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "kidbizkid.com",
+      "title": "Givenchy Lilac Dress",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 27400,
+      "currency": "CAD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP"
+      ]
+    },
+    {
+      "domain": "kidbizkid.com",
+      "title": "Mackage Jesse Blue Jacket",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 57600,
+      "currency": "CAD",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "kidbizkid.com",
+      "title": "Fendi Blue FF Sweater",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 131600,
+      "currency": "CAD",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "kidbizkid.com",
+      "title": "Fendi Blue FF Sweater",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 132500,
+      "currency": "CAD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "miniboutique.co.kr",
+      "title": "[BOBO CHOSES]T-Shirt - B226AC009 - 미니부띠끄 miniboutique",
+      "market": "KR",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 88000,
+      "currency": "KRW",
+      "priceStatus": null,
+      "blockers": [
+        "NO_TITLE_OVERLAP"
+      ]
+    },
+    {
+      "domain": "nickis.com",
+      "title": "T-Shirt Cremeweiß",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 16,
+      "currency": "EUR",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "COLOR_VARIANT",
+        "NO_TITLE_OVERLAP"
+      ]
+    },
+    {
+      "domain": "nickis.com",
+      "title": "Sweatshirt Rot",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 50,
+      "currency": "EUR",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL"
+      ]
+    },
+    {
+      "domain": "nickis.com",
+      "title": "Jeans Blau",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 100,
+      "currency": "EUR",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "COLOR_VARIANT",
+        "NO_TITLE_OVERLAP",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "nickis.com",
+      "title": "Jacke Mixed Media Mehrfarbig",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 104,
+      "currency": "EUR",
+      "priceStatus": null,
+      "blockers": [
+        "MATERIAL"
+      ]
+    },
+    {
+      "domain": "nickis.com",
+      "title": "Daunenjacke Reversible Quilted Marineblau",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 365,
+      "currency": "EUR",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "nickis.com",
+      "title": "Daunenjacke Reversible Quilted Marineblau",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 365,
+      "currency": "EUR",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "COLOR_VARIANT",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "petitemaisonkids.com",
+      "title": "Azalea Pink Flower Hair Clip",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 4200,
+      "currency": "USD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH"
+      ]
+    },
+    {
+      "domain": "petitemaisonkids.com",
+      "title": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 12700,
+      "currency": "USD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE",
+        "GARMENT_FORM"
+      ]
+    },
+    {
+      "domain": "petitemaisonkids.com",
+      "title": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 12700,
+      "currency": "USD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE",
+        "GARMENT_FORM"
+      ]
+    },
+    {
+      "domain": "petitemaisonkids.com",
+      "title": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 12700,
+      "currency": "USD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE",
+        "GARMENT_FORM"
+      ]
+    },
+    {
+      "domain": "petitemaisonkids.com",
+      "title": "Charlie White Mandarin Collar Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 12700,
+      "currency": "USD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "FIT"
+      ]
+    },
+    {
+      "domain": "petitemaisonkids.com",
+      "title": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 12700,
+      "currency": "USD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE",
+        "GARMENT_FORM"
+      ]
+    },
+    {
+      "domain": "petitemaisonkids.com",
+      "title": "Sparkle Blue Denim Jeans",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 22200,
+      "currency": "USD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "petitemaisonkids.com",
+      "title": "Georgina Tartan Print Dress with Red Bow",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 35300,
+      "currency": "USD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "COLOR_VARIANT",
+        "MATERIAL"
+      ]
+    },
+    {
+      "domain": "shoppiccoliandco.com",
+      "title": "Jude Navy Baby Boy Anchor Sweater",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 9700,
+      "currency": "USD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "COLOR_VARIANT",
+        "NO_TITLE_OVERLAP",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "shoppiccoliandco.com",
+      "title": "Jude Navy Baby Boy Anchor Sweater",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 9700,
+      "currency": "USD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "COLOR_VARIANT",
+        "NO_TITLE_OVERLAP",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "shoppiccoliandco.com",
+      "title": "Blue Bears Knitted Sweater",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 11300,
+      "currency": "USD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP"
+      ]
+    },
+    {
+      "domain": "shoppiccoliandco.com",
+      "title": "Rudolph Knitted Sweater",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 11300,
+      "currency": "USD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL"
+      ]
+    },
+    {
+      "domain": "shoppiccoliandco.com",
+      "title": "Beatrice Burgundy Handsmocked Girl Sleeves Dress",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 20700,
+      "currency": "USD",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Blue T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 8,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Blue T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 8,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "White Multi Sequin Logo Crop T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 10.5,
+      "currency": "GBP",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "White Broderie Anglaise Dress",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 20,
+      "currency": "GBP",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Lemon Print Dress",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 20,
+      "currency": "GBP",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE",
+        "BRAND_UNCONFIRMED"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE",
+        "BRAND_UNCONFIRMED"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "White Stripe Graphic T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE",
+        "BRAND_UNCONFIRMED"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE",
+        "BRAND_UNCONFIRMED"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Pale Blue 3D Logo T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 21.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Blue Tie-Dye Polo Bear T-Shirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 29.5,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Denim Blue Jeans",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 39.5,
+      "currency": "GBP",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "COLOR_VARIANT",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Blue Half Zip Sweatshirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 39.5,
+      "currency": "GBP",
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "MATERIAL"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Navy Logo Rugby Sweatshirt",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 58.95,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "COLOR_VARIANT",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Black Puffer Coat",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 63.2,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP"
+      ]
+    },
+    {
+      "domain": "villagekids.co.uk",
+      "title": "Blue Knitted Jacket",
+      "market": "OVERSEAS",
+      "verdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "priceTier": "COMPARISON",
+      "amount": 94,
+      "currency": "GBP",
+      "priceStatus": null,
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL"
+      ]
+    }
+  ]
+}

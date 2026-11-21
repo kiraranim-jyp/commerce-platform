@@ -31,10 +31,26 @@ import {
  * 🔴 네트워크 0 · DB 0(덤프를 읽는다) · 운영 코드 변경 0.
  * 🔴 입력은 `packages/database/scripts/brand-conflict-price-dump.mjs` 가 만든다.
  *    🔴 덤프가 없으면 **SKIP** 한다 — 「0건 통과」로 적지 않는다(측정불가 ≠ PASS).
+ *
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 MI-REGRESSION-PORTABILITY-01 — **입력을 저장소 안으로 옮겼다**(CPO 2026-11-21)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **고친 문제** — 입력이 `process.env.TEMP` 아래의 **머신 로컬 덤프** 였고
+ *    `describe.runIf(READY)` 가 그것이 없으면 **조용히 SKIP** 했다. 그래서 이
+ *    **가격 안전성 계약**(「금액 집계 ∩ 차단축 = 공집합」)이 **다른 환경에서는
+ *    한 번도 돌지 않았다** — 비검증인데 초록으로 보였다.
+ * 🟢 **이제 입력이 `fixtures/brand-conflict-price-real.json`(저장소 커밋)이다.**
+ *    값은 그 덤프를 **한 글자도 바꾸지 않고** 옮겼다(records **159** · `census` 보존).
+ * 🔴 **SKIP 을 없앴다** — `describe.runIf` 를 지우고, 입력이 없거나 모양이 다르면
+ *    `E-0` 이 **FAIL** 한다(측정불가를 PASS 로 적지 않는다는 원래 의도를 **더 강하게** 지킨다).
+ * 🟢 **검증 의미와 assertion 은 그대로다** — R-1·R-2·R-3·P-1·P-2·P-3·C-1·C-2·C-3 전부 불변.
+ * 🔴 운영 데이터·DB·정책·집계기·분류표는 **한 글자도** 바꾸지 않았다(테스트 실행 환경만 개선).
+ * 🔴 이 파일은 그 fixture 를 **읽기만** 한다 — `writeFileSync` **0**(`a-identity-axis` A-2 유지).
  */
 
-const DUMP = path.join(process.env.TEMP ?? ".", "mi-p0-02", "brand-conflict-price.json");
-const READY = existsSync(DUMP);
+/** 🟢 저장소 내부 입력 — 모든 환경에서 **같은 입력** 이다(TEMP 의존 제거). */
+const DUMP = path.join(__dirname, "fixtures", "brand-conflict-price-real.json");
 
 interface Rec extends CandidateOverseasPriceRecord {
   domain: string;
@@ -52,7 +68,31 @@ const sum = (rs: Rec[]) => summarizeCandidateOverseasPrices(rs as CandidateOvers
 const total = (s: ReturnType<typeof sum>) =>
   Object.values(s.byCurrency).reduce((a, c) => a + c.count, 0);
 
-describe.runIf(READY)("BRAND-CONFLICT-PRICE — 운영 저장분 전수", () => {
+describe("BRAND-CONFLICT-PRICE — 운영 저장분 전수", () => {
+  /* ── E. 🔴🔴 입력 자체를 잠근다 — 이 계약이 «조용히 SKIP» 되지 않게 ─────────── */
+
+  it("E-0 🔴🔴 입력이 **저장소 안에 있고** 분모가 그대로다 — 없으면 FAIL(SKIP 금지)", () => {
+    /**
+     * 🔴 전에는 입력이 머신 로컬 TEMP 였고 `describe.runIf` 가 **조용히 SKIP** 했다.
+     *    ⟹ 다른 환경에서 이 가격 안전성 계약이 **한 번도 돌지 않았다**.
+     * 🟢 이제 입력이 없거나 분모가 바뀌면 **여기서 FAIL** 한다.
+     */
+    expect(existsSync(DUMP), "🔴 저장소 fixture 가 없다 — 이 계약은 SKIP 되면 안 된다").toBe(true);
+    const rs = load();
+    /** 🔴 분모를 숫자로 잠근다 — 조용히 줄면 FAIL 한다(측정 범위가 바뀐 것이다). */
+    expect(rs, "🔴 운영 저장분 전수는 159건이다").toHaveLength(159);
+    /** 🔴 모양도 잠근다 — 칸이 사라지면 아래 단언들이 조용히 무의미해진다. */
+    for (const k of ["domain", "verdict", "priceTier", "amount", "currency", "blockers"] as const) {
+      expect(rs[0], `🔴 입력에 ${k} 칸이 없다`).toHaveProperty(k);
+    }
+    /** 🔴 TEMP 경로에 의존하지 않는다 — 환경변수를 읽으면 다시 환경 의존이 된다. */
+    const bare = readFileSync(path.join(__dirname, "brand-conflict-price-real.test.ts"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, " ")
+      .replace(/^\s*\/\/[^\n]*$/gm, " ");
+    expect(bare, "🔴 환경변수 경로 의존이 되돌아왔다").not.toContain(["process.env", ".TEMP"].join(""));
+    expect(bare, "🔴 조건부 실행이 되돌아왔다").not.toContain(["describe", ".runIf"].join(""));
+  });
+
   /* ── R. 🔴🔴 브랜드 충돌 — 가격 자격을 «잃는다» ──────────────────────────── */
 
   it("R-1 🔴🔴 `BRAND_MISMATCH` 후보는 **금액 집계에 한 건도 들어가지 않는다**", () => {

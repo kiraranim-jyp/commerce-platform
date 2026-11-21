@@ -297,6 +297,25 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
     why: "🔴 candidate_reviews 덤프 · 라벨 **있다(SAME 10)** 지만 **전건 기존 GT 사본**(URL 7/7) — 이중 집계 방지",
   });
 
+  /**
+   * 🟢🟢 **이 계약이 또 일했다 (MI-REGRESSION-PORTABILITY-01)** —
+   *    `brand-conflict-price-real.json` 이 `fixtures/` 로 들어오자 **미분류로 정확히 잡혔다.**
+   * 🔴 전수 탐지 조건(`unseen.toEqual([])`)을 **느슨하게 하지 않았다** — 용도를 적어 분류한다
+   *    (CPO: 「전수 탐지 계약 완화 금지」 · 이 파일의 선례 **넷** 과 같은 처리).
+   *
+   * 🔴🔴 **그 파일에는 사람 라벨이 «한 건도» 없다** — 담긴 `verdict` 는
+   *    `candidate_reviews.system_verdict`(= **운영 MI 산출**)이고 `human_verdict` 칸이 **없다**.
+   *    ⟹ 🔴 GT 분모에 넣으면 **시스템 판정을 사람 라벨로 세는 것** 이 된다(가장 무거운 오염).
+   * 🟢 용도는 하나다 — 가격 안전성 계약(`brand-conflict-price-real.test.ts`)의 **입력**:
+   *    「차단축을 든 후보는 금액 집계에 들어가지 않는다」를 운영 저장분 **159건** 으로 재현한다.
+   * 🔴 전에는 그 입력이 머신 로컬 `TEMP` 에 있어 다른 환경에서 **조용히 SKIP** 됐다 —
+   *    그래서 저장소 안으로 옮겼다(값 무변경 · records **159** · `census` 보존).
+   */
+  skipped.push({
+    file: "brand-conflict-price-real.json",
+    why: "🔴 운영 저장분 159건(candidate_reviews) · verdict 는 **system_verdict** 이고 사람 라벨 **0** — 가격 안전성 계약의 입력",
+  });
+
   /* SAME-03 최신 CEO 라벨 — 🔴 DIFFERENT 가 0 이지만 분모로 같이 적는다 */
   {
     const j = readJson("core-same03-human-gt.json") as {
