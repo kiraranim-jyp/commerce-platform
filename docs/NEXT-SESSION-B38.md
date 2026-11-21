@@ -5,7 +5,15 @@
 ### ① 지금 좌표 — 🔴 **CTO 가 할 작업이 «없다». 새 WU 를 스스로 만들지 않는다**
 
 ```
-직전 작업   🟢🟢 **`MI-ORIGIN-FX-DISCREPANCY-03` — 미규명 2건 «원인 확정»**(§0-OFX03)
+직전 작업   🟢🟢 **`MI-ORIGIN-FX-VARIANT-WIRING-04` — 구현·검증 완료 · 🟡 배포 보류**(§0-OFX04)
+            🟢 probe 경로가 원본 URL 의 **`?variant=` 를 보존** 한다 — 운영 **1파일 · 실코드 +9줄**
+            🟢 **새 규칙 0** — 옵션 선택·「못 찾으면 가격 미산출」은 `shopify-product-json.ts:426`
+               에 **이미 있었다** ⟹ 그 함수에 URL 을 온전히 넘기는 **배선** 하나다
+            🟢 대표 사례 원가 **£115 → £119**(지정 옵션 UK 11) · 미지정/오류/미발견 전부 안전
+            🟢🟢 기존 계약 `C-1`(비대칭 고정)이 **설계대로 FAIL 로 뒤집혔고** 방향을 뒤집어 **강화**
+            🔴 가격 영향 — variant 고정 스냅샷 **9/566** · 값이 바뀔 ORIGIN_FX **2** · 과거 행 **0**
+            🟡 **Production 배포·main 병합 안 함** — CPO 최종 검토 후 **CEO 승인 대상**
+그 전 작업   🟢🟢 **`MI-ORIGIN-FX-DISCREPANCY-03` — 미규명 2건 «원인 확정»**(§0-OFX03)
             🟢🟢 원인 = **사이즈별 가격 × URL 의 `?variant=`** — 추출은 그 옵션(£119)을
                존중하고 관측은 그 파라미터를 **버려** 첫 구매가능 옵션(£115)을 쓴다
                ⟹ 🔴 둘 중 하나가 «틀린 값» 이 아니라 **서로 다른 옵션의 가격** 이다
@@ -234,6 +242,89 @@ cd apps/admin && npx vitest run \
 ```
 docs/START-HERE.md §0-NOW → docs/NEXT-SESSION-B38.md §0-HANDOFF 를 읽고 시작해.
 CTO 작업은 없는 상태다 — 다음 범위를 지정해 주면 그 범위만 한 묶음으로 수행해.
+```
+
+---
+
+## 🟢🟢🟢 §0-OFX04. **[2026-11-21] `MI-ORIGIN-FX-VARIANT-WIRING-04` — 구현·검증 완료 · 🟡 배포 보류**
+
+🔴 **다시 조사하지 않는다.** 🟢 커밋 `42402b1a` · 🟡 **main 병합 0 · Production 배포 0**
+(CPO 최종 검토 후 **CEO 승인 대상** · CPO 지시).
+
+### ① 고친 것 — 🟢 **운영 1파일 · 실코드 +9줄**(나머지는 근거 주석)
+
+```
+`packages/crawler/src/shopify-market-probe.ts`
+  ⒜ `probeMarket(origin, handle, marketCode, **selectedVariantId**)` — 인자 추가
+  ⒝ 질의 URL  `${base}${variantQuery}`   (variantQuery = `?variant=<id>` 또는 "")
+  ⒞ 기록 URL  `${base}.json${variantQuery}`  🔴 `.json` 이 쿼리 **앞** 이다
+  ⒟ `probeOriginAndKrMarkets` · `probeAdditionalShopifyMarkets` 가 `sourceUrl` 에서
+     **한 번** 추출해 전달 — 🔴 한 스냅샷 안에서 옵션이 갈리지 않게 **둘 다** 보존
+🟢 **새 규칙 0** — 옵션 선택·품절·「못 찾으면 가격 미산출」은
+   `shopify-product-json.ts:426-446` 에 **이미 구현돼 있었다**(§4-D 확인 결과) ⟹
+   이 WU 는 `extractShopifySelectedVariantId` 를 **재사용** 하는 배선 하나다
+🟢 배선이 실제로 발화하는지 **먼저 확인했다** — `canonicalProduct.sourceUrl` 이 쿼리를
+   **그대로 보존** 하고 전수 677 중 variant 보유가 `source_url` **9** ↔ `cp.sourceUrl` **9** 로 일치
+```
+
+### ② 「반드시 지킬 동작 5」 전수 대조
+
+| 지시 | 결과 | 근거 |
+|---|---|---|
+| ① 원본 URL 에 variant 있으면 우선 | 🟢 | `B-1` — 대표 사례 원가 **£119**(지정 옵션 UK 11) |
+| ② 확인 불가 시 조용히 대체 금지 | 🟢 | `B-5` — probe **null** ⟹ 관측 행 **자체가 없다** |
+| ③ variant 없는 URL 기존 동작 | 🟢 | `B-3`(쿼리 0 · **115** · sourceUrl 예전 모양) · `B-4`(숫자 아닌 값) |
+| ④ 가격·통화·환산·후보·MI 기준 불변 | 🟢 | 변경 **0**(그 파일 밖 운영 코드 0) |
+| ⑤ 다른 Shopify 경로 부작용 0 | 🟢 | `C-2` — 후보 목록·`marketMayBeObserved`·요청 수 **불변** |
+
+🟢🟢 **②가 왜 안전한가** — 지정 variant 를 못 찾으면 `fetchShopifyProductJson` 이 가격을
+내놓지 않고 `if (!price || !price.currency) return null` 이 **관측을 만들지 않는다**.
+그때 원가는 `run-price-check` 의 **기존 폴백(= 스냅샷 추출가)** 으로 서고, 그 값은
+**이미 variant 를 존중한다** ⟹ 🔴 **어느 경로로도 「다른 옵션의 가격」이 되지 않는다.**
+
+### ③ 🔴 가격 영향 범위(전수 fixture · 다시 측정할 때)
+
+```
+variant 고정 스냅샷      **9 / 566** (전부 `www.junioredition.com`)
+그 스냅샷의 관측 36행     ORIGIN_FX 9 · KR_MARKET 9 · MARKET_PROBE 18
+🔴 값이 바뀔 ORIGIN_FX    **2** (£115 → £119 · +3.4%)
+🟢 불변                  **7** (사이즈별 가격이 없는 상품이면 두 규칙이 같은 값)
+🔴 과거 행 수정           **0** — backfill 하지 않았다. 다음 「가격 확인」부터 새 값이 쌓인다
+🔴 전수 분모의 영향        ORIGIN_FX 498 중 **2건**(0.4%) — 🔴 작아 보이지만 **신발처럼
+   사이즈별 가격이 있는 상품군에서 셀러가 옵션을 지정하면 상시 발생** 한다(원인은 구조였다)
+```
+
+### ④ 🟢🟢 기존 계약이 **설계대로 뒤집혔다**
+
+```
+`origin-fx-discrepancy-03.test.ts` **C-1** 은 「배선 비대칭이 존재한다」를 고정하고 있었다.
+⟹ 🟢 이번 수정으로 **FAIL** 했고, 그 FAIL 이 **수정의 증거** 다(쿠팡 고시·WU-076 선례).
+🟢 **느슨하게 하지 않고 방향을 뒤집어 «강화» 했다**:
+   ⒜ probe 가 추출기를 **재사용** 하는지(복제하면 「숫자만」 규칙이 둘로 갈린다 — 복제 금지 단언)
+   ⒝ 두 진입점 **모두** 에 전달하는지  ⒞ 쿼리를 실제로 붙이는지
+   ⒟ 🔴 **보존 단언 4** — handle 조립 · `.json` 위치 · 조용한 대체 금지 · 배송 게이트
+🟢 그 갱신된 C-1 도 **배선을 지우면 FAIL** 한다(음성 대조로 확인)
+```
+
+### ⑤ 검증
+
+```
+신규 계약   origin-fx-variant-wiring-04.test.ts **8 passed** (🔴 외부 HTTP **0** — fetch mock)
+            A-0 운영 가격표 · B-1 대표 사례 119 · B-2 sourceUrl 모양 ·
+            B-3 미지정 · B-4 숫자 아닌 값 · B-5 미발견 안전 · C-1 확장 시장 · C-2 불변
+기존 계약   `-01` 9 · `-02` 9 · `-03` 7 **전건 유지**
+음성 대조   M1 쿼리 미부착 **4 FAIL** · M2 기본 조회 미전달 **3 FAIL** ·
+           M3 확장 조회 미전달 **1 FAIL** · M4 `.json` 위치 오류 **1 FAIL**
+           → 운영 파일 **md5 복구 · diff 0**
+회귀        **944 files / 11,546 passed / 0 failed** · typecheck **0** · **build exit 0**
+```
+
+### ⑥ 🟡 남은 것 — **배포 승인 하나**
+
+```
+🟡 CPO 최종 검토 → **CEO 승인** → main 병합 → Production 배포
+🔴 CTO 가 하지 않는다(CPO 지시: 「원가가 실제로 바뀌는 운영 수정이므로 … 배포는 보류」)
+🔴 과거 행 backfill 은 **별개 결정** 이다(§0-OFX02 ⑥ 와 같은 축 · 여전히 미승인)
 ```
 
 ---
