@@ -1,11 +1,20 @@
 # TTAEJYO — 다음 세션 인수인계 (CTO)
 
-## 🔵🔵🔵 0-HANDOFF. **[2026-11-20 갱신] 이 블록만 읽고 시작한다**
+## 🔵🔵🔵 0-HANDOFF. **[2026-11-21 갱신] 이 블록만 읽고 시작한다**
 
 ### ① 지금 좌표 — 🔴 **CTO 가 할 작업이 «없다». 새 WU 를 스스로 만들지 않는다**
 
 ```
-직전 작업   🔵🔵 **`MI-UNIFIED-MARKET-ARCHITECTURE-03`** — **CPO 결정: ④ 아무것도 변경하지 않는다**
+직전 작업   🟢🟢 **`MI-REGRESSION-PORTABILITY-01` — 구현·검증·push 완료 · CLOSED**(§0-RP01)
+            🔴🔴 **가격 안전성 계약이 다른 환경에서 «한 번도» 돌지 않았다** —
+               입력이 머신 로컬 `TEMP` 덤프였고 `describe.runIf` 가 **조용히 SKIP** 했다
+            🟢 입력을 저장소로 옮겼다 — `fixtures/brand-conflict-price-real.json`
+               (운영 저장분 **159건** · 값 무변경 · `census` 보존 · 민감문자열 0)
+            🟢 `describe.runIf` **제거** · 입력 부재/분모 변화는 **E-0 이 FAIL** 한다
+            🟢 기존 9개 단언(R-1~3 · P-1~3 · C-1~3)을 **한 글자도 바꾸지 않았다**
+            🔴 운영 코드 **0** · DB/schema **0** · 정책/집계기/분류표 **0** · GT 라벨 **0**
+            🟡 **사업 성과가 아니다** — 회귀 안전성 개선이다(배포 0 · main 머지 0)
+그 전 작업   🔵🔵 **`MI-UNIFIED-MARKET-ARCHITECTURE-03`** — **CPO 결정: ④ 아무것도 변경하지 않는다**
             🔴 가격 축 통합 **보류**(승인 안 한 변경 5건은 §0-ARCH03 B)
             🟢🟢 **정정** — 국내 가격 축은 **둘** 이고 `transient` 축은 해외와 **이미 공통** 이다
                (같은 타입·같은 집계기·`blockers` 실제 전달) · 남은 것은 **DB 영속 축 하나**
@@ -177,6 +186,102 @@ cd apps/admin && npx vitest run \
 ```
 docs/START-HERE.md §0-NOW → docs/NEXT-SESSION-B38.md §0-HANDOFF 를 읽고 시작해.
 CTO 작업은 없는 상태다 — 다음 범위를 지정해 주면 그 범위만 한 묶음으로 수행해.
+```
+
+---
+
+## 🟢🟢🟢 §0-RP01. **[2026-11-21] `MI-REGRESSION-PORTABILITY-01` — 구현·검증·push 완료 · CLOSED**
+
+🔴 **다시 조사하지 않는다.** 🟡 이것은 **사업 성과가 아니라 회귀 안전성** 개선이다.
+🟢 커밋 `69eefaa5` · 브랜치 `uird-deploy-01`(0 0) · 🔴 **main 머지 0 · Production 배포 0**.
+
+### ① 고친 문제 — 🔴🔴 **가격 안전성 계약이 다른 환경에서 «한 번도» 돌지 않았다**
+
+```
+brand-conflict-price-real.test.ts 가 입력을 **머신 로컬** 에서 읽었다:
+  const DUMP  = path.join(process.env.TEMP ?? ".", "mi-p0-02", "brand-conflict-price.json")
+  const READY = existsSync(DUMP)
+  describe.runIf(READY)(…)                         ← 🔴 없으면 **조용히 SKIP**
+⟹ 🔴 CI·새 체크아웃·다른 사람의 머신에서 **비검증인데 초록으로 보였다**
+🔴 그 계약이 지키던 것이 가볍지 않다 — 「**차단축을 든 후보는 금액 집계에 들어가지 않는다**」
+   (= 다른 브랜드 가격이 셀러 화면의 가격에 섞이지 않는다는 보장 · 운영 저장분 **159건** 전수)
+```
+
+### ② 한 것 — 입력을 저장소로 옮기고 **SKIP 을 없앴다**
+
+```
+🟢 입력   apps/admin/.../__tests__/fixtures/brand-conflict-price-real.json
+          🔴 그 TEMP 덤프를 **값 그대로** 옮겼다 — records **159** · `at` 보존 ·
+             `census` 보존(BRAND_MISMATCH 89 · NO_TITLE_OVERLAP 83 ·
+             SAME_SELLER_DISTINCT_LISTING 4 · BRAND_UNCONFIRMED 8 · 차단축 없음 58)
+          🔴 민감 문자열 **0**(도메인·제목·금액·verdict·blockers 뿐) · 런타임 쓰기 **0**
+🟢 경로   path.join(__dirname, "fixtures", "brand-conflict-price-real.json")
+🟢 실행   `describe.runIf` **제거** — 이제 **항상** 돈다
+🟢 신규   **E-0 하나** — 입력 부재 · 분모 변화(≠159) · 칸 소실 · **환경변수 경로 복귀** ·
+          **`describe.runIf` 복귀** 를 전부 **FAIL** 로 잡는다
+🔴 기존 9개 단언은 **한 글자도 바꾸지 않았다** — R-1·R-2·R-3 · P-1·P-2·P-3 · C-1·C-2·C-3
+   제거된 줄은 **정확히 셋**(경로 · `READY` · `runIf`)이다
+```
+
+🔴🔴 **의도를 약화하지 않고 «강화» 했다** — 원래 주석이 「덤프가 없으면 SKIP 한다 —
+「0건 통과」로 적지 않는다(측정불가 ≠ PASS)」였다. 🟢 이제 **측정불가가 PASS 가 아니라 FAIL** 이다.
+
+### ③ 🟢🟢 **기존 전수 분류 가드가 내 fixture 를 잡았고, 가드를 풀지 않았다**
+
+```
+core-same06-safety-gt-search.test.ts 의 「fixture 전수 분류」 가드가
+  expected [ 'brand-conflict-price-real.json' ] to deeply equal []
+로 **정확히 FAIL** 했다(회귀에서 1건).
+🔴 `unseen.toEqual([])` 를 **느슨하게 하지 않았다** — 그 파일의 선례 **넷** 과 같이
+   **용도를 적어 분류** 했다(`skipped.push`).
+🔴 분류 문구가 핵심이다 — 그 파일의 `verdict` 는 `candidate_reviews.**system_verdict**`
+   (운영 MI 산출)이고 `human_verdict` 칸이 **없다** ⟹ GT 분모에 넣으면
+   **시스템 판정을 사람 라벨로 세는 것** 이다.
+🟢 GT 분모 **불변** — 수집 **17**(전과 같다) · 제외 31 → **32** · 미분류 **0**
+```
+
+### ④ 음성 대조 — **셋 다 FAIL → 복구**
+
+```
+M1  fixture 경로를 없는 파일로            → **10 FAIL**(전건) 🟢 더는 조용히 넘어가지 않는다
+M2  `describe.runIf(existsSync(DUMP))` 복귀 → **1 FAIL**(E-0)
+M3  `process.env.TEMP` 경로로 되돌림       → **1 FAIL**(E-0)
+    🔴🔴 **이 머신에 그 덤프가 실재해도 FAIL 한다** — 로컬 가용성과 무관하게 잡는다
+복구 → **10 passed**
+🟢 다른 환경 모사 — `TEMP` 를 빈 디렉터리로 바꿔 실행 → **10 passed · skipped 0**
+```
+
+### ⑤ 검증 수치
+
+```
+대상 파일   10 passed (기존 9 + 신규 E-0)
+회귀        **940 files / 11,511 passed / 0 failed** (기준선 11,510 + 내 E-0 **1**)
+typecheck   exit 0 · `error TS` **0**
+preserved/  변경 **0**(회귀가 산출물을 덮지 않았다)
+작업트리    **120 = 기준선**
+```
+
+### ⑥ 🔴🔴 사용자 작업물을 커밋에 끌고 들어가지 않았다
+
+```
+`core-same06-safety-gt-search.test.ts` 는 **세션 시작 시점에 이미 수정돼 있었다**
+(미추적 fixture 4개 — `mi-current-recapture*.json` ×3 · `brand-0-wu080-cf3.json` — 의 분류 **48줄**).
+🔴 `git add <file>` 을 하면 그 48줄이 **내 커밋에 들어간다**.
+🟢 그래서 **HEAD + 내 19줄** 만으로 blob 을 만들어 `update-index --cacheinfo` 로 **그 버전만** staged 했다
+   (작업트리의 사용자 변경 4건은 **그대로** 남아 있다 · 실측 확인).
+🟢 그 staged 버전이 **깨끗한 체크아웃에서 자기완결** 임을 기계적으로 증명했다 —
+   fixtures 추적 **43** + 내 것 **1** = **44**, 그 44가 staged 소스에 **전건 등장**(미분류 0).
+🔴 `git add .` · `reset` · `clean` · `stash` **사용 0**.
+```
+
+### ⑦ 바꾸지 않은 것 (CPO 절대 금지 전수 대조)
+
+```
+SAME/상품 정체성 정책      0     blocker/가격 적격성 정책   0
+가격 산출 · FX             0     운영 데이터 · DB · schema  0
+Production 코드            0     GT 라벨 · preserved 산출물 0
+동결 공급원 · 어댑터        0     기존 계약의 검증 의미      0 (9개 단언 바이트 불변)
+main 머지                  0     Production 배포            0
 ```
 
 ---
