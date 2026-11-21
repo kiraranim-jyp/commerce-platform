@@ -1,6 +1,7 @@
 import type { MarketProbeResult } from "./market-probe-result";
 import {
   extractShopifyHandle,
+  extractShopifySelectedVariantId,
   fetchShopifyProductJson,
   fetchShopifyShopMeta,
   shipsToCountry,
@@ -26,17 +27,56 @@ import {
  * 다른 모양을 주면 저장부가 갈라진다) — 이름만 기존 호출부를 위해 남긴다. */
 export type ShopifyMarketProbeResult = MarketProbeResult;
 
-async function probeMarket(origin: string, handle: string, marketCode: string): Promise<ShopifyMarketProbeResult | null> {
+/**
+ * MI-ORIGIN-FX-VARIANT-WIRING-04(CPO 승인, 2026-11-21) — **원본 URL 이 가리키는
+ * 옵션을 시장 관측에서도 보존한다.**
+ *
+ * ── 무엇이 틀려 있었나(운영 전수 실측) ──────────────────────────────────
+ * CEO 지시 **P0-A.29-E ㉮**(2026-09-20 · 커밋 `683d9d83`)가 「URL 이 «UK 11» 을
+ * 가리키는데 «UK 4» 가격을 쓰던 것」을 고쳤다. 그런데 그 수정은 **추출 경로** 에만
+ * 들어갔고, 이 파일은 URL 을 **새로 조립** 하면서 `?variant=` 를 버렸다
+ * (이 파일의 마지막 변경은 2026-09-13 으로 그 수정보다 **먼저** 다).
+ *
+ * 실측(`MI-ORIGIN-FX-DISCREPANCY-03` · junioredition Lulu T Bar Shoes):
+ * 한 상품이 사이즈마다 **£115(UK 4·5) / £119(UK 7~11) / £123(UK 11.5·12)** 이고
+ * 셀러가 준 URL 은 `?variant=40096037535807`(29 EUR / UK 11 / **£119**)인데
+ * 원가 관측(ORIGIN_FX)은 **£115** 를 적고 있었다 — 그 URL 이 가리킨 옵션이 아니다.
+ * ⟹ 착지원가·마진·CASE 가 **가장 싼 옵션 기준** 으로 섰다.
+ *
+ * ── 고치는 범위 ─────────────────────────────────────────────────────────
+ * 🔴 **새 규칙을 만들지 않았다.** 옵션 선택·품절 판정·「못 찾으면 가격을 내놓지
+ *    않는다」는 전부 `fetchShopifyProductJson`(shopify-product-json.ts:426-446)에
+ *    **이미 구현돼 있다**. 이 파일이 할 일은 그 함수에 **URL 을 온전히 넘기는 것** 뿐이다.
+ * 🟢 그래서 `selectedVariantId` 를 받아 쿼리로 다시 붙인다(없으면 **예전 URL 그대로**).
+ * 🔴 가격·통화·환산 정책 · market 후보 목록 · `marketMayBeObserved` 게이트 ·
+ *    요청 수는 **한 글자도 바꾸지 않았다**.
+ *
+ * ── 지정했는데 못 찾은 경우 ─────────────────────────────────────────────
+ * 🔴 **조용히 다른 사이즈 가격으로 갈아타지 않는다.** 그 경우
+ *    `fetchShopifyProductJson` 이 `price` 를 **내놓지 않고**, 아래 `if (!price …)`
+ *    가 **null** 을 돌려준다 ⟹ 그 시장 관측 행이 **생기지 않는다**.
+ *    🟢 원가는 그때 `run-price-check` 의 기존 폴백(= 스냅샷 추출가)으로 서고,
+ *       그 추출가는 **이미 variant 를 존중한다** ⟹ 어느 경로로도 「다른 옵션의 가격」이 되지 않는다.
+ */
+async function probeMarket(
+  origin: string,
+  handle: string,
+  marketCode: string,
+  selectedVariantId: string | null,
+): Promise<ShopifyMarketProbeResult | null> {
   const prefix = marketCode ? `/${marketCode}` : "";
-  const url = `${origin}${prefix}/products/${handle}`;
-  const result = await fetchShopifyProductJson(url);
+  const base = `${origin}${prefix}/products/${handle}`;
+  /** 🔴 `${base}.json` 뒤에 붙인다 — 쿼리를 경로 앞에 섞으면 `.json` 이 쿼리 안으로 들어간다. */
+  const variantQuery = selectedVariantId ? `?variant=${selectedVariantId}` : "";
+  const result = await fetchShopifyProductJson(`${base}${variantQuery}`);
   const price = result?.productData.price;
   if (!price || !price.currency) return null;
   return {
     marketCode,
     amount: price.amount,
     currency: price.currency,
-    sourceUrl: `${url}.json`,
+    /** 🟢 실제로 무엇을 물었는지 그대로 남긴다(GLOBAL-MARKET ③ 과 같은 이유). */
+    sourceUrl: `${base}.json${variantQuery}`,
     shopMeta: result?.shopMeta ?? null,
     regularPrice: result?.productData.regularPrice ?? null,
     available: result?.productData.available,
@@ -52,9 +92,11 @@ export async function probeOriginAndKrMarkets(
   const handle = extractShopifyHandle(sourceUrl);
   if (!handle) return null;
   const origin = new URL(sourceUrl).origin;
+  /** 🟢 WIRING-04 — 원본 URL 이 옵션을 가리키면 두 시장에 **같은 옵션** 을 묻는다. */
+  const selectedVariantId = extractShopifySelectedVariantId(sourceUrl);
   const [originResult, krResult] = await Promise.all([
-    probeMarket(origin, handle, ""),
-    probeMarket(origin, handle, "en-kr"),
+    probeMarket(origin, handle, "", selectedVariantId),
+    probeMarket(origin, handle, "en-kr", selectedVariantId),
   ]);
   return { origin: originResult, kr: krResult };
 }
@@ -147,9 +189,17 @@ export async function probeAdditionalShopifyMarkets(
   if (!handle) return [];
   const origin = new URL(sourceUrl).origin;
   const shopMeta = await fetchShopifyShopMeta(origin);
+  /**
+   * 🟢 WIRING-04 — 확장 시장에도 **같은 옵션** 을 묻는다.
+   * 🔴 한 스냅샷 안에서 원가(ORIGIN_FX)와 시장 관측(MARKET_PROBE)이 **서로 다른 옵션**
+   *    가격을 들고 있으면 같은 화면이 두 사실을 말한다(실측: ORIGIN_FX £115 ↔ en-int £115
+   *    인데 그 URL 이 가리킨 옵션은 £119 였다) ⟹ 두 경로를 **같이** 보존한다.
+   * 🔴 후보 목록·게이트·요청 수는 **불변** 이다.
+   */
+  const selectedVariantId = extractShopifySelectedVariantId(sourceUrl);
   const candidates = EXPAND_CANDIDATE_MARKET_CODES.filter(
     (code) => !excludeMarketCodes.includes(code) && marketMayBeObserved(shopMeta, code),
   );
-  const results = await Promise.all(candidates.map((code) => probeMarket(origin, handle, code)));
+  const results = await Promise.all(candidates.map((code) => probeMarket(origin, handle, code, selectedVariantId)));
   return results.filter((r): r is ShopifyMarketProbeResult => r !== null);
 }

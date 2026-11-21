@@ -184,37 +184,57 @@ describe("MI-ORIGIN-FX-DISCREPANCY-03 — 미규명 2건의 원인", () => {
 
   /* ── C. 🔴🔴 배선 비대칭 — 같은 수정이 한쪽에만 적용됐다 ─────────────────── */
 
-  it("C-1 🔴🔴 `?variant=` 를 존중하는 곳은 추출 경로뿐 — probe 경로의 URL 조립엔 «없다»", () => {
+  it("C-1 🟢🟢 [WIRING-04 로 뒤집힘] 두 경로가 **둘 다** `?variant=` 를 존중한다", () => {
     /**
-     * 🔴 이 단언이 **현재 상태를 사실로 고정** 한다. 나중에 probe 에 variant 가 배선되면
-     *    여기가 **FAIL 로 뒤집히고** 그것이 수정의 증거다(쿠팡 고시·WU-076 선례와 같은 모양).
-     * 🔴 **고치지 않았다** — 지시 §3 이 운영 코드 변경을 금지했다.
+     * 🔴🔴 **이 단언은 원래 «비대칭이 존재한다» 를 고정했고, 그것이 FAIL 로 뒤집혔다.**
+     *    그 FAIL 이 `MI-ORIGIN-FX-VARIANT-WIRING-04`(CPO 승인 2026-11-21) 수정의 **증거** 다
+     *    — 설계한 대로다(쿠팡 고시·WU-076 선례와 같은 모양).
+     * 🟢 **느슨하게 하지 않고 방향을 뒤집어 «강화» 했다** — 이제 배선이 **사라지면** FAIL 한다.
+     *
+     * 🔴 [보존 기록] 뒤집히기 «전» 의 사실 — probe 경로가 URL 을 handle 로만 조립해
+     *    `?variant=` 를 버렸고, 그래서 원가가 지정 옵션(£119)이 아니라 첫 구매가능
+     *    옵션(£115)으로 섰다. 원인은 **P0-A.29-E ㉮(`683d9d83` · 2026-09-20)가 추출
+     *    경로만 고쳤고 probe 는 그 이전(2026-09-13)이었다** 는 것이다.
      */
     const jsonSrc = bareSource(JSONSRC);
     const probeSrc = bareSource(PROBE);
 
     /**
-     * 🟢 추출 경로는 `?variant=` 를 읽는다.
-     * 🔴🔴 **내 1차 단언이 뚫렸고 그 교훈을 남긴다** — `toContain("extractShopifySelectedVariantId")`
-     *    로 썼더니 이름을 `…IdX` 로 바꾸는 변이(M2)가 **통과** 했다(부분 문자열이라 여전히 매칭).
+     * 🟢 추출기의 **owner 는 여전히 한 파일** 이다.
+     * 🔴🔴 **내 1차 단언이 뚫렸던 교훈을 남긴다** — `toContain("extractShopifySelectedVariantId")`
+     *    로 썼더니 이름을 `…IdX` 로 바꾸는 변이가 **통과** 했다(부분 문자열이라 여전히 매칭).
      * 🟢 그래서 **선언 경계까지** 단언한다 — 이름이 바뀌면 FAIL 한다.
      */
-    expect(jsonSrc, "🟢 추출 경로에 variant 추출기가 «그 이름으로» 선언돼 있다").toContain(
+    expect(jsonSrc, "🟢 추출기의 owner 는 shopify-product-json 하나다").toContain(
       "export function extractShopifySelectedVariantId(",
     );
     expect(jsonSrc, "🟢 그 추출기가 실제로 쿼리 파라미터를 읽는다").toContain(
       ["searchParams", '.get("variant")'].join(""),
     );
 
-    /** 🔴 probe 경로는 그것을 **쓰지 않는다** — 어휘 자체가 없다. */
-    expect(probeSrc, "🔴 probe 가 variant 추출기를 쓰고 있다면 이 계약을 갱신해야 한다").not.toContain(
-      "extractShopifySelectedVariantId",
-    );
-    expect(probeSrc, "🔴 probe 가 variant 파라미터를 읽고 있다면 이 계약을 갱신해야 한다").not.toContain(
+    /** 🟢🟢 probe 경로가 **그 함수를 재사용** 한다 — 판단을 복제하지 않았다. */
+    expect(probeSrc, "🟢 probe 가 variant 추출기를 쓴다").toContain("extractShopifySelectedVariantId(sourceUrl)");
+    /** 🔴 **복제 금지** — probe 가 쿼리를 직접 파싱하면 「숫자만」 규칙이 둘로 갈린다. */
+    expect(probeSrc, "🔴 probe 가 variant 를 직접 파싱하면 안 된다(규칙 owner 는 하나)").not.toContain(
       ["searchParams", '.get("variant")'].join(""),
     );
-    /** 🔴 그리고 URL 을 **handle 만으로** 조립한다 — 그 줄이 variant 를 버리는 자리다. */
-    expect(probeSrc, "🔴 probe 의 URL 조립 모양").toContain("/products/${handle}`");
+    /** 🟢 그리고 실제로 URL 에 다시 실어 보낸다. */
+    expect(probeSrc, "🟢 쿼리로 다시 붙인다").toContain("?variant=${selectedVariantId}");
+    /** 🔴 두 진입점 **모두** 에 전달한다 — 하나만 하면 한 스냅샷 안에서 옵션이 갈린다. */
+    expect(probeSrc, "🟢 기본 조회(원본)").toContain('probeMarket(origin, handle, "", selectedVariantId)');
+    expect(probeSrc, "🟢 기본 조회(en-kr)").toContain('probeMarket(origin, handle, "en-kr", selectedVariantId)');
+    expect(probeSrc, "🟢 확장 조회").toContain("probeMarket(origin, handle, code, selectedVariantId)");
+
+    /**
+     * 🔴 **보존 단언** — 「배선이 생겼다」만 쓰면 다음 사람이 기존 성질까지 바꿀 수 있다.
+     * 🟢 그래서 바뀌지 «않아야» 하는 것을 같이 잠근다.
+     */
+    expect(probeSrc, "🟢 URL 은 여전히 handle 로 조립한다").toContain("/products/${handle}`");
+    expect(probeSrc, "🟢 `.json` 은 쿼리 «앞» 이다").toContain("${base}.json${variantQuery}");
+    expect(probeSrc, "🟢 가격/통화가 없으면 관측을 만들지 않는다(조용한 대체 금지)").toContain(
+      "if (!price || !price.currency) return null;",
+    );
+    expect(probeSrc, "🟢 배송 가능 게이트가 그대로다").toContain("marketMayBeObserved");
   });
 
   it("C-2 🔴 영향 범위 — ORIGIN_FX 498행 중 variant 지정 9 · 그중 불일치 2(전수 fixture)", () => {
