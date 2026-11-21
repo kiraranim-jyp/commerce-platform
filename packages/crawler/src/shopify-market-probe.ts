@@ -58,6 +58,35 @@ export type ShopifyMarketProbeResult = MarketProbeResult;
  *    🟢 원가는 그때 `run-price-check` 의 기존 폴백(= 스냅샷 추출가)으로 서고,
  *       그 추출가는 **이미 variant 를 존중한다** ⟹ 어느 경로로도 「다른 옵션의 가격」이 되지 않는다.
  */
+/**
+ * MI-ORIGIN-FX-VARIANT-WIRING-04A(CPO 보완 지시, 2026-11-21) — **명시된 variant 가
+ * 유효하지 않으면 아무 가격도 내놓지 않는다.**
+ *
+ * ── 무엇이 일관되지 않았나(CPO 지적) ────────────────────────────────────
+ * `?variant=99999999999`(숫자인데 그 상품에 없다) ⟹ 가격 **없음**(관측 0)이었는데
+ * `?variant=abc` · `?variant=`(명시했지만 값이 쓰레기) ⟹ 「애초에 지정이 없었다」로
+ * 떨어져 **첫 구매가능 옵션 가격**(이 사례 £115)이 나왔다. 🔴 같은 「지정했는데 못
+ * 찾았다」인데 결과가 갈렸고, 뒤쪽은 **조용한 갈아타기** 그 자체다.
+ *
+ * ── 🔴 숫자 규칙을 복제하지 않는다 ──────────────────────────────────────
+ * 유효성 판단은 `extractShopifySelectedVariantId`(owner)에 **그대로 맡긴다**. 이 함수는
+ * **파라미터가 «있었는가»** 만 본다(`has` — 값을 파싱하지 않는다) ⟹ 「숫자만 받는다」
+ * 규칙이 두 파일로 갈라지지 않는다(계약 `C-1` 이 그 복제를 금지한다).
+ */
+function resolveRequestedVariant(sourceUrl: string): { id: string | null; invalid: boolean } {
+  const id = extractShopifySelectedVariantId(sourceUrl);
+  if (id) return { id, invalid: false };
+  let present = false;
+  try {
+    /** 🔴 `has` 다 — 값을 읽어 판단하지 않는다(그 판단의 owner 는 위 함수 하나다). */
+    present = new URL(sourceUrl).searchParams.has("variant");
+  } catch {
+    present = false;
+  }
+  /** 🔴 파라미터가 «있는데» id 를 못 얻었다 = 「지정했는데 쓸 수 없다」 ⟹ 가격 금지. */
+  return { id: null, invalid: present };
+}
+
 async function probeMarket(
   origin: string,
   handle: string,
@@ -93,10 +122,17 @@ export async function probeOriginAndKrMarkets(
   if (!handle) return null;
   const origin = new URL(sourceUrl).origin;
   /** 🟢 WIRING-04 — 원본 URL 이 옵션을 가리키면 두 시장에 **같은 옵션** 을 묻는다. */
-  const selectedVariantId = extractShopifySelectedVariantId(sourceUrl);
+  const requested = resolveRequestedVariant(sourceUrl);
+  /**
+   * 🔴 WIRING-04A — 옵션을 **명시했는데 쓸 수 없는 값** 이면 요청조차 하지 않는다.
+   *    🟢 「Shopify 가 아니다」(위 `handle` null → **null**)와 구분된다 — 여기는 모양을
+   *       유지한 채 두 시장이 **없다** 고 말한다(관측 행이 생기지 않는다).
+   *    🔴 첫 구매가능 옵션으로 **갈아타지 않는다** — 그것이 이 WU 가 막는 동작이다.
+   */
+  if (requested.invalid) return { origin: null, kr: null };
   const [originResult, krResult] = await Promise.all([
-    probeMarket(origin, handle, "", selectedVariantId),
-    probeMarket(origin, handle, "en-kr", selectedVariantId),
+    probeMarket(origin, handle, "", requested.id),
+    probeMarket(origin, handle, "en-kr", requested.id),
   ]);
   return { origin: originResult, kr: krResult };
 }
@@ -196,10 +232,12 @@ export async function probeAdditionalShopifyMarkets(
    *    인데 그 URL 이 가리킨 옵션은 £119 였다) ⟹ 두 경로를 **같이** 보존한다.
    * 🔴 후보 목록·게이트·요청 수는 **불변** 이다.
    */
-  const selectedVariantId = extractShopifySelectedVariantId(sourceUrl);
+  const requested = resolveRequestedVariant(sourceUrl);
+  /** 🔴 WIRING-04A — 기본 조회와 **같은 기준** 이다(한쪽만 막으면 다시 갈린다). */
+  if (requested.invalid) return [];
   const candidates = EXPAND_CANDIDATE_MARKET_CODES.filter(
     (code) => !excludeMarketCodes.includes(code) && marketMayBeObserved(shopMeta, code),
   );
-  const results = await Promise.all(candidates.map((code) => probeMarket(origin, handle, code, selectedVariantId)));
+  const results = await Promise.all(candidates.map((code) => probeMarket(origin, handle, code, requested.id)));
   return results.filter((r): r is ShopifyMarketProbeResult => r !== null);
 }

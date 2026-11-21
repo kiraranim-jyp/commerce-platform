@@ -147,17 +147,48 @@ describe("MI-ORIGIN-FX-VARIANT-WIRING-04 — probe 가 `?variant=` 를 보존한
     );
   });
 
-  it("B-4 🟢 숫자가 아닌 variant 는 «지정이 아니다» — 기존 동작으로 떨어진다", async () => {
+  it("B-4 🔴🔴 [04A 로 뒤집힘] 숫자가 아닌 variant 는 **null** — 첫 옵션으로 갈아타지 않는다", async () => {
+    /**
+     * 🔴🔴 **내 1차 구현이 여기서 틀렸고 CPO 가 잡았다. 그 사실을 남긴다.**
+     *    `-04` 에서는 `?variant=abc` 를 「애초에 지정이 없었다」로 떨어뜨려 **£115**(첫
+     *    구매가능 옵션)를 돌려줬다. 🔴 그런데 `?variant=99999999999`(숫자인데 없다)는
+     *    **null** 이었다 ⟹ 같은 「지정했는데 못 찾았다」인데 결과가 갈렸고, 뒤쪽은
+     *    **조용한 갈아타기** 그 자체다(이 트랙이 막는 그 동작).
+     * 🟢 `-04A` 가 그것을 하나로 맞췄다 — **명시했는데 쓸 수 없으면 가격을 내놓지 않는다.**
+     */
     const { probeOriginAndKrMarkets } = await loadProbe();
     const r = await probeOriginAndKrMarkets(
       "https://www.junioredition.com/products/lulu-t-bar-shoes-in-tobacco-by-pepe?variant=abc",
     );
-    /**
-     * 🔴 `extractShopifySelectedVariantId` 가 **숫자만** 받는다 — 그 판단을 복제하지 않고
-     *    그 함수를 그대로 쓰므로, 쓰레기 값은 「애초에 지정이 없었다」로 처리된다.
-     */
-    expect(r!.origin?.amount, "🟢 115(기존 동작)").toBe(115);
-    for (const u of calls) expect(new URL(u).searchParams.get("variant"), `🔴 ${u}`).toBeNull();
+    expect(r, "🟢 Shopify 는 맞으므로 모양은 유지된다(null 이 아니다)").not.toBeNull();
+    expect(r!.origin, "🔴 115 가 나오면 조용한 갈아타기다").toBeNull();
+    expect(r!.kr, "🔴 en-kr 도 없음").toBeNull();
+    /** 🔴 요청조차 보내지 않는다 — 쓸 수 없는 지정에 HTTP 를 쓰지 않는다. */
+    expect(calls, "🔴 질의 0회").toHaveLength(0);
+  });
+
+  it("B-4b 🔴 `?variant=`(빈 값)도 **null** — 「명시했다」는 사실이 우선이다", async () => {
+    const { probeOriginAndKrMarkets } = await loadProbe();
+    const r = await probeOriginAndKrMarkets(
+      "https://www.junioredition.com/products/lulu-t-bar-shoes-in-tobacco-by-pepe?variant=",
+    );
+    expect(r!.origin, "🔴 빈 값도 지정이다 — 기존 동작으로 떨어뜨리지 않는다").toBeNull();
+    expect(r!.kr).toBeNull();
+    expect(calls, "🔴 질의 0회").toHaveLength(0);
+  });
+
+  it("B-4c 🔴 확장 시장도 «같은 기준» 이다 — 무효 지정이면 빈 배열", async () => {
+    /** 🔴 한쪽만 막으면 한 스냅샷 안에서 다시 갈린다(원가는 없는데 시장 관측은 £115). */
+    const { probeAdditionalShopifyMarkets } = await loadProbe();
+    for (const bad of ["?variant=abc", "?variant="]) {
+      calls.length = 0;
+      const results = await probeAdditionalShopifyMarkets(
+        `https://www.junioredition.com/products/lulu-t-bar-shoes-in-tobacco-by-pepe${bad}`,
+        ["", "en-kr"],
+      );
+      expect(results, `🔴 ${bad} — 시장 관측도 만들지 않는다`).toEqual([]);
+      expect(calls, `🔴 ${bad} — 질의 0회`).toHaveLength(0);
+    }
   });
 
   it("B-5 🔴🔴 지정한 variant 를 «못 찾으면» 다른 옵션 가격으로 갈아타지 않는다 — 관측이 없다", async () => {

@@ -221,9 +221,23 @@ describe("MI-ORIGIN-FX-DISCREPANCY-03 — 미규명 2건의 원인", () => {
     /** 🟢 그리고 실제로 URL 에 다시 실어 보낸다. */
     expect(probeSrc, "🟢 쿼리로 다시 붙인다").toContain("?variant=${selectedVariantId}");
     /** 🔴 두 진입점 **모두** 에 전달한다 — 하나만 하면 한 스냅샷 안에서 옵션이 갈린다. */
-    expect(probeSrc, "🟢 기본 조회(원본)").toContain('probeMarket(origin, handle, "", selectedVariantId)');
-    expect(probeSrc, "🟢 기본 조회(en-kr)").toContain('probeMarket(origin, handle, "en-kr", selectedVariantId)');
-    expect(probeSrc, "🟢 확장 조회").toContain("probeMarket(origin, handle, code, selectedVariantId)");
+    expect(probeSrc, "🟢 기본 조회(원본)").toContain('probeMarket(origin, handle, "", requested.id)');
+    expect(probeSrc, "🟢 기본 조회(en-kr)").toContain('probeMarket(origin, handle, "en-kr", requested.id)');
+    expect(probeSrc, "🟢 확장 조회").toContain("probeMarket(origin, handle, code, requested.id)");
+
+    /**
+     * 🔴🔴 **WIRING-04A 보완 — 「명시했는데 쓸 수 없으면 가격을 내놓지 않는다」.**
+     * `-04` 에서는 `?variant=abc`·`?variant=` 가 「지정이 없었다」로 떨어져 **첫 구매가능
+     * 옵션 가격**이 나왔다(CPO 지적). 🟢 그 차단문을 계약으로 잠근다 — 지우면 FAIL 한다.
+     * 🔴 두 진입점 **모두** 막아야 한다(한쪽만 막으면 원가는 없는데 시장 관측은 값이 선다).
+     */
+    expect(probeSrc, "🟢 유효성 판단은 owner 에 맡기고 «존재» 만 본다").toContain(
+      ["searchParams", '.has("variant")'].join(""),
+    );
+    expect(probeSrc, "🔴 기본 조회의 무효 차단문이 사라졌다").toContain(
+      "if (requested.invalid) return { origin: null, kr: null };",
+    );
+    expect(probeSrc, "🔴 확장 조회의 무효 차단문이 사라졌다").toContain("if (requested.invalid) return [];");
 
     /**
      * 🔴 **보존 단언** — 「배선이 생겼다」만 쓰면 다음 사람이 기존 성질까지 바꿀 수 있다.
