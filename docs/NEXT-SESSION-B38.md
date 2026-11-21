@@ -17,8 +17,9 @@
                `?variant=99999999999`(숫자인데 없다 · null)와 **불일치** 였다
                🟢 `resolveRequestedVariant` 로 셋을 갈라 **무효면 두 진입점 모두 차단**(질의 0회)
                🔴 숫자 규칙은 **복제하지 않았다** — owner 가 판단하고 probe 는 `has` 로 존재만 본다
-            🟡 **Production 배포·main 병합 안 함** — CPO 최종 검토 후 **CEO 승인 대상**
-               (CPO: 04A 완료 후 `42402b1a` + `fc764441` 을 **묶어** 최종 승인)
+            🟢🟢 **[FINALIZE] CPO 승인 · main FF · Production 배포 완료 · CLOSED**
+               빌드 `Branch: main, Commit: **15ea5d9**` · `● Ready` · `ttaejyo.vercel.app` 전환
+               🟢 main == uird-deploy-01 == HEAD == **15ea5d99**
 그 전 작업   🟢🟢 **`MI-ORIGIN-FX-DISCREPANCY-03` — 미규명 2건 «원인 확정»**(§0-OFX03)
             🟢🟢 원인 = **사이즈별 가격 × URL 의 `?variant=`** — 추출은 그 옵션(£119)을
                존중하고 관측은 그 파라미터를 **버려** 첫 구매가능 옵션(£115)을 쓴다
@@ -356,14 +357,35 @@ N3 확장 차단문 제거 **1 FAIL** · N4 `has→get` 규칙 복제 **1 FAIL**
 🟢 회귀 **944 files / 11,548 passed / 0 failed** · typecheck **0** · build **exit 0** ·
 기존 `-01` 9 · `-02` 9 · `-03` 7 · `-04` **10** 계약 전건 유지.
 
-### ⑦ 🟡 남은 것 — **배포 승인 하나**
+### ⑦ 🟢🟢 **FINALIZE — main 반영 · Production 배포 완료 · CLOSED**
+
+🟢 **CPO 가 직접 승인·지시** 했다(`MI-ORIGIN-FX-VARIANT-WIRING-04 FINALIZE` · CEO 승인 요청 없음).
 
 ```
-🟡 CPO 최종 검토 → **CEO 승인** → main 병합 → Production 배포
-   🔴 대상은 **두 커밋을 묶은 것** 이다 — `42402b1a`(배선) + `fc764441`(04A 안전 보완)
-🔴 CTO 가 하지 않는다(CPO 지시: 「원가가 실제로 바뀌는 운영 수정이므로 … 배포는 보류」)
-🔴 과거 행 backfill 은 **별개 결정** 이다(§0-OFX02 ⑥ 와 같은 축 · 여전히 미승인)
+main     `fccfb178..15ea5d99` **fast-forward**(`+` 없음) · 머지 커밋 **0** · 잔여 **0**
+         🔴 `git checkout main` 안 썼다 — 사용자 미커밋 변경 7건 보존(ref 직접 push)
+배포     `dpl_Rc5s4KBAh5b5uo5TG8uPtHDcyVKq` · `ttaejyo-dlxbdvino` · **● Ready** · target production
+증거     빌드 로그 **`Branch: main, Commit: 15ea5d9`** · alias `ttaejyo.vercel.app` 전환 확인
+헬스체크  `/` **200** · `/today` 307 · `/pipeline` 307 · `/api/price-history/check` **401**(기준선 동일)
+배포 검증 배포 커밋의 `shopify-market-probe.ts` 에 운영 변경 **5요소 전건 확인**
+         (`resolveRequestedVariant` 3 · 기본 차단문 1 · 확장 차단문 1 · 쿼리 부착 1 · `has` 1)
+계약     대표 사례 + 무효 variant **17 passed**(`-04` 10 + `-03` 7)
 ```
+
+🔴🔴 **반영 범위를 정확히 적는다 — 지시의 4건보다 넓다**:
+```
+지시 목록   `42402b1a` · `fc764441` · `3438fc70` · `15ea5d99` (4)
+실제 FF     `origin/main..HEAD` = **10** — 위 4 + 그 **조상 6**
+            (`cb2c734c` `24fb01fe` `83e92d26` `869e7848` `8e2ac75c` `508b5db7`)
+🔴 4건만 cherry-pick 할 수 **없다** — 승인 커밋의 테스트가 조상 커밋의 fixture 를 읽는다
+   (`-04` 테스트 → `origin-fx-discrepancy-03.json`(8e2ac75c) ·
+    `-03` 테스트 → `origin-fx-accuracy-full.json`(83e92d26)) ⟹ 따로 따면 **테스트가 깨진다**
+🟢 그 6건은 **전건 테스트·fixture·문서** 다(운영 코드 **0** · 기계 확인) ⟹
+   운영 영향은 승인된 **`shopify-market-probe.ts` 하나** 로 한정된다
+```
+
+🔵 **남은 것** — 🔴 과거 행 backfill 은 **별개 미승인 결정** 이다(§0-OFX02 ⑥ 와 같은 축).
+🟡 이번 수정은 **다음 「가격 확인」부터** 새 값을 쌓는다(과거 행 수정 0).
 
 ---
 
