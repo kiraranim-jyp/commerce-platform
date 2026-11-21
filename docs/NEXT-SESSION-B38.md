@@ -5,7 +5,16 @@
 ### ① 지금 좌표 — 🔴 **CTO 가 할 작업이 «없다». 새 WU 를 스스로 만들지 않는다**
 
 ```
-직전 작업   🟢🟢 **`MI-REGRESSION-PORTABILITY-01` — 구현·검증·push 완료 · CLOSED**(§0-RP01)
+직전 작업   🟡🟡 **`MI-ORIGIN-FX-ACCURACY-01` — 측정 완료 · 🔴 분모가 397 이 «아니다»**(§0-OFX01)
+            🔴🔴 **CPO 지시의 분모 397 에 도달하지 못했다** — 그 데이터는 운영 DB 이고
+               `DATABASE_URL`·service-role 키가 **둘 다 없다**(실측). 저장소 전수에서
+               ORIGIN_FX 관측 입력은 **하나**(스냅샷 13 · 관측 58)뿐이었다
+            🔴 그 13 은 상품 13개가 아니라 **고유 상품 2개** 의 반복이다 ⟹ 비율 일반화 금지
+            🟢 측정(운영 owner 직접 호출) — 원본가격 **12/12** · 통화 **12/12** ·
+               잘못된 선택 **0** · 환산 정합 **47/47** · 🔴 **확인 불가 1/13**
+            🔴 **수정 0** — 확인 불가 1건은 과거 데이터 잔존분이고 고치는 길 둘이 모두 금지축
+            🔴 운영 코드 0 · 정책 0 · DB 0 · **main 머지 0 · 배포 0**(지시: 실제 변경 없으면 배포 금지)
+그 전 작업   🟢🟢 **`MI-REGRESSION-PORTABILITY-01` — 구현·검증·push 완료 · CLOSED**(§0-RP01)
             🔴🔴 **가격 안전성 계약이 다른 환경에서 «한 번도» 돌지 않았다** —
                입력이 머신 로컬 `TEMP` 덤프였고 `describe.runIf` 가 **조용히 SKIP** 했다
             🟢 입력을 저장소로 옮겼다 — `fixtures/brand-conflict-price-real.json`
@@ -203,6 +212,93 @@ cd apps/admin && npx vitest run \
 ```
 docs/START-HERE.md §0-NOW → docs/NEXT-SESSION-B38.md §0-HANDOFF 를 읽고 시작해.
 CTO 작업은 없는 상태다 — 다음 범위를 지정해 주면 그 범위만 한 묶음으로 수행해.
+```
+
+---
+
+## 🟡🟡🟡 §0-OFX01. **[2026-11-21] `MI-ORIGIN-FX-ACCURACY-01` — 측정 완료 · 분모 부족**
+
+🔴 **다시 조사하지 않는다.** 🟢 커밋 `cb2c734c` · 브랜치 `uird-deploy-01` ·
+🔴 **main 머지 0 · Production 배포 0**(지시: 「실제 변경이 없으면 불필요한 배포는 하지 않는다」).
+
+### ① 🔴🔴 **분모 397 에 도달하지 못했다 — 이것이 가장 중요한 결과다**
+
+```
+「397」의 출처   docs/MI-SOURCING-VALUE-WU-STATE.md:135-136
+                「SELLER_ORIGIN 관측 1476행 / 스냅샷 397개 전부 … withCost 397/397」
+🔴 그 데이터는 **운영 DB `price_observations`** 이고 이 세션에 자격증명이 **없다**(실측):
+   scripts/.env = `GEMINI_API_KEY` 하나 · .env.local = `VERCEL_OIDC_TOKEN` ·
+   apps/admin/.env.local = `QA_PROXY_TO_PROD` `OCI_PROXY_URL`  ⟹ `DATABASE_URL` **0**
+🔴 저장소·docs·fixtures·preserved·TEMP(170파일) 전수에서 ORIGIN_FX 관측을 담은 입력은
+   **하나** 였다 — `wu008-provenance.json`(스냅샷 **13** · 관측 **58**)
+🔴🔴 그리고 그 13 은 **상품 13개가 아니다** — 고유 상품 **2개** 의 반복이다
+   (bobochoses.co.jp JPY 26,400 × 2 · bobochoses.com EUR 120 × 11)
+⟹ 🔴 **「ORIGIN_FX 정확도 N%」로 적지 않는다.** A-0 가 그 분모를 계약으로 잠근다
+```
+
+### ② 측정 결과 — 🟢 운영 owner `selectCostBasisOriginObservations` **직접 호출**
+
+```
+원본가격 일치율   **12 / 12**   ORIGIN_FX ↔ 스냅샷 `canonical_product.price`(2 생산자)
+통화 일치율       **12 / 12**
+잘못된 선택률     **0**         MARKET_PROBE 선택 0 · ORIGIN_FX 있을 때 KR_MARKET 누출 0
+확인 불가         🔴 **1 / 13**  ORIGIN_FX 0건 스냅샷 → 원가가 **KRW 258,000(한국 표시가)**
+환산 정합         **47 / 47**   `price_krw ≈ amount × rate`(반올림 1원 이내 · 불일치 0)
+호스트 통화 일관성  🟢 호스트당 **1통화**(.co.jp JPY · .com EUR)
+정답 근거 없음     **0**(분모에서 뺄 것이 없었다)
+```
+
+🔴 **독립 정답 근거를 무엇으로 썼는지 적는다** — 생산자가 **둘** 이다(관측 행 ↔ 크롤 시점
+추출). 🔴 **국가→통화 표는 만들지 않았다** — `market_country` 를 통화의 정답으로 쓰면
+PHASE-2 가 계약으로 금지한 축(`phase2-market-currency-is-not-site-fx` A-3)이다.
+🔴 그래서 `market_country` 는 **분포만** 적었다(관측 전용 · G-1).
+
+### ③ 🔴 **수정 0 — 그 이유**
+
+```
+확인 불가 1건(`2ca33295` bobochoses.com)은 **과거 데이터 잔존분** 이다
+(`run-price-check.ts:254-268` 이 고친 그 결함의 이전 행 · 생산자는 지금 항상 ORIGIN_FX 를 만든다)
+🔴 고치는 길이 둘뿐이고 둘 다 금지축이다 —
+   ⒜ ORIGIN_FX 행 **backfill** ⟹ **DB 쓰기**(접근 없음 · 승인 사항)
+   ⒝ 읽는 쪽에서 KR_MARKET 도 배제 ⟹ **원가 정책 변경** 이고 그 상품은 **원가가 사라진다**
+      (owner 주석이 「ORIGIN_FX 가 한 건도 없는 스냅샷은 예전 결과와 완전히 동일하다 —
+       과거 행을 지우거나 다시 계산하지 않는다」고 명시)
+⟹ 🟡 **CPO 판단 사안** 으로 올린다
+```
+
+### ④ 🔴 내 단언이 틀렸고 코드가 맞은 자리 — 남긴다
+
+```
+1차 단언   「KRW 관측은 환율 1 이어야 한다」  → **FAIL**
+🟢 사실    `convertToKrw`(packages/pricing/src/currency.ts:42)가 **KRW 를 환산으로 취급하지 않는다**
+          「KRW → KRW 는 «환산이 아니다». 1:1 이라 추정할 것이 없는데 고정표 경로를 타면서
+           `isEstimate: true` 가 붙어 화면이 환산하지 않은 값을 「추정 환율」이라 말했다」(CPO 결정 B)
+⟹ 🟢 `exchange_rate = null` 이 **정답** 이고 「1」을 박으면 환산한 척이 된다
+🟢 단언을 그 정책을 **지키는 방향** 으로 바꿨다 — 1 이 들어오면 FAIL 하고, 외화는 환율 보유를 요구한다
+🟢 그리고 `market_country = ES` 도 결함이 아니다 — `market-target.ts:15` 가 「ES → 스페인 시장 ✕ ·
+   **판매자가 신고한 국가**」로 못 박았고 `isKoreanMarket()` 은 그 값을 **인자로조차 받지 않는다**
+```
+
+### ⑤ 검증
+
+```
+대상 파일   9 passed  (A-0 · B-1 · B-2 · C-1 · D-1 · E-1 · E-2 · F-1 · G-1)
+음성 대조   M1 KR_MARKET 배제 제거 **1 FAIL** · M2 MARKET_PROBE 를 원가 후보로 **2 FAIL**
+           → 운영 파일 **md5 복구 확인 · diff 0**
+회귀        **941 files / 11,520 passed / 0 failed**(기준선 11,511 + 내 9)
+typecheck   0 · `preserved/` 변경 **0** · 전수 분류 가드 미분류 **0**(GT 수집 **17 불변**)
+입력        `fixtures/origin-fx-accuracy-real.json` — 🔴 SKIP 불가(A-0 가 FAIL 한다)
+           observations **값 무변경 58행 전건** · snapshots 는 측정이 읽는 칸만(축소 명시)
+```
+
+### ⑥ 🔵 다음 한 수 — **분모를 여는 것** 하나다
+
+```
+🔴 이 축의 결론은 「정확한가」가 아니라 **「측정할 수 있는 분모가 2 상품뿐이다」** 다
+🟡 분모를 여는 길 둘(🔴 CTO 가 고르지 않았다)
+   ⒜ 운영 DB 읽기 자격증명(`DATABASE_URL`) — 🟢 읽기 전용이면 정책 변경 0 · 가장 직접적
+   ⒝ 실제 상품 N개 재분석으로 ORIGIN_FX 를 새로 쌓는다 — 🔴 외부 HTTP + 비용
+🔴 그 전에는 이 축을 **VERIFIED COMPLETE 로 적지 않는다**
 ```
 
 ---
