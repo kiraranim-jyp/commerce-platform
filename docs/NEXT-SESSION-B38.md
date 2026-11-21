@@ -5,7 +5,15 @@
 ### ① 지금 좌표 — 🔴 **CTO 가 할 작업이 «없다». 새 WU 를 스스로 만들지 않는다**
 
 ```
-직전 작업   🟢🟢 **`MI-P0-CROSS-MARKET-COMPLETION-01` — A·B·C 는 «이미» 완성 · D 구현·배포**(§0-XM01)
+직전 작업   🟡🟡 **`MI-P0-CROSS-MARKET-COMPLETION-02` E — 측정 완료 · 🔴 MI P0 는 «미완»**(§0-XM02)
+            🔴🔴 **지시 전제를 데이터가 정정** — 국내 탈락 5건의 원인은
+               UNREACHABLE 2 · REDIRECTED_AWAY 1 · tier EXCLUDED 2 ⟹ **market UNKNOWN 0**
+            🟢🟢 **「국내 SAME 0」이 이 분모에서 반증** — human 동일 2/2 국내참고 진입 ·
+               `beaumonde` **SAME · EXACT · blockers []** · 🔴 분모 섞지 않는다(core-same03 10)
+            🔴 **못 잰 것 셋** — 오탐(DIFFERENT 0) · 탐색률(발견 분모 없음) · 운영 market 분포(1건)
+            🔵 **필요한 데이터 하나** — 운영 칸(market·system·tier·blockers)을 가진
+               **DIFFERENT 포함 GT** · 🔴 그 전에는 E 를 완료로 적지 않는다
+그 전 작업   🟢🟢 **`MI-P0-CROSS-MARKET-COMPLETION-01` — A·B·C 는 «이미» 완성 · D 구현·배포**(§0-XM01)
             🟢🟢 **A·B·C 를 다시 만들지 않았다** — 운영에서 이미 하나다:
                생산자 **7**(국내 등록부 p0/other · 해외 자동 · URL · 재투입 · 국내 목록 · 웹검색)
                → `searchResults` **한 배열**(:1513 + :2070) → **한 엔진** `judgeDomesticCandidate`(:2169)
@@ -258,6 +266,67 @@ cd apps/admin && npx vitest run \
 ```
 docs/START-HERE.md §0-NOW → docs/NEXT-SESSION-B38.md §0-HANDOFF 를 읽고 시작해.
 CTO 작업은 없는 상태다 — 다음 범위를 지정해 주면 그 범위만 한 묶음으로 수행해.
+```
+
+---
+
+## 🟡🟡🟡 §0-XM02. **[2026-11-22] `MI-P0-CROSS-MARKET-COMPLETION-02` E — 측정 완료 · MI P0 는 «미완»**
+
+🔴 **다시 조사하지 않는다.** 🟢 커밋 `a1a264f5` · 운영 코드 **0** · 새 GT **0** · 새 수집 **0**.
+
+### ① 🔴🔴 **지시 §3 의 전제를 데이터가 정정했다**
+
+```
+지시   「운영 market 이 UNKNOWN 인 원인을 확정한다」
+실측   `core-same03` 의 `.kr` **7건 전수** — 국내 축 탈락 **5건** 의 원인:
+       **UNREACHABLE 2 · REDIRECTED_AWAY 1 · tier EXCLUDED 2** ⟹ 🔴 **market UNKNOWN 0**
+⟹ 🔴 **3/5 는 시장 분류 «이전» 단계** 에서 끝났다(후보를 읽지 못했다).
+   나머지 2는 판정이 **났고** tier 가 EXCLUDED 다(SIMILAR · CONFLICT) — 시장 문제가 아니다.
+🔴 그리고 **「market 칸이 null」을 「UNKNOWN」으로 읽지 않는다** — GT fixture 에 그 칸이
+   **없을 뿐** 이다(보유한 GT 는 `wu-116` **1건** 뿐이고 그 값은 **KR 확정**).
+```
+
+### ② 🟢🟢 **「국내 SAME 0」이 이 분모에서 «반증» 됐다**
+
+```
+🇰🇷 human 동일 **2건이 둘 다 국내 참고가격 축에 들어간다**(`inDomesticReference = true`)
+   www.beaumonde.co.kr  **SAME** · STRONG_IDENTIFIER · **EXACT** · blockers **[]**
+   biskuit.kr           PRESUMED_SAME · COMPARISON · [BRAND_MISMATCH · NO_TITLE_OVERLAP]
+⟹ 🟢 **국내에서 SAME + EXACT 가 실재한다.** 「국내는 구조적으로 0」이 아니다.
+🔴 **분모를 섞지 않는다** — 이것은 `core-same03`(10) 의 사실이고, 과거의 「국내 SAME 0」은
+   **다른 분모·다른 시점**(WU-138 · B226AC009)이다.
+```
+
+### ③ 성능 — 🔴 **분모를 같이 적고 합치지 않는다**
+
+```
+🇰🇷 국내  .kr **7** · human 동일 2 · 국내참고 **2/2** · SAME 1 · PRESUMED 1 · 가격축 **2/7**
+🌎 해외   **3** · human 동일 3 · SAME 1 · PRESUMED 2 · 가격축 **3/3**
+🟢 **같은 판정 어휘** 를 쓴다(C-2) — 국내 전용 «판정» 상태 **0**.
+   국내에만 있는 `UNREACHABLE`·`REDIRECTED_AWAY` 는 **판정이 아니라 수집 실패** 다.
+```
+
+### ④ 🔴 측정 불가 — **0% 로 적지 않는다**(계약으로 못 박았다)
+
+```
+① 오탐(precision)   분모 **0** — `core-same03` 에 human DIFFERENT 가 없다
+② 후보 탐색률        분모 **없음** — fixture 가 「후보가 된 뒤」를 담는다(발견 단계가 빠졌다)
+③ 운영 market 분포   그 칸을 가진 GT 가 **1건**(wu-116 · KR) ⟹ 분포를 말할 수 없다
+🔴 `wu-112`(27 · DIFFERENT 6)는 **운영 칸이 없다**(sid·domain·url·verdict·reason) ⟹
+   human 라벨은 있지만 **운영 결과와 대조할 수 없다**(A-0 가 그 사실을 계약으로 고정)
+🔵 **필요한 추가 데이터는 하나다** — **운영 `market`·`system`·`priceTier`·`blockers` 칸을
+   가진, human DIFFERENT 를 포함한 GT.** 🔴 그것 없이는 ①③ 을 영원히 못 잰다.
+```
+
+### ⑤ 🟡 **MI P0 완료 여부 — 아직 아니다**
+
+```
+🟢 A 통합 탐색 · B 공통 정규화 · C 단일 엔진 · D All/Domestic/Overseas  — 완료(배포)
+🟡 E 실데이터 성능 — **부분 완료**
+   🟢 잰 것 — 국내·해외 공통 기준 적용 · 국내 SAME/EXACT 실재 · 탈락 원인 전수 ·
+      가격축 도달 · 판정 어휘 동일성
+   🔴 못 잰 것 — 오탐 · 탐색률 · 운영 market 분포 (분모 부재 · 위 ④)
+🔴 **E 를 완료라고 적지 않는다.** 분모가 없는 것을 수치로 만들지 않았다.
 ```
 
 ---
