@@ -13,7 +13,10 @@
             🟢 `describe.runIf` **제거** · 입력 부재/분모 변화는 **E-0 이 FAIL** 한다
             🟢 기존 9개 단언(R-1~3 · P-1~3 · C-1~3)을 **한 글자도 바꾸지 않았다**
             🔴 운영 코드 **0** · DB/schema **0** · 정책/집계기/분류표 **0** · GT 라벨 **0**
-            🟡 **사업 성과가 아니다** — 회귀 안전성 개선이다(배포 0 · main 머지 0)
+            🟡 **사업 성과가 아니다** — 회귀 안전성 개선이다
+            🟢🟢 **CPO 승인 후 main fast-forward + Production 배포 완료**
+               (`MI-REGRESSION-PORTABILITY-01-MERGE-DEPLOY` · 빌드 로그
+                `Branch: main, Commit: f7c12fe` · `ttaejyo.vercel.app` alias 전환 확인)
 그 전 작업   🔵🔵 **`MI-UNIFIED-MARKET-ARCHITECTURE-03`** — **CPO 결정: ④ 아무것도 변경하지 않는다**
             🔴 가격 축 통합 **보류**(승인 안 한 변경 5건은 §0-ARCH03 B)
             🟢🟢 **정정** — 국내 가격 축은 **둘** 이고 `transient` 축은 해외와 **이미 공통** 이다
@@ -193,7 +196,20 @@ CTO 작업은 없는 상태다 — 다음 범위를 지정해 주면 그 범위�
 ## 🟢🟢🟢 §0-RP01. **[2026-11-21] `MI-REGRESSION-PORTABILITY-01` — 구현·검증·push 완료 · CLOSED**
 
 🔴 **다시 조사하지 않는다.** 🟡 이것은 **사업 성과가 아니라 회귀 안전성** 개선이다.
-🟢 커밋 `69eefaa5` · 브랜치 `uird-deploy-01`(0 0) · 🔴 **main 머지 0 · Production 배포 0**.
+🟢 커밋 `69eefaa5` + `f7c12fe5` · 🟢🟢 **main fast-forward · Production 배포 완료**
+(`MI-REGRESSION-PORTABILITY-01-MERGE-DEPLOY` · CPO 승인 2026-11-21).
+
+```
+반영 방식   🔴 `git checkout main` 을 쓰지 않았다 — 그 파일에 **사용자 미커밋 변경** 이 있어
+            checkout 이 덮어쓰려 할 자리였다 ⟹ **`git push origin HEAD:main`**(ref 직접)
+            `95fd84b0..f7c12fe5`(`+` 없음) = **fast-forward** · 머지 커밋 **0** · 작업트리 무접촉
+배포 증거   빌드 로그 `Cloning … (Branch: main, Commit: f7c12fe)` · 상태 `● Ready`(3m)
+            alias `ttaejyo.vercel.app` → `ttaejyo-g0r2fp2lz-…` 전환 확인
+헬스체크    `/` **200** · `/today` 307 · `/pipeline` 307 · `/api/price-history/check` **401**
+            🔴 307/401 은 **정상 보호** 다(메모 `production-307-is-not-route-evidence`)
+🔴 **이 문서의 이 갱신 커밋은 main 에 올리지 않았다** — 지시가 두 커밋 외 반영을 금지했고
+   main push 는 **추가 Production 배포** 를 부른다 ⟹ `uird-deploy-01` 에만 있다
+```
 
 ### ① 고친 문제 — 🔴🔴 **가격 안전성 계약이 다른 환경에서 «한 번도» 돌지 않았다**
 
