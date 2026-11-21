@@ -264,6 +264,43 @@ function hasIdentityEvidence(row: GeminiTransientRow): boolean {
 }
 
 /**
+ * ══════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 MI-P0-CROSS-MARKET-COMPLETION-01 D — **「전체」 축을 «파생» 으로 신설한다**
+ * ══════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **고치는 문제** — 이 선택기는 시장을 **둘** 로만 갈랐다(`"KR" | "OVERSEAS"`).
+ *    그런데 후보의 시장은 **셋** 이다 — `classifyCandidateMarket` 이 증거가 일치할
+ *    때만 KR/OVERSEAS 를 단정하고 그 밖은 **`UNKNOWN`** 으로 둔다(통화 단독 결정 금지).
+ *    ⟹ 🔴 **시장을 확정하지 못한 후보는 두 리스트 «어디에도» 서지 않았다.**
+ *    실측 선례(WU-140 ④) — `beaumonde.co.kr` 은 human SAME 인 `.kr` 인데 **가격이
+ *    없어 market UNKNOWN** 이라 🇰🇷 칸이 「후보를 찾지 못했습니다」라고 **거짓** 을 말했다.
+ *    그때는 **문장 하나로** 메웠고, 이번에 **축으로** 닫는다.
+ *
+ * 🟢 **CPO 가 고정한 목표 구조가 셋이다** — **All / Domestic / Overseas.**
+ *    「전체」는 국내·해외의 **합이 아니라 상위 집합** 이다(시장 미확정분을 포함한다).
+ *
+ * 🔴🔴 **정책을 한 글자도 바꾸지 않는다** — 이것은 «표시 범위» 축이다:
+ * ```
+ * 등급(`transientDisplayTier`)        그대로   — 복제 계산 0
+ * 제외 규칙(CONFLICT · Evidence 없는 UNKNOWN)  그대로
+ * SAME 기준 · 가격 적격성 · 환산 · 금액 집계   그대로(이 파일은 금액을 만들지 않는다)
+ * `row.market` 값 자체                그대로   — 재분류 0 · 「UNKNOWN 을 KR 로」 금지
+ * 기존 KR/OVERSEAS 호출의 산출         🟢 **불변**(아래 `rowInScope` 가 같은 조건을 쓴다)
+ * ```
+ * 🔴 **`UNKNOWN` 을 어느 시장으로도 «승격» 하지 않는다.** 전체 리스트에 서는 것과
+ *    「국내다/해외다」라고 말하는 것은 다른 일이다.
+ */
+export type CandidateListScope = "ALL" | "KR" | "OVERSEAS";
+
+/**
+ * 🟢 범위 술어 — 🔴 분기가 둘로 갈리지 않게 **한 군데** 에 둔다.
+ * 🔴 `"ALL"` 은 **필터를 걸지 않는다**(시장 미확정 후보를 포함하는 것이 이 축의 목적이다).
+ */
+export function rowInScope(row: GeminiTransientRow, scope: CandidateListScope): boolean {
+  return scope === "ALL" ? true : row.market === scope;
+}
+
+/**
  * 🔵 CANDIDATE-EVIDENCE-VISIBILITY-01 — **셀러가 보는 후보 리스트.**
  *
  * 🔴 제외(C 군): `CONFLICT` · 등급을 못 낸 행 · Evidence 없는 `UNKNOWN`.
@@ -272,13 +309,13 @@ function hasIdentityEvidence(row: GeminiTransientRow): boolean {
  */
 export function selectCandidateList(
   rows: readonly GeminiTransientRow[] | null | undefined,
-  market: "KR" | "OVERSEAS",
+  market: CandidateListScope,
 ): Array<{ row: GeminiTransientRow; group: CandidateListGroup }> {
   const out: Array<{ row: GeminiTransientRow; group: CandidateListGroup }> = [];
   if (!rows || rows.length === 0) return out;
   const seen = new Set<string>();
   for (const row of rows) {
-    if (row.market !== market) continue;
+    if (!rowInScope(row, market)) continue;
     if (seen.has(row.discoveredUrl)) continue;
     seen.add(row.discoveredUrl);
     /** 🔴 등급은 **운영 owner** 가 낸 값이다(`transientDisplayTier`) — 복제 계산 0. */
@@ -330,7 +367,13 @@ export function selectCandidateList(
  * 🔴 「N곳」은 여기 넣지 않는다 — 개수는 화면에서 `list.length` 로 **파생** 한다.
  *    상수에 넣으면 그 숫자가 실제 행 수와 조용히 갈라진다.
  */
-export const CANDIDATE_LIST_HEADING: Record<"KR" | "OVERSEAS", string> = {
+export const CANDIDATE_LIST_HEADING: Record<CandidateListScope, string> = {
+  /**
+   * 🔴 **「전체 = 국내 + 해외」로 읽히게 쓰지 않는다** — 시장을 확정하지 못한 후보가
+   *    여기에만 서기 때문이다. 그래서 「시장 구분 없이」를 말에 담는다.
+   * 🔴 기존 두 문장은 **글자 그대로 유지** 한다(계약이 그 글자를 본다).
+   */
+  ALL: "전체 소싱 후보",
   KR: "국내 소싱 후보",
   OVERSEAS: "해외 소싱 후보",
 };
@@ -398,7 +441,9 @@ export const CANDIDATE_GROUP_NOTE: Record<CandidateListGroup, string> = {
  *    이 이름을 **소스 텍스트 앵커** 로 써서 구간을 자른다. 이름/위치를 옮기면
  *    「구역이 사라졌다」가 아니라 **slice 경계가 깨져** 모호한 FAIL 이 난다.
  */
-export const CANDIDATE_LIST_EMPTY: Record<"KR" | "OVERSEAS", string> = {
+export const CANDIDATE_LIST_EMPTY: Record<CandidateListScope, string> = {
+  /** 🔴 전체가 비면 **국내·해외도 반드시 비어 있다**(상위 집합이므로) — 그 말을 섞지 않는다. */
+  ALL: "소싱 후보가 없습니다",
   KR: "국내 소싱 후보가 없습니다",
   OVERSEAS: "해외 소싱 후보가 없습니다",
 };

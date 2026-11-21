@@ -618,11 +618,18 @@ describe("UX-REFINE 화면 계약 — 시장명 · 가격 3상태", () => {
       const texts = empties.map((e) => (e.textContent ?? "").trim());
       expect(texts).toContain("국내 소싱 후보가 없습니다");
       expect(texts).toContain("해외 소싱 후보가 없습니다");
-      /** 🟢 상수도 그 글자여야 한다(화면과 상수가 갈라지지 않는다). */
-      expect(Object.values(CANDIDATE_LIST_EMPTY)).toEqual([
-        "국내 소싱 후보가 없습니다",
-        "해외 소싱 후보가 없습니다",
-      ]);
+      /**
+       * 🟢 상수도 그 글자여야 한다(화면과 상수가 갈라지지 않는다).
+       * 🔵 [MI-P0-CROSS-MARKET-COMPLETION-01 D 로 갱신] 시장 축이 **셋** 이 됐다 —
+       *    `ALL` 이 더해졌다(시장을 확정하지 못한 후보가 두 칸 어디에도 서지 않던
+       *    구멍을 닫는 축이다). 🔴 **기존 두 글자는 그대로** 이고 계속 단언한다.
+       * 🔴 전수 배열 비교를 **키 단위** 로 바꿔 **강화** 했다 — 각 글자를 더 정확히
+       *    잠그면서, 축이 **셋을 넘으면** 여기서 멈춘다.
+       */
+      expect(CANDIDATE_LIST_EMPTY.KR).toBe("국내 소싱 후보가 없습니다");
+      expect(CANDIDATE_LIST_EMPTY.OVERSEAS).toBe("해외 소싱 후보가 없습니다");
+      expect(CANDIDATE_LIST_EMPTY.ALL, "🔴 전체 축의 빈 문장").toBe("소싱 후보가 없습니다");
+      expect(Object.keys(CANDIDATE_LIST_EMPTY).sort()).toEqual(["ALL", "KR", "OVERSEAS"]);
       const note = doc.querySelector('[data-testid="mi-candidate-empty-note"]');
       expect(note, "왜 없는지를 말하지 않으면 「조회하지 않았다」로 읽힌다").not.toBeNull();
       /** 🔴 「동일상품이 없습니다」로 **단정하지 않는다**. */

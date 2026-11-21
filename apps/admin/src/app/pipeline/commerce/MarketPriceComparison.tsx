@@ -537,6 +537,14 @@ export function MarketPriceComparison({
   const domesticList = selectCandidateList(rows, "KR");
   const overseasList = selectCandidateList(rows, "OVERSEAS");
   /**
+   * 🔵 MI-P0-CROSS-MARKET-COMPLETION-01 D — **전체 축은 «같은 선택기» 에서 나온다.**
+   * 🔴 합으로 만들지 않는다(`kr + overseas`) — 시장 미확정 후보가 그 합에서 빠진다.
+   *    그 차이를 드러내는 것이 이 축의 목적이다.
+   * 🔴 등급·제외 규칙·판정은 그대로다 — 범위만 넓힌다(`rowInScope`).
+   */
+  const allList = selectCandidateList(rows, "ALL");
+  const unresolvedMarketCount = allList.length - domesticList.length - overseasList.length;
+  /**
    * 🔵🔵🔵 CORE-E2E-CLOSE-04 — **후보 선택의 활성 owner 가 여기다.**
    * 🔴 MI 패널은 운영에서 항상 `HIDDEN` 이라 그쪽 instance 를 **껐다** ⟹ 이력 GET 이
    *    두 번 돌지 않는다. 🔴 `CommerceWorkspace` 에 저장 state 를 만들지 않았다(CPO §4) —
@@ -1158,6 +1166,36 @@ export function MarketPriceComparison({
        *    `mi-same-excluded` · `market-final-price` 는 **상세 근거 블록으로 옮겼다**
        *    (CPO LOCK ⒜ 「최종 선택 가격은 상세 안에 둔다」를 지킨다).
        */}
+        {/*
+          ══════════════════════════════════════════════════════════════════════
+          🔵🔵🔵 MI-P0-CROSS-MARKET-COMPLETION-01 D — **「전체」 축**
+          ══════════════════════════════════════════════════════════════════════
+          🔴🔴 **고치는 문제** — 아래 격자는 시장을 **둘** 로만 가른다. 그런데 후보의
+             시장은 **셋** 이고(`classifyCandidateMarket` 은 증거가 일치할 때만 단정한다),
+             **시장을 확정하지 못한 후보는 두 칸 어디에도 서지 않았다.**
+             실측 선례(WU-140 ④) — human SAME 인 `.kr` 후보가 **가격이 없어 UNKNOWN** 이라
+             🇰🇷 칸이 「후보를 찾지 못했습니다」라고 **거짓** 을 말했다.
+          🟢 그래서 **같은 선택기**(`selectCandidateList`)에서 `"ALL"` 로 한 번 더 뽑아
+             **전체 · 국내 · 해외 · 시장 미확정** 을 한 줄로 적는다.
+          🔴 **가격을 만들지 않는다** — 「전체」에 금액을 붙이면 **통화가 섞인다**(환산 금지).
+             이 줄은 **후보 가시성** 축이고 금액 owner 가 아니다.
+          🔴 **승격 0** — `UNKNOWN` 을 국내/해외로 바꿔 적지 않는다. 숫자만 드러낸다.
+          🔴 **새 영역 0** — 격자 위의 한 줄이고 아래 두 칸은 **한 글자도 바뀌지 않았다**.
+        */}
+        {allList.length > 0 ? (
+          <p data-testid="mi-candidate-scope-summary" className="mt-2 text-xs text-slate-600">
+            {CANDIDATE_LIST_HEADING.ALL} {allList.length}곳 · {CANDIDATE_LIST_HEADING.KR}{" "}
+            {domesticList.length}곳 · {CANDIDATE_LIST_HEADING.OVERSEAS} {overseasList.length}곳
+            {unresolvedMarketCount > 0 ? (
+              <>
+                {" · "}
+                <span data-testid="mi-candidate-scope-unresolved" className="text-amber-700">
+                  시장 미확정 {unresolvedMarketCount}곳
+                </span>
+              </>
+            ) : null}
+          </p>
+        ) : null}
         {/* 🔴 국내를 해외 «앞» 에 둔다 — 셀러의 질문 순서가 그렇다(WU-056 과 같은 이유). */}
         <div className="mt-2 grid gap-2 md:grid-cols-2">
         <MarketColumn
