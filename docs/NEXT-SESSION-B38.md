@@ -5,7 +5,16 @@
 ### ① 지금 좌표 — 🔴 **CTO 가 할 작업이 «없다». 새 WU 를 스스로 만들지 않는다**
 
 ```
-직전 작업   🟢🟢 **`MI-ORIGIN-FX-VARIANT-WIRING-04` — 구현·검증 완료 · 🟡 배포 보류**(§0-OFX04)
+직전 작업   🟢🟢 **`MI-P0-CROSS-MARKET-COMPLETION-01` — A·B·C 는 «이미» 완성 · D 구현·배포**(§0-XM01)
+            🟢🟢 **A·B·C 를 다시 만들지 않았다** — 운영에서 이미 하나다:
+               생산자 **7**(국내 등록부 p0/other · 해외 자동 · URL · 재투입 · 국내 목록 · 웹검색)
+               → `searchResults` **한 배열**(:1513 + :2070) → **한 엔진** `judgeDomesticCandidate`(:2169)
+            🔴 **D 에 구멍이 있었다** — 후보 리스트가 시장을 **둘** 로만 갈라
+               `market UNKNOWN` 후보가 **두 칸 어디에도 서지 않았다**(WU-140 ④ 의 그 거짓말)
+            🟢 **「전체(All)」 축 신설** — 같은 선택기에서 파생 · 🔴 **가격 0**(통화 혼합 금지) ·
+               승격 0 · 기존 두 칸 산출 **불변** · 배포 `def2aa5`
+            🔴 **E 는 분모가 막는다** — GT 를 합치지 않고 fixture 별로 적었다(§0-XM01 ③)
+그 전 작업   🟢🟢 **`MI-ORIGIN-FX-VARIANT-WIRING-04` — 구현·검증 완료 · 🟢 배포 완료**(§0-OFX04)
             🟢 probe 경로가 원본 URL 의 **`?variant=` 를 보존** 한다 — 운영 **1파일 · 실코드 +9줄**
             🟢 **새 규칙 0** — 옵션 선택·「못 찾으면 가격 미산출」은 `shopify-product-json.ts:426`
                에 **이미 있었다** ⟹ 그 함수에 URL 을 온전히 넘기는 **배선** 하나다
@@ -253,7 +262,96 @@ CTO 작업은 없는 상태다 — 다음 범위를 지정해 주면 그 범위�
 
 ---
 
-## 🟢🟢🟢 §0-OFX04. **[2026-11-21] `MI-ORIGIN-FX-VARIANT-WIRING-04` — 구현·검증 완료 · 🟡 배포 보류**
+## 🟢🟢🟢 §0-XM01. **[2026-11-22] `MI-P0-CROSS-MARKET-COMPLETION-01` — A·B·C 기완성 · D 구현·배포**
+
+🔴 **다시 조사하지 않는다.** 🟢 커밋 `def2aa52` · main 반영 · Production **`def2aa5`** `● Ready`.
+
+### ① 🟢🟢 **A·B·C 는 «이미» 운영에서 완성돼 있었다 — 다시 만들지 않았다**
+
+```
+A 통합 탐색   `run-domestic-price-check.ts`
+   :1513  const searchResults = [...p0Results, ...otherResults, ...(overseasAuto?.searchResults ?? [])]
+          ⟹ **국내 등록부 + 해외 자동** 이 한 배열
+   :2070  searchResults.push({ ...r, candidates: priced })   ← `transientPools` 전부가 합류
+          ⟹ 생산자 **7**(국내 p0 · 국내 other · 해외 자동 · URL · 재투입 · 국내 목록 · 웹검색)
+B 공통 정규화 같은 `ComparisonCandidate` → `withConfidence` → `ProductFacts`
+C 단일 엔진   :2098 `for (const result of searchResults)` → :2169 **`judgeDomesticCandidate` 한 번**
+              🟢 호출부가 **하나뿐** 이다(전수 grep · 국내/해외 전용 분기 0)
+가격 적격성   축2 국내 transient · 축3 해외 · 축4 마진이 **같은 집계기**
+              (`summarizeCandidateOverseasPrices` · ARCH-02 정정) ·
+              🔴 축1 국내 DB 영속만 다르고 그것은 **ARCH-03 보류 결정** 이다
+```
+
+🔴 **그래서 A·B·C 에 코드를 쓰지 않았다** — 쓰면 **하나인 것을 둘로 쪼갠다**(§4-D).
+
+### ② 🔴🔴 **D 에 실제 구멍이 있었고 그것을 닫았다**
+
+```
+문제   `selectCandidateList(rows, "KR" | "OVERSEAS")` 가 `row.market !== market` 으로 걸러
+       ⟹ 후보 시장은 **셋** 인데(`classifyCandidateMarket` 은 증거 일치 시에만 단정)
+          **`UNKNOWN` 후보가 두 리스트 «어디에도» 서지 않았다**
+선례   WU-140 ④ — `beaumonde.co.kr` 은 human SAME 인 `.kr` 인데 **가격이 없어 UNKNOWN** 이라
+       🇰🇷 칸이 「후보를 찾지 못했습니다」라고 **거짓** 을 말했다(그때는 **문장** 으로 메웠다)
+구현   `CandidateListScope = "ALL" | "KR" | "OVERSEAS"` + `rowInScope` (술어 **한 군데**)
+       화면 = 격자 **위 한 줄** — 전체 N · 국내 K · 해외 M · **시장 미확정 U**
+       🔴 `U = all − kr − overseas` (**합으로 만들지 않는다** — 합으로 만들면 그 후보가 사라진다)
+🔴 바꾸지 «않은» 것 — 등급(`transientDisplayTier`) · 제외 규칙(CONFLICT · Evidence 없는 UNKNOWN) ·
+   SAME 기준 · 가격 적격성 · 환산 · 금액 집계 · `row.market` 값 · 기존 두 칸의 산출 · 기존 두 글자
+🔴🔴 **가격을 만들지 않았다** — 「전체」에 금액을 붙이면 **통화가 섞인다**(환산 금지).
+   계약 `D-3` 이 그 구간에 금액 어휘(`₩`·`KRW`·`priceKrw`·`환산`·`평균`…)가 들어오면 **FAIL** 한다.
+🔴 **승격 0** — `UNKNOWN` 을 국내/해외로 바꿔 적지 않는다(`A-1` 이 양방향 단언).
+```
+
+### ③ 🔴 **E — 분모가 막는다. 숫자를 합치지 않고 그대로 적는다**
+
+```
+fixture 별 GT(🔴 **합산 금지** · 도메인 TLD 기준 국내/해외)
+  wu-112-human-gt.json       n=27 · 🇰🇷 5 🌎 22 · SAME 19 DIFF 6 · 🔴 KR×SAME **2**
+  core-same03-human-gt.json  n=10 · 🇰🇷 7 🌎  3 · SAME  5 DIFF 0 · 🔴 KR×SAME **2**
+  wu-093-human-gt.json       n=10 · 🇰🇷 0 🌎  0 · SAME  2 DIFF 8
+  wu-125-human-gt.json       n= 9 · 🇰🇷 0 🌎  9 · SAME  5 DIFF 4
+  wu-111-human-gt.json       n= 2 · 🇰🇷 0 🌎  2 · SAME  2
+  wu-116-human-gt.json       n= 1 · 🇰🇷 1 🌎  0 ·          DIFF 1
+🟢🟢 **「GT KR 표본 0」을 정정한다 — 축을 가려 적어야 한다**:
+   ⒜ **도메인이 한국인 GT 행** = **13**(그중 human SAME **4**) 🟢 실재한다
+   ⒝ **운영이 `market==="KR"` 로 «확정» 한 GT 행** = 🔴 **그 축이 0 이라는 것이 기존 기록이다**
+   ⟹ 🔴 둘은 **다른 분모** 다. WU-140 ④ 가 그 차이의 실례이고, **D 가 닫은 것이 바로 그 간극** 이다
+🔴 그래서 「국내 동일상품 판정 정확도 X%」를 **적지 않는다** — ⒝ 의 분모가 비어 있다
+🔴 그 분모를 채우려면 **새 수집 또는 CEO 육안 GT** 가 필요하고 둘 다 이번 범위 밖이다
+```
+
+### ④ 검증
+
+```
+신규 계약   cross-market-all-axis-01.test.ts **9 passed**
+            A-1 범위 술어(양방향) · B-1 시장 미확정이 전체에만 선다 · B-2 합이 아니다 ·
+            C-1 제외 규칙 불변 · C-2 기존 두 칸 산출 불변 · C-3 말 불변 ·
+            D-1 같은 선택기(복제 0) · D-2 요약 줄 배선 · **D-3 금액 금지**
+음성 대조   M1 ALL 을 시장 필터로 **4 FAIL** · M2 ALL 이 제외 규칙까지 품 **1** ·
+           M3 전체를 합으로 **1** · M4 요약 줄 제거 **2** · M5 전체 줄에 금액 **1**
+           → 운영 2파일 **md5 복구 · diff 0**
+기존 계약   `cand-02 UX-07` 이 `Object.values` 전수 비교라 FAIL(의도된 변경) ⟹
+           **키 단위로 갱신·강화**(각 글자를 더 정확히 잠그고 축이 셋을 넘으면 FAIL)
+회귀        **945 files / 11,557 passed / 0 failed** · typecheck **0** · build **exit 0**
+배포        `def2aa5` · `● Ready` · alias 전환 · 헬스체크 기준선 동일
+```
+
+### ⑤ 🔵 MI P0 완료 여부 — 🟡 **아직 아니다**
+
+```
+🟢 완료   A 통합 탐색 · B 공통 정규화 · C 단일 판단 엔진 · D All/Domestic/Overseas 연결
+🔴 미완   **E 성능 수치** — 운영 `market==="KR"` 확정 GT 분모가 **0** 이라 국내 정확도를
+          숫자로 말할 수 없다. 🔴 **분모가 없는 것을 0% 로 적지 않는다.**
+🔴 남은 정책 결정 **둘**(CTO 가 열지 않았다)
+   ⒜ 국내 DB 영속 가격 축에 blocker 필터(ARCH-03 보류 · human SAME 2건 손실 실측)
+   ⒝ ORIGIN_FX 과거 행 backfill(§0-OFX02 ⑥)
+🔵 다음 한 수 — **⒝ 의 KR 확정 GT 분모를 만드는 것** 이 E 를 여는 유일한 열쇠다
+   (CEO 육안 GT 1회 또는 승인된 수집) · 🔴 CPO 지정 사안
+```
+
+---
+
+## 🟢🟢🟢 §0-OFX04. **[2026-11-21] `MI-ORIGIN-FX-VARIANT-WIRING-04` — 구현·검증 완료 · 🟢 배포 완료**
 
 🔴 **다시 조사하지 않는다.** 🟢 커밋 `42402b1a` · 🟡 **main 병합 0 · Production 배포 0**
 (CPO 최종 검토 후 **CEO 승인 대상** · CPO 지시).
