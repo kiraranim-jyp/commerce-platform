@@ -5,7 +5,13 @@
 ### ① 지금 좌표 — 🔴 **CTO 가 할 작업이 «없다». 새 WU 를 스스로 만들지 않는다**
 
 ```
-직전 트랙   **`MI-IDENTITY-DATA-FLOW-01`** — **조사 단계 종료(CPO 확정) · §0-FLOW01 참조**
+직전 트랙   **`MI-LISTING-LABELED-CODE-01`** — 🔴 **STEP D 미통과 · 중단 · §0-MLLC01 참조**
+            🟢 STEP A/B 통과(GT DIFFERENT→SAME **0** · GT SAME 차단 **0** · verdict 변화 **0**)
+            🟡 STEP C 구현했다가 **되돌렸다**(운영 코드 바이트 동일 복구)
+            🔴 사유 — 기존 계약 **4건** 이 「`brandModelCode` 는 하드코딩 null」을 고정한다 ⟹
+               앵커 갱신이 필요하고 그것은 **계약 수정** 이라 CPO §3 이 금지했다(임의 수정 금지)
+            🟢 **반사실 하니스·산출물은 보존** — 구현과 독립으로 돈다(재측정 불필요)
+그 전 트랙   **`MI-IDENTITY-DATA-FLOW-01`** — 조사 단계 종료(CPO 확정) · §0-FLOW01 참조
             🟢🟢 **이 트랙의 반복 관측이 «하나의 구조적 원인» 으로 설명됐다** —
             판매처별 `ProductFacts` 생성 경로의 **비대칭**(Shopify ↔ Listing · 최대 7점 손실)
             🔴 **CPO: 같은 현황을 다시 조사하지 않는다** · 다음은 **원인 해결 단계** 다
@@ -123,6 +129,85 @@ cd apps/admin && npx vitest run \
 ```
 docs/START-HERE.md §0-NOW → docs/NEXT-SESSION-B38.md §0-HANDOFF 를 읽고 시작해.
 CTO 작업은 없는 상태다 — 다음 범위를 지정해 주면 그 범위만 한 묶음으로 수행해.
+```
+
+---
+
+## 🔵🔵🔵 §0-MLLC01. **[2026-11-21] `MI-LISTING-LABELED-CODE-01` — STEP D 미통과 · 중단**
+
+🔴 CPO 가 **제한적 B-38 부분 해제**(라벨 전용 · slug 폴백 제외)를 승인했고, STEP A/B 는
+통과했으나 **STEP D 에서 기존 계약 4건과 충돌** 해 **구현을 되돌리고 중단** 했다.
+🟢 운영 코드 **바이트 동일 복구**(`git diff` 비어 있음) · DB 0 · 배포 0.
+
+### ① 🟢 STEP A 반사실 — 분모와 수치(재측정 불필요)
+
+```
+분모  fixture 109 = GT SAME 18 · DIFFERENT 13 · SIMILAR 1 · **미라벨 73**
+      🔴 109 · 36 · 98 · 24 · 16 은 서로 다른 집합 — 합산하지 않는다
+팔    BASE  = 변경 전(`brandModelCode: null`) → `recoverModelCodeFromDetail`
+      LABEL = 승인 한 줄(`extractLabeledProductCode(description) ?? null`) → 같은 복구기
+      🔴 두 팔 모두 **명시 재현** 한다 ⟹ 하니스가 팩토리 현재 동작과 **독립** 이다
+결과  ① GT DIFFERENT → SAME 전환      **0**   ✅ CPO 핵심 통과 조건
+      ② GT SAME 품번충돌 새 차단       **0**   ✅ (명단 공백 · `B226AB040` 포함 0)
+      ③ GT SIMILAR verdict 변화        **0**
+      ④ 미라벨 verdict 변화            **0**
+      ⑤ 전 분모 verdict 변화           **0**   ⟹ 🔴 **순효과 0**
+      ⑥ `brandModelCode` 칸 추가 공급  **10**  (열화·덮어쓰기 **0**)
+      BASE 팔에서 이미 복구된 쌍 **22**(그중 GT 라벨 11) ⟹ 🟢 운영 복구기가 살아 있다
+산출물 `__tests__/preserved/mllc-01-labeled-code-counterfactual.json`
+하니스 `__tests__/mllc-01-labeled-code-counterfactual.test.ts`(10 tests)
+```
+
+### ② 🟢 승인 변경은 **중복이 아니다**(그러나 이득은 잠재적이다)
+
+```
+운영 복구기 `recoverModelCodeFromDetail`(model-code-from-detail.ts:68)은
+  `product-url-facts.ts:621`(PLAIN_HTML) · `:428`(SHOPIFY_JSON)에서 **이미 돈다**
+🔴 그런데 그 함수는 품번 **«모양»**(`\bB\d{3}[A-Z]{2}\d{3}\b`)만 읽는다 ⟹
+   다른 브랜드의 실제 품번을 **읽지 못한다**(실측: `WK21A165` · `WK21W97` ·
+   `AW26MS185` · `BJ87` · `BJ35-SS26` · `BJ11-SS26` · `SS25-250`)
+🟢 라벨 앵커는 모양과 무관하므로 그 공백 **10건** 을 메운다(전부 미라벨)
+🔴🔴 그래도 verdict 는 **0건** 바뀐다 — 원상품 코드와 **정확히 일치** 한 2건
+   (`WK21A165` · `WK21W97` · junioredition × Wynken)은 `MODEL_CODE` **3점을 실제로 얻었는데**
+   `BRAND_UNCONFIRMED` 가 SAME 을 막았다(등록부 4개 밖 브랜드) ⟹ **이득은 잠재적** 이다
+⟹ 🔵 **구속 조건은 품번이 아니라 브랜드 등록부** 라는 것이 이 측정의 결론이다
+```
+
+### ③ 🔴 중단 사유 — 기존 계약 4건이 「변경 전 상태」를 고정한다
+
+```
+candidate-code-parity-01.test.ts    C-1   「PLAIN_HTML 후보 품번은 여전히 하드코딩 null」
+core-2ab-evidence-source-meaning    AB-S1 「`productFactsFromListing` 의 빈 칸은 **다섯**」
+core-2ac-plain-html-parity          AC-6  「`brandModelCode` 는 여전히 하드코딩 null」
+core-2j-identity-field-purity       A     「brandModelCode 생산자 **여섯** · 후보 경로 **둘**」
+🟢 네 건 전부 **의도된 변경에 의한 FAIL** 이고 제품 결함이 아니다
+🟢 AB-S1 주석이 그 설계 의도를 직접 적는다 — 「남은 다섯은 **열 때마다 줄어야 하고
+   «조용히» 줄면 안 된다**」 · 선례는 CORE-2AC(일곱 → 다섯으로 앵커 **갱신·강화**)
+🔴 그러나 그 갱신은 **계약 수정** 이고 CPO §3 STEP D 가 「임의 수정 금지 · 중단」으로
+   못 박았다 ⟹ **CTO 가 수정하지 않았다**
+```
+
+### ④ 🟡 재개에 필요한 것 — **CPO 승인 1건**
+
+```
+승인 대상  위 계약 **4 앵커의 갱신·강화**(브랜드 품번 칸을 「라벨 전용으로 채운다」로 ·
+          나머지 **넷**(materialText · fitText · ageRangeText · sizeLabels)은 **그대로 잠근다**)
+🟢 그 승인만 있으면 남은 작업은 **한 줄 구현 + 앵커 4건 갱신 + 회귀** 이고,
+   반사실·계약 뼈대·산출물은 **이미 있다**(재조사·재측정 0)
+🔴 승인 전에는 착수하지 않는다
+🔴 그리고 **등록부 밖 브랜드 문제는 이 승인으로 해결되지 않는다** — ②의 2건이 그 증거다
+```
+
+### ⑤ 🔴 내가 틀려서 고친 하니스 결함 2건 (그대로 적는다)
+
+```
+⒜ 구현 후 BASE 팔이 **바뀐 팩토리를 그대로 써서** 반사실이 동어반복이 됐다
+   (A-4 가 조용히 「통과」로 뒤집혔다) ⟹ BASE 를 변경 전 동작으로 **명시 재현** 하게 고쳤다
+⒝ 🔴 더 중요 — `originFacts` 의 `?? base.brandModelCode` 폴백이 구현 후
+   **원상품 설명의 라벨 코드** 를 끌어와 `originCode === null` 인 쌍의 판정을 바꿨다
+   ⟹ 두 팔이 함께 흔들려 델타가 오염됐다(**A-3 가 FAIL 로 잡았다**)
+   🟢 운영 원상품 facts 는 `productFactsFromIdentityDna`(origin-facts.ts:44)가 만들고
+      이 팩토리를 쓰지 않으므로 **하니스 결함** 이다 ⟹ 폴백을 제거했다
 ```
 
 ---

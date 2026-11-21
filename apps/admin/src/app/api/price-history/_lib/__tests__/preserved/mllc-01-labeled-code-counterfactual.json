@@ -1,0 +1,3464 @@
+{
+  "note": "MLLC-01 STEP A — 승인된 「라벨 전용」 변경의 순효과 반사실. 🔴 운영 코드 0 · HTTP 0 · DB 0 · 수집 0. 🔴 두 팔의 차이는 후보 `brandModelCode` 한 칸뿐이고 나머지 입력은 동일하다.",
+  "finding": "🔴🔴 순효과 0 — 운영 PLAIN_HTML 경로가 `recoverModelCodeFromDetail`(model-code-from-detail.ts:68)을 product-url-facts.ts:621 에서 이미 적용하고, 그 함수는 라벨 없이 품번 모양만으로 `brandModelCode` 를 비어 있을 때만 채운다(Contract A/C) ⟹ 승인 변경은 그 부분집합이다.",
+  "denominator": {
+    "fixturePairs": 109,
+    "gt": {
+      "미라벨": 73,
+      "SAME": 20,
+      "DIFFERENT": 15,
+      "SIMILAR": 1
+    },
+    "notMerged": "109 · 36(GT) · 73(미라벨) · 98 · 24 · 16 은 서로 다른 집합 — 합산하지 않는다"
+  },
+  "stepB": {
+    "① GT DIFFERENT → SAME 전환": 0,
+    "② GT SAME 이 품번 충돌로 새로 막힘": 0,
+    "③ GT SIMILAR verdict 변화": 0,
+    "④ 미라벨 verdict 변화": 0,
+    "⑤ 전 분모 verdict 변화": 0,
+    "⑥ 전 분모 brandModelCode 칸 변화": 10
+  },
+  "baseRecovery": {
+    "BASE 팔에서 품번이 복구된 쌍": 22,
+    "그중 GT 라벨 보유": 11
+  },
+  "verdictTally": {
+    "base": {
+      "CONFLICT": 6,
+      "SIMILAR": 66,
+      "UNKNOWN": 11,
+      "PRESUMED_SAME": 20,
+      "SAME": 6
+    },
+    "label": {
+      "CONFLICT": 6,
+      "SIMILAR": 66,
+      "UNKNOWN": 11,
+      "PRESUMED_SAME": 20,
+      "SAME": 6
+    }
+  },
+  "sameBlockedByCodeConflict": [],
+  "limitations": [
+    "🔴 이 반사실은 **PLAIN_HTML(후보 상세 URL) 경로** 를 재현한다. 등록부 어댑터 7개(looxloo·rulii·deuxbebe·littleluna·chocoel·foretforet·childrensalon)는 `productFactsFromListing` 에 `description` 을 **넘기지 않으므로**(전수 grep 0) 승인 변경도 `recoverModelCodeFromDetail` 도 **읽을 것이 없다** ⟹ 그 경로의 품번 공백은 STRUCTURING_GAP 이 아니라 **DATA_SOURCE_GAP** 이다.",
+    "🔴 후보 브랜드는 등록부 4개 별칭으로만 채웠다(두 팔 동일) — 운영의 JSON-LD 브랜드가 아니다. 델타에는 영향이 없으나 **절대 verdict 값은 운영 값이 아니다**.",
+    "🔴 미라벨 73건은 GT 가 없으므로 전환의 옳고 그름을 판정할 수 없다(측정불가 · 0 이 아니다)."
+  ],
+  "rows": [
+    {
+      "originCode": "B226AB097",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/stamp-bloom-all-over-reversible-jacket-by-bobo-choses",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "CONFLICT",
+        "brandModelCode": "B226AC097",
+        "axisPoints": {},
+        "blockers": [],
+        "conflicts": [
+          "MODEL_CODE"
+        ]
+      },
+      "label": {
+        "verdict": "CONFLICT",
+        "brandModelCode": "B226AC097",
+        "axisPoints": {},
+        "blockers": [],
+        "conflicts": [
+          "MODEL_CODE"
+        ]
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AB097",
+      "candidateDomain": "nickis.com",
+      "candidateUrl": "https://nickis.com/products/colmar-daunenjacke-reversible-quilted-marineblau-7404628282",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "biskuit.kr",
+      "candidateUrl": "https://biskuit.kr/product/%eb%b3%b4%eb%b3%b4%ec%87%bc%ec%a6%88-%ed%97%88%ea%b7%b8-%ed%97%a4%ec%96%b4%eb%a6%ac-%eb%aa%ac%ec%8a%a4%ed%84%b0-%ed%8b%b0%ec%85%94%ec%b8%a0-b226ac009/8891/category/367/display/1/",
+      "humanGt": "SAME",
+      "base": {
+        "verdict": "UNKNOWN",
+        "brandModelCode": null,
+        "axisPoints": {},
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "UNKNOWN",
+        "brandModelCode": null,
+        "axisPoints": {},
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "bobochoses.com",
+      "candidateUrl": "https://bobochoses.com/products/b226ab040-hug-hairy-monster-t-shirt",
+      "humanGt": "SAME",
+      "base": {
+        "verdict": "UNKNOWN",
+        "brandModelCode": null,
+        "axisPoints": {},
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "UNKNOWN",
+        "brandModelCode": null,
+        "axisPoints": {},
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "bornyesterdaykids.com",
+      "candidateUrl": "https://bornyesterdaykids.com/products/bobo-choses-baby-hug-hairy-monster-l-s-t-shirt-booo-bo-choses-tag-denim-pants-set-light-blue-red",
+      "humanGt": "SAME",
+      "base": {
+        "verdict": "CONFLICT",
+        "brandModelCode": null,
+        "axisPoints": {},
+        "blockers": [],
+        "conflicts": [
+          "COMPOSITION"
+        ]
+      },
+      "label": {
+        "verdict": "CONFLICT",
+        "brandModelCode": null,
+        "axisPoints": {},
+        "blockers": [],
+        "conflicts": [
+          "COMPOSITION"
+        ]
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "cemarose.ca",
+      "candidateUrl": "https://cemarose.ca/products/bobo-choses-kids-booty-ghosts-sweatshirt-light-blue-c7907",
+      "humanGt": "DIFFERENT",
+      "base": {
+        "verdict": "CONFLICT",
+        "brandModelCode": "B226AC031",
+        "axisPoints": {},
+        "blockers": [],
+        "conflicts": [
+          "MODEL_CODE"
+        ]
+      },
+      "label": {
+        "verdict": "CONFLICT",
+        "brandModelCode": "B226AC031",
+        "axisPoints": {},
+        "blockers": [],
+        "conflicts": [
+          "MODEL_CODE"
+        ]
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "cissywears.com",
+      "candidateUrl": "https://cissywears.com/products/bobo-choses-babyhug-hairy-monster-t-shirt",
+      "humanGt": "SAME",
+      "base": {
+        "verdict": "UNKNOWN",
+        "brandModelCode": null,
+        "axisPoints": {},
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "UNKNOWN",
+        "brandModelCode": null,
+        "axisPoints": {},
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "global.trenbe.com",
+      "candidateUrl": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+      "humanGt": "SAME",
+      "base": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": "B226AC009",
+        "axisPoints": {
+          "MODEL_CODE": 3
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": "B226AC009",
+        "axisPoints": {
+          "MODEL_CODE": 3
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "global.trenbe.com",
+      "candidateUrl": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": "B226AC009",
+        "axisPoints": {
+          "TITLE": 1,
+          "MODEL_CODE": 3,
+          "CATEGORY": 1
+        },
+        "blockers": [],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": "B226AC009",
+        "axisPoints": {
+          "TITLE": 1,
+          "MODEL_CODE": 3,
+          "CATEGORY": 1
+        },
+        "blockers": [],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "base": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": "B226AC009",
+        "axisPoints": {
+          "TITLE": 2,
+          "MODEL_CODE": 3,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": "B226AC009",
+        "axisPoints": {
+          "TITLE": 2,
+          "MODEL_CODE": 3,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SAME",
+        "brandModelCode": "B226AC009",
+        "axisPoints": {
+          "TITLE": 2,
+          "MODEL_CODE": 3,
+          "CATEGORY": 1
+        },
+        "blockers": [],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SAME",
+        "brandModelCode": "B226AC009",
+        "axisPoints": {
+          "TITLE": 2,
+          "MODEL_CODE": 3,
+          "CATEGORY": 1
+        },
+        "blockers": [],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://www.junioredition.com/products/hug-hairy-monster-baby-t-shirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "base": {
+        "verdict": "CONFLICT",
+        "brandModelCode": "B226AB040",
+        "axisPoints": {},
+        "blockers": [],
+        "conflicts": [
+          "MODEL_CODE"
+        ]
+      },
+      "label": {
+        "verdict": "CONFLICT",
+        "brandModelCode": "B226AB040",
+        "axisPoints": {},
+        "blockers": [],
+        "conflicts": [
+          "MODEL_CODE"
+        ]
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "base": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": "B226AC009",
+        "axisPoints": {
+          "MODEL_CODE": 3
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": "B226AC009",
+        "axisPoints": {
+          "MODEL_CODE": 3
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "kids21.com",
+      "candidateUrl": "https://kids21.com/products/700005621lbl",
+      "humanGt": "SAME",
+      "base": {
+        "verdict": "UNKNOWN",
+        "brandModelCode": null,
+        "axisPoints": {},
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "UNKNOWN",
+        "brandModelCode": null,
+        "axisPoints": {},
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "m.luxboy.com",
+      "candidateUrl": "https://m.luxboy.com/product/a14338197cb8698cd92c86431cce8d05",
+      "humanGt": "DIFFERENT",
+      "base": {
+        "verdict": "UNKNOWN",
+        "brandModelCode": null,
+        "axisPoints": {},
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "UNKNOWN",
+        "brandModelCode": null,
+        "axisPoints": {},
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "miniboutique.co.kr",
+      "candidateUrl": "https://miniboutique.co.kr/product/bobo-chosest-shirt-b226ac009/28043/",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "parkette.ca",
+      "candidateUrl": "https://www.parkette.ca/products/hug-hairy-monster-sweatshirt",
+      "humanGt": "DIFFERENT",
+      "base": {
+        "verdict": "UNKNOWN",
+        "brandModelCode": null,
+        "axisPoints": {},
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "UNKNOWN",
+        "brandModelCode": null,
+        "axisPoints": {},
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "scoutandcokids.com",
+      "candidateUrl": "https://scoutandcokids.com/collections/bobo-choses/products/bobo-choses-hug-hairy-monster-t-shirt",
+      "humanGt": "SAME",
+      "base": {
+        "verdict": "UNKNOWN",
+        "brandModelCode": null,
+        "axisPoints": {},
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "UNKNOWN",
+        "brandModelCode": null,
+        "axisPoints": {},
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "stockmann.ee",
+      "candidateUrl": "https://www.stockmann.ee/et-ee/bobo-choses-trikoosark-hug-monster/18119748633-1.html",
+      "humanGt": "SAME",
+      "base": {
+        "verdict": "UNKNOWN",
+        "brandModelCode": null,
+        "axisPoints": {},
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "UNKNOWN",
+        "brandModelCode": null,
+        "axisPoints": {},
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "thefrontshop.com",
+      "candidateUrl": "https://www.thefrontshop.com/products/hug-hairy-monster-t-shirt",
+      "humanGt": "SAME",
+      "base": {
+        "verdict": "UNKNOWN",
+        "brandModelCode": null,
+        "axisPoints": {},
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "UNKNOWN",
+        "brandModelCode": null,
+        "axisPoints": {},
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "tinyapple.net",
+      "candidateUrl": "https://www.tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+      "humanGt": "SAME",
+      "base": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": "B226AC009",
+        "axisPoints": {
+          "MODEL_CODE": 3
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": "B226AC009",
+        "axisPoints": {
+          "MODEL_CODE": 3
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "tinyapple.net",
+      "candidateUrl": "https://www.tinyapple.net/en-kr/products/bobo-choses-bobo-choses-pop-t-shirt-blue",
+      "humanGt": "DIFFERENT",
+      "base": {
+        "verdict": "CONFLICT",
+        "brandModelCode": "B226AC142",
+        "axisPoints": {},
+        "blockers": [],
+        "conflicts": [
+          "MODEL_CODE"
+        ]
+      },
+      "label": {
+        "verdict": "CONFLICT",
+        "brandModelCode": "B226AC142",
+        "axisPoints": {},
+        "blockers": [],
+        "conflicts": [
+          "MODEL_CODE"
+        ]
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "tinyapple.net",
+      "candidateUrl": "https://www.tinyapple.net/en-kr/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+      "humanGt": "SAME",
+      "base": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": "B226AC009",
+        "axisPoints": {
+          "MODEL_CODE": 3
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": "B226AC009",
+        "axisPoints": {
+          "MODEL_CODE": 3
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/pale-blue-3d-logo-t-shirt",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/pale-blue-3d-logo-t-shirt",
+      "humanGt": "DIFFERENT",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/blue-tie-dye-polo-bear-t-shirt",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "(공백)",
+      "candidateUrl": "https://www.junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "base": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": "B226AC009",
+        "axisPoints": {
+          "TITLE": 2,
+          "MODEL_CODE": 3,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": "B226AC009",
+        "axisPoints": {
+          "TITLE": 2,
+          "MODEL_CODE": 3,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC009",
+      "candidateDomain": "(공백)",
+      "candidateUrl": "https://scoutandcokids.com/products/bobo-choses-hug-hairy-monster-t-shirt",
+      "humanGt": "SAME",
+      "base": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 2,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 2,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC010",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/booty-ghosts-t-shirt-by-bobo-choses",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "CONFLICT",
+        "brandModelCode": "B226AC141",
+        "axisPoints": {},
+        "blockers": [],
+        "conflicts": [
+          "MODEL_CODE"
+        ]
+      },
+      "label": {
+        "verdict": "CONFLICT",
+        "brandModelCode": "B226AC141",
+        "axisPoints": {},
+        "blockers": [],
+        "conflicts": [
+          "MODEL_CODE"
+        ]
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC010",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SAME",
+        "brandModelCode": "B226AC010",
+        "axisPoints": {
+          "TITLE": 2,
+          "MODEL_CODE": 3,
+          "CATEGORY": 1
+        },
+        "blockers": [],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SAME",
+        "brandModelCode": "B226AC010",
+        "axisPoints": {
+          "TITLE": 2,
+          "MODEL_CODE": 3,
+          "CATEGORY": 1
+        },
+        "blockers": [],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC010",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SAME",
+        "brandModelCode": "B226AC010",
+        "axisPoints": {
+          "TITLE": 2,
+          "MODEL_CODE": 3,
+          "CATEGORY": 1
+        },
+        "blockers": [],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SAME",
+        "brandModelCode": "B226AC010",
+        "axisPoints": {
+          "TITLE": 2,
+          "MODEL_CODE": 3,
+          "CATEGORY": 1
+        },
+        "blockers": [],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC017",
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/hugo-boss-baby-boys-double-b-graphic-t-shirt",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC017",
+      "candidateDomain": "nickis.com",
+      "candidateUrl": "https://nickis.com/products/bobo-choses-t-shirt-cremeweiss-3006678709",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC017",
+      "candidateDomain": "petitemaisonkids.com",
+      "candidateUrl": "https://petitemaisonkids.com/products/charlie-white-mandarin-collar-shirt",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC017",
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/white-stripe-graphic-t-shirt",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC029",
+      "candidateDomain": "designerkidswear.com",
+      "candidateUrl": "https://designerkidswear.com/products/michael-kors-kids-girls-sweater-pink-r15223-44v",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC033",
+      "candidateDomain": "designerkidswear.com",
+      "candidateUrl": "https://designerkidswear.com/products/fendi-baby-boys-sweatshirt-blue-buh088-8ra-f19j4",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC033",
+      "candidateDomain": "designerkidswear.com",
+      "candidateUrl": "https://designerkidswear.com/products/stone-island-junior-kids-boys-sweatshirt-blue-6100001-s0a20-v004b",
+      "humanGt": "DIFFERENT",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC033",
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+      "humanGt": "DIFFERENT",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC033",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/bobo-choses-pop-sweatshirt-by-bobo-choses",
+      "humanGt": "SAME",
+      "base": {
+        "verdict": "SAME",
+        "brandModelCode": "B226AC033",
+        "axisPoints": {
+          "TITLE": 2,
+          "MODEL_CODE": 3,
+          "CATEGORY": 1
+        },
+        "blockers": [],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SAME",
+        "brandModelCode": "B226AC033",
+        "axisPoints": {
+          "TITLE": 2,
+          "MODEL_CODE": 3,
+          "CATEGORY": 1
+        },
+        "blockers": [],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC033",
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/hugo-boss-navy-zip-sweatshirt",
+      "humanGt": "DIFFERENT",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC033",
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/lacoste-navy-sweatshirt",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC033",
+      "candidateDomain": "petitemaisonkids.com",
+      "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+      "humanGt": "DIFFERENT",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "GARMENT_FORM",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "GARMENT_FORM",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC033",
+      "candidateDomain": "shoppiccoliandco.com",
+      "candidateUrl": "https://shoppiccoliandco.com/products/jude-navy-baby-boy-anchor-sweater",
+      "humanGt": "DIFFERENT",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC033",
+      "candidateDomain": "tiptoeboutique.com",
+      "candidateUrl": "https://tiptoeboutique.com/products/b226ac033-midnight-blue",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "MODEL_CODE": 3,
+          "CATEGORY": 1
+        },
+        "blockers": [],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "MODEL_CODE": 3,
+          "CATEGORY": 1
+        },
+        "blockers": [],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC036",
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC036",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/mush-monster-duo-baby-sweatshirt-by-bobo-choses",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": "B226AB059",
+        "axisPoints": {
+          "TITLE": 2,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "MODEL_CODE_AGE_LINE"
+        ],
+        "conflicts": [
+          "MODEL_CODE"
+        ]
+      },
+      "label": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": "B226AB059",
+        "axisPoints": {
+          "TITLE": 2,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "MODEL_CODE_AGE_LINE"
+        ],
+        "conflicts": [
+          "MODEL_CODE"
+        ]
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC036",
+      "candidateDomain": "(공백)",
+      "candidateUrl": "https://www.beaumonde.co.kr/goods/goods_view.php?goodsno=1000014013",
+      "humanGt": "SAME",
+      "base": {
+        "verdict": "UNKNOWN",
+        "brandModelCode": null,
+        "axisPoints": {},
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "UNKNOWN",
+        "brandModelCode": null,
+        "axisPoints": {},
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC036",
+      "candidateDomain": "(공백)",
+      "candidateUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362797&type=x&current_category=058",
+      "humanGt": "SAME",
+      "base": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 2,
+          "CATEGORY": 1
+        },
+        "blockers": [],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 2,
+          "CATEGORY": 1
+        },
+        "blockers": [],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC038",
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC038",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/hidden-monster-sweatshirt-by-bobo-choses",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SAME",
+        "brandModelCode": "B226AC038",
+        "axisPoints": {
+          "TITLE": 2,
+          "MODEL_CODE": 3,
+          "CATEGORY": 1
+        },
+        "blockers": [],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SAME",
+        "brandModelCode": "B226AC038",
+        "axisPoints": {
+          "TITLE": 2,
+          "MODEL_CODE": 3,
+          "CATEGORY": 1
+        },
+        "blockers": [],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC038",
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/fendi-blue-ff-sweater",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC038",
+      "candidateDomain": "petitemaisonkids.com",
+      "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "GARMENT_FORM",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "GARMENT_FORM",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC041",
+      "candidateDomain": "designerkidswear.com",
+      "candidateUrl": "https://designerkidswear.com/products/ea7-emporio-armani-kids-boys-polo-navy-7b000023-af1290-ub102",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC041",
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC041",
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/fendi-blue-ff-sweater",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC041",
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/navy-logo-rugby-sweatshirt",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC043",
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC043",
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/stone-island-blue-sweatshirt",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC043",
+      "candidateDomain": "petitemaisonkids.com",
+      "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "GARMENT_FORM",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "GARMENT_FORM",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC043",
+      "candidateDomain": "shoppiccoliandco.com",
+      "candidateUrl": "https://shoppiccoliandco.com/products/blue-bears-knitted-sweater",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC043",
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/blue-half-zip-sweatshirt",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC073",
+      "candidateDomain": "designerkidswear.com",
+      "candidateUrl": "https://designerkidswear.com/products/versace-kids-baby-boys-denim-blue-1009197-1a08511-1d200",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC073",
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/gingham-woven-trousers",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC073",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/taxi-saurus-tag-denim-pants-by-bobo-choses",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SAME",
+        "brandModelCode": "B226AC073",
+        "axisPoints": {
+          "TITLE": 2,
+          "MODEL_CODE": 3,
+          "CATEGORY": 1
+        },
+        "blockers": [],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SAME",
+        "brandModelCode": "B226AC073",
+        "axisPoints": {
+          "TITLE": 2,
+          "MODEL_CODE": 3,
+          "CATEGORY": 1
+        },
+        "blockers": [],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC073",
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/diesel-viker-jeans",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC073",
+      "candidateDomain": "nickis.com",
+      "candidateUrl": "https://nickis.com/products/polo-ralph-lauren-jeans-blau-3402271700",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC073",
+      "candidateDomain": "petitemaisonkids.com",
+      "candidateUrl": "https://petitemaisonkids.com/products/sparkle-blue-denim-jeans",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC073",
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/denim-blue-jeans",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC073",
+      "candidateDomain": "(공백)",
+      "candidateUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362810&type=x&current_category=058",
+      "humanGt": "SAME",
+      "base": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 2,
+          "CATEGORY": 1
+        },
+        "blockers": [],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 2,
+          "CATEGORY": 1
+        },
+        "blockers": [],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC110",
+      "candidateDomain": "designerkidswear.com",
+      "candidateUrl": "https://designerkidswear.com/products/dolce-gabbana-kids-boys-dg-t-shirt-white-l4jthvg7nvc-s9000",
+      "humanGt": "DIFFERENT",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC110",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/bobo-choses-embossed-t-shirt-by-bobo-choses",
+      "humanGt": "SIMILAR",
+      "base": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": "B226AC111",
+        "axisPoints": {
+          "TITLE": 2,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "MODEL_CODE_AGE_LINE"
+        ],
+        "conflicts": [
+          "MODEL_CODE"
+        ]
+      },
+      "label": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": "B226AC111",
+        "axisPoints": {
+          "TITLE": 2,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "MODEL_CODE_AGE_LINE"
+        ],
+        "conflicts": [
+          "MODEL_CODE"
+        ]
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC110",
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/marc-jacobs-black-t-shirt",
+      "humanGt": "DIFFERENT",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC110",
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/white-multi-sequin-logo-crop-t-shirt",
+      "humanGt": "DIFFERENT",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC170",
+      "candidateDomain": "nickis.com",
+      "candidateUrl": "https://nickis.com/products/levis-sweatshirt-rot-7401897725",
+      "humanGt": "DIFFERENT",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226AC170",
+      "candidateDomain": "shoppiccoliandco.com",
+      "candidateUrl": "https://shoppiccoliandco.com/products/rudolph-knitted-sweater",
+      "humanGt": "DIFFERENT",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "B226TC175",
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/baby-sweater-suit-biscuit-organic-cotton",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "WK21A165",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/double-deerstalker-cap-in-blue-soft-tan-by-wynken",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 2,
+          "COLOR": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": "WK21A165",
+        "axisPoints": {
+          "TITLE": 2,
+          "MODEL_CODE": 3,
+          "COLOR": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": true
+    },
+    {
+      "originCode": "WK21W97",
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/mixed-media-jacket-in-blue-mix-by-wynken",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 2,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "SAME_SELLER_DISTINCT_LISTING",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": "WK21W97",
+        "axisPoints": {
+          "TITLE": 2,
+          "MODEL_CODE": 3,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "SAME_SELLER_DISTINCT_LISTING",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": true
+    },
+    {
+      "originCode": "WK21W97",
+      "candidateDomain": "nickis.com",
+      "candidateUrl": "https://nickis.com/products/wynken-jacke-mixed-media-mehrfarbig-7400851022",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": "WK21W97",
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/black-puffer-coat-4",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "UNKNOWN",
+        "brandModelCode": null,
+        "axisPoints": {},
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "UNKNOWN",
+        "brandModelCode": null,
+        "axisPoints": {},
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "designerkidswear.com",
+      "candidateUrl": "https://designerkidswear.com/products/givenchy-baby-girls-dress-pink-h31301-46g",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "designerkidswear.com",
+      "candidateUrl": "https://designerkidswear.com/products/moncler-kids-enfant-baby-k2f-jacket-brown-1a00024-597z8-246",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1,
+          "COLOR": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1,
+          "COLOR": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "designerkidswear.com",
+      "candidateUrl": "https://designerkidswear.com/products/mackage-kids-jesse-blue-jesse-bl",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1,
+          "COLOR": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1,
+          "COLOR": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/color-block-jacket-pastel-blue-mellow-yellow",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1,
+          "COLOR": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": "SS25-250",
+        "axisPoints": {
+          "CATEGORY": 1,
+          "COLOR": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": true
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/baby-ribbed-booties-grey-melange-organic-cotton",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "COLOR": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "COLOR": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/kim-shirt-organic-cotton-sleet-check",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "folkberlin.com",
+      "candidateUrl": "https://folkberlin.com/products/baby-ribbed-booties-grey-melange-organic-cotton",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "COLOR": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "COLOR": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/faux-fur-reversible-jacket-in-blue-ode-to-rose-by-wynken",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "CATEGORY": 1,
+          "COLOR": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": "WK21W112",
+        "axisPoints": {
+          "TITLE": 1,
+          "CATEGORY": 1,
+          "COLOR": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": true
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/everyday-ghosts-all-over-baby-t-shirt-by-bobo-choses",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": "B226AB039",
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": "B226AB039",
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/tunique-with-hair-clip-in-garden-flowers-print-by-bonjour",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1
+        },
+        "blockers": [
+          "SAME_SELLER_DISTINCT_LISTING",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": "BJ11-SS26",
+        "axisPoints": {
+          "TITLE": 1
+        },
+        "blockers": [
+          "SAME_SELLER_DISTINCT_LISTING",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": true
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/pixel-abduction-all-over-reversible-jacket-by-bobo-choses",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": "B226AC098",
+        "axisPoints": {
+          "TITLE": 1,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "BRAND_MISMATCH",
+          "SAME_SELLER_DISTINCT_LISTING"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": "B226AC098",
+        "axisPoints": {
+          "TITLE": 1,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "BRAND_MISMATCH",
+          "SAME_SELLER_DISTINCT_LISTING"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/bubble-sweatshirt-in-grey-melange-by-main-story",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 2,
+          "CATEGORY": 1,
+          "COLOR": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": "AW26MS185",
+        "axisPoints": {
+          "TITLE": 2,
+          "CATEGORY": 1,
+          "COLOR": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": true
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/mixed-media-jacket-in-ecru-mix-by-wynken",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 2,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": "WK21W97",
+        "axisPoints": {
+          "TITLE": 2,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": true
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/bubble-sweatshirt-in-grey-melange-by-main-story",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 2,
+          "CATEGORY": 1,
+          "COLOR": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": "AW26MS185",
+        "axisPoints": {
+          "TITLE": 2,
+          "CATEGORY": 1,
+          "COLOR": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": true
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/handsmock-apron-dress-in-natural-by-bonjour",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "SAME_SELLER_DISTINCT_LISTING",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": "BJ35-SS26",
+        "axisPoints": {
+          "TITLE": 1,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "SAME_SELLER_DISTINCT_LISTING",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": true
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "junioredition.com",
+      "candidateUrl": "https://junioredition.com/products/exclusive-handsmock-dress-in-pink-tapestry-by-bonjour",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "SAME_SELLER_DISTINCT_LISTING",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": "BJ87",
+        "axisPoints": {
+          "TITLE": 1,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "SAME_SELLER_DISTINCT_LISTING",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": true
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/patachou-ecru-tweed-coat",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/mackage-jesse-blue-jacket",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1,
+          "COLOR": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1,
+          "COLOR": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/givenchy-lilac-dress",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "kidbizkid.com",
+      "candidateUrl": "https://kidbizkid.com/products/billieblush-reversible-leopard-jacket",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "nickis.com",
+      "candidateUrl": "https://nickis.com/products/colmar-daunenjacke-reversible-quilted-marineblau-7404628282",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "petitemaisonkids.com",
+      "candidateUrl": "https://petitemaisonkids.com/products/azalea-pink-flower-hair-clip",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "petitemaisonkids.com",
+      "candidateUrl": "https://petitemaisonkids.com/products/georgina-tartan-print-dress-with-red-bow",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "CATEGORY": 1,
+          "COLOR": 1
+        },
+        "blockers": [
+          "COLOR_VARIANT",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "PRESUMED_SAME",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "CATEGORY": 1,
+          "COLOR": 1
+        },
+        "blockers": [
+          "COLOR_VARIANT",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "shoppiccoliandco.com",
+      "candidateUrl": "https://shoppiccoliandco.com/products/preorder-beatrice-burgundy-handsmocked-girl-sleeves-dress-ships-end-of-october",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1,
+          "COLOR": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1,
+          "COLOR": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/lemon-print-dress",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "TITLE": 1,
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/blue-t-shirt",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/copy-of-coral-pink-broderie-anglaise-dress",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    },
+    {
+      "originCode": null,
+      "candidateDomain": "villagekids.co.uk",
+      "candidateUrl": "https://villagekids.co.uk/products/blue-knitted-jacket",
+      "humanGt": "미라벨",
+      "base": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1,
+          "COLOR": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "label": {
+        "verdict": "SIMILAR",
+        "brandModelCode": null,
+        "axisPoints": {
+          "CATEGORY": 1,
+          "COLOR": 1
+        },
+        "blockers": [
+          "NO_TITLE_OVERLAP",
+          "BRAND_UNCONFIRMED"
+        ],
+        "conflicts": []
+      },
+      "verdictChanged": false,
+      "codeChanged": false
+    }
+  ]
+}
