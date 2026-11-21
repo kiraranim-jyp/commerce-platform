@@ -51,16 +51,16 @@
  },
  "verdictAll": {
   "base": {
-   "SIMILAR": 69,
+   "SIMILAR": 66,
    "UNKNOWN": 18,
-   "CONFLICT": 1,
-   "PRESUMED_SAME": 21
+   "CONFLICT": 5,
+   "PRESUMED_SAME": 20
   },
   "noiseAdded": {
-   "SIMILAR": 69,
+   "SIMILAR": 66,
    "UNKNOWN": 18,
-   "CONFLICT": 1,
-   "PRESUMED_SAME": 21
+   "CONFLICT": 5,
+   "PRESUMED_SAME": 20
   }
  },
  "outcome": {
@@ -1018,28 +1018,22 @@
     "shirt"
    ],
    "base": {
-    "verdict": "PRESUMED_SAME",
-    "axes": [
-     "TITLE:2",
-     "CATEGORY:1"
-    ],
-    "totalPoints": 3,
-    "blockers": [
-     "BRAND_UNCONFIRMED"
-    ],
-    "conflicts": []
+    "verdict": "CONFLICT",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [],
+    "conflicts": [
+     "MODEL_CODE"
+    ]
    },
    "cf": {
-    "verdict": "PRESUMED_SAME",
-    "axes": [
-     "TITLE:2",
-     "CATEGORY:1"
-    ],
-    "totalPoints": 3,
-    "blockers": [
-     "BRAND_UNCONFIRMED"
-    ],
-    "conflicts": []
+    "verdict": "CONFLICT",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [],
+    "conflicts": [
+     "MODEL_CODE"
+    ]
    },
    "changed": false
   },
@@ -1093,9 +1087,10 @@
     "verdict": "PRESUMED_SAME",
     "axes": [
      "TITLE:2",
+     "MODEL_CODE:3",
      "CATEGORY:1"
     ],
-    "totalPoints": 3,
+    "totalPoints": 6,
     "blockers": [
      "BRAND_UNCONFIRMED"
     ],
@@ -1105,9 +1100,10 @@
     "verdict": "PRESUMED_SAME",
     "axes": [
      "TITLE:2",
+     "MODEL_CODE:3",
      "CATEGORY:1"
     ],
-    "totalPoints": 3,
+    "totalPoints": 6,
     "blockers": [
      "BRAND_UNCONFIRMED"
     ],
@@ -2784,9 +2780,10 @@
     "verdict": "PRESUMED_SAME",
     "axes": [
      "TITLE:2",
+     "MODEL_CODE:3",
      "COLOR:1"
     ],
-    "totalPoints": 3,
+    "totalPoints": 6,
     "blockers": [
      "BRAND_UNCONFIRMED"
     ],
@@ -2796,9 +2793,10 @@
     "verdict": "PRESUMED_SAME",
     "axes": [
      "TITLE:2",
+     "MODEL_CODE:3",
      "COLOR:1"
     ],
-    "totalPoints": 3,
+    "totalPoints": 6,
     "blockers": [
      "BRAND_UNCONFIRMED"
     ],
@@ -2820,9 +2818,10 @@
     "verdict": "PRESUMED_SAME",
     "axes": [
      "TITLE:2",
+     "MODEL_CODE:3",
      "CATEGORY:1"
     ],
-    "totalPoints": 3,
+    "totalPoints": 6,
     "blockers": [
      "BRAND_UNCONFIRMED"
     ],
@@ -2832,9 +2831,10 @@
     "verdict": "PRESUMED_SAME",
     "axes": [
      "TITLE:2",
+     "MODEL_CODE:3",
      "CATEGORY:1"
     ],
-    "totalPoints": 3,
+    "totalPoints": 6,
     "blockers": [
      "BRAND_UNCONFIRMED"
     ],
@@ -3250,26 +3250,22 @@
    "ownerState": "OBSERVED",
    "removedTypeTokens": [],
    "base": {
-    "verdict": "SIMILAR",
-    "axes": [
-     "TITLE:1"
-    ],
-    "totalPoints": 1,
-    "blockers": [
-     "BRAND_UNCONFIRMED"
-    ],
-    "conflicts": []
+    "verdict": "CONFLICT",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [],
+    "conflicts": [
+     "MODEL_CODE"
+    ]
    },
    "cf": {
-    "verdict": "SIMILAR",
-    "axes": [
-     "TITLE:1"
-    ],
-    "totalPoints": 1,
-    "blockers": [
-     "BRAND_UNCONFIRMED"
-    ],
-    "conflicts": []
+    "verdict": "CONFLICT",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [],
+    "conflicts": [
+     "MODEL_CODE"
+    ]
    },
    "changed": false
   },
@@ -3432,28 +3428,22 @@
     "dress"
    ],
    "base": {
-    "verdict": "SIMILAR",
-    "axes": [
-     "TITLE:1",
-     "CATEGORY:1"
-    ],
-    "totalPoints": 2,
-    "blockers": [
-     "BRAND_UNCONFIRMED"
-    ],
-    "conflicts": []
+    "verdict": "CONFLICT",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [],
+    "conflicts": [
+     "MODEL_CODE"
+    ]
    },
    "cf": {
-    "verdict": "SIMILAR",
-    "axes": [
-     "TITLE:1",
-     "CATEGORY:1"
-    ],
-    "totalPoints": 2,
-    "blockers": [
-     "BRAND_UNCONFIRMED"
-    ],
-    "conflicts": []
+    "verdict": "CONFLICT",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [],
+    "conflicts": [
+     "MODEL_CODE"
+    ]
    },
    "changed": false
   },
@@ -3468,28 +3458,22 @@
     "dress"
    ],
    "base": {
-    "verdict": "SIMILAR",
-    "axes": [
-     "TITLE:1",
-     "CATEGORY:1"
-    ],
-    "totalPoints": 2,
-    "blockers": [
-     "BRAND_UNCONFIRMED"
-    ],
-    "conflicts": []
+    "verdict": "CONFLICT",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [],
+    "conflicts": [
+     "MODEL_CODE"
+    ]
    },
    "cf": {
-    "verdict": "SIMILAR",
-    "axes": [
-     "TITLE:1",
-     "CATEGORY:1"
-    ],
-    "totalPoints": 2,
-    "blockers": [
-     "BRAND_UNCONFIRMED"
-    ],
-    "conflicts": []
+    "verdict": "CONFLICT",
+    "axes": [],
+    "totalPoints": 0,
+    "blockers": [],
+    "conflicts": [
+     "MODEL_CODE"
+    ]
    },
    "changed": false
   },

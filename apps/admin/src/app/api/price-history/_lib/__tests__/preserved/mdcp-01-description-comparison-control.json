@@ -1222,7 +1222,9 @@
             "TITLE": 2,
             "CATEGORY": 1
           },
-          "blockers": [],
+          "blockers": [
+            "MODEL_CODE_AGE_LINE"
+          ],
           "candidateBrand": "Bobo Choses",
           "codeConfirmed": false,
           "brandCompatible": true

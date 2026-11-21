@@ -18,14 +18,13 @@
  "verdictByGt": {
   "base": {
    "SAME": {
-    "PRESUMED_SAME": 5,
-    "SIMILAR": 1
+    "PRESUMED_SAME": 6
    },
    "DIFFERENT": {
     "SIMILAR": 9
    },
    "SIMILAR": {
-    "SIMILAR": 1
+    "CONFLICT": 1
    }
   },
   "filled": {
@@ -40,30 +39,7 @@
    }
   }
  },
- "changedPairs": [
-  {
-   "host": "junioredition.com",
-   "humanGt": "SAME",
-   "originCode": "B226AC033",
-   "candidateOwnCode": "B226AC033",
-   "directCompareModelCode": "exact",
-   "from": "SIMILAR",
-   "to": "PRESUMED_SAME",
-   "ageLineBlockerFired": false,
-   "modelCodeConflictRecorded": false
-  },
-  {
-   "host": "junioredition.com",
-   "humanGt": "SIMILAR",
-   "originCode": "B226AC110",
-   "candidateOwnCode": "B226AC111",
-   "directCompareModelCode": "conflict",
-   "from": "SIMILAR",
-   "to": "CONFLICT",
-   "ageLineBlockerFired": false,
-   "modelCodeConflictRecorded": true
-  }
- ],
+ "changedPairs": [],
  "acAbCases": [],
  "sameLineDifferentNumberCases": 1,
  "rows": [
@@ -98,9 +74,10 @@
     "conflicts": [],
     "axes": [
      "TITLE:2",
+     "MODEL_CODE:3",
      "CATEGORY:1"
     ],
-    "identifierConfirmed": false
+    "identifierConfirmed": true
    },
    "filled": {
     "verdict": "PRESUMED_SAME",
@@ -150,9 +127,10 @@
     "conflicts": [],
     "axes": [
      "TITLE:2",
+     "MODEL_CODE:3",
      "CATEGORY:1"
     ],
-    "identifierConfirmed": false
+    "identifierConfirmed": true
    },
    "filled": {
     "verdict": "PRESUMED_SAME",
@@ -337,16 +315,17 @@
     "sweatshirt"
    ],
    "base": {
-    "verdict": "SIMILAR",
+    "verdict": "PRESUMED_SAME",
     "blockers": [
      "BRAND_UNCONFIRMED"
     ],
     "conflicts": [],
     "axes": [
      "TITLE:1",
+     "MODEL_CODE:3",
      "CATEGORY:1"
     ],
-    "identifierConfirmed": false
+    "identifierConfirmed": true
    },
    "filled": {
     "verdict": "PRESUMED_SAME",
@@ -363,7 +342,7 @@
    },
    "ageLineBlockerFired": false,
    "modelCodeConflictRecorded": false,
-   "verdictChanged": true
+   "verdictChanged": false
   },
   {
    "originCode": "B226AC033",
@@ -684,15 +663,12 @@
     "shirt"
    ],
    "base": {
-    "verdict": "SIMILAR",
-    "blockers": [
-     "BRAND_UNCONFIRMED"
+    "verdict": "CONFLICT",
+    "blockers": [],
+    "conflicts": [
+     "MODEL_CODE"
     ],
-    "conflicts": [],
-    "axes": [
-     "TITLE:1",
-     "CATEGORY:1"
-    ],
+    "axes": [],
     "identifierConfirmed": false
    },
    "filled": {
@@ -706,7 +682,7 @@
    },
    "ageLineBlockerFired": false,
    "modelCodeConflictRecorded": true,
-   "verdictChanged": true
+   "verdictChanged": false
   },
   {
    "originCode": "B226AC110",
