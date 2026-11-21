@@ -346,6 +346,21 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
     why: "🔴 price_observations 전수 운영 덤프(관측 2,395 · 스냅샷 566) · 사람 라벨 **0** — ORIGIN_FX 전수 측정의 입력",
   });
 
+  /**
+   * 🟢🟢 **이 계약이 또 일했다 (MI-ORIGIN-FX-DISCREPANCY-03)** — 미분류로 정확히 잡혔다.
+   * 🔴 전수 탐지 조건을 **느슨하게 하지 않았다** — 용도를 적어 분류한다.
+   *
+   * 🔴🔴 **사람 라벨이 0 이다** — 담긴 것은 금액 불일치 **2건** 의 원인 증거
+   *    (그 두 스냅샷의 `canonicalProduct.variants` 가격표 9개 × 2 + SELLER_ORIGIN 관측 8행)다.
+   *    동일상품 판정 라벨이 **없다** ⟹ GT 분모에 넣으면 분모가 틀린다.
+   * 🟢 용도는 하나다 — 「관측 115 ↔ 추출 119」가 **사이즈별 가격 × URL variant 고정** 때문임을
+   *    기계로 증명하는 입력(`origin-fx-discrepancy-03.test.ts`).
+   */
+  skipped.push({
+    file: "origin-fx-discrepancy-03.json",
+    why: "🔴 금액 불일치 2건의 원인 증거(variants 가격표 + 관측 8행) · 사람 라벨 **0** — 원인 확정 계약의 입력",
+  });
+
   /* SAME-03 최신 CEO 라벨 — 🔴 DIFFERENT 가 0 이지만 분모로 같이 적는다 */
   {
     const j = readJson("core-same03-human-gt.json") as {

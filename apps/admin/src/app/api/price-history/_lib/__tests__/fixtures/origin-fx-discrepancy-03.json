@@ -1,0 +1,365 @@
+{
+ "note": "🔵 MI-ORIGIN-FX-DISCREPANCY-03 — 미규명 금액 불일치 2건(관측 115 ↔ 추출 119)의 원인 증거. 🔴 운영 DB 읽기 전용(select 뿐 · 쓰기 0 · 자격증명 비출력). snapshots 는 그 2건의 canonicalProduct 중 price·variants 를 «그대로» 꺼낸 것이고 observations 는 그 스냅샷의 SELLER_ORIGIN 행 전건이다. 🔴 손으로 베낀 값이 아니다.",
+ "snapshots": [
+  {
+   "id": "532faa9d-bc51-40a4-a72d-777d9393f3b3",
+   "source_url": "https://www.junioredition.com/en-kr/products/lulu-t-bar-shoes-in-tobacco-by-pepe?_pos=2&_psq=Lulu+T+Bar+Shoes+in+Vernice+Nero+by+P%C3%A8P%C3%A8+-+Last+Ones+In+Stock+-+28-29+EUR&_psid=5b9ca5c42&_ss=e&variant=40096037535807",
+   "title": "Lulu T Bar Shoes in Tobacco by PèPè",
+   "canonical_price": {
+    "value": {
+     "amount": 119,
+     "currency": "GBP"
+    },
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "variants": [
+    {
+     "id": "40096041599039",
+     "sku": "DB1-2",
+     "price": {
+      "amount": 115,
+      "currency": "GBP"
+     },
+     "optionValues": {
+      "Size": "21 EUR (UK 4)"
+     },
+     "stockQuantity": 1
+    },
+    {
+     "id": "40096041631807",
+     "sku": "DB1-2",
+     "price": {
+      "amount": 115,
+      "currency": "GBP"
+     },
+     "optionValues": {
+      "Size": "22 EUR (UK 5)"
+     },
+     "stockQuantity": 1
+    },
+    {
+     "id": "40096041697343",
+     "sku": null,
+     "price": {
+      "amount": 119,
+      "currency": "GBP"
+     },
+     "optionValues": {
+      "Size": "24 EUR (UK 7)"
+     },
+     "stockQuantity": 0
+    },
+    {
+     "id": "40096037404735",
+     "sku": "DB1-2",
+     "price": {
+      "amount": 119,
+      "currency": "GBP"
+     },
+     "optionValues": {
+      "Size": "25 EUR (UK 7.5)"
+     },
+     "stockQuantity": 1
+    },
+    {
+     "id": "40096037437503",
+     "sku": "DB1-2",
+     "price": {
+      "amount": 119,
+      "currency": "GBP"
+     },
+     "optionValues": {
+      "Size": "26 EUR (UK 8)"
+     },
+     "stockQuantity": 1
+    },
+    {
+     "id": "40096037503039",
+     "sku": "DB1-2",
+     "price": {
+      "amount": 119,
+      "currency": "GBP"
+     },
+     "optionValues": {
+      "Size": "28 EUR (UK 10)"
+     },
+     "stockQuantity": 0
+    },
+    {
+     "id": "40096037535807",
+     "sku": "DB1-2",
+     "price": {
+      "amount": 119,
+      "currency": "GBP"
+     },
+     "optionValues": {
+      "Size": "29 EUR (UK 11)"
+     },
+     "stockQuantity": 1
+    },
+    {
+     "id": "40096037568575",
+     "sku": "DB1-2",
+     "price": {
+      "amount": 123,
+      "currency": "GBP"
+     },
+     "optionValues": {
+      "Size": "30 EUR (UK 11.5)"
+     },
+     "stockQuantity": 0
+    },
+    {
+     "id": "40096037601343",
+     "sku": "DB1-2",
+     "price": {
+      "amount": 123,
+      "currency": "GBP"
+     },
+     "optionValues": {
+      "Size": "31 EUR (UK 12)"
+     },
+     "stockQuantity": 1
+    }
+   ]
+  },
+  {
+   "id": "e3aaae5b-a131-46dc-a051-02a0915644dc",
+   "source_url": "https://www.junioredition.com/en-kr/products/lulu-t-bar-shoes-in-tobacco-by-pepe?_pos=2&_psq=Lulu+T+Bar+Shoes+in+Vernice+Nero+by+P%C3%A8P%C3%A8+-+Last+Ones+In+Stock+-+28-29+EUR&_psid=5b9ca5c42&_ss=e&variant=40096037535807",
+   "title": "Lulu T Bar Shoes in Tobacco by PèPè",
+   "canonical_price": {
+    "value": {
+     "amount": 119,
+     "currency": "GBP"
+    },
+    "source": "ORIGINAL",
+    "confidence": 0.95
+   },
+   "variants": [
+    {
+     "id": "40096041599039",
+     "sku": "DB1-2",
+     "price": {
+      "amount": 115,
+      "currency": "GBP"
+     },
+     "optionValues": {
+      "Size": "21 EUR (UK 4)"
+     },
+     "stockQuantity": 1
+    },
+    {
+     "id": "40096041631807",
+     "sku": "DB1-2",
+     "price": {
+      "amount": 115,
+      "currency": "GBP"
+     },
+     "optionValues": {
+      "Size": "22 EUR (UK 5)"
+     },
+     "stockQuantity": 1
+    },
+    {
+     "id": "40096041697343",
+     "sku": null,
+     "price": {
+      "amount": 119,
+      "currency": "GBP"
+     },
+     "optionValues": {
+      "Size": "24 EUR (UK 7)"
+     },
+     "stockQuantity": 0
+    },
+    {
+     "id": "40096037404735",
+     "sku": "DB1-2",
+     "price": {
+      "amount": 119,
+      "currency": "GBP"
+     },
+     "optionValues": {
+      "Size": "25 EUR (UK 7.5)"
+     },
+     "stockQuantity": 1
+    },
+    {
+     "id": "40096037437503",
+     "sku": "DB1-2",
+     "price": {
+      "amount": 119,
+      "currency": "GBP"
+     },
+     "optionValues": {
+      "Size": "26 EUR (UK 8)"
+     },
+     "stockQuantity": 1
+    },
+    {
+     "id": "40096037503039",
+     "sku": "DB1-2",
+     "price": {
+      "amount": 119,
+      "currency": "GBP"
+     },
+     "optionValues": {
+      "Size": "28 EUR (UK 10)"
+     },
+     "stockQuantity": 0
+    },
+    {
+     "id": "40096037535807",
+     "sku": "DB1-2",
+     "price": {
+      "amount": 119,
+      "currency": "GBP"
+     },
+     "optionValues": {
+      "Size": "29 EUR (UK 11)"
+     },
+     "stockQuantity": 1
+    },
+    {
+     "id": "40096037568575",
+     "sku": "DB1-2",
+     "price": {
+      "amount": 123,
+      "currency": "GBP"
+     },
+     "optionValues": {
+      "Size": "30 EUR (UK 11.5)"
+     },
+     "stockQuantity": 0
+    },
+    {
+     "id": "40096037601343",
+     "sku": "DB1-2",
+     "price": {
+      "amount": 123,
+      "currency": "GBP"
+     },
+     "optionValues": {
+      "Size": "31 EUR (UK 12)"
+     },
+     "stockQuantity": 1
+    }
+   ]
+  }
+ ],
+ "observations": [
+  {
+   "id": "5186ad7c-731e-4fa1-822a-077096665b8a",
+   "snapshot_id": "532faa9d-bc51-40a4-a72d-777d9393f3b3",
+   "source_label": "KR_MARKET",
+   "source_product_url": "https://www.junioredition.com/en-kr/products/lulu-t-bar-shoes-in-tobacco-by-pepe.json",
+   "currency": "KRW",
+   "price_amount": "223200",
+   "price_krw": "223200",
+   "sale_price_krw": null,
+   "original_price_krw": null,
+   "market_code": "en-kr",
+   "market_country": "GB",
+   "checked_at": "2026-09-20T17:03:58.569Z"
+  },
+  {
+   "id": "6bb0dc33-9450-4bd7-af0e-6d66d0cfe576",
+   "snapshot_id": "532faa9d-bc51-40a4-a72d-777d9393f3b3",
+   "source_label": "MARKET_PROBE",
+   "source_product_url": "https://www.junioredition.com/en-int/products/lulu-t-bar-shoes-in-tobacco-by-pepe.json",
+   "currency": "GBP",
+   "price_amount": "115",
+   "price_krw": "213015",
+   "sale_price_krw": null,
+   "original_price_krw": null,
+   "market_code": "en-int",
+   "market_country": "GB",
+   "checked_at": "2026-09-20T17:03:58.569Z"
+  },
+  {
+   "id": "e2fd07a6-41ba-43fb-b181-88013bed4374",
+   "snapshot_id": "532faa9d-bc51-40a4-a72d-777d9393f3b3",
+   "source_label": "MARKET_PROBE",
+   "source_product_url": "https://www.junioredition.com/en-au/products/lulu-t-bar-shoes-in-tobacco-by-pepe.json",
+   "currency": "AUD",
+   "price_amount": "240",
+   "price_krw": "237206",
+   "sale_price_krw": null,
+   "original_price_krw": null,
+   "market_code": "en-au",
+   "market_country": "GB",
+   "checked_at": "2026-09-20T17:03:58.569Z"
+  },
+  {
+   "id": "13eedb38-33b6-4cfd-be5a-499541fb35ed",
+   "snapshot_id": "532faa9d-bc51-40a4-a72d-777d9393f3b3",
+   "source_label": "ORIGIN_FX",
+   "source_product_url": "https://www.junioredition.com/products/lulu-t-bar-shoes-in-tobacco-by-pepe.json",
+   "currency": "GBP",
+   "price_amount": "115",
+   "price_krw": "213015",
+   "sale_price_krw": null,
+   "original_price_krw": null,
+   "market_code": "",
+   "market_country": "GB",
+   "checked_at": "2026-09-20T17:03:58.569Z"
+  },
+  {
+   "id": "145c071d-579a-44ee-85f1-795ab62968f7",
+   "snapshot_id": "e3aaae5b-a131-46dc-a051-02a0915644dc",
+   "source_label": "KR_MARKET",
+   "source_product_url": "https://www.junioredition.com/en-kr/products/lulu-t-bar-shoes-in-tobacco-by-pepe.json",
+   "currency": "KRW",
+   "price_amount": "216000",
+   "price_krw": "216000",
+   "sale_price_krw": null,
+   "original_price_krw": null,
+   "market_code": "en-kr",
+   "market_country": "GB",
+   "checked_at": "2026-10-01T00:37:38.091Z"
+  },
+  {
+   "id": "cceb3c3c-4a1a-4f06-9ed8-702b6877dce4",
+   "snapshot_id": "e3aaae5b-a131-46dc-a051-02a0915644dc",
+   "source_label": "MARKET_PROBE",
+   "source_product_url": "https://www.junioredition.com/en-int/products/lulu-t-bar-shoes-in-tobacco-by-pepe.json",
+   "currency": "GBP",
+   "price_amount": "115",
+   "price_krw": "206170",
+   "sale_price_krw": null,
+   "original_price_krw": null,
+   "market_code": "en-int",
+   "market_country": "GB",
+   "checked_at": "2026-10-01T00:37:38.091Z"
+  },
+  {
+   "id": "630d8703-87e0-48b7-89a5-bb3a68558f0d",
+   "snapshot_id": "e3aaae5b-a131-46dc-a051-02a0915644dc",
+   "source_label": "MARKET_PROBE",
+   "source_product_url": "https://www.junioredition.com/en-au/products/lulu-t-bar-shoes-in-tobacco-by-pepe.json",
+   "currency": "AUD",
+   "price_amount": "245",
+   "price_krw": "232251",
+   "sale_price_krw": null,
+   "original_price_krw": null,
+   "market_code": "en-au",
+   "market_country": "GB",
+   "checked_at": "2026-10-01T00:37:38.091Z"
+  },
+  {
+   "id": "a962b369-74ff-439e-a767-e6f22f546ec0",
+   "snapshot_id": "e3aaae5b-a131-46dc-a051-02a0915644dc",
+   "source_label": "ORIGIN_FX",
+   "source_product_url": "https://www.junioredition.com/products/lulu-t-bar-shoes-in-tobacco-by-pepe.json",
+   "currency": "GBP",
+   "price_amount": "115",
+   "price_krw": "206170",
+   "sale_price_krw": null,
+   "original_price_krw": null,
+   "market_code": "",
+   "market_country": "GB",
+   "checked_at": "2026-10-01T00:37:38.091Z"
+  }
+ ]
+}
