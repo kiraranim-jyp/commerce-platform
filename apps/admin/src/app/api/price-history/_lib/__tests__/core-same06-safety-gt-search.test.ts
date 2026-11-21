@@ -316,6 +316,21 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
     why: "🔴 운영 저장분 159건(candidate_reviews) · verdict 는 **system_verdict** 이고 사람 라벨 **0** — 가격 안전성 계약의 입력",
   });
 
+  /**
+   * 🟢🟢 **이 계약이 또 일했다 (MI-ORIGIN-FX-ACCURACY-01)** — 미분류로 정확히 잡혔다.
+   * 🔴 전수 탐지 조건을 **느슨하게 하지 않았다** — 용도를 적어 분류한다(선례 다섯과 같다).
+   *
+   * 🔴🔴 **사람 라벨이 0 이다** — 이 파일은 `price_observations`(SELLER_ORIGIN) 운영 덤프이고
+   *    담긴 것은 **원가 근거 행**(ORIGIN_FX / KR_MARKET / MARKET_PROBE)과 스냅샷의
+   *    크롤 시점 추출가다. 동일상품 판정 라벨이 **없다** ⟹ GT 분모에 넣으면 분모가 틀린다.
+   * 🟢 용도는 하나다 — ORIGIN_FX **원본가격 정확도** 측정의 입력
+   *    (`origin-fx-accuracy-01.test.ts` · 스냅샷 13 · 관측 58 · 🔴 고유 상품 **2**).
+   */
+  skipped.push({
+    file: "origin-fx-accuracy-real.json",
+    why: "🔴 price_observations 운영 덤프(스냅샷 13 · 관측 58 · 고유 상품 **2**) · 사람 라벨 **0** — ORIGIN_FX 정확도 측정의 입력",
+  });
+
   /* SAME-03 최신 CEO 라벨 — 🔴 DIFFERENT 가 0 이지만 분모로 같이 적는다 */
   {
     const j = readJson("core-same03-human-gt.json") as {
