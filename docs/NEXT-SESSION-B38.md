@@ -142,8 +142,14 @@ CTO 작업은 없는 상태다 — 다음 범위를 지정해 주면 그 범위�
 ### ① 🟢 STEP A 반사실 — 분모와 수치(재측정 불필요)
 
 ```
-분모  fixture 109 = GT SAME 18 · DIFFERENT 13 · SIMILAR 1 · **미라벨 73**
-      🔴 109 · 36 · 98 · 24 · 16 은 서로 다른 집합 — 합산하지 않는다
+분모  fixture 109 = GT **SAME 20 · DIFFERENT 15 · SIMILAR 1** · 미라벨 **73**  (= 109 ✅)
+      🔴🔴 **[2026-11-21 정정]** 1차 보고가 이 자리에 「SAME 18 · DIFFERENT 13 · SIMILAR 1」을
+         적었다 — 그것은 **98 축**(후보 제목 ∧ 설명) 수치이고 **109 축에 섞어 적은 것** 이다.
+         🟢 산출물(`denominator.gt`)과 하니스는 **처음부터 109 축이 맞았다** — 틀린 것은 보고서 본문이다.
+         🟢 차이 **4건** = GT 라벨이 있는데 **후보 설명이 없어** 98 축에서 빠진 쌍이다:
+            SAME `B226AC009`×bornyesterdaykids · SAME `B226AC036`×beaumonde ·
+            DIFFERENT `B226AC009`×villagekids · DIFFERENT `B226AC110`×villagekids
+      🔴 109 · 98 · 36 · 32 · 24 · 16 은 서로 다른 집합 — 합산하지 않는다
 팔    BASE  = 변경 전(`brandModelCode: null`) → `recoverModelCodeFromDetail`
       LABEL = 승인 한 줄(`extractLabeledProductCode(description) ?? null`) → 같은 복구기
       🔴 두 팔 모두 **명시 재현** 한다 ⟹ 하니스가 팩토리 현재 동작과 **독립** 이다
