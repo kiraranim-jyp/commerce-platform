@@ -146,8 +146,23 @@ describe("CORE-2AC 계약 — 세 칸만 · 배선은 하나 · 범위 밖은 �
     );
   });
 
-  it("AC-6 🔴 `brandModelCode` 는 여전히 **하드코딩 null** 이다", () => {
-    expect(listingSeg(LISTING_SRC)).toContain("brandModelCode: null");
+  it("AC-6 🔵 `brandModelCode` 는 **라벨 전용** 이다(MLLC-01 갱신 · 강화)", () => {
+    /**
+     * 🔴🔴 **갱신 이력** — 원래 「하드코딩 null」을 고정했고, MLLC-01(CPO 부분 해제
+     *    2026-11-21)이 **라벨 전용** 복구를 승인해 FAIL 로 뒤집혔다 ⟹ 의도된 변경이다.
+     * 🔴 CORE-2AC 가 열었던 **세 칸**(categoryText · audienceSignals · description)과
+     *    이 칸은 **다른 승인** 에서 왔다 — 섞어 적지 않는다.
+     */
+    const seg = listingSeg(LISTING_SRC);
+    expect(seg).toContain("brandModelCode: extractLabeledProductCode(input.description) ?? null");
+    /** 🔴 명시적 제외 범위(MLLC-01 §2)를 같이 잠근다 — 토큰은 런타임 조립(자기참조 방지). */
+    for (const banned of [
+      ["extractCodeLike", "SlugSegment"].join(""),
+      ["extractCodeLike", "TitleToken"].join(""),
+      "brandModelCode: input.sellerSku",
+    ]) {
+      expect(seg, `🔴 ${banned} 가 들어왔다 — MLLC-01 이 제외한 범위다`).not.toContain(banned);
+    }
   });
 
   it("AC-7 🟢 배선은 **PLAIN_HTML 한 자리** 이고 **추가 HTTP 0** 이다", () => {

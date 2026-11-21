@@ -112,12 +112,27 @@ describe("CANDIDATE-CODE-PARITY-01 C — 운영은 그대로다(배선 0)", () =
    * 🔴 이 단언들이 **되돌림의 증거** 다. 다음 세션이 배선을 다시 넣으면 **FAIL 로 뒤집히고**
    *    그때는 위 A·B 와 골든 계약 둘을 **같이** 들고 CPO 판정을 받아야 한다.
    */
-  it("C-1 🔴 PLAIN_HTML 후보 품번은 여전히 **하드코딩 null** 이다", () => {
+  it("C-1 🔵 PLAIN_HTML 후보 품번은 **라벨 전용** 이다(MLLC-01 갱신 · 강화)", () => {
+    /**
+     * 🔴🔴 **갱신 이력** — 이 단언은 원래 「`brandModelCode: null` 하드코딩」을 고정했다.
+     *    MLLC-01(CPO 부분 해제 2026-11-21)이 **라벨 전용** 복구를 승인해 FAIL 로 뒤집혔고
+     *    그것이 **의도된 변경의 증거** 다. 🟢 앵커를 **갱신하고 강화** 한다 — 「채운다」로
+     *    느슨하게 두지 않고 **허용 추출기 하나** 와 **금지축 셋** 을 같이 잠근다.
+     */
     const at = SELLER_CODE.indexOf("export function productFactsFromListing");
     const body = SELLER_CODE.slice(at, SELLER_CODE.indexOf("\n}", at));
-    expect(body).toContain("brandModelCode: null");
-    expect(body, "🔴 제목 토큰 축이 열렸다 — 판매처 SKU 승격 위험을 먼저 닫아야 한다")
-      .not.toContain("extractCodeLikeTitleToken");
+    /** 🟢 허용 — 라벨 추출기 **하나** 이고 폴백은 `null` 이다. */
+    expect(body).toContain("brandModelCode: extractLabeledProductCode(input.description) ?? null");
+    /** 🔴 금지 ① slug 폴백 — 판매처 SKU 가 Identity 칸에 들어오는 문이다. */
+    expect(body, "🔴 slug 폴백이 들어왔다(MLLC-01 명시적 제외 범위)").not.toContain(
+      ["extractCodeLike", "SlugSegment"].join(""),
+    );
+    /** 🔴 금지 ② 제목 토큰 승격. */
+    expect(body, "🔴 제목 토큰 축이 열렸다 — 판매처 SKU 승격 위험을 먼저 닫아야 한다").not.toContain(
+      ["extractCodeLike", "TitleToken"].join(""),
+    );
+    /** 🔴 금지 ③ 판매처 SKU 를 품번 칸에 쓰지 않는다 — 두 칸은 서로 다른 것이다. */
+    expect(body).not.toContain("brandModelCode: input.sellerSku");
   });
 
   it("C-2 🔴 Shopify 후보 품번 체인은 **라벨 → slug 둘** 이다", () => {

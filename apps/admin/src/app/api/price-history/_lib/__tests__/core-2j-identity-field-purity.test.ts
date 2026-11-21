@@ -136,19 +136,41 @@ describe("CORE-2J — Product Code Extraction / Identity Field Purity (운영 �
     console.log("       brandModelCode = extractLabeledProductCode(description) ?? **extractCodeLikeSlugSegment(slug)**");
     console.log("       🔴 slug 승격이 여기 있다 — **판매처 SKU 가 Identity 칸에 들어오는 문** 이다");
 
-    /** 🟢 ② PLAIN_HTML 경로 — **null 하드코딩** 이고 그것이 «의도» 다. */
-    expect(sfc).toContain("brandModelCode: null");
+    /**
+     * 🔵 ② PLAIN_HTML 경로 — **라벨 전용** 이다(MLLC-01 · CPO 부분 해제 2026-11-21).
+     *
+     * 🔴🔴 **갱신 이력** — 원래 「`null` 하드코딩이 의도다」였고 근거는
+     *    「포레포레 **자체코드**(판매처 SKU)를 넣으면 `compareModelCode` 가 충돌을 지어낸다」였다.
+     * 🟢 그 위험은 **라벨 앵커가 구조적으로 막는다** — 라벨 없는 값은 추출되지 않고
+     *    slug·sellerSku·제목토큰 경로는 **금지** 다(바로 아래 단언이 그것을 잠근다).
+     * 🔴 그래서 보호 의도를 **약화하지 않고** 「채우지 않는다」 → 「**라벨 뒤의 값만 채운다**」로 갱신한다.
+     */
+    expect(sfc).toContain("brandModelCode: extractLabeledProductCode(input.description) ?? null");
+    const listingAt = sfc.indexOf("export function productFactsFromListing");
+    const listingSeg = sfc.slice(listingAt, sfc.indexOf("\n}", listingAt));
+    /** 🔴 금지축 — 토큰은 **런타임 조립** 한다(이 파일의 자기참조 함정 방지). */
+    for (const banned of [
+      ["extractCodeLike", "SlugSegment"].join(""),
+      ["extractCodeLike", "TitleToken"].join(""),
+      "brandModelCode: input.sellerSku",
+    ]) {
+      expect(listingSeg, `🔴 ${banned} 가 PLAIN_HTML 경로에 들어왔다`).not.toContain(banned);
+    }
     console.log("\n    ② PLAIN_HTML    productFactsFromListing");
-    console.log("       brandModelCode = **null**(하드코딩) 🟢 **의도된 것** —");
-    console.log("       `domestic-identifiers.ts:52` 가 이유를 적는다: 포레포레 자체코드를 넣으면");
-    console.log("       `compareModelCode` 가 **「모델코드 충돌」을 지어낸다**");
+    console.log("       brandModelCode = **extractLabeledProductCode(input.description) ?? null**");
+    console.log("       🟢 라벨 앵커 전용 — slug · sellerSku · 제목토큰은 **금지**(단언으로 잠김)");
+    console.log("       🔴 판매처 자체코드가 Identity 칸에 들어오는 문은 **여전히 닫혀 있다**");
 
     /** 🟢 ③ 그리고 그 공백을 메우는 **안전한 확인 경로** 가 이미 있다. */
     expect(mtc).toContain("brandModelCode === null");
     expect(mtc).toContain("confirmBrandCodeInEvidence(query.facts.brandModelCode");
     console.log("\n    ③ 확인 경로     match.ts — `c.facts.brandModelCode **=== null**` 일 때만");
     console.log("       confirmBrandCodeInEvidence(원상품품번, { title, url, sku })");
-    console.log("       🔴🔴 **그래서 판매처 SKU 가 먼저 들어가면 이 안전 경로가 «아예 돌지 않는다».**");
+    console.log("       🔴🔴 **그래서 품번 칸이 먼저 채워지면 이 안전 경로가 «아예 돌지 않는다».**");
+    console.log("       🔵 MLLC-01 이후 그 자리를 **라벨 품번** 도 차지할 수 있다 —");
+    console.log("          실측(분모 109): 확인 경로 발화 **61쌍** · 라벨이 막은 쌍 **2** ·");
+    console.log("          그중 verdict 열화 **0** · GT DIFFERENT→SAME **0** · GT SAME 신규차단 **0**");
+    console.log("          산출물 `preserved/mllc-01-labeled-code-counterfactual.json`");
 
     /** 🔴 건초더미가 셋뿐이다 — `description`/본문은 **안 본다**. */
     for (const f of ["title: c.title", "url: c.url", "sku: c.sku"]) expect(mtc).toContain(f);

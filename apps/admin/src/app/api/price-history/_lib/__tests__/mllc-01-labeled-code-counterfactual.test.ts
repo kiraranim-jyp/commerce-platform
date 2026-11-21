@@ -5,6 +5,7 @@ import { compareCrossSellerProducts } from "@commerce/crawler/src/comparison-sea
 import { findBrandAliasMentions } from "@commerce/crawler/src/comparison-search/brand-alias";
 import { productFactsFromListing } from "@commerce/crawler/src/comparison-search/seller-facts";
 import { recoverModelCodeFromDetail } from "@commerce/crawler/src/comparison-search/model-code-from-detail";
+import { confirmBrandCodeInEvidence } from "@commerce/crawler/src/comparison-search/domestic-identifiers";
 import { extractLabeledProductCode } from "@commerce/shared";
 
 /**
@@ -147,11 +148,123 @@ const tally = (rs: typeof ROWS, pick: (r: (typeof ROWS)[number]) => string) => {
 };
 const hasCodeConflict = (a: { conflicts: string[] }) => a.conflicts.includes("MODEL_CODE");
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴🔴 STEP A-2 — **`match.ts` 의 «확인 경로» 를 포함한 반사실**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 1차 반사실은 `compareCrossSellerProducts` 를 **직접** 불러 운영 배선 하나를
+ *    건너뛰었다. `match.ts:629` 가 그것이다:
+ * ```
+ * c.facts.brandModelCode === null && query.facts?.brandModelCode
+ *   ? { ...c.facts, brandModelCode: confirmBrandCodeInEvidence(원상품품번,
+ *                                     { title, url, sku }) }
+ *   : c.facts
+ * ```
+ * 🔴🔴 **칸이 «채워지면» 그 확인 경로가 아예 돌지 않는다.** 그래서 라벨 복구가
+ *    ⒜ 원상품 코드를 title/url 에서 확인하던 쌍의 **확인을 막고**
+ *    ⒝ 대신 **다른 코드** 를 넣어 `compareModelCode` 충돌을 만들 수 있다.
+ *    🟢 `core-2j-identity-field-purity` A 의 주석이 바로 그 위험을 적어 둔다.
+ * 🟢 그래서 **같은 109건 · 새 수집 0** 으로 그 배선까지 포함해 다시 잰다.
+ * 🔴 운영 코드는 **한 글자도** 바꾸지 않는다(이 파일은 평가 전용이다).
+ */
+const judgeWithConfirm = (p: Pair, arm: "BASE" | "LABEL") => {
+  const x = originFacts(p);
+  const description = t(p.candidate.description) || null;
+  const made = productFactsFromListing({
+    title: t(p.candidate.title) || "(제목 없음)",
+    url: p.candidateUrl,
+    brand: candidateBrand(p),
+    description,
+  });
+  const armed =
+    arm === "LABEL"
+      ? { ...made, brandModelCode: extractLabeledProductCode(description) ?? null }
+      : { ...made, brandModelCode: null };
+  const afterRecover = recoverModelCodeFromDetail(armed);
+  /** 🟢 `match.ts:629` 와 **같은 게이트** 다 — 채워져 있으면 확인하지 않는다. */
+  const y =
+    afterRecover.brandModelCode === null && x.brandModelCode
+      ? {
+          ...afterRecover,
+          brandModelCode: confirmBrandCodeInEvidence(x.brandModelCode, {
+            title: t(p.candidate.title),
+            url: p.candidateUrl,
+            sku: afterRecover.sellerSku ?? null,
+          }),
+        }
+      : afterRecover;
+  const m = compareCrossSellerProducts(x, y);
+  return {
+    verdict: m.verdict,
+    brandModelCode: y.brandModelCode,
+    confirmRan: afterRecover.brandModelCode === null && !!x.brandModelCode,
+    conflicts: (m.conflicts ?? []).map((c) => c.conflict),
+  };
+};
+
+const WIRED = PAIRS.map((p) => {
+  const base = judgeWithConfirm(p, "BASE");
+  const label = judgeWithConfirm(p, "LABEL");
+  return {
+    originCode: p.originCode,
+    candidateDomain: p.candidateDomain ?? "(공백)",
+    candidateUrl: p.candidateUrl,
+    humanGt: p.humanGt ?? "미라벨",
+    base,
+    label,
+    verdictChanged: base.verdict !== label.verdict,
+    /** 🔴 확인 경로가 BASE 에서는 돌고 LABEL 에서는 «막힌» 쌍 — 이것이 그 위험 모드다. */
+    confirmSuppressed: base.confirmRan && !label.confirmRan,
+  };
+});
+const wiredByGt = (g: string) => WIRED.filter((r) => r.humanGt === g);
+const hasCodeConflictW = (a: { conflicts: string[] }) => a.conflicts.includes("MODEL_CODE");
+
+describe("MLLC-01 STEP A-2 — 확인 경로를 포함한 반사실(같은 109건 · 새 수집 0)", () => {
+  it("A2-0 🟢 확인 경로가 **실제로 발화하는 쌍이 있다** — 배선을 모델링했다는 증거", () => {
+    expect(WIRED.filter((r) => r.base.confirmRan).length).toBeGreaterThan(0);
+  });
+
+  it("A2-1 🔴🔴 **GT DIFFERENT → SAME 전환 0** (확인 경로 포함)", () => {
+    expect(
+      wiredByGt("DIFFERENT").filter((r) => r.base.verdict !== "SAME" && r.label.verdict === "SAME"),
+    ).toHaveLength(0);
+  });
+
+  it("A2-2 🔴🔴 **GT SAME 이 품번 충돌로 새로 막히지 않는다** (확인 경로 포함)", () => {
+    expect(
+      wiredByGt("SAME").filter((r) => !hasCodeConflictW(r.base) && hasCodeConflictW(r.label)),
+    ).toHaveLength(0);
+  });
+
+  it("A2-3 🔴 **확인 경로가 막혀 verdict 가 나빠진 쌍이 0** 이다", () => {
+    const harmed = WIRED.filter((r) => r.confirmSuppressed && r.verdictChanged);
+    expect(harmed).toHaveLength(0);
+  });
+
+  it("A2-4 🔴 전 분모 verdict 변화 0 — 확인 배선을 넣어도 같다", () => {
+    expect(WIRED.filter((r) => r.verdictChanged)).toHaveLength(0);
+  });
+});
+
 describe("MLLC-01 STEP A — 반사실(운영 호출 순서 그대로 · HTTP 0)", () => {
-  it("A-0 🟢 분모를 먼저 적는다 — GT 라벨별로 가른다(합산 금지)", () => {
+  it("A-0 🟢 분모를 먼저 적는다 — GT 라벨별로 **per-label 까지** 가른다(합산 금지)", () => {
+    /**
+     * 🔴🔴 **1차 A-0 은 합계(36)만 단언해서 내 보고서의 거짓 수치를 잡지 못했다.**
+     *    보고서가 98 축 숫자(SAME 18 · DIFFERENT 13)를 109 축에 섞어 적었고 CPO 가 잡았다.
+     * 🟢 그래서 per-label 을 **상호 배타** 로 잠근다 — 조용히 틀릴 자리를 없앤다.
+     */
     expect(ROWS).toHaveLength(109);
-    expect(byGt("SAME").length + byGt("DIFFERENT").length + byGt("SIMILAR").length).toBe(36);
+    expect(byGt("SAME")).toHaveLength(20);
+    expect(byGt("DIFFERENT")).toHaveLength(15);
+    expect(byGt("SIMILAR")).toHaveLength(1);
     expect(byGt("미라벨")).toHaveLength(73);
+    /** 🔴 그 넷 밖의 라벨이 **없다** — 분류되지 않은 값이 생기면 FAIL 한다. */
+    const known = new Set(["SAME", "DIFFERENT", "SIMILAR", "미라벨"]);
+    expect(ROWS.filter((r) => !known.has(r.humanGt))).toHaveLength(0);
+    /** 🟢 상호 배타 합계 = 전수. */
+    expect(20 + 15 + 1 + 73).toBe(ROWS.length);
   });
 
   it("A-1 🔴🔴 **GT DIFFERENT → SAME 전환이 0건** 이다(CPO 핵심 통과 조건)", () => {
@@ -245,6 +358,23 @@ describe("MLLC-01 STEP A — 반사실(운영 호출 순서 그대로 · HTTP 0)
         "④ 미라벨 verdict 변화": byGt("미라벨").filter((r) => r.verdictChanged).length,
         "⑤ 전 분모 verdict 변화": ROWS.filter((r) => r.verdictChanged).length,
         "⑥ 전 분모 brandModelCode 칸 변화": ROWS.filter((r) => r.codeChanged).length,
+      },
+      /**
+       * 🔵 STEP A-2 — `match.ts:629` 확인 경로를 포함한 재측정(같은 109건).
+       * 🔴 1차 반사실이 건너뛴 배선이고, `core-2j` A 가 경고한 위험 모드다.
+       */
+      stepA2WithConfirmPath: {
+        "확인 경로가 BASE 에서 발화한 쌍": WIRED.filter((r) => r.base.confirmRan).length,
+        "확인 경로가 LABEL 에서 «막힌» 쌍": WIRED.filter((r) => r.confirmSuppressed).length,
+        "그중 verdict 가 나빠진 쌍": WIRED.filter((r) => r.confirmSuppressed && r.verdictChanged)
+          .length,
+        "GT DIFFERENT → SAME 전환": wiredByGt("DIFFERENT").filter(
+          (r) => r.base.verdict !== "SAME" && r.label.verdict === "SAME",
+        ).length,
+        "GT SAME 품번충돌 새 차단": wiredByGt("SAME").filter(
+          (r) => !hasCodeConflictW(r.base) && hasCodeConflictW(r.label),
+        ).length,
+        "전 분모 verdict 변화": WIRED.filter((r) => r.verdictChanged).length,
       },
       baseRecovery: {
         "BASE 팔에서 품번이 복구된 쌍": ROWS.filter((r) => r.base.brandModelCode != null).length,

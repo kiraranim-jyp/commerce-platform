@@ -376,8 +376,40 @@ export function productFactsFromListing(input: ListingProductLike): ProductFacts
     sourceUrl: input.url,
     urlSlug: extractUrlSlug(input.url),
     brand,
-    /** 🔴 CORE-2AC 범위 밖 — 품번은 여전히 **채우지 않는다**(CPO §3). */
-    brandModelCode: null,
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔵🔵🔵 MLLC-01 — **라벨이 명시된 품번만 채운다**(CPO 부분 해제 2026-11-21)
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 🔴 **B-38 전체 복구가 아니다.** 해제된 범위는 **이 한 줄** 이고 다음은 **금지** 다 —
+     *    `extractCodeLikeSlugSegment`(slug 폴백) · `input.sellerSku` · 라벨 없는 코드 ·
+     *    일반 숫자열. 🔴 `materialText`/`fitText`/`ageRangeText`/`sizeLabels` 는 **그대로** 다.
+     *
+     * 🟢 **라벨 앵커가 안전 조건이다** — 「Product/Article code · manufacturer code ·
+     *    mpn · 제조사 품번 · 상품코드 …」 **라벨 뒤의 값만** 읽고, 서로 다른 값이 둘 이상이면
+     *    **null**(Contract M) · 값 뒤가 통화면 **버린다**(`Model code 88000 won`).
+     * 🟢 Shopify 팩토리(:247)와 **같은 추출기** 다 — 신규 추출기 **0**.
+     *
+     * 🔴🔴 **중복이 아니다.** 운영은 이 산출물에 `recoverModelCodeFromDetail`
+     *    (product-url-facts.ts:621)을 이미 적용하지만 그 함수는 품번 **«모양»**
+     *    (`\bB\d{3}[A-Z]{2}\d{3}\b`)만 읽는다 ⟹ 다른 브랜드의 실제 품번
+     *    (실측 `WK21A165` · `AW26MS185` · `BJ87` · `SS25-250`)을 **읽지 못한다**.
+     *    🟢 라벨 앵커가 그 공백을 메운다(실측 **10건** · 전부 미라벨).
+     * 🟢 그 복구기의 Contract A(「비어 있을 때만」)와 충돌하지 않는다 — 여기서 채우면 조기 반환한다.
+     *
+     * 🔴🔴 **이 칸을 채우면 `match.ts:629` 의 확인 경로가 «돌지 않는다»**
+     *    (그 게이트가 `brandModelCode === null` 이다). 🟢 그 위험까지 포함해 쟀다 —
+     *    확인 경로 발화 **61쌍** · 라벨이 막은 쌍 **2** · 그중 verdict 열화 **0**.
+     *
+     * 🔴 **반사실 실측(분모 109 = GT SAME 20 · DIFFERENT 15 · SIMILAR 1 · 미라벨 73)**:
+     *    GT DIFFERENT → SAME **0** · GT SAME 품번충돌 신규 차단 **0** · SIMILAR **0** ·
+     *    미라벨 **0** · 전 분모 verdict 변화 **0**(확인 배선 포함해도 동일).
+     *    🔴 이득은 **잠재적** 이다 — 원상품 코드와 정확히 일치한 2건이 `MODEL_CODE` 3점을
+     *       얻었는데도 `BRAND_UNCONFIRMED` 가 SAME 을 막았다(등록부 4개 밖 브랜드).
+     *       🔴 브랜드 등록부는 **별도 과제** 다(CPO 분리).
+     *    산출물 `__tests__/preserved/mllc-01-labeled-code-counterfactual.json`.
+     */
+    brandModelCode: extractLabeledProductCode(input.description) ?? null,
     sellerSku: input.sellerSku?.trim() || null,
     title: input.title,
     /** 🔴 4번째 인자를 `material` 로 바꾸지 않는다 — CPO 가 고정한 세 칸 밖이다. */

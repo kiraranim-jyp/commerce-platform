@@ -19,6 +19,14 @@
     "⑤ 전 분모 verdict 변화": 0,
     "⑥ 전 분모 brandModelCode 칸 변화": 10
   },
+  "stepA2WithConfirmPath": {
+    "확인 경로가 BASE 에서 발화한 쌍": 61,
+    "확인 경로가 LABEL 에서 «막힌» 쌍": 2,
+    "그중 verdict 가 나빠진 쌍": 0,
+    "GT DIFFERENT → SAME 전환": 0,
+    "GT SAME 품번충돌 새 차단": 0,
+    "전 분모 verdict 변화": 0
+  },
   "baseRecovery": {
     "BASE 팔에서 품번이 복구된 쌍": 22,
     "그중 GT 라벨 보유": 11

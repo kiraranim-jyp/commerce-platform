@@ -5,12 +5,14 @@
 ### ① 지금 좌표 — 🔴 **CTO 가 할 작업이 «없다». 새 WU 를 스스로 만들지 않는다**
 
 ```
-직전 트랙   **`MI-LISTING-LABELED-CODE-01`** — 🔴 **STEP D 미통과 · 중단 · §0-MLLC01 참조**
-            🟢 STEP A/B 통과(GT DIFFERENT→SAME **0** · GT SAME 차단 **0** · verdict 변화 **0**)
-            🟡 STEP C 구현했다가 **되돌렸다**(운영 코드 바이트 동일 복구)
-            🔴 사유 — 기존 계약 **4건** 이 「`brandModelCode` 는 하드코딩 null」을 고정한다 ⟹
-               앵커 갱신이 필요하고 그것은 **계약 수정** 이라 CPO §3 이 금지했다(임의 수정 금지)
-            🟢 **반사실 하니스·산출물은 보존** — 구현과 독립으로 돈다(재측정 불필요)
+직전 트랙   🟢🟢 **`MI-LISTING-LABELED-CODE-01` — 구현·검증 완료 · CLOSED**(§0-MLLC01)
+            운영 코드 **1줄** — `productFactsFromListing` 의 `brandModelCode` 를
+            **라벨 전용**(`extractLabeledProductCode(input.description) ?? null`)으로 채운다
+            🔴 slug 폴백 · sellerSku · 라벨 없는 코드 · 제목토큰 — **전부 금지**(계약 5파일이 잠금)
+            🔴 `materialText`·`fitText`·`ageRangeText`·`sizeLabels` 는 **그대로 제한 유지**
+            🟢 계약 앵커 **4건 갱신·강화** + A-0 **per-label 단언** + STEP A-2(확인 배선)
+            🔴 **운영 verdict 변화 0** — 이득은 **잠재적** 이다(브랜드 등록부가 구속 조건 · 별도 과제)
+            🟡 배포 **안 함**(main 머지 승인 사항)
 그 전 트랙   **`MI-IDENTITY-DATA-FLOW-01`** — 조사 단계 종료(CPO 확정) · §0-FLOW01 참조
             🟢🟢 **이 트랙의 반복 관측이 «하나의 구조적 원인» 으로 설명됐다** —
             판매처별 `ProductFacts` 생성 경로의 **비대칭**(Shopify ↔ Listing · 최대 7점 손실)
@@ -133,11 +135,40 @@ CTO 작업은 없는 상태다 — 다음 범위를 지정해 주면 그 범위�
 
 ---
 
-## 🔵🔵🔵 §0-MLLC01. **[2026-11-21] `MI-LISTING-LABELED-CODE-01` — STEP D 미통과 · 중단**
+## 🔵🔵🔵 §0-MLLC01. **[2026-11-21] `MI-LISTING-LABELED-CODE-01` — 구현·검증 완료 · CLOSED**
 
-🔴 CPO 가 **제한적 B-38 부분 해제**(라벨 전용 · slug 폴백 제외)를 승인했고, STEP A/B 는
-통과했으나 **STEP D 에서 기존 계약 4건과 충돌** 해 **구현을 되돌리고 중단** 했다.
-🟢 운영 코드 **바이트 동일 복구**(`git diff` 비어 있음) · DB 0 · 배포 0.
+🟢 CPO 가 **제한적 B-38 부분 해제**(라벨 전용 · slug 폴백 제외)와 **계약 4 앵커 갱신** 을
+승인해 집행했다. 운영 코드 **1줄** · DB **0** · 배포 **0**(main 머지 승인 사항).
+
+### ⓞ 최종 상태
+
+```
+운영 변경  `seller-facts.ts` productFactsFromListing
+          `brandModelCode: null` → `extractLabeledProductCode(input.description) ?? null`
+          🔴 실제 코드 **1줄**(나머지는 근거 주석) · 승인된 추출기 하나 · 폴백은 `null`
+금지 유지  slug 폴백 · `sellerSku` · 라벨 없는 코드 · 제목토큰 승격 ·
+          `materialText`/`fitText`/`ageRangeText`/`sizeLabels` · Contract P2 ·
+          브랜드 점수/등록부/alias · 임계값 · blocker · 가격 적격성 · DB/schema
+계약      신규 `mllc-01-labeled-code-contract`(12) ·
+          반사실 `mllc-01-labeled-code-counterfactual`(15 · A-0 per-label + STEP A-2) ·
+          앵커 갱신 4 — candidate-code-parity-01 C-1 · core-2ab AB-S1 ·
+          core-2ac AC-6 · core-2j A
+음성대조   M1 한 줄 되돌림 → **7 FAIL** · M2 slug 폴백 추가 → **5 FAIL** → 복구 PASS
+검증      대상 7파일 **58 passed** · typecheck **0** ·
+          회귀 **940 files / 11,510 passed / 0 failed**
+🔴 **운영 verdict 변화 0** — 이득은 잠재적이고 구속 조건은 **브랜드 등록부** 다(별도 과제)
+```
+
+### ⓞ-b 🔴 앵커 4건의 변경 전후 의미
+
+```
+candidate-code-parity-01 C-1  「하드코딩 null」      → 「**라벨 전용** + 금지축 3 잠금」
+core-2ab AB-S1                「빈 칸 **다섯**」      → 「빈 칸 **넷** + 품번은 라벨에서만」
+core-2ac AC-6                 「하드코딩 null」      → 「라벨 전용 + 제외 범위 3 잠금」
+core-2j  A                    「null 이 의도다」      → 「**라벨 뒤의 값만** · 자체코드 문은 닫힘」
+                              + ③ 확인 경로 주석에 **실측(61/2/0)** 을 박았다
+🟢 네 건 모두 **보호 의도를 약화하지 않고** 좁게 다시 적었다(금지축을 단언으로 추가).
+```
 
 ### ① 🟢 STEP A 반사실 — 분모와 수치(재측정 불필요)
 
