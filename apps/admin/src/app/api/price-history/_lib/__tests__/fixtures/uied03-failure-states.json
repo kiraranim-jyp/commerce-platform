@@ -1,0 +1,519 @@
+{
+  "note": "🔴 UIED-03 조사 산출 · 운영 상태 타입 아님 · 라벨 0 · HTTP 0",
+  "originCriteria": {
+    "brand": "Bobo Choses",
+    "code": "B226AC033",
+    "title": "Bobo Choses Pop sweatshirt"
+  },
+  "denominator": {
+    "rows": 32,
+    "inScope": 23,
+    "candidates": 8
+  },
+  "situations": {
+    "ABSENT_IN_TEXT": "원문 있음 · 증거 실제 부재",
+    "EXTRACTION_FAILED": "원문 있음 · 증거 있음 · 추출 실패",
+    "NO_SOURCE_TEXT": "원문 자체 없음",
+    "NOT_MEASURED": "미측정",
+    "CROSS_CONFLICT": "원상품 ↔ 후보 값 불일치(운영 CONFLICT)",
+    "MULTI_VALUE_CONFLICT": "한쪽 내 복수 관측값 충돌",
+    "NOT_APPLICABLE": "해당 없음(분모 밖)",
+    "UNDECIDABLE": "🔴 구분 불가(미확정)"
+  },
+  "rows": [
+    {
+      "domain": "coupleshot.com",
+      "area": "BRAND",
+      "axisComparison": "MISSING",
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": null,
+      "foundInText": true,
+      "foundWhere": [
+        "DESCRIPTION"
+      ],
+      "excerpt": "[��������,BOBO CHOSES Bobo Choses Pop sweatshirt ����Ʈ����(��",
+      "encodingDamaged": true,
+      "multilingual": false,
+      "situation": "원문 있음 · 증거 있음 · 추출 실패"
+    },
+    {
+      "domain": "coupleshot.com",
+      "area": "MODEL_CODE",
+      "axisComparison": "MISSING",
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": "B226AC033",
+      "foundInText": true,
+      "foundWhere": [
+        "DESCRIPTION"
+      ],
+      "excerpt": "ses Pop sweatshirt ����Ʈ����(���o) 26aw-B226AC033] ������� ��ǰ�Դϴ�. (30�����̻� ���Ž� ���ڹ",
+      "encodingDamaged": true,
+      "multilingual": false,
+      "situation": "🔴 구분 불가(미확정)"
+    },
+    {
+      "domain": "coupleshot.com",
+      "area": "PRODUCT_NAME",
+      "axisComparison": "PRESENT",
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": "�̴�Ŀ�ü�",
+      "foundInText": true,
+      "foundWhere": [
+        "TITLE"
+      ],
+      "excerpt": "�̴�Ŀ�ü�",
+      "encodingDamaged": true,
+      "multilingual": false,
+      "situation": "해당 없음(분모 밖)"
+    },
+    {
+      "domain": "coupleshot.com",
+      "area": "DESCRIPTION",
+      "axisComparison": null,
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": null,
+      "foundInText": true,
+      "foundWhere": [
+        "DESCRIPTION"
+      ],
+      "excerpt": "[��������,BOBO CHOSES Bobo Choses Pop sweatshirt ����Ʈ����(���o) 26aw-B226AC033]",
+      "encodingDamaged": true,
+      "multilingual": false,
+      "situation": "원문 있음 · 증거 있음 · 추출 실패"
+    },
+    {
+      "domain": "designerkidswear.com",
+      "area": "BRAND",
+      "axisComparison": "MISSING",
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": "FENDI",
+      "foundInText": false,
+      "foundWhere": [],
+      "excerpt": null,
+      "encodingDamaged": false,
+      "multilingual": false,
+      "situation": "원문 있음 · 증거 실제 부재"
+    },
+    {
+      "domain": "designerkidswear.com",
+      "area": "MODEL_CODE",
+      "axisComparison": "MISSING",
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": null,
+      "foundInText": false,
+      "foundWhere": [],
+      "excerpt": null,
+      "encodingDamaged": false,
+      "multilingual": false,
+      "situation": "원문 있음 · 증거 실제 부재"
+    },
+    {
+      "domain": "designerkidswear.com",
+      "area": "PRODUCT_NAME",
+      "axisComparison": "CONFLICT",
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": "Baby Boys Blue Cotton Bear Sweatshirt",
+      "foundInText": true,
+      "foundWhere": [
+        "TITLE"
+      ],
+      "excerpt": "Baby Boys Blue Cotton Bear Sweatshirt",
+      "encodingDamaged": false,
+      "multilingual": false,
+      "situation": "원상품 ↔ 후보 값 불일치(운영 CONFLICT)"
+    },
+    {
+      "domain": "designerkidswear.com",
+      "area": "DESCRIPTION",
+      "axisComparison": null,
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": null,
+      "foundInText": true,
+      "foundWhere": [
+        "DESCRIPTION"
+      ],
+      "excerpt": "Expertly crafted from soft, high-quality cotton, this Fendi kids baby boy's swea",
+      "encodingDamaged": false,
+      "multilingual": false,
+      "situation": "해당 없음(분모 밖)"
+    },
+    {
+      "domain": "folkberlin.com",
+      "area": "BRAND",
+      "axisComparison": "MISSING",
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": "Gray Label",
+      "foundInText": false,
+      "foundWhere": [],
+      "excerpt": null,
+      "encodingDamaged": false,
+      "multilingual": false,
+      "situation": "원문 있음 · 증거 실제 부재"
+    },
+    {
+      "domain": "folkberlin.com",
+      "area": "MODEL_CODE",
+      "axisComparison": "MISSING",
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": null,
+      "foundInText": false,
+      "foundWhere": [],
+      "excerpt": null,
+      "encodingDamaged": false,
+      "multilingual": false,
+      "situation": "원문 있음 · 증거 실제 부재"
+    },
+    {
+      "domain": "folkberlin.com",
+      "area": "PRODUCT_NAME",
+      "axisComparison": "CONFLICT",
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": "Baby-Sweateranzug „Blue Moon“ Bio-Baumwolle",
+      "foundInText": true,
+      "foundWhere": [
+        "TITLE"
+      ],
+      "excerpt": "Baby-Sweateranzug „Blue Moon“ Bio-Baumwolle",
+      "encodingDamaged": false,
+      "multilingual": false,
+      "situation": "원상품 ↔ 후보 값 불일치(운영 CONFLICT)"
+    },
+    {
+      "domain": "folkberlin.com",
+      "area": "DESCRIPTION",
+      "axisComparison": null,
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": null,
+      "foundInText": true,
+      "foundWhere": [
+        "DESCRIPTION"
+      ],
+      "excerpt": "Baby-Sweateranzug „Blue Moon“ aus Bio-Baumwolle Dieser vielseitige und wärmende ",
+      "encodingDamaged": false,
+      "multilingual": false,
+      "situation": "해당 없음(분모 밖)"
+    },
+    {
+      "domain": "junioredition.com",
+      "area": "BRAND",
+      "axisComparison": "MISSING",
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": "Bobo Choses",
+      "foundInText": true,
+      "foundWhere": [
+        "TITLE",
+        "DESCRIPTION"
+      ],
+      "excerpt": "Bobo Choses Pop Sweatshirt by Bobo Choses",
+      "encodingDamaged": false,
+      "multilingual": false,
+      "situation": "원문 있음 · 증거 있음 · 추출 실패"
+    },
+    {
+      "domain": "junioredition.com",
+      "area": "MODEL_CODE",
+      "axisComparison": "MISSING",
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": "B226AC033",
+      "foundInText": true,
+      "foundWhere": [
+        "DESCRIPTION"
+      ],
+      "excerpt": "ecycled Cotton 12% Cotton. Product code B226AC033 AW26 Made in Spain.",
+      "encodingDamaged": false,
+      "multilingual": false,
+      "situation": "🔴 구분 불가(미확정)"
+    },
+    {
+      "domain": "junioredition.com",
+      "area": "PRODUCT_NAME",
+      "axisComparison": "PRESENT",
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": "Bobo Choses Pop Sweatshirt by Bobo Choses",
+      "foundInText": true,
+      "foundWhere": [
+        "TITLE"
+      ],
+      "excerpt": "Bobo Choses Pop Sweatshirt by Bobo Choses",
+      "encodingDamaged": false,
+      "multilingual": false,
+      "situation": "해당 없음(분모 밖)"
+    },
+    {
+      "domain": "junioredition.com",
+      "area": "DESCRIPTION",
+      "axisComparison": null,
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": null,
+      "foundInText": true,
+      "foundWhere": [
+        "DESCRIPTION"
+      ],
+      "excerpt": "Bigfoot By BC Sweatshirt by Bobo Choses. Midnight blue sweatshirt in a relaxed f",
+      "encodingDamaged": false,
+      "multilingual": false,
+      "situation": "해당 없음(분모 밖)"
+    },
+    {
+      "domain": "kidbizkid.com",
+      "area": "BRAND",
+      "axisComparison": "MISSING",
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": "Lacoste",
+      "foundInText": false,
+      "foundWhere": [],
+      "excerpt": null,
+      "encodingDamaged": false,
+      "multilingual": false,
+      "situation": "원문 있음 · 증거 실제 부재"
+    },
+    {
+      "domain": "kidbizkid.com",
+      "area": "MODEL_CODE",
+      "axisComparison": "MISSING",
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": null,
+      "foundInText": false,
+      "foundWhere": [],
+      "excerpt": null,
+      "encodingDamaged": false,
+      "multilingual": false,
+      "situation": "원문 있음 · 증거 실제 부재"
+    },
+    {
+      "domain": "kidbizkid.com",
+      "area": "PRODUCT_NAME",
+      "axisComparison": "CONFLICT",
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": "Lacoste Navy Sweatshirt",
+      "foundInText": true,
+      "foundWhere": [
+        "TITLE"
+      ],
+      "excerpt": "Lacoste Navy Sweatshirt",
+      "encodingDamaged": false,
+      "multilingual": false,
+      "situation": "원상품 ↔ 후보 값 불일치(운영 CONFLICT)"
+    },
+    {
+      "domain": "kidbizkid.com",
+      "area": "DESCRIPTION",
+      "axisComparison": null,
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": null,
+      "foundInText": true,
+      "foundWhere": [
+        "DESCRIPTION"
+      ],
+      "excerpt": "Timeless Lacoste comfort in sleek navy. This classic zip-up sweatshirt features ",
+      "encodingDamaged": false,
+      "multilingual": false,
+      "situation": "해당 없음(분모 밖)"
+    },
+    {
+      "domain": "kids-world.com",
+      "area": "BRAND",
+      "axisComparison": "MISSING",
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": "Bobo Choses",
+      "foundInText": true,
+      "foundWhere": [
+        "TITLE",
+        "DESCRIPTION"
+      ],
+      "excerpt": "Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트",
+      "encodingDamaged": false,
+      "multilingual": true,
+      "situation": "원문 있음 · 증거 있음 · 추출 실패"
+    },
+    {
+      "domain": "kids-world.com",
+      "area": "MODEL_CODE",
+      "axisComparison": "MISSING",
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": "B226AC033",
+      "foundInText": true,
+      "foundWhere": [
+        "DESCRIPTION"
+      ],
+      "excerpt": "코튼 소재입니다.. Bobo Choses 맨투맨. Bobo Choses B226AC033-401",
+      "encodingDamaged": false,
+      "multilingual": true,
+      "situation": "🔴 구분 불가(미확정)"
+    },
+    {
+      "domain": "kids-world.com",
+      "area": "PRODUCT_NAME",
+      "axisComparison": "CONFLICT",
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": "Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트",
+      "foundInText": true,
+      "foundWhere": [
+        "TITLE"
+      ],
+      "excerpt": "Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트",
+      "encodingDamaged": false,
+      "multilingual": true,
+      "situation": "원상품 ↔ 후보 값 불일치(운영 CONFLICT)"
+    },
+    {
+      "domain": "kids-world.com",
+      "area": "DESCRIPTION",
+      "axisComparison": null,
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": null,
+      "foundInText": true,
+      "foundWhere": [
+        "DESCRIPTION"
+      ],
+      "excerpt": "Bobo Choses 맨투맨. Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트. Bobo Choses (보보쇼즈) 의 맨투맨진한 파란",
+      "encodingDamaged": false,
+      "multilingual": true,
+      "situation": "해당 없음(분모 밖)"
+    },
+    {
+      "domain": "petitemaisonkids.com",
+      "area": "BRAND",
+      "axisComparison": "MISSING",
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": "Petite Maison Kids",
+      "foundInText": false,
+      "foundWhere": [],
+      "excerpt": null,
+      "encodingDamaged": false,
+      "multilingual": false,
+      "situation": "원문 있음 · 증거 실제 부재"
+    },
+    {
+      "domain": "petitemaisonkids.com",
+      "area": "MODEL_CODE",
+      "axisComparison": "MISSING",
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": null,
+      "foundInText": false,
+      "foundWhere": [],
+      "excerpt": null,
+      "encodingDamaged": false,
+      "multilingual": false,
+      "situation": "원문 있음 · 증거 실제 부재"
+    },
+    {
+      "domain": "petitemaisonkids.com",
+      "area": "PRODUCT_NAME",
+      "axisComparison": "CONFLICT",
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers",
+      "foundInText": true,
+      "foundWhere": [
+        "TITLE"
+      ],
+      "excerpt": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers",
+      "encodingDamaged": false,
+      "multilingual": false,
+      "situation": "원상품 ↔ 후보 값 불일치(운영 CONFLICT)"
+    },
+    {
+      "domain": "petitemaisonkids.com",
+      "area": "DESCRIPTION",
+      "axisComparison": null,
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": null,
+      "foundInText": true,
+      "foundWhere": [
+        "DESCRIPTION"
+      ],
+      "excerpt": "Indulge her in a little luxury with our Maya Blue Cotton Sweater Top. Made from ",
+      "encodingDamaged": false,
+      "multilingual": false,
+      "situation": "해당 없음(분모 밖)"
+    },
+    {
+      "domain": "shoppiccoliandco.com",
+      "area": "BRAND",
+      "axisComparison": "MISSING",
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": "Piccoli & Co™",
+      "foundInText": false,
+      "foundWhere": [],
+      "excerpt": null,
+      "encodingDamaged": false,
+      "multilingual": false,
+      "situation": "원문 있음 · 증거 실제 부재"
+    },
+    {
+      "domain": "shoppiccoliandco.com",
+      "area": "MODEL_CODE",
+      "axisComparison": "MISSING",
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": null,
+      "foundInText": false,
+      "foundWhere": [],
+      "excerpt": null,
+      "encodingDamaged": false,
+      "multilingual": false,
+      "situation": "원문 있음 · 증거 실제 부재"
+    },
+    {
+      "domain": "shoppiccoliandco.com",
+      "area": "PRODUCT_NAME",
+      "axisComparison": "CONFLICT",
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": "Jude Navy Baby Boy Anchor Sweater",
+      "foundInText": true,
+      "foundWhere": [
+        "TITLE"
+      ],
+      "excerpt": "Jude Navy Baby Boy Anchor Sweater",
+      "encodingDamaged": false,
+      "multilingual": false,
+      "situation": "원상품 ↔ 후보 값 불일치(운영 CONFLICT)"
+    },
+    {
+      "domain": "shoppiccoliandco.com",
+      "area": "DESCRIPTION",
+      "axisComparison": null,
+      "titlePresent": true,
+      "descPresent": true,
+      "structured": null,
+      "foundInText": true,
+      "foundWhere": [
+        "DESCRIPTION"
+      ],
+      "excerpt": "Meet the Jude Navy Baby Boy Anchor Sweater—a tiny piece of nautical charm design",
+      "encodingDamaged": false,
+      "multilingual": false,
+      "situation": "해당 없음(분모 밖)"
+    }
+  ]
+}
