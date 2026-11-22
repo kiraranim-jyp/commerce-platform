@@ -1,0 +1,545 @@
+{
+ "snapshot": {
+  "id": "25a3bba7-fe75-464b-95b2-0da2ef83ec44",
+  "source_url": "https://bobochoses.com/en-kr/products/b226ac033-bobo-choses-pop-sweatshirt",
+  "title": "Bobo Choses Pop sweatshirt",
+  "status": "IN_PROGRESS",
+  "created_at": "2026-11-07T07:13:39.118Z"
+ },
+ "workspaceKeys": [
+  "url",
+  "items",
+  "activeTab",
+  "searchRun",
+  "thumbnails",
+  "developerMode",
+  "canonicalProduct",
+  "categoryMappings",
+  "pipelineResponse",
+  "platformSettings",
+  "representativeId",
+  "marketCategoryProfileId"
+ ],
+ "canonicalKeys": [
+  "sku",
+  "brand",
+  "color",
+  "price",
+  "title",
+  "images",
+  "weight",
+  "options",
+  "titleKo",
+  "importer",
+  "itemName",
+  "keywords",
+  "material",
+  "seoTitle",
+  "variants",
+  "modelName",
+  "sourceUrl",
+  "description",
+  "shippingFee",
+  "shopifyTags",
+  "manufacturer",
+  "optionGroups",
+  "regularPrice",
+  "returnPolicy",
+  "certification",
+  "descriptionKo",
+  "priceValidity",
+  "stockQuantity",
+  "priceBreakdown",
+  "recommendedAge",
+  "seoDescription",
+  "brandResolution",
+  "countryOfOrigin",
+  "careInstructions",
+  "certificationType",
+  "childCertification",
+  "shopifyProductType",
+  "channelPriceOverrides",
+  "channelNoticeOverrides",
+  "categoryRecommendationCache"
+ ],
+ "origin": {
+  "sourceUrl": "https://bobochoses.com/en-kr/products/b226ac033-bobo-choses-pop-sweatshirt",
+  "title": {
+   "value": "Bobo Choses Pop sweatshirt",
+   "source": "ORIGINAL",
+   "confidence": 0.95
+  },
+  "titleKo": {
+   "value": "Bobo Choses Pop sweatshirt",
+   "source": "AI_GENERATED",
+   "confidence": 0.7
+  },
+  "brand": {
+   "value": "Bobo Choses",
+   "source": "ORIGINAL",
+   "confidence": 0.95
+  },
+  "brandResolution": {
+   "raw": "AW26",
+   "confidence": "HIGH",
+   "ruleApplied": [
+    "SEASON_CODE"
+   ]
+  },
+  "sku": {
+   "value": "",
+   "source": "ORIGINAL",
+   "confidence": 0
+  },
+  "price": {
+   "value": {
+    "amount": 62,
+    "currency": "EUR"
+   },
+   "source": "ORIGINAL",
+   "confidence": 0.95
+  },
+  "priceValidity": "VALID",
+  "material": {
+   "value": "",
+   "source": "ORIGINAL",
+   "confidence": 0
+  },
+  "color": {
+   "value": "Midnight blue",
+   "source": "ORIGINAL",
+   "confidence": 0.7
+  },
+  "recommendedAge": {
+   "value": "",
+   "source": "REQUIRED",
+   "confidence": 0
+  },
+  "manufacturer": {
+   "value": "",
+   "source": "REQUIRED",
+   "confidence": 0
+  },
+  "description": {
+   "value": "Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain.",
+   "source": "ORIGINAL",
+   "confidence": 0.95
+  },
+  "descriptionKo": {
+   "value": "브랜드: Bobo Choses\n상품 종류: 티셔츠\n색상: Midnight blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain.\"",
+   "source": "AI_GENERATED",
+   "confidence": 0.95
+  },
+  "keywords": {
+   "value": [
+    "aw26",
+    "children",
+    "clothing",
+    "Current",
+    "drop-2",
+    "Kid",
+    "sweatshirts",
+    "Bobo Choses"
+   ],
+   "source": "ORIGINAL",
+   "confidence": 0.9
+  },
+  "images": [
+   {
+    "url": null,
+    "role": null
+   },
+   {
+    "url": null,
+    "role": null
+   },
+   {
+    "url": null,
+    "role": null
+   }
+  ],
+  "selectedVariant": null
+ },
+ "reviews": [
+  {
+   "candidate_url": "https://bonbonverona.it/products/bobo-choses-pop-sweatshirt-b226ac033-401-bobo-choses",
+   "candidate_domain": "bonbonverona.it",
+   "candidate_title": "Bobo Choses Pop sweatshirt",
+   "market": "OVERSEAS",
+   "price_amount": "62",
+   "price_currency": "EUR",
+   "price_status": "VERIFIED_CURRENT",
+   "sold_out": null,
+   "system_verdict": "SAME",
+   "match_truth": "STRONG_IDENTIFIER",
+   "price_tier": "EXACT",
+   "blockers": [],
+   "match_reasons": [
+    "모델명 유사도 100%",
+    "카테고리 일치",
+    "브랜드 일치",
+    "근거: 핵심 상품명 pop",
+    "근거: 브랜드 품번 일치",
+    "근거: 상품군 TOP↔TOP",
+    "근거: 색상 BLUE",
+    "근거: 소재 cotton:12,organic cotton:66,recycled cotton:22",
+    "근거: 핏 loose fit",
+    "근거: 대상 KIDS",
+    "교차판매처 판정 동일상품(브랜드·상품군·색상·소재·핏·대상이 동시에 일치) + 기존 매칭 level=very_high — 품번을 맞춰볼 수 없어도 서로 다른 축이 동시에 맞아 자동확정",
+    "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+    "판정근거: 입력 텍스트등급=very_high · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=SAME → STRONG_IDENTIFIER(순위 4)"
+   ],
+   "human_verdict": null,
+   "human_note": null,
+   "source": "WEB_SEARCH",
+   "origin_code": "B226AC033",
+   "image_url": null,
+   "first_seen_at": "2026-11-07T07:15:10.109Z",
+   "last_seen_at": "2026-11-07T07:15:09.504Z",
+   "reviewed_at": null
+  },
+  {
+   "candidate_url": "http://www.coupleshot.com/m/product.html?branduid=574657&special=1",
+   "candidate_domain": "coupleshot.com",
+   "candidate_title": "�̴�Ŀ�ü�",
+   "market": "UNKNOWN",
+   "price_amount": "135000",
+   "price_currency": "KRW",
+   "price_status": "VERIFIED_CURRENT",
+   "sold_out": null,
+   "system_verdict": "PRESUMED_SAME",
+   "match_truth": "TEXT_CONFIRMED",
+   "price_tier": "COMPARISON",
+   "blockers": [
+    "NO_TITLE_OVERLAP",
+    "BRAND_UNCONFIRMED"
+   ],
+   "match_reasons": [
+    "모델명 유사도 0%",
+    "근거: 브랜드 품번 일치",
+    "보류: 핵심 상품명에 겹치는 말이 없다",
+    "보류: 양쪽 브랜드를 확인하지 못했다",
+    "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+    "판정근거: 입력 텍스트등급=low · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED(순위 3)"
+   ],
+   "human_verdict": null,
+   "human_note": null,
+   "source": "WEB_SEARCH",
+   "origin_code": "B226AC033",
+   "image_url": null,
+   "first_seen_at": "2026-11-07T07:15:10.109Z",
+   "last_seen_at": "2026-11-07T07:15:09.504Z",
+   "reviewed_at": null
+  },
+  {
+   "candidate_url": "https://designerkidswear.com/products/fendi-baby-boys-sweatshirt-blue-buh088-8ra-f19j4",
+   "candidate_domain": "designerkidswear.com",
+   "candidate_title": "Baby Boys Blue Cotton Bear Sweatshirt",
+   "market": "OVERSEAS",
+   "price_amount": "530",
+   "price_currency": "CAD",
+   "price_status": "UNVERIFIED_SEARCH",
+   "sold_out": null,
+   "system_verdict": "PRESUMED_SAME",
+   "match_truth": "TEXT_CONFIRMED",
+   "price_tier": "COMPARISON",
+   "blockers": [
+    "BRAND_MISMATCH",
+    "NO_TITLE_OVERLAP",
+    "MATERIAL",
+    "AUDIENCE_LINE"
+   ],
+   "match_reasons": [
+    "모델명 유사도 14%",
+    "카테고리 일치",
+    "브랜드 불일치",
+    "근거: 상품군 TOP↔TOP",
+    "근거: 색상 BLUE",
+    "근거: 대상 KIDS",
+    "보류: 브랜드 Bobo Choses ↔ FENDI",
+    "보류: 핵심 상품명에 겹치는 말이 없다",
+    "보류: 소재 cotton:12,organic cotton:66,recycled cotton:22 ↔ cotton:7,cotton:93,elastane:7",
+    "보류: 연령 라인 CHILD ↔ BABY",
+    "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+    "판정근거: 입력 텍스트등급=low · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED(순위 3)"
+   ],
+   "human_verdict": null,
+   "human_note": null,
+   "source": "OVERSEAS_AUTO",
+   "origin_code": "B226AC033",
+   "image_url": null,
+   "first_seen_at": "2026-11-07T07:15:10.109Z",
+   "last_seen_at": "2026-11-07T07:15:09.504Z",
+   "reviewed_at": null
+  },
+  {
+   "candidate_url": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "candidate_domain": "folkberlin.com",
+   "candidate_title": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+   "market": "OVERSEAS",
+   "price_amount": "39",
+   "price_currency": "EUR",
+   "price_status": "UNVERIFIED_SEARCH",
+   "sold_out": null,
+   "system_verdict": "PRESUMED_SAME",
+   "match_truth": "TEXT_CONFIRMED",
+   "price_tier": "COMPARISON",
+   "blockers": [
+    "BRAND_MISMATCH",
+    "NO_TITLE_OVERLAP",
+    "MATERIAL",
+    "AUDIENCE_LINE"
+   ],
+   "match_reasons": [
+    "모델명 유사도 0%",
+    "카테고리 일치",
+    "브랜드 불일치",
+    "근거: 상품군 TOP↔TOP",
+    "근거: 색상 BLUE",
+    "근거: 대상 KIDS",
+    "보류: 브랜드 Bobo Choses ↔ Gray Label",
+    "보류: 핵심 상품명에 겹치는 말이 없다",
+    "보류: 소재 cotton:12,organic cotton:66,recycled cotton:22 ↔ organic cotton:100",
+    "보류: 연령 라인 CHILD ↔ BABY",
+    "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+    "판정근거: 입력 텍스트등급=low · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED(순위 3)"
+   ],
+   "human_verdict": null,
+   "human_note": null,
+   "source": "OVERSEAS_AUTO",
+   "origin_code": "B226AC033",
+   "image_url": null,
+   "first_seen_at": "2026-11-07T07:15:10.109Z",
+   "last_seen_at": "2026-11-07T07:15:09.504Z",
+   "reviewed_at": null
+  },
+  {
+   "candidate_url": "https://junioredition.com/products/bobo-choses-pop-sweatshirt-by-bobo-choses",
+   "candidate_domain": "junioredition.com",
+   "candidate_title": "Bobo Choses Pop Sweatshirt by Bobo Choses",
+   "market": "OVERSEAS",
+   "price_amount": "58",
+   "price_currency": "GBP",
+   "price_status": "VERIFIED_CURRENT",
+   "sold_out": null,
+   "system_verdict": "PRESUMED_SAME",
+   "match_truth": "TEXT_CONFIRMED",
+   "price_tier": "COMPARISON",
+   "blockers": [
+    "MATERIAL"
+   ],
+   "match_reasons": [
+    "모델명 유사도 100%",
+    "카테고리 일치",
+    "브랜드 일치",
+    "근거: 핵심 상품명 pop",
+    "근거: 브랜드 품번 일치",
+    "근거: 상품군 TOP↔TOP",
+    "근거: 색상 BLUE",
+    "근거: 핏 loose fit ↔ relaxed fit(표현 차이 · 동일 브랜드 품번 완전일치 교차판매처)",
+    "보류: 소재 cotton:12,organic cotton:66,recycled cotton:22 ↔ cotton:12,organic cotton:22,organic cotton:66,recycled cotton:12,recycled cotton:22",
+    "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+    "판정근거: 입력 텍스트등급=very_high · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED(순위 3)"
+   ],
+   "human_verdict": null,
+   "human_note": null,
+   "source": "OVERSEAS_AUTO",
+   "origin_code": "B226AC033",
+   "image_url": null,
+   "first_seen_at": "2026-11-07T07:15:10.109Z",
+   "last_seen_at": "2026-11-07T07:15:09.504Z",
+   "reviewed_at": null
+  },
+  {
+   "candidate_url": "https://kidbizkid.com/products/lacoste-navy-sweatshirt",
+   "candidate_domain": "kidbizkid.com",
+   "candidate_title": "Lacoste Navy Sweatshirt",
+   "market": "OVERSEAS",
+   "price_amount": "10300",
+   "price_currency": "CAD",
+   "price_status": "UNVERIFIED_SEARCH",
+   "sold_out": null,
+   "system_verdict": "PRESUMED_SAME",
+   "match_truth": "TEXT_CONFIRMED",
+   "price_tier": "COMPARISON",
+   "blockers": [
+    "BRAND_MISMATCH",
+    "COLOR_VARIANT",
+    "NO_TITLE_OVERLAP",
+    "AUDIENCE_LINE"
+   ],
+   "match_reasons": [
+    "모델명 유사도 25%",
+    "카테고리 일치",
+    "브랜드 불일치",
+    "근거: 상품군 TOP↔TOP",
+    "근거: 색상 BLUE",
+    "근거: 대상 KIDS",
+    "보류: 브랜드 Bobo Choses ↔ Lacoste",
+    "보류: 색상 이름 Midnight blue ↔ in sleek navy",
+    "보류: 핵심 상품명에 겹치는 말이 없다",
+    "보류: 연령 라인 CHILD ↔ BABY",
+    "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+    "판정근거: 입력 텍스트등급=low · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED(순위 3)"
+   ],
+   "human_verdict": null,
+   "human_note": null,
+   "source": "OVERSEAS_AUTO",
+   "origin_code": "B226AC033",
+   "image_url": null,
+   "first_seen_at": "2026-11-07T07:15:10.109Z",
+   "last_seen_at": "2026-11-07T07:15:09.504Z",
+   "reviewed_at": null
+  },
+  {
+   "candidate_url": "https://www.kids-world.com/ko-kr/bobo-choses-sweatshirt-midnight-blue-print-p-450718.html",
+   "candidate_domain": "kids-world.com",
+   "candidate_title": "Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트",
+   "market": "UNKNOWN",
+   "price_amount": "106000",
+   "price_currency": "KRW",
+   "price_status": "VERIFIED_CURRENT",
+   "sold_out": null,
+   "system_verdict": "PRESUMED_SAME",
+   "match_truth": "TEXT_CONFIRMED",
+   "price_tier": "COMPARISON",
+   "blockers": [
+    "NO_TITLE_OVERLAP"
+   ],
+   "match_reasons": [
+    "모델명 유사도 0%",
+    "브랜드 일치",
+    "근거: 브랜드 품번 일치",
+    "보류: 핵심 상품명에 겹치는 말이 없다",
+    "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+    "판정근거: 입력 텍스트등급=low · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED(순위 3)"
+   ],
+   "human_verdict": null,
+   "human_note": null,
+   "source": "WEB_SEARCH",
+   "origin_code": "B226AC033",
+   "image_url": null,
+   "first_seen_at": "2026-11-07T07:15:10.109Z",
+   "last_seen_at": "2026-11-07T07:15:09.504Z",
+   "reviewed_at": null
+  },
+  {
+   "candidate_url": "https://www.mariodannakids.it/en/product/bobo-choses-kids-bobo-choses-pop-sweatshirt-b226ac033",
+   "candidate_domain": "mariodannakids.it",
+   "candidate_title": "Bobo Choses Pop sweatshirt BOBO CHOSES KIDS B226AC033 . - Mario D",
+   "market": "UNKNOWN",
+   "price_amount": null,
+   "price_currency": null,
+   "price_status": "UNVERIFIED_SEARCH",
+   "sold_out": null,
+   "system_verdict": "SAME",
+   "match_truth": "STRONG_IDENTIFIER",
+   "price_tier": "EXACT",
+   "blockers": [],
+   "match_reasons": [
+    "모델명 유사도 40%",
+    "카테고리 일치",
+    "브랜드 일치",
+    "근거: 핵심 상품명 일부 pop",
+    "근거: 브랜드 품번 일치",
+    "근거: 상품군 TOP↔TOP",
+    "근거: 대상 KIDS",
+    "modelCode 완전 일치(식별자 근거) + 기존 매칭 level=low — 텍스트 점수와 무관하게 식별자 증거로 자동확정",
+    "판정방법: MODEL_CODE_EXACT — 브랜드 품번 완전 일치",
+    "판정근거: 입력 텍스트등급=low · 품번증거=exact (해외 B226AC033 ↔ 국내 B226AC033) · 교차판매처=SAME → STRONG_IDENTIFIER(순위 4)"
+   ],
+   "human_verdict": null,
+   "human_note": null,
+   "source": "WEB_SEARCH",
+   "origin_code": "B226AC033",
+   "image_url": null,
+   "first_seen_at": "2026-11-07T07:15:10.109Z",
+   "last_seen_at": "2026-11-07T07:15:09.504Z",
+   "reviewed_at": null
+  },
+  {
+   "candidate_url": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+   "candidate_domain": "petitemaisonkids.com",
+   "candidate_title": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers",
+   "market": "OVERSEAS",
+   "price_amount": "12800",
+   "price_currency": "USD",
+   "price_status": "UNVERIFIED_SEARCH",
+   "sold_out": null,
+   "system_verdict": "PRESUMED_SAME",
+   "match_truth": "TEXT_CONFIRMED",
+   "price_tier": "COMPARISON",
+   "blockers": [
+    "BRAND_MISMATCH",
+    "NO_TITLE_OVERLAP",
+    "MATERIAL",
+    "AUDIENCE_LINE",
+    "GARMENT_FORM"
+   ],
+   "match_reasons": [
+    "모델명 유사도 0%",
+    "카테고리 일치",
+    "브랜드 불일치",
+    "근거: 상품군 TOP↔TOP",
+    "근거: 색상 BLUE",
+    "근거: 대상 KIDS",
+    "보류: 브랜드 Bobo Choses ↔ Petite Maison Kids",
+    "보류: 핵심 상품명에 겹치는 말이 없다",
+    "보류: 소재 cotton:12,organic cotton:66,recycled cotton:22 ↔ cotton:95,elastane:5",
+    "보류: 연령 라인 CHILD ↔ BABY",
+    "보류: 옷의 형태 SWEATSHIRT ↔ TOP",
+    "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+    "판정근거: 입력 텍스트등급=low · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED(순위 3)"
+   ],
+   "human_verdict": null,
+   "human_note": null,
+   "source": "OVERSEAS_AUTO",
+   "origin_code": "B226AC033",
+   "image_url": null,
+   "first_seen_at": "2026-11-07T07:15:10.109Z",
+   "last_seen_at": "2026-11-07T07:15:09.504Z",
+   "reviewed_at": null
+  },
+  {
+   "candidate_url": "https://shoppiccoliandco.com/products/jude-navy-baby-boy-anchor-sweater",
+   "candidate_domain": "shoppiccoliandco.com",
+   "candidate_title": "Jude Navy Baby Boy Anchor Sweater",
+   "market": "OVERSEAS",
+   "price_amount": "9700",
+   "price_currency": "USD",
+   "price_status": "UNVERIFIED_SEARCH",
+   "sold_out": null,
+   "system_verdict": "PRESUMED_SAME",
+   "match_truth": "TEXT_CONFIRMED",
+   "price_tier": "COMPARISON",
+   "blockers": [
+    "BRAND_MISMATCH",
+    "COLOR_VARIANT",
+    "NO_TITLE_OVERLAP",
+    "AUDIENCE_LINE"
+   ],
+   "match_reasons": [
+    "모델명 유사도 0%",
+    "카테고리 일치",
+    "브랜드 불일치",
+    "근거: 상품군 TOP↔TOP",
+    "근거: 색상 BLUE",
+    "근거: 대상 KIDS",
+    "보류: 브랜드 Bobo Choses ↔ Piccoli & Co™",
+    "보류: 색상 이름 Midnight blue ↔ the jude navy",
+    "보류: 핵심 상품명에 겹치는 말이 없다",
+    "보류: 연령 라인 CHILD ↔ BABY",
+    "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+    "판정근거: 입력 텍스트등급=low · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED(순위 3)"
+   ],
+   "human_verdict": null,
+   "human_note": null,
+   "source": "OVERSEAS_AUTO",
+   "origin_code": "B226AC033",
+   "image_url": null,
+   "first_seen_at": "2026-11-07T07:15:10.109Z",
+   "last_seen_at": "2026-11-07T07:15:09.504Z",
+   "reviewed_at": null
+  }
+ ]
+}

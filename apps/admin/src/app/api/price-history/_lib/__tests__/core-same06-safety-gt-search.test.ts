@@ -200,6 +200,14 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
   skipped.push({ file: "query-adopt-01-production.json", why: "🟢 채택 Query E2E Production 실측 · 라벨 **없음**" });
   skipped.push({ file: "rc-01-input-url.json", why: "🟢 입력 URL A/B 추출 비교 · 라벨 **없음**" });
   /**
+   * 🔵 MI-PRODUCT-IDENTITY-COMPARISON-01(2026-11-22) — **비교표의 입력 둘.**
+   * 🔴 **분모에 넣지 않는다** — ①은 `candidate_reviews` 읽기 전용 덤프(이중 집계 방지 ·
+   *    `ceo-evidence-review-db.json` 과 같은 이유) ②는 라이브 원문 관측이고 **사람 라벨이
+   *    하나도 없다**(`human_verdict` 전건 null · 판정은 CPO 가 한다).
+   */
+  skipped.push({ file: "mic01-db-pull.json", why: "🔴 `candidate_reviews` 읽기 전용 덤프 — **이중 집계 방지** · 비교표 입력" });
+  skipped.push({ file: "mic01-candidate-originals.json", why: "🟢 라이브 원문·식별근거 관측 · 사람 라벨 **없음**" });
+  /**
    * 🔵 CEO-EVIDENCE-REVIEW(2026-11-07) — **`candidate_reviews` 읽기 전용 덤프**(11쌍 URL · 3행).
    * 🔴 분모에 넣지 않는다 — `dsp-01-reviewed-same.json` 과 **같은 이유**(이중 집계).
    *    라벨 원본은 운영 DB 이고 이 파일은 **검토 화면 표시 전용** 고정본이다.
