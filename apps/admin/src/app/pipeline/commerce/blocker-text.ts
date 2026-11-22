@@ -51,6 +51,80 @@ export function blockerText(token: string): string {
 /** 🟢 계약이 「축을 임의로 늘리지 않았다」를 셀 수 있게 열어 둔다. */
 export const KNOWN_BLOCKER_TOKENS = Object.keys(BLOCKER_TEXT);
 
+/* ═══════════════════════════════════════════════════════════════════════════════
+   🔵🔵🔵 MI-IDENTITY-REVIEW-COMPLETION-02 — **토큰 → 식별 축** 묶음
+   ═══════════════════════════════════════════════════════════════════════════════
+
+   🔴🔴 **왜 이 파일이냐** — 비교목록표가 축별 근거를 그리려면 「어느 토큰이 브랜드
+      축인가」를 알아야 한다. 그 묶음을 **선별기(`mi-same-candidates`)에 두면**
+      「선별기가 판정 어휘를 다룬다」는 기존 계약이 **내 코드 때문에 FAIL** 한다.
+   🟢 그래서 **가드를 풀지 않고 코드를 옮겼다** — 이 파일이 이미 그 토큰 전부의
+      소유자다(WU-133 이 `blocker-text.ts` 를 따로 만든 바로 그 이유다).
+
+   🔴🔴 **이 함수가 생긴 직접 계기를 적는다** — 1차 구현이 `crossSellerBlockers` 를
+      「문장」이라고 **가정** 해 화면에 그대로 뿌렸고, 실제로는 **내부 토큰**
+      (`BRAND_UNCONFIRMED` · `MODEL_CODE`)이라 회귀가 FAIL 했다(`wu-146 7-c`
+      「내부 토큰 노출」). 🟢 **그 가드가 맞았고 내 가정이 틀렸다.**
+
+   🔴 **축을 늘리지 않는다** — 여기 없는 토큰은 축 칸에 **붙지 않는다**(사유 칠이 말한다).
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+export type BlockerIdentityAxis = "BRAND" | "MODEL_CODE" | "TITLE";
+
+/**
+ * 🔴 **식별 세 축에 직접 해당하는 토큰만** 담는다 — 소재·색상·상품군·대상은 식별
+ *    조합(§5-D 의 「브랜드+품번 또는 상품명+품번」)이 아니라 **보조 근거** 다.
+ */
+const BLOCKER_IDENTITY_AXIS: Record<string, BlockerIdentityAxis> = {
+  BRAND_UNCONFIRMED: "BRAND",
+  BRAND_MISMATCH: "BRAND",
+  MODEL_CODE: "MODEL_CODE",
+  NO_TITLE_OVERLAP: "TITLE",
+};
+
+/**
+ * 🟢 운영이 낸 토큰 배열에서 **그 축의 것만** 골라 **셀러의 말** 로 돌려준다.
+ * 🔴 사전에 없는 토큰은 **버린다** — 「기타 사유」를 축 칸에 넣으면 「브랜드가 기타
+ *    사유다」라는 말이 된다(그 역할은 사유 칠이 이미 한다).
+ */
+function identityAxisBlockerTexts(
+  tokens: readonly string[] | null | undefined,
+  axis: BlockerIdentityAxis,
+): string[] {
+  const out: string[] = [];
+  for (const t of tokens ?? []) {
+    if (BLOCKER_IDENTITY_AXIS[t] !== axis) continue;
+    const s = blockerText(t);
+    if (!out.includes(s)) out.push(s);
+  }
+  return out;
+}
+
+/**
+ * 🟢 **후보 행에서 그 축의 「차이」를 셀러의 말로** 돌려준다.
+ *
+ * 🔴🔴 **칸을 읽는 자리가 왜 이 파일이냐** — 기존 계약 `wu-136 E-2` 가
+ *    「결론 영역의 코드에 `crossSellerBlockers` 같은 **내부 칸 이름이 문자열로**
+ *    없다」를 문다. 1차 구현이 `MarketPriceComparison` 안에서 그 칸을 직접 읽어
+ *    **FAIL** 했다. 🟢 **가드를 풀지 않고 읽는 자리를 옮겼다** — 이 파일이 그
+ *    토큰들의 소유자이므로 칸 이름도 여기 있는 것이 맞다(`derivedKrwOf` 가 같은
+ *    이유로 영역 밖으로 나간 그 선례와 같은 모양이다).
+ * 🔴 두 배열을 **같이** 본다 — 브랜드/제목은 `blockers`, 품번은 `conflicts` 에 온다.
+ */
+export function identityAxisDifferenceTexts(
+  row: {
+    crossSellerBlockers?: readonly string[] | null;
+    crossSellerConflicts?: readonly string[] | null;
+  },
+  axis: BlockerIdentityAxis,
+): string[] {
+  const out = identityAxisBlockerTexts(row.crossSellerBlockers, axis);
+  for (const s of identityAxisBlockerTexts(row.crossSellerConflicts, axis)) {
+    if (!out.includes(s)) out.push(s);
+  }
+  return out;
+}
+
 /**
  * ════════════════════════════════════════════════════════════════════════════
  * 🔵🔵🔵 EVIDENCE-SURFACE-01 — **근거 줄을 셋으로 «가른다»**(CPO 승인 2026-11-05)

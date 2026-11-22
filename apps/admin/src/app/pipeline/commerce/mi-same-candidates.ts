@@ -520,6 +520,17 @@ export function selectReviewQueue(
     const tier = transientDisplayTier(row);
     /** 🟢 확정 SAME 은 자동 판정이 끝났다 — 검토 대기에 넣지 않는다. */
     if (tier === "SAME") continue;
+    /**
+     * 🔴🔴 **근거가 아예 없는 행은 넣지 않는다 — 이 줄이 빠져 기존 계약이 FAIL 했다.**
+     *
+     * `core-e2e-close-04 S-3`(「근거 없는 SIMILAR 은 행도 서지 않는다」 · CPO §4-C)와
+     * `core-e2e-close-05 R-6` 이 그것을 문다. 🟢 그 가드가 맞다 — `matchTruth` 도
+     * `matchReasons` 도 없는 후보는 **사람이 비교할 것이 없다**(화면에 세우면 노이즈다).
+     * 🔴 그리고 그것이 이 선별기 머리 주석이 이미 적어 둔 규칙이다(「근거가 하나도
+     *    없는 행은 제외」) — 1차 구현의 `IDENTITY_INCOMPLETE` 가 그 행을 **되살렸다**.
+     * 🟢 술어를 **새로 만들지 않았다** — 같은 파일의 `hasIdentityEvidence` 하나다.
+     */
+    if (!hasIdentityEvidence(row)) continue;
 
     const reasons: ReviewReason[] = [];
     if ((row.crossSellerConflicts?.length ?? 0) > 0) reasons.push("EVIDENCE_CONFLICT");
@@ -540,6 +551,73 @@ export const REVIEW_QUEUE_HEADING = "검토 대기 후보";
 export const REVIEW_QUEUE_NOTE =
   "자동으로 동일상품을 확정하지 못한 후보입니다. 브랜드·품번·상품명과 판정 사유를 보고 직접 판단할 수 있습니다.";
 export const REVIEW_QUEUE_EMPTY = "검토 대기 후보가 없습니다";
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   🔵🔵🔵 MI-IDENTITY-REVIEW-COMPLETION-02 — **나란히 비교** 의 어휘와 입력
+   ═══════════════════════════════════════════════════════════════════════════════
+
+   🔴 왜 여기냐 — `selectReviewQueue` 와 **같은 owner** 여야 비교표의 말과 선택기가
+      갈라지지 않는다(REV-01 이 같은 이유로 라벨을 이 파일에 뒀다).
+   🔴🔴 **이 블록은 «표시» 전용이다.** 아래 값 중 어떤 것도 판정·집계·가격에
+      입력되지 않는다 — `selectReviewQueue` 는 이 타입을 **인자로 받지 않는다**.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * 🟢 **원상품 쪽 식별 세 칸.** 🔴 화면이 **이미 아는 값** 만 담는다(지어내지 않는다).
+ *
+ * 🔴 `modelCode` 의 출처는 `CanonicalProduct.sku` 다 — 🔴🔴 그래서 라벨이
+ *    **「품번(SKU)」** 이다. 「제조사 품번」으로 단정하지 않는다(§5-D-2 의 그 주의:
+ *    판매처 SKU 를 제조사 품번으로 오인하지 않는다).
+ * 🔴 값이 없으면 `null` — **빈 문자열을 넣지 않는다**(「없다」와 「모른다」가 섞인다).
+ */
+export interface OriginIdentity {
+  brand: string | null;
+  modelCode: string | null;
+  title: string | null;
+  /** 🔴 **상세설명 원문.** 표시 근거 추출에만 쓴다(운영 SAME 판정 연결 0 · CPO 2회 거부). */
+  description?: string | null;
+}
+
+/** 🟢 비교표의 세 줄 이름 — 🔴 CEO 판단 기준(§5-D)의 **핵심 식별 조합** 과 같은 순서다. */
+export const REVIEW_COMPARE_AXES = ["BRAND", "MODEL_CODE", "TITLE"] as const;
+export type ReviewCompareAxis = (typeof REVIEW_COMPARE_AXES)[number];
+export const REVIEW_COMPARE_AXIS_LABEL: Record<ReviewCompareAxis, string> = {
+  BRAND: "브랜드",
+  /** 🔴 「제조사 품번」이라 적지 않는다 — 출처가 `sku` 다. */
+  MODEL_CODE: "품번(SKU)",
+  TITLE: "상품명",
+};
+
+export const REVIEW_ORIGIN_COLUMN = "원상품";
+export const REVIEW_CANDIDATE_COLUMN = "후보";
+/**
+ * 🔴 **시장을 확정하지 못한 후보의 구역 이름.** 🔴 「국내」·「해외」로 **옮겨 적지 않는다**
+ *    (`classifyCandidateMarket` 은 증거가 일치할 때만 단정한다 — 승격 금지).
+ * 🟢 그 구역이 있어야 **합이 전체** 가 된다 ⟹ 검토 대기에서 **누락이 0** 이다.
+ */
+export const REVIEW_UNRESOLVED_MARKET_HEADING = "시장 미확정 후보";
+/** 🟢 원문 확인 통로 — 🔴 「동일상품」·「확정」 같은 판정 어휘를 쓰지 않는다. */
+export const REVIEW_OPEN_PAGE_TEXT = "판매처 페이지 열기";
+/** 🔴 값이 **화면에 도달하지 않은 것** 과 「판매처에 없다」를 가른다. */
+export const REVIEW_VALUE_UNKNOWN = "확인 불가";
+/**
+ * 🔴🔴 **후보 쪽 브랜드·품번 «원값» 은 지금 응답에 없다.** 행 계약
+ *    (`GeminiTransientRow`)에 그 칸이 **없고**(서버 `GeminiTransientEvidence` 도 없다)
+ *    이번 범위는 화면 배선이라 **응답 계약을 바꾸지 않았다**(새 API 0 · CPO 금지).
+ * 🟢 그래서 후보 쪽은 **판정이 이미 낸 축 문장** 을 그대로 보여준다 — 그 문장이
+ *    「브랜드 A ↔ B」·「품번 exact」처럼 **두 값을 같이 들고 있다**(WU-013 실측).
+ * 🔴 빈 칸을 「후보에 브랜드가 없다」로 읽히게 두지 않는다 — 이 문장이 그것을 막는다.
+ */
+export const REVIEW_CANDIDATE_VALUE_NOT_IN_RESPONSE =
+  "후보 쪽 원값은 이번 응답에 없습니다 — 아래 판정 근거 문장으로 확인하십시오";
+
+
+/**
+ * 🔁 `REVIEW_QUEUE_EMPTY` 와 **다른 문장** 이다 — 조회가 아직 돌지 않았을 때.
+ * 🔴 「후보 없음」과 「조회 안 함」을 같은 말로 만들지 않는다(WU-130 ② 계약).
+ */
+export const REVIEW_QUEUE_NOT_CHECKED = "아직 조회하지 않았습니다";
+
 /**
  * 🔴 「조회하지 않았다」로 읽히지 않게 **왜** 없는지를 적는다.
  *

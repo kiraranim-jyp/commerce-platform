@@ -3789,6 +3789,36 @@ export function CommerceWorkspace({
              */
             snapshotId={snapshotId}
             /**
+             * ════════════════════════════════════════════════════════════════
+             * 🔵🔵🔵 MI-IDENTITY-REVIEW-COMPLETION-02 — **원상품 식별 세 칸**
+             * ════════════════════════════════════════════════════════════════
+             *
+             * 🔴🔴 이 한 줄이 비교목록표의 **마지막 배선 공백** 이었다 — 선택기·검토 훅·
+             *    후보 쪽 재료는 전부 이미 있었고 「원상품 쪽 값」만 그 컴포넌트에
+             *    도달하지 않아 **「나란히」가 성립하지 않았다**.
+             * 🟢 **이 자리가 이미 아는 값** 이다(`product`) — 새 fetch 0 · 새 state 0 ·
+             *    서버 응답 변경 0 · 값 생성 0.
+             * 🔴 `modelCode` 는 `sku` 다 — 받는 쪽 라벨이 **「품번(SKU)」** 이고
+             *    「제조사 품번」으로 단정하지 않는다(§5-D-2 의 그 주의).
+             * 🔴 `description` 은 **표시 근거 추출 전용** 이다 — 운영 SAME 판정 연결 0.
+             * 🔴 빈 문자열을 `null` 로 **접지 않는다** — 받는 쪽이 `trim()` 으로 가른다
+             *    (여기서 접으면 「없다」와 「모른다」의 구분이 호출부로 흩어진다).
+             */
+            originIdentity={{
+              /**
+               * 🔴🔴 **옵셔널 접근이다 — 그 이유를 적는다.** 1차 구현이 `product.sku.value`
+               *    처럼 바로 읽었고, **레거시 스냅샷에 그 칸이 없는** 경로에서 `TypeError` 가
+               *    나 **페이지가 통째로 안 떴다**(`golf01-wire-page-chain` 3 FAIL —
+               *    「해외 조회가 한 번도 나가지 않았다」). 🟢 회귀가 잡았다.
+               * 🔴 `?? null` 은 **「모른다」** 다 — 값을 지어내는 폴백이 아니다.
+               *    받는 쪽이 그 `null` 을 **「확인 불가」** 로 화면에 적는다.
+               */
+              brand: product.brand?.value ?? null,
+              modelCode: product.sku?.value ?? null,
+              title: product.title?.value ?? null,
+              description: product.description?.value ?? null,
+            }}
+            /**
              * 🔵🔵 CORE-E2E-CLOSE-05 — **패널의 기존 `recheckNow`** 를 그대로 내려보낸다.
              * 🔴 여기서 `/check` 를 부르지 않는다 — 새 호출부·새 API **0**(CPO §3).
              * 🔴 자동 재조회 **0** — 셀러가 버튼을 누를 때만 발생한다.

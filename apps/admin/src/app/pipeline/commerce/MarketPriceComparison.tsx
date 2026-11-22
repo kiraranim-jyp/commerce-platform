@@ -2,6 +2,22 @@
 
 import type { JSX } from "react";
 import { OverseasReferencePrice } from "./OverseasReferencePrice";
+/**
+ * 🔵🔵 MI-IDENTITY-REVIEW-COMPLETION-02 — **상세설명 근거는 «표시 전용 어댑터» 로만 온다.**
+ * 🔴 추출기를 이 파일이 직접 부르지 않는다 — 경계가 파일 이름에 있어야 다음 사람이
+ *    「판정에 연결됐다」로 읽지 않는다(CPO 가 두 번 거부한 그 연결).
+ */
+/**
+ * 🔵 REV-02 — 🔴 **토큰의 「말」 owner 는 이 파일 하나다.** 비교표가 `BRAND_UNCONFIRMED`
+ *    같은 내부 토큰을 **그대로 내보내지 않는다**(실제로 그렇게 했다가 회귀가 잡았다).
+ */
+import { identityAxisDifferenceTexts } from "./blocker-text";
+import {
+  DESCRIPTION_EVIDENCE_HEADING,
+  DESCRIPTION_EVIDENCE_SCOPE,
+  DESCRIPTION_EVIDENCE_STATE_LABEL,
+  originDescriptionEvidence,
+} from "./origin-description-evidence";
 import {
   DOMESTIC_REFERENCE_NOTE,
   DOMESTIC_REFERENCE_SCOPE,
@@ -80,6 +96,29 @@ import {
    * 🔴 가격 축(`selectMiSameCandidates`)과 **다른 함수** 다 — 그 정책은 변경 0.
    */
   selectCandidateList,
+  /**
+   * 🔵🔵🔵 MI-IDENTITY-REVIEW-COMPLETION-02 — **비교목록표(검토 대기) 선택기와 어휘.**
+   * 🔴 **다시 만들지 않는다** — REV-01 이 배포한 그 선택기 하나다(CPO 명시).
+   * 🔴 `selectCandidateList`(셀러 노출 축)와 **다른 함수** 다 — 그 정책은 변경 0.
+   */
+  selectReviewQueue,
+  REVIEW_QUEUE_HEADING,
+  REVIEW_QUEUE_NOTE,
+  REVIEW_QUEUE_EMPTY,
+  REVIEW_QUEUE_NOT_CHECKED,
+  REVIEW_REASON_LABEL,
+  REVIEW_COMPARE_AXES,
+  REVIEW_COMPARE_AXIS_LABEL,
+  REVIEW_ORIGIN_COLUMN,
+  REVIEW_CANDIDATE_COLUMN,
+  REVIEW_VALUE_UNKNOWN,
+  REVIEW_CANDIDATE_VALUE_NOT_IN_RESPONSE,
+  REVIEW_UNRESOLVED_MARKET_HEADING,
+  REVIEW_OPEN_PAGE_TEXT,
+  type OriginIdentity,
+  type ReviewCompareAxis,
+  /** 🔴 후보 목록과 **같은 union** 이다 — 비교목록표가 자기 시장 축을 만들지 않는다. */
+  type CandidateListScope,
   /**
    * 🔵 UNIFIED-UX-1 ⑧ — 🔴 **화면이 자기 규칙을 만들지 않는다.** 자격 술어는
    *    집계기와 같은 owner 이고 어휘도 `mi-same-candidates` 가 소유한다.
@@ -317,6 +356,23 @@ export interface MarketPriceComparisonProps {
    */
   snapshotId?: string | null;
   /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MI-IDENTITY-REVIEW-COMPLETION-02 — **원상품 식별 세 칸(비교의 왼쪽)**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 **이 prop 하나가 비교목록표를 막고 있던 유일한 배선 공백이었다**(REV-02 조사).
+   *    선택기(`selectReviewQueue`)·검토 훅(`useCandidateReview`)·후보 쪽 표시 재료는
+   *    **전부 이미 있었고**, 「원상품 쪽 값」만 이 컴포넌트에 도달하지 않았다 ⟹
+   *    그래서 「나란히」가 성립하지 않았다.
+   *
+   * 🔴 호출부(`CommerceWorkspace`)가 **이미 아는 값** 을 내려보낸다 — 새 fetch 0 ·
+   *    새 state 0 · 서버 응답 변경 0 · 값 생성 0.
+   * 🔴 **optional 이다** — 없으면 비교표의 원상품 칸이 「확인 불가」로 선다(영역은 선다).
+   *    🟢 후보 쪽 근거는 원상품 값과 **무관하게** 보이므로 영역을 죽이지 않는다.
+   * 🔴 **판정에 들어가지 않는다** — `selectReviewQueue` 는 이 값을 인자로 받지 않는다.
+   */
+  originIdentity?: OriginIdentity | null;
+  /**
    * 🔵🔵🔵 CORE-E2E-CLOSE-05 — **셀러가 직접 다시 조회한다.**
    * 🔴 재진입하면 `/check` 가 돌지 않아 `rows` 가 null 이고 이 영역이 통째로
    *    사라졌다(CEO Production FAIL). 🟢 그 복구 수단을 **여기** 에 둔다.
@@ -494,6 +550,8 @@ export interface MarketPriceComparisonProps {
 export function MarketPriceComparison({
   rows,
   snapshotId,
+  /** 🔵 REV-02 — 원상품 식별 세 칸(표시 전용 · 없으면 「확인 불가」). */
+  originIdentity = null,
   onRecheck,
   rechecking = false,
   /** 🔵 A — 서버가 낸 국내↔해외 비교값(표시 전용 · 없으면 줄을 그리지 않는다). */
@@ -1274,6 +1332,30 @@ export function MarketPriceComparison({
           onConfirmPriceKrw={onConfirmPriceKrw}
         />
         </div>
+
+      {/**
+       * ══════════════════════════════════════════════════════════════════════
+       * 🔵🔵🔵 MI-IDENTITY-REVIEW-COMPLETION-02 — **비교목록표가 화면에 선다**
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * 🔴🔴 REV-01 은 선택기(`selectReviewQueue`)까지였다 — CPO 판정: **「선택기를 만든
+       *    것과 사용자가 실제로 비교목록표를 쓰는 것은 전혀 다른 단계」**. 이 블록이 그 단계다.
+       *
+       * 🔴 **접힘 안에 둔다 · `open` 을 붙이지 않는다.** 두 이유다:
+       *    ⒜ 1차는 **판단** 자리다(§5-D · CORE-UX 고정 순서 ①판매판단 →②권장가 →③근거)
+       *    ⒝ 펼쳐 두면 **보류 후보가 「유력 후보」로 읽힌다** — 2026-09-19 사고의 기전이다
+       *       (WU-091 ① · 그래서 후보 구역은 전부 접힘이다).
+       * 🟢 `summary` 는 1차에 선다 ⟹ 「검토할 것이 N건 있다」는 **숨지 않는다**.
+       *
+       * 🔴 **이 영역이 하지 않는 것**:
+       * ```
+       * ❌ 승격 — 보류/차단/UNKNOWN 을 SAME 으로 바꾸지 않는다(선택기가 tier 를 읽기만 한다)
+       * ❌ 가격 집계 · 환산 · 금액 결론 — 금액 owner 가 아니다
+       * ❌ 새 API · 새 저장 경로 — 검토 저장은 **기존 `useCandidateReview` 하나** 다
+       * ❌ 입력칸 — `core-2s D-3`(「셀러에게 글쓰기를 요구하지 않는다」)이 막고 그 계약이 맞다
+       * ```
+       */}
+      <ReviewQueueSection rows={rows} originIdentity={originIdentity} />
 
       {/**
        * ══════════════════════════════════════════════════════════════════════
@@ -2198,6 +2280,209 @@ function MarketBlock({
  * 🔴 저장은 **기존 흐름** 이다(`useCandidateReview` → `candidate-reviews` POST) —
  *    새 API 0 · 중복 구현 0.
  */
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 MI-IDENTITY-REVIEW-COMPLETION-02 — **비교목록표 본체**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 **선택기를 다시 만들지 않는다** — `selectReviewQueue`(REV-01 배포분) 하나를 부른다.
+ * 🔴 **검토 저장을 다시 만들지 않는다** — `CandidateSelect` + `useCandidateReview` 그대로다
+ *    (새 API 0 · `source` 는 그 경로가 이미 들고 있다 · 079 CHECK 확장 0).
+ * 🔴 **값을 만들지 않는다** — 원상품은 prop, 후보는 행이 들고 온 값과 판정이 낸 축 문장이다.
+ */
+function ReviewQueueSection({
+  rows,
+  originIdentity,
+}: {
+  rows?: readonly GeminiTransientRow[] | null;
+  originIdentity: OriginIdentity | null;
+}): JSX.Element | null {
+  /**
+   * 🔴 `null` = **조회가 아직 돌지 않았다.** 그 상태에서 「검토 대기 0건」이라 적으면
+   *    「확인했는데 없다」로 읽힌다 — 두 사실은 다르다(WU-130 ② 계약과 같은 축).
+   * 🟢 그래서 그때는 **영역을 그리지 않는다**(빈 결론을 만들지 않는다).
+   */
+  if (rows == null) return null;
+
+  /**
+   * 🔴🔴 **state 가 없다.** 1차 구현은 시장 필터를 `useState` 로 했고 기존 계약
+   *    `core-ux-seller-01 UX-06-d`(「이 영역에 **state 는 0**」 · 「생기면 UX 조립을
+   *    넘은 것이다 — STOP 조건」)가 **FAIL** 했다. 🟢 그 가드가 맞다.
+   * 🟢 그래서 필터를 **버튼이 아니라 시장별 구역** 으로 바꿨다 — 같은 비교가 되고
+   *    상태·클릭·복원이 **전부 없어진다**(그리고 세 시장이 한눈에 같이 보인다).
+   * 🔴 세 구역은 **서로 겹치지 않고 합이 전체** 다 — `rowInScope` 가 `market === scope`
+   *    이므로 `UNKNOWN` 은 국내·해외 어디에도 들지 않는다 ⟹ 그 차집합이 ③이다.
+   */
+  const all = selectReviewQueue(rows, "ALL");
+  const kr = selectReviewQueue(rows, "KR");
+  const overseas = selectReviewQueue(rows, "OVERSEAS");
+  const placed = new Set([...kr, ...overseas].map((e) => e.row.discoveredUrl));
+  const unresolved = all.filter((e) => !placed.has(e.row.discoveredUrl));
+
+  /** 🔴 원상품 상세설명 원문이 화면에 없으면 **빈 배열** 이고 영역을 그리지 않는다. */
+  const evidence = originDescriptionEvidence(originIdentity);
+
+  const originValue = (axis: ReviewCompareAxis): string | null => {
+    if (!originIdentity) return null;
+    if (axis === "BRAND") return originIdentity.brand;
+    if (axis === "MODEL_CODE") return originIdentity.modelCode;
+    return originIdentity.title;
+  };
+
+  const groups: { key: CandidateListScope | "UNRESOLVED"; label: string; items: typeof all }[] = [
+    { key: "KR", label: CANDIDATE_LIST_HEADING.KR, items: kr },
+    { key: "OVERSEAS", label: CANDIDATE_LIST_HEADING.OVERSEAS, items: overseas },
+    { key: "UNRESOLVED", label: REVIEW_UNRESOLVED_MARKET_HEADING, items: unresolved },
+  ];
+
+  return (
+    <details data-testid="mi-review-queue" className="mt-3 rounded border border-border/60">
+      <summary
+        data-testid="mi-review-queue-summary"
+        className="cursor-pointer px-2 py-1 text-[11px] font-medium text-text-secondary"
+      >
+        {REVIEW_QUEUE_HEADING} {all.length}건
+      </summary>
+      <div className="px-2 pb-2">
+        <p data-testid="mi-review-queue-note" className="text-[11px] text-text-tertiary">
+          {REVIEW_QUEUE_NOTE}
+        </p>
+        {evidence.length > 0 && (
+          <div data-testid="mi-review-origin-evidence" className="mt-1">
+            <p className="text-[11px] font-medium text-text-secondary">{DESCRIPTION_EVIDENCE_HEADING}</p>
+            {/** 🔴🔴 이 한 줄을 지우면 다음 사람이 이 값을 판정 근거로 읽는다. */}
+            <p data-testid="mi-review-origin-evidence-scope" className="text-[11px] text-text-tertiary">
+              {DESCRIPTION_EVIDENCE_SCOPE}
+            </p>
+            {evidence.map((line) => (
+              <p
+                key={line.axis}
+                data-testid="mi-review-origin-evidence-line"
+                className="text-[11px] text-text-tertiary"
+              >
+                {REVIEW_COMPARE_AXIS_LABEL[line.axis]} — {DESCRIPTION_EVIDENCE_STATE_LABEL[line.state] ?? line.state}
+                {line.observed ? ` · ${line.observed}` : ""}
+              </p>
+            ))}
+          </div>
+        )}
+        {all.length === 0 ? (
+          <p data-testid="mi-review-queue-empty" className="mt-1 text-[11px] text-text-tertiary">
+            {REVIEW_QUEUE_EMPTY}
+          </p>
+        ) : (
+          groups.map((g) => (
+            <div key={g.key} data-testid={`mi-review-group-${g.key.toLowerCase()}`} className="mt-2">
+              {/** 🔴 **빈 구역을 그리지 않는다** — 「국내 0건」 머리말만 서면 조회 실패로 읽힌다. */}
+              {g.items.length === 0 ? null : (
+                <>
+                  <p className="text-[11px] font-medium text-text-secondary">
+                    {g.label} {g.items.length}건
+                  </p>
+                  {g.items.map(({ row, reasons }) => (
+                    <article
+                      key={row.discoveredUrl}
+                      data-testid="mi-review-row"
+                      className="mt-1 border-t border-border/40 pt-1"
+                    >
+                      <p className="text-[11px] font-medium text-text-secondary">{row.domain}</p>
+                      {/** 🟢 **왜 자동으로 못 닫혔는가** — 선별기가 낸 사유를 그대로 적는다(새 판정 0). */}
+                      <div data-testid="mi-review-reasons" className="mt-0.5 flex flex-wrap gap-1">
+                        {reasons.map((r) => (
+                          <span
+                            key={r}
+                            data-testid="mi-review-reason"
+                            className="rounded bg-surface-2 px-1 py-0.5 text-[10px] text-text-tertiary"
+                          >
+                            {REVIEW_REASON_LABEL[r]}
+                          </span>
+                        ))}
+                      </div>
+                      {/**
+                        * 🔵 **나란히 비교** — 세 축이 **같은 줄에서** 원상품 ↔ 후보로 선다.
+                        *
+                        * 🔴🔴 후보 칸에 **진단 문장을 쓰지 않는다.** 1차 구현이 `matchReasons`
+                        *    (「모델명 유사도 60%」 같은 문장)를 그대로 뿌렸고 기존 계약
+                        *    `cand-02 R2-05`(「진단 문장이 카드에 출력되지 않는다」)가 **FAIL** 했다.
+                        *    🟢 그 가드가 맞다 — 그 문장은 사람이 읽을 비교 근거가 아니다.
+                        * 🟢 그래서 **축별 차이만** 셀러의 말로 적는다(owner `blocker-text.ts`).
+                        * 🔴 후보의 브랜드·품번 **원값은 응답에 없다** ⟹ 차이도 없으면 그 사실을
+                        *    적는다. 🔴 빈 칸을 「후보에 브랜드가 없다」로 읽히게 두지 않는다.
+                        */}
+                      <table data-testid="mi-review-compare" className="mt-1 w-full table-fixed text-left text-[11px]">
+                        <thead>
+                          <tr className="text-text-tertiary">
+                            <th className="w-20 font-normal" />
+                            <th className="font-normal">{REVIEW_ORIGIN_COLUMN}</th>
+                            <th className="font-normal">{REVIEW_CANDIDATE_COLUMN}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {REVIEW_COMPARE_AXES.map((axis) => {
+                            const ov = originValue(axis);
+                            const diffs = identityAxisDifferenceTexts(row, axis);
+                            const candidate =
+                              axis === "TITLE"
+                                ? (row.title ?? null)
+                                : diffs.length > 0
+                                  ? diffs.join(" · ")
+                                  : null;
+                            return (
+                              <tr
+                                key={axis}
+                                data-testid={`mi-review-axis-${axis.toLowerCase()}`}
+                                className="align-top"
+                              >
+                                <th scope="row" className="font-normal text-text-tertiary">
+                                  {REVIEW_COMPARE_AXIS_LABEL[axis]}
+                                </th>
+                                <td data-testid="mi-review-origin-value" className="text-text-secondary">
+                                  {ov && ov.trim().length > 0 ? ov : REVIEW_VALUE_UNKNOWN}
+                                </td>
+                                <td data-testid="mi-review-candidate-value" className="text-text-secondary">
+                                  {candidate && candidate.trim().length > 0
+                                    ? candidate
+                                    : axis === "TITLE"
+                                      ? REVIEW_VALUE_UNKNOWN
+                                      : REVIEW_CANDIDATE_VALUE_NOT_IN_RESPONSE}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                      {/**
+                        * 🔴🔴 **판정 버튼을 두지 않았다 — 그것이 CPO 승인 ⒝ 의 되돌림이다.**
+                        *    기존 계약 셋이 그 제거를 담고 있다(`core-e2e-close-04` 「선택 UI 제거 ·
+                        *    저장 «경로» 보존」 · `sourcing-candidate-unified-ux-1 V-1/V-2` ·
+                        *    `stage2-evidence-recovery D2-3` 「사람 판정은 셀러 카드에 표시되지
+                        *    않는다」). 🔴 CTO 가 그 제품 결정을 스스로 뒤집지 않는다(§3).
+                        * 🟢 저장 **경로는 살아 있다**(`useCandidateReview` → `candidate-reviews`) —
+                        *    버튼을 되살릴지는 **CPO 판정 사안** 으로 올린다.
+                        * 🟢 지금 이 영역이 주는 것은 **비교와 판단 근거** 다 — 원상품 ↔ 후보 세 축 ·
+                        *    보류 사유 · 원문 통로.
+                        */}
+                      <a
+                        href={row.discoveredUrl}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        data-testid="mi-review-open-page"
+                        className="mt-0.5 inline-block text-[11px] text-accent underline"
+                      >
+                        {REVIEW_OPEN_PAGE_TEXT}
+                      </a>
+                    </article>
+                  ))}
+                </>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </details>
+  );
+}
+
 function CandidateSelect({
   row,
   api,
