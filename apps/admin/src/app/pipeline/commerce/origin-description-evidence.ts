@@ -1,26 +1,34 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
- * 🔵🔵🔵 MI-IDENTITY-REVIEW-COMPLETION-02 — **원상품 상세설명 근거(표시 전용)**
+ * 🔴🔴🔴 MI-IDENTITY-REVIEW-COMPLETION-02 — **상세설명 근거는 «지금» 불가능하다**
  * ═══════════════════════════════════════════════════════════════════════════════
  *
- * 🔴🔴 **이 파일은 판정에 들어가지 않는다.** 이름을 그렇게 지었다 —
- *    `origin-description-evidence` 는 **화면 어댑터** 이고, 운영 판정 owner 셋
- *    (`product-url-facts.ts` · `cross-seller.ts` · `seller-facts.ts`)은 이 모듈도
- *    추출기도 **import 하지 않는다**(`sprint3-gate-gt-precision F-1` 가 그것을 문다).
- *    🟢 그 계약의 범위는 **그 셋** 이고, 화면이 추출기를 읽는 것은 금지가 아니다.
+ * 🔴🔴 **이 어댑터가 빈 배열을 돌려준다. 그 이유가 이 WU 의 중요한 발견이다.**
  *
- * 🔴 CPO 가 **두 번** 거부한 것은 「상세설명 브랜드·상품명을 **운영 SAME 판정에 연결**」
- *    이다. 🟢 승인된 것은 「추출해서 **식별 근거로 보여주기**」다 ⟹ 이 파일이 그 경계다.
+ * 1차 구현은 상세설명 추출기 둘을 import 해 원상품의 브랜드·상품명 근거를 보여줬고
+ * **로컬 build 는 exit 0** 이었다. 그런데 **Production 배포가 실패했다**:
+ * ```
+ * Module not found: @commerce/crawler/src/comparison-search/brand-description-evidence
+ * Module not found: @commerce/crawler/src/comparison-search/product-name-description-evidence
+ * ```
+ * 🔴 원인 — **그 두 파일이 git 에 커밋되어 있지 않다**(`git ls-files` 전수 확인 ·
+ *    작업트리에만 있는 untracked 파일이다). Vercel 은 저장소에서 빌드하므로 **없다**.
  *
- * 🔴 **원상품 쪽만** 할 수 있다 — 후보의 상세설명 원문은 응답(`GeminiTransientRow`)에
- *    **없다**. 그 공백을 「후보에 상세설명이 없다」로 적지 않는다(§REVIEW 어휘가 말한다).
+ * 🔴🔴 **그래서 헌장 §5-D 의 「상세설명 증거 «추출» 은 구현돼 있다(302줄 · 310줄)」는
+ *    «로컬 작업트리» 에서만 참이다.** 저장소 기준으로는 **존재하지 않는다.**
  *
- * 🔴 네트워크 0 · DB 0 · state 0 — 두 추출기는 **순수 함수** 다.
+ * 🔴 **CTO 는 그 파일을 커밋하지 않았다** — 사용자 작업물이고 CTO 작업물이 아니다
+ *    (헌장 §4-D 「사용자 수정 파일을 덮어쓰거나 재작성하지 않는다」).
+ *    🔵 커밋 여부는 **그 파일 소유자 / CPO 판단** 이다.
+ *
+ * 🟢 그래서 **화면의 다른 부분은 그대로** 두고 이 축만 비웠다 — 원상품 ↔ 후보 세 축
+ *    비교 · 보류 사유 · 원문 통로는 **전부 작동한다**(소비처가 한 곳이라 가능했다).
+ * 🟢 그 파일들이 커밋되면 **이 파일만** 되살리면 된다.
+ *
+ * 🔴 되살릴 때도 **표시 전용** 이어야 한다 — 「상세설명으로 운영 SAME 판정을 바꾼다」는
+ *    CPO 가 **두 번** 거부했다.
  * ═══════════════════════════════════════════════════════════════════════════════
  */
-import { analyzeBrandDescriptionEvidence } from "@commerce/crawler/src/comparison-search/brand-description-evidence";
-import { analyzeProductNameDescriptionEvidence } from "@commerce/crawler/src/comparison-search/product-name-description-evidence";
-
 import type { OriginIdentity } from "./mi-same-candidates";
 
 /** 🟢 네 상태의 **사람 말**. 🔴 「확정」이라는 말을 쓰지 않는다 — 관찰 결론이다. */
@@ -35,6 +43,7 @@ export const DESCRIPTION_EVIDENCE_HEADING = "원상품 상세설명 근거";
 /**
  * 🔴🔴 **이 한 줄이 이 영역의 안전장치다.** 없으면 다음 사람이 이 값을 판정 근거로
  *    읽는다 — 그것이 CPO 가 두 번 거부한 그 연결이다.
+ * 🟢 추출기가 저장소에 돌아오면 **문장을 다시 쓰지 않아도** 된다(상수는 살아 있다).
  */
 export const DESCRIPTION_EVIDENCE_SCOPE =
   "상세설명에서 읽은 관찰값입니다 — 동일상품 자동 판정에는 사용되지 않습니다.";
@@ -50,25 +59,14 @@ export interface OriginDescriptionEvidenceLine {
 }
 
 /**
- * 🟢 원상품의 (상품명 + 상세설명)에서 **브랜드·상품명 근거** 를 뽑아 화면 줄로 만든다.
- *
- * 🔴 `description` 이 없으면 **빈 배열** 이다 — 「UNKNOWN」 줄을 만들지 않는다.
- *    근거가 없는데 영역을 그리면 셀러는 「찾아봤지만 없다」로 읽고, 실제로는
- *    **원문 자체가 화면에 없었던** 것이다(두 사실은 다르다).
+ * 🔴 **지금은 항상 빈 배열이다** — 추출기가 저장소에 없다(위 머리말).
+ * 🟢 화면은 빈 배열이면 **영역을 그리지 않는다** ⟹ 「찾아봤지만 근거가 없다」는
+ *    거짓말을 하지 않는다. 없는 것은 **근거가 아니라 추출기** 다.
+ * 🔴 여기서 추출기를 **새로 구현하지 않았다** — CPO 가 「기존 것을 재사용」하라고
+ *    했고, 새로 쓰면 그것은 **두 번째 추출기** 가 된다(갈라지는 날이 온다).
  */
 export function originDescriptionEvidence(
-  identity: OriginIdentity | null | undefined,
+  _identity: OriginIdentity | null | undefined,
 ): OriginDescriptionEvidenceLine[] {
-  if (!identity) return [];
-  const description = identity.description ?? null;
-  if (!description || description.trim().length === 0) return [];
-
-  const input = { title: identity.title, description };
-  const brand = analyzeBrandDescriptionEvidence(input);
-  const name = analyzeProductNameDescriptionEvidence(input);
-
-  return [
-    { axis: "BRAND", state: brand.state, observed: brand.corroborated, reasons: brand.reasons },
-    { axis: "TITLE", state: name.state, observed: name.corroborated, reasons: name.reasons },
-  ];
+  return [];
 }

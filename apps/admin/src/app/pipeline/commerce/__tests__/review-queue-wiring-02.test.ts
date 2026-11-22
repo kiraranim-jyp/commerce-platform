@@ -467,16 +467,35 @@ describe("REV-02 F — 상세설명 근거는 표시 전용이다", () => {
     description: "Brand : Bobo Choses\nProduct name : Pop sweatshirt\n100% organic cotton",
   };
 
-  it("F-1 🟢 상세설명이 있으면 근거 줄이 서고 **범위 문장이 같이** 선다", () => {
+  /**
+   * 🔴🔴 **1차 구현은 추출기를 import 했고 Production 배포가 실패했다** —
+   *    `Module not found: @commerce/crawler/.../brand-description-evidence`.
+   *    원인은 그 두 파일이 **git 에 커밋되지 않은 작업트리 파일** 이라는 것이다
+   *    (로컬 build 는 exit 0 이었다 ⟹ **로컬 PASS 가 배포 PASS 가 아니다**).
+   * 🔴 CTO 는 사용자 파일을 커밋하지 않았다 ⟹ 이 축은 **지금 비어 있다**.
+   * 🟢 그래서 단언을 **그 사실로** 바꿨다 — 「없는 것은 근거가 아니라 추출기다」.
+   */
+  it("F-1 🔴🔴 추출기가 저장소에 없으므로 **근거 영역을 그리지 않는다**(상세설명이 있어도)", () => {
     const host = mount({ rows: realRows(), originIdentity: ORIGIN_WITH_DESC });
-    expect(host.querySelector('[data-testid="mi-review-origin-evidence"]')).not.toBeNull();
-    expect(text(host.querySelector('[data-testid="mi-review-origin-evidence-scope"]'))).toBe(
-      DESCRIPTION_EVIDENCE_SCOPE,
-    );
     expect(
-      q(host, '[data-testid="mi-review-origin-evidence-line"]').length,
-      "🔴 근거 줄이 없다",
-    ).toBeGreaterThan(0);
+      host.querySelector('[data-testid="mi-review-origin-evidence"]'),
+      "🔴 근거 없이 영역이 섰다 — 「찾아봤지만 없다」는 거짓이다",
+    ).toBeNull();
+  });
+
+  it("F-1b 🔴 어댑터가 **저장소에 없는 모듈을 import 하지 않는다**(배포가 깨진다)", () => {
+    const SRC = readFileSync(join(__dirname, "..", "origin-description-evidence.ts"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "");
+    /** 🔴 주석을 벗긴 뒤에 본다 — 머리말이 그 모듈 이름을 **설명으로** 적는다. */
+    for (const banned of ["brand-description-evidence", "product-name-description-evidence"]) {
+      expect(SRC, `🔴 커밋되지 않은 모듈을 import 한다: ${banned}`).not.toContain(banned);
+    }
+  });
+
+  it("F-1c 🟢 되살릴 자리는 **한 곳** 이다 — 화면은 어댑터만 본다", () => {
+    const SRC = readFileSync(join(__dirname, "..", "MarketPriceComparison.tsx"), "utf8");
+    expect(SRC, "🔴 화면이 추출기를 직접 부른다").not.toContain("analyzeBrandDescriptionEvidence");
+    expect(SRC, "🔴 어댑터 배선이 사라졌다").toContain("originDescriptionEvidence(originIdentity)");
   });
 
   it("F-2 🔴🔴 범위 문장이 **「판정에 쓰이지 않는다」를 직접 말한다**", () => {
