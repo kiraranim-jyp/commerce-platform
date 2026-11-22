@@ -5,7 +5,17 @@
 ### ① 지금 좌표 — 🔴 **CTO 가 할 작업이 «없다». 새 WU 를 스스로 만들지 않는다**
 
 ```
-직전 작업   🟢🟢 **`MI-FINAL-COMPLETION-01` — 상품 하나가 ③~⑧ 을 «끝까지» 돈다**(§0-FIN01)
+직전 작업   🟡🟡 **`MI-IDENTITY-REVIEW-COMPLETION-01` — P0-4 비교목록표 «선택기» 구현·배포**(§0-REV01)
+            🟢 `selectReviewQueue` 신설 — 셀러 리스트가 **의도적으로 제외** 하는 후보
+               (CONFLICT · 등급 없음 · Evidence 없는 UNKNOWN)를 **사람이 볼 창구** 로 모은다
+            🟢 사유 다섯 — 판단 불가 · 추가 확인 · 자동 판정 차단 · 근거 충돌 · 식별정보 부족
+            🔴 **판정 승격 0** · 셀러 화면 **불변** · 정책/가격/DB **0**
+            🔴🔴 **상세설명 브랜드·상품명의 «운영 판정 연결» 은 하지 않았다** —
+               `brand-1-description-evidence.test.ts:256` 이 **계약으로 금지** 하고
+               해제 조건이 **GT 정밀도 재측정** 인데 그 분모가 **없다**(§0-REV01 ③)
+            🟢 상세설명 **품번** 은 `MLLC-01` 로 **이미 연결·배포** 돼 있다(seller-facts.ts:412)
+            🔴 **화면 배선·E2E·성능 측정은 미완** — §0-REV01 ④
+그 전 작업   🟢🟢 **`MI-FINAL-COMPLETION-01` — 상품 하나가 ③~⑧ 을 «끝까지» 돈다**(§0-FIN01)
             🟢 운영 스냅샷 `25a3bba7`(EUR 62 · 후보 10 전건 판정)으로 운영 owner E2E
             🟢 ④⑤ 가격 집계 실제 산출 EUR 62 · GBP 58 · 차단축 7건 영향 **0**
             🟢🟢 ⑥ **시장 미확정 3건**(그중 **SAME·EXACT 1**) ⟹ D 축이 **실데이터에서 발화**
@@ -280,6 +290,82 @@ cd apps/admin && npx vitest run \
 ```
 docs/START-HERE.md §0-NOW → docs/NEXT-SESSION-B38.md §0-HANDOFF 를 읽고 시작해.
 CTO 작업은 없는 상태다 — 다음 범위를 지정해 주면 그 범위만 한 묶음으로 수행해.
+```
+
+---
+
+## 🟡🟡🟡 §0-REV01. **[2026-11-22] `MI-IDENTITY-REVIEW-COMPLETION-01` — P0-4 구현 · 나머지 미완**
+
+🔴 **다시 조사하지 않는다.** 🟢 커밋 `5cc78592` · 정책 **0** · 판정 **0** · DB **0** · 셀러 화면 **0**.
+
+### ① 🟢 한 것 — **비교목록표 선택기**(P0-4 의 핵심)
+
+```
+🔴 고친 문제 — 셀러용 `selectCandidateList` 는 `CONFLICT` · 등급 없음 ·
+   Evidence 없는 `UNKNOWN` 을 **의도적으로 제외** 한다(2026-09-19 사고 방지 장치).
+   그 규칙은 셀러 화면에서 **맞다**. 🔴 그런데 **CPO·CEO 가 판단해야 하는 후보가
+   정확히 그 제외분** 이다 ⟹ **사람이 볼 창구가 없었다.**
+🟢 `selectReviewQueue(rows, scope)` — 같은 `rows` · 같은 판정값 · **승격 0**
+   사유 다섯  판단 불가 · 추가 확인 필요 · 자동 판정 차단 · 근거 충돌 · 핵심 식별정보 부족
+   제외       확정 `SAME`(자동 판정이 끝났다) · 근거가 하나도 없는 행
+   scope      `CandidateListScope` **그대로**(전체/국내/해외 공용) · 같은 URL 한 번만
+🔴 셀러용 선택기를 **한 글자도 바꾸지 않았다**(그 화면은 그대로다).
+```
+
+### ② 🟢 상세설명 — **품번은 이미 연결·배포돼 있다**
+
+```
+🟢 `seller-facts.ts:412`  brandModelCode: extractLabeledProductCode(input.description) ?? null
+   ⟹ **상세설명의 라벨 붙은 품번이 판정 입력으로 들어간다**(MLLC-01 · 배포 완료)
+🟢 브랜드·상품명 추출기도 **구현돼 있다** —
+   `brand-description-evidence.ts`(302줄) · `product-name-description-evidence.ts`(310줄)
+```
+
+### ③ 🔴🔴 **하지 «않은» 것과 그 이유 — 상세설명 브랜드·상품명의 운영 판정 연결**
+
+```
+🔴 `packages/crawler/src/comparison-search/__tests__/brand-1-description-evidence.test.ts:256`
+   expect(read(owner)).not.toContain("brand-description-evidence")
+   ⟹ **운영 owner 소스에 그 이름이 있으면 FAIL** 한다(계약으로 잠겨 있다)
+🔴 금지 사유(CLAUDE.md §5-D) — `COLOR_VARIANT`/`FIT` 가 **다른 표기를 다른 상품으로**
+   읽어 **정밀도 손실**(2분모 재현 · CPO 확정)
+🔴 해제 조건 — **GT 정밀도 재측정 하나** · 🔴🔴 「정밀도 검증 없이 해제하지 않는다」(CPO)
+🔴 그런데 그 재측정의 분모가 **없다** — §0-XM03 이 확정했다(국내 human DIFFERENT 0)
+⟹ 🔴 **지시의 「기존 동결 계약을 임의 해제하지 말 것」을 지켜 연결하지 않았다.**
+🟢 대신 지시 §3 의 「추출 ≠ 판정 확정」대로 **검토 근거로 쓰는 길** 을 열었다(①).
+```
+
+### ④ 🔴 미완료 — **이번 지시 범위 안에서 남은 것**
+
+```
+🔴 P0-4 **화면 배선** — 선택기는 있으나 `MarketPriceComparison`/검토 화면에
+   **아직 그려지지 않았다**(렌더 0). 다음 세션이 **그 배선부터** 한다.
+🔴 P0-6 **실제 상품 E2E** — 선택기 단위 계약(9)만 있고 운영 데이터 E2E 미실행
+🔴 P0-7 **성능 측정**(브랜드/품번/상품명 추출률 · 등록률 · 누락률) 미실행
+🔴 P0-5 **검토 상태 저장** — `candidate_reviews` 재사용 가능 여부 미확인
+   (🟢 `saveHumanVerdict` 는 존재한다 · 🔴 `source` CHECK 확장이 필요한지 미확인)
+```
+
+### ⑤ 🔴 내 단언이 두 번 뚫렸고 둘 다 남겼다
+
+```
+⒜ A-1 을 `crossSellerConflicts: ["MODEL_CODE"]` 로 썼더니 **셀러 리스트에 선다** —
+   `CANDIDATE-POSSIBLE-CONFLICT-01` 이 「품번만 충돌한 참고 후보」를 **이미 보여준다**.
+   🟢 진짜 제외분(품번 «외» 축이 같이 충돌)으로 바꿨다.
+⒝ B-1 에서 변이 N1(확정 SAME 가드 제거)이 **통과** 했다 — 그 행에 `reasons` 가 생기지
+   않아 **두 번째 가드가 우연히** 막았다 ⟹ 첫 가드가 단독 검증되지 않았다.
+   🟢 「확정 SAME + 차단축 보유」 행으로 바꿔 N1 이 **1 FAIL** 로 잠겼다.
+```
+
+### ⑥ 검증
+
+```
+신규 계약   review-queue-01.test.ts **9 passed**
+음성 대조   N1 확정 SAME 가드 제거 **1 FAIL** · N2 충돌 미확인 **2** · N3 차단 미확인 **1** ·
+           N4 중복 URL 허용 **1** · N5 식별정보 문턱 완화 **2** → **md5 복구 · diff 0**
+회귀        **949 files / 11,588 passed / 0 failed** · typecheck **0** · build **exit 0**
+🟡 1회차 `mi-reeval-05-shadow` 파일 쓰기 실패(UNKNOWN) — 단독 1 passed · 재실행 0 failed ·
+   그 산출물 **해시 불변** ⟹ **실행 간 불안정**(이 세션 2회째 · 내 변경 아님)
 ```
 
 ---
