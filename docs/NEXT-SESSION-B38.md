@@ -335,6 +335,45 @@ CTO 작업은 없는 상태다 — 다음 범위를 지정해 주면 그 범위�
 🟢 대신 지시 §3 의 「추출 ≠ 판정 확정」대로 **검토 근거로 쓰는 길** 을 열었다(①).
 ```
 
+### ④-A 🔵🔵🔵 **[REV-02 착수 좌표] 조사 없이 «여기서» 시작한다**(2026-11-22 확인)
+
+🔴🔴 **REV-02 는 착수 전 확인만 하고 구현하지 않았다**(헌장 §4-C 용량 판단 ·
+작업트리 **120 = 기준선 clean**). 🟢 그 확인 결과가 아래다 — **다시 조사하지 않는다.**
+
+```
+① 🟢 **검토 저장은 새로 만들 것이 없다** — `useCandidateReview`(use-candidate-review.ts)가
+   **`MarketPriceComparison.tsx` 안에 이미 배선돼 있다**(GET/POST).
+   🔴 `saveHumanVerdict`(candidate-review.ts:517)의 `source` 기본값은 **`SELLER_URL`** 이고
+      **provenance 가 아니다**(기존 메모) ⟹ 검토 저장 시 `source` 를 **명시해 보내야** 한다.
+   🔴 `source` CHECK 는 079 가 다섯만 허용한다 — **새 값이 필요하면 migration 이고 금지축** 이다.
+      🟢 기존 값으로 충분한지 먼저 본다(DB 변경 없이 가능한 범위를 끝까지).
+
+② 🔴 **「원상품 ↔ 후보 나란히 비교」의 유일한 장애물** —
+   `MarketPriceComparison` 에 **원상품 식별정보 prop 이 없다**(`originBrand`/`originModelCode`/
+   `originTitle` **전부 0건** · 실측 grep).
+   🟢 호출부는 **`CommerceWorkspace.tsx:3783`** 이고 그 자리에 `product`(canonicalProduct)가 있다.
+   ⟹ 🔵 **최소 변경안** — 그 호출부에서 optional prop 하나를 내린다:
+      `originIdentity={{ brand, modelCode, title }}` (🔴 값 생성 0 · 있는 칸을 그대로 넘긴다)
+
+③ 🟢 **선택기는 이미 있다** — `selectReviewQueue(rows, scope)` ·
+   `REVIEW_REASON_LABEL` · `REVIEW_QUEUE_HEADING/NOTE/EMPTY` (배포 `5cc78592`).
+   🔴 `scope` 는 `CandidateListScope` 그대로라 **전체/국내/해외 필터가 공짜** 다.
+
+④ 🟢 후보 쪽 표시 재료도 행에 **이미 있다** — `title` · `matchReasons`(판정기가 본 축) ·
+   `crossSellerBlockers` · `crossSellerConflicts` · `priceAmount`/`priceCurrency`/`priceStatus` ·
+   `market` · `imageUrl` · `discoveredUrl`(원본 링크).
+   🔴 **상세설명 브랜드·상품명 근거** 는 그 행에 **없다** — `brand-description-evidence.ts` ·
+      `product-name-description-evidence.ts` 산출을 **전달 경로에 실어야** 한다
+      (🔴 판정 입력이 아니라 **표시 근거** 로 · ③의 동결은 그대로).
+
+🔵 **그래서 REV-02 의 실행 순서는 넷이다**
+   ⒜ `CommerceWorkspace:3783` → `originIdentity` prop 내리기(+타입)
+   ⒝ `MarketPriceComparison` 안에 `selectReviewQueue` 섹션 렌더(전체/국내/해외 필터 · 나란히 표)
+   ⒞ 검토 상태 — **기존 `useCandidateReview` 재사용**(새 API 0 · `source` 명시)
+   ⒟ 실데이터 E2E — 🟢 입력이 **이미 있다**: `fixtures/mi-final-e2e-01.json`
+      (후보 10 · SAME 2 · 보류 8 · 시장 미확정 3) ⟹ **검토 대기 8건이 떠야 한다**(예상값)
+```
+
 ### ④ 🔴 미완료 — **이번 지시 범위 안에서 남은 것**
 
 ```
