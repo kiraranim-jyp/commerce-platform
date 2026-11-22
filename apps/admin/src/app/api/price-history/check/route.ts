@@ -705,11 +705,19 @@ export async function POST(request: Request) {
    * 🔴 「확인 불가」도 목록에는 넣지 않는다 — CEO 가 `apron dress` 를 **다시 판정하게
    *    만든** 그 자리다(CPO §1-2 「CEO 판정을 우선한다」). 🟢 그 수는 아래에 남는다.
    */
+  /**
+   * 🔴🔴🔴 **운영 Identity owner 를 «부른다» — DB 칸을 읽지 않는다.**
+   *    1차 구현이 `product.sku?.value`(= **DB 원본 칸**)를 넘겼다. 🔴 그것은 CPO 가
+   *    **두 번** 정정한 그 혼용이다(DB `sku` ≠ 운영 `brandModelCode`).
+   * 🟢 운영 값의 owner 는 `buildProductIdentityDna` → `resolveBrandModelCode` 이고
+   *    **이 route 가 이미 그 함수를 쓴다**(:155 · :200 · :611). 같은 값을 쓴다.
+   * 🟢 순수 함수다 — 추가 HTTP 0 · 수집 0.
+   */
+  const originDna = buildProductIdentityDna(product);
   const originForEligibility = {
-    brand: product.brand?.value ?? null,
-    /** 🔴 **운영 `brandModelCode`** 다 — DB `sku` 칸과 혼용하지 않는다(CPO 반복 지시). */
-    modelCode: product.sku?.value ?? null,
-    title: product.title?.value ?? null,
+    brand: originDna.brand?.value ?? null,
+    modelCode: originDna.brandModelCode ?? null,
+    title: originDna.title ?? null,
   };
   const keepInList = (e: GeminiTransientEvidence): boolean =>
     isCandidateInMiList({

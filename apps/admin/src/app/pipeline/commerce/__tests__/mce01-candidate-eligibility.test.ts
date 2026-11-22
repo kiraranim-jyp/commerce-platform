@@ -467,8 +467,18 @@ describe("MCE01 — MI 후보 진입 자격", () => {
       spreadBlock,
       "🔴🔴 몇 건이 빠졌는지 **응답에** 실리지 않는다 — 후보가 조용히 사라진다",
     ).toContain("candidateListFilter,");
-    /** 🔴 원상품 품번은 **운영 값** 이다(DB sku 칸 혼용 금지 · CPO 반복 지시). */
-    expect(ROUTE).toContain("modelCode: product.sku?.value ?? null");
+    /**
+     * 🔴🔴🔴 **원상품 품번은 «운영 값» 이다 — DB `sku` 칸 혼용 금지(CPO 두 번 정정).**
+     *    🔴 1차 구현이 `product.sku?.value` 를 넘겼고 이 단언이 그것을 **고정했다** ⟹
+     *       계약이 **틀린 값을 지키고 있었다**. 🟢 운영 owner 를 부르도록 바꿨다.
+     */
+    expect(ROUTE, "🔴🔴 DB sku 칸을 운영 품번으로 썼다").not.toContain(
+      "modelCode: product.sku?.value",
+    );
+    expect(ROUTE, "🔴 운영 Identity owner 를 부르지 않는다").toContain(
+      "const originDna = buildProductIdentityDna(product)",
+    );
+    expect(ROUTE).toContain("modelCode: originDna.brandModelCode ?? null");
     /**
      * 🔴 **발굴 원본을 지우지 않는다**(CPO 금지 「원시 검색 결과 삭제」) — 순수 필터다.
      *    런너 산출을 되쓰는 대입이 없음을 단언한다.
