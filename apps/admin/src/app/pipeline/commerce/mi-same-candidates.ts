@@ -41,7 +41,7 @@ import type { OverseasPriceSummary } from "./overseas-reference";
  */
 import { OVERSEAS_REFERENCE_TITLE } from "./overseas-reference";
 /** 🔴 WU-133 — 축의 «말» 은 별 모듈이 소유한다(가드를 엄격하게 유지하기 위해 · 그 파일 머리 주석). */
-import { isCandidateEligibleForDisplay } from "./candidate-eligibility";
+import { isCandidateInMiList } from "./candidate-eligibility";
 import { blockerText } from "./blocker-text";
 
 /**
@@ -556,7 +556,7 @@ export function selectReviewQueue(
      *    🔴 「확인 불가」는 **거르지 않는다**(술어가 `EXCLUDED` 만 막는다) —
      *       원문을 못 받은 것을 「무관」으로 취급하면 CPO §2 를 어긴다.
      */
-    if (origin && !isCandidateEligibleForDisplay({
+    if (origin && !isCandidateInMiList({
       originBrand: origin.brand ?? null,
       originModelCode: origin.modelCode ?? null,
       originTitle: origin.title ?? null,

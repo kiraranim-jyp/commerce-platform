@@ -68,14 +68,34 @@ const norm = (s: string | null | undefined): string =>
  * 🟢 **식별 토큰** — 원상품 제목 토큰 중 **일반 단어를 뺀** 것.
  * 🔴 두 글자 이하는 버린다(`nº`·`03` 같은 조각이 우연히 겹치는 것을 막는다).
  */
-export function identifyingNameTokens(title: string | null | undefined): string[] {
+export function identifyingNameTokens(
+  title: string | null | undefined,
+  /**
+   * 🔵🔵 MI-CANDIDATE-QUALITY-01 — **브랜드 토큰은 상품명 식별어가 아니다.**
+   *
+   * 🔴🔴 CEO 판정이 그것을 지적했다(Burgundy Cashmere Print ↔ apron dress):
+   *    「브랜드가 일치해도, 품번이 다르고, **상품명의 식별2개는 판단할수 없는
+   *     브랜드정보** 라 다른 상품임」. 🔴 그 둘은 `handsmock`(브랜드 라인 명칭)과
+   *    **`bonjour`(브랜드명 자체)** 였다.
+   * 🔴 브랜드는 **이미 자기 축** 이 있다 ⟹ 상품명 축에서 또 세면 **이중 계산** 이다.
+   * 🟢 그래서 **원상품 브랜드의 토큰** 을 상품명 식별어에서 뺀다(새 사전 0).
+   */
+  brandToExclude?: string | null,
+): string[] {
+  const brandTokens = new Set(
+    (brandToExclude ?? "")
+      .toLowerCase()
+      .replace(/[^a-z0-9가-힣\s]/g, " ")
+      .split(/\s+/)
+      .filter((t) => t.length >= 2),
+  );
   return [
     ...new Set(
       (title ?? "")
         .toLowerCase()
         .replace(/[^a-z0-9가-힣\s]/g, " ")
         .split(/\s+/)
-        .filter((t) => t.length >= 3 && !GENERIC.has(t)),
+        .filter((t) => t.length >= 3 && !GENERIC.has(t) && !brandTokens.has(t)),
     ),
   ];
 }
@@ -96,7 +116,12 @@ export type EligibilityReason =
   | "MODEL_CODE_CONFLICT"
   | "EXPLICIT_CONFLICT"
   /* 확인 불가 */
-  | "NO_SOURCE_TEXT";
+  | "NO_SOURCE_TEXT"
+  /**
+   * 🔴🔴 MI-CANDIDATE-QUALITY-01 — **도착지가 상품 페이지가 아니었다.**
+   *    WU-075 의 `REDIRECTED_AWAY` 계열이다 — 그 후보는 **관측된 적이 없다**.
+   */
+  | "NOT_PRODUCT_ARRIVAL";
 
 export const ELIGIBILITY_REASON_TEXT: Record<EligibilityReason, string> = {
   BRAND_LINK: "브랜드가 일치합니다",
@@ -108,6 +133,7 @@ export const ELIGIBILITY_REASON_TEXT: Record<EligibilityReason, string> = {
   MODEL_CODE_CONFLICT: "제조사 모델 품번이 명확히 다릅니다(다른 모델·다른 시즌)",
   EXPLICIT_CONFLICT: "다른 상품임을 보여주는 식별정보 충돌이 있습니다",
   NO_SOURCE_TEXT: "원문을 확보하지 못해 확인할 수 없습니다",
+  NOT_PRODUCT_ARRIVAL: "상품 상세 페이지가 열리지 않았습니다",
 };
 
 /**
@@ -127,6 +153,13 @@ export interface CandidateEligibilityInput {
   candidateDescription?: string | null;
   /** 🟢 운영이 이미 적어 둔 충돌 토큰(`BRAND_MISMATCH` 등). 🔴 새로 만들지 않는다. */
   conflicts?: readonly string[] | null;
+  /**
+   * 🟢 **도착지 상태** — 운영 `factsFromProductUrl` 의 status 그대로(`OK` ·
+   *    `REDIRECTED_AWAY` …). 🔴 새로 만든 어휘가 **아니다**(WU-075).
+   * 🔴 **모르면 넘기지 않는다** — 이 칸이 비면 가드는 **발화하지 않는다**
+   *    (「모른다」를 「도착 실패」로 읽지 않는다).
+   */
+  candidateArrival?: string | null;
 }
 
 export interface CandidateEligibilityResult {
@@ -184,6 +217,28 @@ export function candidateModelCodeForConflict(
 const CONFLICT_TOKENS = new Set(["BRAND_MISMATCH", "MODEL_CODE", "GARMENT_FORM", "AUDIENCE_LINE"]);
 
 /**
+ * 🔵🔵🔵 **도착지가 상품 페이지가 아니면 후보가 아니다 — 새 축이 아니라 WU-075 다.**
+ *
+ * 🔴🔴 **CEO 판정이 이 자리를 가리켰다.** 1차에 「상세화면이 열리지 않아 판단 불가」 ·
+ *    2차에 「다른 상품임」이라고 적힌 후보(`handsmock-apron-dress`)의 실제 상태는
+ *    **`fetchStatus = REDIRECTED_AWAY`** 였다 — 우리가 **그 상품을 본 적이 없다**.
+ * 🟢 그래서 「브랜드 하나로는 부족하다」는 **더 센 동일성 문턱을 세우지 않았다** —
+ *    그 문턱은 **다국어 제목 후보까지 같이 죽인다**(실측: `kids-world` 「Bobo Choses
+ *    맨투맨 …」 이 사라졌다 · REV-02 가 그 보존을 계약으로 들고 있었다).
+ * 🔴 **라이브 경로에서는 이 가드가 «상류» 에 이미 있다** — `factsFromProductUrl` 이
+ *    그 상태를 내면 후보 풀이 **후보를 만들지 않는다**(WU-075). 🔴 그래서
+ *    `GeminiTransientEvidence` 에는 이 칸이 **없고 이 가드는 발화하지 않는다**.
+ *    🟢 발화하는 곳은 **저장분을 되돌려 재현하는 경로**(CEO 판정표)다.
+ */
+const NON_PRODUCT_ARRIVALS = new Set([
+  "REDIRECTED_AWAY",
+  "UNREACHABLE",
+  "NOT_PRODUCT_URL",
+  "NOT_PRODUCT_PAGE",
+  "NO_FACTS",
+]);
+
+/**
  * 🔵🔵 **자격 판정 — 유지 / 제외 / 확인 불가.**
  *
  * 🔴 순서가 계약이다:
@@ -201,6 +256,12 @@ export function evaluateCandidateEligibility(
   input: CandidateEligibilityInput,
 ): CandidateEligibilityResult {
   const reasons: EligibilityReason[] = [];
+
+  /* ── ⓪ 도착지 — 🔴 상품 페이지가 아니면 **그 상품을 본 적이 없다** ─────────── */
+  const arrival = (input.candidateArrival ?? "").trim().toUpperCase();
+  if (arrival.length > 0 && NON_PRODUCT_ARRIVALS.has(arrival)) {
+    return { eligibility: "EXCLUDED", reasons: ["NOT_PRODUCT_ARRIVAL"], matchedNameTokens: [] };
+  }
 
   /* ── ① 브랜드 연결 ─────────────────────────────────────────────────────── */
   const ob = norm(input.originBrand);
@@ -243,7 +304,7 @@ export function evaluateCandidateEligibility(
   }
 
   /* ── ③ 상품명 연결 — 🔴 일반 단어는 세지 않는다 ────────────────────────── */
-  const originTokens = identifyingNameTokens(input.originTitle);
+  const originTokens = identifyingNameTokens(input.originTitle, input.originBrand);
   const candNorm = candTitleNorm;
   const matchedNameTokens = originTokens.filter((t) => candNorm.includes(norm(t)));
   /**
@@ -277,6 +338,26 @@ export function evaluateCandidateEligibility(
     if (codeHit || brandHit || nameHit) reasons.push("DESCRIPTION_LINK");
   }
 
+  /**
+   * 🔵🔵 **연결 근거가 «하나라도» 있으면 유지한다.**
+   *
+   * 🔴🔴 **한 번 「둘 이상」으로 올렸다가 되돌렸다. 그 기록을 남긴다** —
+   *    근거는 CEO 의 「브랜드가 일치해도 … 다른 상품임」 한 줄이었는데, 그 후보의
+   *    실제 상태는 **도착지 실패**(ⓠ)였다. 🔴 문턱을 올리는 쪽으로 읽었더니
+   *    **같은 모양의 다국어 후보**(`kids-world` 「Bobo Choses 맨투맨 …」)가 함께 죽었다 —
+   *    둘은 내 입력만으로는 **구별 불가** 다(브랜드 단독 · 상세설명 미관측).
+   * 🟢 그래서 **동일성 문턱이 아니라 «관측 여부»** 로 갈랐다. 문턱은 그대로 둔다.
+   * ```
+   * taxi-saurus junioredition  브랜드+품번+상품명+설명  🟢 유지(CEO SAME)
+   * donokids                   상품명+설명             🟢 유지(CEO SAME)
+   * Wynken junioredition       브랜드+품번+설명         🟢 유지(CEO SAME)
+   * Wynken nickis              브랜드+설명             🟢 유지(CEO SAME)
+   * kids-world 맨투맨(다국어)    브랜드                 🟢 유지(관측됨)
+   * apron dress                브랜드                 🔴 제외(**도착지 실패**)
+   * ```
+   * 🔴 **다국어 제목 완화가 아니다** — alias 0 · 번역 0 · 새 축 0. 바뀐 것은 **아무것도
+   *    더 받아들이지 않는다** 는 점이다(이 분기는 MCE-02 의 그 분기 그대로다).
+   */
   if (reasons.length > 0) return { eligibility: "ELIGIBLE", reasons, matchedNameTokens };
 
   /* ── ② 확인 불가 — 🔴 원문이 아예 없다 ────────────────────────────────── */
@@ -305,7 +386,25 @@ export function evaluateCandidateEligibility(
   };
 }
 
-/** 🟢 표시 게이트가 쓰는 한 줄 — 🔴 「확인 불가」는 **숨기지 않는다**(분리해 보여준다). */
+/**
+ * 🔵🔵 MI-CANDIDATE-QUALITY-01 — **MI 후보 «목록» 은 `ELIGIBLE` 만 받는다.**
+ *
+ * 🔴🔴 **CPO 정정** — MCE-01 은 「확인 불가」도 목록에 통과시켰고, 그래서 CEO 가
+ *    `apron dress`(설명 0자 · 브랜드만 일치)를 **다시 판정해야** 했다. CEO 판정은
+ *    **DIFFERENT** 이고 CPO 는 「이번 회귀에서는 **CEO 판정을 우선**」이라 확정했다.
+ * 🟢 그래서 세 갈래는 **그대로 두고**(확인 불가를 「무관」으로 단정하지 않는다)
+ *    **목록 진입만** `ELIGIBLE` 로 좁힌다 — 확인 불가는 **수와 사유가 응답에 남는다**.
+ * 🔴 「숨긴다」가 아니라 **「후보 목록이 아니다」** 다 — 그 구역은 별도 WU 가 만든다.
+ */
+export function isCandidateInMiList(input: CandidateEligibilityInput): boolean {
+  return evaluateCandidateEligibility(input).eligibility === "ELIGIBLE";
+}
+
+/**
+ * 🔴 **이전 이름은 남겨 둔다** — 「확인 불가를 숨기지 않는다」를 보는 계약이 있고
+ *    그 성질은 **여전히 참** 이다(술어가 세 갈래를 그대로 낸다).
+ * 🔴 단 **목록 게이트로 쓰지 않는다** — 목록은 위 `isCandidateInMiList` 하나다.
+ */
 export function isCandidateEligibleForDisplay(input: CandidateEligibilityInput): boolean {
   return evaluateCandidateEligibility(input).eligibility !== "EXCLUDED";
 }

@@ -5,6 +5,7 @@ import { computeMarketAlert, type AlertCategory } from "@commerce/pricing";
 import { resolveMarketCategoryScopes } from "../../domestic-price-sources/_lib/category-scope";
 import { getSnapshot, saveSnapshotSearchRun } from "../../snapshots/_lib/snapshot";
 import { computeMarketIntelligence, attachDerivedKrw } from "../_lib/market-intelligence";
+import { isCandidateInMiList } from "@/app/pipeline/commerce/candidate-eligibility";
 import { openAlertIfNotActive, resolveAlertsNotIn } from "../_lib/price-alerts";
 import {
   MAX_SUPPLIED_CANDIDATE_URLS,
@@ -685,15 +686,70 @@ export async function POST(request: Request) {
   const krwByUrl = new Map<string, number>(
     Object.entries(intelligence?.candidateKrwByUrl ?? {}),
   );
+  /**
+   * ════════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MI-CANDIDATE-QUALITY-01 — **후보 목록을 «서버에서» 거른다.**
+   * ════════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 **CPO 지적** — MCE-01/02 는 **화면 게이트** 에만 있었다. 「단순히 화면에서
+   *    숨기는 것으로 완료하지 않는다」(§2) ⟹ **응답 후보 목록에서 제거** 한다.
+   *
+   * 🔴🔴 **경계 — 가격 집계 입력은 한 글자도 바꾸지 않는다.**
+   * ```
+   * MI 집계 입력   `transientEvidence`(위 :460~480) → computeMarketIntelligence
+   *                🟢 **거르지 않는다** — 시장가격·recommendedPrice·집계 불변(CPO §4)
+   * 응답 후보 목록  아래 여섯 배열 → 화면
+   *                🔴 **여기서만** 거른다
+   * 발굴 원본      🟢 보존 — 런너 산출을 지우지 않는다(순수 필터)
+   * ```
+   * 🔴 「확인 불가」도 목록에는 넣지 않는다 — CEO 가 `apron dress` 를 **다시 판정하게
+   *    만든** 그 자리다(CPO §1-2 「CEO 판정을 우선한다」). 🟢 그 수는 아래에 남는다.
+   */
+  const originForEligibility = {
+    brand: product.brand?.value ?? null,
+    /** 🔴 **운영 `brandModelCode`** 다 — DB `sku` 칸과 혼용하지 않는다(CPO 반복 지시). */
+    modelCode: product.sku?.value ?? null,
+    title: product.title?.value ?? null,
+  };
+  const keepInList = (e: GeminiTransientEvidence): boolean =>
+    isCandidateInMiList({
+      originBrand: originForEligibility.brand,
+      originModelCode: originForEligibility.modelCode,
+      originTitle: originForEligibility.title,
+      candidateBrand: e.brand ?? null,
+      candidateModelCode: e.modelCode ?? null,
+      candidateTitle: e.title ?? null,
+      candidateDescription: e.description ?? null,
+      conflicts: e.crossSellerBlockers ?? null,
+    });
+  const filterList = (xs: GeminiTransientEvidence[] | null | undefined) =>
+    xs == null ? xs : xs.filter(keepInList);
+  /** 🟢 **몇 건이 왜 빠졌는지** 를 응답에 남긴다 — 「조용히 사라졌다」로 두지 않는다. */
+  const allSixBefore = [
+    ...(domesticShop?.webSearchEvidence ?? []),
+    ...(domesticShop?.domesticListingEvidence ?? []),
+    ...(domesticShop?.overseasAutoEvidence ?? []),
+    ...(domesticShop?.urlCandidateEvidence ?? []),
+    ...(domesticShop?.geminiEvidence ?? []),
+    ...(domesticShop?.reviewedSameEvidence ?? []),
+  ];
+  const candidateListFilter = {
+    before: allSixBefore.length,
+    kept: allSixBefore.filter(keepInList).length,
+    removed: allSixBefore.length - allSixBefore.filter(keepInList).length,
+  };
+
   const domesticShopWithKrw = domesticShop
     ? {
         ...domesticShop,
-        webSearchEvidence: attachDerivedKrw(domesticShop.webSearchEvidence, krwByUrl),
-        domesticListingEvidence: attachDerivedKrw(domesticShop.domesticListingEvidence, krwByUrl),
-        overseasAutoEvidence: attachDerivedKrw(domesticShop.overseasAutoEvidence, krwByUrl),
-        urlCandidateEvidence: attachDerivedKrw(domesticShop.urlCandidateEvidence, krwByUrl),
-        geminiEvidence: attachDerivedKrw(domesticShop.geminiEvidence, krwByUrl),
-        reviewedSameEvidence: attachDerivedKrw(domesticShop.reviewedSameEvidence, krwByUrl),
+        webSearchEvidence: attachDerivedKrw(filterList(domesticShop.webSearchEvidence), krwByUrl),
+        domesticListingEvidence: attachDerivedKrw(filterList(domesticShop.domesticListingEvidence), krwByUrl),
+        overseasAutoEvidence: attachDerivedKrw(filterList(domesticShop.overseasAutoEvidence), krwByUrl),
+        urlCandidateEvidence: attachDerivedKrw(filterList(domesticShop.urlCandidateEvidence), krwByUrl),
+        geminiEvidence: attachDerivedKrw(filterList(domesticShop.geminiEvidence), krwByUrl),
+        reviewedSameEvidence: attachDerivedKrw(filterList(domesticShop.reviewedSameEvidence), krwByUrl),
+        /** 🔵 거른 건수 — 🔴 화면이 그 사실을 말할 수 있어야 한다. */
+        candidateListFilter,
       }
     : domesticShop;
 

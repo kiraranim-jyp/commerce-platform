@@ -18,7 +18,7 @@ import {
   tierGroupLabel,
   type MatchDisplayTier,
 } from "./match-display";
-import { isCandidateEligibleForDisplay } from "./candidate-eligibility";
+import { isCandidateInMiList } from "./candidate-eligibility";
 // MI-UX-9 §4 — 통화 표시를 한 곳에서. §10 — 검색 상태 5종 구분.
 import { formatMoney } from "@/lib/price-truth";
 import { CandidateComparison } from "./CandidateComparison";
@@ -591,7 +591,7 @@ function ResultTable({
      * 🔴 **「확인 불가」는 숨기지 않는다** — 술어가 `EXCLUDED` 만 거른다.
      * 🔴 `sku` 는 이 컴포넌트가 받은 **원상품 품번** 이고 DB 칸과 혼용하지 않는다.
      */
-    isCandidateEligibleForDisplay({
+    isCandidateInMiList({
       originBrand: originBrand ?? null,
       originModelCode: originModelCode ?? null,
       originTitle: originTitle,

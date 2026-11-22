@@ -22,7 +22,7 @@ import {
   tierGroupLabel,
   type MatchDisplayTier,
 } from "./match-display";
-import { isCandidateEligibleForDisplay } from "./candidate-eligibility";
+import { isCandidateInMiList } from "./candidate-eligibility";
 /**
  * 🔴🔴 WU-141-R3 C-5 — **`market-evidence` import 를 통째로 제거했다**(계약 계층에서 발견).
  *
@@ -796,7 +796,7 @@ function ResultTable({
      * 🔵🔵 MI-CANDIDATE-ELIGIBILITY-01 — **진입 자격 문**(국내 표와 같은 술어).
      * 🔴 판정·8축·threshold **0** · 「확인 불가」는 숨기지 않는다.
      */
-    isCandidateEligibleForDisplay({
+    isCandidateInMiList({
       originBrand: originBrand ?? null,
       originModelCode: originModelCode ?? null,
       originTitle,

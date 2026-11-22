@@ -34,13 +34,21 @@ const SIX = [
   "reviewedSameEvidence",
 ] as const;
 
-describe("A 🔴🔴 6배열 «전부» 에 환산값이 붙는다 (하나라도 빠지면 FAIL)", () => {
+/**
+ * 🔵🔵 **MI-CANDIDATE-QUALITY-01 — 그 표현식 안에 «자격 필터» 가 하나 더 들어왔다.**
+ *
+ * 🔴 이 계약이 내 변경을 **FAIL 로 잡았다**(의도된 변경). 🟢 가드를 풀지 않고
+ *    **앵커를 옮기면서 «강화»** 했다 — 이제 한 표현식이 **환산 부착 «그리고» 후보 필터**
+ *    를 같이 잠근다. ⟹ 🔴 **한 배열만 거르고 다른 배열을 빠뜨리는 것** 도 FAIL 한다
+ *    (그것이 「조용히 다른 생산자만 무관 후보를 보여주는」 모양이다).
+ */
+describe("A 🔴🔴 6배열 «전부» 에 환산 + 자격 필터가 붙는다 (하나라도 빠지면 FAIL)", () => {
   for (const key of SIX) {
     it(`A-${key} 🔴 \`${key}\` 가 attachDerivedKrw 를 거친다`, () => {
       expect(
         ROUTE,
         `🔴 ${key} 가 환산 부착에서 빠졌다 — 그 생산자의 후보만 조용히 「환산 불가」가 된다`,
-      ).toContain(`${key}: attachDerivedKrw(domesticShop.${key}, krwByUrl)`);
+      ).toContain(`${key}: attachDerivedKrw(filterList(domesticShop.${key}), krwByUrl)`);
     });
   }
 
@@ -53,7 +61,7 @@ describe("A 🔴🔴 6배열 «전부» 에 환산값이 붙는다 (하나라도
       expect(ROUTE, `🔴 ${key} 가 PRODUCERS 에 없다`).toContain(`domesticShop.${key}`);
     }
     /** 🔴 부착 호출 수가 6 이다 — 더도 덜도 아니다(중복 부착 금지 포함). */
-    const calls = ROUTE.match(/attachDerivedKrw\(domesticShop\./g) ?? [];
+    const calls = ROUTE.match(/attachDerivedKrw\(filterList\(domesticShop\./g) ?? [];
     expect(calls.length, "🔴 부착 대상 수가 6이 아니다").toBe(SIX.length);
   });
 });
