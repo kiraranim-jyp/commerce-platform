@@ -13,7 +13,14 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  extractCodeLikeSlugSegment,
+  extractCodeLikeTitleToken,
+  extractLabeledProductCode,
+  extractUrlSlug,
+} from "@commerce/shared/src/product-facts";
+import {
   ELIGIBILITY_REASON_TEXT,
+  candidateModelCodeForConflict,
   GENERIC_NAME_TOKENS,
   evaluateCandidateEligibility,
   identifyingNameTokens,
@@ -48,7 +55,14 @@ const CEO_CASES: {
   { key: "sparkle-blue-denim-jeans", ceo: "DIFFERENT", expect: "EXCLUDED", why: "일반 상품명 유사성만" },
   { key: "products/denim-blue-jeans", ceo: "DIFFERENT", expect: "EXCLUDED", why: "일반 상품명 유사성만" },
   { key: "donokids", ceo: "SAME", expect: "ELIGIBLE", why: "구조화는 달라도 상세설명 원문에 원상품 식별정보" },
-  { key: "exclusive-handsmock-dress-in-pink-tapestry", ceo: "DIFFERENT", expect: "ELIGIBLE", why: "브랜드·상품명 연결은 있다 — 품번 차이는 «판정» 이다" },
+  /**
+   * 🔴🔴 **CPO 정정(MI-CANDIDATE-ELIGIBILITY-02)** — 1차에 「유지」로 적었다.
+   *    근거는 「품번 차이는 판정이다」였는데 **CPO 가 그 해석을 뒤집었다**:
+   *    「같은 브랜드의 **다른 시즌·다른 모델** 이 MI 후보에 계속 남는다」.
+   * 🟢 실측 — 원상품 `BJ21` ↔ 후보 **`BJ87`**(설명문 `Product code BJ87`) ·
+   *    CEO 「브랜드와 상품명은 맞으나, 품번이 달라 다른 년도 생산 제품임」.
+   */
+  { key: "exclusive-handsmock-dress-in-pink-tapestry", ceo: "DIFFERENT", expect: "EXCLUDED", why: "실제 모델 품번이 명확히 다르다(BJ21 ↔ BJ87)" },
   { key: "mixed-media-jacket-in-blue-mix-by-wynken", ceo: "SAME", expect: "ELIGIBLE", why: "품번·브랜드 연결 · 색상 변형" },
   { key: "wynken-jacke-mixed-media", ceo: "SAME", expect: "ELIGIBLE", why: "판매처 자체 품번이어도 브랜드 연결" },
 ];
@@ -151,6 +165,71 @@ describe("MCE01 — MI 후보 진입 자격", () => {
       candidateDescription: "품번 B226AC07 입니다",
     });
     expect(tail.eligibility, "🔴 꼬리를 자른 품번을 일치로 받았다").toBe("EXCLUDED");
+  });
+
+  it("A-5 🔵🔵 **실제 모델 품번이 다르면 제외한다** — 음성대조 N3·N4·N5 보강", () => {
+    /**
+     * 🔴🔴 **N3·N4·N5 가 22건에서 통과했다** — 그 셋은 다른 축(브랜드 충돌 ·
+     *    상품명 연결)이 이미 덮어서 **효과가 보이지 않는다**. 🟢 그래서 술어를
+     *    **직접** 단언한다(규칙이 사라지면 여기서 FAIL 한다).
+     */
+    const base = {
+      originBrand: "Bonjour",
+      originModelCode: "BJ21",
+      originTitle: "Handsmock Dress in Little Bouquet by Bonjour",
+      candidateBrand: "Bonjour",
+      candidateTitle: "Handsmock Dress in Pink Tapestry by Bonjour",
+    };
+    /** 🔴 **모델 품번 충돌** — 브랜드·상품명이 맞아도 제외다(CPO 정정). */
+    const conflict = evaluateCandidateEligibility({
+      ...base,
+      candidateModelCode: "BJ87",
+      candidateDescription: "Handsmock Dress by Bonjour. Product code BJ87 AW26",
+    });
+    expect(conflict.eligibility).toBe("EXCLUDED");
+    expect(conflict.reasons).toEqual(["MODEL_CODE_CONFLICT"]);
+
+    /** 🟢 **N3** — 판매처 자체 SKU(숫자만)는 모델 품번으로 쓰지 않는다 ⟹ 유지. */
+    expect(candidateModelCodeForConflict("7400851022", null), "🔴 숫자만을 모델 품번으로 썼다").toBeNull();
+    const sellerSku = evaluateCandidateEligibility({
+      ...base,
+      candidateModelCode: "7400851022",
+      candidateDescription: "Diese Jacke …",
+    });
+    expect(sellerSku.eligibility, "🔴🔴 판매처 자체 SKU 차이로 제외했다").not.toBe("EXCLUDED");
+
+    /** 🟢 **N4** — 라벨 없는 우연한 문자열은 모델 품번이 아니다 ⟹ 유지. */
+    expect(candidateModelCodeForConflict(null, "… A2202 … J50690 …"), "🔴 라벨 없는 문자열을 품번으로 썼다").toBeNull();
+    expect(candidateModelCodeForConflict(null, "Made in Spain. Product code BJ87 AW26")).toBe("BJ87");
+    const noLabel = evaluateCandidateEligibility({ ...base, candidateDescription: "… A2202 … J50690 …" });
+    expect(noLabel.eligibility, "🔴 라벨 없는 문자열로 제외했다").not.toBe("EXCLUDED");
+
+    /** 🟢 **N5** — 접두 한 글자 누락은 **일치** 다(donokids 실측) ⟹ 충돌이 아니다. */
+    const prefixDrop = evaluateCandidateEligibility({
+      originBrand: "Bobo Choses",
+      originModelCode: "B226AC073",
+      originTitle: "Taxi Saurus Tag denim pants",
+      candidateModelCode: "226AC073",
+      candidateTitle: "zzz",
+    });
+    expect(prefixDrop.eligibility, "🔴🔴 접두 누락 품번을 충돌로 읽었다").toBe("ELIGIBLE");
+    expect(prefixDrop.reasons).toContain("CODE_LINK");
+
+    /** 🔴 **N6** — 색상 변형은 충돌 토큰이 아니다(품번 일치면 유지). */
+    const colorVariant = evaluateCandidateEligibility({
+      originBrand: "Wynken",
+      originModelCode: "WK21W97",
+      originTitle: "Mixed Media Jacket in Ecru Mix by Wynken",
+      candidateModelCode: "WK21W97",
+      candidateTitle: "Mixed Media Jacket in Blue Mix by Wynken",
+      conflicts: ["COLOR_VARIANT"],
+    });
+    expect(colorVariant.eligibility, "🔴 색상 변형으로 제외했다").toBe("ELIGIBLE");
+
+    /** 🔴 품번 **비교 불가** 면 나머지 근거를 쓴다(제외하지 않는다). */
+    const noCode = evaluateCandidateEligibility({ ...base, candidateModelCode: null, candidateDescription: null });
+    expect(noCode.eligibility).toBe("ELIGIBLE");
+    expect(noCode.reasons).toContain("BRAND_LINK");
   });
 
   /* ═══ B. CEO 11 사례 재현 ═══════════════════════════════════════════════ */
@@ -313,11 +392,19 @@ describe("MCE01 — MI 후보 진입 자격", () => {
        *    🟢 그래서 전수에서는 **제목 + 저장 blocker** 로만 자격을 본다 —
        *    🔴 이 측정은 **하한** 이다(상세설명·구조화가 있으면 더 살아난다).
        */
+      /**
+       * 🔵🔵 MI-CANDIDATE-ELIGIBILITY-02 — **원상품 운영 품번을 넘긴다.**
+       *    🔴 1차에 `null` 로 비워 새 축(모델 품번 충돌)이 **발화하지 않았다** ⟹
+       *       「전수에서 영향 0」이 **측정이 아니라 미발화** 였다.
+       *    🟢 owner 순서 그대로 해석한다(설명문 → 제목 → URL slug · DB `sku` 아님).
+       */
+      const originCode =
+        extractLabeledProductCode(s?.origin_desc ?? null) ??
+        extractCodeLikeTitleToken(s?.origin_title ?? null) ??
+        extractCodeLikeSlugSegment(extractUrlSlug(s?.source_url ?? null));
       const res = evaluateCandidateEligibility({
         originBrand: s?.origin_brand ?? null,
-        /** 🔴 DB `sku` 가 아니라 **운영 품번** 이 필요하지만 전수에는 그 값이 없다
-         *    ⇒ 🔴 품번 축을 **비워 둔다**(지어내지 않는다). */
-        originModelCode: null,
+        originModelCode: originCode,
         originTitle: s?.origin_title ?? null,
         candidateTitle: r.candidate_title,
         conflicts: Array.isArray(r.blockers) ? (r.blockers as string[]) : null,
@@ -359,5 +446,25 @@ describe("MCE01 — MI 후보 진입 자격", () => {
     /** 🔴 일반어만 겹친 제외와 근거 없음 제외를 **갈라** 잠근다. */
     expect(why.GENERIC_TOKENS_ONLY, "🔴 일반어 제외 수가 바뀌었다").toBe(2);
     expect(why.EXPLICIT_CONFLICT, "🔴 충돌 제외 수가 바뀌었다").toBe(156);
+    /**
+     * 🔴🔴 **새 축(모델 품번 충돌)은 전수에서 «발화하지 않는다» — 그 사실을 잠근다.**
+     *    `candidate_reviews` 에 **후보 구조화 품번·상세설명 칸이 없다**(MMCS-01 실측 0/364)
+     *    ⟹ `candidateModelCodeForConflict` 가 전건 `null` 이고 비교가 성립하지 않는다.
+     * 🔴 그래서 「전수에서 영향 0」을 **「안전하다」로 읽지 않는다** — **측정 불가** 다.
+     * 🟢 그 축의 실측은 **라이브 관측 22건**(B-1)에서만 가능하다.
+     */
+    expect(why.MODEL_CODE_CONFLICT ?? 0, "🔴 전수에서 새 축이 발화했다 — 서술을 갱신해야 한다").toBe(0);
+    const candCodes = rows.filter(
+      (r) => candidateModelCodeForConflict(null, null) != null || (r as { candidate_brand?: unknown }).candidate_brand != null,
+    );
+    expect(candCodes, "🔴 후보 품번·브랜드가 저장되기 시작했다 — 새 축을 전수로 재야 한다").toHaveLength(0);
+    /** 🟢 **원상품 품번은 실제로 해석됐다**(미발화 원인이 후보 측임을 증명한다). */
+    const withOriginCode = base.bySnapshot.filter(
+      (s) =>
+        (extractLabeledProductCode(s.origin_desc) ??
+          extractCodeLikeTitleToken(s.origin_title) ??
+          extractCodeLikeSlugSegment(extractUrlSlug(s.source_url))) != null,
+    );
+    expect(withOriginCode, "🔴 원상품 품번 해석 수가 바뀌었다").toHaveLength(115);
   });
 });

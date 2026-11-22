@@ -93,6 +93,7 @@ export type EligibilityReason =
   /* 제외 */
   | "NO_IDENTITY_LINK"
   | "GENERIC_TOKENS_ONLY"
+  | "MODEL_CODE_CONFLICT"
   | "EXPLICIT_CONFLICT"
   /* 확인 불가 */
   | "NO_SOURCE_TEXT";
@@ -104,6 +105,7 @@ export const ELIGIBILITY_REASON_TEXT: Record<EligibilityReason, string> = {
   DESCRIPTION_LINK: "상세설명 원문에서 원상품 식별정보를 확인했습니다",
   NO_IDENTITY_LINK: "브랜드·품번·상품명에 연결 근거가 없습니다",
   GENERIC_TOKENS_ONLY: "상품 유형·색상 같은 일반 단어만 겹칩니다",
+  MODEL_CODE_CONFLICT: "제조사 모델 품번이 명확히 다릅니다(다른 모델·다른 시즌)",
   EXPLICIT_CONFLICT: "다른 상품임을 보여주는 식별정보 충돌이 있습니다",
   NO_SOURCE_TEXT: "원문을 확보하지 못해 확인할 수 없습니다",
 };
@@ -132,6 +134,46 @@ export interface CandidateEligibilityResult {
   reasons: EligibilityReason[];
   /** 🟢 상품명 축으로 유지된 경우 **어떤 식별어가 겹쳤는지**(화면이 그대로 보여준다). */
   matchedNameTokens: string[];
+}
+
+/**
+ * 🔵🔵 MI-CANDIDATE-ELIGIBILITY-02 — **라벨이 붙은 품번만** 후보의 「실제 모델 품번」으로 본다.
+ *
+ * 🔴🔴 CPO 정책 — 「상세설명에 품번이 등장하더라도 **실제 대상 상품의 품번인지** 확인한다」.
+ *    🟢 실측이 그 경계를 보여 줬다:
+ * ```
+ * junioredition  「… Product code BJ87 …」        ⟹ 🟢 **라벨이 붙었다** = 실제 모델 품번
+ * villagekids    설명 안에 `A2202` `J50690`       ⟹ 🔴 라벨이 없다 = 우연한 문자열
+ * ```
+ * 🔴 라벨 어휘는 **운영 추출기가 쓰는 말** 그대로다(새 사전 0).
+ */
+const LABELED_CODE_RE =
+  /(?:product\s*code|article\s*code|model\s*(?:code|no\.?)|품번|모델\s*번호)\s*[:\s]*([A-Za-z0-9-]{4,20})/i;
+
+/**
+ * 🔵🔵 **후보의 「실제 모델 품번」** — 🔴 **판매처 자체 SKU 를 여기에 넣지 않는다.**
+ *
+ * 🔴🔴 CPO 정책 — 「판매처 자체 SKU 불일치는 모델 품번 충돌로 처리하지 않는다」.
+ *    🟢 가르는 규칙은 **이 저장소가 이미 쓰는 것** 이다(WU-095 · WU-071):
+ * ```
+ * 숫자만            ⟹ 🔴 판매처 재고번호다(`extractCodeLikeSlugSegment` 가 그렇게 거부한다)
+ * 글자+숫자 혼합     ⟹ 🟢 제조사 품번 모양
+ * ```
+ * 🟢 실측 — `nickis.com` 의 `7400851022` 는 **숫자만** 이라 모델 품번으로 쓰지 않는다
+ *    (그래서 그 후보는 브랜드 연결로 **유지** 된다 · CEO SAME).
+ */
+export function candidateModelCodeForConflict(
+  structured: string | null | undefined,
+  description: string | null | undefined,
+): string | null {
+  const looksLikeModelCode = (v: string): boolean =>
+    /[a-z]/i.test(v) && /[0-9]/.test(v) && !/^[0-9]+$/.test(v);
+  const st = (structured ?? "").trim();
+  if (st.length > 0 && looksLikeModelCode(st)) return st;
+  const m = LABELED_CODE_RE.exec(description ?? "");
+  const labeled = (m?.[1] ?? "").trim();
+  if (labeled.length > 0 && looksLikeModelCode(labeled)) return labeled;
+  return null;
 }
 
 /**
@@ -176,10 +218,29 @@ export function evaluateCandidateEligibility(
   const brandInTitle = ob.length > 0 && candTitleNorm.includes(ob);
   if (ob.length > 0 && ((cb.length > 0 && ob === cb) || brandInTitle)) reasons.push("BRAND_LINK");
 
-  /* ── ② 품번 연결 ──────────────────────────────────────────────────────── */
+  /* ── ② 품번 연결 / 🔴 모델 품번 충돌 ──────────────────────────────────── */
   const oc = norm(input.originModelCode);
-  const cc = norm(input.candidateModelCode);
-  if (oc.length > 0 && cc.length > 0 && oc === cc) reasons.push("CODE_LINK");
+  /**
+   * 🔵🔵 MI-CANDIDATE-ELIGIBILITY-02 — **실제 모델 품번이 다르면 «먼저» 제외한다.**
+   *
+   * 🔴🔴 **CPO 정정** — 1차는 「연결 근거가 하나라도 있으면 충돌이 있어도 유지」였고,
+   *    그 때문에 **같은 브랜드의 다른 시즌·다른 모델** 이 후보에 남았다
+   *    (실측 — 원상품 `BJ21` ↔ 후보 **`BJ87`** · CEO **DIFFERENT**「품번이 달라 다른
+   *     년도 생산 제품」). 🔴 그것은 단순 충돌 «표시» 로 끝낼 일이 아니다.
+   * 🟢 그래서 **모델 품번 축만** 연결 근거보다 앞에 둔다 — 🔴 색상·소재 변형 축은
+   *    **그대로** 다(`COLOR_VARIANT` 는 여전히 유지 쪽이다 · CPO 표).
+   * 🔴 접두 한 글자 누락은 **일치** 로 본다(donokids 실측) ⟹ 충돌로 세지 않는다.
+   */
+  const modelCode = candidateModelCodeForConflict(input.candidateModelCode, input.candidateDescription);
+  const cc = norm(modelCode);
+  const codeEqual =
+    oc.length > 0 &&
+    cc.length > 0 &&
+    (oc === cc || (oc.length >= 4 && oc.slice(1) === cc) || (cc.length >= 4 && cc.slice(1) === oc));
+  if (codeEqual) reasons.push("CODE_LINK");
+  else if (oc.length > 0 && cc.length > 0) {
+    return { eligibility: "EXCLUDED", reasons: ["MODEL_CODE_CONFLICT"], matchedNameTokens: [] };
+  }
 
   /* ── ③ 상품명 연결 — 🔴 일반 단어는 세지 않는다 ────────────────────────── */
   const originTokens = identifyingNameTokens(input.originTitle);
