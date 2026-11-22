@@ -211,6 +211,7 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
   skipped.push({ file: "mmse01-baseline.json", why: "🔴 `candidate_reviews` 읽기 전용 전수 덤프 — **이중 집계 방지**" });
   skipped.push({ file: "mmse01-firstpass.json", why: "🟢 1차 분류 산출 · 사람 라벨 **없음**" });
   skipped.push({ file: "mmse01-secondpass.json", why: "🟢 2차 선택적 증거 관측 · 사람 라벨 **없음**" });
+  skipped.push({ file: "mmse02-code-evidence.json", why: "🟢 품번 출처 분해 산출 · 사람 라벨 **없음**" });
   /**
    * 🔵 CEO-EVIDENCE-REVIEW(2026-11-07) — **`candidate_reviews` 읽기 전용 덤프**(11쌍 URL · 3행).
    * 🔴 분모에 넣지 않는다 — `dsp-01-reviewed-same.json` 과 **같은 이유**(이중 집계).
