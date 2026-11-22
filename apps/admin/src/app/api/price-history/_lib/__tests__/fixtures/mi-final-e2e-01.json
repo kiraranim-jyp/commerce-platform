@@ -1,0 +1,325 @@
+{
+ "note": "🔵 MI-FINAL-COMPLETION-01 — 통합 MI E2E 의 «운영 실데이터» 입력. 🔴 운영 DB 읽기 전용(select 뿐 · 쓰기 0 · 자격증명 비출력 · numeric 은 ::text). snapshot/observations/candidate_reviews 를 «그대로» 옮겼다 · 가공 0.",
+ "snapshot": {
+  "id": "25a3bba7-fe75-464b-95b2-0da2ef83ec44",
+  "source_url": "https://bobochoses.com/en-kr/products/b226ac033-bobo-choses-pop-sweatshirt",
+  "title": "Bobo Choses Pop sweatshirt",
+  "created_at": "2026-11-07T07:13:39.118Z",
+  "price": {
+   "value": {
+    "amount": 62,
+    "currency": "EUR"
+   },
+   "source": "ORIGINAL",
+   "confidence": 0.95
+  },
+  "brand": {
+   "value": "Bobo Choses",
+   "source": "ORIGINAL",
+   "confidence": 0.95
+  },
+  "sku": {
+   "value": "",
+   "source": "ORIGINAL",
+   "confidence": 0
+  },
+  "price_breakdown": {
+   "feePercent": 10,
+   "shippingKrw": 12000,
+   "marginPercent": 12
+  }
+ },
+ "observations": [
+  {
+   "id": "790b05fe-4320-4a56-b8e1-c5348198a3c7",
+   "source": "SELLER_ORIGIN",
+   "source_label": "ORIGIN_FX",
+   "source_product_url": "https://bobochoses.com/products/b226ac033-bobo-choses-pop-sweatshirt.json",
+   "currency": "EUR",
+   "price_amount": "62",
+   "exchange_rate": "1517.02",
+   "price_krw": "94055",
+   "sale_price_krw": null,
+   "original_price_krw": null,
+   "sold_out": true,
+   "market_code": "",
+   "market_country": "ES",
+   "checked_at": "2026-11-07T07:13:53.193Z"
+  },
+  {
+   "id": "c1f91170-6174-4243-b92f-6e787d637c23",
+   "source": "SELLER_ORIGIN",
+   "source_label": "KR_MARKET",
+   "source_product_url": "https://bobochoses.com/en-kr/products/b226ac033-bobo-choses-pop-sweatshirt.json",
+   "currency": "KRW",
+   "price_amount": "135000",
+   "exchange_rate": null,
+   "price_krw": "135000",
+   "sale_price_krw": null,
+   "original_price_krw": null,
+   "sold_out": true,
+   "market_code": "en-kr",
+   "market_country": "ES",
+   "checked_at": "2026-11-07T07:13:53.193Z"
+  },
+  {
+   "id": "305ad611-62f6-4000-a84b-ad34d44704c0",
+   "source": "SELLER_ORIGIN",
+   "source_label": "MARKET_PROBE",
+   "source_product_url": "https://bobochoses.com/en-us/products/b226ac033-bobo-choses-pop-sweatshirt.json",
+   "currency": "USD",
+   "price_amount": "89",
+   "exchange_rate": "1358.7281683833407",
+   "price_krw": "120927",
+   "sale_price_krw": null,
+   "original_price_krw": null,
+   "sold_out": true,
+   "market_code": "en-us",
+   "market_country": "ES",
+   "checked_at": "2026-11-07T07:13:53.193Z"
+  },
+  {
+   "id": "586ff63b-5f3d-49f9-859e-fcd308ae66ca",
+   "source": "SELLER_ORIGIN",
+   "source_label": "MARKET_PROBE",
+   "source_product_url": "https://bobochoses.com/en-fr/products/b226ac033-bobo-choses-pop-sweatshirt.json",
+   "currency": "EUR",
+   "price_amount": "62",
+   "exchange_rate": "1517.02",
+   "price_krw": "94055",
+   "sale_price_krw": null,
+   "original_price_krw": null,
+   "sold_out": true,
+   "market_code": "en-fr",
+   "market_country": "ES",
+   "checked_at": "2026-11-07T07:13:53.193Z"
+  },
+  {
+   "id": "e9100f64-b966-4d46-ab94-0a9de650212a",
+   "source": "SELLER_ORIGIN",
+   "source_label": "MARKET_PROBE",
+   "source_product_url": "https://bobochoses.com/en-de/products/b226ac033-bobo-choses-pop-sweatshirt.json",
+   "currency": "EUR",
+   "price_amount": "62",
+   "exchange_rate": "1517.02",
+   "price_krw": "94055",
+   "sale_price_krw": null,
+   "original_price_krw": null,
+   "sold_out": true,
+   "market_code": "en-de",
+   "market_country": "ES",
+   "checked_at": "2026-11-07T07:13:53.193Z"
+  },
+  {
+   "id": "80789bea-0561-41e3-836a-94da8a48355b",
+   "source": "SELLER_ORIGIN",
+   "source_label": "MARKET_PROBE",
+   "source_product_url": "https://bobochoses.com/en-int/products/b226ac033-bobo-choses-pop-sweatshirt.json",
+   "currency": "EUR",
+   "price_amount": "62",
+   "exchange_rate": "1517.02",
+   "price_krw": "94055",
+   "sale_price_krw": null,
+   "original_price_krw": null,
+   "sold_out": true,
+   "market_code": "en-int",
+   "market_country": "ES",
+   "checked_at": "2026-11-07T07:13:53.193Z"
+  }
+ ],
+ "candidateReviews": [
+  {
+   "candidate_url": "https://bonbonverona.it/products/bobo-choses-pop-sweatshirt-b226ac033-401-bobo-choses",
+   "candidate_domain": "bonbonverona.it",
+   "candidate_title": "Bobo Choses Pop sweatshirt",
+   "market": "OVERSEAS",
+   "price_amount": "62",
+   "price_currency": "EUR",
+   "price_status": "VERIFIED_CURRENT",
+   "sold_out": null,
+   "system_verdict": "SAME",
+   "match_truth": "STRONG_IDENTIFIER",
+   "price_tier": "EXACT",
+   "blockers": [],
+   "human_verdict": null,
+   "source": "WEB_SEARCH"
+  },
+  {
+   "candidate_url": "http://www.coupleshot.com/m/product.html?branduid=574657&special=1",
+   "candidate_domain": "coupleshot.com",
+   "candidate_title": "�̴�Ŀ�ü�",
+   "market": "UNKNOWN",
+   "price_amount": "135000",
+   "price_currency": "KRW",
+   "price_status": "VERIFIED_CURRENT",
+   "sold_out": null,
+   "system_verdict": "PRESUMED_SAME",
+   "match_truth": "TEXT_CONFIRMED",
+   "price_tier": "COMPARISON",
+   "blockers": [
+    "NO_TITLE_OVERLAP",
+    "BRAND_UNCONFIRMED"
+   ],
+   "human_verdict": null,
+   "source": "WEB_SEARCH"
+  },
+  {
+   "candidate_url": "https://designerkidswear.com/products/fendi-baby-boys-sweatshirt-blue-buh088-8ra-f19j4",
+   "candidate_domain": "designerkidswear.com",
+   "candidate_title": "Baby Boys Blue Cotton Bear Sweatshirt",
+   "market": "OVERSEAS",
+   "price_amount": "530",
+   "price_currency": "CAD",
+   "price_status": "UNVERIFIED_SEARCH",
+   "sold_out": null,
+   "system_verdict": "PRESUMED_SAME",
+   "match_truth": "TEXT_CONFIRMED",
+   "price_tier": "COMPARISON",
+   "blockers": [
+    "BRAND_MISMATCH",
+    "NO_TITLE_OVERLAP",
+    "MATERIAL",
+    "AUDIENCE_LINE"
+   ],
+   "human_verdict": null,
+   "source": "OVERSEAS_AUTO"
+  },
+  {
+   "candidate_url": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "candidate_domain": "folkberlin.com",
+   "candidate_title": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+   "market": "OVERSEAS",
+   "price_amount": "39",
+   "price_currency": "EUR",
+   "price_status": "UNVERIFIED_SEARCH",
+   "sold_out": null,
+   "system_verdict": "PRESUMED_SAME",
+   "match_truth": "TEXT_CONFIRMED",
+   "price_tier": "COMPARISON",
+   "blockers": [
+    "BRAND_MISMATCH",
+    "NO_TITLE_OVERLAP",
+    "MATERIAL",
+    "AUDIENCE_LINE"
+   ],
+   "human_verdict": null,
+   "source": "OVERSEAS_AUTO"
+  },
+  {
+   "candidate_url": "https://junioredition.com/products/bobo-choses-pop-sweatshirt-by-bobo-choses",
+   "candidate_domain": "junioredition.com",
+   "candidate_title": "Bobo Choses Pop Sweatshirt by Bobo Choses",
+   "market": "OVERSEAS",
+   "price_amount": "58",
+   "price_currency": "GBP",
+   "price_status": "VERIFIED_CURRENT",
+   "sold_out": null,
+   "system_verdict": "PRESUMED_SAME",
+   "match_truth": "TEXT_CONFIRMED",
+   "price_tier": "COMPARISON",
+   "blockers": [
+    "MATERIAL"
+   ],
+   "human_verdict": null,
+   "source": "OVERSEAS_AUTO"
+  },
+  {
+   "candidate_url": "https://kidbizkid.com/products/lacoste-navy-sweatshirt",
+   "candidate_domain": "kidbizkid.com",
+   "candidate_title": "Lacoste Navy Sweatshirt",
+   "market": "OVERSEAS",
+   "price_amount": "10300",
+   "price_currency": "CAD",
+   "price_status": "UNVERIFIED_SEARCH",
+   "sold_out": null,
+   "system_verdict": "PRESUMED_SAME",
+   "match_truth": "TEXT_CONFIRMED",
+   "price_tier": "COMPARISON",
+   "blockers": [
+    "BRAND_MISMATCH",
+    "COLOR_VARIANT",
+    "NO_TITLE_OVERLAP",
+    "AUDIENCE_LINE"
+   ],
+   "human_verdict": null,
+   "source": "OVERSEAS_AUTO"
+  },
+  {
+   "candidate_url": "https://www.kids-world.com/ko-kr/bobo-choses-sweatshirt-midnight-blue-print-p-450718.html",
+   "candidate_domain": "kids-world.com",
+   "candidate_title": "Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트",
+   "market": "UNKNOWN",
+   "price_amount": "106000",
+   "price_currency": "KRW",
+   "price_status": "VERIFIED_CURRENT",
+   "sold_out": null,
+   "system_verdict": "PRESUMED_SAME",
+   "match_truth": "TEXT_CONFIRMED",
+   "price_tier": "COMPARISON",
+   "blockers": [
+    "NO_TITLE_OVERLAP"
+   ],
+   "human_verdict": null,
+   "source": "WEB_SEARCH"
+  },
+  {
+   "candidate_url": "https://www.mariodannakids.it/en/product/bobo-choses-kids-bobo-choses-pop-sweatshirt-b226ac033",
+   "candidate_domain": "mariodannakids.it",
+   "candidate_title": "Bobo Choses Pop sweatshirt BOBO CHOSES KIDS B226AC033 . - Mario D",
+   "market": "UNKNOWN",
+   "price_amount": null,
+   "price_currency": null,
+   "price_status": "UNVERIFIED_SEARCH",
+   "sold_out": null,
+   "system_verdict": "SAME",
+   "match_truth": "STRONG_IDENTIFIER",
+   "price_tier": "EXACT",
+   "blockers": [],
+   "human_verdict": null,
+   "source": "WEB_SEARCH"
+  },
+  {
+   "candidate_url": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+   "candidate_domain": "petitemaisonkids.com",
+   "candidate_title": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers",
+   "market": "OVERSEAS",
+   "price_amount": "12800",
+   "price_currency": "USD",
+   "price_status": "UNVERIFIED_SEARCH",
+   "sold_out": null,
+   "system_verdict": "PRESUMED_SAME",
+   "match_truth": "TEXT_CONFIRMED",
+   "price_tier": "COMPARISON",
+   "blockers": [
+    "BRAND_MISMATCH",
+    "NO_TITLE_OVERLAP",
+    "MATERIAL",
+    "AUDIENCE_LINE",
+    "GARMENT_FORM"
+   ],
+   "human_verdict": null,
+   "source": "OVERSEAS_AUTO"
+  },
+  {
+   "candidate_url": "https://shoppiccoliandco.com/products/jude-navy-baby-boy-anchor-sweater",
+   "candidate_domain": "shoppiccoliandco.com",
+   "candidate_title": "Jude Navy Baby Boy Anchor Sweater",
+   "market": "OVERSEAS",
+   "price_amount": "9700",
+   "price_currency": "USD",
+   "price_status": "UNVERIFIED_SEARCH",
+   "sold_out": null,
+   "system_verdict": "PRESUMED_SAME",
+   "match_truth": "TEXT_CONFIRMED",
+   "price_tier": "COMPARISON",
+   "blockers": [
+    "BRAND_MISMATCH",
+    "COLOR_VARIANT",
+    "NO_TITLE_OVERLAP",
+    "AUDIENCE_LINE"
+   ],
+   "human_verdict": null,
+   "source": "OVERSEAS_AUTO"
+  }
+ ]
+}

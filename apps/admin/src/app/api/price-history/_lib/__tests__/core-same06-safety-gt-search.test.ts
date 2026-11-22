@@ -375,6 +375,20 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
     why: "🔴 기존 GT(wu-112·125·111) × 기존 운영 산출의 URL 조인 6행 · human 은 **기존 GT 유래** — 이중 집계 방지",
   });
 
+  /**
+   * 🟢🟢 **이 계약이 또 일했다 (MI-FINAL-COMPLETION-01)** — 미분류로 잡혔다.
+   * 🔴 전수 탐지 조건을 느슨하게 하지 않았다 — 용도를 적어 분류한다.
+   *
+   * 🔴🔴 **사람 라벨이 0 이다** — 운영 DB 스냅샷 `25a3bba7…` 하나의
+   *    snapshot · `price_observations` 6 · `candidate_reviews` **10**(전건 운영 판정)이고
+   *    `human_verdict` 는 **전건 null** 이다 ⟹ GT 분모에 넣으면 분모가 틀린다.
+   * 🟢 용도는 하나다 — 통합 MI 운영 E2E 의 입력(`mi-final-e2e-01.test.ts` · 상품 1개).
+   */
+  skipped.push({
+    file: "mi-final-e2e-01.json",
+    why: "🔴 운영 스냅샷 1개(관측 6 · 후보 10 · 전건 운영 판정) · human_verdict **전건 null** — 통합 E2E 의 입력",
+  });
+
   /* SAME-03 최신 CEO 라벨 — 🔴 DIFFERENT 가 0 이지만 분모로 같이 적는다 */
   {
     const j = readJson("core-same03-human-gt.json") as {
