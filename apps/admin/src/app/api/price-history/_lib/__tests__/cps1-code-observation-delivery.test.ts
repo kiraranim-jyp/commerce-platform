@@ -38,14 +38,29 @@ describe("CPS1 — 품번 관찰값 전달(STEP 1)", () => {
     /** 🟢 계산 → 배열 → 응답 세 줄이 전부 살아 있어야 한다. */
     expect(RUNNER, "🔴 품번 관찰 계산이 사라졌다").toContain("summarizeIdentityEvidence(query.facts, best.facts)");
     expect(RUNNER, "🔴 관찰 배열이 사라졌다").toContain("identityEvidenceRows.push(");
-    expect(RUNNER, "🔴 응답 칸 배선이 사라졌다").toContain("identityEvidence: { candidates: identityEvidenceRows }");
+    /**
+     * 🔵 UIED-02 에서 **의도적으로** 이 줄에 `observedAt` 이 붙었다(CPO 승인 §H ①).
+     * 🔴 그래서 앵커를 **느슨하게 하지 않고** 두 조건으로 **갈라** 단언한다 —
+     *    ⒜ 그 배열이 응답 칸의 `candidates` 다 ⒝ 관측 시각이 **같은 칸** 에 있다.
+     */
+    expect(RUNNER, "🔴 응답 칸 배선이 사라졌다").toContain("identityEvidence: { candidates: identityEvidenceRows,");
+    expect(RUNNER, "🔴 관측 시각이 사라졌다").toContain("observedAt: new Date().toISOString() }");
     /** 🟢 라우트가 그 칸을 응답으로 내보낸다. */
     expect(ROUTE, "🔴 라우트 전달이 사라졌다").toContain("identityEvidence: domesticShop?.identityEvidence ?? null");
   });
 
   it("A-2 🟢 **타입이 값을 좁히지 않는다** — raw·normalized·source 가 살아서 간다", () => {
-    /** 🔴 `axes` 를 요약 상태만으로 좁히면 품번 «값» 이 사라진다. */
-    expect(RUNNER).toContain('axes: ReturnType<typeof summarizeIdentityEvidence>["axes"]');
+    /**
+     * 🔴 `axes` 를 요약 상태만으로 좁히면 품번 «값» 이 사라진다.
+     * 🔵 UIED-02 에서 **지역 배열 선언이 결과 타입 파생으로 바뀌었다**(칸이 넷으로 늘어
+     *    같은 모양을 두 벌 적으면 조용히 갈라진다) ⟹ 🟢 그래서 **느슨하게 하지 않고**
+     *    「그 배열의 타입이 **응답 타입에서 온다**」를 단언한다 — 한쪽만 고치면 FAIL 한다.
+     */
+    /** 🔴 줄바꿈이 CRLF 라 줄을 그대로 붙여 단언하면 틀린다(실제로 FAIL 했다). */
+    expect(
+      RUNNER.replace(/\s+/g, " "),
+      "🔴 배열 타입이 응답 타입과 갈라졌다",
+    ).toContain('NonNullable< DomesticPriceCheckResult["identityEvidence"] >["candidates"] = []');
     expect(RUNNER).toContain('axes: IdentityEvidenceSummary["axes"]');
     /** 🔴 `state` 만 남기는 모양이 되돌아오면 FAIL 한다. */
     expect(RUNNER, "🔴 축을 상태만으로 좁혔다").not.toContain("axes: { axis: string; state:");

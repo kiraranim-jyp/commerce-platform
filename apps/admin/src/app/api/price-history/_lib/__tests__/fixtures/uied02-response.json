@@ -1,0 +1,2285 @@
+{
+  "identityEvidence": {
+    "candidates": [
+      {
+        "candidateUrl": "http://www.coupleshot.com/m/product.html?branduid=574657&special=1",
+        "domain": "coupleshot.com",
+        "structured": {
+          "origin": {
+            "brand": "Bobo Choses",
+            "modelCode": "B226AC033",
+            "title": "Bobo Choses Pop sweatshirt"
+          },
+          "candidate": {
+            "brand": null,
+            "modelCode": "B226AC033",
+            "title": "�̴�Ŀ�ü�"
+          }
+        },
+        "description": {
+          "raw": "[��������,BOBO CHOSES Bobo Choses Pop sweatshirt ����Ʈ����(���o) 26aw-B226AC033] ������� ��ǰ�Դϴ�. (30�����̻� ���Ž� ���ڹ� ����/�����ñ���)",
+          "length": 136,
+          "state": "PRESENT"
+        },
+        "axes": [
+          {
+            "axis": "BRAND",
+            "observationOnly": false,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "MODEL_CODE",
+            "observationOnly": false,
+            "originState": "MISSING",
+            "candidateState": "PRESENT",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [
+              {
+                "raw": "B226AC033",
+                "normalized": "b226ac033",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 1,
+            "conflictBasis": null
+          },
+          {
+            "axis": "PRODUCT_NAME",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "PRESENT",
+            "origin": [
+              {
+                "raw": "Bobo Choses Pop sweatshirt",
+                "normalized": "bobo choses pop sweatshirt",
+                "source": "TITLE"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "�̴�Ŀ�ü�",
+                "normalized": "��l·�u�",
+                "source": "TITLE"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": null
+          },
+          {
+            "axis": "FORM",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "PRESENT",
+            "origin": [
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "TITLE"
+              },
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "originIndependentSources": 2,
+            "candidateIndependentSources": 1,
+            "conflictBasis": null
+          },
+          {
+            "axis": "COLOR",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [
+              {
+                "raw": "Midnight blue",
+                "normalized": "midnight blue",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "MATERIAL",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [
+              {
+                "raw": "cotton",
+                "normalized": "cotton",
+                "source": "DESCRIPTION"
+              },
+              {
+                "raw": "organic cotton",
+                "normalized": "organic cotton",
+                "source": "DESCRIPTION"
+              },
+              {
+                "raw": "recycled cotton",
+                "normalized": "recycled cotton",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "FIT",
+            "observationOnly": true,
+            "originState": "PRESENT",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [
+              {
+                "raw": "loose fit",
+                "normalized": "loose fit",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "COMPOSITION",
+            "observationOnly": true,
+            "originState": "PRESENT",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [
+              {
+                "raw": "cotton:12,organic cotton:66,recycled cotton:22",
+                "normalized": "cotton:12,organic cotton:66,recycled cotton:22",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "SET",
+            "observationOnly": true,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "OPTION_SKU",
+            "observationOnly": true,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "IMAGE",
+            "observationOnly": true,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC033_6.jpg?v=1794389793",
+                "normalized": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/b226ac033_6.jpg?v=1794389793",
+                "source": "IMAGE"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "http://www.coupleshot.com/shopimages/coupleshot/0110330001042.jpg",
+                "normalized": "http://www.coupleshot.com/shopimages/coupleshot/0110330001042.jpg",
+                "source": "IMAGE"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": "원본 [\"https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC033_6.jpg?v=1794389793\"] ↔ 후보 [\"http://www.coupleshot.com/shopimages/coupleshot/0110330001042.jpg\"]"
+          }
+        ],
+        "supply": {
+          "originHasEvidence": true,
+          "candidateHasEvidence": true,
+          "asymmetric": false
+        },
+        "storedForComparison": {
+          "title": "�̴�Ŀ�ü�",
+          "market": "UNKNOWN",
+          "verdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "price": "135000 KRW",
+          "priceStatus": "VERIFIED_CURRENT",
+          "blockers": [
+            "NO_TITLE_OVERLAP",
+            "BRAND_UNCONFIRMED"
+          ],
+          "matchReasons": [
+            "모델명 유사도 0%",
+            "근거: 브랜드 품번 일치",
+            "보류: 핵심 상품명에 겹치는 말이 없다",
+            "보류: 양쪽 브랜드를 확인하지 못했다",
+            "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+            "판정근거: 입력 텍스트등급=low · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED(순위 3)"
+          ],
+          "lastSeenAt": "2026-11-07T07:15:09.504Z"
+        }
+      },
+      {
+        "candidateUrl": "https://designerkidswear.com/products/fendi-baby-boys-sweatshirt-blue-buh088-8ra-f19j4",
+        "domain": "designerkidswear.com",
+        "structured": {
+          "origin": {
+            "brand": "Bobo Choses",
+            "modelCode": "B226AC033",
+            "title": "Bobo Choses Pop sweatshirt"
+          },
+          "candidate": {
+            "brand": "FENDI",
+            "modelCode": null,
+            "title": "Baby Boys Blue Cotton Bear Sweatshirt"
+          }
+        },
+        "description": {
+          "raw": "Expertly crafted from soft, high-quality cotton, this Fendi kids baby boy's sweatshirt is a stylish and comfortable choice for your little one. Featuring a classic white contrast trim and signature teddy bear Zucca print on the chest, this sweatshirt offers both fashion and functionality. 93% Cotton 7% Elastane Made in Portugal",
+          "length": 329,
+          "state": "PRESENT"
+        },
+        "axes": [
+          {
+            "axis": "BRAND",
+            "observationOnly": false,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "MODEL_CODE",
+            "observationOnly": false,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "PRODUCT_NAME",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "Bobo Choses Pop sweatshirt",
+                "normalized": "bobo choses pop sweatshirt",
+                "source": "TITLE"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "Baby Boys Blue Cotton Bear Sweatshirt",
+                "normalized": "baby boys blue cotton bear sweatshirt",
+                "source": "TITLE"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": "원본 [\"Bobo Choses Pop sweatshirt\"] ↔ 후보 [\"Baby Boys Blue Cotton Bear Sweatshirt\"]"
+          },
+          {
+            "axis": "FORM",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "PRESENT",
+            "origin": [
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "TITLE"
+              },
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "TITLE"
+              },
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "originIndependentSources": 2,
+            "candidateIndependentSources": 2,
+            "conflictBasis": null
+          },
+          {
+            "axis": "COLOR",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "Midnight blue",
+                "normalized": "midnight blue",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "Blue",
+                "normalized": "blue",
+                "source": "TITLE"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": "원본 [\"Midnight blue\"] ↔ 후보 [\"Blue\"]"
+          },
+          {
+            "axis": "MATERIAL",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "PRESENT",
+            "origin": [
+              {
+                "raw": "cotton",
+                "normalized": "cotton",
+                "source": "DESCRIPTION"
+              },
+              {
+                "raw": "organic cotton",
+                "normalized": "organic cotton",
+                "source": "DESCRIPTION"
+              },
+              {
+                "raw": "recycled cotton",
+                "normalized": "recycled cotton",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "cotton",
+                "normalized": "cotton",
+                "source": "DESCRIPTION"
+              },
+              {
+                "raw": "elastane",
+                "normalized": "elastane",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": null
+          },
+          {
+            "axis": "FIT",
+            "observationOnly": true,
+            "originState": "PRESENT",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [
+              {
+                "raw": "loose fit",
+                "normalized": "loose fit",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "COMPOSITION",
+            "observationOnly": true,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "cotton:12,organic cotton:66,recycled cotton:22",
+                "normalized": "cotton:12,organic cotton:66,recycled cotton:22",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "cotton:7,cotton:93,elastane:7",
+                "normalized": "cotton:7,cotton:93,elastane:7",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": "원본 [\"cotton:12,organic cotton:66,recycled cotton:22\"] ↔ 후보 [\"cotton:7,cotton:93,elastane:7\"]"
+          },
+          {
+            "axis": "SET",
+            "observationOnly": true,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "OPTION_SKU",
+            "observationOnly": true,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "IMAGE",
+            "observationOnly": true,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC033_6.jpg?v=1794389793",
+                "normalized": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/b226ac033_6.jpg?v=1794389793",
+                "source": "IMAGE"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "https://cdn.shopify.com/s/files/1/0383/7535/8604/files/BUH088-8RA-F19J4-1.jpg?v=1752261566",
+                "normalized": "https://cdn.shopify.com/s/files/1/0383/7535/8604/files/buh088-8ra-f19j4-1.jpg?v=1752261566",
+                "source": "IMAGE"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": "원본 [\"https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC033_6.jpg?v=1794389793\"] ↔ 후보 [\"https://cdn.shopify.com/s/files/1/0383/7535/8604/files/BUH088-8RA-F19J4-1.jpg?v=1752261566\"]"
+          }
+        ],
+        "supply": {
+          "originHasEvidence": true,
+          "candidateHasEvidence": true,
+          "asymmetric": false
+        },
+        "storedForComparison": {
+          "title": "Baby Boys Blue Cotton Bear Sweatshirt",
+          "market": "OVERSEAS",
+          "verdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "price": "530 CAD",
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "blockers": [
+            "BRAND_MISMATCH",
+            "NO_TITLE_OVERLAP",
+            "MATERIAL",
+            "AUDIENCE_LINE"
+          ],
+          "matchReasons": [
+            "모델명 유사도 14%",
+            "카테고리 일치",
+            "브랜드 불일치",
+            "근거: 상품군 TOP↔TOP",
+            "근거: 색상 BLUE",
+            "근거: 대상 KIDS",
+            "보류: 브랜드 Bobo Choses ↔ FENDI",
+            "보류: 핵심 상품명에 겹치는 말이 없다",
+            "보류: 소재 cotton:12,organic cotton:66,recycled cotton:22 ↔ cotton:7,cotton:93,elastane:7",
+            "보류: 연령 라인 CHILD ↔ BABY",
+            "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+            "판정근거: 입력 텍스트등급=low · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED(순위 3)"
+          ],
+          "lastSeenAt": "2026-11-07T07:15:09.504Z"
+        }
+      },
+      {
+        "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+        "domain": "folkberlin.com",
+        "structured": {
+          "origin": {
+            "brand": "Bobo Choses",
+            "modelCode": "B226AC033",
+            "title": "Bobo Choses Pop sweatshirt"
+          },
+          "candidate": {
+            "brand": "Gray Label",
+            "modelCode": null,
+            "title": "Baby-Sweateranzug „Blue Moon“ Bio-Baumwolle"
+          }
+        },
+        "description": {
+          "raw": "Baby-Sweateranzug „Blue Moon“ aus Bio-Baumwolle Dieser vielseitige und wärmende Anzug hat einen Rundhalsausschnitt und Druckknöpfe an der Vorderseite, die das Anziehen erleichtern. Er verfügt über eine Kängurutasche auf der Vorderseite sowie breite Rippdetails am Halsausschnitt und an den Bündchen. Hergestellt aus besonders weicher 100 % Bio-Baumwolle mit etwas Elasthan. Das Gray-Label-Logo ist auf der Brust aufgestickt. Hergestellt in Portugal. Gut zu wissen Material: 100 % Bio-Baumwolle mit Elasthan Besonders weich Mit Kängurutasche auf der Vorderseite Breite Rippdetails am Halsausschnitt und an den Bündchen Maschinenwäsche bei 30 Grad Farbe: Blue Moon Hergestellt in Portugal Über die Marke Gray Label ist eine minimalistische und nachhaltige Essentials-Marke für Kinder im Alter von 0 bis 12 Jahren. Sie wurde 2011 von Emily Gray gegründet. Gray Label engagiert sich dafür, die Auswirkungen auf die Umwelt zu minimieren, indem hochwertige Produkte hergestellt werden, die mehrere Lebenszyklen lang halten.",
+          "length": 1017,
+          "state": "PRESENT"
+        },
+        "axes": [
+          {
+            "axis": "BRAND",
+            "observationOnly": false,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "MODEL_CODE",
+            "observationOnly": false,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "PRODUCT_NAME",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "Bobo Choses Pop sweatshirt",
+                "normalized": "bobo choses pop sweatshirt",
+                "source": "TITLE"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "Baby-Sweateranzug „Blue Moon“ Bio-Baumwolle",
+                "normalized": "baby-sweateranzug „blue moon“ bio-baumwolle",
+                "source": "TITLE"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": "원본 [\"Bobo Choses Pop sweatshirt\"] ↔ 후보 [\"Baby-Sweateranzug „Blue Moon“ Bio-Baumwolle\"]"
+          },
+          {
+            "axis": "FORM",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "TITLE"
+              },
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [],
+            "originIndependentSources": 2,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "COLOR",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "Midnight blue",
+                "normalized": "midnight blue",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "Blue",
+                "normalized": "blue",
+                "source": "TITLE"
+              },
+              {
+                "raw": "baby sweateranzug blue",
+                "normalized": "baby sweateranzug blue",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 2,
+            "conflictBasis": "원본 [\"Midnight blue\"] ↔ 후보 [\"Blue\",\"baby sweateranzug blue\"]"
+          },
+          {
+            "axis": "MATERIAL",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [
+              {
+                "raw": "cotton",
+                "normalized": "cotton",
+                "source": "DESCRIPTION"
+              },
+              {
+                "raw": "organic cotton",
+                "normalized": "organic cotton",
+                "source": "DESCRIPTION"
+              },
+              {
+                "raw": "recycled cotton",
+                "normalized": "recycled cotton",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "FIT",
+            "observationOnly": true,
+            "originState": "PRESENT",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [
+              {
+                "raw": "loose fit",
+                "normalized": "loose fit",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "COMPOSITION",
+            "observationOnly": true,
+            "originState": "PRESENT",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [
+              {
+                "raw": "cotton:12,organic cotton:66,recycled cotton:22",
+                "normalized": "cotton:12,organic cotton:66,recycled cotton:22",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "SET",
+            "observationOnly": true,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "OPTION_SKU",
+            "observationOnly": true,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "IMAGE",
+            "observationOnly": true,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC033_6.jpg?v=1794389793",
+                "normalized": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/b226ac033_6.jpg?v=1794389793",
+                "source": "IMAGE"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "https://cdn.shopify.com/s/files/1/0543/4900/4997/files/Graylabel-baby-BlueMoon-9774.jpg?v=1726497078",
+                "normalized": "https://cdn.shopify.com/s/files/1/0543/4900/4997/files/graylabel-baby-bluemoon-9774.jpg?v=1726497078",
+                "source": "IMAGE"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": "원본 [\"https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC033_6.jpg?v=1794389793\"] ↔ 후보 [\"https://cdn.shopify.com/s/files/1/0543/4900/4997/files/Graylabel-baby-BlueMoon-9774.jpg?v=1726497078\"]"
+          }
+        ],
+        "supply": {
+          "originHasEvidence": true,
+          "candidateHasEvidence": true,
+          "asymmetric": false
+        },
+        "storedForComparison": {
+          "title": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+          "market": "OVERSEAS",
+          "verdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "price": "39 EUR",
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "blockers": [
+            "BRAND_MISMATCH",
+            "NO_TITLE_OVERLAP",
+            "MATERIAL",
+            "AUDIENCE_LINE"
+          ],
+          "matchReasons": [
+            "모델명 유사도 0%",
+            "카테고리 일치",
+            "브랜드 불일치",
+            "근거: 상품군 TOP↔TOP",
+            "근거: 색상 BLUE",
+            "근거: 대상 KIDS",
+            "보류: 브랜드 Bobo Choses ↔ Gray Label",
+            "보류: 핵심 상품명에 겹치는 말이 없다",
+            "보류: 소재 cotton:12,organic cotton:66,recycled cotton:22 ↔ organic cotton:100",
+            "보류: 연령 라인 CHILD ↔ BABY",
+            "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+            "판정근거: 입력 텍스트등급=low · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED(순위 3)"
+          ],
+          "lastSeenAt": "2026-11-07T07:15:09.504Z"
+        }
+      },
+      {
+        "candidateUrl": "https://junioredition.com/products/bobo-choses-pop-sweatshirt-by-bobo-choses",
+        "domain": "junioredition.com",
+        "structured": {
+          "origin": {
+            "brand": "Bobo Choses",
+            "modelCode": "B226AC033",
+            "title": "Bobo Choses Pop sweatshirt"
+          },
+          "candidate": {
+            "brand": "Bobo Choses",
+            "modelCode": "B226AC033",
+            "title": "Bobo Choses Pop Sweatshirt by Bobo Choses"
+          }
+        },
+        "description": {
+          "raw": "Bigfoot By BC Sweatshirt by Bobo Choses. Midnight blue sweatshirt in a relaxed fit featuring ribbed cuffs, bottom and neck and a Bobo Choses print in white across the chest. Perfect for keeping cosy and stylish during the seasonal transition. Colour - Midnight Blue. 66% Organic Cotton 22% Recycled Cotton 12% Cotton. Product code B226AC033 AW26 Made in Spain.",
+          "length": 360,
+          "state": "PRESENT"
+        },
+        "axes": [
+          {
+            "axis": "BRAND",
+            "observationOnly": false,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "MODEL_CODE",
+            "observationOnly": false,
+            "originState": "MISSING",
+            "candidateState": "PRESENT",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [
+              {
+                "raw": "B226AC033",
+                "normalized": "b226ac033",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 1,
+            "conflictBasis": null
+          },
+          {
+            "axis": "PRODUCT_NAME",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "PRESENT",
+            "origin": [
+              {
+                "raw": "Bobo Choses Pop sweatshirt",
+                "normalized": "bobo choses pop sweatshirt",
+                "source": "TITLE"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "Bobo Choses Pop Sweatshirt by Bobo Choses",
+                "normalized": "bobo choses pop sweatshirt by bobo choses",
+                "source": "TITLE"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": null
+          },
+          {
+            "axis": "FORM",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "PRESENT",
+            "origin": [
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "TITLE"
+              },
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "TITLE"
+              },
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "originIndependentSources": 2,
+            "candidateIndependentSources": 2,
+            "conflictBasis": null
+          },
+          {
+            "axis": "COLOR",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "PRESENT",
+            "origin": [
+              {
+                "raw": "Midnight blue",
+                "normalized": "midnight blue",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "Midnight Blue",
+                "normalized": "midnight blue",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": null
+          },
+          {
+            "axis": "MATERIAL",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "PRESENT",
+            "origin": [
+              {
+                "raw": "cotton",
+                "normalized": "cotton",
+                "source": "DESCRIPTION"
+              },
+              {
+                "raw": "organic cotton",
+                "normalized": "organic cotton",
+                "source": "DESCRIPTION"
+              },
+              {
+                "raw": "recycled cotton",
+                "normalized": "recycled cotton",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "cotton",
+                "normalized": "cotton",
+                "source": "DESCRIPTION"
+              },
+              {
+                "raw": "organic cotton",
+                "normalized": "organic cotton",
+                "source": "DESCRIPTION"
+              },
+              {
+                "raw": "recycled cotton",
+                "normalized": "recycled cotton",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": null
+          },
+          {
+            "axis": "FIT",
+            "observationOnly": true,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "loose fit",
+                "normalized": "loose fit",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "relaxed fit",
+                "normalized": "relaxed fit",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": "원본 [\"loose fit\"] ↔ 후보 [\"relaxed fit\"]"
+          },
+          {
+            "axis": "COMPOSITION",
+            "observationOnly": true,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "cotton:12,organic cotton:66,recycled cotton:22",
+                "normalized": "cotton:12,organic cotton:66,recycled cotton:22",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "cotton:12,organic cotton:22,organic cotton:66,recycled cotton:12,recycled cotton:22",
+                "normalized": "cotton:12,organic cotton:22,organic cotton:66,recycled cotton:12,recycled cotton:22",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": "원본 [\"cotton:12,organic cotton:66,recycled cotton:22\"] ↔ 후보 [\"cotton:12,organic cotton:22,organic cotton:66,recycled cotton:12,recycled cotton:22\"]"
+          },
+          {
+            "axis": "SET",
+            "observationOnly": true,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "OPTION_SKU",
+            "observationOnly": true,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "IMAGE",
+            "observationOnly": true,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC033_6.jpg?v=1794389793",
+                "normalized": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/b226ac033_6.jpg?v=1794389793",
+                "source": "IMAGE"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "https://cdn.shopify.com/s/files/1/0874/8574/files/Bobo-Choses-AW26-Bobo-Choses-Pop-Sweatshirt.jpg?v=1784285824",
+                "normalized": "https://cdn.shopify.com/s/files/1/0874/8574/files/bobo-choses-aw26-bobo-choses-pop-sweatshirt.jpg?v=1784285824",
+                "source": "IMAGE"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": "원본 [\"https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC033_6.jpg?v=1794389793\"] ↔ 후보 [\"https://cdn.shopify.com/s/files/1/0874/8574/files/Bobo-Choses-AW26-Bobo-Choses-Pop-Sweatshirt.jpg?v=1784285824\"]"
+          }
+        ],
+        "supply": {
+          "originHasEvidence": true,
+          "candidateHasEvidence": true,
+          "asymmetric": false
+        },
+        "storedForComparison": {
+          "title": "Bobo Choses Pop Sweatshirt by Bobo Choses",
+          "market": "OVERSEAS",
+          "verdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "price": "58 GBP",
+          "priceStatus": "VERIFIED_CURRENT",
+          "blockers": [
+            "MATERIAL"
+          ],
+          "matchReasons": [
+            "모델명 유사도 100%",
+            "카테고리 일치",
+            "브랜드 일치",
+            "근거: 핵심 상품명 pop",
+            "근거: 브랜드 품번 일치",
+            "근거: 상품군 TOP↔TOP",
+            "근거: 색상 BLUE",
+            "근거: 핏 loose fit ↔ relaxed fit(표현 차이 · 동일 브랜드 품번 완전일치 교차판매처)",
+            "보류: 소재 cotton:12,organic cotton:66,recycled cotton:22 ↔ cotton:12,organic cotton:22,organic cotton:66,recycled cotton:12,recycled cotton:22",
+            "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+            "판정근거: 입력 텍스트등급=very_high · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED(순위 3)"
+          ],
+          "lastSeenAt": "2026-11-07T07:15:09.504Z"
+        }
+      },
+      {
+        "candidateUrl": "https://kidbizkid.com/products/lacoste-navy-sweatshirt",
+        "domain": "kidbizkid.com",
+        "structured": {
+          "origin": {
+            "brand": "Bobo Choses",
+            "modelCode": "B226AC033",
+            "title": "Bobo Choses Pop sweatshirt"
+          },
+          "candidate": {
+            "brand": "Lacoste",
+            "modelCode": null,
+            "title": "Lacoste Navy Sweatshirt"
+          }
+        },
+        "description": {
+          "raw": "Timeless Lacoste comfort in sleek navy. This classic zip-up sweatshirt features the iconic crocodile logo embroidered on the chest—a signature touch that pairs effortlessly with any casual outfit. Crafted for everyday wear, it delivers the quality and style Lacoste is known for.",
+          "length": 279,
+          "state": "PRESENT"
+        },
+        "axes": [
+          {
+            "axis": "BRAND",
+            "observationOnly": false,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "MODEL_CODE",
+            "observationOnly": false,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "PRODUCT_NAME",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "Bobo Choses Pop sweatshirt",
+                "normalized": "bobo choses pop sweatshirt",
+                "source": "TITLE"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "Lacoste Navy Sweatshirt",
+                "normalized": "lacoste navy sweatshirt",
+                "source": "TITLE"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": "원본 [\"Bobo Choses Pop sweatshirt\"] ↔ 후보 [\"Lacoste Navy Sweatshirt\"]"
+          },
+          {
+            "axis": "FORM",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "PRESENT",
+            "origin": [
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "TITLE"
+              },
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "TITLE"
+              },
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "originIndependentSources": 2,
+            "candidateIndependentSources": 2,
+            "conflictBasis": null
+          },
+          {
+            "axis": "COLOR",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "Midnight blue",
+                "normalized": "midnight blue",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "Navy",
+                "normalized": "navy",
+                "source": "TITLE"
+              },
+              {
+                "raw": "in sleek navy",
+                "normalized": "in sleek navy",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 2,
+            "conflictBasis": "원본 [\"Midnight blue\"] ↔ 후보 [\"Navy\",\"in sleek navy\"]"
+          },
+          {
+            "axis": "MATERIAL",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [
+              {
+                "raw": "cotton",
+                "normalized": "cotton",
+                "source": "DESCRIPTION"
+              },
+              {
+                "raw": "organic cotton",
+                "normalized": "organic cotton",
+                "source": "DESCRIPTION"
+              },
+              {
+                "raw": "recycled cotton",
+                "normalized": "recycled cotton",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "FIT",
+            "observationOnly": true,
+            "originState": "PRESENT",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [
+              {
+                "raw": "loose fit",
+                "normalized": "loose fit",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "COMPOSITION",
+            "observationOnly": true,
+            "originState": "PRESENT",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [
+              {
+                "raw": "cotton:12,organic cotton:66,recycled cotton:22",
+                "normalized": "cotton:12,organic cotton:66,recycled cotton:22",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "SET",
+            "observationOnly": true,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "OPTION_SKU",
+            "observationOnly": true,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "IMAGE",
+            "observationOnly": true,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC033_6.jpg?v=1794389793",
+                "normalized": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/b226ac033_6.jpg?v=1794389793",
+                "source": "IMAGE"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "https://cdn.shopify.com/s/files/1/2390/3997/files/Gemini_Generated_Image_t1qy12t1qy12t1qy.jpg?v=1788556557",
+                "normalized": "https://cdn.shopify.com/s/files/1/2390/3997/files/gemini_generated_image_t1qy12t1qy12t1qy.jpg?v=1788556557",
+                "source": "IMAGE"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": "원본 [\"https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC033_6.jpg?v=1794389793\"] ↔ 후보 [\"https://cdn.shopify.com/s/files/1/2390/3997/files/Gemini_Generated_Image_t1qy12t1qy12t1qy.jpg?v=1788556557\"]"
+          }
+        ],
+        "supply": {
+          "originHasEvidence": true,
+          "candidateHasEvidence": true,
+          "asymmetric": false
+        },
+        "storedForComparison": {
+          "title": "Lacoste Navy Sweatshirt",
+          "market": "OVERSEAS",
+          "verdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "price": "10300 CAD",
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "blockers": [
+            "BRAND_MISMATCH",
+            "COLOR_VARIANT",
+            "NO_TITLE_OVERLAP",
+            "AUDIENCE_LINE"
+          ],
+          "matchReasons": [
+            "모델명 유사도 25%",
+            "카테고리 일치",
+            "브랜드 불일치",
+            "근거: 상품군 TOP↔TOP",
+            "근거: 색상 BLUE",
+            "근거: 대상 KIDS",
+            "보류: 브랜드 Bobo Choses ↔ Lacoste",
+            "보류: 색상 이름 Midnight blue ↔ in sleek navy",
+            "보류: 핵심 상품명에 겹치는 말이 없다",
+            "보류: 연령 라인 CHILD ↔ BABY",
+            "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+            "판정근거: 입력 텍스트등급=low · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED(순위 3)"
+          ],
+          "lastSeenAt": "2026-11-07T07:15:09.504Z"
+        }
+      },
+      {
+        "candidateUrl": "https://www.kids-world.com/ko-kr/bobo-choses-sweatshirt-midnight-blue-print-p-450718.html",
+        "domain": "kids-world.com",
+        "structured": {
+          "origin": {
+            "brand": "Bobo Choses",
+            "modelCode": "B226AC033",
+            "title": "Bobo Choses Pop sweatshirt"
+          },
+          "candidate": {
+            "brand": "Bobo Choses",
+            "modelCode": "B226AC033",
+            "title": "Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트"
+          }
+        },
+        "description": {
+          "raw": "Bobo Choses 맨투맨. Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트. Bobo Choses (보보쇼즈) 의 맨투맨진한 파란색 바탕에 은은한 워싱 처리가 된 맨투맨 입니다. 가슴 부분에는 흰색 레터링으로 브랜드 이름이 새겨져 있습니다. 맨투맨 넥에 긴 소매는 넓은 골지 마감으로 처리되었으며, 밑단에도 넓은 골지 디테일이 더해져 클래식한 핏을 연출합니다. 보보 초 Bobo Choses (보보쇼즈) 로고가 앞면에 선명하게 배치되어 대비 효과를 줍니다. 심플하면서도 스타일리시한 디자인으로 일상복으로 활용하기 좋습니다. 맨투맨 은 부드러운 기모 코튼 소재입니다.. Bobo Choses 맨투맨. Bobo Choses B226AC033-401",
+          "length": 368,
+          "state": "PRESENT"
+        },
+        "axes": [
+          {
+            "axis": "BRAND",
+            "observationOnly": false,
+            "originState": "MISSING",
+            "candidateState": "PRESENT",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [
+              {
+                "raw": "Bobo Choses",
+                "normalized": "bobo choses",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 1,
+            "conflictBasis": null
+          },
+          {
+            "axis": "MODEL_CODE",
+            "observationOnly": false,
+            "originState": "MISSING",
+            "candidateState": "PRESENT",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [
+              {
+                "raw": "B226AC033",
+                "normalized": "b226ac033",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 1,
+            "conflictBasis": null
+          },
+          {
+            "axis": "PRODUCT_NAME",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "Bobo Choses Pop sweatshirt",
+                "normalized": "bobo choses pop sweatshirt",
+                "source": "TITLE"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트",
+                "normalized": "bobo choses 맨투맨 - 미드나잇 블루 포함 프린트",
+                "source": "TITLE"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": "원본 [\"Bobo Choses Pop sweatshirt\"] ↔ 후보 [\"Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트\"]"
+          },
+          {
+            "axis": "FORM",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "PRESENT",
+            "origin": [
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "TITLE"
+              },
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "TITLE"
+              },
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "originIndependentSources": 2,
+            "candidateIndependentSources": 2,
+            "conflictBasis": null
+          },
+          {
+            "axis": "COLOR",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [
+              {
+                "raw": "Midnight blue",
+                "normalized": "midnight blue",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "MATERIAL",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [
+              {
+                "raw": "cotton",
+                "normalized": "cotton",
+                "source": "DESCRIPTION"
+              },
+              {
+                "raw": "organic cotton",
+                "normalized": "organic cotton",
+                "source": "DESCRIPTION"
+              },
+              {
+                "raw": "recycled cotton",
+                "normalized": "recycled cotton",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "FIT",
+            "observationOnly": true,
+            "originState": "PRESENT",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [
+              {
+                "raw": "loose fit",
+                "normalized": "loose fit",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "COMPOSITION",
+            "observationOnly": true,
+            "originState": "PRESENT",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [
+              {
+                "raw": "cotton:12,organic cotton:66,recycled cotton:22",
+                "normalized": "cotton:12,organic cotton:66,recycled cotton:22",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "SET",
+            "observationOnly": true,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "OPTION_SKU",
+            "observationOnly": true,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "IMAGE",
+            "observationOnly": true,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC033_6.jpg?v=1794389793",
+                "normalized": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/b226ac033_6.jpg?v=1794389793",
+                "source": "IMAGE"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "https://cdn.kids-world.com/images/products/IY026/681px/IY026.jpg?v=1787212179",
+                "normalized": "https://cdn.kids-world.com/images/products/iy026/681px/iy026.jpg?v=1787212179",
+                "source": "IMAGE"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": "원본 [\"https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC033_6.jpg?v=1794389793\"] ↔ 후보 [\"https://cdn.kids-world.com/images/products/IY026/681px/IY026.jpg?v=1787212179\"]"
+          }
+        ],
+        "supply": {
+          "originHasEvidence": true,
+          "candidateHasEvidence": true,
+          "asymmetric": false
+        },
+        "storedForComparison": {
+          "title": "Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트",
+          "market": "UNKNOWN",
+          "verdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "price": "106000 KRW",
+          "priceStatus": "VERIFIED_CURRENT",
+          "blockers": [
+            "NO_TITLE_OVERLAP"
+          ],
+          "matchReasons": [
+            "모델명 유사도 0%",
+            "브랜드 일치",
+            "근거: 브랜드 품번 일치",
+            "보류: 핵심 상품명에 겹치는 말이 없다",
+            "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+            "판정근거: 입력 텍스트등급=low · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED(순위 3)"
+          ],
+          "lastSeenAt": "2026-11-07T07:15:09.504Z"
+        }
+      },
+      {
+        "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+        "domain": "petitemaisonkids.com",
+        "structured": {
+          "origin": {
+            "brand": "Bobo Choses",
+            "modelCode": "B226AC033",
+            "title": "Bobo Choses Pop sweatshirt"
+          },
+          "candidate": {
+            "brand": "Petite Maison Kids",
+            "modelCode": null,
+            "title": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers"
+          }
+        },
+        "description": {
+          "raw": "Indulge her in a little luxury with our Maya Blue Cotton Sweater Top. Made from soft, premium cotton with a touch of stretch, this top pairs everyday comfort with sophisticated style. The rich blue color is reminiscent of a clear sky, and handmade flowers add a sweet, special finish. Style it with the matching pieces from our Maya Collection for a coordinated lounge set, or pair it with her favorite bottoms for an easy, elegant outfit. Available in sizes 6 months to 12 years. Soft 95% Cotton, 5% Elastane Handmade Flowers Made to Match our Maya Collection Made in Turkey Care Instructions: Hand wash or machine wash in cold water, delicate cycle. Hang to dry.",
+          "length": 664,
+          "state": "PRESENT"
+        },
+        "axes": [
+          {
+            "axis": "BRAND",
+            "observationOnly": false,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "MODEL_CODE",
+            "observationOnly": false,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "PRODUCT_NAME",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "Bobo Choses Pop sweatshirt",
+                "normalized": "bobo choses pop sweatshirt",
+                "source": "TITLE"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers",
+                "normalized": "maya girls' blue cotton sweater top with handmade flowers",
+                "source": "TITLE"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": "원본 [\"Bobo Choses Pop sweatshirt\"] ↔ 후보 [\"Maya Girls' Blue Cotton Sweater Top with Handmade Flowers\"]"
+          },
+          {
+            "axis": "FORM",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "TITLE"
+              },
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "TOP",
+                "normalized": "top",
+                "source": "TITLE"
+              },
+              {
+                "raw": "TOP",
+                "normalized": "top",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "originIndependentSources": 2,
+            "candidateIndependentSources": 2,
+            "conflictBasis": "원본 [\"SWEATSHIRT\",\"SWEATSHIRT\"] ↔ 후보 [\"TOP\",\"TOP\"]"
+          },
+          {
+            "axis": "COLOR",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "Midnight blue",
+                "normalized": "midnight blue",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "Blue",
+                "normalized": "blue",
+                "source": "TITLE"
+              },
+              {
+                "raw": "our maya blue",
+                "normalized": "our maya blue",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 2,
+            "conflictBasis": "원본 [\"Midnight blue\"] ↔ 후보 [\"Blue\",\"our maya blue\"]"
+          },
+          {
+            "axis": "MATERIAL",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "PRESENT",
+            "origin": [
+              {
+                "raw": "cotton",
+                "normalized": "cotton",
+                "source": "DESCRIPTION"
+              },
+              {
+                "raw": "organic cotton",
+                "normalized": "organic cotton",
+                "source": "DESCRIPTION"
+              },
+              {
+                "raw": "recycled cotton",
+                "normalized": "recycled cotton",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "cotton",
+                "normalized": "cotton",
+                "source": "DESCRIPTION"
+              },
+              {
+                "raw": "elastane",
+                "normalized": "elastane",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": null
+          },
+          {
+            "axis": "FIT",
+            "observationOnly": true,
+            "originState": "PRESENT",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [
+              {
+                "raw": "loose fit",
+                "normalized": "loose fit",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "COMPOSITION",
+            "observationOnly": true,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "cotton:12,organic cotton:66,recycled cotton:22",
+                "normalized": "cotton:12,organic cotton:66,recycled cotton:22",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "cotton:95,elastane:5",
+                "normalized": "cotton:95,elastane:5",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": "원본 [\"cotton:12,organic cotton:66,recycled cotton:22\"] ↔ 후보 [\"cotton:95,elastane:5\"]"
+          },
+          {
+            "axis": "SET",
+            "observationOnly": true,
+            "originState": "MISSING",
+            "candidateState": "PRESENT",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [
+              {
+                "raw": "set",
+                "normalized": "set",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 1,
+            "conflictBasis": null
+          },
+          {
+            "axis": "OPTION_SKU",
+            "observationOnly": true,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "IMAGE",
+            "observationOnly": true,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC033_6.jpg?v=1794389793",
+                "normalized": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/b226ac033_6.jpg?v=1794389793",
+                "source": "IMAGE"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "https://cdn.shopify.com/s/files/1/0081/1171/8457/files/BC46F29A-E160-4F7E-B86A-C0CFDA03CC62.jpg?v=1756127386",
+                "normalized": "https://cdn.shopify.com/s/files/1/0081/1171/8457/files/bc46f29a-e160-4f7e-b86a-c0cfda03cc62.jpg?v=1756127386",
+                "source": "IMAGE"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": "원본 [\"https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC033_6.jpg?v=1794389793\"] ↔ 후보 [\"https://cdn.shopify.com/s/files/1/0081/1171/8457/files/BC46F29A-E160-4F7E-B86A-C0CFDA03CC62.jpg?v=1756127386\"]"
+          }
+        ],
+        "supply": {
+          "originHasEvidence": true,
+          "candidateHasEvidence": true,
+          "asymmetric": false
+        },
+        "storedForComparison": {
+          "title": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers",
+          "market": "OVERSEAS",
+          "verdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "price": "12800 USD",
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "blockers": [
+            "BRAND_MISMATCH",
+            "NO_TITLE_OVERLAP",
+            "MATERIAL",
+            "AUDIENCE_LINE",
+            "GARMENT_FORM"
+          ],
+          "matchReasons": [
+            "모델명 유사도 0%",
+            "카테고리 일치",
+            "브랜드 불일치",
+            "근거: 상품군 TOP↔TOP",
+            "근거: 색상 BLUE",
+            "근거: 대상 KIDS",
+            "보류: 브랜드 Bobo Choses ↔ Petite Maison Kids",
+            "보류: 핵심 상품명에 겹치는 말이 없다",
+            "보류: 소재 cotton:12,organic cotton:66,recycled cotton:22 ↔ cotton:95,elastane:5",
+            "보류: 연령 라인 CHILD ↔ BABY",
+            "보류: 옷의 형태 SWEATSHIRT ↔ TOP",
+            "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+            "판정근거: 입력 텍스트등급=low · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED(순위 3)"
+          ],
+          "lastSeenAt": "2026-11-07T07:15:09.504Z"
+        }
+      },
+      {
+        "candidateUrl": "https://shoppiccoliandco.com/products/jude-navy-baby-boy-anchor-sweater",
+        "domain": "shoppiccoliandco.com",
+        "structured": {
+          "origin": {
+            "brand": "Bobo Choses",
+            "modelCode": "B226AC033",
+            "title": "Bobo Choses Pop sweatshirt"
+          },
+          "candidate": {
+            "brand": "Piccoli & Co™",
+            "modelCode": null,
+            "title": "Jude Navy Baby Boy Anchor Sweater"
+          }
+        },
+        "description": {
+          "raw": "Meet the Jude Navy Baby Boy Anchor Sweater—a tiny piece of nautical charm designed to elevate everyday outfits. This striped knitted sweater pairs deep navy with crisp stripes and a playful anchor motif, giving your little one a classic, sea-breeze-ready look from sunlit mornings to breezy evenings. What makes this sweater stand out Striped knitted design with a distinctive anchor motif adds instant personality to any outfit. Made in Spain —crafted with care and attention to detail that reflects timeless European knitwear traditions. Navy colorway coordinates effortlessly with rompers, shorts, jeans, or over lightweight layers for year-round style. Ideal for summer adventures —a comfortable, breathable layer that works for seaside strolls, family outings, and playful days outdoors. This sweater isn’t just about looks. It’s about practicality and a touch of adventure—a go-to piece for parents who want a versatile, easy-to-wear layer that frames those memorable summer moments. The anchor motif is a subtle nod to nautical adventures, making it perfect for beach trips, photoshoots, or anytime your little sailor is ready to explore. Who this is for Parents seeking a stylish, age-appropriate knit that feels special without being fussy. Babies who benefit from a flexible, comfortable layer that can be dressed up or down. Gift-givers looking for a Spain-made garment with a timeless, family-friendly design. Practical use ideas Layer over a bodysuit for a polished seaside ensemble during summer outings. Pair with light denim or neutral shorts for quick, put-together outfits on busy days. Bring along on vacations to maintain a cohesive wardrobe that photographs beautifully in natural light. With its thoughtful design and Spanish craftsmanship, the Jude Navy Baby Boy Anchor Sweater offers a reliable, stylish option that grows with your little one’s summertime adventures. Elevate the daily wardrobe with a touch of nautical charm—the kind of piece that becomes a family favorite in minutes.",
+          "length": 2010,
+          "state": "PRESENT"
+        },
+        "axes": [
+          {
+            "axis": "BRAND",
+            "observationOnly": false,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "MODEL_CODE",
+            "observationOnly": false,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "PRODUCT_NAME",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "Bobo Choses Pop sweatshirt",
+                "normalized": "bobo choses pop sweatshirt",
+                "source": "TITLE"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "Jude Navy Baby Boy Anchor Sweater",
+                "normalized": "jude navy baby boy anchor sweater",
+                "source": "TITLE"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": "원본 [\"Bobo Choses Pop sweatshirt\"] ↔ 후보 [\"Jude Navy Baby Boy Anchor Sweater\"]"
+          },
+          {
+            "axis": "FORM",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "TITLE"
+              },
+              {
+                "raw": "SWEATSHIRT",
+                "normalized": "sweatshirt",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "BODYSUIT",
+                "normalized": "bodysuit",
+                "source": "DESCRIPTION"
+              },
+              {
+                "raw": "PANTS",
+                "normalized": "pants",
+                "source": "DESCRIPTION"
+              },
+              {
+                "raw": "ROMPER",
+                "normalized": "romper",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "originIndependentSources": 2,
+            "candidateIndependentSources": 1,
+            "conflictBasis": "원본 [\"SWEATSHIRT\",\"SWEATSHIRT\"] ↔ 후보 [\"BODYSUIT\",\"PANTS\",\"ROMPER\"]"
+          },
+          {
+            "axis": "COLOR",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "Midnight blue",
+                "normalized": "midnight blue",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "Navy",
+                "normalized": "navy",
+                "source": "TITLE"
+              },
+              {
+                "raw": "the jude navy",
+                "normalized": "the jude navy",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 2,
+            "conflictBasis": "원본 [\"Midnight blue\"] ↔ 후보 [\"Navy\",\"the jude navy\"]"
+          },
+          {
+            "axis": "MATERIAL",
+            "observationOnly": false,
+            "originState": "PRESENT",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [
+              {
+                "raw": "cotton",
+                "normalized": "cotton",
+                "source": "DESCRIPTION"
+              },
+              {
+                "raw": "organic cotton",
+                "normalized": "organic cotton",
+                "source": "DESCRIPTION"
+              },
+              {
+                "raw": "recycled cotton",
+                "normalized": "recycled cotton",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "FIT",
+            "observationOnly": true,
+            "originState": "PRESENT",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [
+              {
+                "raw": "loose fit",
+                "normalized": "loose fit",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "COMPOSITION",
+            "observationOnly": true,
+            "originState": "PRESENT",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [
+              {
+                "raw": "cotton:12,organic cotton:66,recycled cotton:22",
+                "normalized": "cotton:12,organic cotton:66,recycled cotton:22",
+                "source": "DESCRIPTION"
+              }
+            ],
+            "candidate": [],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "SET",
+            "observationOnly": true,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "OPTION_SKU",
+            "observationOnly": true,
+            "originState": "MISSING",
+            "candidateState": "MISSING",
+            "comparison": "MISSING",
+            "origin": [],
+            "candidate": [],
+            "originIndependentSources": 0,
+            "candidateIndependentSources": 0,
+            "conflictBasis": null
+          },
+          {
+            "axis": "IMAGE",
+            "observationOnly": true,
+            "originState": "PRESENT",
+            "candidateState": "PRESENT",
+            "comparison": "CONFLICT",
+            "origin": [
+              {
+                "raw": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC033_6.jpg?v=1794389793",
+                "normalized": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/b226ac033_6.jpg?v=1794389793",
+                "source": "IMAGE"
+              }
+            ],
+            "candidate": [
+              {
+                "raw": "https://cdn.shopify.com/s/files/1/0466/4842/6659/files/769911C5-A127-4B74-86B3-6F21F6ECCDD8.jpg?v=1743013397",
+                "normalized": "https://cdn.shopify.com/s/files/1/0466/4842/6659/files/769911c5-a127-4b74-86b3-6f21f6eccdd8.jpg?v=1743013397",
+                "source": "IMAGE"
+              }
+            ],
+            "originIndependentSources": 1,
+            "candidateIndependentSources": 1,
+            "conflictBasis": "원본 [\"https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC033_6.jpg?v=1794389793\"] ↔ 후보 [\"https://cdn.shopify.com/s/files/1/0466/4842/6659/files/769911C5-A127-4B74-86B3-6F21F6ECCDD8.jpg?v=1743013397\"]"
+          }
+        ],
+        "supply": {
+          "originHasEvidence": true,
+          "candidateHasEvidence": true,
+          "asymmetric": false
+        },
+        "storedForComparison": {
+          "title": "Jude Navy Baby Boy Anchor Sweater",
+          "market": "OVERSEAS",
+          "verdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "price": "9700 USD",
+          "priceStatus": "UNVERIFIED_SEARCH",
+          "blockers": [
+            "BRAND_MISMATCH",
+            "COLOR_VARIANT",
+            "NO_TITLE_OVERLAP",
+            "AUDIENCE_LINE"
+          ],
+          "matchReasons": [
+            "모델명 유사도 0%",
+            "카테고리 일치",
+            "브랜드 불일치",
+            "근거: 상품군 TOP↔TOP",
+            "근거: 색상 BLUE",
+            "근거: 대상 KIDS",
+            "보류: 브랜드 Bobo Choses ↔ Piccoli & Co™",
+            "보류: 색상 이름 Midnight blue ↔ the jude navy",
+            "보류: 핵심 상품명에 겹치는 말이 없다",
+            "보류: 연령 라인 CHILD ↔ BABY",
+            "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+            "판정근거: 입력 텍스트등급=low · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED(순위 3)"
+          ],
+          "lastSeenAt": "2026-11-07T07:15:09.504Z"
+        }
+      }
+    ],
+    "observedAt": "<이 응답이 관측한 시각>"
+  }
+}

@@ -134,7 +134,13 @@ describe("UIED01 — 브랜드·품번·상품명·상세설명 통합 증거", 
     expect(facts, "🔴 상세설명 원문 칸이 없다").toContain("description?");
     /** 🟢 전달 — STEP 1 이 확인한 그 세 줄. */
     const runner = strip(readFileSync(join(LIB, "run-domestic-price-check.ts"), "utf8"));
-    expect(runner).toContain("identityEvidence: { candidates: identityEvidenceRows }");
+    /** 🔵 UIED-02 가 같은 칸에 `observedAt` 을 더했다 — 배열 배선은 그대로다. */
+    expect(runner).toContain("identityEvidence: { candidates: identityEvidenceRows,");
+    /**
+     * 🔵🔵 UIED-02 — **§A 가 적은 「상세설명만 응답 칸이 없다」가 닫혔다.**
+     * 🔴 그래서 이 계약의 방향을 뒤집는다 — 이제 **있어야** 한다.
+     */
+    expect(runner, "🔴 상세설명 원문 전달이 사라졌다").toContain("raw: candidateDescription ?? null");
   });
 
   it("A-2 🔴🔴 **상태 다섯을 기존 넷에 매핑했다** — 운영 타입을 늘리지 않았다", () => {

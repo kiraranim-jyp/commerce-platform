@@ -561,7 +561,46 @@ export interface DomesticPriceCheckResult {
       domain: string;
       axes: IdentityEvidenceSummary["axes"];
       supply: IdentityEvidenceSummary["supply"];
+      /**
+       * 🔵🔵 UIED-02 ③ — **구조화 세 칸**(원상품 · 후보).
+       *
+       * 🔴🔴 **`axes` 와 합치지 않는다.** `axes` 는 제목·상세설명에서 «읽은» 원문 관찰값이고
+       *    이것은 추출기가 세운 **구조화 칸** 이다. UIED-01 이 그 둘이 갈리는 실례를 쟀다 —
+       *    브랜드 축이 **8/8 `MISSING`** 인데 구조화 칸에는 `Bobo Choses` 가 **있었다**
+       *    (그 원상품의 제목·상세설명에 브랜드 문자열이 없어서다).
+       * 🔴 없으면 `null` — 「확인 불가」다(지어내지 않는다).
+       */
+      structured: {
+        origin: { brand: string | null; modelCode: string | null; title: string | null };
+        candidate: { brand: string | null; modelCode: string | null; title: string | null };
+      };
+      /**
+       * 🔵🔵 UIED-02 ④ — **후보 상세설명 원문**(CPO 승인 §H ①).
+       *
+       * 🔴 **원문 그대로** 다 — 번역 0 · 보정 0 · 요약 0 · 잘라내기 0.
+       * 🔴 **`null` 과 `""` 를 섞지 않는다**(CPO 명시):
+       * ```
+       * raw === null  →  NOT_MEASURED   추출 경로가 그 칸을 **세우지 않았다**
+       * raw === ""    →  MISSING        읽었는데 **비어 있었다**
+       * 그 외          →  PRESENT
+       * ```
+       * 🟢 상태 어휘는 기존 `IDENTITY_EVIDENCE_STATES` 안에서만 쓴다(새 타입 0).
+       */
+      description: {
+        raw: string | null;
+        length: number;
+        state: "PRESENT" | "MISSING" | "NOT_MEASURED";
+      };
     }[];
+    /**
+     * 🔵 UIED-02 ⑥ — **관측 시각**.
+     *
+     * 🔴🔴 **값별 시각은 운영이 보관하지 않는다** — `ProductFacts` 에 시각 칸이 **없고**
+     *    런너에도 없다(전수 확인). 그래서 **이 응답이 관측한 시각 하나** 만 적는다.
+     * 🔴 「각 값이 그때 관측됐다」로 읽지 않는다 — 이 `/check` 실행이 그 facts 를 만든
+     *    시각이다. 값별 시각이 필요하면 **별도 저장 설계** 사안이다(이번 범위 밖).
+     */
+    observedAt: string;
   } | null;
   /**
    * 🔵🔵 DIP-01 — **⑧ 게이트가 버린 후보**(표시 전용 · 타입이 좁다).
@@ -1831,12 +1870,9 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
    *    `computeMarketIntelligence` 에 **넘기지 않는다** ⟹ 가격/판정 오염 경로가 **없다**.
    * 🔴 후보 하나당 한 줄이고 `candidateUrl` 로 **연결이 명확** 하다(CPO 계약 경계 6).
    */
-  const identityEvidenceRows: {
-    candidateUrl: string;
-    domain: string;
-    axes: ReturnType<typeof summarizeIdentityEvidence>["axes"];
-    supply: ReturnType<typeof summarizeIdentityEvidence>["supply"];
-  }[] = [];
+  const identityEvidenceRows: NonNullable<
+    DomesticPriceCheckResult["identityEvidence"]
+  >["candidates"] = [];
   /**
    * 🔵 DIP-01 — ⑧ 게이트가 버린 후보. 🔴 위 여섯과 **다른 타입** 이고(좁다) MI 입력에
    *    **합치지 않는다**. 출처는 행마다 `source` 로 들고 다닌다(배열을 가르지 않는 이유 —
@@ -2336,9 +2372,38 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
        * 🔴 새 계산/네트워크 0 — 두 facts 의 `evidence` 칸을 **읽을** 뿐이다.
        */
       if (best.facts) {
+        /**
+         * 🔵🔵 UIED-02 — **네 영역을 한 후보 줄에 세운다**(CPO 승인 §H ①).
+         * 🔴 새 수집 0 · 새 HTTP 0 · 새 추출기 0 — `query.facts`/`best.facts` 를 **읽을** 뿐이다.
+         *    (바로 아래 sink 의 `brand`/`modelCode` 와 **같은 객체** 다 · FINAL-03 선례)
+         */
+        const candidateDescription = best.facts.description;
         identityEvidenceRows.push({
           candidateUrl: best.url,
           domain: result.domain,
+          structured: {
+            origin: {
+              brand: query.facts?.brand ?? null,
+              modelCode: query.facts?.brandModelCode ?? null,
+              title: query.facts?.title ?? null,
+            },
+            candidate: {
+              brand: best.facts.brand ?? null,
+              modelCode: best.facts.brandModelCode ?? null,
+              title: best.facts.title ?? null,
+            },
+          },
+          description: {
+            /** 🔴 원문 그대로 · `null` 과 `""` 를 구분해 보존한다. */
+            raw: candidateDescription ?? null,
+            length: candidateDescription?.length ?? 0,
+            state:
+              candidateDescription == null
+                ? "NOT_MEASURED"
+                : candidateDescription.length === 0
+                  ? "MISSING"
+                  : "PRESENT",
+          },
           ...summarizeIdentityEvidence(query.facts, best.facts),
         });
       }
@@ -2706,7 +2771,11 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
      *    가격/추천/SAME 판정과 **섞지 않는다** · Matcher 근거로 쓰지 않는다.
      * 🔴 후보가 하나도 판정되지 않았으면 `[]` 다(「증거 없음」이 아니라 「대조 대상 없음」).
      */
-    identityEvidence: { candidates: identityEvidenceRows },
+    /**
+     * 🔴 UIED-02 ⑥ — `observedAt` 은 **이 응답이 관측한 시각 하나** 다.
+     *    값별 시각은 운영이 보관하지 않는다(`ProductFacts` 에 시각 칸이 없다).
+     */
+    identityEvidence: { candidates: identityEvidenceRows, observedAt: new Date().toISOString() },
     /**
      * 🔵 DIP-01 — ⑧ 게이트가 버린 후보. 🔴 `[]` 는 「버려진 후보가 없다」이고
      *    「경로가 안 돌았다」가 아니다 — 이 배열은 **항상** 돈다(모든 생산자 공통 경로).
