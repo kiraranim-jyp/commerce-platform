@@ -235,6 +235,11 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
     file: "uied03-failure-states.json",
     why: "🟢 추출 실패/부재 분류(2차 산출물) · 사람 라벨 **없음** · **이중 집계 방지**",
   });
+  /** 🔵 UIED-04 — **다상품군 병목 집계**(상품군 12 · 분모 364). 🔴 라벨 0 · 2차 산출물. */
+  skipped.push({
+    file: "uied04-multigroup.json",
+    why: "🟢 다상품군 병목 집계(2차 산출물) · 사람 라벨 **없음** · **이중 집계 방지**",
+  });
   /**
    * 🔵 UIED-01 — 브랜드·품번·상품명·상세설명 **네 영역 통합 비교표**(17행 · 5 상품군).
    * 🔴 분모에 넣지 않는다 — 기존 산출물 넷을 **조립한 2차 산출물** 이라 넣으면 같은

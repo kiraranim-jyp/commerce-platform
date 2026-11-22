@@ -1,0 +1,1357 @@
+{
+  "note": "🔴 UIED-04 조사 산출 · HTTP 0 · 판정 변경 0 · 라벨 0 · 2차 산출물(이중 집계 금지). 분모 — 후보 364(GT_IMPORT 고아 17 제외) · 원상품 122.",
+  "denominator": {
+    "baselineRows": 381,
+    "orphans": 17,
+    "candidates": 364,
+    "origins": 122
+  },
+  "groups": [
+    {
+      "group": "T Shirt",
+      "origins": 37,
+      "candidates": 111,
+      "kr": 31,
+      "overseas": 65,
+      "unknownMkt": 15,
+      "opSame": 27,
+      "human": 1,
+      "originBrand": 37,
+      "originSku": 37,
+      "originCodeResolved": 37,
+      "originDesc": 37,
+      "candTitle": 111,
+      "candBrandStored": 0,
+      "candDescStored": 0,
+      "aliasGap": 0,
+      "aliasCovered": 52,
+      "noOriginCode": 0,
+      "multilingualTitle": 40,
+      "bottleneck": 30,
+      "displayOnly": 27,
+      "realDifferent": 54
+    },
+    {
+      "group": "T-shirts",
+      "origins": 51,
+      "candidates": 110,
+      "kr": 6,
+      "overseas": 102,
+      "unknownMkt": 2,
+      "opSame": 47,
+      "human": 10,
+      "originBrand": 47,
+      "originSku": 0,
+      "originCodeResolved": 51,
+      "originDesc": 51,
+      "candTitle": 108,
+      "candBrandStored": 0,
+      "candDescStored": 0,
+      "aliasGap": 0,
+      "aliasCovered": 48,
+      "noOriginCode": 0,
+      "multilingualTitle": 6,
+      "bottleneck": 44,
+      "displayOnly": 46,
+      "realDifferent": 20
+    },
+    {
+      "group": "Sweatshirts",
+      "origins": 19,
+      "candidates": 97,
+      "kr": 4,
+      "overseas": 88,
+      "unknownMkt": 5,
+      "opSame": 6,
+      "human": 10,
+      "originBrand": 19,
+      "originSku": 0,
+      "originCodeResolved": 19,
+      "originDesc": 19,
+      "candTitle": 95,
+      "candBrandStored": 0,
+      "candDescStored": 0,
+      "aliasGap": 0,
+      "aliasCovered": 22,
+      "noOriginCode": 0,
+      "multilingualTitle": 5,
+      "bottleneck": 24,
+      "displayOnly": 6,
+      "realDifferent": 67
+    },
+    {
+      "group": "🔴 미분류(원상품 유형 없음)",
+      "origins": 5,
+      "candidates": 16,
+      "kr": 0,
+      "overseas": 16,
+      "unknownMkt": 0,
+      "opSame": 2,
+      "human": 0,
+      "originBrand": 5,
+      "originSku": 3,
+      "originCodeResolved": 0,
+      "originDesc": 5,
+      "candTitle": 16,
+      "candBrandStored": 0,
+      "candDescStored": 0,
+      "aliasGap": 2,
+      "aliasCovered": 2,
+      "noOriginCode": 16,
+      "multilingualTitle": 0,
+      "bottleneck": 14,
+      "displayOnly": 2,
+      "realDifferent": 0
+    },
+    {
+      "group": "Trousers",
+      "origins": 1,
+      "candidates": 8,
+      "kr": 0,
+      "overseas": 7,
+      "unknownMkt": 1,
+      "opSame": 0,
+      "human": 1,
+      "originBrand": 1,
+      "originSku": 0,
+      "originCodeResolved": 1,
+      "originDesc": 1,
+      "candTitle": 7,
+      "candBrandStored": 0,
+      "candDescStored": 0,
+      "aliasGap": 0,
+      "aliasCovered": 1,
+      "noOriginCode": 0,
+      "multilingualTitle": 0,
+      "bottleneck": 2,
+      "displayOnly": 0,
+      "realDifferent": 6
+    },
+    {
+      "group": "Dress",
+      "origins": 2,
+      "candidates": 8,
+      "kr": 0,
+      "overseas": 8,
+      "unknownMkt": 0,
+      "opSame": 0,
+      "human": 0,
+      "originBrand": 2,
+      "originSku": 0,
+      "originCodeResolved": 2,
+      "originDesc": 2,
+      "candTitle": 8,
+      "candBrandStored": 0,
+      "candDescStored": 0,
+      "aliasGap": 2,
+      "aliasCovered": 0,
+      "noOriginCode": 0,
+      "multilingualTitle": 0,
+      "bottleneck": 2,
+      "displayOnly": 0,
+      "realDifferent": 6
+    },
+    {
+      "group": "Jacket",
+      "origins": 2,
+      "candidates": 6,
+      "kr": 0,
+      "overseas": 6,
+      "unknownMkt": 0,
+      "opSame": 0,
+      "human": 0,
+      "originBrand": 2,
+      "originSku": 1,
+      "originCodeResolved": 1,
+      "originDesc": 2,
+      "candTitle": 6,
+      "candBrandStored": 0,
+      "candDescStored": 0,
+      "aliasGap": 1,
+      "aliasCovered": 0,
+      "noOriginCode": 3,
+      "multilingualTitle": 0,
+      "bottleneck": 3,
+      "displayOnly": 0,
+      "realDifferent": 3
+    },
+    {
+      "group": "Outerwear",
+      "origins": 1,
+      "candidates": 2,
+      "kr": 0,
+      "overseas": 2,
+      "unknownMkt": 0,
+      "opSame": 0,
+      "human": 0,
+      "originBrand": 1,
+      "originSku": 0,
+      "originCodeResolved": 1,
+      "originDesc": 1,
+      "candTitle": 2,
+      "candBrandStored": 0,
+      "candDescStored": 0,
+      "aliasGap": 0,
+      "aliasCovered": 1,
+      "noOriginCode": 0,
+      "multilingualTitle": 0,
+      "bottleneck": 1,
+      "displayOnly": 0,
+      "realDifferent": 1
+    },
+    {
+      "group": "Blouse",
+      "origins": 1,
+      "candidates": 2,
+      "kr": 0,
+      "overseas": 2,
+      "unknownMkt": 0,
+      "opSame": 0,
+      "human": 0,
+      "originBrand": 1,
+      "originSku": 0,
+      "originCodeResolved": 1,
+      "originDesc": 1,
+      "candTitle": 2,
+      "candBrandStored": 0,
+      "candDescStored": 0,
+      "aliasGap": 1,
+      "aliasCovered": 0,
+      "noOriginCode": 0,
+      "multilingualTitle": 0,
+      "bottleneck": 1,
+      "displayOnly": 0,
+      "realDifferent": 1
+    },
+    {
+      "group": "AW26 DROP TWO",
+      "origins": 1,
+      "candidates": 2,
+      "kr": 0,
+      "overseas": 2,
+      "unknownMkt": 0,
+      "opSame": 0,
+      "human": 0,
+      "originBrand": 1,
+      "originSku": 0,
+      "originCodeResolved": 0,
+      "originDesc": 1,
+      "candTitle": 2,
+      "candBrandStored": 0,
+      "candDescStored": 0,
+      "aliasGap": 1,
+      "aliasCovered": 0,
+      "noOriginCode": 2,
+      "multilingualTitle": 0,
+      "bottleneck": 2,
+      "displayOnly": 0,
+      "realDifferent": 0
+    },
+    {
+      "group": "Cap",
+      "origins": 1,
+      "candidates": 1,
+      "kr": 0,
+      "overseas": 1,
+      "unknownMkt": 0,
+      "opSame": 0,
+      "human": 0,
+      "originBrand": 1,
+      "originSku": 1,
+      "originCodeResolved": 1,
+      "originDesc": 1,
+      "candTitle": 1,
+      "candBrandStored": 0,
+      "candDescStored": 0,
+      "aliasGap": 1,
+      "aliasCovered": 0,
+      "noOriginCode": 0,
+      "multilingualTitle": 0,
+      "bottleneck": 1,
+      "displayOnly": 0,
+      "realDifferent": 0
+    },
+    {
+      "group": "Backpack",
+      "origins": 1,
+      "candidates": 1,
+      "kr": 0,
+      "overseas": 1,
+      "unknownMkt": 0,
+      "opSame": 1,
+      "human": 0,
+      "originBrand": 1,
+      "originSku": 1,
+      "originCodeResolved": 1,
+      "originDesc": 1,
+      "candTitle": 1,
+      "candBrandStored": 0,
+      "candDescStored": 0,
+      "aliasGap": 1,
+      "aliasCovered": 0,
+      "noOriginCode": 0,
+      "multilingualTitle": 0,
+      "bottleneck": 0,
+      "displayOnly": 1,
+      "realDifferent": 0
+    }
+  ],
+  "bottleneckWhy": {
+    "브랜드 미확인": 35,
+    "제목 겹침 0": 37,
+    "blocker: BRAND_UNCONFIRMED": 4,
+    "원상품 품번 기준 부재(운영 입력)": 16,
+    "blocker: MATERIAL": 14,
+    "후보 품번 증거 없음": 5,
+    "blocker: BRAND_MISMATCH+COLOR_VARIANT": 1,
+    "🔴 blocker 없음(사유 미확정)": 5,
+    "blocker: COLOR_VARIANT": 1,
+    "blocker: FIT+BRAND_UNCONFIRMED": 4,
+    "blocker: MATERIAL+SAME_SELLER_DISTINCT_LISTING": 1,
+    "blocker: BRAND_MISMATCH+AUDIENCE_LINE": 1
+  },
+  "aliasGapRows": [
+    {
+      "group": "Dress",
+      "domain": "junioredition.com",
+      "brand": "Bonjour",
+      "title": "Handsmock Dress in Pink Tapestry by Bonjour - Last Ones In Stock - 6-1"
+    },
+    {
+      "group": "🔴 미분류(원상품 유형 없음)",
+      "domain": "junioredition.com",
+      "brand": "Main Story",
+      "title": "Bubble Sweatshirt in Grey Melange by Main Story"
+    },
+    {
+      "group": "Backpack",
+      "domain": "junioredition.com",
+      "brand": "Mini Rodini",
+      "title": "Panther Embroidered Backpack by Mini Rodini"
+    },
+    {
+      "group": "Cap",
+      "domain": "junioredition.com",
+      "brand": "Wynken",
+      "title": "Double Deerstalker Cap in Blue / Soft Tan by Wynken"
+    },
+    {
+      "group": "Jacket",
+      "domain": "junioredition.com",
+      "brand": "Wynken",
+      "title": "Mixed Media Jacket in Blue Mix by Wynken"
+    },
+    {
+      "group": "🔴 미분류(원상품 유형 없음)",
+      "domain": "junioredition.com",
+      "brand": "Main Story",
+      "title": "Bubble Sweatshirt in Grey Melange by Main Story"
+    },
+    {
+      "group": "AW26 DROP TWO",
+      "domain": "junioredition.com",
+      "brand": "Wynken",
+      "title": "Mixed Media Jacket in Ecru Mix by Wynken"
+    },
+    {
+      "group": "Dress",
+      "domain": "junioredition.com",
+      "brand": "Bonjour",
+      "title": "Handsmock Apron Dress in Natural by Bonjour - Last Ones In Stock - 2-8"
+    },
+    {
+      "group": "Blouse",
+      "domain": "junioredition.com",
+      "brand": "Bonjour",
+      "title": "Tunique With Hair Clip in Garden Flowers Print by Bonjour - Last Ones "
+    }
+  ],
+  "multilingualRows": [
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hug Hairy Monster T-shirt #226AC009]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hug Hairy Monster T-shirt #226AC009]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hug Hairy Monster T-shirt #226AC009]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hug Hairy Monster T-shirt #226AC009]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "kihanan.com",
+      "title": "★DROP1★2026AW★BOBOCHOSES ボボショーズ Hug Hairy Monster ",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "peipeicollection.com",
+      "title": "Bobo Choses - Hug Hairy Monster T-shirt 長袖薄Ｔ",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "vividvia.com",
+      "title": "보보쇼즈 26FW Hug Hairy Monster T-shirt B226AC009 - VI",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "kids-world.com",
+      "title": "Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hug Hairy Monster T-shirt #226AC009]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hug Hairy Monster T-shirt #226AC009]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hidden Monster sweatshirt #226AC038]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hug Hairy Monster T-shirt #226AC009]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hug Hairy Monster T-shirt #226AC009]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hug Hairy Monster T-shirt #226AC009]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "miniboutique.co.kr",
+      "title": "[BOBO CHOSES]T-Shirt - B226AC009 - 미니부띠끄 minibouti",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hug Hairy Monster T-shirt #226AC009]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "kihanan.com",
+      "title": "★DROP1★2026AW★BOBOCHOSES ボボショーズ Hug Hairy Monster ",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "peipeicollection.com",
+      "title": "Bobo Choses - Hug Hairy Monster T-shirt 長袖薄Ｔ",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "vividvia.com",
+      "title": "보보쇼즈 26FW Hug Hairy Monster T-shirt B226AC009 - VI",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hidden Monster sweatshirt #226AC038]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hug Hairy Monster T-shirt #226AC009]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hug Hairy Monster T-shirt #226AC009]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hug Hairy Monster T-shirt #226AC009]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hug Hairy Monster T-shirt #226AC009]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hug Hairy Monster T-shirt #226AC009]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "vividvia.com",
+      "title": "보보쇼즈 26FW Hug Hairy Monster T-shirt B226AC009 - VI",
+      "verdict": "SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Mush Monster Duo sweatshirt #226AC036]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hug Hairy Monster T-shirt #226AC009]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hidden Monster sweatshirt #226AC038]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hug Hairy Monster T-shirt #226AC009]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hug Hairy Monster T-shirt #226AC009]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hug Hairy Monster T-shirt #226AC009]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hug Hairy Monster T-shirt #226AC009]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "kihanan.com",
+      "title": "★DROP1★2026AW★BOBOCHOSES ボボショーズ Hug Hairy Monster ",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "peipeicollection.com",
+      "title": "Bobo Choses - Hug Hairy Monster T-shirt 長袖薄Ｔ",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "vividvia.com",
+      "title": "보보쇼즈 26FW Hug Hairy Monster T-shirt B226AC009 - VI",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hug Hairy Monster T-shirt #226AC009]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hug Hairy Monster T-shirt #226AC009]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "title": "[[보보쇼즈] Hug Hairy Monster T-shirt #226AC009]",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "kihanan.com",
+      "title": "★DROP1★2026AW★BOBOCHOSES ボボショーズ Hug Hairy Monster ",
+      "verdict": "PRESUMED_SAME"
+    }
+  ],
+  "bottleneckRows": [
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "peipeicollection.com",
+      "why": "blocker: BRAND_UNCONFIRMED",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "🔴 미분류(원상품 유형 없음)",
+      "domain": "designerkidswear.com",
+      "why": "원상품 품번 기준 부재(운영 입력)",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "🔴 미분류(원상품 유형 없음)",
+      "domain": "folkberlin.com",
+      "why": "원상품 품번 기준 부재(운영 입력)",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "🔴 미분류(원상품 유형 없음)",
+      "domain": "junioredition.com",
+      "why": "원상품 품번 기준 부재(운영 입력)",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "🔴 미분류(원상품 유형 없음)",
+      "domain": "kidbizkid.com",
+      "why": "원상품 품번 기준 부재(운영 입력)",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "🔴 미분류(원상품 유형 없음)",
+      "domain": "nickis.com",
+      "why": "원상품 품번 기준 부재(운영 입력)",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "🔴 미분류(원상품 유형 없음)",
+      "domain": "villagekids.co.uk",
+      "why": "원상품 품번 기준 부재(운영 입력)",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "coupleshot.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "junioredition.com",
+      "why": "blocker: MATERIAL",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "kids-world.com",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Dress",
+      "domain": "junioredition.com",
+      "why": "후보 품번 증거 없음",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "junioredition.com",
+      "why": "blocker: MATERIAL",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "runcolors.com",
+      "why": "후보 품번 증거 없음",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "🔴 미분류(원상품 유형 없음)",
+      "domain": "folkberlin.com",
+      "why": "원상품 품번 기준 부재(운영 입력)",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "designerkidswear.com",
+      "why": "blocker: BRAND_MISMATCH+COLOR_VARIANT",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "-",
+      "why": "🔴 blocker 없음(사유 미확정)",
+      "verdict": null
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "-",
+      "why": "🔴 blocker 없음(사유 미확정)",
+      "verdict": null
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "junioredition.com",
+      "why": "blocker: MATERIAL",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Trousers",
+      "domain": "junioredition.com",
+      "why": "blocker: COLOR_VARIANT",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Trousers",
+      "domain": "-",
+      "why": "🔴 blocker 없음(사유 미확정)",
+      "verdict": null
+    },
+    {
+      "group": "T-shirts",
+      "domain": "miniboutique.co.kr",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "junioredition.com",
+      "why": "blocker: MATERIAL",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "junioredition.com",
+      "why": "blocker: MATERIAL",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "peipeicollection.com",
+      "why": "blocker: BRAND_UNCONFIRMED",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "junioredition.com",
+      "why": "blocker: FIT+BRAND_UNCONFIRMED",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "-",
+      "why": "🔴 blocker 없음(사유 미확정)",
+      "verdict": null
+    },
+    {
+      "group": "T-shirts",
+      "domain": "-",
+      "why": "🔴 blocker 없음(사유 미확정)",
+      "verdict": null
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "junioredition.com",
+      "why": "blocker: MATERIAL",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "junioredition.com",
+      "why": "blocker: MATERIAL",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "🔴 미분류(원상품 유형 없음)",
+      "domain": "folkberlin.com",
+      "why": "원상품 품번 기준 부재(운영 입력)",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "🔴 미분류(원상품 유형 없음)",
+      "domain": "junioredition.com",
+      "why": "원상품 품번 기준 부재(운영 입력)",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "🔴 미분류(원상품 유형 없음)",
+      "domain": "villagekids.co.uk",
+      "why": "원상품 품번 기준 부재(운영 입력)",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "junioredition.com",
+      "why": "blocker: FIT+BRAND_UNCONFIRMED",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "junioredition.com",
+      "why": "blocker: MATERIAL",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "junioredition.com",
+      "why": "blocker: MATERIAL",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "junioredition.com",
+      "why": "blocker: MATERIAL",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "nickis.com",
+      "why": "후보 품번 증거 없음",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "peipeicollection.com",
+      "why": "blocker: BRAND_UNCONFIRMED",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "folkberlin.com",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Cap",
+      "domain": "junioredition.com",
+      "why": "blocker: MATERIAL",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "junioredition.com",
+      "why": "blocker: FIT+BRAND_UNCONFIRMED",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "junioredition.com",
+      "why": "blocker: MATERIAL",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Sweatshirts",
+      "domain": "junioredition.com",
+      "why": "blocker: MATERIAL",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "🔴 미분류(원상품 유형 없음)",
+      "domain": "folkberlin.com",
+      "why": "원상품 품번 기준 부재(운영 입력)",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "🔴 미분류(원상품 유형 없음)",
+      "domain": "junioredition.com",
+      "why": "원상품 품번 기준 부재(운영 입력)",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "🔴 미분류(원상품 유형 없음)",
+      "domain": "villagekids.co.uk",
+      "why": "원상품 품번 기준 부재(운영 입력)",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Jacket",
+      "domain": "junioredition.com",
+      "why": "blocker: MATERIAL+SAME_SELLER_DISTINCT_LISTING",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Jacket",
+      "domain": "nickis.com",
+      "why": "blocker: MATERIAL",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Jacket",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "🔴 미분류(원상품 유형 없음)",
+      "domain": "folkberlin.com",
+      "why": "원상품 품번 기준 부재(운영 입력)",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Outerwear",
+      "domain": "nickis.com",
+      "why": "blocker: BRAND_MISMATCH+AUDIENCE_LINE",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "AW26 DROP TWO",
+      "domain": "junioredition.com",
+      "why": "원상품 품번 기준 부재(운영 입력)",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "AW26 DROP TWO",
+      "domain": "kidbizkid.com",
+      "why": "원상품 품번 기준 부재(운영 입력)",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Dress",
+      "domain": "junioredition.com",
+      "why": "후보 품번 증거 없음",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "Blouse",
+      "domain": "junioredition.com",
+      "why": "후보 품번 증거 없음",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "junioredition.com",
+      "why": "blocker: FIT+BRAND_UNCONFIRMED",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "donokids.com",
+      "why": "브랜드 미확인",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T Shirt",
+      "domain": "peipeicollection.com",
+      "why": "blocker: BRAND_UNCONFIRMED",
+      "verdict": "PRESUMED_SAME"
+    },
+    {
+      "group": "T-shirts",
+      "domain": "villagekids.co.uk",
+      "why": "제목 겹침 0",
+      "verdict": "PRESUMED_SAME"
+    }
+  ]
+}
