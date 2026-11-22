@@ -354,20 +354,26 @@ export function evaluateCandidateEligibility(
   const nameLinkNeeded = originTokens.length <= 1 ? 1 : 2;
   if (originTokens.length > 0 && matchedNameTokens.length >= nameLinkNeeded) reasons.push("NAME_LINK");
   /**
-   * 🔵🔵🔵 **MCQ-02 — 원상품 제목에 식별어가 «0» 일 때를 「근거 없음」으로 읽지 않는다.**
+   * 🔵🔵🔵 **MCQ-02.1 — 「일반 제목 완전일치」 규칙은 «지웠다». 그 이력을 남긴다.**
    *
-   * 🔴🔴 실측 — 원상품 `Bobo choses long sleeve T-shirt` 는 토큰이 **전부 일반어**
-   *    (`long`·`sleeve`·`t-shirt`) + 브랜드라 식별어가 **0** 이다. 그런데 후보 제목이
-   *    **글자 그대로 같고** 운영 판정이 **SAME** 이다. 🔴 구조화만 보면 그 행이
-   *    「브랜드 단독」으로 분류되어 **기존 운영 SAME 이 제외된다**(CPO 검증 조건 위반).
-   * 🟢 그래서 **상품명 축이 말을 할 수 없을 때만**, 그리고 **제목이 정규화 후 완전히
-   *    같을 때만** 상품명 연결로 본다. 🔴 **부분일치가 아니다** — 가장 좁은 꼴 하나다.
-   * 🔴 이것은 **다국어 완화가 아니다** — 언어를 보지 않고 **문자열 동일성** 만 본다
-   *    (실제로 다국어 후보 `kids-world` 는 이 조건을 **통과하지 못한다**).
+   * 🔴🔴 **CPO 가 그 규칙을 보편 자격 근거로 승인하지 않았고, 조사가 그 판단이 맞았음을
+   *    보여 줬다** — 내가 적은 근거(「원상품 식별어가 0 이라 상품명 축이 말을 못 한다」)는
+   *    **그 2건의 실제 원인이 아니었다**:
+   * ```
+   * 원상품 URL  bobochoses.com/en-kr/products/**b226tc174**-bobo-choses-long-sleeve-…
+   * 후보  URL  bobochoses.co.jp/products/**b226tc174**-bobo-choses-long-sleeve-t-sh…
+   * 원상품 DB `sku` = **""** (빈 문자열) · 운영 `resolveBrandModelCode` ⟹ **B226TC174**
+   *   (⒞ URL slug 경로) · 후보 URL 에도 **같은 품번** 이 있다
+   * 운영 판정 verdict **SAME** · matchTruth **STRONG_IDENTIFIER** · blocker **0**
+   * ```
+   * ⟹ 🟢 그 2건을 살리는 것은 **품번 축**(`confirmBrandCodeInEvidence` · MCQ-02 ⒝)이고
+   *    **제목 일치가 아니다**. 🔴 그래서 이 규칙은 **아무것도 보존하지 않으면서**
+   *    「일반 단어로만 된 제목이 같으면 같은 상품」이라는 **위험한 보편 규칙** 만 남겼다.
+   * 🔴 **다시 넣지 않는다** — 넣고 싶으면 그 전에 ⒜ 서로 **다른 상품** 이 같은 일반 제목을
+   *    쓰는 분모를 확보하고 ⒝ CPO 승인을 받는다. 🟢 현재 분모는 **없다**(전수 364 에서
+   *    그 제목을 쓰는 행은 2건이고 **둘 다 같은 도메인·둘 다 SAME** 이다 ⟹ 충돌 **미관측**).
+   *    🔴 「미관측」을 「안전」으로 읽지 않는다 — 그래서 규칙을 **세우지 않는 쪽** 을 택했다.
    */
-  const titleIdentical =
-    originTokens.length === 0 && candTitleNorm.length > 0 && candTitleNorm === norm(input.originTitle);
-  if (titleIdentical) reasons.push("NAME_LINK");
 
   /* ── ④ 상세설명 연결 — 🟢 원문에서 원상품 식별정보를 찾는다 ─────────────── */
   const desc = input.candidateDescription ?? "";

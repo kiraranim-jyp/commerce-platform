@@ -536,6 +536,75 @@ describe("MCE01 — MI 후보 진입 자격", () => {
     });
   });
 
+  /**
+   * ════════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 G — **일반 제목 완전일치는 «단독으로» 자격이 아니다**(MCQ-02.1 · CPO 불허)
+   * ════════════════════════════════════════════════════════════════════════════
+   */
+  describe("G 🔵🔵 일반 제목 충돌 안전성", () => {
+    it("G-1 🔴🔴 **일반 단어로만 된 제목이 완전히 같아도 통과하지 못한다**", () => {
+      /**
+       * 🔴 CPO 문장 — 「다른 판매처가 같은 일반적인 제목을 사용했다고 해서 반드시 같은
+       *    실물 상품이라는 보장은 없습니다.」 🟢 그 모양을 **직접** 세워 막힘을 단언한다.
+       * 🔴 품번·상세설명·URL 품번이 **하나도 없다** — 제목만 글자 그대로 같다.
+       */
+      const got = evaluateCandidateEligibility({
+        originBrand: "Bobo Choses",
+        originModelCode: null,
+        originTitle: "Bobo choses long sleeve T-shirt",
+        candidateBrand: "Bobo Choses",
+        candidateModelCode: null,
+        candidateTitle: "Bobo choses long sleeve T-shirt",
+        candidateUrl: "https://other-shop.example/products/12345",
+        candidateDescription: null,
+      });
+      expect(got.eligibility, "🔴🔴 일반 제목 일치만으로 신규 후보가 통과했다").toBe("EXCLUDED");
+      expect(got.reasons[0]).toBe("BRAND_ONLY_NO_IDENTITY");
+      /** 🔴 **상품명 연결로 적지도 않는다** — 일반 단어를 식별어로 승격하지 않는다. */
+      expect(got.reasons, "🔴 일반 단어를 상품명 연결로 셌다").not.toContain("NAME_LINK");
+    });
+
+    it("G-2 🟢🟢 **기존 운영 SAME 2건은 «품번» 으로 보존된다** — 제목 때문이 아니다", () => {
+      /**
+       * 🟢 실측 그대로다 — 원상품 `bobochoses.com/.../**b226tc174**-…`(DB `sku` 는 `""`) ·
+       *    후보 `bobochoses.co.jp/products/**b226tc174**-…` · 운영 verdict **SAME** ·
+       *    matchTruth **STRONG_IDENTIFIER** · blocker **0**.
+       * 🔴 이 단언이 **G-1 과 쌍** 이다 — 같은 제목인데 한쪽은 통과하고 한쪽은 막힌다.
+       *    가르는 것은 **품번** 하나다.
+       */
+      const got = evaluateCandidateEligibility({
+        originBrand: "Bobo Choses",
+        originModelCode: "B226TC174",
+        originTitle: "Bobo choses long sleeve T-shirt",
+        candidateBrand: null,
+        candidateModelCode: null,
+        candidateTitle: "Bobo choses long sleeve T-shirt",
+        candidateUrl:
+          "https://bobochoses.co.jp/products/b226tc174-bobo-choses-long-sleeve-t-shirt",
+        candidateDescription: null,
+      });
+      expect(got.eligibility, "🔴🔴 품번 근거가 있는 기존 SAME 을 지웠다").toBe("ELIGIBLE");
+      expect(got.reasons, "🔴 품번 연결로 적지 않았다").toContain("CODE_LINK");
+    });
+
+    it("G-3 🔴 **URL 품번이 없으면 그 2건도 통과하지 못한다** — 반사실", () => {
+      /** 🟢 G-2 와 **입력이 같고 URL 만 다르다** ⟹ 가르는 축이 품번임을 양방향으로 잠근다. */
+      const got = evaluateCandidateEligibility({
+        originBrand: "Bobo Choses",
+        originModelCode: "B226TC174",
+        originTitle: "Bobo choses long sleeve T-shirt",
+        candidateBrand: null,
+        candidateModelCode: null,
+        candidateTitle: "Bobo choses long sleeve T-shirt",
+        candidateUrl: "https://bobochoses.co.jp/products/some-other-handle",
+        candidateDescription: null,
+      });
+      expect(got.eligibility, "🔴🔴 품번 없이 통과했다 — 일반 제목 규칙이 되살아났다").toBe(
+        "EXCLUDED",
+      );
+    });
+  });
+
   it("S-1 🔵🔵 **서버가 후보 목록을 거른다 — 가격 집계 입력은 불변이다**", () => {
     const ROUTE = readFileSync(
       join(__dirname, "..", "..", "..", "api", "price-history", "check", "route.ts"),
@@ -833,6 +902,15 @@ describe("MCE01 — MI 후보 진입 자격", () => {
         originModelCode: originCode,
         originTitle: s?.origin_title ?? null,
         candidateTitle: r.candidate_title,
+        /**
+         * 🔴🔴 **MCQ-02.1 — 이 칸이 빠져 있었고 그 탓에 전수 측정이 과소였다.**
+         *    MCQ-02 가 품번 확인 건초더미에 **URL** 을 넣었는데(운영
+         *    `confirmBrandCodeInEvidence`) 이 측정 블록만 그것을 **넘기지 않았다** ⟹
+         *    🔴 「브랜드 단독 10건」·「CODE_LINK 15」가 **URL 축 없이** 나온 값이었다.
+         * 🟢 실측 — 이 칸 하나로 `b226tc174` 두 건이 **품번 연결** 로 바뀐다
+         *    (원상품 DB `sku` 는 `""` 인데 운영 해석이 slug 에서 품번을 낸다).
+         */
+        candidateUrl: r.candidate_url ?? null,
         conflicts: Array.isArray(r.blockers) ? (r.blockers as string[]) : null,
       });
       tally[res.eligibility] = (tally[res.eligibility] ?? 0) + 1;
@@ -876,13 +954,18 @@ describe("MCE01 — MI 후보 진입 자격", () => {
     expect(tally.EXCLUDED, "🔴 제외 수가 바뀌었다").toBe(165);
     expect(tally.UNVERIFIABLE, "🔴 확인 불가 수가 바뀌었다").toBe(5);
     /**
-     * 🔵🔵🔵 **MCQ-02 전수 영향 — 브랜드 단독 10건 중 «7» 만 제외된다.**
+     * 🔵🔵🔵 **MCQ-02.1 전수 영향 — 브랜드 단독 10건 중 «7» 만 제외되고, 살아남는 3건은
+     *    «전부 품번 축» 이다.**
      * ```
-     * 브랜드 단독으로 «분류» 된 행        10
-     *   ⒜ 원상품 제목 식별어 0 · 후보 제목이 **완전히 동일**   2  🟢 유지(운영 SAME)
-     *   ⒝ 후보 **제목에 원상품 품번** 이 그대로(market KR)    1  🟢 유지
-     *   ⒞ 진짜 브랜드 단독                                 7  🔴 제외
+     * 브랜드 단독으로 «분류» 된 행        10   (🔴 그 분류는 **URL 축 없이** 센 값이었다)
+     *   ⒜ 후보 **URL 에 원상품 품번** `b226tc174`              2  🟢 유지 — **품번 연결**
+     *      (원상품 DB `sku` 는 `""` · 운영 해석이 slug 에서 품번을 낸다)
+     *   ⒝ 후보 **제목에 원상품 품번** 그대로(market KR)        1  🟢 유지 — **품번 연결**
+     *   ⒞ 진짜 브랜드 단독                                  7  🔴 제외
      * ```
+     * 🔴🔴 **그래서 「일반 제목 완전일치」 규칙은 아무것도 보존하지 않았다** — 내가 ⒜의
+     *    원인을 제목으로 **잘못 적었고**, CPO 가 그 규칙을 보편 근거로 승인하지 않은 판단이
+     *    맞았다. 🟢 규칙을 지우고 다시 재어 **유지 수가 한 건도 바뀌지 않았다**.
      * 🔴🔴 ⒜⒝를 같이 제외하면 **기존 운영 SAME 과 국내 후보가 줄어든다** — CPO 가
      *    경고한 「구조화 필드 누락과 원문 미관측을 혼동」 바로 그 자리다.
      */
@@ -894,11 +977,10 @@ describe("MCE01 — MI 후보 진입 자격", () => {
     /** 🔴 M6 — 제목에서 브랜드를 찾는 경로가 **140건** 을 살린다. */
     expect(why.BRAND_LINK, "🔴 브랜드 연결 수가 바뀌었다 — 제목 조회 경로를 확인하라").toBe(140);
     /**
-     * 🔵 **MCQ-02 — 191 → 193.** 🔴 느슨해진 것이 아니다: 원상품 제목에 식별어가 **0** 인
-     *    행에서 **후보 제목이 정규화 후 완전히 같을 때만** 상품명 연결로 센다(실측 **2건** ·
-     *    둘 다 운영 **SAME**). 🔴 부분일치는 세지 않는다.
+     * 🔵 **MCQ-02.1 — 193 → 191 로 되돌렸다.** 「일반 제목 완전일치」 규칙을 **지웠다**
+     *    (CPO 불허). 🟢 그래도 그 2건은 **품번 축** 으로 살아남는다(아래 G-2).
      */
-    expect(why.NAME_LINK, "🔴 상품명 연결 수가 바뀌었다").toBe(193);
+    expect(why.NAME_LINK, "🔴 상품명 연결 수가 바뀌었다").toBe(191);
     /** 🔴 일반어만 겹친 제외와 근거 없음 제외를 **갈라** 잠근다. */
     expect(why.GENERIC_TOKENS_ONLY, "🔴 일반어 제외 수가 바뀌었다").toBe(1);
     expect(why.EXPLICIT_CONFLICT, "🔴 충돌 제외 수가 바뀌었다").toBe(155);
