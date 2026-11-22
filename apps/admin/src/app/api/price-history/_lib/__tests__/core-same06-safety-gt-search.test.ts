@@ -361,6 +361,20 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
     why: "🔴 금액 불일치 2건의 원인 증거(variants 가격표 + 관측 8행) · 사람 라벨 **0** — 원인 확정 계약의 입력",
   });
 
+  /**
+   * 🟢🟢 **이 계약이 또 일했다 (MI-P0-CROSS-MARKET-COMPLETION-03)** — 미분류로 잡혔다.
+   * 🔴 전수 탐지 조건을 느슨하게 하지 않았다 — 용도를 적어 분류한다.
+   *
+   * 🔴🔴 **새 사람 라벨이 아니다.** 이 파일의 `human` 은 **기존 GT**(wu-112 · wu-125 ·
+   *    wu-111)에서 **그대로 온 값** 이고, 거기에 **기존 운영 산출**(candidate_reviews 덤프)을
+   *    **URL 로 조인** 한 것이다 ⟹ 🔴 GT 분모에 넣으면 **이중 집계** 다(그 셋이 이미 센다).
+   * 🟢 용도는 하나다 — 「GT × 운영 결과」 측정의 입력(`cross-market-eval-03.test.ts` · 6행).
+   */
+  skipped.push({
+    file: "cross-market-eval-03.json",
+    why: "🔴 기존 GT(wu-112·125·111) × 기존 운영 산출의 URL 조인 6행 · human 은 **기존 GT 유래** — 이중 집계 방지",
+  });
+
   /* SAME-03 최신 CEO 라벨 — 🔴 DIFFERENT 가 0 이지만 분모로 같이 적는다 */
   {
     const j = readJson("core-same03-human-gt.json") as {
