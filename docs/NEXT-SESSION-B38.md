@@ -5,7 +5,14 @@
 ### ① 지금 좌표 — 🔴 **CTO 가 할 작업이 «없다». 새 WU 를 스스로 만들지 않는다**
 
 ```
-직전 작업   🟡🟡 **`MI-P0-CROSS-MARKET-COMPLETION-03` — GT × 운영 조인 · 🔴 MI P0 «미완»**(§0-XM03)
+직전 작업   🟢🟢 **`MI-FINAL-COMPLETION-01` — 상품 하나가 ③~⑧ 을 «끝까지» 돈다**(§0-FIN01)
+            🟢 운영 스냅샷 `25a3bba7`(EUR 62 · 후보 10 전건 판정)으로 운영 owner E2E
+            🟢 ④⑤ 가격 집계 실제 산출 EUR 62 · GBP 58 · 차단축 7건 영향 **0**
+            🟢🟢 ⑥ **시장 미확정 3건**(그중 **SAME·EXACT 1**) ⟹ D 축이 **실데이터에서 발화**
+            🟢 ⑦ 원가 ₩94,055 → **CASE D(판단 보류)** · 🔴 입력에 시장 가격 **0**(A/B 분리)
+            🟢 ⑧ sellability **YELLOW** — 국내 SAME 0 인데 GREEN 아님
+            🔴 **MI P0 는 미완** — 국내 오탐·탐색률 분모가 비어 있다(§0-FIN01 ⑤)
+그 전 작업   🟡🟡 **`MI-P0-CROSS-MARKET-COMPLETION-03` — GT × 운영 조인 · 🔴 MI P0 «미완»**(§0-XM03)
             🟢🟢 **오탐 분모가 처음 생겼다** — 확정 SAME **4/4 정확 · 오탐 0** ·
                보류 2는 **둘 다 human DIFFERENT** · human SAME 회수 **4/4**
             🔴 연결 **6 / 39** — domain 조인은 1:1 이 0건 · `brand-conflict`(159)는 URL 칸 없음
@@ -273,6 +280,83 @@ cd apps/admin && npx vitest run \
 ```
 docs/START-HERE.md §0-NOW → docs/NEXT-SESSION-B38.md §0-HANDOFF 를 읽고 시작해.
 CTO 작업은 없는 상태다 — 다음 범위를 지정해 주면 그 범위만 한 묶음으로 수행해.
+```
+
+---
+
+## 🟢🟢🟢 §0-FIN01. **[2026-11-22] `MI-FINAL-COMPLETION-01` — 통합 MI 운영 E2E**
+
+🔴 **다시 조사하지 않는다.** 🟢 커밋 `3c7d82d0` · 운영 코드 **0** · DB 쓰기 **0** · 정책 **0**.
+
+### ① 무엇을 증명했나 — **상품 하나가 ③~⑧ 을 끝까지 돈다**
+
+```
+표본  운영 스냅샷 `25a3bba7…` Bobo Choses Pop sweatshirt · **EUR 62** ·
+      priceBreakdown {fee 10% · shipping ₩12,000 · margin 12%} ·
+      관측 **6** · 후보 **10**(🟢 전건 운영 판정) · 🔴 상품 **1개** · human 라벨 **0**
+🔴 `computeMarketIntelligence` 는 **supabase service-role 키** 를 요구해 직접 호출 불가 ⟹
+   🟢 **그 함수가 부르는 운영 owner** 들에 같은 입력을 넣어 ③~⑧ 을 돌렸다(복제식 0).
+🟢 ①② 는 §0-XM01 이 **코드 위치로** 확정했다 — 재조사하지 않았다.
+```
+
+| 단계 | 운영 owner | 실제 산출 |
+|---|---|---|
+| ③ 판정 | `system_verdict`(judgeDomesticCandidate 산출) | **10/10** 보유 · 판정 어휘 **한 집합** |
+| ④⑤ 가격 | `summarizeCandidateOverseasPrices` | **EUR 62 · GBP 58** · byMarket{OVERSEAS 7 · UNKNOWN 3} · byPriceTier{EXACT 2 · COMPARISON 8} |
+| ④ 차단축 | `PRICE_DISQUALIFYING_BLOCKER_LIST` | 보유 **7건** → 금액 집계 영향 **0** |
+| ⑥ 화면 | `selectCandidateList` ALL/KR/OVERSEAS | 전체 10 · 🇰🇷 0 · 🌎 7 · 🔴 **시장 미확정 3** |
+| ⑦ 원가→추천가 | `selectCostBasisOriginObservations` → `computePriceRecommendation` | 원가 **₩94,055** → **CASE D(판단 보류)** |
+| ⑧ MI CASE | `computeSellability` | **YELLOW**(국내 SAME 0 인데 **GREEN 아님**) |
+
+### ② 🟢🟢 **D 축이 실데이터에서 «발화» 했다**
+
+```
+시장 미확정 **3건** — coupleshot.com · kids-world.com · **mariodannakids.it**
+🔴 그중 `mariodannakids.it` 은 **SAME · STRONG_IDENTIFIER · EXACT** 다
+⟹ 🔴🔴 「전체」 축이 없으면 그 후보가 **화면에서 사라진다**(🇰🇷 0 · 🌎 7 에 안 든다)
+🟢 §0-XM01 이 fixture 로 증명한 것이 **운영 실데이터에서 재현** 됐다
+```
+
+### ③ 🟢 A/B 분리와 「없는 데이터로 추천하지 않는다」가 지켜진다
+
+```
+⑦ 추천가 입력에 **시장 가격이 한 칸도 없다**(`domesticLowestPriceKrw: null` ·
+   `domesticBasis: "NONE"`) ⟹ **CASE D** · `recommendedPrice: null`
+   🟢 `minimumPrice`/`targetPrice`(₩120,517)는 **원가 역산** 값이고 시장 평균이 아니다
+⑧ sellability — 국내 확정 SAME **0** ⟹ **YELLOW**(🔴 GREEN 아님)
+```
+
+### ④ 🔴 내 단언이 두 번 틀렸고 코드가 맞았다
+
+```
+⒜ 「`lowestKrw` 칸이 있으면 환산한 것」 → **FAIL**. 그 칸은 **호출자가 넘긴
+   `krwEquivalent` 의 파생** 이고 집계기는 환율을 **모른다**(candidate-market.ts:633).
+   🟢 단언을 「넘기지 않았으니 **null 이어야** 한다」로 바꿔 **경계를 지키는 방향** 으로 강화했다.
+⒝ 칸 이름을 추측해 **typecheck 가 잡았다** — `costKrw`/`feePercent` 가 아니라
+   **`totalCostKrw`·`expectedFeePercent`·`domesticBasis`** · **`costPriceKrw`·`domestic.matched`**.
+   🟢 타입에서 읽어 고쳤다(§12 의 반복 함정 · 이번에도 **사전에** 잡혔다).
+```
+
+### ⑤ 🔴 남은 미완료 — **현재 MI 범위에서 반드시 해결해야 하는 것**
+
+```
+🔴 **국내 오탐(precision)과 후보 탐색률** — 분모가 비어 있다
+   ⒜ 국내 표본에 human **DIFFERENT** 가 없다(`core-same03` DIFFERENT 0 ·
+      `cross-market-eval-03` 의 `.kr` 0)
+   ⒝ 발견 단계 분모가 없다(보유 자료는 전부 「후보가 된 뒤」다)
+🔵 **필요한 원천은 하나** — 「**국내 후보를 포함하고 `market`·`price_tier` 가 채워진,
+   human DIFFERENT 를 가진 운영 판정 자료**」
+   🔴 CTO 가 만들 수 없다(새 수집·CEO 육안 GT 는 승인 사안) ⟹ **CPO/CEO 결정**
+```
+
+### ⑥ 🟡 **완료 후 별도로 검토할 추가 개선 제안**(🔴 현재 범위에 끼워 넣지 않았다)
+
+```
+① 국내 DB 영속 가격 축의 blocker 필터        ARCH-03 보류 · human SAME 2건 손실 실측
+② ORIGIN_FX 과거 행 backfill(140 · CAD 4 등)  §0-OFX02 ⑥ · DB 쓰기 승인 사항
+③ 상세설명 증거를 운영 SAME 판정에 연결        §5-D 동결 · 재개 조건 = GT 정밀도 재측정
+④ `brand-conflict-price-real` 덤프에 URL 칸 추가  조인 가능 범위를 159행 넓힌다
+⑤ 「전체」 축의 **가격 표시**                 🔴 통화 혼합이라 현 정책에서는 불가 · 정책 사안
 ```
 
 ---
