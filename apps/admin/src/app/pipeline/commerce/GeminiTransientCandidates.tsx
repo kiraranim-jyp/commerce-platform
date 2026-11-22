@@ -51,6 +51,15 @@ export interface GeminiTransientRow {
   domain: string;
   /** 🔴 WU-028 — 판매처만으로는 「무엇이 그 가격인가」를 말할 수 없다. */
   title?: string | null;
+  /**
+   * 🔵🔵 MI-IDENTITY-REVIEW-FINAL-03 ② — **후보의 브랜드·품번 «원값»**(표시 전용).
+   * 🟢 서버 `GeminiTransientEvidence` 의 **같은 이름 칸** 이다 — 화면은 선언만 한다.
+   * 🔴 **판정에 쓰지 않는다** — 비교목록표의 「나란히」 칸이 유일한 소비처다.
+   * 🔴 저장분 복원 경로(`candidate_reviews`)에는 이 칸이 **없다** ⟹ `undefined` 이고
+   *    화면이 **「확인 불가」** 로 적는다(그 테이블에 칸을 만들지 않았다 · migration **0**).
+   */
+  brand?: string | null;
+  modelCode?: string | null;
   /** 🔴 WU-028 — 이 후보가 **어디서 왔는가**. 행에서도 출처가 보여야 한다. */
   /** 🔴 E2E-04 — runner 의 `GeminiTransientEvidence.source` 와 **같은 집합** 이어야 한다. */
   source?: "GEMINI_DISCOVERY" | "SELLER_URL" | "OVERSEAS_AUTO" | "REVIEWED_SAME" | "DOMESTIC_LISTING" | "WEB_SEARCH" | null;

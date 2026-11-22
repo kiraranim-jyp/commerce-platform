@@ -1355,7 +1355,7 @@ export function MarketPriceComparison({
        * ❌ 입력칸 — `core-2s D-3`(「셀러에게 글쓰기를 요구하지 않는다」)이 막고 그 계약이 맞다
        * ```
        */}
-      <ReviewQueueSection rows={rows} originIdentity={originIdentity} />
+      <ReviewQueueSection rows={rows} originIdentity={originIdentity} api={reviewApi} />
 
       {/**
        * ══════════════════════════════════════════════════════════════════════
@@ -2293,9 +2293,12 @@ function MarketBlock({
 function ReviewQueueSection({
   rows,
   originIdentity,
+  api,
 }: {
   rows?: readonly GeminiTransientRow[] | null;
   originIdentity: OriginIdentity | null;
+  /** 🔵 FINAL-03 ① — 저장 owner 는 **패널의 그 훅 하나** 다(새 instance 0). */
+  api?: CandidateReviewApi;
 }): JSX.Element | null {
   /**
    * 🔴 `null` = **조회가 아직 돌지 않았다.** 그 상태에서 「검토 대기 0건」이라 적으면
@@ -2420,10 +2423,25 @@ function ReviewQueueSection({
                         <tbody>
                           {REVIEW_COMPARE_AXES.map((axis) => {
                             const ov = originValue(axis);
-                            const diffs = identityAxisDifferenceTexts(row, axis);
-                            const candidate =
+                            /**
+                             * 🔵🔵 FINAL-03 ② — **후보 쪽도 «원값» 을 먼저 적는다.**
+                             * 🔴 REV-02 에서는 응답에 원값이 없어 「차이」만 적었다 ⟹
+                             *    CPO 가 두 칸 추가를 승인해 이제 **나란히** 선다.
+                             * 🔴 순서가 규칙이다 — **원값 → (없으면) 차이 → (없으면) 확인 불가**.
+                             * 🟢 차이 문장은 원값이 **없을 때만** 선다 — 그래야 한 칸에서
+                             *    「값」과 「차이」가 섞이지 않는다.
+                             * 🔴 원값을 **지어내지 않는다**(CPO 명시) — `null` 이면 확인 불가다.
+                             */
+                            const raw =
                               axis === "TITLE"
                                 ? (row.title ?? null)
+                                : axis === "BRAND"
+                                  ? (row.brand ?? null)
+                                  : (row.modelCode ?? null);
+                            const diffs = identityAxisDifferenceTexts(row, axis);
+                            const candidate =
+                              raw && raw.trim().length > 0
+                                ? raw
                                 : diffs.length > 0
                                   ? diffs.join(" · ")
                                   : null;
@@ -2452,16 +2470,25 @@ function ReviewQueueSection({
                         </tbody>
                       </table>
                       {/**
-                        * 🔴🔴 **판정 버튼을 두지 않았다 — 그것이 CPO 승인 ⒝ 의 되돌림이다.**
-                        *    기존 계약 셋이 그 제거를 담고 있다(`core-e2e-close-04` 「선택 UI 제거 ·
-                        *    저장 «경로» 보존」 · `sourcing-candidate-unified-ux-1 V-1/V-2` ·
-                        *    `stage2-evidence-recovery D2-3` 「사람 판정은 셀러 카드에 표시되지
-                        *    않는다」). 🔴 CTO 가 그 제품 결정을 스스로 뒤집지 않는다(§3).
-                        * 🟢 저장 **경로는 살아 있다**(`useCandidateReview` → `candidate-reviews`) —
-                        *    버튼을 되살릴지는 **CPO 판정 사안** 으로 올린다.
-                        * 🟢 지금 이 영역이 주는 것은 **비교와 판단 근거** 다 — 원상품 ↔ 후보 세 축 ·
-                        *    보류 사유 · 원문 통로.
+                        * ══════════════════════════════════════════════════════════════
+                        * 🔵🔵🔵 MI-IDENTITY-REVIEW-FINAL-03 ① — **사람 판정 UI(CPO 승인)**
+                        * ══════════════════════════════════════════════════════════════
+                        *
+                        * 🔴🔴 **REV-02 에서는 두지 않았다** — 기존 계약 셋이 그 제거를
+                        *    담고 있었고 그중 하나가 **CPO 승인 ⒝** 였다. 🔵 CPO 가 이번에
+                        *    **복원을 승인** 했다(「비교목록표를 만든 목적이 CPO·CEO 의 직접
+                        *    검토이기 때문」) ⟹ 그 셋을 **이 범위에서만** 열었다.
+                        *
+                        * 🔴 **셀러 후보 행에는 여전히 없다** — 계약을 「없다」에서 「검토
+                        *    접힘 안에만 있다」로 **강화** 했다(범위를 좁혀 잠갔다 · 느슨하게
+                        *    한 것이 아니다). 그 자리가 2026-09-19 사고의 기전이었다.
+                        * 🟢 **같은 컴포넌트·같은 훅·같은 API** 다(`CandidateSelect` +
+                        *    `useCandidateReview` → `candidate-reviews` POST) — 새 저장 경로 **0** ·
+                        *    새 버튼 집합 **0** · 079 `source` CHECK 확장 **0** · migration **0**.
+                        * 🔴 사람 판정은 **자동 판정을 덮지 않는다** — 다른 state·다른 칸이고
+                        *    MI·가격·알림·등록 payload 에 **들어가지 않는다**(WU-131 양방향 계약).
                         */}
+                      <CandidateSelect row={row} api={api} />
                       <a
                         href={row.discoveredUrl}
                         target="_blank"

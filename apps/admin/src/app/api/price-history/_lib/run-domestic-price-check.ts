@@ -341,6 +341,27 @@ export interface GeminiTransientEvidence {
    */
   title: string;
   /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MI-IDENTITY-REVIEW-FINAL-03 ② — **후보의 브랜드·품번 «원값»**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 **왜 생겼나** — 비교목록표가 원상품 ↔ 후보를 세 축으로 나란히 세우는데,
+   *    후보 쪽은 **상품명만** 응답에 있었다(REV-02 §⒝). 그래서 브랜드·품번 칸이
+   *    「응답에 없다」로만 서 있었고 **비교가 반쪽** 이었다. CPO 가 두 칸 추가를 승인했다.
+   *
+   * 🟢 **판정이 고른 바로 그 후보의 `facts`** 에서 옮긴다(`best.facts`) — 같은 자리에서
+   *    `summarizeIdentityEvidence(query.facts, best.facts)` 가 이미 그 객체를 쓴다
+   *    ⟹ 새 수집 **0** · 새 HTTP **0** · 새 추출기 **0**.
+   * 🔴 **추정하지 않는다** — 없으면 `null` 이고 화면이 **「확인 불가」** 로 적는다
+   *    (CPO 명시: 「실제 원본 데이터가 없으면 확인 불가로 표시한다」).
+   * 🔴 **판정에 들어가지 않는다** — 표시 전용이다. `crossSellerVerdict`·`matchTruth`·
+   *    `priceTier`·가격 집계는 이 두 칸을 **읽지 않는다**(계약이 그것을 문다).
+   * 🔴 `brandModelCode` 는 **제조사 품번 확인 축** 이다(지어낸 품번이 들어오지 않는다 —
+   *    `confirmBrandCodeInEvidence` 가 그 값의 owner 다).
+   */
+  brand: string | null;
+  modelCode: string | null;
+  /**
    * 🔴🔴 WU-132 ④ — **후보 대표 이미지.** 셀러가 「동일상품인가」를 눈으로 가르려면
    *    글자가 아니라 **사진** 이 필요하다(CEO 가 WU-099 에서 지적한 그 자리 —
    *    이미지가 없어 26건 중 12건이 **측정불가** 로 돌아왔다).
@@ -2331,6 +2352,14 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
          * 🟢 판정이 고른 **바로 그 후보** 의 제목이다 — 새로 만들거나 가공하지 않는다.
          */
         title: best.title,
+        /**
+         * 🔵🔵 MI-IDENTITY-REVIEW-FINAL-03 ② — **후보 원값 두 칸.**
+         * 🟢 바로 위 `identityEvidenceRows` 가 쓰는 **같은 객체**(`best.facts`)다 —
+         *    새 수집 0 · 새 HTTP 0 · 새 추출기 0.
+         * 🔴 `?? null` — 없으면 **「확인 불가」** 다(지어내지 않는다 · CPO 명시).
+         */
+        brand: best.facts?.brand ?? null,
+        modelCode: best.facts?.brandModelCode ?? null,
         /**
          * 🔴 WU-132 ④ — **후보가 들고 온 그 이미지** 다. 새로 받지 않는다(HTTP 0) ·
          *    다른 상품 사진으로 대체하지 않는다 · 없으면 `null`.

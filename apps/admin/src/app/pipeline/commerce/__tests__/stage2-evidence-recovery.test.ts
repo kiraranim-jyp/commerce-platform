@@ -260,9 +260,22 @@ describe("STAGE2-R — D2 「내 판단」은 글쓰기가 아니라 선택이�
    * 🔴 그리고 **입력칸 0** 이라는 원래 금지는 **그대로** 유지한다.
    */
   it("D2-3 🔴 사람 판정은 셀러 카드에 표시되지 않는다(데이터·저장 경로는 보존)", () => {
-    /** ⒜ 선택·사유 UI 가 **렌더되지 않는다**(기존 금지 유지). */
+    /**
+     * ⒜ 사유 UI 는 **여전히 0** 이다(기존 금지 그대로 — 글쓰기를 요구하지 않는다).
+     *
+     * 🔵🔵 **MI-IDENTITY-REVIEW-FINAL-03 ① — 선택 UI 범위가 «좁혀져» 갱신됐다(CPO 승인).**
+     * 🔴 전: 「`<CandidateSelect` 호출이 **0**」
+     * 🟢 후: 「호출이 **정확히 1** 이고 그 하나는 **검토 접힘** 의 것이다」
+     *    🔴 2 가 되면 셀러 후보 행에 다시 붙었다는 뜻이다 — 이 계약이 막던 그 모양이다.
+     *    🟢 **위치** 는 마운트 DOM 축이 문다(`sourcing-candidate-unified-ux-1 V-1/V-1b` —
+     *       후보 행에 **0** · 검토 접힘에 **1 이상**) ⟹ 두 축이 같이 잠근다.
+     * 🔵 CPO 결정 — 「비교목록표를 만든 목적이 CPO·CEO 의 직접 검토이기 때문에 승인한다.」
+     */
     expect(CARD).not.toContain("<CandidateNoteChoices");
-    expect(CARD).not.toContain("<CandidateSelect");
+    expect(
+      CARD.split("<CandidateSelect").length - 1,
+      "🔴 선택 UI 호출이 하나가 아니다 — 셀러 후보 행에 되살아났을 수 있다",
+    ).toBe(1);
     /** ⒝ 🔴 읽기 전용 표시도 **없다** — 좌표와 어휘 둘 다. */
     expect(CARD, "🔴 사람 판정 표시가 셀러 카드에 되살아났다").not.toContain(
       'data-testid="mi-candidate-human-verdict"',

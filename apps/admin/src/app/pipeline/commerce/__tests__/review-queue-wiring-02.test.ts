@@ -35,6 +35,12 @@ import {
   type OriginIdentity,
 } from "../mi-same-candidates";
 import { DESCRIPTION_EVIDENCE_SCOPE } from "../origin-description-evidence";
+/** 🔴 판정 어휘를 테스트가 **지어내지 않는다** — 운영과 같은 맵을 읽는다. */
+import {
+  HUMAN_REVIEW_BUTTON,
+  HUMAN_REVIEW_VALUES,
+  SAVE_STATE_TEXT,
+} from "../GeminiTransientCandidates";
 import type { GeminiTransientRow } from "../GeminiTransientCandidates";
 import { toSavedCandidateRows } from "../../../api/price-history/_lib/saved-candidate-rows";
 import { candidateReviewRowFromDb } from "../../../api/price-history/_lib/candidate-review";
@@ -411,15 +417,24 @@ describe("REV-02 E — 저장 경로를 새로 만들지 않았다", () => {
    * 🟢 그래서 **가드를 한 글자도 풀지 않았고** 이 영역은 「비교와 근거」까지 한다.
    * 🔵 버튼 복원 여부는 **CPO 판정 사안** 으로 올렸다.
    */
-  it("E-1 🔴🔴 검토 행에 **판정 버튼을 만들지 않았다**(기존 제거 결정을 되돌리지 않는다)", () => {
+  /**
+   * 🔵🔵🔵 **FINAL-03 ① — CPO 가 복원을 승인했다. 이 단언의 방향이 뒤집혔다.**
+   *
+   * 🔴 REV-02 에서는 「버튼을 두지 않았다」가 계약이었다 — 기존 계약 셋이
+   *    **CPO 승인 ⒝**(선택 UI 제거)를 담고 있었기 때문이다.
+   * 🔵 CPO 결정 — 「비교목록표를 만든 목적이 CPO·CEO 의 직접 검토이기 때문에 승인한다.」
+   * 🟢 그래서 그 셋을 **범위만 좁혀** 갱신했다(후보 행에 0 · 검토 접힘에 1 이상).
+   */
+  it("E-1 🔵🔵 검토 행에 **판정 UI 가 선다**(CPO 승인 · 셀러 후보 행은 그대로 0)", () => {
     const host = mount({ rows: realRows(), originIdentity: realOrigin() });
-    expect(q(host, '[data-testid="mi-review-row"]').length).toBeGreaterThan(0);
-    expect(
-      host.querySelectorAll('[data-testid="mi-candidate-select"]').length,
-      "🔴 제거된 선택 UI 가 되살아났다",
-    ).toBe(0);
-    /** 🟢 그래도 **판단에 필요한 것** 은 행에 있다 — 비교표 · 사유 · 원문 통로. */
-    for (const r of q(host, '[data-testid="mi-review-row"]')) {
+    const rows = q(host, '[data-testid="mi-review-row"]');
+    expect(rows.length).toBeGreaterThan(0);
+    for (const r of rows) {
+      expect(
+        r.querySelector('[data-testid="mi-candidate-select"]'),
+        "🔴 검토 행에 판정 UI 가 없다 — 사람이 판단할 수 없다",
+      ).not.toBeNull();
+      /** 🟢 판단에 필요한 나머지도 같이 있다. */
       expect(r.querySelector('[data-testid="mi-review-compare"]')).not.toBeNull();
       expect(r.querySelector('[data-testid="mi-review-open-page"]')).not.toBeNull();
     }
@@ -546,6 +561,194 @@ describe("REV-02 F — 상세설명 근거는 표시 전용이다", () => {
     const sig = SRC.slice(at, SRC.indexOf("{", SRC.indexOf("): Array<", at)));
     expect(sig, "🔴 선택기가 원상품 식별값을 받는다").not.toContain("OriginIdentity");
     expect(sig, "🔴 선택기가 상세설명을 받는다").not.toContain("description");
+  });
+});
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * H. 🔵🔵🔵 FINAL-03 ① — **사람 판정 UI(CPO 승인)**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔵 CPO 결정 — 「비교목록표를 만든 목적이 CPO·CEO 의 직접 검토이기 때문에 승인한다.
+ *    기존 계약 3건은 이 범위에서만 수정하십시오. 자동 판정 정책을 바꾸는 것은 아니다.」
+ * 🔴 그래서 여기서 재는 것은 셋이다 — ⒜ **검토 접힘 안에만** 있다 ⒝ **기존 저장
+ *    경로** 를 쓴다 ⒞ 사람 판정이 **자동 판정을 덮지 않는다**.
+ */
+
+describe("REV-02/FINAL-03 H — 사람 판정 UI", () => {
+  it("H-1 🟢🟢 **행마다 판정 UI 가 선다** — 네 선택지가 기존 어휘 owner 의 것이다", () => {
+    const host = mount({ rows: realRows(), originIdentity: realOrigin() });
+    const rows = q(host, '[data-testid="mi-review-row"]');
+    expect(rows.length, "🔴 분모 0").toBeGreaterThan(0);
+    for (const r of rows) {
+      const sel = r.querySelector('[data-testid="mi-candidate-select"]');
+      expect(sel, "🔴 검토 행에 판정 UI 가 없다").not.toBeNull();
+      for (const v of HUMAN_REVIEW_VALUES) {
+        const btn = sel!.querySelector(`[data-testid="mi-select-${v.toLowerCase()}"]`);
+        expect(btn, `🔴 ${v} 선택지가 없다`).not.toBeNull();
+        /** 🔴 문구를 테스트가 **지어내지 않는다** — 같은 맵을 읽는다(DB CHECK 와 같은 어휘). */
+        expect(text(btn)).toBe(HUMAN_REVIEW_BUTTON[v]);
+      }
+    }
+  });
+
+  /**
+   * 🔴🔴 **가짜 훅을 넣지 않는다.** 1차에서 `api` 를 `mount()` 로 넘기려 했으나
+   *    `MarketPriceComparison` 은 **자기 `useCandidateReview(snapshotId)`** 를 쓰므로
+   *    그 prop 이 **무시된다**(내 테스트가 아무것도 가로채지 못해 호출 0 이었다).
+   * 🟢 그래서 **운영 경로를 그대로** 쟀다 — `fetch` 를 세워 **실제 POST 본문** 을 본다.
+   *    이것이 「기존 저장 API 재사용」의 직접 증거다(새 API 0).
+   */
+  it("H-2 🟢🟢 **누르면 기존 저장 API 로 간다** — 실제 POST 본문을 확인한다", async () => {
+    const calls: { url: string; body: Record<string, unknown> }[] = [];
+    const prev = globalThis.fetch;
+    globalThis.fetch = (async (input: unknown, init?: { method?: string; body?: string }) => {
+      if (init?.method === "POST") {
+        calls.push({
+          url: String(input),
+          body: JSON.parse(init.body ?? "{}") as Record<string, unknown>,
+        });
+      }
+      return { ok: true, json: async () => ({ ok: true, reviews: [] }) } as unknown as Response;
+    }) as unknown as typeof fetch;
+    try {
+      const host = mount({ rows: realRows(), originIdentity: realOrigin() });
+      const first = q(host, '[data-testid="mi-review-row"]')[0]!;
+      await act(async () => {
+        first
+          .querySelector('[data-testid="mi-select-same"]')
+          ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      });
+      expect(calls, "🔴 저장 POST 가 나가지 않았다").toHaveLength(1);
+      /** 🟢 **기존 엔드포인트** 다 — 새 주소를 만들지 않았다. */
+      expect(calls[0]!.url).toContain("/candidate-reviews");
+      expect(calls[0]!.url).toContain(fixture().snapshot.id);
+      expect(calls[0]!.body.humanVerdict).toBe("SAME");
+      expect(String(calls[0]!.body.candidateUrl)).toMatch(/^http/);
+      /** 🟢 맥락이 같이 간다 — 재진입에서 「왜 그렇게 봤는지」를 복원할 수 있어야 한다. */
+      expect(calls[0]!.body.candidate, "🔴 후보 맥락이 빠졌다 — 맨몸 행이 생긴다").toBeTruthy();
+    } finally {
+      globalThis.fetch = prev;
+    }
+  });
+
+  it("H-3 🔴🔴 **사람 판정이 자동 판정을 덮지 않는다** — 행의 시스템 값이 그대로다", async () => {
+    const prev = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      ({
+        ok: true,
+        json: async () => ({ ok: true, reviews: [] }),
+      }) as unknown as Response) as unknown as typeof fetch;
+    try {
+      const rows = realRows();
+      const key = (r: GeminiTransientRow) =>
+        `${r.discoveredUrl}|${r.crossSellerVerdict}|${r.matchTruth}|${r.priceTier}`;
+      const before = rows.map(key).sort();
+      const host = mount({ rows, originIdentity: realOrigin() });
+      await act(async () => {
+        q(host, '[data-testid="mi-review-row"]')[0]
+          ?.querySelector('[data-testid="mi-select-different"]')
+          ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      });
+      expect(rows.map(key).sort(), "🔴 사람 판정이 시스템 판정을 덮었다").toEqual(before);
+      /** 🟢 그리고 화면의 **시스템 사유 칠** 도 그대로 있다(다른 노드·다른 state). */
+      expect(
+        text(host.querySelector('[data-testid="mi-review-reasons"]')).length,
+        "🔴 사유 칠이 사라졌다",
+      ).toBeGreaterThan(0);
+    } finally {
+      globalThis.fetch = prev;
+    }
+  });
+
+  it("H-4 🔴 저장 owner 는 **그 훅 하나** 다 — 영역이 자기 저장 경로를 만들지 않았다", () => {
+    const AREA = readFileSync(join(__dirname, "..", "MarketPriceComparison.tsx"), "utf8")
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
+      .replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(AREA, "🔴 영역이 직접 fetch 한다").not.toContain("fetch(");
+    expect(AREA, "🔴 영역이 주소를 직접 적는다").not.toContain("candidate-reviews");
+    expect(AREA, "🔴 훅 배선이 사라졌다").toContain("useCandidateReview(snapshotId)");
+    /** 🟢 그 훅의 인스턴스는 **하나** 다 — 둘이면 이력 GET 이 두 번 돈다. */
+    expect(AREA.split("useCandidateReview(").length - 1).toBe(1);
+  });
+
+  it("H-5 🟢 저장 상태 어휘는 **기존 owner** 것이다 — 「눌렀다」와 「저장됐다」를 가른다", () => {
+    const LEAF = readFileSync(join(__dirname, "..", "GeminiTransientCandidates.tsx"), "utf8");
+    expect(LEAF, "🔴 저장 상태 어휘 owner 가 사라졌다").toContain("SAVE_STATE_TEXT");
+    for (const k of ["SAVING", "SAVED", "ERROR"] as const) {
+      expect(SAVE_STATE_TEXT[k].length, `🔴 ${k} 문구가 비었다`).toBeGreaterThan(0);
+    }
+    /** 🟢 그 문구를 그리는 것은 `CandidateSelect` 이고 검토 행이 **그것을 그대로** 쓴다. */
+    const AREA = readFileSync(join(__dirname, "..", "MarketPriceComparison.tsx"), "utf8");
+    expect(AREA).toContain("<CandidateSelect row={row} api={api} />");
+  });
+});
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * I. 🔵🔵🔵 FINAL-03 ② — **후보 원값 두 칸**
+ * ════════════════════════════════════════════════════════════════════════════ */
+
+describe("REV-02/FINAL-03 I — 후보 브랜드·품번 원값", () => {
+  it("I-1 🟢🟢 **원값이 있으면 그대로 선다** — 원상품과 나란히", () => {
+    const target = selectReviewQueue(realRows(), "ALL")[0]!.row.discoveredUrl;
+    const rows = realRows().map((r) =>
+      r.discoveredUrl === target ? { ...r, brand: "Bobo Choses", modelCode: "B226AC033" } : r,
+    );
+    const host = mount({ rows, originIdentity: realOrigin() });
+    const cells = q(host, '[data-testid="mi-review-candidate-value"]').map((e) => text(e));
+    expect(cells, "🔴 후보 브랜드 원값이 화면에 없다").toContain("Bobo Choses");
+    expect(cells, "🔴 후보 품번 원값이 화면에 없다").toContain("B226AC033");
+  });
+
+  it("I-2 🔴🔴 **원값이 차단축 문장을 이긴다** — 값과 차이를 한 칸에서 섞지 않는다", () => {
+    /**
+     * 🔴 **저장분 복원 경로는 차단축을 `crossSellerConflicts` 에 넣는다**(합쳐 저장된다 ·
+     *    `saved-candidate-rows.ts:149`). 1차에 `crossSellerBlockers` 만 봐서 **분모 0** 이었다.
+     */
+    const base = selectReviewQueue(realRows(), "ALL").find((e) =>
+      [...(e.row.crossSellerBlockers ?? []), ...(e.row.crossSellerConflicts ?? [])].includes(
+        "BRAND_MISMATCH",
+      ),
+    );
+    expect(base, "🔴 분모 0 — 브랜드 차단축을 든 후보가 없다").toBeTruthy();
+    const rows = realRows().map((r) =>
+      r.discoveredUrl === base!.row.discoveredUrl ? { ...r, brand: "Fendi" } : r,
+    );
+    const host = mount({ rows, originIdentity: realOrigin() });
+    const cells = q(host, '[data-testid="mi-review-candidate-value"]').map((e) => text(e));
+    expect(cells, "🔴 원값이 안 섰다").toContain("Fendi");
+    expect(cells.join("|"), "🔴 같은 칸에 값과 차이가 같이 적혔다").not.toContain("Fendi · ");
+  });
+
+  it("I-3 🔴 **원값이 없으면 지어내지 않는다** — 차이 또는 「확인 불가」다(CPO 명시)", () => {
+    const rows = realRows().map((r) => ({ ...r, brand: null, modelCode: null }));
+    const host = mount({ rows, originIdentity: realOrigin() });
+    const t = q(host, '[data-testid="mi-review-candidate-value"]')
+      .map((e) => text(e))
+      .join("|");
+    expect(
+      t.includes(REVIEW_VALUE_UNKNOWN) || t.includes(REVIEW_CANDIDATE_VALUE_NOT_IN_RESPONSE),
+      "🔴 빈 칸을 그대로 뒀다 — 「후보에 브랜드가 없다」로 읽힌다",
+    ).toBe(true);
+  });
+
+  it("I-4 🟢 **서버가 그 두 칸을 «판정이 고른 후보의 facts» 에서 옮긴다**(새 수집 0)", () => {
+    const RUNNER = readFileSync(
+      join(__dirname, "..", "..", "..", "api", "price-history", "_lib", "run-domestic-price-check.ts"),
+      "utf8",
+    );
+    expect(RUNNER, "🔴 브랜드 원값 배선이 없다").toContain("brand: best.facts?.brand ?? null");
+    expect(RUNNER, "🔴 품번 원값 배선이 없다").toContain(
+      "modelCode: best.facts?.brandModelCode ?? null",
+    );
+  });
+
+  it("I-5 🔴🔴 **그 두 칸은 판정·가격에 들어가지 않는다** — 소비처가 비교표 하나다", () => {
+    const AREA = readFileSync(join(__dirname, "..", "MarketPriceComparison.tsx"), "utf8")
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
+      .replace(/\/\*[\s\S]*?\*\//g, "");
+    /** 🔴 `row.brand`·`row.modelCode` 를 읽는 곳이 **각각 한 번** 이어야 한다. */
+    expect(AREA.split("row.brand").length - 1, "🔴 브랜드 원값 소비처가 둘 이상이다").toBe(1);
+    expect(AREA.split("row.modelCode").length - 1, "🔴 품번 원값 소비처가 둘 이상이다").toBe(1);
   });
 });
 

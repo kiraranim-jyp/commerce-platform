@@ -214,19 +214,55 @@ describe("U. 🔵 후보 카드 — 같은 템플릿 · 참고가격 포함/제�
 });
 
 describe("V. 🔵 ②⑤⑦ — 기본 5칸 · 등급 이동 · 선택 UI 제거", () => {
-  it("V-1 🟢🟢 **동일상품 선택 UI 가 사라졌다**(⑦ · CPO 승인 ⒝)", async () => {
+  /**
+   * ════════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 **MI-IDENTITY-REVIEW-FINAL-03 ① — 범위가 «좁혀져» 갱신됐다(CPO 승인)**
+   * ════════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 전: 「선택 UI 가 **화면 어디에도** 없다」
+   * 🟢 후: 「**셀러 후보 행에는** 없다 · **검토 접힘(`mi-review-queue`) 안에만** 있다」
+   *
+   * 🔴🔴 **느슨하게 한 것이 아니라 «위치를 못 박아» 강화했다.** 전에는 「0개」만 셌으므로
+   *    총개수 축 하나로만 잠겨 있었다. 지금은 ⒜ 후보 행에 **0** ⒝ 검토 접힘 안에
+   *    **1 이상** 을 **동시에** 단언한다 ⟹ 어느 방향으로 틀어져도 FAIL 한다.
+   * 🔵 CPO 결정 — 「비교목록표를 만든 목적이 CPO·CEO 의 직접 검토이기 때문에 승인한다.
+   *    기존 계약 3건은 **이 범위에서만** 수정하십시오. 자동 판정 정책을 바꾸는 것은 아니다.」
+   * 🔴 그래서 **셀러가 보는 후보 행의 성질(2026-09-19 사고 기전)은 그대로** 다.
+   */
+  it("V-1 🟢🟢 **셀러 후보 행에는 선택 UI 가 없다**(⑦ · 범위: 후보 행)", async () => {
     await mount();
-    expect(
-      container.querySelector('[data-testid="mi-candidate-select"]'),
-      "🔴 선택 버튼이 남아 있으면 셀러에게 또 고르라고 하는 화면이다",
-    ).toBeNull();
-    expect(container.querySelector('[data-testid="mi-candidate-note"]')).toBeNull();
-    expect(container.querySelectorAll('[data-testid^="mi-select-"]')).toHaveLength(0);
+    const rows = Array.from(container.querySelectorAll('[data-testid="mi-candidate-row"]'));
+    expect(rows.length, "🔴 분모 0 — 후보 행이 없으면 이 단언은 아무것도 보지 않는다").toBeGreaterThan(
+      0,
+    );
+    for (const r of rows) {
+      expect(
+        r.querySelector('[data-testid="mi-candidate-select"]'),
+        "🔴 선택 버튼이 후보 행에 남아 있으면 셀러에게 또 고르라고 하는 화면이다",
+      ).toBeNull();
+      expect(r.querySelector('[data-testid="mi-candidate-note"]')).toBeNull();
+      expect(r.querySelectorAll('[data-testid^="mi-select-"]')).toHaveLength(0);
+    }
   });
 
-  it("V-2 🔴 선택 UI 는 **마크업에서도** 호출되지 않는다(소스 축)", () => {
-    /** 🔴 컴포넌트 정의는 남겨도 된다 — **렌더 호출** 이 0 이어야 한다. */
-    expect(AREA_SRC).not.toContain("<CandidateSelect");
+  it("V-1b 🔵🔵 그리고 **검토 접힘 «안에는» 선다**(FINAL-03 ① · CPO 승인)", async () => {
+    await mount();
+    const fold = container.querySelector('[data-testid="mi-review-queue"]');
+    expect(fold, "🔴 검토 접힘이 없다 — 사람이 판정할 자리가 사라졌다").not.toBeNull();
+    expect(
+      fold!.querySelectorAll('[data-testid="mi-candidate-select"]').length,
+      "🔴 검토 접힘 안에 판정 UI 가 없다 — CPO 가 승인한 그 기능이 죽었다",
+    ).toBeGreaterThan(0);
+  });
+
+  it("V-2 🔴 선택 UI 호출은 **검토 접힘 하나** 다(소스 축 · 개수로 잠근다)", () => {
+    /**
+     * 🔴 컴포넌트 정의는 남겨도 된다 — **렌더 호출의 위치와 개수** 가 축이다.
+     * 🔴 `<CandidateSelect` 가 **정확히 1회** 여야 한다 — 2회가 되면 후보 행에
+     *    다시 붙었다는 뜻이고, 그것이 이 계약이 원래 막던 그 모양이다.
+     */
+    const calls = AREA_SRC.split("<CandidateSelect").length - 1;
+    expect(calls, "🔴 선택 UI 호출이 하나가 아니다 — 후보 행에 다시 붙었을 수 있다").toBe(1);
     expect(AREA_SRC).not.toContain("<CandidateNoteChoices");
   });
 

@@ -150,11 +150,23 @@ describe("SELLER-DECISION §19 — props → selector → DOM 후보 수", () =>
     const badges = container.querySelectorAll('[data-testid="mi-candidate-group"]');
     expect(rows.length, "🔴 후보가 0 이면 이 계약이 아무것도 못 본다").toBeGreaterThan(0);
     expect(badges.length, "🔴 후보 수와 1:1 이어야 한다 — 하나로 뭉개지 않는다").toBe(rows.length);
-    expect(container.querySelectorAll('[data-testid="mi-candidate-select"]')).toHaveLength(0);
-    expect(
-      container.querySelectorAll('[data-testid="mi-candidate-judgement"]'),
-      "🔴 「우리 판단」 영역이 되살아났다",
-    ).toHaveLength(0);
+    /**
+     * 🔵🔵 **MI-IDENTITY-REVIEW-FINAL-03 ① — 범위가 «좁혀져» 갱신됐다(CPO 승인).**
+     * 🔴 전: 「선택 UI 가 **화면 전체에** 0」
+     * 🟢 후: 「**후보 행마다** 0」 — 검토 접힘(`mi-review-queue`) 안에는 **있다**.
+     * 🔴 느슨하게 한 것이 아니다 — **행 단위로 전수** 돌려 더 촘촘히 본다.
+     *    위치 축은 `sourcing-candidate-unified-ux-1 V-1/V-1b` 가 같이 문다.
+     */
+    for (const r of rows) {
+      expect(
+        r.querySelectorAll('[data-testid="mi-candidate-select"]'),
+        "🔴 선택 UI 가 셀러 후보 행에 되살아났다",
+      ).toHaveLength(0);
+      expect(
+        r.querySelectorAll('[data-testid="mi-candidate-judgement"]'),
+        "🔴 「우리 판단」 영역이 되살아났다",
+      ).toHaveLength(0);
+    }
   });
 
   /**
