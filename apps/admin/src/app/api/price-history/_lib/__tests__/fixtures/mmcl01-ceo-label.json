@@ -1,0 +1,1112 @@
+{
+  "note": "🔴 MMCL-01 — CEO 판정용 비교표 입력. 🔴 CTO 가 SAME/DIFFERENT 를 확정하지 않았다. 🔴 ceoVerdict 는 전건 null · DB 저장 0 · 운영 판정 연결 0. 원문은 그대로(번역·보정 0) · 정규화와 분리.",
+  "httpCalls": 24,
+  "origins": 5,
+  "candidates": 22,
+  "groups": [
+    "Dress",
+    "Jacket",
+    "Trousers"
+  ],
+  "rows": [
+    {
+      "group": "Trousers",
+      "snapshotId": "6cf3e50e-fec6-4463-9114-c351f81c1bbb",
+      "originTitle": "Taxi Saurus Tag denim pants",
+      "originUrl": "https://bobochoses.com/en-kr/products/b226ac073-taxi-saurus-tag-denim-pants",
+      "originBrand": "Bobo Choses",
+      "originDbSku": "",
+      "originOpCode": "B226AC073",
+      "originOpCodeSource": "URL slug",
+      "originCodeShapesInDesc": [],
+      "originDescChars": 83,
+      "originDescRaw": "Midnight blue pants. Organic Cotton 100%. Cocoon fit. Responsibly made in Portugal.",
+      "originBrandExcerpt": null,
+      "originCodeExcerpt": null,
+      "originNameTokens": [
+        "taxi",
+        "saurus",
+        "tag",
+        "denim",
+        "pants"
+      ],
+      "candidates": [
+        {
+          "domain": "designerkidswear.com",
+          "url": "https://designerkidswear.com/products/versace-kids-baby-boys-denim-blue-1009197-1a08511-1d200",
+          "market": "OVERSEAS",
+          "systemVerdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "blockers": [
+            "BRAND_MISMATCH",
+            "MATERIAL",
+            "AUDIENCE_LINE"
+          ],
+          "storedHumanVerdict": null,
+          "fetchStatus": "OK",
+          "fetchPath": "SHOPIFY_JSON",
+          "candidateBrand": "VERSACE",
+          "candidateCode": null,
+          "candidateTitle": "Baby Boys Blue Denim",
+          "descriptionChars": 121,
+          "descriptionRaw": "Versace soft cotton blue wash denim with signature greek key elastic waist trimming. 95% cotton 5% Elastane Made in Italy",
+          "imageUrl": "https://cdn.shopify.com/s/files/1/0383/7535/8604/files/90_1009197-1A08511_1D200_20_0.jpg?v=1694200334",
+          "brand": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "구조화 필드",
+            "note": "구조화 「VERSACE」"
+          },
+          "code": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "-",
+            "note": "구조화 품번 없음"
+          },
+          "name": {
+            "presence": "있음",
+            "excerpt": "Versace soft cotton blue wash denim with signature greek key elastic waist trimming. 95% c…",
+            "agreement": "불일치",
+            "source": "상세설명",
+            "note": "설명 겹침 1/5 · 제목 겹침 1/5"
+          },
+          "ceoVerdict": null,
+          "ceoNote": null
+        },
+        {
+          "domain": "folkberlin.com",
+          "url": "https://folkberlin.com/products/gingham-woven-trousers",
+          "market": "OVERSEAS",
+          "systemVerdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "blockers": [
+            "BRAND_MISMATCH",
+            "NO_TITLE_OVERLAP"
+          ],
+          "storedHumanVerdict": null,
+          "fetchStatus": "OK",
+          "fetchPath": "SHOPIFY_JSON",
+          "candidateBrand": "Mini Rodini",
+          "candidateCode": null,
+          "candidateTitle": "Karierte Webhose, besonders weich, 116 - 122 / 6 - 7 Jahre",
+          "descriptionChars": 1434,
+          "descriptionRaw": "Karierte Webhose, superweich 116–122 / 6–7 Jahre Mini Rodini Webhose aus weichem TENCEL™ Lyocell. Entworfen für eine lässige Passform mit elastischem Bund und elastischen Bündchen. Teil der Kopenhagener SS25-Kollektion von Mini Rodini. Gut zu wissen Material: 100 % Bio-Baumwolle Konisch zulaufende Passform Verdeckte Kordelzüge im Bund Hundestickerei Zwei Vordertaschen Elastischer Bund Artikelnummer: 2523016113 TENCEL™ Lyocell ist eine zu 100 % biologisch abbaubare Faser aus zertifiziertem Holz von Fichten und Buchen. Sie wird in einem einzigartigen geschlossenen Kreislaufsystem hergestellt, bei dem keine Chemikalien in die Natur gelangen. Die Lyocell-Produktion benötigt im Vergleich zu Baumwolle und Viskose deutlich weniger Wasser und Anbaufläche. Lyocell ist nicht nur ein Vorreiter in der Textilindustrie, sondern auch ein strapazierfähiges und zugleich weiches Material mit seidigem Griff.\" Über die Marke Mini Rodini ist eine schwedische Kindermodemarke, die 2006 von der Illustratorin Cassandra Rhodin gegründet wurde – als Hommage an alle Kinder, ihre Fantasie und ihr Gefühl, dass alles möglich ist. Dieses Kleidungsstück wird in einer Fabrik hergestellt, die Teil des Projekts von Mini Rodini für existenzsichernde Löhne ist. Anstatt den Beschäftigten nur den Mindestlohn zu zahlen, von dem es fast unmöglich ist zu leben, zahlen wir einen Lohn, der hoch genug ist, um einen normalen Lebensstandard zu gewährleisten.",
+          "imageUrl": "https://cdn.shopify.com/s/files/1/0543/4900/4997/files/MiniRodini_trousers_SS25.jpg?v=1738052744",
+          "brand": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "구조화 필드",
+            "note": "구조화 「Mini Rodini」"
+          },
+          "code": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "-",
+            "note": "구조화 품번 없음"
+          },
+          "name": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "제목",
+            "note": "설명 겹침 0/5 · 제목 겹침 0/5"
+          },
+          "ceoVerdict": null,
+          "ceoNote": null
+        },
+        {
+          "domain": "junioredition.com",
+          "url": "https://junioredition.com/products/taxi-saurus-tag-denim-pants-by-bobo-choses",
+          "market": "OVERSEAS",
+          "systemVerdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "blockers": [
+            "COLOR_VARIANT"
+          ],
+          "storedHumanVerdict": null,
+          "fetchStatus": "OK",
+          "fetchPath": "SHOPIFY_JSON",
+          "candidateBrand": "Bobo Choses",
+          "candidateCode": "B226AC073",
+          "candidateTitle": "Taxi Saurus Tag Denim Pants by Bobo Choses",
+          "descriptionChars": 235,
+          "descriptionRaw": "Taxi Saurus Tag Denim Pants by Bobo Choses. Midnight blue denim trousers designed with an elasticated waistband, tapered legs and front pockets. Colour - Midnight Blue. 100% Organic Cotton. Product code B226AC073 AW26 Made in Portugal.",
+          "imageUrl": "https://cdn.shopify.com/s/files/1/0874/8574/files/Bobo-Choses-AW26-Taxi-Saurus-Tag-Denim-Pants.jpg?v=1784289414",
+          "brand": {
+            "presence": "있음",
+            "excerpt": "Taxi Saurus Tag Denim Pants by Bobo Choses. Midnight blue denim trousers designed with an elastic…",
+            "agreement": "일치",
+            "source": "상세설명",
+            "note": "구조화 「Bobo Choses」"
+          },
+          "code": {
+            "presence": "있음",
+            "excerpt": "…our - Midnight Blue. 100% Organic Cotton. Product code B226AC073 AW26 Made in Portugal.",
+            "agreement": "일치",
+            "source": "상세설명",
+            "note": "구조화 「B226AC073」"
+          },
+          "name": {
+            "presence": "있음",
+            "excerpt": "Taxi Saurus Tag Denim Pants by Bobo Choses. Midnight blue d…",
+            "agreement": "일치",
+            "source": "상세설명",
+            "note": "설명 겹침 5/5 · 제목 겹침 5/5"
+          },
+          "ceoVerdict": null,
+          "ceoNote": null
+        },
+        {
+          "domain": "kidbizkid.com",
+          "url": "https://kidbizkid.com/products/diesel-viker-jeans",
+          "market": "OVERSEAS",
+          "systemVerdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "blockers": [
+            "BRAND_MISMATCH",
+            "COLOR_VARIANT",
+            "NO_TITLE_OVERLAP",
+            "AUDIENCE_LINE"
+          ],
+          "storedHumanVerdict": null,
+          "fetchStatus": "OK",
+          "fetchPath": "SHOPIFY_JSON",
+          "candidateBrand": "Diesel",
+          "candidateCode": null,
+          "candidateTitle": "Diesel Viker Jeans",
+          "descriptionChars": 126,
+          "descriptionRaw": "Upgrade your denim game with Diesel Viker Jeans! These dark jeans feature a classic 5-pocket design, perfect for any occasion.",
+          "imageUrl": "https://cdn.shopify.com/s/files/1/2390/3997/files/J00809_1.jpg?v=1726774700",
+          "brand": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "구조화 필드",
+            "note": "구조화 「Diesel」"
+          },
+          "code": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "-",
+            "note": "구조화 품번 없음"
+          },
+          "name": {
+            "presence": "있음",
+            "excerpt": "Upgrade your denim game with Diesel Viker Jeans! These dark jeans feature…",
+            "agreement": "불일치",
+            "source": "상세설명",
+            "note": "설명 겹침 1/5 · 제목 겹침 0/5"
+          },
+          "ceoVerdict": null,
+          "ceoNote": null
+        },
+        {
+          "domain": "nickis.com",
+          "url": "https://nickis.com/products/polo-ralph-lauren-jeans-blau-3402271700",
+          "market": "OVERSEAS",
+          "systemVerdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "blockers": [
+            "BRAND_MISMATCH",
+            "COLOR_VARIANT",
+            "NO_TITLE_OVERLAP",
+            "AUDIENCE_LINE"
+          ],
+          "storedHumanVerdict": null,
+          "fetchStatus": "REDIRECTED_AWAY",
+          "fetchPath": null,
+          "candidateBrand": null,
+          "candidateCode": null,
+          "candidateTitle": "Jeans Blau",
+          "descriptionChars": 0,
+          "descriptionRaw": null,
+          "imageUrl": null,
+          "brand": {
+            "presence": "확인 불가",
+            "excerpt": null,
+            "agreement": "비교 불가",
+            "source": "-",
+            "note": "상세설명 미확보(REDIRECTED_AWAY)"
+          },
+          "code": {
+            "presence": "확인 불가",
+            "excerpt": null,
+            "agreement": "비교 불가",
+            "source": "-",
+            "note": "상세설명 미확보(REDIRECTED_AWAY)"
+          },
+          "name": {
+            "presence": "확인 불가",
+            "excerpt": "Jeans Blau",
+            "agreement": "불일치",
+            "source": "제목",
+            "note": "상세설명 미확보(REDIRECTED_AWAY) · 제목 겹침 0/5"
+          },
+          "ceoVerdict": null,
+          "ceoNote": null
+        },
+        {
+          "domain": "petitemaisonkids.com",
+          "url": "https://petitemaisonkids.com/products/sparkle-blue-denim-jeans",
+          "market": "OVERSEAS",
+          "systemVerdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "blockers": [
+            "BRAND_MISMATCH",
+            "MATERIAL",
+            "AUDIENCE_LINE"
+          ],
+          "storedHumanVerdict": null,
+          "fetchStatus": "OK",
+          "fetchPath": "SHOPIFY_JSON",
+          "candidateBrand": "Petite Maison Kids",
+          "candidateCode": null,
+          "candidateTitle": "Sparkle Blue Denim Jeans",
+          "descriptionChars": 627,
+          "descriptionRaw": "Light blue denim jeans designed for girls with a trendy wide-leg silhouette and sparkling embellishments. The distressed detailing adds playful character while the comfortable fit makes them perfect for everyday wear or special occasions. Crafted from a soft cotton-polyester blend with a zipper closure and adjustable waist for a secure fit. Pairs beautifully with our Sparkle Jean Jacket to create a coordinated look. 90% Cotton, 10% Polyester Imported Unlined Zipper closure and adjustable waist Wide leg fit Made to match our Sparkle Jean Jacket Care Instructions : Hand wash in cold water with mild detergent. Hang to dry.",
+          "imageUrl": "https://cdn.shopify.com/s/files/1/0081/1171/8457/files/IMG-8323.jpg?v=1785604846",
+          "brand": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "구조화 필드",
+            "note": "구조화 「Petite Maison Kids」"
+          },
+          "code": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "-",
+            "note": "구조화 품번 없음"
+          },
+          "name": {
+            "presence": "있음",
+            "excerpt": "Light blue denim jeans designed for girls with a trendy wide-leg silhou…",
+            "agreement": "불일치",
+            "source": "상세설명",
+            "note": "설명 겹침 1/5 · 제목 겹침 1/5"
+          },
+          "ceoVerdict": null,
+          "ceoNote": null
+        },
+        {
+          "domain": "villagekids.co.uk",
+          "url": "https://villagekids.co.uk/products/denim-blue-jeans",
+          "market": "OVERSEAS",
+          "systemVerdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "blockers": [
+            "BRAND_MISMATCH",
+            "COLOR_VARIANT",
+            "NO_TITLE_OVERLAP",
+            "MATERIAL",
+            "AUDIENCE_LINE"
+          ],
+          "storedHumanVerdict": null,
+          "fetchStatus": "OK",
+          "fetchPath": "SHOPIFY_JSON",
+          "candidateBrand": "Boss Kids",
+          "candidateCode": null,
+          "candidateTitle": "Denim Blue Jeans",
+          "descriptionChars": 170,
+          "descriptionRaw": "Denim blue jeans by Boss with a loose fit 5 pockets and a rubber label that adjourns at the back. With an adjustable waistband. 100% Cotton Machine Wash 30*c A2202-J50690",
+          "imageUrl": "https://cdn.shopify.com/s/files/1/0278/6259/7706/files/products_9_a4b62bac-69d5-4ecf-bf14-87706008195e.jpg?v=1712138578",
+          "brand": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "구조화 필드",
+            "note": "구조화 「Boss Kids」"
+          },
+          "code": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "-",
+            "note": "구조화 품번 없음 · 🔴 다른 품번 A2202, J50690"
+          },
+          "name": {
+            "presence": "있음",
+            "excerpt": "Denim blue jeans by Boss with a loose fit 5 pockets and a ru…",
+            "agreement": "불일치",
+            "source": "상세설명",
+            "note": "설명 겹침 1/5 · 제목 겹침 1/5"
+          },
+          "ceoVerdict": null,
+          "ceoNote": null
+        },
+        {
+          "domain": null,
+          "url": "https://www.donokids.com/shop/shopdetail.html?branduid=3362810&type=x&current_category=058",
+          "market": "미확정",
+          "systemVerdict": null,
+          "matchTruth": null,
+          "priceTier": null,
+          "blockers": [],
+          "storedHumanVerdict": "SAME",
+          "fetchStatus": "OK",
+          "fetchPath": "PLAIN_HTML",
+          "candidateBrand": null,
+          "candidateCode": null,
+          "candidateTitle": "[[보보쇼즈] Taxi Saurus Tag denim pants #226AC073]",
+          "descriptionChars": 46,
+          "descriptionRaw": "[[보보쇼즈] Taxi Saurus Tag denim pants #226AC073]",
+          "imageUrl": null,
+          "brand": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "비교 불가",
+            "source": "-",
+            "note": "구조화 브랜드 없음 · 다국어"
+          },
+          "code": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "-",
+            "note": "구조화 품번 없음"
+          },
+          "name": {
+            "presence": "있음",
+            "excerpt": "[[보보쇼즈] Taxi Saurus Tag denim pants #226AC073]",
+            "agreement": "일치",
+            "source": "상세설명",
+            "note": "설명 겹침 5/5 · 제목 겹침 5/5 · 다국어 제목"
+          },
+          "ceoVerdict": null,
+          "ceoNote": null
+        }
+      ]
+    },
+    {
+      "group": "Dress",
+      "snapshotId": "3073691b-1f97-4f5b-aac6-f9537e444d72",
+      "originTitle": "Handsmock Dress in Little Bouquet by Bonjour",
+      "originUrl": "https://www.junioredition.com/collections/bonjour/products/handsmock-dress-in-little-bouquet-by-bonjour",
+      "originBrand": "Bonjour",
+      "originDbSku": "",
+      "originOpCode": "BJ21",
+      "originOpCodeSource": "설명문",
+      "originCodeShapesInDesc": [],
+      "originDescChars": 545,
+      "originDescRaw": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful floral fabric with removable crochet collar. Colour - Little Bouquet. 100% Cotton. Size Guide: 2 Years: Length 56cm, Chest 30cm, Sleeve Length 32cm. 4 Years: Length 60cm, Chest 31cm, Sleeve Length 34cm. 6 Years: Length 64cm, Chest 32cm, Sleeve Length 36cm. 8 Years: Length 68cm, Chest 31cm, Sleeve Length 34cm. 10 Years: Length 72cm, Chest 34cm, Sleeve Length 40cm. 12 Years: Length 76cm, Chest 35cm, Sleeve Length 42cm. Product Code BJ21_AW26",
+      "originBrandExcerpt": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length d…",
+      "originCodeExcerpt": null,
+      "originNameTokens": [
+        "handsmock",
+        "dress",
+        "little",
+        "bouquet",
+        "bonjour"
+      ],
+      "candidates": [
+        {
+          "domain": "designerkidswear.com",
+          "url": "https://designerkidswear.com/products/givenchy-baby-girls-dress-pink-h31301-46g",
+          "market": "OVERSEAS",
+          "systemVerdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "blockers": [
+            "BRAND_MISMATCH",
+            "NO_TITLE_OVERLAP"
+          ],
+          "storedHumanVerdict": null,
+          "fetchStatus": "OK",
+          "fetchPath": "SHOPIFY_JSON",
+          "candidateBrand": "GIVENCHY",
+          "candidateCode": null,
+          "candidateTitle": "Baby Girls Pink Piqué Cotton Polo Dress",
+          "descriptionChars": 537,
+          "descriptionRaw": "Elevate her wardrobe with this exquisite Givenchy baby girls pink cotton piqué polo dress, a timeless piece that seamlessly blends sophistication with playful elegance. Crafted from premium cotton piqué knit, this short-sleeve dress features refined details including delicate embellishments on the collar and sleeve cuffs, paired with subtle tone-on-tone button accents along the front. Perfect for special occasions or everyday luxury, this dress combines impeccable tailoring with the comfort she deserves. 100% Cotton Made in Tunisia",
+          "imageUrl": "https://cdn.shopify.com/s/files/1/0383/7535/8604/files/H31301_46G_001.jpg?v=1783621493",
+          "brand": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "구조화 필드",
+            "note": "구조화 「GIVENCHY」"
+          },
+          "code": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "-",
+            "note": "구조화 품번 없음"
+          },
+          "name": {
+            "presence": "있음",
+            "excerpt": "…s exquisite Givenchy baby girls pink cotton piqué polo dress, a timeless piece that seamlessly blends sophisticatio…",
+            "agreement": "불일치",
+            "source": "상세설명",
+            "note": "설명 겹침 1/5 · 제목 겹침 1/5"
+          },
+          "ceoVerdict": null,
+          "ceoNote": null
+        },
+        {
+          "domain": "junioredition.com",
+          "url": "https://junioredition.com/products/exclusive-handsmock-dress-in-pink-tapestry-by-bonjour",
+          "market": "OVERSEAS",
+          "systemVerdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "blockers": [
+            "SAME_SELLER_DISTINCT_LISTING"
+          ],
+          "storedHumanVerdict": null,
+          "fetchStatus": "OK",
+          "fetchPath": "SHOPIFY_JSON",
+          "candidateBrand": "Bonjour",
+          "candidateCode": "BJ87",
+          "candidateTitle": "Handsmock Dress in Pink Tapestry by Bonjour - Last Ones In Stock - 6-12 Years",
+          "descriptionChars": 503,
+          "descriptionRaw": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful pink tapestry fabric, with pink smocking and embroidered flowers. Colour - Pink Tapestry. 100% Cotton. Size Guide (all measurements are approximate and offered as a guide only.): 2 Years - Chest 30cm, Hips 56cm. 4 Years - Chest 31cm, Hips 60cm. 6 Years - Chest 32cm, Hips 64cm. 8 Years - Chest 33cm, Hips 68cm. 10 Years - Chest 34cm, Hips 72cm. 12 Years - Chest 35cm, Hips 76cm. Product Code BJ87_AW25",
+          "imageUrl": "https://cdn.shopify.com/s/files/1/0874/8574/files/Bonjour-AW25-Exclusives-Handsmock-Dress-Pink-Tapestry-1.jpg?v=1758973236",
+          "brand": {
+            "presence": "있음",
+            "excerpt": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length d…",
+            "agreement": "일치",
+            "source": "상세설명",
+            "note": "구조화 「Bonjour」"
+          },
+          "code": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "구조화 필드",
+            "note": "구조화 「BJ87」"
+          },
+          "name": {
+            "presence": "있음",
+            "excerpt": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in…",
+            "agreement": "일치",
+            "source": "상세설명",
+            "note": "설명 겹침 3/5 · 제목 겹침 3/5"
+          },
+          "ceoVerdict": null,
+          "ceoNote": null
+        },
+        {
+          "domain": "kidbizkid.com",
+          "url": "https://kidbizkid.com/products/givenchy-lilac-dress",
+          "market": "OVERSEAS",
+          "systemVerdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "blockers": [
+            "BRAND_MISMATCH",
+            "NO_TITLE_OVERLAP"
+          ],
+          "storedHumanVerdict": null,
+          "fetchStatus": "OK",
+          "fetchPath": "SHOPIFY_JSON",
+          "candidateBrand": "Givenchy",
+          "candidateCode": null,
+          "candidateTitle": "Givenchy Lilac Dress",
+          "descriptionChars": 79,
+          "descriptionRaw": "Givenchy purple interlock dress. With Givenchy lace bands details. 100% Cotton.",
+          "imageUrl": "https://cdn.shopify.com/s/files/1/2390/3997/products/H12281_935_001.jpg?v=1674249408",
+          "brand": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "구조화 필드",
+            "note": "구조화 「Givenchy」"
+          },
+          "code": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "-",
+            "note": "구조화 품번 없음"
+          },
+          "name": {
+            "presence": "있음",
+            "excerpt": "Givenchy purple interlock dress. With Givenchy lace bands details. 100% Cotton.",
+            "agreement": "불일치",
+            "source": "상세설명",
+            "note": "설명 겹침 1/5 · 제목 겹침 1/5"
+          },
+          "ceoVerdict": null,
+          "ceoNote": null
+        },
+        {
+          "domain": "villagekids.co.uk",
+          "url": "https://villagekids.co.uk/products/copy-of-coral-pink-broderie-anglaise-dress",
+          "market": "OVERSEAS",
+          "systemVerdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "blockers": [
+            "BRAND_MISMATCH",
+            "NO_TITLE_OVERLAP"
+          ],
+          "storedHumanVerdict": null,
+          "fetchStatus": "OK",
+          "fetchPath": "SHOPIFY_JSON",
+          "candidateBrand": "Guess",
+          "candidateCode": null,
+          "candidateTitle": "White Broderie Anglaise Dress",
+          "descriptionChars": 137,
+          "descriptionRaw": "Broderie Anglaise White dress by Guess with capped sleeves and zip fastening at back 100% Cotton Machine Wash 30*c A2012-K3GK10WFBC0-G011",
+          "imageUrl": "https://cdn.shopify.com/s/files/1/0278/6259/7706/products/products_70_0752bb5b-9e9b-4475-9ad2-cd70d9022e6a.png?v=1678896906",
+          "brand": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "구조화 필드",
+            "note": "구조화 「Guess」"
+          },
+          "code": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "-",
+            "note": "구조화 품번 없음 · 🔴 다른 품번 A2012"
+          },
+          "name": {
+            "presence": "있음",
+            "excerpt": "Broderie Anglaise White dress by Guess with capped sleeves and zip fastening at back…",
+            "agreement": "불일치",
+            "source": "상세설명",
+            "note": "설명 겹침 1/5 · 제목 겹침 1/5"
+          },
+          "ceoVerdict": null,
+          "ceoNote": null
+        }
+      ]
+    },
+    {
+      "group": "Dress",
+      "snapshotId": "ebc8162c-e88f-4521-8124-cbb5d33f7815",
+      "originTitle": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+      "originUrl": "https://www.junioredition.com/collections/bonjour/products/handsmock-dress-in-burgundy-cashmere-print-by-bonjour",
+      "originBrand": "Bonjour",
+      "originDbSku": "",
+      "originOpCode": "BJ44",
+      "originOpCodeSource": "설명문",
+      "originCodeShapesInDesc": [],
+      "originDescChars": 548,
+      "originDescRaw": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful floral fabric with removable crochet collar. Colour - Burgundy Cashmere. 100% Cotton. Size Guide: 2 Years: Length 56cm, Chest 30cm, Sleeve Length 32cm. 4 Years: Length 60cm, Chest 31cm, Sleeve Length 34cm. 6 Years: Length 64cm, Chest 32cm, Sleeve Length 36cm. 8 Years: Length 68cm, Chest 31cm, Sleeve Length 34cm. 10 Years: Length 72cm, Chest 34cm, Sleeve Length 40cm. 12 Years: Length 76cm, Chest 35cm, Sleeve Length 42cm. Product Code BJ44_AW26",
+      "originBrandExcerpt": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length d…",
+      "originCodeExcerpt": null,
+      "originNameTokens": [
+        "handsmock",
+        "dress",
+        "burgundy",
+        "cashmere",
+        "print",
+        "bonjour"
+      ],
+      "candidates": [
+        {
+          "domain": "junioredition.com",
+          "url": "https://junioredition.com/products/handsmock-apron-dress-in-natural-by-bonjour",
+          "market": "OVERSEAS",
+          "systemVerdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "blockers": [
+            "SAME_SELLER_DISTINCT_LISTING"
+          ],
+          "storedHumanVerdict": null,
+          "fetchStatus": "REDIRECTED_AWAY",
+          "fetchPath": null,
+          "candidateBrand": null,
+          "candidateCode": null,
+          "candidateTitle": "Handsmock Apron Dress in Natural by Bonjour - Last Ones In Stock - 2-8 Years",
+          "descriptionChars": 0,
+          "descriptionRaw": null,
+          "imageUrl": null,
+          "brand": {
+            "presence": "확인 불가",
+            "excerpt": null,
+            "agreement": "비교 불가",
+            "source": "-",
+            "note": "상세설명 미확보(REDIRECTED_AWAY)"
+          },
+          "code": {
+            "presence": "확인 불가",
+            "excerpt": null,
+            "agreement": "비교 불가",
+            "source": "-",
+            "note": "상세설명 미확보(REDIRECTED_AWAY)"
+          },
+          "name": {
+            "presence": "확인 불가",
+            "excerpt": "Handsmock Apron Dress in Natural by Bonjour - Last Ones In Stock - 2-8 Years",
+            "agreement": "일치",
+            "source": "제목",
+            "note": "상세설명 미확보(REDIRECTED_AWAY) · 제목 겹침 3/6"
+          },
+          "ceoVerdict": null,
+          "ceoNote": null
+        },
+        {
+          "domain": "petitemaisonkids.com",
+          "url": "https://petitemaisonkids.com/products/georgina-tartan-print-dress-with-red-bow",
+          "market": "OVERSEAS",
+          "systemVerdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "blockers": [
+            "BRAND_MISMATCH",
+            "COLOR_VARIANT",
+            "MATERIAL"
+          ],
+          "storedHumanVerdict": null,
+          "fetchStatus": "OK",
+          "fetchPath": "SHOPIFY_JSON",
+          "candidateBrand": "Petite Maison Kids",
+          "candidateCode": null,
+          "candidateTitle": "Georgina Tartan Print Dress with Red Bow",
+          "descriptionChars": 580,
+          "descriptionRaw": "Elevate your style with our Georgina Tartan Print Dress, featuring a striking pussy cat bow and bold tartan design. The statement collar and red piping add a touch of sophistication to this timeless piece. Perfect for any occasion, this dress will make you stand out in a crowd. Front button closure Knee length Fit is true to size 67% Polyester, 33% Viscose Fully lined 100% Cotton Made in Turkey Grey and blue print tartan Matching sibling baby and boy outfit available Care Instructions : Hand wash in cold water with mild detergent or dry clean. Hang to dry. Iron recommended.",
+          "imageUrl": "https://cdn.shopify.com/s/files/1/0081/1171/8457/files/35CC32F4-A716-4153-92F4-A3890B49DE33.jpg?v=1762461163",
+          "brand": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "구조화 필드",
+            "note": "구조화 「Petite Maison Kids」"
+          },
+          "code": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "-",
+            "note": "구조화 품번 없음"
+          },
+          "name": {
+            "presence": "있음",
+            "excerpt": "Elevate your style with our Georgina Tartan Print Dress, featuring a striking pussy cat bow and bold tartan de…",
+            "agreement": "일치",
+            "source": "상세설명",
+            "note": "설명 겹침 2/6 · 제목 겹침 2/6"
+          },
+          "ceoVerdict": null,
+          "ceoNote": null
+        },
+        {
+          "domain": "shoppiccoliandco.com",
+          "url": "https://shoppiccoliandco.com/products/preorder-beatrice-burgundy-handsmocked-girl-sleeves-dress-ships-end-of-october",
+          "market": "OVERSEAS",
+          "systemVerdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "blockers": [
+            "BRAND_MISMATCH",
+            "NO_TITLE_OVERLAP"
+          ],
+          "storedHumanVerdict": null,
+          "fetchStatus": "OK",
+          "fetchPath": "SHOPIFY_JSON",
+          "candidateBrand": "Piccoli & Co™",
+          "candidateCode": null,
+          "candidateTitle": "Beatrice Burgundy Handsmocked Girl Sleeves Dress",
+          "descriptionChars": 441,
+          "descriptionRaw": "A classic burgundy girl dress featuring delicate handsmocking across the bodice and a crisp white ruffled collar. The rich burgundy tone, softly gathered skirt and traditional detailing create an elegant, timeless silhouette. Made in Mexico Care: Hand wash cold. Lay flat to dry. Steam preferred. Preorder — Ships end of October Important notice: This item is a preorder and is non-returnable. Please consider this before placing your order.",
+          "imageUrl": "https://cdn.shopify.com/s/files/1/0466/4842/6659/files/2D5C161A-9B6C-449A-912F-4487D00D2C2A.jpg?v=1792593310",
+          "brand": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "구조화 필드",
+            "note": "구조화 「Piccoli & Co™」"
+          },
+          "code": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "-",
+            "note": "구조화 품번 없음"
+          },
+          "name": {
+            "presence": "있음",
+            "excerpt": "A classic burgundy girl dress featuring delicate handsmocking across the bodice and a crisp white ruffled collar.…",
+            "agreement": "일치",
+            "source": "상세설명",
+            "note": "설명 겹침 3/6 · 제목 겹침 3/6"
+          },
+          "ceoVerdict": null,
+          "ceoNote": null
+        },
+        {
+          "domain": "villagekids.co.uk",
+          "url": "https://villagekids.co.uk/products/lemon-print-dress",
+          "market": "OVERSEAS",
+          "systemVerdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "blockers": [
+            "BRAND_MISMATCH"
+          ],
+          "storedHumanVerdict": null,
+          "fetchStatus": "OK",
+          "fetchPath": "SHOPIFY_JSON",
+          "candidateBrand": "Guess",
+          "candidateCode": null,
+          "candidateTitle": "Lemon Print Dress",
+          "descriptionChars": 154,
+          "descriptionRaw": "This dress by Guess has a lemon design all over in Broderie Anglaise. It has a frilled off the shoulder design. 100% Cotton Machine Wash 30*C A1812-J2GK19",
+          "imageUrl": "https://cdn.shopify.com/s/files/1/0278/6259/7706/products/J.png?v=1647272527",
+          "brand": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "구조화 필드",
+            "note": "구조화 「Guess」"
+          },
+          "code": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "-",
+            "note": "구조화 품번 없음 · 🔴 다른 품번 A1812"
+          },
+          "name": {
+            "presence": "있음",
+            "excerpt": "This dress by Guess has a lemon design all over in Broderie Angla…",
+            "agreement": "일치",
+            "source": "상세설명",
+            "note": "설명 겹침 1/6 · 제목 겹침 2/6"
+          },
+          "ceoVerdict": null,
+          "ceoNote": null
+        }
+      ]
+    },
+    {
+      "group": "Jacket",
+      "snapshotId": "ad4dd611-8c10-4d64-b1ee-a0d74c688ee3",
+      "originTitle": "Reversible Jacket nº03 in Otter Brown by True Artist",
+      "originUrl": "https://www.junioredition.com/collections/true-artist/products/reversible-jacket-n-03-in-otter-brown-by-true-artist",
+      "originBrand": "True Artist",
+      "originDbSku": "",
+      "originOpCode": null,
+      "originOpCodeSource": "없음",
+      "originCodeShapesInDesc": [
+        "T226MA044"
+      ],
+      "originDescChars": 635,
+      "originDescRaw": "Reversible Jacket nº03 by True Artist. Reversible Jacket nº03 in Otter Brown is made of 100% polyamide in one face and 100% polyester polar fleece on the other face. This reversible style features different details and colours on both sides: on one face it has two patch pockets, True Artists' logo printed at the back and the bird logo embroidered on the chest. On the polar fleece side it has a patch pocket with the logo and contrast colour details. It is designed with spread collar, front zipper fastening, dropped shoulders and has a relaxed fit. Colour - Otter Brown. 100% Polyester 100% Polyamide. T226MA044 AW26 Made in China.",
+      "originBrandExcerpt": "Reversible Jacket nº03 by True Artist. Reversible Jacket nº03 in Otter Brown is made of 100%…",
+      "originCodeExcerpt": "…. Colour - Otter Brown. 100% Polyester 100% Polyamide. T226MA044 AW26 Made in China.",
+      "originNameTokens": [
+        "reversible",
+        "jacket",
+        "otter",
+        "brown",
+        "true",
+        "artist"
+      ],
+      "candidates": [
+        {
+          "domain": "designerkidswear.com",
+          "url": "https://designerkidswear.com/products/moncler-kids-enfant-baby-k2f-jacket-brown-1a00024-597z8-246",
+          "market": "OVERSEAS",
+          "systemVerdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "blockers": [
+            "BRAND_MISMATCH",
+            "NO_TITLE_OVERLAP",
+            "MATERIAL"
+          ],
+          "storedHumanVerdict": null,
+          "fetchStatus": "OK",
+          "fetchPath": "SHOPIFY_JSON",
+          "candidateBrand": "Moncler Enfant",
+          "candidateCode": null,
+          "candidateTitle": "Baby Brown K2F Down Jacket",
+          "descriptionChars": 522,
+          "descriptionRaw": "A versatile design that transitions effortlessly from the playground to more special occasions, the baby Moncler Enfant K2 down jacket is crafted from nylon laqué. The puffer coat features a detachable synthetic material trim along the hood, providing an extra cozy touch. Crafted from nylon laqué Nylon lining Down-filled Stand collar Detachable hood with detachable synthetic material trim Zip closure Side pockets Sleeve pocket with snap button closure Elastic cuffs 100% Polyamide 90% Down, 10% Feather Made in Moldova",
+          "imageUrl": "https://cdn.shopify.com/s/files/1/0383/7535/8604/files/L29511A00024597Z8246_Z.jpg?v=1787169758",
+          "brand": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "구조화 필드",
+            "note": "구조화 「Moncler Enfant」"
+          },
+          "code": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "-",
+            "note": "구조화 품번 없음"
+          },
+          "name": {
+            "presence": "있음",
+            "excerpt": "…ore special occasions, the baby Moncler Enfant K2 down jacket is crafted from nylon laqué. The puffer coat features…",
+            "agreement": "일치",
+            "source": "상세설명",
+            "note": "설명 겹침 1/6 · 제목 겹침 2/6"
+          },
+          "ceoVerdict": null,
+          "ceoNote": null
+        },
+        {
+          "domain": "junioredition.com",
+          "url": "https://junioredition.com/products/pixel-abduction-all-over-reversible-jacket-by-bobo-choses",
+          "market": "OVERSEAS",
+          "systemVerdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "blockers": [
+            "BRAND_MISMATCH",
+            "MATERIAL",
+            "SAME_SELLER_DISTINCT_LISTING"
+          ],
+          "storedHumanVerdict": null,
+          "fetchStatus": "OK",
+          "fetchPath": "SHOPIFY_JSON",
+          "candidateBrand": "Bobo Choses",
+          "candidateCode": "B226AC098",
+          "candidateTitle": "Pixel Abduction All Over Reversible Jacket by Bobo Choses",
+          "descriptionChars": 319,
+          "descriptionRaw": "Pixel Abduction All Over Reversible Jacket by Bobo Choses. A warm and stylish collared fleece jacket with an all over space ship abduction design in brown and yellow. A fun and versatile winter essential. Colour - Brown. 100% Recycled Polyester 100% Recycled Polyamide lining. Product code B226AC098 AW26 Made in China.",
+          "imageUrl": "https://cdn.shopify.com/s/files/1/0874/8574/files/Bobo-Choses-AW26-Pixel-Abduction-All-Over-Reversible-Jacket.jpg?v=1784287042",
+          "brand": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "구조화 필드",
+            "note": "구조화 「Bobo Choses」"
+          },
+          "code": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "구조화 필드",
+            "note": "구조화 「B226AC098」 · 🔴 다른 품번 B226AC098"
+          },
+          "name": {
+            "presence": "있음",
+            "excerpt": "Pixel Abduction All Over Reversible Jacket by Bobo Choses. A warm and stylish collared fle…",
+            "agreement": "일치",
+            "source": "상세설명",
+            "note": "설명 겹침 3/6 · 제목 겹침 2/6"
+          },
+          "ceoVerdict": null,
+          "ceoNote": null
+        },
+        {
+          "domain": "kidbizkid.com",
+          "url": "https://kidbizkid.com/products/billieblush-reversible-leopard-jacket",
+          "market": "OVERSEAS",
+          "systemVerdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "blockers": [
+            "BRAND_MISMATCH",
+            "MATERIAL"
+          ],
+          "storedHumanVerdict": null,
+          "fetchStatus": "OK",
+          "fetchPath": "SHOPIFY_JSON",
+          "candidateBrand": "Billieblush",
+          "candidateCode": null,
+          "candidateTitle": "Billieblush Reversible Leopard Jacket",
+          "descriptionChars": 181,
+          "descriptionRaw": "Billieblush reversible puffer jacket. 1 side with allover leopard, 1 side in faux shearling. 2 side pockets. With glittered rib on cuffs. Zip fastening on the front. 100% Polyester.",
+          "imageUrl": "https://cdn.shopify.com/s/files/1/2390/3997/files/U21355_47V_102_74b1fa3e-fece-422b-96dc-f8f5775d8357.jpg?v=1754596466",
+          "brand": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "구조화 필드",
+            "note": "구조화 「Billieblush」"
+          },
+          "code": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "-",
+            "note": "구조화 품번 없음"
+          },
+          "name": {
+            "presence": "있음",
+            "excerpt": "Billieblush reversible puffer jacket. 1 side with allover leopard, 1 side in…",
+            "agreement": "일치",
+            "source": "상세설명",
+            "note": "설명 겹침 2/6 · 제목 겹침 2/6"
+          },
+          "ceoVerdict": null,
+          "ceoNote": null
+        }
+      ]
+    },
+    {
+      "group": "Jacket",
+      "snapshotId": "dfd70b3e-ced8-4a49-95f0-caeb202a276f",
+      "originTitle": "Mixed Media Jacket in Ecru Mix by Wynken",
+      "originUrl": "https://www.junioredition.com/collections/wynken/products/mixed-media-jacket-in-ecru-mix-by-wynken",
+      "originBrand": "Wynken",
+      "originDbSku": "WK21W97",
+      "originOpCode": "WK21W97",
+      "originOpCodeSource": "설명문",
+      "originCodeShapesInDesc": [
+        "WK21W97"
+      ],
+      "originDescChars": 628,
+      "originDescRaw": "Mixed Media Jacket by Wynken. This mixed media jacket is perfect for colder days, combining warmth with playful style. The ecru faux fur exterior adds texture and character, while the Wynken stitching in a painter’s palette shape gives a subtle, creative detail. A collar keeps little ones extra cosy, and pockets are perfect for keeping hands warm. Soft, comfortable, and easy to layer, this teddy fleece jacket balances practicality, style, and character, making it a versatile choice for chilly days and playful adventures. Colour - Ecru Mix. Shell: 100% Polyester. Panel: 100% Nylon. Made in China. Product Code WK21W97 AW26",
+      "originBrandExcerpt": "Mixed Media Jacket by Wynken. This mixed media jacket is perfect for colder days, c…",
+      "originCodeExcerpt": "…yester. Panel: 100% Nylon. Made in China. Product Code WK21W97 AW26",
+      "originNameTokens": [
+        "mixed",
+        "media",
+        "jacket",
+        "ecru",
+        "mix",
+        "wynken"
+      ],
+      "candidates": [
+        {
+          "domain": "junioredition.com",
+          "url": "https://junioredition.com/products/mixed-media-jacket-in-blue-mix-by-wynken",
+          "market": "OVERSEAS",
+          "systemVerdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "blockers": [
+            "MATERIAL",
+            "SAME_SELLER_DISTINCT_LISTING"
+          ],
+          "storedHumanVerdict": null,
+          "fetchStatus": "OK",
+          "fetchPath": "SHOPIFY_JSON",
+          "candidateBrand": "Wynken",
+          "candidateCode": "WK21W97",
+          "candidateTitle": "Mixed Media Jacket in Blue Mix by Wynken",
+          "descriptionChars": 622,
+          "descriptionRaw": "Mixed Media Jacket by Wynken. This mixed media jacket is perfect for colder days, combining warmth with playful style. The blue faux fur exterior adds texture and character, while the Wynken stitching in a painter’s palette shape gives a subtle, creative detail. A collar keeps little ones extra cosy, and pockets are perfect for keeping hands warm. Soft, comfortable, and easy to layer, this fleece jacket balances practicality, style, and character, making it a versatile choice for chilly days and playful adventures. Colour - Blue Mix. Shell: 100% Polyester. Panel: 100% Nylon. Made in China. Product Code WK21W97 AW26",
+          "imageUrl": "https://cdn.shopify.com/s/files/1/0874/8574/files/Wynken-AW26-Mixed-Media-Jacket-Blue-Mix.jpg?v=1786438148",
+          "brand": {
+            "presence": "있음",
+            "excerpt": "Mixed Media Jacket by Wynken. This mixed media jacket is perfect for colder days, c…",
+            "agreement": "일치",
+            "source": "상세설명",
+            "note": "구조화 「Wynken」"
+          },
+          "code": {
+            "presence": "있음",
+            "excerpt": "…yester. Panel: 100% Nylon. Made in China. Product Code WK21W97 AW26",
+            "agreement": "일치",
+            "source": "상세설명",
+            "note": "구조화 「WK21W97」"
+          },
+          "name": {
+            "presence": "있음",
+            "excerpt": "Mixed Media Jacket by Wynken. This mixed media jacket is per…",
+            "agreement": "일치",
+            "source": "상세설명",
+            "note": "설명 겹침 5/6 · 제목 겹침 5/6"
+          },
+          "ceoVerdict": null,
+          "ceoNote": null
+        },
+        {
+          "domain": "nickis.com",
+          "url": "https://nickis.com/products/wynken-jacke-mixed-media-mehrfarbig-7400851022",
+          "market": "OVERSEAS",
+          "systemVerdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "blockers": [
+            "MATERIAL"
+          ],
+          "storedHumanVerdict": null,
+          "fetchStatus": "OK",
+          "fetchPath": "SHOPIFY_JSON",
+          "candidateBrand": "Wynken",
+          "candidateCode": null,
+          "candidateTitle": "Jacke Mixed Media Mehrfarbig",
+          "descriptionChars": 799,
+          "descriptionRaw": "Diese Mixed-Media-Jacke ist der perfekte Begleiter für kalte Tage und verbindet wärmenden Komfort mit einem verspielten Stilmix. Das cremefarbene Kunstfell-Obermaterial mit Colour-Block-Ärmeln in Rot und Blau sorgt für Textur und Charakter, während die Wynken-Stickerei in Form einer Malpalette einen kreativen Akzent setzt. Ein Kragen hält zusätzlich warm, Taschen sorgen für kuschelig warme Hände – weich, bequem und ideal zum Layern. Das Obermaterial besteht zu 100% aus Polyester, ergänzt durch Einsätze aus 100% Nylon an den Colour-Block-Ärmeln. Über einem Pullover oder dicken Longsleeve getragen, hält die Jacke auch an kalten Tagen zuverlässig warm. Die Wynken-Stickerei in Form einer Malpalette ist das kreative Detail, das dieses Modell von einer gewöhnlichen Kunstfelljacke unterscheidet.",
+          "imageUrl": "https://cdn.shopify.com/s/files/1/0632/7677/7627/files/1787576108-7400851022-1.jpg?v=1787576116",
+          "brand": {
+            "presence": "있음",
+            "excerpt": "…t und Blau sorgt für Textur und Charakter, während die Wynken-Stickerei in Form einer Malpalette einen kreativen Akz…",
+            "agreement": "일치",
+            "source": "상세설명",
+            "note": "구조화 「Wynken」"
+          },
+          "code": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "-",
+            "note": "구조화 품번 없음"
+          },
+          "name": {
+            "presence": "있음",
+            "excerpt": "Diese Mixed-Media-Jacke ist der perfekte Begleiter für kalte Tage…",
+            "agreement": "일치",
+            "source": "상세설명",
+            "note": "설명 겹침 4/6 · 제목 겹침 3/6"
+          },
+          "ceoVerdict": null,
+          "ceoNote": null
+        },
+        {
+          "domain": "villagekids.co.uk",
+          "url": "https://villagekids.co.uk/products/black-puffer-coat-4",
+          "market": "OVERSEAS",
+          "systemVerdict": "PRESUMED_SAME",
+          "matchTruth": "TEXT_CONFIRMED",
+          "priceTier": "COMPARISON",
+          "blockers": [
+            "BRAND_MISMATCH",
+            "NO_TITLE_OVERLAP"
+          ],
+          "storedHumanVerdict": null,
+          "fetchStatus": "OK",
+          "fetchPath": "SHOPIFY_JSON",
+          "candidateBrand": "Guess",
+          "candidateCode": null,
+          "candidateTitle": "Black Puffer Coat",
+          "descriptionChars": 294,
+          "descriptionRaw": "Black coat for girls by Guess. This hooded puffer coat has the logo badge at the chest, a mock, elasticated belt with gold tone branded studs and two front pockets. There is a full zip and popper closures with elasticated cuffs for a perfect fit. 100% Polyester Machine wash 30* E12-J6BL03-JBLK",
+          "imageUrl": "https://cdn.shopify.com/s/files/1/0278/6259/7706/files/products-2026-08-20T130005.911.jpg?v=1787227499",
+          "brand": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "구조화 필드",
+            "note": "구조화 「Guess」"
+          },
+          "code": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "-",
+            "note": "구조화 품번 없음"
+          },
+          "name": {
+            "presence": "없음",
+            "excerpt": null,
+            "agreement": "불일치",
+            "source": "제목",
+            "note": "설명 겹침 0/6 · 제목 겹침 0/6"
+          },
+          "ceoVerdict": null,
+          "ceoNote": null
+        }
+      ]
+    }
+  ]
+}
