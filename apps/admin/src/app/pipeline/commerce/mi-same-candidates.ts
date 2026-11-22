@@ -447,6 +447,99 @@ export const CANDIDATE_LIST_EMPTY: Record<CandidateListScope, string> = {
   KR: "국내 소싱 후보가 없습니다",
   OVERSEAS: "해외 소싱 후보가 없습니다",
 };
+
+/**
+ * ══════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 MI-IDENTITY-REVIEW-COMPLETION-01 P0-4 — **사람이 볼 «비교목록표»**
+ * ══════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **고치는 문제** — 위 `selectCandidateList`(셀러용)에는 **제외 규칙** 이 있다:
+ *    `CONFLICT` · 등급을 못 낸 행 · Evidence 없는 `UNKNOWN` 은 **주 리스트에 오지 않는다**.
+ *    그 규칙은 셀러 화면에서 **맞다**(2026-09-19 「유력 후보 5건」 사고의 방지 장치).
+ *    🔴 그런데 **CPO·CEO 가 직접 판단해야 하는 후보가 정확히 그 제외분** 이다
+ *    ⟹ 지금은 그 후보를 **사람이 볼 창구가 없다.**
+ *
+ * 🟢 그래서 **별도 선택기** 를 둔다 — 같은 `rows` · 같은 판정값 · **승격 0**.
+ * 🔴 셀러용 `selectCandidateList` 를 **한 글자도 바꾸지 않았다**(그 화면은 그대로다).
+ * 🔴 **판정을 바꾸지 않는다** — `crossSellerVerdict`·`matchTruth`·`priceTier` 는 **그대로**
+ *    남고 `reasons`(왜 검토 대상인가)만 더한다. SAME 기준·차단 조건·가격 **0 변경**.
+ */
+export type ReviewReason =
+  | "UNKNOWN_VERDICT"
+  | "HOLD_FOR_REVIEW"
+  | "BLOCKED"
+  | "EVIDENCE_CONFLICT"
+  | "IDENTITY_INCOMPLETE";
+
+/** 🟢 사람이 읽는 말 — 🔴 내부 토큰(tier·matchTruth)을 글자로 쓰지 않는다. */
+export const REVIEW_REASON_LABEL: Record<ReviewReason, string> = {
+  UNKNOWN_VERDICT: "판단 불가",
+  HOLD_FOR_REVIEW: "추가 확인 필요",
+  BLOCKED: "자동 판정 차단",
+  EVIDENCE_CONFLICT: "근거 충돌",
+  IDENTITY_INCOMPLETE: "핵심 식별정보 부족",
+};
+
+/** 🔴 보류 등급 — **기존 집합을 재사용** 한다(새 등급 어휘 0). */
+const REVIEW_HOLD_TIERS: readonly MatchDisplayTier[] = ["PRESUMED_SAME", "SIMILAR"];
+
+/**
+ * 🟢 **핵심 식별정보가 부족한가** — 브랜드·품번·상품명 셋 중 **둘 이상** 을 모르면 그렇다.
+ * 🔴 행이 들고 있는 것으로만 판단한다 — 추론·추정 **0**.
+ * 🔴 「근거가 적혔는가」로 본다(`matchReasons`) — 판정기가 그 축을 **실제로 본 흔적** 이다.
+ */
+export function identityIncomplete(row: GeminiTransientRow): boolean {
+  const reasons = row.matchReasons ?? [];
+  const hasTitle = Boolean(row.title && row.title.trim().length > 0);
+  const mentions = (needle: string) => reasons.some((r) => r.includes(needle));
+  const known = [hasTitle, mentions("브랜드"), mentions("품번") || mentions("상품코드")].filter(Boolean).length;
+  return known <= 1;
+}
+
+/**
+ * 🟢 **비교목록표** — 판단이 어려운 후보를 **누락 없이** 모은다.
+ *
+ * 등록 대상(CPO §5) — ① `UNKNOWN` ② `PRESUMED_SAME`·`SIMILAR` 보류
+ * ③ 차단 사유 보유 ④ 근거 충돌(🔴 품번 충돌 `CONFLICT` 가 여기 든다) ⑤ 식별정보 부족.
+ * 🔴 제외 — 확정 `SAME`(자동 판정이 끝났다) · **근거가 하나도 없는 행**(사람이 볼 것이 없다).
+ *
+ * 🔴 같은 URL 은 한 번만 · `scope` 는 `CandidateListScope` 를 **그대로** 쓴다(전체/국내/해외 공용).
+ */
+export function selectReviewQueue(
+  rows: readonly GeminiTransientRow[] | null | undefined,
+  scope: CandidateListScope = "ALL",
+): Array<{ row: GeminiTransientRow; reasons: ReviewReason[] }> {
+  const out: Array<{ row: GeminiTransientRow; reasons: ReviewReason[] }> = [];
+  if (!rows || rows.length === 0) return out;
+  const seen = new Set<string>();
+  for (const row of rows) {
+    if (!rowInScope(row, scope)) continue;
+    if (seen.has(row.discoveredUrl)) continue;
+    seen.add(row.discoveredUrl);
+    /** 🔴 등급은 **운영 owner** 가 낸 값이다 — 복제 계산 0. */
+    const tier = transientDisplayTier(row);
+    /** 🟢 확정 SAME 은 자동 판정이 끝났다 — 검토 대기에 넣지 않는다. */
+    if (tier === "SAME") continue;
+
+    const reasons: ReviewReason[] = [];
+    if ((row.crossSellerConflicts?.length ?? 0) > 0) reasons.push("EVIDENCE_CONFLICT");
+    if ((row.crossSellerBlockers?.length ?? 0) > 0) reasons.push("BLOCKED");
+    if (tier && REVIEW_HOLD_TIERS.includes(tier)) reasons.push("HOLD_FOR_REVIEW");
+    if (tier === "UNKNOWN" || tier === null) reasons.push("UNKNOWN_VERDICT");
+    if (identityIncomplete(row)) reasons.push("IDENTITY_INCOMPLETE");
+
+    /** 🔴 근거가 하나도 없으면 넣지 않는다 — 🟢 넷 중 하나라도 있으면 **반드시 선다**(누락 0). */
+    if (reasons.length === 0) continue;
+    out.push({ row, reasons });
+  }
+  return out;
+}
+
+/** 🟢 비교목록표의 말 — 🔴 셀러 화면의 글자를 재사용하지 않는다(용도가 다르다). */
+export const REVIEW_QUEUE_HEADING = "검토 대기 후보";
+export const REVIEW_QUEUE_NOTE =
+  "자동으로 동일상품을 확정하지 못한 후보입니다. 브랜드·품번·상품명과 판정 사유를 보고 직접 판단할 수 있습니다.";
+export const REVIEW_QUEUE_EMPTY = "검토 대기 후보가 없습니다";
 /**
  * 🔴 「조회하지 않았다」로 읽히지 않게 **왜** 없는지를 적는다.
  *
