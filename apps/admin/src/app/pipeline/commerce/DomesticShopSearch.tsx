@@ -18,6 +18,7 @@ import {
   tierGroupLabel,
   type MatchDisplayTier,
 } from "./match-display";
+import { isCandidateEligibleForDisplay } from "./candidate-eligibility";
 // MI-UX-9 §4 — 통화 표시를 한 곳에서. §10 — 검색 상태 5종 구분.
 import { formatMoney } from "@/lib/price-truth";
 import { CandidateComparison } from "./CandidateComparison";
@@ -99,6 +100,14 @@ export interface Candidate {
    *    ⟹ 🟢 **서버/판정 변경 0** · 선언 한 칸.
    */
   facts?: { brandModelCode?: string | null } | null;
+  /**
+   * 🔵 MI-CANDIDATE-ELIGIBILITY-01 — **서버가 «이미» 보내는 두 칸을 선언한다.**
+   *    WU-091 과 **같은 자리** 다(라우트가 후보 객체를 통째로 직렬화한다) ⟹
+   *    🟢 서버·판정 변경 **0** · 선언 두 칸.
+   * 🔴 진입 자격 술어가 이 둘을 읽는다(브랜드 연결 · 명확한 충돌).
+   */
+  brand?: string | null;
+  crossSellerBlockers?: string[] | null;
   price: { amount: number; currency: string } | null;
   regularPrice?: { amount: number; currency: string } | null;
   imageUrl: string | null;
@@ -324,7 +333,9 @@ export function DomesticShopSearch({
           )}
         />
       )}
-      {results && <ResultTable results={results} />}
+      {results && (
+        <ResultTable results={results} originTitle={title} originBrand={brand} originModelCode={sku} />
+      )}
       {results?.length === 0 && <p className="text-xs text-text-secondary">{MARKET_EVIDENCE_EMPTY}</p>}
     </MarketEvidenceFrame>
   );
@@ -524,7 +535,22 @@ function CandidateRowTable({ rows }: { rows: CandidateRow[] }) {
  * 있으면 비교상품보다 항상 먼저 보인다"는 절대 원칙을 컴포넌트 구조 자체로
  * 강제한다(정렬 순서에 기대지 않는다, CONFLICT/INSUFFICIENT_EVIDENCE/미지원/
  * 오류/후보없음은 전부 "더보기" 뒤로). */
-function ResultTable({ results }: { results: SearchResult[] }) {
+/**
+ * 🔴 MI-CANDIDATE-ELIGIBILITY-01 — **원상품 세 칸을 받는다.**
+ *    🔴 진입 자격은 「원상품과의 연결」이라 원상품 없이는 판단할 수 없다.
+ *    🟢 호출부가 **한 곳** 이고 그 값은 이 컴포넌트가 이미 props 로 받고 있다.
+ */
+function ResultTable({
+  results,
+  originTitle,
+  originBrand,
+  originModelCode,
+}: {
+  results: SearchResult[];
+  originTitle: string;
+  originBrand?: string;
+  originModelCode?: string;
+}) {
   const [showAll, setShowAll] = useState(false);
   const allRows: CandidateRow[] = [];
   for (const r of results) {
@@ -553,6 +579,26 @@ function ResultTable({ results }: { results: SearchResult[] }) {
       tier: displayTierForCandidate(c),
       confidence: c.confidence,
       crossSellerVerdict: c.crossSellerVerdict,
+    }) &&
+    /**
+     * 🔵🔵 MI-CANDIDATE-ELIGIBILITY-01 — **진입 자격 문을 하나 더 세운다.**
+     *
+     * 🔴🔴 CEO 실측(22건) — Versace·Diesel·Polo Ralph Lauren 이 Bobo Choses
+     *    바지의 후보로 섰다. 위 `mayShowCandidate` ② 가 `PRESUMED_SAME` 을 **무조건**
+     *    통과시키고, 그 등급은 「상품군 PANTS↔PANTS · 색상 BLUE · 대상 KIDS」 같은
+     *    **일반 축** 으로 채워진다. ⟹ 사람이 비교할 것이 없는 후보가 목록에 섰다.
+     * 🟢 그래서 **판정을 바꾸지 않고**(8축·threshold 0) **표시 자격** 만 더 본다.
+     * 🔴 **「확인 불가」는 숨기지 않는다** — 술어가 `EXCLUDED` 만 거른다.
+     * 🔴 `sku` 는 이 컴포넌트가 받은 **원상품 품번** 이고 DB 칸과 혼용하지 않는다.
+     */
+    isCandidateEligibleForDisplay({
+      originBrand: originBrand ?? null,
+      originModelCode: originModelCode ?? null,
+      originTitle: originTitle,
+      candidateBrand: c.brand ?? null,
+      candidateModelCode: c.facts?.brandModelCode ?? null,
+      candidateTitle: c.title,
+      conflicts: c.crossSellerBlockers ?? null,
     });
   const visibleRows = allRows.filter((row) => row.candidate && mayShow(row.candidate));
   if (visibleRows.length === 0) return null;

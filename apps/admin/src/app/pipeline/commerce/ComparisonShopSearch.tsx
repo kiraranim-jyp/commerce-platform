@@ -22,6 +22,7 @@ import {
   tierGroupLabel,
   type MatchDisplayTier,
 } from "./match-display";
+import { isCandidateEligibleForDisplay } from "./candidate-eligibility";
 /**
  * 🔴🔴 WU-141-R3 C-5 — **`market-evidence` import 를 통째로 제거했다**(계약 계층에서 발견).
  *
@@ -157,6 +158,12 @@ interface Candidate {
    *    🟢 서버/판정 변경 **0**.
    */
   facts?: { brandModelCode?: string | null } | null;
+  /**
+   * 🔵 MI-CANDIDATE-ELIGIBILITY-01 — **서버가 이미 보내는 두 칸을 선언한다**
+   *    (국내와 같은 이유 · WU-091 선례). 🟢 서버·판정 변경 **0**.
+   */
+  brand?: string | null;
+  crossSellerBlockers?: string[] | null;
 }
 
 interface SearchResult {
@@ -493,7 +500,16 @@ export function ComparisonShopSearch({
           )}
         />
       )}
-      {results && <ResultTable results={results} krwRates={krwRates} fxSource={fxSource} />}
+      {results && (
+        <ResultTable
+          results={results}
+          krwRates={krwRates}
+          fxSource={fxSource}
+          originTitle={title}
+          originBrand={brand}
+          originModelCode={sku}
+        />
+      )}
       {results && <RakutenAttribution results={results} />}
       {/* 조회가 끝났는데 한 곳도 없었다 — "아직 조회 중"과 구분해서만 말한다. */}
       {results?.length === 0 && <p className="text-xs text-text-secondary">{MARKET_EVIDENCE_EMPTY}</p>}
@@ -728,14 +744,23 @@ function ResultHeadline({ results }: { results: SearchResult[] }) {
  * 표로 재구성. P-4-DATA-4(CPO 지시, 2026-08-29 STEP 7) — "매칭 불확실/미지원/오류
  * N건 더보기" 같은 개발자용 raw count 문구를 셀러 화면에서 제거한다. 데이터
  * 자체는 지우지 않는다(진단 목적으로는 여전히 필요) — 문구만 셀러 언어로 바꾼다. */
+/**
+ * 🔴 MI-CANDIDATE-ELIGIBILITY-01 — **원상품 세 칸을 받는다**(국내와 같은 이유).
+ */
 function ResultTable({
   results,
   krwRates,
   fxSource,
+  originTitle,
+  originBrand,
+  originModelCode,
 }: {
   results: SearchResult[];
   krwRates: Record<string, number> | null;
   fxSource: "frankfurter" | "fallback" | null;
+  originTitle: string;
+  originBrand?: string;
+  originModelCode?: string;
 }) {
   const [showAll, setShowAll] = useState(false);
   const allRows: OverseasRow[] = [];
@@ -766,7 +791,20 @@ function ResultTable({
   // 문 하나(mayShowCandidate)로 모였다: 등급 + 다섯 축 중 명시적 충돌 없음 +
   // 최소 유사도. 판정을 다시 하지 않는다 — 이미 계산된 값을 읽는다.
   const mayShow = (c: Candidate) =>
-    mayShowCandidate({ tier: displayTierForCandidate(c), confidence: c.confidence });
+    mayShowCandidate({ tier: displayTierForCandidate(c), confidence: c.confidence }) &&
+    /**
+     * 🔵🔵 MI-CANDIDATE-ELIGIBILITY-01 — **진입 자격 문**(국내 표와 같은 술어).
+     * 🔴 판정·8축·threshold **0** · 「확인 불가」는 숨기지 않는다.
+     */
+    isCandidateEligibleForDisplay({
+      originBrand: originBrand ?? null,
+      originModelCode: originModelCode ?? null,
+      originTitle,
+      candidateBrand: c.brand ?? null,
+      candidateModelCode: c.facts?.brandModelCode ?? null,
+      candidateTitle: c.title,
+      conflicts: c.crossSellerBlockers ?? null,
+    });
   const visibleRows = allRows.filter((row) => row.candidate && mayShow(row.candidate));
   // CEO 지시(2026-08-19: "매칭성공 0이면 조회를 하지마") — 참고 가능한 매칭이
   // 하나도 없으면 표 자체를 그리지 않는다(위 ResultHeadline이 이미 안내).

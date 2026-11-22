@@ -2316,9 +2316,17 @@ function ReviewQueueSection({
    * 🔴 세 구역은 **서로 겹치지 않고 합이 전체** 다 — `rowInScope` 가 `market === scope`
    *    이므로 `UNKNOWN` 은 국내·해외 어디에도 들지 않는다 ⟹ 그 차집합이 ③이다.
    */
-  const all = selectReviewQueue(rows, "ALL");
-  const kr = selectReviewQueue(rows, "KR");
-  const overseas = selectReviewQueue(rows, "OVERSEAS");
+  /**
+   * 🔵🔵 MI-CANDIDATE-ELIGIBILITY-01 — **원상품을 선택기에 넘긴다.**
+   *    🔴 그래야 「원상품과의 연결」을 볼 수 있다(자격은 원상품 없이 못 정한다).
+   *    🔴 `modelCode` 는 이 화면이 받은 **원상품 품번** 이다(DB 칸 혼용 금지).
+   */
+  const originForEligibility = originIdentity
+    ? { brand: originIdentity.brand, modelCode: originIdentity.modelCode, title: originIdentity.title }
+    : null;
+  const all = selectReviewQueue(rows, "ALL", originForEligibility);
+  const kr = selectReviewQueue(rows, "KR", originForEligibility);
+  const overseas = selectReviewQueue(rows, "OVERSEAS", originForEligibility);
   const placed = new Set([...kr, ...overseas].map((e) => e.row.discoveredUrl));
   const unresolved = all.filter((e) => !placed.has(e.row.discoveredUrl));
 

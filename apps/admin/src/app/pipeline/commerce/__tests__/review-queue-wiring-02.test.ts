@@ -112,7 +112,13 @@ const q = (host: HTMLElement, sel: string) => [...host.querySelectorAll(sel)];
 const text = (el: Element | null) => el?.textContent ?? "";
 
 /* ════════════════════════════════════════════════════════════════════════════
- * A. 🟢 실데이터 — **검토 대상 8건** 이 화면에 선다
+ * A. 🟢 실데이터 — **검토 대상이 화면에 선다**
+ *
+ * 🔵🔵 **MI-CANDIDATE-ELIGIBILITY-01 에서 「8」이 「2」가 됐다 — 의도된 변경이다.**
+ *    CEO 가 22건을 직접 보고 「일치하는 게 하나도 없는데 이건 왜 판단 후보까지 온거지?」
+ *    라고 했고, CPO 가 **진입 자격** 정책을 승인했다. 이제 원상품과 연결 근거가 없는
+ *    후보는 검토 대기에 **서지 않는다**.
+ * 🔴 느슨하게 바꾼 것이 아니다 — 아래 A-2 가 **살아남은 둘이 누구인지** 까지 단언한다.
  * ════════════════════════════════════════════════════════════════════════════ */
 
 describe("REV-02 A — 실데이터가 비교목록표에 오른다", () => {
@@ -128,18 +134,43 @@ describe("REV-02 A — 실데이터가 비교목록표에 오른다", () => {
     expect(same, "🔴 확정 SAME 이 2건이 아니다").toHaveLength(2);
   });
 
-  it("A-2 🟢🟢 **마운트한 DOM 에 검토 행이 8개** 다(선택기 호출이 아니라 화면이다)", () => {
+  it("A-2 🟢🟢 **마운트한 DOM 에 검토 행이 2개** 다 — 무관 후보 6건이 사라졌다", () => {
     const host = mount({ rows: realRows(), originIdentity: realOrigin() });
-    expect(q(host, '[data-testid="mi-review-row"]'), "🔴 화면에 검토 행이 8개가 아니다").toHaveLength(
-      8,
-    );
+    /**
+     * 🔵🔵 **8 → 2.** 🔴 숫자만 바꾸지 않았다 — **누가 남고 누가 사라졌는지** 를 같이 잠근다.
+     * ```
+     * 🟢 남는 둘   junioredition.com 「Bobo Choses Pop Sweatshirt by Bobo Choses」
+     *              kids-world.com    「Bobo Choses 맨투맨 …」(🟢 다국어인데 살아남는다)
+     * 🔴 사라진 6  Lacoste Navy Sweatshirt · Baby Boys Blue Cotton Bear Sweatshirt ·
+     *              Jude Navy Baby Boy Anchor Sweater · Maya Girls' … Sweater Top ·
+     *              Baby Sweater Suit ''Blue Moon'' · 🔴 coupleshot(제목 인코딩 손상)
+     * ```
+     * 🔴🔴 **coupleshot 은 「알고 있는 손실」** 이다 — 그 후보의 상세설명에는
+     *    `BOBO CHOSES Bobo Choses Pop sweatshirt` 가 **있지만**(UIED-03 「추출 실패」),
+     *    `candidate_reviews` 에 **상세설명 칸이 없어** 저장분 경로가 그것을 못 본다.
+     *    🟢 라이브 경로는 설명을 행에 싣는다(그 배선은 들어갔다).
+     */
+    const rows = q(host, '[data-testid="mi-review-row"]');
+    expect(rows, "🔴 화면에 검토 행이 2개가 아니다").toHaveLength(2);
+    /**
+     * 🔴 **범위를 검토 행으로 좁힌다** — 1차에 `host.textContent` 전체를 봤고
+     *    접힌 **후보 구역**(`GeminiTransientCandidates`)이 전건을 렌더하므로
+     *    `kidbizkid` 가 그 안에서 잡혔다. 🟢 그 구역은 이 WU 의 범위가 아니다.
+     */
+    const text = rows.map((r) => r.textContent ?? "").join(" ");
+    for (const keep of ["junioredition.com", "kids-world.com"]) {
+      expect(text, `🔴🔴 연결 근거가 있는 후보가 사라졌다: ${keep}`).toContain(keep);
+    }
+    for (const gone of ["kidbizkid.com", "shoppiccoliandco.com", "petitemaisonkids.com"]) {
+      expect(text, `🔴🔴 무관 후보가 아직 선다: ${gone}`).not.toContain(gone);
+    }
   });
 
   it("A-3 🟢 머리말이 **전체 축의 건수** 를 말한다(필터와 무관하게 흔들리지 않는다)", () => {
     const host = mount({ rows: realRows(), originIdentity: realOrigin() });
     const summary = text(host.querySelector('[data-testid="mi-review-queue-summary"]'));
     expect(summary).toContain(REVIEW_QUEUE_HEADING);
-    expect(summary, "🔴 건수가 화면에 없다").toContain("8");
+    expect(summary, "🔴 건수가 화면에 없다").toContain("2");
   });
 
   it("A-4 🔴 **확정 SAME 은 검토 행에 없다** — 자동 판정이 끝난 것을 다시 묻지 않는다", () => {
@@ -155,7 +186,7 @@ describe("REV-02 A — 실데이터가 비교목록표에 오른다", () => {
   it("A-5 🟢 선택기와 화면이 **같은 수** 를 본다(복제 계산 0)", () => {
     const rows = realRows();
     const host = mount({ rows, originIdentity: realOrigin() });
-    expect(q(host, '[data-testid="mi-review-row"]').length).toBe(selectReviewQueue(rows, "ALL").length);
+    expect(q(host, '[data-testid="mi-review-row"]').length).toBe(selectReviewQueue(rows, "ALL", realOrigin()).length);
   });
 
   it("A-6 🔴 사유 칠(chip)이 **행마다** 선다 — 「왜 자동으로 못 닫혔나」가 비어 있지 않다", () => {
@@ -217,7 +248,11 @@ describe("REV-02 B — 브랜드·품번·상품명이 나란히 선다", () => 
 
   it("B-5 🔴🔴 원상품 값이 **아예 없으면** 세 칸이 전부 「확인 불가」다(영역은 선다)", () => {
     const host = mount({ rows: realRows(), originIdentity: null });
-    expect(q(host, '[data-testid="mi-review-row"]').length, "🔴 원상품이 없으면 영역이 죽었다").toBe(8);
+    /**
+     * 🔴🔴 **원상품이 없으면 자격을 «보지 않는다»** — 그래서 **8** 그대로다.
+     *    🟢 그것이 선택 인자의 계약이다(원상품 없이 연결을 판단할 수 없다).
+     */
+    expect(q(host, '[data-testid="mi-review-row"]').length, "🔴 원상품 없을 때 수가 바뀌었다").toBe(8);
     const cells = q(host, '[data-testid="mi-review-origin-value"]');
     expect(cells.length).toBeGreaterThan(0);
     for (const c of cells) expect(text(c)).toBe(REVIEW_VALUE_UNKNOWN);
@@ -239,7 +274,11 @@ describe("REV-02 B — 브랜드·품번·상품명이 나란히 선다", () => 
     const titles = q(host, '[data-testid="mi-review-axis-title"]')
       .map((e) => text(e))
       .join("\n");
-    const expected = selectReviewQueue(rows, "ALL")
+    /**
+     * 🔴 **원상품을 같이 넘겨야 화면과 같은 수** 가 된다 — 선택기가 자격을 보려면
+     *    원상품이 필요하다(MI-CANDIDATE-ELIGIBILITY-01). 🟢 화면도 그렇게 부른다.
+     */
+    const expected = selectReviewQueue(rows, "ALL", realOrigin())
       .map((e) => e.row.title)
       .filter((t): t is string => Boolean(t && t.trim()));
     expect(expected.length, "🔴 분모 0 — 제목 있는 검토 후보가 없다").toBeGreaterThan(0);
@@ -249,7 +288,7 @@ describe("REV-02 B — 브랜드·품번·상품명이 나란히 선다", () => 
   it("B-8 🟢 원문 확인 통로가 **행마다** 있다 — 사람이 직접 볼 수 있어야 판단이 된다", () => {
     const host = mount({ rows: realRows(), originIdentity: realOrigin() });
     const links = q(host, '[data-testid="mi-review-open-page"]');
-    expect(links, "🔴 원문 통로가 행 수와 다르다").toHaveLength(8);
+    expect(links, "🔴 원문 통로가 행 수와 다르다").toHaveLength(2);
     for (const a of links) {
       expect(text(a)).toBe(REVIEW_OPEN_PAGE_TEXT);
       expect((a as HTMLAnchorElement).getAttribute("href"), "🔴 갈 곳 없는 링크다").toMatch(/^http/);
@@ -293,7 +332,7 @@ describe("REV-02 C — 시장별 구역이 겹치지 않고 합이 전체다", (
     const urls = q(host, '[data-testid="mi-review-open-page"]').map((a) =>
       (a as HTMLAnchorElement).getAttribute("href"),
     );
-    const all = selectReviewQueue(rows, "ALL");
+    const all = selectReviewQueue(rows, "ALL", realOrigin());
     expect(urls, "🔴 구역 합이 전체와 다르다").toHaveLength(all.length);
     expect(new Set(urls).size, "🔴 같은 후보가 두 구역에 섰다").toBe(all.length);
   });
@@ -304,13 +343,13 @@ describe("REV-02 C — 시장별 구역이 겹치지 않고 합이 전체다", (
     const rowsIn = (key: string) =>
       host.querySelectorAll(`[data-testid="mi-review-group-${key}"] [data-testid="mi-review-row"]`)
         .length;
-    expect(rowsIn("kr")).toBe(selectReviewQueue(rows, "KR").length);
-    expect(rowsIn("overseas")).toBe(selectReviewQueue(rows, "OVERSEAS").length);
+    expect(rowsIn("kr")).toBe(selectReviewQueue(rows, "KR", realOrigin()).length);
+    expect(rowsIn("overseas")).toBe(selectReviewQueue(rows, "OVERSEAS", realOrigin()).length);
     /** 🟢 미확정 = 전체 − (국내 + 해외) — 그 차집합이 **실제로 0 이 아니다**(분모 잠금). */
     const unresolved =
-      selectReviewQueue(rows, "ALL").length -
-      selectReviewQueue(rows, "KR").length -
-      selectReviewQueue(rows, "OVERSEAS").length;
+      selectReviewQueue(rows, "ALL", realOrigin()).length -
+      selectReviewQueue(rows, "KR", realOrigin()).length -
+      selectReviewQueue(rows, "OVERSEAS", realOrigin()).length;
     expect(unresolved, "🔴 분모 0 — 시장 미확정 후보가 없다").toBeGreaterThan(0);
     expect(rowsIn("unresolved")).toBe(unresolved);
   });
@@ -463,9 +502,15 @@ describe("REV-02 E — 저장 경로를 새로 만들지 않았다", () => {
     /** 🟢 저장 owner 는 **그 훅 하나** 다. */
     expect(SRC, "🔴 검토 훅 배선이 사라졌다").toContain("useCandidateReview(snapshotId)");
     /** 🟢 선택기를 **재사용** 한다 — 다시 만들지 않았다(세 구역이 같은 함수를 부른다). */
-    expect(SRC, "🔴 선택기를 다시 만들었다").toContain('selectReviewQueue(rows, "ALL")');
-    expect(SRC).toContain('selectReviewQueue(rows, "KR")');
-    expect(SRC).toContain('selectReviewQueue(rows, "OVERSEAS")');
+    /**
+     * 🔵 MI-CANDIDATE-ELIGIBILITY-01 — 호출부가 **원상품을 같이** 넘긴다.
+     *    🔴 그 인자를 빼면 자격 문이 **열린다** ⟹ 앵커를 그 모양으로 **강화** 한다.
+     */
+    expect(SRC, "🔴 선택기를 다시 만들었다").toContain(
+      ['selectReviewQueue(rows, "ALL"', ", originForEligibility)"].join(""),
+    );
+    expect(SRC).toContain(['selectReviewQueue(rows, "KR"', ", originForEligibility)"].join(""));
+    expect(SRC).toContain(['selectReviewQueue(rows, "OVERSEAS"', ", originForEligibility)"].join(""));
   });
 });
 
@@ -704,14 +749,23 @@ describe("REV-02/FINAL-03 I — 후보 브랜드·품번 원값", () => {
      * 🔴 **저장분 복원 경로는 차단축을 `crossSellerConflicts` 에 넣는다**(합쳐 저장된다 ·
      *    `saved-candidate-rows.ts:149`). 1차에 `crossSellerBlockers` 만 봐서 **분모 0** 이었다.
      */
-    const base = selectReviewQueue(realRows(), "ALL").find((e) =>
-      [...(e.row.crossSellerBlockers ?? []), ...(e.row.crossSellerConflicts ?? [])].includes(
-        "BRAND_MISMATCH",
-      ),
-    );
-    expect(base, "🔴 분모 0 — 브랜드 차단축을 든 후보가 없다").toBeTruthy();
+    /**
+     * 🔴🔴 **MI-CANDIDATE-ELIGIBILITY-01 로 분모가 사라졌다 — 그것이 정상이다.**
+     *    `BRAND_MISMATCH` 를 든 후보들은 **연결 근거가 없어 제외** 됐다(그게 이 WU 의 목적).
+     * 🟢 그래서 이 계약이 보려는 모양(「원값이 차단축 문장을 이긴다」)을 **살아남는 행에
+     *    만들어** 검증한다 — 제목에 원상품 식별어가 있어 **자격은 유지** 되고,
+     *    브랜드 원값과 브랜드 차단축이 **같이** 있는 상태다.
+     */
+    const base = selectReviewQueue(realRows(), "ALL", realOrigin())[0];
+    expect(base, "🔴 분모 0 — 검토 대기가 비었다").toBeTruthy();
     const rows = realRows().map((r) =>
-      r.discoveredUrl === base!.row.discoveredUrl ? { ...r, brand: "Fendi" } : r,
+      r.discoveredUrl === base!.row.discoveredUrl
+        ? {
+            ...r,
+            brand: "Fendi",
+            crossSellerConflicts: [...(r.crossSellerConflicts ?? []), "BRAND_MISMATCH"],
+          }
+        : r,
     );
     const host = mount({ rows, originIdentity: realOrigin() });
     const cells = q(host, '[data-testid="mi-review-candidate-value"]').map((e) => text(e));

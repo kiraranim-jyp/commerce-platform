@@ -362,6 +362,18 @@ export interface GeminiTransientEvidence {
   brand: string | null;
   modelCode: string | null;
   /**
+   * 🔵🔵 MI-CANDIDATE-ELIGIBILITY-01 — **후보 상세설명 «원문» 을 행에 싣는다.**
+   *
+   * 🔴🔴 왜 필요한가 — 진입 자격이 **제목·구조화만** 보면, 제목이 인코딩
+   *    손상된 후보가 **상세설명에 원상품 식별정보를 갖고 있어도** 제외된다
+   *    (실측 `coupleshot.com` — 제목은 깨졌고 설명엔 `BOBO CHOSES Bobo Choses Pop
+   *     sweatshirt` 가 그대로 있다 · UIED-03 이 「추출 실패」로 식별한 그 건이다).
+   * 🟢 UIED-02 와 **같은 값·같은 객체** 다(`best.facts.description`) ⟹
+   *    새 수집 **0** · 새 추출기 **0** · 추가 HTTP **0**.
+   * 🔴 **판정에 들어가지 않는다** — 이 칸을 읽는 곳은 **표시 자격 술어** 하나다.
+   */
+  description: string | null;
+  /**
    * 🔴🔴 WU-132 ④ — **후보 대표 이미지.** 셀러가 「동일상품인가」를 눈으로 가르려면
    *    글자가 아니라 **사진** 이 필요하다(CEO 가 WU-099 에서 지적한 그 자리 —
    *    이미지가 없어 26건 중 12건이 **측정불가** 로 돌아왔다).
@@ -2425,6 +2437,8 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
          */
         brand: best.facts?.brand ?? null,
         modelCode: best.facts?.brandModelCode ?? null,
+        /** 🔴 원문 그대로 · 없으면 `null`(「없다」로 바꾸지 않는다). */
+        description: best.facts?.description ?? null,
         /**
          * 🔴 WU-132 ④ — **후보가 들고 온 그 이미지** 다. 새로 받지 않는다(HTTP 0) ·
          *    다른 상품 사진으로 대체하지 않는다 · 없으면 `null`.

@@ -60,6 +60,8 @@ export interface GeminiTransientRow {
    */
   brand?: string | null;
   modelCode?: string | null;
+  /** 🔵 MI-CANDIDATE-ELIGIBILITY-01 — 후보 상세설명 **원문**(표시 자격 전용). */
+  description?: string | null;
   /** 🔴 WU-028 — 이 후보가 **어디서 왔는가**. 행에서도 출처가 보여야 한다. */
   /** 🔴 E2E-04 — runner 의 `GeminiTransientEvidence.source` 와 **같은 집합** 이어야 한다. */
   source?: "GEMINI_DISCOVERY" | "SELLER_URL" | "OVERSEAS_AUTO" | "REVIEWED_SAME" | "DOMESTIC_LISTING" | "WEB_SEARCH" | null;

@@ -41,6 +41,7 @@ import type { OverseasPriceSummary } from "./overseas-reference";
  */
 import { OVERSEAS_REFERENCE_TITLE } from "./overseas-reference";
 /** 🔴 WU-133 — 축의 «말» 은 별 모듈이 소유한다(가드를 엄격하게 유지하기 위해 · 그 파일 머리 주석). */
+import { isCandidateEligibleForDisplay } from "./candidate-eligibility";
 import { blockerText } from "./blocker-text";
 
 /**
@@ -255,6 +256,15 @@ function isModelCodeOnlyReference(row: GeminiTransientRow): boolean {
   if ((row.crossSellerBlockers?.length ?? 0) > 0) return false;
   /** 🔴 「상당한 공통 Evidence」의 최소 조건 — 제목이 있고 판정 이유가 적혀 있다. */
   return Boolean(row.title) && (row.matchReasons?.length ?? 0) > 0;
+}
+
+/**
+ * 🔴🔴 **충돌 토큰은 «두 배열» 에 흩어져 있다** — 저장분 복원 경로가
+ *    blocker 를 `crossSellerConflicts` 에 합쳐 넣는다(`saved-candidate-rows.ts:149`).
+ *    🔴 한쪽만 보면 저장된 후보의 충돌을 **못 본다**.
+ */
+function identityConflictTokens(row: GeminiTransientRow): string[] {
+  return [...(row.crossSellerBlockers ?? []), ...(row.crossSellerConflicts ?? [])];
 }
 
 function hasIdentityEvidence(row: GeminiTransientRow): boolean {
@@ -508,6 +518,16 @@ export function identityIncomplete(row: GeminiTransientRow): boolean {
 export function selectReviewQueue(
   rows: readonly GeminiTransientRow[] | null | undefined,
   scope: CandidateListScope = "ALL",
+  /**
+   * 🔵🔵 MI-CANDIDATE-ELIGIBILITY-01 — **원상품을 받으면 진입 자격을 본다.**
+   *
+   * 🔴 **선택 인자다** — 안 넘기면 **동작이 한 글자도 바뀌지 않는다**(기존 호출부 불변).
+   * 🔴🔴 왜 필요한가 — CEO 실측(22건)에서 Versace·Diesel·Ralph Lauren 이
+   *    검토 대기에 섰다. 그 후보의 「근거」는 **상품군·색상·대상** 같은 일반 축뿐이다.
+   * 🟢 그 판단은 이 파일이 하지 않는다 — `candidate-eligibility` 하나가 owner 다
+   *    (🔴 두 벌로 만들면 후보 표와 검토 대기가 **다른 답** 을 낸다).
+   */
+  origin?: { brand?: string | null; modelCode?: string | null; title?: string | null } | null,
 ): Array<{ row: GeminiTransientRow; reasons: ReviewReason[] }> {
   const out: Array<{ row: GeminiTransientRow; reasons: ReviewReason[] }> = [];
   if (!rows || rows.length === 0) return out;
@@ -531,6 +551,22 @@ export function selectReviewQueue(
      * 🟢 술어를 **새로 만들지 않았다** — 같은 파일의 `hasIdentityEvidence` 하나다.
      */
     if (!hasIdentityEvidence(row)) continue;
+    /**
+     * 🔴🔴 **진입 자격 — 원상품이 주어졌을 때만 본다.**
+     *    🔴 「확인 불가」는 **거르지 않는다**(술어가 `EXCLUDED` 만 막는다) —
+     *       원문을 못 받은 것을 「무관」으로 취급하면 CPO §2 를 어긴다.
+     */
+    if (origin && !isCandidateEligibleForDisplay({
+      originBrand: origin.brand ?? null,
+      originModelCode: origin.modelCode ?? null,
+      originTitle: origin.title ?? null,
+      candidateBrand: row.brand ?? null,
+      candidateModelCode: row.modelCode ?? null,
+      candidateTitle: row.title ?? null,
+      /** 🟢 제목이 손상돼도 **설명 원문** 으로 살아날 수 있다(coupleshot 실측). */
+      candidateDescription: row.description ?? null,
+      conflicts: identityConflictTokens(row),
+    })) continue;
 
     const reasons: ReviewReason[] = [];
     if ((row.crossSellerConflicts?.length ?? 0) > 0) reasons.push("EVIDENCE_CONFLICT");
