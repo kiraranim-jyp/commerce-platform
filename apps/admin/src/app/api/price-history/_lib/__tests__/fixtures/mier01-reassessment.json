@@ -1,0 +1,1202 @@
+{
+ "note": "MI-IDENTITY-EVIDENCE-REASSESSMENT-01 — 원본 기준값으로 후보 상세설명 재검증. 운영 추출기 factsFromProductUrl 산출 · 읽기 전용 · 값 생성 0 · 번역 0.",
+ "originCriteria": {
+  "brand": "Bobo Choses",
+  "code": "B226AC033",
+  "title": "Bobo Choses Pop sweatshirt",
+  "price": "EUR 62"
+ },
+ "collectedAt": "2026-11-22T07:09:14.856Z",
+ "httpCalls": 10,
+ "origin": {
+  "url": "https://bobochoses.com/en-kr/products/b226ac033-bobo-choses-pop-sweatshirt",
+  "access": {
+   "status": "OK",
+   "fetchPath": "SHOPIFY_JSON"
+  },
+  "brandRaw": "Bobo Choses",
+  "codeRaw": "B226AC033",
+  "titleRaw": "Bobo Choses Pop sweatshirt",
+  "descriptionRaw": "Midnight blue sweatshirt. Organic Cotton 66%, Recycled Cotton 22%, Cotton 12%. Loose fit. Responsibly made in Spain.",
+  "imageUrl": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC033_6.jpg?v=1794389793",
+  "price": {
+   "amount": 62,
+   "currency": "EUR"
+  }
+ },
+ "rows": [
+  {
+   "domain": "coupleshot.com",
+   "url": "http://www.coupleshot.com/m/product.html?branduid=574657&special=1",
+   "access": {
+    "status": "OK",
+    "fetchPath": "PLAIN_HTML",
+    "httpCalls": 1
+   },
+   "collectedAt": "2026-11-22T07:09:14.856Z",
+   "candidate": {
+    "titleRaw": "�̴�Ŀ�ü�",
+    "brandRaw": null,
+    "codeRaw": "B226AC033",
+    "sellerSku": null,
+    "colorText": null,
+    "materialText": null,
+    "categoryText": "BOBO CHOSES (26aw �������� ~30%! / 26.11.20.18:00~11.30.00:00) (��) > 2026aw bobo choses (��)",
+    "fitText": null,
+    "descriptionRaw": "[��������,BOBO CHOSES Bobo Choses Pop sweatshirt ����Ʈ����(���o) 26aw-B226AC033] ������� ��ǰ�Դϴ�. (30�����̻� ���Ž� ���ڹ� ����/�����ñ���)",
+    "descriptionLength": 136,
+    "imageUrl": null,
+    "price": {
+     "amount": 135000,
+     "currency": "KRW"
+    }
+   },
+   "stored": {
+    "title": "�̴�Ŀ�ü�",
+    "market": "UNKNOWN",
+    "verdict": "PRESUMED_SAME",
+    "matchTruth": "TEXT_CONFIRMED",
+    "priceTier": "COMPARISON",
+    "price": "135000 KRW",
+    "priceStatus": "VERIFIED_CURRENT",
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ],
+    "matchReasons": [
+     "모델명 유사도 0%",
+     "근거: 브랜드 품번 일치",
+     "보류: 핵심 상품명에 겹치는 말이 없다",
+     "보류: 양쪽 브랜드를 확인하지 못했다",
+     "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+     "판정근거: 입력 텍스트등급=low · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED(순위 3)"
+    ],
+    "lastSeenAt": "2026-11-07T07:15:09.504Z"
+   },
+   "hitsInTitle": [
+    {
+     "key": "BRAND_BOBO_CHOSES",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "CODE_B226AC033",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "NAME_POP_SWEATSHIRT",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "FORM_SWEATSHIRT",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "MATERIAL_COTTON_MIX",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "COLOR_MIDNIGHT_BLUE",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "ORIGIN_SPAIN",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "SEASON_AW26",
+     "found": false,
+     "excerpts": []
+    }
+   ],
+   "hitsInDescription": [
+    {
+     "key": "BRAND_BOBO_CHOSES",
+     "found": true,
+     "excerpts": [
+      "[��������,BOBO CHOSES Bobo Choses Pop sweatshirt ����Ʈ����(���o) 26aw-B226AC033]…",
+      "[��������,BOBO CHOSES Bobo Choses Pop sweatshirt ����Ʈ����(���o) 26aw-B226AC033] ������� ��ǰ�…"
+     ]
+    },
+    {
+     "key": "CODE_B226AC033",
+     "found": true,
+     "excerpts": [
+      "…BOBO CHOSES Bobo Choses Pop sweatshirt ����Ʈ����(���o) 26aw-B226AC033] ������� ��ǰ�Դϴ�. (30�����̻� ���Ž� ���ڹ� ����/�����ñ���)"
+     ]
+    },
+    {
+     "key": "NAME_POP_SWEATSHIRT",
+     "found": true,
+     "excerpts": [
+      "[��������,BOBO CHOSES Bobo Choses Pop sweatshirt ����Ʈ����(���o) 26aw-B226AC033] ������� ��ǰ�Դϴ�. (30�����̻�…"
+     ]
+    },
+    {
+     "key": "FORM_SWEATSHIRT",
+     "found": true,
+     "excerpts": [
+      "[��������,BOBO CHOSES Bobo Choses Pop sweatshirt ����Ʈ����(���o) 26aw-B226AC033] ������� ��ǰ�Դϴ�. (30�����̻�…"
+     ]
+    },
+    {
+     "key": "MATERIAL_COTTON_MIX",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "COLOR_MIDNIGHT_BLUE",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "ORIGIN_SPAIN",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "SEASON_AW26",
+     "found": true,
+     "excerpts": [
+      "…����,BOBO CHOSES Bobo Choses Pop sweatshirt ����Ʈ����(���o) 26aw-B226AC033] ������� ��ǰ�Դϴ�. (30�����̻� ���Ž� ���ڹ� ����/���…"
+     ]
+    }
+   ]
+  },
+  {
+   "domain": "designerkidswear.com",
+   "url": "https://designerkidswear.com/products/fendi-baby-boys-sweatshirt-blue-buh088-8ra-f19j4",
+   "access": {
+    "status": "OK",
+    "fetchPath": "SHOPIFY_JSON",
+    "httpCalls": 1
+   },
+   "collectedAt": "2026-11-22T07:09:14.856Z",
+   "candidate": {
+    "titleRaw": "Baby Boys Blue Cotton Bear Sweatshirt",
+    "brandRaw": "FENDI",
+    "codeRaw": null,
+    "sellerSku": null,
+    "colorText": "Blue",
+    "materialText": "Expertly crafted from soft, high-quality cotton, this Fendi kids baby boy's sweatshirt is a stylish and comfortable choice for your little one. Featuring a classic white contrast trim and signature teddy bear Zucca print on the chest, this sweatshirt offers both fashion and functionality. 93% Cotton 7% Elastane Made in Portugal",
+    "categoryText": "Baby Boy",
+    "fitText": null,
+    "descriptionRaw": "Expertly crafted from soft, high-quality cotton, this Fendi kids baby boy's sweatshirt is a stylish and comfortable choice for your little one. Featuring a classic white contrast trim and signature teddy bear Zucca print on the chest, this sweatshirt offers both fashion and functionality. 93% Cotton 7% Elastane Made in Portugal",
+    "descriptionLength": 329,
+    "imageUrl": "https://cdn.shopify.com/s/files/1/0383/7535/8604/files/BUH088-8RA-F19J4-1.jpg?v=1752261566",
+    "price": {
+     "amount": 530,
+     "currency": "CAD"
+    }
+   },
+   "stored": {
+    "title": "Baby Boys Blue Cotton Bear Sweatshirt",
+    "market": "OVERSEAS",
+    "verdict": "PRESUMED_SAME",
+    "matchTruth": "TEXT_CONFIRMED",
+    "priceTier": "COMPARISON",
+    "price": "530 CAD",
+    "priceStatus": "UNVERIFIED_SEARCH",
+    "blockers": [
+     "BRAND_MISMATCH",
+     "NO_TITLE_OVERLAP",
+     "MATERIAL",
+     "AUDIENCE_LINE"
+    ],
+    "matchReasons": [
+     "모델명 유사도 14%",
+     "카테고리 일치",
+     "브랜드 불일치",
+     "근거: 상품군 TOP↔TOP",
+     "근거: 색상 BLUE",
+     "근거: 대상 KIDS",
+     "보류: 브랜드 Bobo Choses ↔ FENDI",
+     "보류: 핵심 상품명에 겹치는 말이 없다",
+     "보류: 소재 cotton:12,organic cotton:66,recycled cotton:22 ↔ cotton:7,cotton:93,elastane:7",
+     "보류: 연령 라인 CHILD ↔ BABY",
+     "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+     "판정근거: 입력 텍스트등급=low · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED(순위 3)"
+    ],
+    "lastSeenAt": "2026-11-07T07:15:09.504Z"
+   },
+   "hitsInTitle": [
+    {
+     "key": "BRAND_BOBO_CHOSES",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "CODE_B226AC033",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "NAME_POP_SWEATSHIRT",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "FORM_SWEATSHIRT",
+     "found": true,
+     "excerpts": [
+      "Baby Boys Blue Cotton Bear Sweatshirt"
+     ]
+    },
+    {
+     "key": "MATERIAL_COTTON_MIX",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "COLOR_MIDNIGHT_BLUE",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "ORIGIN_SPAIN",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "SEASON_AW26",
+     "found": false,
+     "excerpts": []
+    }
+   ],
+   "hitsInDescription": [
+    {
+     "key": "BRAND_BOBO_CHOSES",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "CODE_B226AC033",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "NAME_POP_SWEATSHIRT",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "FORM_SWEATSHIRT",
+     "found": true,
+     "excerpts": [
+      "…from soft, high-quality cotton, this Fendi kids baby boy's sweatshirt is a stylish and comfortable choice for your little one. Fe…",
+      "…rim and signature teddy bear Zucca print on the chest, this sweatshirt offers both fashion and functionality. 93% Cotton 7% Elasta…"
+     ]
+    },
+    {
+     "key": "MATERIAL_COTTON_MIX",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "COLOR_MIDNIGHT_BLUE",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "ORIGIN_SPAIN",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "SEASON_AW26",
+     "found": false,
+     "excerpts": []
+    }
+   ]
+  },
+  {
+   "domain": "folkberlin.com",
+   "url": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "access": {
+    "status": "OK",
+    "fetchPath": "SHOPIFY_JSON",
+    "httpCalls": 1
+   },
+   "collectedAt": "2026-11-22T07:09:14.856Z",
+   "candidate": {
+    "titleRaw": "Baby-Sweateranzug „Blue Moon“ Bio-Baumwolle",
+    "brandRaw": "Gray Label",
+    "codeRaw": null,
+    "sellerSku": null,
+    "colorText": "baby sweateranzug blue",
+    "materialText": null,
+    "categoryText": "Babykleidung",
+    "fitText": null,
+    "descriptionRaw": "Baby-Sweateranzug „Blue Moon“ aus Bio-Baumwolle Dieser vielseitige und wärmende Anzug hat einen Rundhalsausschnitt und Druckknöpfe an der Vorderseite, die das Anziehen erleichtern. Er verfügt über eine Kängurutasche auf der Vorderseite sowie breite Rippdetails am Halsausschnitt und an den Bündchen. Hergestellt aus besonders weicher 100 % Bio-Baumwolle mit etwas Elasthan. Das Gray-Label-Logo ist auf der Brust aufgestickt. Hergestellt in Portugal. Gut zu wissen Material: 100 % Bio-Baumwolle mit Elasthan Besonders weich Mit Kängurutasche auf der Vorderseite Breite Rippdetails am Halsausschnitt und an den Bündchen Maschinenwäsche bei 30 Grad Farbe: Blue Moon Hergestellt in Portugal Über die Marke Gray Label ist eine minimalistische und nachhaltige Essentials-Marke für Kinder im Alter von 0 bis 12 Jahren. Sie wurde 2011 von Emily Gray gegründet. Gray Label engagiert sich dafür, die Auswirkungen auf die Umwelt zu minimieren, indem hochwertige Produkte hergestellt werden, die mehrere Lebenszyklen lang halten.",
+    "descriptionLength": 1017,
+    "imageUrl": "https://cdn.shopify.com/s/files/1/0543/4900/4997/files/Graylabel-baby-BlueMoon-9774.jpg?v=1726497078",
+    "price": {
+     "amount": 39,
+     "currency": "EUR"
+    }
+   },
+   "stored": {
+    "title": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+    "market": "OVERSEAS",
+    "verdict": "PRESUMED_SAME",
+    "matchTruth": "TEXT_CONFIRMED",
+    "priceTier": "COMPARISON",
+    "price": "39 EUR",
+    "priceStatus": "UNVERIFIED_SEARCH",
+    "blockers": [
+     "BRAND_MISMATCH",
+     "NO_TITLE_OVERLAP",
+     "MATERIAL",
+     "AUDIENCE_LINE"
+    ],
+    "matchReasons": [
+     "모델명 유사도 0%",
+     "카테고리 일치",
+     "브랜드 불일치",
+     "근거: 상품군 TOP↔TOP",
+     "근거: 색상 BLUE",
+     "근거: 대상 KIDS",
+     "보류: 브랜드 Bobo Choses ↔ Gray Label",
+     "보류: 핵심 상품명에 겹치는 말이 없다",
+     "보류: 소재 cotton:12,organic cotton:66,recycled cotton:22 ↔ organic cotton:100",
+     "보류: 연령 라인 CHILD ↔ BABY",
+     "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+     "판정근거: 입력 텍스트등급=low · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED(순위 3)"
+    ],
+    "lastSeenAt": "2026-11-07T07:15:09.504Z"
+   },
+   "hitsInTitle": [
+    {
+     "key": "BRAND_BOBO_CHOSES",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "CODE_B226AC033",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "NAME_POP_SWEATSHIRT",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "FORM_SWEATSHIRT",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "MATERIAL_COTTON_MIX",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "COLOR_MIDNIGHT_BLUE",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "ORIGIN_SPAIN",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "SEASON_AW26",
+     "found": false,
+     "excerpts": []
+    }
+   ],
+   "hitsInDescription": [
+    {
+     "key": "BRAND_BOBO_CHOSES",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "CODE_B226AC033",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "NAME_POP_SWEATSHIRT",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "FORM_SWEATSHIRT",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "MATERIAL_COTTON_MIX",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "COLOR_MIDNIGHT_BLUE",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "ORIGIN_SPAIN",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "SEASON_AW26",
+     "found": false,
+     "excerpts": []
+    }
+   ]
+  },
+  {
+   "domain": "junioredition.com",
+   "url": "https://junioredition.com/products/bobo-choses-pop-sweatshirt-by-bobo-choses",
+   "access": {
+    "status": "OK",
+    "fetchPath": "SHOPIFY_JSON",
+    "httpCalls": 1
+   },
+   "collectedAt": "2026-11-22T07:09:14.856Z",
+   "candidate": {
+    "titleRaw": "Bobo Choses Pop Sweatshirt by Bobo Choses",
+    "brandRaw": "Bobo Choses",
+    "codeRaw": "B226AC033",
+    "sellerSku": null,
+    "colorText": "Midnight Blue",
+    "materialText": "Bigfoot By BC Sweatshirt by Bobo Choses. Midnight blue sweatshirt in a relaxed fit featuring ribbed cuffs, bottom and neck and a Bobo Choses print in white across the chest. Perfect for keeping cosy and stylish during the seasonal transition. Colour - Midnight Blue. 66% Organic Cotton 22% Recycled Cotton 12% Cotton. Product code B226AC033 AW26 Made in Spain.",
+    "categoryText": "Sweatshirt",
+    "fitText": "relaxed fit",
+    "descriptionRaw": "Bigfoot By BC Sweatshirt by Bobo Choses. Midnight blue sweatshirt in a relaxed fit featuring ribbed cuffs, bottom and neck and a Bobo Choses print in white across the chest. Perfect for keeping cosy and stylish during the seasonal transition. Colour - Midnight Blue. 66% Organic Cotton 22% Recycled Cotton 12% Cotton. Product code B226AC033 AW26 Made in Spain.",
+    "descriptionLength": 360,
+    "imageUrl": "https://cdn.shopify.com/s/files/1/0874/8574/files/Bobo-Choses-AW26-Bobo-Choses-Pop-Sweatshirt.jpg?v=1784285824",
+    "price": {
+     "amount": 40.6,
+     "currency": "GBP"
+    }
+   },
+   "stored": {
+    "title": "Bobo Choses Pop Sweatshirt by Bobo Choses",
+    "market": "OVERSEAS",
+    "verdict": "PRESUMED_SAME",
+    "matchTruth": "TEXT_CONFIRMED",
+    "priceTier": "COMPARISON",
+    "price": "58 GBP",
+    "priceStatus": "VERIFIED_CURRENT",
+    "blockers": [
+     "MATERIAL"
+    ],
+    "matchReasons": [
+     "모델명 유사도 100%",
+     "카테고리 일치",
+     "브랜드 일치",
+     "근거: 핵심 상품명 pop",
+     "근거: 브랜드 품번 일치",
+     "근거: 상품군 TOP↔TOP",
+     "근거: 색상 BLUE",
+     "근거: 핏 loose fit ↔ relaxed fit(표현 차이 · 동일 브랜드 품번 완전일치 교차판매처)",
+     "보류: 소재 cotton:12,organic cotton:66,recycled cotton:22 ↔ cotton:12,organic cotton:22,organic cotton:66,recycled cotton:12,recycled cotton:22",
+     "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+     "판정근거: 입력 텍스트등급=very_high · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED(순위 3)"
+    ],
+    "lastSeenAt": "2026-11-07T07:15:09.504Z"
+   },
+   "hitsInTitle": [
+    {
+     "key": "BRAND_BOBO_CHOSES",
+     "found": true,
+     "excerpts": [
+      "Bobo Choses Pop Sweatshirt by Bobo Choses"
+     ]
+    },
+    {
+     "key": "CODE_B226AC033",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "NAME_POP_SWEATSHIRT",
+     "found": true,
+     "excerpts": [
+      "Bobo Choses Pop Sweatshirt by Bobo Choses"
+     ]
+    },
+    {
+     "key": "FORM_SWEATSHIRT",
+     "found": true,
+     "excerpts": [
+      "Bobo Choses Pop Sweatshirt by Bobo Choses"
+     ]
+    },
+    {
+     "key": "MATERIAL_COTTON_MIX",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "COLOR_MIDNIGHT_BLUE",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "ORIGIN_SPAIN",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "SEASON_AW26",
+     "found": false,
+     "excerpts": []
+    }
+   ],
+   "hitsInDescription": [
+    {
+     "key": "BRAND_BOBO_CHOSES",
+     "found": true,
+     "excerpts": [
+      "Bigfoot By BC Sweatshirt by Bobo Choses. Midnight blue sweatshirt in a relaxed fit featuring ribbed…",
+      "…a relaxed fit featuring ribbed cuffs, bottom and neck and a Bobo Choses print in white across the chest. Perfect for keeping cosy a…"
+     ]
+    },
+    {
+     "key": "CODE_B226AC033",
+     "found": true,
+     "excerpts": [
+      "…Organic Cotton 22% Recycled Cotton 12% Cotton. Product code B226AC033 AW26 Made in Spain."
+     ]
+    },
+    {
+     "key": "NAME_POP_SWEATSHIRT",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "FORM_SWEATSHIRT",
+     "found": true,
+     "excerpts": [
+      "Bigfoot By BC Sweatshirt by Bobo Choses. Midnight blue sweatshirt in a relaxed fit f…",
+      "Bigfoot By BC Sweatshirt by Bobo Choses. Midnight blue sweatshirt in a relaxed fit featuring ribbed cuffs, bottom and neck an…"
+     ]
+    },
+    {
+     "key": "MATERIAL_COTTON_MIX",
+     "found": true,
+     "excerpts": [
+      "…during the seasonal transition. Colour - Midnight Blue. 66% Organic Cotton 22% Recycled Cotton 12% Cotton. Product code B226AC033 AW26…",
+      "…transition. Colour - Midnight Blue. 66% Organic Cotton 22% Recycled Cotton 12% Cotton. Product code B226AC033 AW26 Made in Spain."
+     ]
+    },
+    {
+     "key": "COLOR_MIDNIGHT_BLUE",
+     "found": true,
+     "excerpts": [
+      "Bigfoot By BC Sweatshirt by Bobo Choses. Midnight blue sweatshirt in a relaxed fit featuring ribbed cuffs, bottom…",
+      "…g cosy and stylish during the seasonal transition. Colour - Midnight Blue. 66% Organic Cotton 22% Recycled Cotton 12% Cotton. Product…"
+     ]
+    },
+    {
+     "key": "ORIGIN_SPAIN",
+     "found": true,
+     "excerpts": [
+      "…22% Recycled Cotton 12% Cotton. Product code B226AC033 AW26 Made in Spain."
+     ]
+    },
+    {
+     "key": "SEASON_AW26",
+     "found": true,
+     "excerpts": [
+      "…tton 22% Recycled Cotton 12% Cotton. Product code B226AC033 AW26 Made in Spain."
+     ]
+    }
+   ]
+  },
+  {
+   "domain": "kidbizkid.com",
+   "url": "https://kidbizkid.com/products/lacoste-navy-sweatshirt",
+   "access": {
+    "status": "OK",
+    "fetchPath": "SHOPIFY_JSON",
+    "httpCalls": 1
+   },
+   "collectedAt": "2026-11-22T07:09:14.856Z",
+   "candidate": {
+    "titleRaw": "Lacoste Navy Sweatshirt",
+    "brandRaw": "Lacoste",
+    "codeRaw": null,
+    "sellerSku": null,
+    "colorText": "in sleek navy",
+    "materialText": null,
+    "categoryText": "Sweatshirt",
+    "fitText": null,
+    "descriptionRaw": "Timeless Lacoste comfort in sleek navy. This classic zip-up sweatshirt features the iconic crocodile logo embroidered on the chest—a signature touch that pairs effortlessly with any casual outfit. Crafted for everyday wear, it delivers the quality and style Lacoste is known for.",
+    "descriptionLength": 279,
+    "imageUrl": "https://cdn.shopify.com/s/files/1/2390/3997/files/Gemini_Generated_Image_t1qy12t1qy12t1qy.jpg?v=1788556557",
+    "price": {
+     "amount": 87000,
+     "currency": "KRW"
+    }
+   },
+   "stored": {
+    "title": "Lacoste Navy Sweatshirt",
+    "market": "OVERSEAS",
+    "verdict": "PRESUMED_SAME",
+    "matchTruth": "TEXT_CONFIRMED",
+    "priceTier": "COMPARISON",
+    "price": "10300 CAD",
+    "priceStatus": "UNVERIFIED_SEARCH",
+    "blockers": [
+     "BRAND_MISMATCH",
+     "COLOR_VARIANT",
+     "NO_TITLE_OVERLAP",
+     "AUDIENCE_LINE"
+    ],
+    "matchReasons": [
+     "모델명 유사도 25%",
+     "카테고리 일치",
+     "브랜드 불일치",
+     "근거: 상품군 TOP↔TOP",
+     "근거: 색상 BLUE",
+     "근거: 대상 KIDS",
+     "보류: 브랜드 Bobo Choses ↔ Lacoste",
+     "보류: 색상 이름 Midnight blue ↔ in sleek navy",
+     "보류: 핵심 상품명에 겹치는 말이 없다",
+     "보류: 연령 라인 CHILD ↔ BABY",
+     "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+     "판정근거: 입력 텍스트등급=low · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED(순위 3)"
+    ],
+    "lastSeenAt": "2026-11-07T07:15:09.504Z"
+   },
+   "hitsInTitle": [
+    {
+     "key": "BRAND_BOBO_CHOSES",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "CODE_B226AC033",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "NAME_POP_SWEATSHIRT",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "FORM_SWEATSHIRT",
+     "found": true,
+     "excerpts": [
+      "Lacoste Navy Sweatshirt"
+     ]
+    },
+    {
+     "key": "MATERIAL_COTTON_MIX",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "COLOR_MIDNIGHT_BLUE",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "ORIGIN_SPAIN",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "SEASON_AW26",
+     "found": false,
+     "excerpts": []
+    }
+   ],
+   "hitsInDescription": [
+    {
+     "key": "BRAND_BOBO_CHOSES",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "CODE_B226AC033",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "NAME_POP_SWEATSHIRT",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "FORM_SWEATSHIRT",
+     "found": true,
+     "excerpts": [
+      "Timeless Lacoste comfort in sleek navy. This classic zip-up sweatshirt features the iconic crocodile logo embroidered on the chest…"
+     ]
+    },
+    {
+     "key": "MATERIAL_COTTON_MIX",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "COLOR_MIDNIGHT_BLUE",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "ORIGIN_SPAIN",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "SEASON_AW26",
+     "found": false,
+     "excerpts": []
+    }
+   ]
+  },
+  {
+   "domain": "kids-world.com",
+   "url": "https://www.kids-world.com/ko-kr/bobo-choses-sweatshirt-midnight-blue-print-p-450718.html",
+   "access": {
+    "status": "OK",
+    "fetchPath": "PLAIN_HTML",
+    "httpCalls": 1
+   },
+   "collectedAt": "2026-11-22T07:09:14.856Z",
+   "candidate": {
+    "titleRaw": "Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트",
+    "brandRaw": "Bobo Choses",
+    "codeRaw": "B226AC033",
+    "sellerSku": null,
+    "colorText": null,
+    "materialText": null,
+    "categoryText": null,
+    "fitText": null,
+    "descriptionRaw": "Bobo Choses 맨투맨. Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트. Bobo Choses (보보쇼즈) 의 맨투맨진한 파란색 바탕에 은은한 워싱 처리가 된 맨투맨 입니다. 가슴 부분에는 흰색 레터링으로 브랜드 이름이 새겨져 있습니다. 맨투맨 넥에 긴 소매는 넓은 골지 마감으로 처리되었으며, 밑단에도 넓은 골지 디테일이 더해져 클래식한 핏을 연출합니다. 보보 초 Bobo Choses (보보쇼즈) 로고가 앞면에 선명하게 배치되어 대비 효과를 줍니다. 심플하면서도 스타일리시한 디자인으로 일상복으로 활용하기 좋습니다. 맨투맨 은 부드러운 기모 코튼 소재입니다.. Bobo Choses 맨투맨. Bobo Choses B226AC033-401",
+    "descriptionLength": 368,
+    "imageUrl": null,
+    "price": {
+     "amount": 106000,
+     "currency": "KRW"
+    }
+   },
+   "stored": {
+    "title": "Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트",
+    "market": "UNKNOWN",
+    "verdict": "PRESUMED_SAME",
+    "matchTruth": "TEXT_CONFIRMED",
+    "priceTier": "COMPARISON",
+    "price": "106000 KRW",
+    "priceStatus": "VERIFIED_CURRENT",
+    "blockers": [
+     "NO_TITLE_OVERLAP"
+    ],
+    "matchReasons": [
+     "모델명 유사도 0%",
+     "브랜드 일치",
+     "근거: 브랜드 품번 일치",
+     "보류: 핵심 상품명에 겹치는 말이 없다",
+     "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+     "판정근거: 입력 텍스트등급=low · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED(순위 3)"
+    ],
+    "lastSeenAt": "2026-11-07T07:15:09.504Z"
+   },
+   "hitsInTitle": [
+    {
+     "key": "BRAND_BOBO_CHOSES",
+     "found": true,
+     "excerpts": [
+      "Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트"
+     ]
+    },
+    {
+     "key": "CODE_B226AC033",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "NAME_POP_SWEATSHIRT",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "FORM_SWEATSHIRT",
+     "found": true,
+     "excerpts": [
+      "Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트"
+     ]
+    },
+    {
+     "key": "MATERIAL_COTTON_MIX",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "COLOR_MIDNIGHT_BLUE",
+     "found": true,
+     "excerpts": [
+      "Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트"
+     ]
+    },
+    {
+     "key": "ORIGIN_SPAIN",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "SEASON_AW26",
+     "found": false,
+     "excerpts": []
+    }
+   ],
+   "hitsInDescription": [
+    {
+     "key": "BRAND_BOBO_CHOSES",
+     "found": true,
+     "excerpts": [
+      "Bobo Choses 맨투맨. Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트. Bobo Choses (보보쇼즈) 의…",
+      "Bobo Choses 맨투맨. Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트. Bobo Choses (보보쇼즈) 의 맨투맨진한 파란색 바탕에 은은…",
+      "Bobo Choses 맨투맨. Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트. Bobo Choses (보보쇼즈) 의 맨투맨진한 파란색 바탕에 은은한 워싱 처리가 된 맨투맨 입니다. 가슴 부분에는 흰색 레터링…"
+     ]
+    },
+    {
+     "key": "CODE_B226AC033",
+     "found": true,
+     "excerpts": [
+      "…좋습니다. 맨투맨 은 부드러운 기모 코튼 소재입니다.. Bobo Choses 맨투맨. Bobo Choses B226AC033-401"
+     ]
+    },
+    {
+     "key": "NAME_POP_SWEATSHIRT",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "FORM_SWEATSHIRT",
+     "found": true,
+     "excerpts": [
+      "Bobo Choses 맨투맨. Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트. Bobo Choses (보보쇼즈) 의 맨투맨…",
+      "Bobo Choses 맨투맨. Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트. Bobo Choses (보보쇼즈) 의 맨투맨진한 파란색 바탕에 은은한 워싱…",
+      "…맨투맨. Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트. Bobo Choses (보보쇼즈) 의 맨투맨진한 파란색 바탕에 은은한 워싱 처리가 된 맨투맨 입니다. 가슴 부분에는 흰색 레터링으로 브랜드 이름이 새겨…"
+     ]
+    },
+    {
+     "key": "MATERIAL_COTTON_MIX",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "COLOR_MIDNIGHT_BLUE",
+     "found": true,
+     "excerpts": [
+      "Bobo Choses 맨투맨. Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트. Bobo Choses (보보쇼즈) 의 맨투맨진한 파란색 바탕에 은은한 워싱 처리가 된 맨투맨…"
+     ]
+    },
+    {
+     "key": "ORIGIN_SPAIN",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "SEASON_AW26",
+     "found": false,
+     "excerpts": []
+    }
+   ]
+  },
+  {
+   "domain": "petitemaisonkids.com",
+   "url": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+   "access": {
+    "status": "OK",
+    "fetchPath": "SHOPIFY_JSON",
+    "httpCalls": 1
+   },
+   "collectedAt": "2026-11-22T07:09:14.856Z",
+   "candidate": {
+    "titleRaw": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers",
+    "brandRaw": "Petite Maison Kids",
+    "codeRaw": null,
+    "sellerSku": null,
+    "colorText": "our maya blue",
+    "materialText": "Indulge her in a little luxury with our Maya Blue Cotton Sweater Top. Made from soft, premium cotton with a touch of stretch, this top pairs everyday comfort with sophisticated style. The rich blue color is reminiscent of a clear sky, and handmade flowers add a sweet, special finish. Style it with the matching pieces from our Maya Collection for a coordinated lounge set, or pair it with her favorite bottoms for an easy, elegant outfit. Available in sizes 6 months to 12 years. Soft 95% Cotton, 5% Elastane Handmade Flowers Made to Match our Maya Collection Made in Turkey Care Instructions: Hand wash or machine wash in cold water, delicate cycle. Hang to dry.",
+    "categoryText": "Sweater",
+    "fitText": null,
+    "descriptionRaw": "Indulge her in a little luxury with our Maya Blue Cotton Sweater Top. Made from soft, premium cotton with a touch of stretch, this top pairs everyday comfort with sophisticated style. The rich blue color is reminiscent of a clear sky, and handmade flowers add a sweet, special finish. Style it with the matching pieces from our Maya Collection for a coordinated lounge set, or pair it with her favorite bottoms for an easy, elegant outfit. Available in sizes 6 months to 12 years. Soft 95% Cotton, 5% Elastane Handmade Flowers Made to Match our Maya Collection Made in Turkey Care Instructions: Hand wash or machine wash in cold water, delicate cycle. Hang to dry.",
+    "descriptionLength": 664,
+    "imageUrl": "https://cdn.shopify.com/s/files/1/0081/1171/8457/files/BC46F29A-E160-4F7E-B86A-C0CFDA03CC62.jpg?v=1756127386",
+    "price": {
+     "amount": 115000,
+     "currency": "KRW"
+    }
+   },
+   "stored": {
+    "title": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers",
+    "market": "OVERSEAS",
+    "verdict": "PRESUMED_SAME",
+    "matchTruth": "TEXT_CONFIRMED",
+    "priceTier": "COMPARISON",
+    "price": "12800 USD",
+    "priceStatus": "UNVERIFIED_SEARCH",
+    "blockers": [
+     "BRAND_MISMATCH",
+     "NO_TITLE_OVERLAP",
+     "MATERIAL",
+     "AUDIENCE_LINE",
+     "GARMENT_FORM"
+    ],
+    "matchReasons": [
+     "모델명 유사도 0%",
+     "카테고리 일치",
+     "브랜드 불일치",
+     "근거: 상품군 TOP↔TOP",
+     "근거: 색상 BLUE",
+     "근거: 대상 KIDS",
+     "보류: 브랜드 Bobo Choses ↔ Petite Maison Kids",
+     "보류: 핵심 상품명에 겹치는 말이 없다",
+     "보류: 소재 cotton:12,organic cotton:66,recycled cotton:22 ↔ cotton:95,elastane:5",
+     "보류: 연령 라인 CHILD ↔ BABY",
+     "보류: 옷의 형태 SWEATSHIRT ↔ TOP",
+     "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+     "판정근거: 입력 텍스트등급=low · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED(순위 3)"
+    ],
+    "lastSeenAt": "2026-11-07T07:15:09.504Z"
+   },
+   "hitsInTitle": [
+    {
+     "key": "BRAND_BOBO_CHOSES",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "CODE_B226AC033",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "NAME_POP_SWEATSHIRT",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "FORM_SWEATSHIRT",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "MATERIAL_COTTON_MIX",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "COLOR_MIDNIGHT_BLUE",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "ORIGIN_SPAIN",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "SEASON_AW26",
+     "found": false,
+     "excerpts": []
+    }
+   ],
+   "hitsInDescription": [
+    {
+     "key": "BRAND_BOBO_CHOSES",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "CODE_B226AC033",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "NAME_POP_SWEATSHIRT",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "FORM_SWEATSHIRT",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "MATERIAL_COTTON_MIX",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "COLOR_MIDNIGHT_BLUE",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "ORIGIN_SPAIN",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "SEASON_AW26",
+     "found": false,
+     "excerpts": []
+    }
+   ]
+  },
+  {
+   "domain": "shoppiccoliandco.com",
+   "url": "https://shoppiccoliandco.com/products/jude-navy-baby-boy-anchor-sweater",
+   "access": {
+    "status": "OK",
+    "fetchPath": "SHOPIFY_JSON",
+    "httpCalls": 1
+   },
+   "collectedAt": "2026-11-22T07:09:14.856Z",
+   "candidate": {
+    "titleRaw": "Jude Navy Baby Boy Anchor Sweater",
+    "brandRaw": "Piccoli & Co™",
+    "codeRaw": null,
+    "sellerSku": null,
+    "colorText": "the jude navy",
+    "materialText": null,
+    "categoryText": null,
+    "fitText": null,
+    "descriptionRaw": "Meet the Jude Navy Baby Boy Anchor Sweater—a tiny piece of nautical charm designed to elevate everyday outfits. This striped knitted sweater pairs deep navy with crisp stripes and a playful anchor motif, giving your little one a classic, sea-breeze-ready look from sunlit mornings to breezy evenings. What makes this sweater stand out Striped knitted design with a distinctive anchor motif adds instant personality to any outfit. Made in Spain —crafted with care and attention to detail that reflects timeless European knitwear traditions. Navy colorway coordinates effortlessly with rompers, shorts, jeans, or over lightweight layers for year-round style. Ideal for summer adventures —a comfortable, breathable layer that works for seaside strolls, family outings, and playful days outdoors. This sweater isn’t just about looks. It’s about practicality and a touch of adventure—a go-to piece for parents who want a versatile, easy-to-wear layer that frames those memorable summer moments. The anchor motif is a subtle nod to nautical adventures, making it perfect for beach trips, photoshoots, or anytime your little sailor is ready to explore. Who this is for Parents seeking a stylish, age-appropriate knit that feels special without being fussy. Babies who benefit from a flexible, comfortable layer that can be dressed up or down. Gift-givers looking for a Spain-made garment with a timeless, family-friendly design. Practical use ideas Layer over a bodysuit for a polished seaside ensemble during summer outings. Pair with light denim or neutral shorts for quick, put-together outfits on busy days. Bring along on vacations to maintain a cohesive wardrobe that photographs beautifully in natural light. With its thoughtful design and Spanish craftsmanship, the Jude Navy Baby Boy Anchor Sweater offers a reliable, stylish option that grows with your little one’s summertime adventures. Elevate the daily wardrobe with a touch of nautical charm—the kind of piece that becomes a family favorite in minutes.",
+    "descriptionLength": 2010,
+    "imageUrl": "https://cdn.shopify.com/s/files/1/0466/4842/6659/files/769911C5-A127-4B74-86B3-6F21F6ECCDD8.jpg?v=1743013397",
+    "price": {
+     "amount": 82000,
+     "currency": "KRW"
+    }
+   },
+   "stored": {
+    "title": "Jude Navy Baby Boy Anchor Sweater",
+    "market": "OVERSEAS",
+    "verdict": "PRESUMED_SAME",
+    "matchTruth": "TEXT_CONFIRMED",
+    "priceTier": "COMPARISON",
+    "price": "9700 USD",
+    "priceStatus": "UNVERIFIED_SEARCH",
+    "blockers": [
+     "BRAND_MISMATCH",
+     "COLOR_VARIANT",
+     "NO_TITLE_OVERLAP",
+     "AUDIENCE_LINE"
+    ],
+    "matchReasons": [
+     "모델명 유사도 0%",
+     "카테고리 일치",
+     "브랜드 불일치",
+     "근거: 상품군 TOP↔TOP",
+     "근거: 색상 BLUE",
+     "근거: 대상 KIDS",
+     "보류: 브랜드 Bobo Choses ↔ Piccoli & Co™",
+     "보류: 색상 이름 Midnight blue ↔ the jude navy",
+     "보류: 핵심 상품명에 겹치는 말이 없다",
+     "보류: 연령 라인 CHILD ↔ BABY",
+     "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+     "판정근거: 입력 텍스트등급=low · 품번증거=unavailable (해외 B226AC033 ↔ 국내 없음) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED(순위 3)"
+    ],
+    "lastSeenAt": "2026-11-07T07:15:09.504Z"
+   },
+   "hitsInTitle": [
+    {
+     "key": "BRAND_BOBO_CHOSES",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "CODE_B226AC033",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "NAME_POP_SWEATSHIRT",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "FORM_SWEATSHIRT",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "MATERIAL_COTTON_MIX",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "COLOR_MIDNIGHT_BLUE",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "ORIGIN_SPAIN",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "SEASON_AW26",
+     "found": false,
+     "excerpts": []
+    }
+   ],
+   "hitsInDescription": [
+    {
+     "key": "BRAND_BOBO_CHOSES",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "CODE_B226AC033",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "NAME_POP_SWEATSHIRT",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "FORM_SWEATSHIRT",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "MATERIAL_COTTON_MIX",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "COLOR_MIDNIGHT_BLUE",
+     "found": false,
+     "excerpts": []
+    },
+    {
+     "key": "ORIGIN_SPAIN",
+     "found": true,
+     "excerpts": [
+      "…nctive anchor motif adds instant personality to any outfit. Made in Spain —crafted with care and attention to detail that reflects ti…"
+     ]
+    },
+    {
+     "key": "SEASON_AW26",
+     "found": false,
+     "excerpts": []
+    }
+   ]
+  }
+ ]
+}
