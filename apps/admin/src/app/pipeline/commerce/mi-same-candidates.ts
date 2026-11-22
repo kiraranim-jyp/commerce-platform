@@ -563,6 +563,8 @@ export function selectReviewQueue(
       candidateBrand: row.brand ?? null,
       candidateModelCode: row.modelCode ?? null,
       candidateTitle: row.title ?? null,
+      /** 🟢 MCQ-02 — 운영 품번 확인 건초더미의 한 칸(`confirmBrandCodeInEvidence`). */
+      candidateUrl: row.discoveredUrl ?? null,
       /** 🟢 제목이 손상돼도 **설명 원문** 으로 살아날 수 있다(coupleshot 실측). */
       candidateDescription: row.description ?? null,
       conflicts: identityConflictTokens(row),

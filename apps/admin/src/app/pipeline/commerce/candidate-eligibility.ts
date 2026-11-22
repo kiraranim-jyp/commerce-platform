@@ -40,6 +40,9 @@
  * 🔴 상품 유형 · 색상 · 소재 · 대상 · 형태 묘사만 담는다. 고유 디자인명(`taxi` ·
  *    `saurus` · `handsmock` · `otter`)은 **식별어** 이므로 **절대 넣지 않는다**.
  */
+
+import { confirmBrandCodeInEvidence } from "@commerce/crawler/src/comparison-search/domestic-identifiers";
+
 export const GENERIC_NAME_TOKENS: readonly string[] = [
   /* ── 상품 유형(CPO 지명 + 22건 실측) ── */
   "dress", "jacket", "pants", "trousers", "jeans", "shirt", "tshirt", "t-shirt",
@@ -121,7 +124,12 @@ export type EligibilityReason =
    * 🔴🔴 MI-CANDIDATE-QUALITY-01 — **도착지가 상품 페이지가 아니었다.**
    *    WU-075 의 `REDIRECTED_AWAY` 계열이다 — 그 후보는 **관측된 적이 없다**.
    */
-  | "NOT_PRODUCT_ARRIVAL";
+  | "NOT_PRODUCT_ARRIVAL"
+  /**
+   * 🔵🔵 MCQ-02(CPO 판정 2026-11-23) — **브랜드 단독은 후보 자격이 부족하다.**
+   *    「브랜드가 같다」는 사실이 아니라 **원상품과 후보를 «연결» 하는 식별 근거** 가 기준이다.
+   */
+  | "BRAND_ONLY_NO_IDENTITY";
 
 export const ELIGIBILITY_REASON_TEXT: Record<EligibilityReason, string> = {
   BRAND_LINK: "브랜드가 일치합니다",
@@ -134,6 +142,7 @@ export const ELIGIBILITY_REASON_TEXT: Record<EligibilityReason, string> = {
   EXPLICIT_CONFLICT: "다른 상품임을 보여주는 식별정보 충돌이 있습니다",
   NO_SOURCE_TEXT: "원문을 확보하지 못해 확인할 수 없습니다",
   NOT_PRODUCT_ARRIVAL: "상품 상세 페이지가 열리지 않았습니다",
+  BRAND_ONLY_NO_IDENTITY: "브랜드만 같고 품번·상품명·상세설명 연결 근거가 없습니다",
 };
 
 /**
@@ -149,6 +158,11 @@ export interface CandidateEligibilityInput {
   candidateBrand?: string | null;
   candidateModelCode?: string | null;
   candidateTitle?: string | null;
+  /**
+   * 🟢 후보 상품 **URL** — 운영 `confirmBrandCodeInEvidence` 의 건초더미 한 칸이다
+   *    (WU-004 실측에서 **유일하게 효과가 확인된** 자리). 🔴 URL 을 지어내지 않는다.
+   */
+  candidateUrl?: string | null;
   /** 🟢 후보 상세설명 **원문**(UIED-02 가 응답에 실은 그 값). 🔴 없으면 `null`. */
   candidateDescription?: string | null;
   /** 🟢 운영이 이미 적어 둔 충돌 토큰(`BRAND_MISMATCH` 등). 🔴 새로 만들지 않는다. */
@@ -298,7 +312,29 @@ export function evaluateCandidateEligibility(
     oc.length > 0 &&
     cc.length > 0 &&
     (oc === cc || (oc.length >= 4 && oc.slice(1) === cc) || (cc.length >= 4 && cc.slice(1) === oc));
-  if (codeEqual) reasons.push("CODE_LINK");
+  /**
+   * 🔵🔵🔵 **MCQ-02 — 원상품 품번이 후보 «제목·URL» 에 그대로 있으면 품번 연결이다.**
+   *
+   * 🔴🔴 **CPO 정책표의 「브랜드 + 실제 품번 일치 → 유지」를 실제 입력에 적용한다.**
+   *    🟢 실측이 그 자리를 보여 줬다 — 원상품 `B226AC009` · 후보 제목
+   *       `[BOBO CHOSES]T-Shirt - **B226AC009** - 미니부띠끄`(**market KR**).
+   *       🔴 그 후보의 **구조화 품번 칸은 비어 있다** ⟹ 구조화만 보면 「브랜드 단독」으로
+   *       분류되어 **국내 후보가 사라진다**. 그것이 CPO 가 경고한 「구조화 필드 누락과
+   *       원문 미관측을 혼동」 바로 그것이다.
+   * 🟢 **새 규칙을 만들지 않았다** — 운영 owner `confirmBrandCodeInEvidence` 를 **그대로**
+   *    부른다(WU-004 가 건초더미를 title·url·sku 로 넓힌 그 함수 · 하이픈 품번 토큰 수열
+   *    규칙까지 포함). 🔴 후보의 자체 SKU 를 품번으로 **승격하지 않는다** — 원본 품번이
+   *    그 칸에 적혀 있는지 **확인** 할 뿐이다.
+   */
+  const codeInEvidence =
+    !codeEqual &&
+    oc.length > 0 &&
+    confirmBrandCodeInEvidence(input.originModelCode ?? null, {
+      title: input.candidateTitle ?? null,
+      url: input.candidateUrl ?? null,
+      sku: input.candidateModelCode ?? null,
+    }) != null;
+  if (codeEqual || codeInEvidence) reasons.push("CODE_LINK");
   else if (oc.length > 0 && cc.length > 0) {
     return { eligibility: "EXCLUDED", reasons: ["MODEL_CODE_CONFLICT"], matchedNameTokens: [] };
   }
@@ -317,6 +353,21 @@ export function evaluateCandidateEligibility(
    */
   const nameLinkNeeded = originTokens.length <= 1 ? 1 : 2;
   if (originTokens.length > 0 && matchedNameTokens.length >= nameLinkNeeded) reasons.push("NAME_LINK");
+  /**
+   * 🔵🔵🔵 **MCQ-02 — 원상품 제목에 식별어가 «0» 일 때를 「근거 없음」으로 읽지 않는다.**
+   *
+   * 🔴🔴 실측 — 원상품 `Bobo choses long sleeve T-shirt` 는 토큰이 **전부 일반어**
+   *    (`long`·`sleeve`·`t-shirt`) + 브랜드라 식별어가 **0** 이다. 그런데 후보 제목이
+   *    **글자 그대로 같고** 운영 판정이 **SAME** 이다. 🔴 구조화만 보면 그 행이
+   *    「브랜드 단독」으로 분류되어 **기존 운영 SAME 이 제외된다**(CPO 검증 조건 위반).
+   * 🟢 그래서 **상품명 축이 말을 할 수 없을 때만**, 그리고 **제목이 정규화 후 완전히
+   *    같을 때만** 상품명 연결로 본다. 🔴 **부분일치가 아니다** — 가장 좁은 꼴 하나다.
+   * 🔴 이것은 **다국어 완화가 아니다** — 언어를 보지 않고 **문자열 동일성** 만 본다
+   *    (실제로 다국어 후보 `kids-world` 는 이 조건을 **통과하지 못한다**).
+   */
+  const titleIdentical =
+    originTokens.length === 0 && candTitleNorm.length > 0 && candTitleNorm === norm(input.originTitle);
+  if (titleIdentical) reasons.push("NAME_LINK");
 
   /* ── ④ 상세설명 연결 — 🟢 원문에서 원상품 식별정보를 찾는다 ─────────────── */
   const desc = input.candidateDescription ?? "";
@@ -358,6 +409,27 @@ export function evaluateCandidateEligibility(
    * 🔴 **다국어 제목 완화가 아니다** — alias 0 · 번역 0 · 새 축 0. 바뀐 것은 **아무것도
    *    더 받아들이지 않는다** 는 점이다(이 분기는 MCE-02 의 그 분기 그대로다).
    */
+  /**
+   * 🔵🔵🔵 **MCQ-02(CPO 판정) — 브랜드 단독은 사용자 후보 목록에서 제외한다.**
+   *
+   * 🔴🔴 CPO 문장 그대로다 — 「후보 자격은 **브랜드가 같다는 사실** 이 아니라 원상품과
+   *    후보를 **연결하는 식별 근거가 있는가** 로 판단한다」. 브랜드는 정체성을 설명하는
+   *    여러 축 중 **하나** 일 뿐이다.
+   * 🟢 그래서 이 분기는 **브랜드 축 하나만 남은 경우** 에만 닫힌다 — 품번·상품명·
+   *    상세설명 중 **하나라도** 연결되면 위에서 이미 유지됐다.
+   * 🔴 **원본은 지우지 않는다**(CPO ②) — 사유를 적어 돌려줄 뿐이다.
+   * 🔴 **다국어가 사유가 아니다**(CPO ④) — `kids-world` 「Bobo Choses 맨투맨 …」이 걸리는
+   *    이유는 한국어라서가 아니라 원상품 식별어 `pop` 이 **그 제목에 없어서** 다.
+   *    🟢 같은 fixture 의 이탈리아어 후보(`mariodannakids` · 제목에 `Pop`+`B226AC033`)는
+   *       **유지된다** — 언어가 기준이 아니라는 직접 증거다.
+   */
+  if (reasons.length === 1 && reasons[0] === "BRAND_LINK") {
+    return {
+      eligibility: "EXCLUDED",
+      reasons: ["BRAND_ONLY_NO_IDENTITY", "BRAND_LINK"],
+      matchedNameTokens,
+    };
+  }
   if (reasons.length > 0) return { eligibility: "ELIGIBLE", reasons, matchedNameTokens };
 
   /* ── ② 확인 불가 — 🔴 원문이 아예 없다 ────────────────────────────────── */

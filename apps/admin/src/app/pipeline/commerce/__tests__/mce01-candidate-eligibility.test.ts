@@ -252,15 +252,30 @@ describe("MCE01 — MI 후보 진입 자격", () => {
     /** 🔴 품번 **비교 불가** 면 나머지 근거를 쓴다(제외하지 않는다). */
     const noCode = evaluateCandidateEligibility({ ...base, candidateModelCode: null, candidateDescription: null });
     /**
-     * 🔴 품번 비교가 **불가능** 하면 나머지 근거를 쓴다 — 제외하지 않는다.
+     * 🔵🔵🔵 **MCQ-02(CPO 판정 2026-11-23) — 브랜드 단독은 «제외» 다.**
      *
-     * 🔵🔵 **MI-CANDIDATE-QUALITY-01 — 「브랜드 하나」를 문턱으로 막지 «않는다».**
-     *    🔴 한 번 막아 봤고 **같은 모양의 다국어 후보가 함께 죽었다**(`kids-world`
-     *       「Bobo Choses 맨투맨 …」). 🟢 CEO 가 가리킨 `apron dress` 를 가르는 것은
-     *       동일성 문턱이 아니라 **도착지 실패** 다 — 바로 아래가 그 대조군이다.
+     * 🔴🔴 이 단언은 **두 번 뒤집혔다. 그 이력을 남긴다** —
+     * ```
+     * MCE-02       브랜드 단독 → 유지   (연결 근거가 하나라도 있으면 유지)
+     * MCQ-01 1차    브랜드 단독 → 제외   🔴 **동일성 문턱을 올려서** ⟹ 다국어 후보가 같이 죽었다
+     * MCQ-01 최종   브랜드 단독 → 유지   (도착지 축으로 갈랐다)
+     * **MCQ-02**    브랜드 단독 → **제외**  🟢 **문턱이 아니라 «식별 근거의 유무» 로**
+     * ```
+     * 🔴 MCQ-01 1차와 **결과는 같고 근거가 다르다** — 그때는 「근거가 둘 이어야 한다」는
+     *    문턱이었고, 지금은 「**브랜드는 연결 근거가 아니다**」는 CPO 식별 원칙이다.
+     *    🟢 그 차이가 실제 동작으로 드러난다 — 품번·상품명·설명 중 **하나만** 연결돼도
+     *       유지된다(문턱이면 둘을 요구해 `donokids`·`nickis` 가 죽는다).
      */
-    expect(noCode.reasons).toContain("BRAND_LINK");
-    expect(noCode.eligibility, "🔴 브랜드 연결 후보를 문턱으로 지웠다").toBe("ELIGIBLE");
+    expect(noCode.reasons, "🔴 브랜드 축이 발화하지 않았다").toContain("BRAND_LINK");
+    expect(noCode.eligibility, "🔴🔴 브랜드 단독이 목록에 들어왔다").toBe("EXCLUDED");
+    expect(noCode.reasons[0], "🔴 사유를 적지 않았다 — 원본은 보존하고 사유로 가른다").toBe(
+      "BRAND_ONLY_NO_IDENTITY",
+    );
+    /**
+     * 🟢🟢 **문턱이 아니라는 증거는 이 파일 아래 `brandPlusName`(A-5)이 이미 들고 있다** —
+     *    브랜드 **+ 상품명 하나** 면 유지된다(CPO 정책표 「브랜드 + 식별 가능한 상품명
+     *    연결 → 유지」). 🔴 같은 단언을 **두 번 쓰지 않는다**(중복 선언이 빌드를 깼다).
+     */
 
     /**
      * 🔴🔴 **N6-b — 도착지가 상품 페이지가 아니면 제외된다**(CEO `apron dress`).
@@ -274,7 +289,11 @@ describe("MCE01 — MI 후보 진입 자격", () => {
     });
     expect(badArrival.eligibility, "🔴🔴 열리지 않은 페이지가 후보로 남았다").toBe("EXCLUDED");
     expect(badArrival.reasons).toEqual(["NOT_PRODUCT_ARRIVAL"]);
-    /** 🔴 **모르면 발화하지 않는다** — 「모른다」를 「도착 실패」로 읽지 않는다. */
+    /**
+     * 🔴 **모르면 발화하지 않는다** — 「모른다」를 「도착 실패」로 읽지 않는다.
+     *    🟢 MCQ-02 이후 이 입력(브랜드 단독)은 **어느 쪽이든 제외** 지만 **사유가 다르다** ⟹
+     *       `eligibility` 가 아니라 **사유** 로 단언한다(그래야 두 축이 섞이지 않는다).
+     */
     for (const unknown of [null, "", "OK"]) {
       expect(
         evaluateCandidateEligibility({
@@ -282,9 +301,9 @@ describe("MCE01 — MI 후보 진입 자격", () => {
           candidateModelCode: null,
           candidateDescription: null,
           candidateArrival: unknown,
-        }).eligibility,
+        }).reasons,
         `🔴 도착지 ${JSON.stringify(unknown)} 를 실패로 읽었다`,
-      ).toBe("ELIGIBLE");
+      ).not.toContain("NOT_PRODUCT_ARRIVAL");
     }
     const brandPlusName = evaluateCandidateEligibility({
       ...base,
@@ -310,6 +329,7 @@ describe("MCE01 — MI 후보 진입 자격", () => {
           candidateBrand: c.candidateBrand,
           candidateModelCode: c.candidateCode,
           candidateTitle: c.candidateTitle,
+        candidateUrl: c.url,
           candidateDescription: c.descriptionRaw,
           conflicts: c.blockers,
         candidateArrival: c.fetchStatus ?? null,
@@ -362,6 +382,7 @@ describe("MCE01 — MI 후보 진입 자격", () => {
         candidateBrand: x.c.candidateBrand,
         candidateModelCode: x.c.candidateCode,
         candidateTitle: x.c.candidateTitle,
+        candidateUrl: x.c.url,
         candidateDescription: x.c.descriptionRaw,
         conflicts: x.c.blockers,
         candidateArrival: x.c.fetchStatus ?? null,
@@ -405,6 +426,7 @@ describe("MCE01 — MI 후보 진입 자격", () => {
         candidateBrand: found!.c.candidateBrand,
         candidateModelCode: found!.c.candidateCode,
         candidateTitle: found!.c.candidateTitle,
+        candidateUrl: found!.c.url,
         candidateDescription: found!.c.descriptionRaw,
         conflicts: found!.c.blockers,
         candidateArrival: found!.c.fetchStatus ?? null,
@@ -414,6 +436,105 @@ describe("MCE01 — MI 후보 진입 자격", () => {
   });
 
   /* ═══ C. 반사실 + 전수 영향 ═════════════════════════════ */
+
+  /**
+   * ════════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 M — **언어는 제외 사유가 «아니다»**(CPO ④ · MCQ-02)
+   * ════════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴🔴 **CPO 문장** — 「다국어라는 이유로 제외하면 안 됩니다. 언어가 아니라 **상품
+   *    식별 근거의 유무** 로 판단합니다.」
+   * 🔴 이 블록이 필요한 이유 — MCQ-02 로 다국어 후보 하나(`kids-world`)가 목록에서
+   *    빠졌다. 🔴 그 하나를 보고 다음 사람이 「다국어는 빠진다」로 읽으면 **정책이
+   *    반대로 구현된다**. 🟢 그래서 **같은 언어 쌍으로 양방향** 을 잠근다.
+   */
+  describe("M 🔵🔵 언어가 아니라 식별 근거로 가른다", () => {
+    /** 🟢 운영 fixture 의 실제 다국어 후보로 본다 — 손으로 만든 문자열이 아니다. */
+    const rev02 = () => {
+      const fx = JSON.parse(
+        readFileSync(join(FIX, "mi-final-e2e-01.json"), "utf8"),
+      ) as {
+        snapshot: { title: string; brand: { value: string }; sku: { value: string } };
+        candidateReviews: { candidate_url: string; candidate_title: string | null }[];
+      };
+      return fx;
+    };
+    const judge = (title: string | null, url: string) => {
+      const fx = rev02();
+      return evaluateCandidateEligibility({
+        originBrand: fx.snapshot.brand.value,
+        originModelCode: fx.snapshot.sku.value || null,
+        originTitle: fx.snapshot.title,
+        candidateBrand: null,
+        candidateModelCode: null,
+        candidateTitle: title,
+        candidateUrl: url,
+        candidateDescription: null,
+      });
+    };
+
+    it("M-1 🟢🟢 **비영어 후보가 식별 상품명을 적으면 «유지»** 된다(이탈리아어 실측)", () => {
+      const fx = rev02();
+      const it_ = fx.candidateReviews.find((c) => c.candidate_url.includes("mariodannakids"));
+      expect(it_, "🔴 이탈리아어 후보가 fixture 에서 사라졌다 — 이 단언의 전제가 깨졌다").toBeTruthy();
+      const got = judge(it_!.candidate_title, it_!.candidate_url);
+      expect(got.eligibility, "🔴🔴 비영어 후보를 언어 때문에 지웠다 — CPO ④ 위반").toBe(
+        "ELIGIBLE",
+      );
+    });
+
+    it("M-2 🔴 **한국어 후보가 식별 상품명을 적으면 «유지»** 된다 — 같은 행의 반사실", () => {
+      const fx = rev02();
+      const ko = fx.candidateReviews.find((c) => c.candidate_url.includes("kids-world"));
+      expect(ko, "🔴 한국어 후보가 fixture 에서 사라졌다").toBeTruthy();
+      /** 🔴 현재는 **제외** 다 — 사유가 언어가 아니라 **브랜드 단독** 임을 단언한다. */
+      const before = judge(ko!.candidate_title, ko!.candidate_url);
+      expect(before.eligibility).toBe("EXCLUDED");
+      expect(before.reasons[0], "🔴🔴 제외 사유가 브랜드 단독이 아니다").toBe(
+        "BRAND_ONLY_NO_IDENTITY",
+      );
+      /**
+       * 🟢🟢 **반사실 — 그 한국어 제목에 식별어만 더하면 «유지» 로 바뀐다.**
+       *    🔴 제목은 **여전히 한국어** 다 ⟹ 가르는 것이 언어가 아니라는 직접 증거다.
+       */
+      const after = judge(`${ko!.candidate_title} Pop`, ko!.candidate_url);
+      expect(after.eligibility, "🔴🔴 식별어를 더해도 한국어라서 지웠다 — CPO ④ 위반").toBe(
+        "ELIGIBLE",
+      );
+      expect(after.reasons).toContain("NAME_LINK");
+    });
+
+    it("M-3 🔴 **URL 에 원상품 품번이 있으면 유지** 된다(운영 owner 재사용 · 구조화 칸 공백)", () => {
+      /**
+       * 🟢 MCQ-02 ⒝ 의 자리 — 후보 **제목·URL** 에 원상품 품번이 그대로 있는 경우다.
+       *    🔴 구조화 품번 칸이 비어 있어도 **국내 후보가 사라지지 않아야** 한다.
+       */
+      const got = evaluateCandidateEligibility({
+        originBrand: "Bobo Choses",
+        originModelCode: "B226AC009",
+        originTitle: "Hug Hairy Monster T-shirt",
+        candidateBrand: null,
+        candidateModelCode: null,
+        candidateTitle: "[BOBO CHOSES]T-Shirt - B226AC009 - 미니부띠끄",
+        candidateUrl: "https://example.kr/goods/1",
+        candidateDescription: null,
+      });
+      expect(got.eligibility, "🔴🔴 제목의 원상품 품번을 못 읽었다").toBe("ELIGIBLE");
+      expect(got.reasons, "🔴 품번 연결로 적지 않았다").toContain("CODE_LINK");
+      /** 🔴 **판매처 자체 SKU 를 품번으로 승격하지 않는다** — 다른 번호는 연결이 아니다. */
+      const other = evaluateCandidateEligibility({
+        originBrand: "Bobo Choses",
+        originModelCode: "B226AC009",
+        originTitle: "Hug Hairy Monster T-shirt",
+        candidateBrand: null,
+        candidateModelCode: null,
+        candidateTitle: "[BOBO CHOSES]T-Shirt - 76A7D-320-01 - 미니부띠끄",
+        candidateUrl: "https://example.kr/goods/2",
+        candidateDescription: null,
+      });
+      expect(other.reasons, "🔴🔴 판매처 자체 번호를 품번 연결로 읽었다").not.toContain("CODE_LINK");
+    });
+  });
 
   it("S-1 🔵🔵 **서버가 후보 목록을 거른다 — 가격 집계 입력은 불변이다**", () => {
     const ROUTE = readFileSync(
@@ -515,6 +636,7 @@ describe("MCE01 — MI 후보 진입 자격", () => {
         candidateBrand: x.c.candidateBrand,
         candidateModelCode: x.c.candidateCode,
         candidateTitle: x.c.candidateTitle,
+        candidateUrl: x.c.url,
         candidateDescription: x.c.descriptionRaw,
         conflicts: x.c.blockers,
         candidateArrival: x.c.fetchStatus ?? null,
@@ -567,8 +689,15 @@ describe("MCE01 — MI 후보 진입 자격", () => {
         candidateBrand: null,
         conflicts: [],
       });
-      expect(after.eligibility, "🔴🔴 브랜드 축이 발화하지 않는다").toBe("ELIGIBLE");
-      expect(after.reasons).toContain("BRAND_LINK");
+      /**
+       * 🔵🔵 **MCQ-02 — 브랜드 축은 «발화하지만» 단독으로는 자격이 되지 않는다.**
+       *    🔴 그래서 변이의 기대값이 「유지」가 아니라 **「사유가 바뀐다」** 다 —
+       *       축이 죽었는지(`NO_IDENTITY_LINK`)와 축은 살아 있는지
+       *       (`BRAND_ONLY_NO_IDENTITY`)를 **구분해서** 단언한다.
+       */
+      expect(after.reasons, "🔴🔴 브랜드 축이 발화하지 않는다").toContain("BRAND_LINK");
+      expect(after.reasons[0], "🔴 브랜드 단독 사유가 아니다").toBe("BRAND_ONLY_NO_IDENTITY");
+      expect(after.eligibility, "🔴 브랜드 단독이 목록에 들어왔다").toBe("EXCLUDED");
     });
 
     it("D-3 🔴 **후보 품번을 다른 모델로 바꾸면** CEO SAME 도 제외된다", () => {
@@ -630,6 +759,7 @@ describe("MCE01 — MI 후보 진입 자격", () => {
           candidateBrand: c.candidateBrand,
           candidateModelCode: c.candidateCode,
           candidateTitle: c.candidateTitle,
+        candidateUrl: c.url,
           candidateDescription: c.descriptionRaw,
           conflicts: c.blockers,
         candidateArrival: c.fetchStatus ?? null,
@@ -742,14 +872,33 @@ describe("MCE01 — MI 후보 진입 자격", () => {
      *    🟢 그래서 **recall 을 잃지 않는 쪽** 을 택했다.
      * 🔴 남은 확인불가 **5** 는 제목조차 없는 행이다(원문 0) — 「없음」이 아니다.
      */
-    expect(tally.ELIGIBLE, "🔴 유지 수가 바뀌었다").toBe(201);
-    expect(tally.EXCLUDED, "🔴 제외 수가 바뀌었다").toBe(158);
+    expect(tally.ELIGIBLE, "🔴 유지 수가 바뀌었다").toBe(194);
+    expect(tally.EXCLUDED, "🔴 제외 수가 바뀌었다").toBe(165);
     expect(tally.UNVERIFIABLE, "🔴 확인 불가 수가 바뀌었다").toBe(5);
+    /**
+     * 🔵🔵🔵 **MCQ-02 전수 영향 — 브랜드 단독 10건 중 «7» 만 제외된다.**
+     * ```
+     * 브랜드 단독으로 «분류» 된 행        10
+     *   ⒜ 원상품 제목 식별어 0 · 후보 제목이 **완전히 동일**   2  🟢 유지(운영 SAME)
+     *   ⒝ 후보 **제목에 원상품 품번** 이 그대로(market KR)    1  🟢 유지
+     *   ⒞ 진짜 브랜드 단독                                 7  🔴 제외
+     * ```
+     * 🔴🔴 ⒜⒝를 같이 제외하면 **기존 운영 SAME 과 국내 후보가 줄어든다** — CPO 가
+     *    경고한 「구조화 필드 누락과 원문 미관측을 혼동」 바로 그 자리다.
+     */
+    expect(why.BRAND_ONLY_NO_IDENTITY, "🔴 브랜드 단독 제외 수가 바뀌었다").toBe(7);
+    /** 🟢 운영 품번 확인(제목·URL)이 **실제로 발화한다** — 0 이면 ⒝가 죽는다. */
+    expect(why.CODE_LINK ?? 0, "🔴🔴 품번 연결이 한 번도 발화하지 않았다").toBeGreaterThan(0);
     expect(keptSame, "🔴 운영 SAME 유지 수가 바뀌었다").toBe(83);
     expect(krKept, "🔴🔴 국내 후보가 줄었다").toBe(krBefore);
     /** 🔴 M6 — 제목에서 브랜드를 찾는 경로가 **140건** 을 살린다. */
     expect(why.BRAND_LINK, "🔴 브랜드 연결 수가 바뀌었다 — 제목 조회 경로를 확인하라").toBe(140);
-    expect(why.NAME_LINK, "🔴 상품명 연결 수가 바뀌었다").toBe(191);
+    /**
+     * 🔵 **MCQ-02 — 191 → 193.** 🔴 느슨해진 것이 아니다: 원상품 제목에 식별어가 **0** 인
+     *    행에서 **후보 제목이 정규화 후 완전히 같을 때만** 상품명 연결로 센다(실측 **2건** ·
+     *    둘 다 운영 **SAME**). 🔴 부분일치는 세지 않는다.
+     */
+    expect(why.NAME_LINK, "🔴 상품명 연결 수가 바뀌었다").toBe(193);
     /** 🔴 일반어만 겹친 제외와 근거 없음 제외를 **갈라** 잠근다. */
     expect(why.GENERIC_TOKENS_ONLY, "🔴 일반어 제외 수가 바뀌었다").toBe(1);
     expect(why.EXPLICIT_CONFLICT, "🔴 충돌 제외 수가 바뀌었다").toBe(155);

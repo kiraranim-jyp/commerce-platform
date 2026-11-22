@@ -727,6 +727,8 @@ export async function POST(request: Request) {
       candidateBrand: e.brand ?? null,
       candidateModelCode: e.modelCode ?? null,
       candidateTitle: e.title ?? null,
+      /** 🟢 MCQ-02 — 운영 품번 확인 건초더미의 한 칸(`confirmBrandCodeInEvidence`). */
+      candidateUrl: e.discoveredUrl ?? null,
       candidateDescription: e.description ?? null,
       conflicts: e.crossSellerBlockers ?? null,
     });

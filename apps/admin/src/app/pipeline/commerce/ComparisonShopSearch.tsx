@@ -803,6 +803,8 @@ function ResultTable({
       candidateBrand: c.brand ?? null,
       candidateModelCode: c.facts?.brandModelCode ?? null,
       candidateTitle: c.title,
+      /** 🟢 MCQ-02 — 운영 품번 확인 건초더미의 한 칸(`confirmBrandCodeInEvidence`). */
+      candidateUrl: c.url ?? null,
       conflicts: c.crossSellerBlockers ?? null,
     });
   const visibleRows = allRows.filter((row) => row.candidate && mayShow(row.candidate));

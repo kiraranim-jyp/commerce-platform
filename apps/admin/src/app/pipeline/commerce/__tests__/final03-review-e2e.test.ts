@@ -179,10 +179,13 @@ describe("FINAL-03 ④ — 최종 검증 덤프", () => {
       /* ── 단언 ─────────────────────────────────────────────────────── */
       expect(rows, "🔴 입력 분모가 10 이 아니다").toHaveLength(10);
       /**
-       * 🔵🔵 MI-CANDIDATE-ELIGIBILITY-01 — **8 → 2.** 원상품과 연결 근거가 없는
-       *    후보 6건이 검토 대기에서 빠졌다(CEO 가 「왜 후보까지 온거지?」라 한 그것).
-       */
-      expect(reviewRows, "🔴 화면 검토 행이 2개가 아니다").toHaveLength(2);
+        * 🔵🔵 MI-CANDIDATE-ELIGIBILITY-01 — **8 → 2.** 원상품과 연결 근거가 없는
+        *    후보 6건이 검토 대기에서 빠졌다(CEO 가 「왜 후보까지 온거지?」라 한 그것).
+        * 🔵🔵🔵 **MCQ-02(CPO 판정 2026-11-23) — 2 → 1.** 「브랜드만 같은」 후보
+        *    (`kids-world` 「Bobo Choses 맨투맨 …」)가 하나 더 빠졌다.
+        *    🔴 사유는 **다국어가 아니다** — 원상품 식별어 `pop` 이 그 제목에 없다.
+        */
+      expect(reviewRows, "🔴 화면 검토 행이 1개가 아니다").toHaveLength(1);
       expect(kr.length + os.length + unresolved.length, "🔴 구역 합이 전체와 다르다").toBe(all.length);
       /** ① 세 축이 **행마다** 원상품/후보 둘 다 채워져 있다(빈 칸 0). */
       for (const r of table) {

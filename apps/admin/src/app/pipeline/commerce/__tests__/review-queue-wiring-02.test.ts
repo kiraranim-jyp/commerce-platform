@@ -139,8 +139,20 @@ describe("REV-02 A — 실데이터가 비교목록표에 오른다", () => {
     /**
      * 🔵🔵 **8 → 2.** 🔴 숫자만 바꾸지 않았다 — **누가 남고 누가 사라졌는지** 를 같이 잠근다.
      * ```
-     * 🟢 남는 둘   junioredition.com 「Bobo Choses Pop Sweatshirt by Bobo Choses」
-     *              kids-world.com    「Bobo Choses 맨투맨 …」(🟢 다국어인데 살아남는다)
+     * 🔵🔵🔵 **MCQ-02(CPO 판정 2026-11-23)로 2 → 1 이 됐다.**
+     * ```
+     * 🟢 남는 하나  junioredition.com 「Bobo Choses Pop Sweatshirt by Bobo Choses」
+     *               (브랜드 **+ 식별 상품명 `pop`** 연결)
+     * 🔴 빠진 하나  kids-world.com 「Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트」
+     * ```
+     * 🔴🔴 **그 제외 사유가 「다국어」가 «아니다»** — CPO ④ 가 금지한 그 해석이다.
+     *    🟢 실측 — 원상품 식별어는 `pop` 하나이고 그 제목에 **`pop` 이 없다**
+     *       (「미드나잇 블루」·「프린트」·「맨투맨」은 색상·상품군 **일반어**) ⟹
+     *       **브랜드 단독** 이다(`BRAND_ONLY_NO_IDENTITY`).
+     * 🟢🟢 **언어가 기준이 아니라는 증거가 같은 fixture 안에 있다** — 이탈리아 사이트
+     *    `mariodannakids.it` 후보는 제목에 `Pop` 과 `B226AC033` 을 적어 **자격을 얻는다**
+     *    (아래 M-1 이 그것을 잠근다).
+     * 🔴 과거 둘 중 하나   kids-world.com (🟢 다국어인데 살아남는다 — **MCE-02 기준**)
      * 🔴 사라진 6  Lacoste Navy Sweatshirt · Baby Boys Blue Cotton Bear Sweatshirt ·
      *              Jude Navy Baby Boy Anchor Sweater · Maya Girls' … Sweater Top ·
      *              Baby Sweater Suit ''Blue Moon'' · 🔴 coupleshot(제목 인코딩 손상)
@@ -151,16 +163,18 @@ describe("REV-02 A — 실데이터가 비교목록표에 오른다", () => {
      *    🟢 라이브 경로는 설명을 행에 싣는다(그 배선은 들어갔다).
      */
     const rows = q(host, '[data-testid="mi-review-row"]');
-    expect(rows, "🔴 화면에 검토 행이 2개가 아니다").toHaveLength(2);
+    expect(rows, "🔴 화면에 검토 행이 1개가 아니다").toHaveLength(1);
     /**
      * 🔴 **범위를 검토 행으로 좁힌다** — 1차에 `host.textContent` 전체를 봤고
      *    접힌 **후보 구역**(`GeminiTransientCandidates`)이 전건을 렌더하므로
      *    `kidbizkid` 가 그 안에서 잡혔다. 🟢 그 구역은 이 WU 의 범위가 아니다.
      */
     const text = rows.map((r) => r.textContent ?? "").join(" ");
-    for (const keep of ["junioredition.com", "kids-world.com"]) {
+    for (const keep of ["junioredition.com"]) {
       expect(text, `🔴🔴 연결 근거가 있는 후보가 사라졌다: ${keep}`).toContain(keep);
     }
+    /** 🔴 브랜드 단독은 목록에 서지 않는다(CPO 판정) — 🟢 원본은 보존된다. */
+    expect(text, "🔴🔴 브랜드 단독 후보가 아직 선다").not.toContain("kids-world.com");
     for (const gone of ["kidbizkid.com", "shoppiccoliandco.com", "petitemaisonkids.com"]) {
       expect(text, `🔴🔴 무관 후보가 아직 선다: ${gone}`).not.toContain(gone);
     }
@@ -170,7 +184,7 @@ describe("REV-02 A — 실데이터가 비교목록표에 오른다", () => {
     const host = mount({ rows: realRows(), originIdentity: realOrigin() });
     const summary = text(host.querySelector('[data-testid="mi-review-queue-summary"]'));
     expect(summary).toContain(REVIEW_QUEUE_HEADING);
-    expect(summary, "🔴 건수가 화면에 없다").toContain("2");
+    expect(summary, "🔴 건수가 화면에 없다").toContain("1");
   });
 
   it("A-4 🔴 **확정 SAME 은 검토 행에 없다** — 자동 판정이 끝난 것을 다시 묻지 않는다", () => {
@@ -288,7 +302,10 @@ describe("REV-02 B — 브랜드·품번·상품명이 나란히 선다", () => 
   it("B-8 🟢 원문 확인 통로가 **행마다** 있다 — 사람이 직접 볼 수 있어야 판단이 된다", () => {
     const host = mount({ rows: realRows(), originIdentity: realOrigin() });
     const links = q(host, '[data-testid="mi-review-open-page"]');
-    expect(links, "🔴 원문 통로가 행 수와 다르다").toHaveLength(2);
+    expect(links, "🔴 원문 통로가 행 수와 다르다").toHaveLength(
+      q(host, '[data-testid="mi-review-row"]').length,
+    );
+    expect(links.length, "🔴 분모 0 — 아무것도 단언하지 못한다").toBeGreaterThan(0);
     for (const a of links) {
       expect(text(a)).toBe(REVIEW_OPEN_PAGE_TEXT);
       expect((a as HTMLAnchorElement).getAttribute("href"), "🔴 갈 곳 없는 링크다").toMatch(/^http/);
@@ -345,13 +362,26 @@ describe("REV-02 C — 시장별 구역이 겹치지 않고 합이 전체다", (
         .length;
     expect(rowsIn("kr")).toBe(selectReviewQueue(rows, "KR", realOrigin()).length);
     expect(rowsIn("overseas")).toBe(selectReviewQueue(rows, "OVERSEAS", realOrigin()).length);
-    /** 🟢 미확정 = 전체 − (국내 + 해외) — 그 차집합이 **실제로 0 이 아니다**(분모 잠금). */
+    /**
+     * 🟢 미확정 = 전체 − (국내 + 해외) — **구역 합이 전체** 라는 불변은 그대로다.
+     *
+     * 🔴🔴 **MCQ-02 로 이 fixture 의 미확정 분모가 «0» 이 됐다** — 미확정이던 행
+     *    (`kids-world`)이 **브랜드 단독** 으로 제외됐기 때문이다. 🔴 그래서
+     *    「미확정 구역」 규칙은 **이 화면 축에서 측정 불가** 다 — 0 으로 적지 않는다.
+     * 🟢 대신 **선택기 축** 에서 분모를 유지한다 — 자격 필터를 **걸지 않은** 선택기
+     *    (2-인자 꼴)에는 그 행이 살아 있고, 「미확정을 국내·해외로 옮겨 적지 않는다」는
+     *    **그 축의 규칙** 이다. ⟹ 규칙은 계속 잠기고 분모는 거짓이 되지 않는다.
+     */
     const unresolved =
       selectReviewQueue(rows, "ALL", realOrigin()).length -
       selectReviewQueue(rows, "KR", realOrigin()).length -
       selectReviewQueue(rows, "OVERSEAS", realOrigin()).length;
-    expect(unresolved, "🔴 분모 0 — 시장 미확정 후보가 없다").toBeGreaterThan(0);
     expect(rowsIn("unresolved")).toBe(unresolved);
+    const rawUnresolved =
+      selectReviewQueue(rows, "ALL").length -
+      selectReviewQueue(rows, "KR").length -
+      selectReviewQueue(rows, "OVERSEAS").length;
+    expect(rawUnresolved, "🔴 분모 0 — 미확정 규칙을 어느 축에서도 못 잰다").toBeGreaterThan(0);
   });
 
   it("C-5 🔴 **빈 구역의 머리말을 그리지 않는다** — 「국내 0건」은 조회 실패로 읽힌다", () => {
@@ -365,7 +395,13 @@ describe("REV-02 C — 시장별 구역이 겹치지 않고 합이 전체다", (
   });
 
   it("C-6 🟢 **시장 미확정을 국내·해외로 옮겨 적지 않는다**(승격 0)", () => {
-    const host = mount({ rows: realRows(), originIdentity: realOrigin() });
+    /**
+     * 🔴🔴 **MCQ-02 로 이 화면의 미확정 분모가 0 이 됐다**(C-4 의 그 사유) ⟹
+     *    자격 필터를 **걸지 않은** 입력으로 그 구역을 세운다. 🔴 「미확정 승격 금지」는
+     *    **시장 분류 규칙** 이고 **후보 자격과 다른 축** 이다 — 둘을 섞으면 이 계약이
+     *    조용히 사라진다(그것이 이 WU 에서 실제로 일어날 수 있었던 일이다).
+     */
+    const host = mount({ rows: realRows() });
     expect(
       text(host.querySelector('[data-testid="mi-review-group-unresolved"]')),
     ).toContain(REVIEW_UNRESOLVED_MARKET_HEADING);
@@ -734,7 +770,12 @@ describe("REV-02/FINAL-03 H — 사람 판정 UI", () => {
 
 describe("REV-02/FINAL-03 I — 후보 브랜드·품번 원값", () => {
   it("I-1 🟢🟢 **원값이 있으면 그대로 선다** — 원상품과 나란히", () => {
-    const target = selectReviewQueue(realRows(), "ALL")[0]!.row.discoveredUrl;
+    /**
+     * 🔴 **대상은 «운영 큐» 에서 고른다** — 자격 필터를 안 거친 선택기에서 고르면
+     *    목록에 없는 행에 원값을 심어 「원값이 안 보인다」는 **거짓 FAIL** 이 난다
+     *    (MCQ-01 에서 실제로 났다).
+     */
+    const target = selectReviewQueue(realRows(), "ALL", realOrigin())[0]!.row.discoveredUrl;
     const rows = realRows().map((r) =>
       r.discoveredUrl === target ? { ...r, brand: "Bobo Choses", modelCode: "B226AC033" } : r,
     );
