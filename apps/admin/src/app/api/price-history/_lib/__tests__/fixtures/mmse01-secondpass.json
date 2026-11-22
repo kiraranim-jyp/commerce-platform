@@ -1,0 +1,418 @@
+{
+ "note": "MMSE01 2차 — SAME 0 상품군의 비실제다름 9건 선택적 증거 확인. 운영 추출기 그대로 · 승격 0 · 판정 변경 0.",
+ "collectedAt": "2026-11-22T07:27:56.608Z",
+ "httpCalls": 10,
+ "zeroSameGroups": [
+  "의류-원피스",
+  "의류-하의",
+  "의류-아웃터",
+  "액세서리-모자"
+ ],
+ "targetCount": 9,
+ "rows": [
+  {
+   "group": "의류-원피스",
+   "originTitle": "Handsmock Dress in Little Bouquet by Bonjour",
+   "originBrand": "Bonjour",
+   "originSku": null,
+   "domain": "junioredition.com",
+   "url": "https://junioredition.com/products/exclusive-handsmock-dress-in-pink-tapestry-by-bonjour",
+   "firstPass": {
+    "state": "INSUFFICIENT",
+    "brand": "MATCH",
+    "code": "NO_EVIDENCE",
+    "note": "브랜드=MATCH · 품번=NO_EVIDENCE · 제목겹침0=false"
+   },
+   "stored": {
+    "verdict": "PRESUMED_SAME",
+    "tier": "COMPARISON",
+    "market": "OVERSEAS"
+   },
+   "missingEvidence": [
+    "품번 증거"
+   ],
+   "live": {
+    "status": "OK",
+    "fetchPath": "SHOPIFY_JSON",
+    "titleRaw": "Handsmock Dress in Pink Tapestry by Bonjour - Last Ones In Stock - 6-12 Years",
+    "brandRaw": "Bonjour",
+    "codeRaw": "BJ87",
+    "colorText": "Pink Tapestry",
+    "materialText": "Handsmock Dress by Bonjour. Bonjour's iconic handsmock style in a longer length dress. In a beautiful pink tapestry fabric, with pink smocking and embroidered flowers. Colour - Pink Tapestry. 100% Cotton. Size Guide (all measurements are approximate and offered as a guide only.): 2 Years - Chest 30cm, Hips 56cm. 4 Years - Chest 31cm, Hips 60cm. 6 Years - Chest 32cm, Hips 64cm. 8 Years - Chest 33cm, Hips 68cm. 10 Years - Chest 34cm, Hips 72cm. 12 Years - Chest 35cm, Hips 76cm. Product Code BJ87_AW25",
+    "descriptionLength": 503,
+    "originCodeInCandidate": {
+     "found": false,
+     "excerpt": null
+    },
+    "originBrandInCandidate": {
+     "found": true,
+     "excerpt": "Handsmock Dress in Pink Tapestry by Bonjour - Last Ones In Stock - 6-12 Years Handsmock Dress"
+    },
+    "price": {
+     "amount": 29.7,
+     "currency": "GBP"
+    },
+    "imageUrl": "https://cdn.shopify.com/s/files/1/0874/8574/files/Bonjour-AW25-Exclusives-Handsmock-Dress-Pink-Tapestry-1.jpg?v=1758973236"
+   }
+  },
+  {
+   "group": "의류-하의",
+   "originTitle": "Taxi Saurus Tag denim pants",
+   "originBrand": "Bobo Choses",
+   "originSku": null,
+   "domain": "junioredition.com",
+   "url": "https://junioredition.com/products/taxi-saurus-tag-denim-pants-by-bobo-choses",
+   "firstPass": {
+    "state": "STRUCTURED_ENOUGH",
+    "brand": "MATCH",
+    "code": "MATCH",
+    "note": "브랜드·품번 일치 · 상품명 유사도 100%"
+   },
+   "stored": {
+    "verdict": "PRESUMED_SAME",
+    "tier": "COMPARISON",
+    "market": "OVERSEAS"
+   },
+   "missingEvidence": [],
+   "live": {
+    "status": "OK",
+    "fetchPath": "SHOPIFY_JSON",
+    "titleRaw": "Taxi Saurus Tag Denim Pants by Bobo Choses",
+    "brandRaw": "Bobo Choses",
+    "codeRaw": "B226AC073",
+    "colorText": "saurus tag denim",
+    "materialText": "Taxi Saurus Tag Denim Pants by Bobo Choses. Midnight blue denim trousers designed with an elasticated waistband, tapered legs and front pockets. Colour - Midnight Blue. 100% Organic Cotton. Product code B226AC073 AW26 Made in Portugal.",
+    "descriptionLength": 235,
+    "originCodeInCandidate": {
+     "found": false,
+     "excerpt": null
+    },
+    "originBrandInCandidate": {
+     "found": true,
+     "excerpt": "Taxi Saurus Tag Denim Pants by Bobo Choses Taxi Saurus Tag Denim Pants by Bobo Choses. Midni"
+    },
+    "price": {
+     "amount": 52.5,
+     "currency": "GBP"
+    },
+    "imageUrl": "https://cdn.shopify.com/s/files/1/0874/8574/files/Bobo-Choses-AW26-Taxi-Saurus-Tag-Denim-Pants.jpg?v=1784289414"
+   }
+  },
+  {
+   "group": "의류-하의",
+   "originTitle": "Taxi Saurus Tag denim pants",
+   "originBrand": "Bobo Choses",
+   "originSku": null,
+   "domain": null,
+   "url": "https://www.donokids.com/shop/shopdetail.html?branduid=3362810&type=x&current_category=058",
+   "firstPass": {
+    "state": "INSUFFICIENT",
+    "brand": "UNKNOWN",
+    "code": "UNKNOWN",
+    "note": "브랜드=UNKNOWN · 품번=UNKNOWN · 제목겹침0=false"
+   },
+   "stored": {
+    "verdict": null,
+    "tier": null,
+    "market": null
+   },
+   "missingEvidence": [
+    "품번 증거",
+    "브랜드 축 미기록"
+   ],
+   "live": {
+    "status": "OK",
+    "fetchPath": "PLAIN_HTML",
+    "titleRaw": "[[보보쇼즈] Taxi Saurus Tag denim pants #226AC073]",
+    "brandRaw": null,
+    "codeRaw": null,
+    "colorText": null,
+    "materialText": null,
+    "descriptionLength": 46,
+    "originCodeInCandidate": {
+     "found": false,
+     "excerpt": null
+    },
+    "originBrandInCandidate": {
+     "found": false,
+     "excerpt": null
+    },
+    "price": {
+     "amount": 175000,
+     "currency": "KRW"
+    },
+    "imageUrl": null
+   }
+  },
+  {
+   "group": "액세서리-모자",
+   "originTitle": "Double Deerstalker Cap in Blue / Soft Tan by Wynken",
+   "originBrand": "Wynken",
+   "originSku": "WK21A165",
+   "domain": "junioredition.com",
+   "url": "https://junioredition.com/products/double-deerstalker-cap-in-blue-soft-tan-by-wynken",
+   "firstPass": {
+    "state": "INSUFFICIENT",
+    "brand": "UNKNOWN",
+    "code": "UNKNOWN",
+    "note": "브랜드=UNKNOWN · 품번=UNKNOWN · 제목겹침0=false"
+   },
+   "stored": {
+    "verdict": "PRESUMED_SAME",
+    "tier": "COMPARISON",
+    "market": "OVERSEAS"
+   },
+   "missingEvidence": [
+    "품번 증거",
+    "브랜드 축 미기록"
+   ],
+   "live": {
+    "status": "OK",
+    "fetchPath": "SHOPIFY_JSON",
+    "titleRaw": "Double Deerstalker Cap in Blue / Soft Tan by Wynken",
+    "brandRaw": "Wynken",
+    "codeRaw": "WK21A165",
+    "colorText": "Blue / Soft Tan",
+    "materialText": "Double Deerstalker Cap by Wynken. The Double Deerstalker is a two-in-one cap, featuring an outer cap in ultramarine blue 100% nylon with subtle tone-on-tone “wynken” embroidery, and an inner cap in soft tan faux fur with a cotton lining. Each piece can be worn separately or snapped together with press studs, making this two-in-one hat both practical and versatile. Lightweight and cosy, this faux fur and nylon cap is easy to style on its own or layered for added warmth. A tactile, playful accessory that adds texture, sophistication and a creative twist to your everyday look. Colour - Blue / Soft Tan. Outer: 100% Nylon. Inner: 100% Polyester. Lining: 100% Cotton. Made in China. Product Code WK21A165 AW26",
+    "descriptionLength": 711,
+    "originCodeInCandidate": {
+     "found": true,
+     "excerpt": "Lining: 100% Cotton. Made in China. Product Code WK21A165 AW26"
+    },
+    "originBrandInCandidate": {
+     "found": true,
+     "excerpt": "Double Deerstalker Cap in Blue / Soft Tan by Wynken Double Deerstalker Cap by Wynken. The Double Deer"
+    },
+    "price": {
+     "amount": 36.4,
+     "currency": "GBP"
+    },
+    "imageUrl": "https://cdn.shopify.com/s/files/1/0874/8574/files/Wynken-AW26-Double-Deerstalker-Cap-Blue-Soft-Tan-2.jpg?v=1786447669"
+   }
+  },
+  {
+   "group": "의류-아웃터",
+   "originTitle": "Mixed Media Jacket in Ecru Mix by Wynken",
+   "originBrand": "Wynken",
+   "originSku": "WK21W97",
+   "domain": "junioredition.com",
+   "url": "https://junioredition.com/products/mixed-media-jacket-in-blue-mix-by-wynken",
+   "firstPass": {
+    "state": "INSUFFICIENT",
+    "brand": "UNKNOWN",
+    "code": "UNKNOWN",
+    "note": "브랜드=UNKNOWN · 품번=UNKNOWN · 제목겹침0=false"
+   },
+   "stored": {
+    "verdict": "PRESUMED_SAME",
+    "tier": "COMPARISON",
+    "market": "OVERSEAS"
+   },
+   "missingEvidence": [
+    "품번 증거",
+    "브랜드 축 미기록"
+   ],
+   "live": {
+    "status": "OK",
+    "fetchPath": "SHOPIFY_JSON",
+    "titleRaw": "Mixed Media Jacket in Blue Mix by Wynken",
+    "brandRaw": "Wynken",
+    "codeRaw": "WK21W97",
+    "colorText": "Blue Mix",
+    "materialText": "Mixed Media Jacket by Wynken. This mixed media jacket is perfect for colder days, combining warmth with playful style. The blue faux fur exterior adds texture and character, while the Wynken stitching in a painter’s palette shape gives a subtle, creative detail. A collar keeps little ones extra cosy, and pockets are perfect for keeping hands warm. Soft, comfortable, and easy to layer, this fleece jacket balances practicality, style, and character, making it a versatile choice for chilly days and playful adventures. Colour - Blue Mix. Shell: 100% Polyester. Panel: 100% Nylon. Made in China. Product Code WK21W97 AW26",
+    "descriptionLength": 622,
+    "originCodeInCandidate": {
+     "found": true,
+     "excerpt": "r. Panel: 100% Nylon. Made in China. Product Code WK21W97 AW26"
+    },
+    "originBrandInCandidate": {
+     "found": true,
+     "excerpt": "Mixed Media Jacket in Blue Mix by Wynken Mixed Media Jacket by Wynken. This mixed media ja"
+    },
+    "price": {
+     "amount": 63.7,
+     "currency": "GBP"
+    },
+    "imageUrl": "https://cdn.shopify.com/s/files/1/0874/8574/files/Wynken-AW26-Mixed-Media-Jacket-Blue-Mix.jpg?v=1786438148"
+   }
+  },
+  {
+   "group": "의류-아웃터",
+   "originTitle": "Mixed Media Jacket in Ecru Mix by Wynken",
+   "originBrand": "Wynken",
+   "originSku": "WK21W97",
+   "domain": "nickis.com",
+   "url": "https://nickis.com/products/wynken-jacke-mixed-media-mehrfarbig-7400851022",
+   "firstPass": {
+    "state": "INSUFFICIENT",
+    "brand": "UNKNOWN",
+    "code": "UNKNOWN",
+    "note": "브랜드=UNKNOWN · 품번=UNKNOWN · 제목겹침0=false"
+   },
+   "stored": {
+    "verdict": "PRESUMED_SAME",
+    "tier": "COMPARISON",
+    "market": "OVERSEAS"
+   },
+   "missingEvidence": [
+    "품번 증거",
+    "브랜드 축 미기록"
+   ],
+   "live": {
+    "status": "OK",
+    "fetchPath": "SHOPIFY_JSON",
+    "titleRaw": "Jacke Mixed Media Mehrfarbig",
+    "brandRaw": "Wynken",
+    "codeRaw": null,
+    "colorText": null,
+    "materialText": "Diese Mixed-Media-Jacke ist der perfekte Begleiter für kalte Tage und verbindet wärmenden Komfort mit einem verspielten Stilmix. Das cremefarbene Kunstfell-Obermaterial mit Colour-Block-Ärmeln in Rot und Blau sorgt für Textur und Charakter, während die Wynken-Stickerei in Form einer Malpalette einen kreativen Akzent setzt. Ein Kragen hält zusätzlich warm, Taschen sorgen für kuschelig warme Hände – weich, bequem und ideal zum Layern. Das Obermaterial besteht zu 100% aus Polyester, ergänzt durch Einsätze aus 100% Nylon an den Colour-Block-Ärmeln. Über einem Pullover oder dicken Longsleeve getragen, hält die Jacke auch an kalten Tagen zuverlässig warm. Die Wynken-Stickerei in Form einer Malpalette ist das kreative Detail, das dieses Modell von einer gewöhnlichen Kunstfelljacke unterscheidet.",
+    "descriptionLength": 799,
+    "originCodeInCandidate": {
+     "found": false,
+     "excerpt": null
+    },
+    "originBrandInCandidate": {
+     "found": true,
+     "excerpt": "Blau sorgt für Textur und Charakter, während die Wynken-Stickerei in Form einer Malpalette einen kreative"
+    },
+    "price": {
+     "amount": 83.2,
+     "currency": "EUR"
+    },
+    "imageUrl": "https://cdn.shopify.com/s/files/1/0632/7677/7627/files/1787576108-7400851022-1.jpg?v=1787576116"
+   }
+  },
+  {
+   "group": "의류-아웃터",
+   "originTitle": "Mixed Media Jacket in Ecru Mix by Wynken",
+   "originBrand": "Wynken",
+   "originSku": "WK21W97",
+   "domain": "villagekids.co.uk",
+   "url": "https://villagekids.co.uk/products/black-puffer-coat-4",
+   "firstPass": {
+    "state": "INSUFFICIENT",
+    "brand": "MISMATCH",
+    "code": "UNKNOWN",
+    "note": "브랜드=MISMATCH · 품번=UNKNOWN · 제목겹침0=true"
+   },
+   "stored": {
+    "verdict": "PRESUMED_SAME",
+    "tier": "COMPARISON",
+    "market": "OVERSEAS"
+   },
+   "missingEvidence": [
+    "품번 증거"
+   ],
+   "live": {
+    "status": "OK",
+    "fetchPath": "SHOPIFY_JSON",
+    "titleRaw": "Black Puffer Coat",
+    "brandRaw": "Guess",
+    "codeRaw": null,
+    "colorText": "black",
+    "materialText": "Black coat for girls by Guess. This hooded puffer coat has the logo badge at the chest, a mock, elasticated belt with gold tone branded studs and two front pockets. There is a full zip and popper closures with elasticated cuffs for a perfect fit. 100% Polyester Machine wash 30* E12-J6BL03-JBLK",
+    "descriptionLength": 294,
+    "originCodeInCandidate": {
+     "found": false,
+     "excerpt": null
+    },
+    "originBrandInCandidate": {
+     "found": false,
+     "excerpt": null
+    },
+    "price": {
+     "amount": 63.2,
+     "currency": "GBP"
+    },
+    "imageUrl": "https://cdn.shopify.com/s/files/1/0278/6259/7706/files/products-2026-08-20T130005.911.jpg?v=1787227499"
+   }
+  },
+  {
+   "group": "의류-아웃터",
+   "originTitle": "Stamp Bloom all over reversible anorak",
+   "originBrand": "Bobo Choses",
+   "originSku": null,
+   "domain": "nickis.com",
+   "url": "https://nickis.com/products/colmar-daunenjacke-reversible-quilted-marineblau-7404628282",
+   "firstPass": {
+    "state": "INSUFFICIENT",
+    "brand": "MISMATCH",
+    "code": "UNKNOWN",
+    "note": "브랜드=MISMATCH · 품번=UNKNOWN · 제목겹침0=false"
+   },
+   "stored": {
+    "verdict": "PRESUMED_SAME",
+    "tier": "COMPARISON",
+    "market": "OVERSEAS"
+   },
+   "missingEvidence": [
+    "품번 증거"
+   ],
+   "live": {
+    "status": "OK",
+    "fetchPath": "SHOPIFY_JSON",
+    "titleRaw": "Daunenjacke Reversible Quilted Marineblau",
+    "brandRaw": "Colmar",
+    "codeRaw": null,
+    "colorText": "der farbe navy",
+    "materialText": null,
+    "descriptionLength": 1176,
+    "originCodeInCandidate": {
+     "found": false,
+     "excerpt": null
+    },
+    "originBrandInCandidate": {
+     "found": false,
+     "excerpt": null
+    },
+    "price": {
+     "amount": 292,
+     "currency": "EUR"
+    },
+    "imageUrl": "https://cdn.shopify.com/s/files/1/0632/7677/7627/files/7404628282-1.jpg?v=1790246948"
+   }
+  },
+  {
+   "group": "의류-원피스",
+   "originTitle": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+   "originBrand": "Bonjour",
+   "originSku": null,
+   "domain": "junioredition.com",
+   "url": "https://junioredition.com/products/handsmock-apron-dress-in-natural-by-bonjour",
+   "firstPass": {
+    "state": "INSUFFICIENT",
+    "brand": "MATCH",
+    "code": "NO_EVIDENCE",
+    "note": "브랜드=MATCH · 품번=NO_EVIDENCE · 제목겹침0=false"
+   },
+   "stored": {
+    "verdict": "PRESUMED_SAME",
+    "tier": "COMPARISON",
+    "market": "OVERSEAS"
+   },
+   "missingEvidence": [
+    "품번 증거"
+   ],
+   "live": {
+    "status": "REDIRECTED_AWAY",
+    "fetchPath": "PLAIN_HTML",
+    "titleRaw": null,
+    "brandRaw": null,
+    "codeRaw": null,
+    "colorText": null,
+    "materialText": null,
+    "descriptionLength": 0,
+    "originCodeInCandidate": {
+     "found": false,
+     "excerpt": null
+    },
+    "originBrandInCandidate": {
+     "found": false,
+     "excerpt": null
+    },
+    "price": null,
+    "imageUrl": null
+   }
+  }
+ ]
+}
