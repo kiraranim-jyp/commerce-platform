@@ -1,0 +1,1080 @@
+{
+ "note": "MI-UNIFIED-IDENTITY-EVIDENCE-DESIGN-01 — 브랜드·품번·상품명·상세설명 통합 비교표. 기존 산출물 넷만 재사용 · HTTP 0 · 승격 0 · 판정 변경 0.",
+ "stateMapping": {
+  "MATCH": "PRESENT",
+  "CONFLICT": "CONFLICT",
+  "UNKNOWN": "MISSING",
+  "NOT_MEASURED": "NOT_MEASURED"
+ },
+ "baseline": {
+  "candidates": 364,
+  "origins": 122,
+  "operationalSame": 83,
+  "humanLabels": 22
+ },
+ "byGroup": {
+  "의류-상의": 8,
+  "의류-원피스": 2,
+  "의류-하의": 2,
+  "액세서리-모자": 1,
+  "의류-아웃터": 4
+ },
+ "byScenario": {
+  "0": 4,
+  "1": 1,
+  "2": 1,
+  "3": 1,
+  "7": 1,
+  "8": 7,
+  "9": 1,
+  "10": 1
+ },
+ "rows": [
+  {
+   "group": "의류-상의",
+   "originTitle": "Bobo Choses Pop sweatshirt",
+   "domain": "coupleshot.com",
+   "brand": {
+    "originStructured": "Bobo Choses",
+    "candidateStructured": null,
+    "axis": {
+     "comparison": "MISSING",
+     "origin": [],
+     "candidate": [],
+     "conflictBasis": null
+    },
+    "descriptionHit": {
+     "found": true,
+     "excerpt": "[��������,BOBO CHOSES Bobo Choses Pop sweatshirt ����Ʈ����(���o) 26aw-B226AC033]…"
+    },
+    "extractionFailed": true
+   },
+   "code": {
+    "originDbSku": null,
+    "originUrlSlug": "B226AC033",
+    "candidateStructured": "B226AC033",
+    "axis": {
+     "comparison": "MISSING",
+     "origin": [],
+     "candidate": [
+      {
+       "raw": "B226AC033",
+       "normalized": "b226ac033",
+       "source": "DESCRIPTION"
+      }
+     ]
+    },
+    "descriptionHit": {
+     "found": true,
+     "excerpt": "…BOBO CHOSES Bobo Choses Pop sweatshirt ����Ʈ����(���o) 26aw-B226AC033] ������� ��ǰ�Դϴ�. (30�����̻� ���Ž� ���ڹ� ����/�����ñ���)"
+    },
+    "variantScope": "BASE_ONLY"
+   },
+   "name": {
+    "originStructured": "Bobo Choses Pop sweatshirt",
+    "candidateStructured": "�̴�Ŀ�ü�",
+    "axis": {
+     "comparison": "PRESENT",
+     "origin": [
+      {
+       "raw": "Bobo Choses Pop sweatshirt",
+       "normalized": "bobo choses pop sweatshirt",
+       "source": "TITLE"
+      }
+     ],
+     "candidate": [
+      {
+       "raw": "�̴�Ŀ�ü�",
+       "normalized": "��l·�u�",
+       "source": "TITLE"
+      }
+     ]
+    },
+    "descriptionHit": {
+     "found": true,
+     "excerpt": "[��������,BOBO CHOSES Bobo Choses Pop sweatshirt ����Ʈ����(���o) 26aw-B226AC033] ������� ��ǰ�Դϴ�. (30�����̻�…"
+    },
+    "encodingDamaged": true,
+    "multilingual": false
+   },
+   "description": {
+    "length": 136,
+    "available": true
+   },
+   "stored": {
+    "verdict": "PRESUMED_SAME",
+    "tier": "COMPARISON",
+    "blockers": [
+     "NO_TITLE_OVERLAP",
+     "BRAND_UNCONFIRMED"
+    ]
+   },
+   "scenario": 10,
+   "scenarioLabel": "상세설명에 기준 브랜드가 단순 언급(구조화 브랜드 없음)"
+  },
+  {
+   "group": "의류-상의",
+   "originTitle": "Bobo Choses Pop sweatshirt",
+   "domain": "designerkidswear.com",
+   "brand": {
+    "originStructured": "Bobo Choses",
+    "candidateStructured": "FENDI",
+    "axis": {
+     "comparison": "MISSING",
+     "origin": [],
+     "candidate": [],
+     "conflictBasis": null
+    },
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "extractionFailed": false
+   },
+   "code": {
+    "originDbSku": null,
+    "originUrlSlug": null,
+    "candidateStructured": null,
+    "axis": {
+     "comparison": "MISSING",
+     "origin": [],
+     "candidate": []
+    },
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "variantScope": "UNKNOWN"
+   },
+   "name": {
+    "originStructured": "Bobo Choses Pop sweatshirt",
+    "candidateStructured": "Baby Boys Blue Cotton Bear Sweatshirt",
+    "axis": {
+     "comparison": "CONFLICT",
+     "origin": [
+      {
+       "raw": "Bobo Choses Pop sweatshirt",
+       "normalized": "bobo choses pop sweatshirt",
+       "source": "TITLE"
+      }
+     ],
+     "candidate": [
+      {
+       "raw": "Baby Boys Blue Cotton Bear Sweatshirt",
+       "normalized": "baby boys blue cotton bear sweatshirt",
+       "source": "TITLE"
+      }
+     ]
+    },
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "encodingDamaged": false,
+    "multilingual": false
+   },
+   "description": {
+    "length": 329,
+    "available": true
+   },
+   "stored": {
+    "verdict": "PRESUMED_SAME",
+    "tier": "COMPARISON",
+    "blockers": [
+     "BRAND_MISMATCH",
+     "NO_TITLE_OVERLAP",
+     "MATERIAL",
+     "AUDIENCE_LINE"
+    ]
+   },
+   "scenario": 8,
+   "scenarioLabel": "브랜드가 실제로 다른 상품"
+  },
+  {
+   "group": "의류-상의",
+   "originTitle": "Bobo Choses Pop sweatshirt",
+   "domain": "folkberlin.com",
+   "brand": {
+    "originStructured": "Bobo Choses",
+    "candidateStructured": "Gray Label",
+    "axis": {
+     "comparison": "MISSING",
+     "origin": [],
+     "candidate": [],
+     "conflictBasis": null
+    },
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "extractionFailed": false
+   },
+   "code": {
+    "originDbSku": null,
+    "originUrlSlug": null,
+    "candidateStructured": null,
+    "axis": {
+     "comparison": "MISSING",
+     "origin": [],
+     "candidate": []
+    },
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "variantScope": "UNKNOWN"
+   },
+   "name": {
+    "originStructured": "Bobo Choses Pop sweatshirt",
+    "candidateStructured": "Baby-Sweateranzug „Blue Moon“ Bio-Baumwolle",
+    "axis": {
+     "comparison": "CONFLICT",
+     "origin": [
+      {
+       "raw": "Bobo Choses Pop sweatshirt",
+       "normalized": "bobo choses pop sweatshirt",
+       "source": "TITLE"
+      }
+     ],
+     "candidate": [
+      {
+       "raw": "Baby-Sweateranzug „Blue Moon“ Bio-Baumwolle",
+       "normalized": "baby-sweateranzug „blue moon“ bio-baumwolle",
+       "source": "TITLE"
+      }
+     ]
+    },
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "encodingDamaged": false,
+    "multilingual": false
+   },
+   "description": {
+    "length": 1017,
+    "available": true
+   },
+   "stored": {
+    "verdict": "PRESUMED_SAME",
+    "tier": "COMPARISON",
+    "blockers": [
+     "BRAND_MISMATCH",
+     "NO_TITLE_OVERLAP",
+     "MATERIAL",
+     "AUDIENCE_LINE"
+    ]
+   },
+   "scenario": 8,
+   "scenarioLabel": "브랜드가 실제로 다른 상품"
+  },
+  {
+   "group": "의류-상의",
+   "originTitle": "Bobo Choses Pop sweatshirt",
+   "domain": "junioredition.com",
+   "brand": {
+    "originStructured": "Bobo Choses",
+    "candidateStructured": "Bobo Choses",
+    "axis": {
+     "comparison": "MISSING",
+     "origin": [],
+     "candidate": [],
+     "conflictBasis": null
+    },
+    "descriptionHit": {
+     "found": true,
+     "excerpt": "Bigfoot By BC Sweatshirt by Bobo Choses. Midnight blue sweatshirt in a relaxed fit featuring ribbed…"
+    },
+    "extractionFailed": false
+   },
+   "code": {
+    "originDbSku": null,
+    "originUrlSlug": "B226AC009",
+    "candidateStructured": "B226AC033",
+    "axis": {
+     "comparison": "MISSING",
+     "origin": [],
+     "candidate": [
+      {
+       "raw": "B226AC033",
+       "normalized": "b226ac033",
+       "source": "DESCRIPTION"
+      }
+     ]
+    },
+    "descriptionHit": {
+     "found": true,
+     "excerpt": "…Organic Cotton 22% Recycled Cotton 12% Cotton. Product code B226AC033 AW26 Made in Spain."
+    },
+    "variantScope": "BASE_ONLY"
+   },
+   "name": {
+    "originStructured": "Bobo Choses Pop sweatshirt",
+    "candidateStructured": "Bobo Choses Pop Sweatshirt by Bobo Choses",
+    "axis": {
+     "comparison": "PRESENT",
+     "origin": [
+      {
+       "raw": "Bobo Choses Pop sweatshirt",
+       "normalized": "bobo choses pop sweatshirt",
+       "source": "TITLE"
+      }
+     ],
+     "candidate": [
+      {
+       "raw": "Bobo Choses Pop Sweatshirt by Bobo Choses",
+       "normalized": "bobo choses pop sweatshirt by bobo choses",
+       "source": "TITLE"
+      }
+     ]
+    },
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "encodingDamaged": false,
+    "multilingual": false
+   },
+   "description": {
+    "length": 360,
+    "available": true
+   },
+   "stored": {
+    "verdict": "PRESUMED_SAME",
+    "tier": "COMPARISON",
+    "blockers": [
+     "MATERIAL"
+    ]
+   },
+   "scenario": 1,
+   "scenarioLabel": "브랜드·품번·상품명 모두 일치"
+  },
+  {
+   "group": "의류-상의",
+   "originTitle": "Bobo Choses Pop sweatshirt",
+   "domain": "kidbizkid.com",
+   "brand": {
+    "originStructured": "Bobo Choses",
+    "candidateStructured": "Lacoste",
+    "axis": {
+     "comparison": "MISSING",
+     "origin": [],
+     "candidate": [],
+     "conflictBasis": null
+    },
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "extractionFailed": false
+   },
+   "code": {
+    "originDbSku": null,
+    "originUrlSlug": null,
+    "candidateStructured": null,
+    "axis": {
+     "comparison": "MISSING",
+     "origin": [],
+     "candidate": []
+    },
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "variantScope": "UNKNOWN"
+   },
+   "name": {
+    "originStructured": "Bobo Choses Pop sweatshirt",
+    "candidateStructured": "Lacoste Navy Sweatshirt",
+    "axis": {
+     "comparison": "CONFLICT",
+     "origin": [
+      {
+       "raw": "Bobo Choses Pop sweatshirt",
+       "normalized": "bobo choses pop sweatshirt",
+       "source": "TITLE"
+      }
+     ],
+     "candidate": [
+      {
+       "raw": "Lacoste Navy Sweatshirt",
+       "normalized": "lacoste navy sweatshirt",
+       "source": "TITLE"
+      }
+     ]
+    },
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "encodingDamaged": false,
+    "multilingual": false
+   },
+   "description": {
+    "length": 279,
+    "available": true
+   },
+   "stored": {
+    "verdict": "PRESUMED_SAME",
+    "tier": "COMPARISON",
+    "blockers": [
+     "BRAND_MISMATCH",
+     "COLOR_VARIANT",
+     "NO_TITLE_OVERLAP",
+     "AUDIENCE_LINE"
+    ]
+   },
+   "scenario": 8,
+   "scenarioLabel": "브랜드가 실제로 다른 상품"
+  },
+  {
+   "group": "의류-상의",
+   "originTitle": "Bobo Choses Pop sweatshirt",
+   "domain": "kids-world.com",
+   "brand": {
+    "originStructured": "Bobo Choses",
+    "candidateStructured": "Bobo Choses",
+    "axis": {
+     "comparison": "MISSING",
+     "origin": [],
+     "candidate": [
+      {
+       "raw": "Bobo Choses",
+       "normalized": "bobo choses",
+       "source": "DESCRIPTION"
+      }
+     ],
+     "conflictBasis": null
+    },
+    "descriptionHit": {
+     "found": true,
+     "excerpt": "Bobo Choses 맨투맨. Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트. Bobo Choses (보보쇼즈) 의…"
+    },
+    "extractionFailed": false
+   },
+   "code": {
+    "originDbSku": null,
+    "originUrlSlug": "B226AC033",
+    "candidateStructured": "B226AC033",
+    "axis": {
+     "comparison": "MISSING",
+     "origin": [],
+     "candidate": [
+      {
+       "raw": "B226AC033",
+       "normalized": "b226ac033",
+       "source": "DESCRIPTION"
+      }
+     ]
+    },
+    "descriptionHit": {
+     "found": true,
+     "excerpt": "…좋습니다. 맨투맨 은 부드러운 기모 코튼 소재입니다.. Bobo Choses 맨투맨. Bobo Choses B226AC033-401"
+    },
+    "variantScope": "BASE_ONLY"
+   },
+   "name": {
+    "originStructured": "Bobo Choses Pop sweatshirt",
+    "candidateStructured": "Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트",
+    "axis": {
+     "comparison": "CONFLICT",
+     "origin": [
+      {
+       "raw": "Bobo Choses Pop sweatshirt",
+       "normalized": "bobo choses pop sweatshirt",
+       "source": "TITLE"
+      }
+     ],
+     "candidate": [
+      {
+       "raw": "Bobo Choses 맨투맨 - 미드나잇 블루 포함 프린트",
+       "normalized": "bobo choses 맨투맨 - 미드나잇 블루 포함 프린트",
+       "source": "TITLE"
+      }
+     ]
+    },
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "encodingDamaged": false,
+    "multilingual": true
+   },
+   "description": {
+    "length": 368,
+    "available": true
+   },
+   "stored": {
+    "verdict": "PRESUMED_SAME",
+    "tier": "COMPARISON",
+    "blockers": [
+     "NO_TITLE_OVERLAP"
+    ]
+   },
+   "scenario": 3,
+   "scenarioLabel": "품번 일치 · 상품명 다국어 차이"
+  },
+  {
+   "group": "의류-상의",
+   "originTitle": "Bobo Choses Pop sweatshirt",
+   "domain": "petitemaisonkids.com",
+   "brand": {
+    "originStructured": "Bobo Choses",
+    "candidateStructured": "Petite Maison Kids",
+    "axis": {
+     "comparison": "MISSING",
+     "origin": [],
+     "candidate": [],
+     "conflictBasis": null
+    },
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "extractionFailed": false
+   },
+   "code": {
+    "originDbSku": null,
+    "originUrlSlug": null,
+    "candidateStructured": null,
+    "axis": {
+     "comparison": "MISSING",
+     "origin": [],
+     "candidate": []
+    },
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "variantScope": "UNKNOWN"
+   },
+   "name": {
+    "originStructured": "Bobo Choses Pop sweatshirt",
+    "candidateStructured": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers",
+    "axis": {
+     "comparison": "CONFLICT",
+     "origin": [
+      {
+       "raw": "Bobo Choses Pop sweatshirt",
+       "normalized": "bobo choses pop sweatshirt",
+       "source": "TITLE"
+      }
+     ],
+     "candidate": [
+      {
+       "raw": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers",
+       "normalized": "maya girls' blue cotton sweater top with handmade flowers",
+       "source": "TITLE"
+      }
+     ]
+    },
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "encodingDamaged": false,
+    "multilingual": false
+   },
+   "description": {
+    "length": 664,
+    "available": true
+   },
+   "stored": {
+    "verdict": "PRESUMED_SAME",
+    "tier": "COMPARISON",
+    "blockers": [
+     "BRAND_MISMATCH",
+     "NO_TITLE_OVERLAP",
+     "MATERIAL",
+     "AUDIENCE_LINE",
+     "GARMENT_FORM"
+    ]
+   },
+   "scenario": 8,
+   "scenarioLabel": "브랜드가 실제로 다른 상품"
+  },
+  {
+   "group": "의류-상의",
+   "originTitle": "Bobo Choses Pop sweatshirt",
+   "domain": "shoppiccoliandco.com",
+   "brand": {
+    "originStructured": "Bobo Choses",
+    "candidateStructured": "Piccoli & Co™",
+    "axis": {
+     "comparison": "MISSING",
+     "origin": [],
+     "candidate": [],
+     "conflictBasis": null
+    },
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "extractionFailed": false
+   },
+   "code": {
+    "originDbSku": null,
+    "originUrlSlug": null,
+    "candidateStructured": null,
+    "axis": {
+     "comparison": "MISSING",
+     "origin": [],
+     "candidate": []
+    },
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "variantScope": "UNKNOWN"
+   },
+   "name": {
+    "originStructured": "Bobo Choses Pop sweatshirt",
+    "candidateStructured": "Jude Navy Baby Boy Anchor Sweater",
+    "axis": {
+     "comparison": "CONFLICT",
+     "origin": [
+      {
+       "raw": "Bobo Choses Pop sweatshirt",
+       "normalized": "bobo choses pop sweatshirt",
+       "source": "TITLE"
+      }
+     ],
+     "candidate": [
+      {
+       "raw": "Jude Navy Baby Boy Anchor Sweater",
+       "normalized": "jude navy baby boy anchor sweater",
+       "source": "TITLE"
+      }
+     ]
+    },
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "encodingDamaged": false,
+    "multilingual": false
+   },
+   "description": {
+    "length": 2010,
+    "available": true
+   },
+   "stored": {
+    "verdict": "PRESUMED_SAME",
+    "tier": "COMPARISON",
+    "blockers": [
+     "BRAND_MISMATCH",
+     "COLOR_VARIANT",
+     "NO_TITLE_OVERLAP",
+     "AUDIENCE_LINE"
+    ]
+   },
+   "scenario": 8,
+   "scenarioLabel": "브랜드가 실제로 다른 상품"
+  },
+  {
+   "group": "의류-원피스",
+   "originTitle": "Handsmock Dress in Little Bouquet by Bonjour",
+   "domain": "junioredition.com",
+   "brand": {
+    "originStructured": "Bonjour",
+    "candidateStructured": "Bonjour",
+    "axis": null,
+    "descriptionHit": {
+     "found": true,
+     "excerpt": "Handsmock Dress in Pink Tapestry by Bonjour - Last Ones In Stock - 6-12 Years Handsmock Dress"
+    },
+    "extractionFailed": false
+   },
+   "code": {
+    "originDbSku": null,
+    "originUrlSlug": null,
+    "candidateStructured": "BJ87",
+    "axis": null,
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "variantScope": "BASE_ONLY"
+   },
+   "name": {
+    "originStructured": "Handsmock Dress in Little Bouquet by Bonjour",
+    "candidateStructured": "Handsmock Dress in Pink Tapestry by Bonjour - Last Ones In Stock - 6-12 Years",
+    "axis": null,
+    "descriptionHit": null,
+    "encodingDamaged": false,
+    "multilingual": false
+   },
+   "description": {
+    "length": 503,
+    "available": true
+   },
+   "stored": {
+    "verdict": "PRESUMED_SAME",
+    "tier": "COMPARISON",
+    "blockers": []
+   },
+   "scenario": 0,
+   "scenarioLabel": "🔴 분류 불가(미확정)"
+  },
+  {
+   "group": "의류-하의",
+   "originTitle": "Taxi Saurus Tag denim pants",
+   "domain": "junioredition.com",
+   "brand": {
+    "originStructured": "Bobo Choses",
+    "candidateStructured": "Bobo Choses",
+    "axis": null,
+    "descriptionHit": {
+     "found": true,
+     "excerpt": "Taxi Saurus Tag Denim Pants by Bobo Choses Taxi Saurus Tag Denim Pants by Bobo Choses. Midni"
+    },
+    "extractionFailed": false
+   },
+   "code": {
+    "originDbSku": null,
+    "originUrlSlug": null,
+    "candidateStructured": "B226AC073",
+    "axis": null,
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "variantScope": "BASE_ONLY"
+   },
+   "name": {
+    "originStructured": "Taxi Saurus Tag denim pants",
+    "candidateStructured": "Taxi Saurus Tag Denim Pants by Bobo Choses",
+    "axis": null,
+    "descriptionHit": null,
+    "encodingDamaged": false,
+    "multilingual": false
+   },
+   "description": {
+    "length": 235,
+    "available": true
+   },
+   "stored": {
+    "verdict": "PRESUMED_SAME",
+    "tier": "COMPARISON",
+    "blockers": []
+   },
+   "scenario": 0,
+   "scenarioLabel": "🔴 분류 불가(미확정)"
+  },
+  {
+   "group": "의류-하의",
+   "originTitle": "Taxi Saurus Tag denim pants",
+   "domain": "(도메인 없음)",
+   "brand": {
+    "originStructured": "Bobo Choses",
+    "candidateStructured": null,
+    "axis": null,
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "extractionFailed": false
+   },
+   "code": {
+    "originDbSku": null,
+    "originUrlSlug": null,
+    "candidateStructured": null,
+    "axis": null,
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "variantScope": "UNKNOWN"
+   },
+   "name": {
+    "originStructured": "Taxi Saurus Tag denim pants",
+    "candidateStructured": "[[보보쇼즈] Taxi Saurus Tag denim pants #226AC073]",
+    "axis": null,
+    "descriptionHit": null,
+    "encodingDamaged": false,
+    "multilingual": true
+   },
+   "description": {
+    "length": 46,
+    "available": true
+   },
+   "stored": {
+    "verdict": null,
+    "tier": null,
+    "blockers": []
+   },
+   "scenario": 0,
+   "scenarioLabel": "🔴 분류 불가(미확정)"
+  },
+  {
+   "group": "액세서리-모자",
+   "originTitle": "Double Deerstalker Cap in Blue / Soft Tan by Wynken",
+   "domain": "junioredition.com",
+   "brand": {
+    "originStructured": "Wynken",
+    "candidateStructured": "Wynken",
+    "axis": null,
+    "descriptionHit": {
+     "found": true,
+     "excerpt": "Double Deerstalker Cap in Blue / Soft Tan by Wynken Double Deerstalker Cap by Wynken. The Double Deer"
+    },
+    "extractionFailed": false
+   },
+   "code": {
+    "originDbSku": "WK21A165",
+    "originUrlSlug": null,
+    "candidateStructured": "WK21A165",
+    "axis": null,
+    "descriptionHit": {
+     "found": true,
+     "excerpt": "Lining: 100% Cotton. Made in China. Product Code WK21A165 AW26"
+    },
+    "variantScope": "BASE_ONLY"
+   },
+   "name": {
+    "originStructured": "Double Deerstalker Cap in Blue / Soft Tan by Wynken",
+    "candidateStructured": "Double Deerstalker Cap in Blue / Soft Tan by Wynken",
+    "axis": null,
+    "descriptionHit": null,
+    "encodingDamaged": false,
+    "multilingual": false
+   },
+   "description": {
+    "length": 711,
+    "available": true
+   },
+   "stored": {
+    "verdict": "PRESUMED_SAME",
+    "tier": "COMPARISON",
+    "blockers": []
+   },
+   "scenario": 0,
+   "scenarioLabel": "🔴 분류 불가(미확정)"
+  },
+  {
+   "group": "의류-아웃터",
+   "originTitle": "Mixed Media Jacket in Ecru Mix by Wynken",
+   "domain": "junioredition.com",
+   "brand": {
+    "originStructured": "Wynken",
+    "candidateStructured": "Wynken",
+    "axis": null,
+    "descriptionHit": {
+     "found": true,
+     "excerpt": "Mixed Media Jacket in Blue Mix by Wynken Mixed Media Jacket by Wynken. This mixed media ja"
+    },
+    "extractionFailed": false
+   },
+   "code": {
+    "originDbSku": "WK21W97",
+    "originUrlSlug": null,
+    "candidateStructured": "WK21W97",
+    "axis": null,
+    "descriptionHit": {
+     "found": true,
+     "excerpt": "r. Panel: 100% Nylon. Made in China. Product Code WK21W97 AW26"
+    },
+    "variantScope": "BASE_ONLY"
+   },
+   "name": {
+    "originStructured": "Mixed Media Jacket in Ecru Mix by Wynken",
+    "candidateStructured": "Mixed Media Jacket in Blue Mix by Wynken",
+    "axis": null,
+    "descriptionHit": null,
+    "encodingDamaged": false,
+    "multilingual": false
+   },
+   "description": {
+    "length": 622,
+    "available": true
+   },
+   "stored": {
+    "verdict": "PRESUMED_SAME",
+    "tier": "COMPARISON",
+    "blockers": []
+   },
+   "scenario": 7,
+   "scenarioLabel": "품번 일치 · 색상·변형 충돌"
+  },
+  {
+   "group": "의류-아웃터",
+   "originTitle": "Mixed Media Jacket in Ecru Mix by Wynken",
+   "domain": "nickis.com",
+   "brand": {
+    "originStructured": "Wynken",
+    "candidateStructured": "Wynken",
+    "axis": null,
+    "descriptionHit": {
+     "found": true,
+     "excerpt": "Blau sorgt für Textur und Charakter, während die Wynken-Stickerei in Form einer Malpalette einen kreative"
+    },
+    "extractionFailed": false
+   },
+   "code": {
+    "originDbSku": "WK21W97",
+    "originUrlSlug": null,
+    "candidateStructured": null,
+    "axis": null,
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "variantScope": "UNKNOWN"
+   },
+   "name": {
+    "originStructured": "Mixed Media Jacket in Ecru Mix by Wynken",
+    "candidateStructured": "Jacke Mixed Media Mehrfarbig",
+    "axis": null,
+    "descriptionHit": null,
+    "encodingDamaged": false,
+    "multilingual": false
+   },
+   "description": {
+    "length": 799,
+    "available": true
+   },
+   "stored": {
+    "verdict": "PRESUMED_SAME",
+    "tier": "COMPARISON",
+    "blockers": []
+   },
+   "scenario": 2,
+   "scenarioLabel": "브랜드·상품명 일치 · 품번 없음"
+  },
+  {
+   "group": "의류-아웃터",
+   "originTitle": "Mixed Media Jacket in Ecru Mix by Wynken",
+   "domain": "villagekids.co.uk",
+   "brand": {
+    "originStructured": "Wynken",
+    "candidateStructured": "Guess",
+    "axis": null,
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "extractionFailed": false
+   },
+   "code": {
+    "originDbSku": "WK21W97",
+    "originUrlSlug": null,
+    "candidateStructured": null,
+    "axis": null,
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "variantScope": "UNKNOWN"
+   },
+   "name": {
+    "originStructured": "Mixed Media Jacket in Ecru Mix by Wynken",
+    "candidateStructured": "Black Puffer Coat",
+    "axis": null,
+    "descriptionHit": null,
+    "encodingDamaged": false,
+    "multilingual": false
+   },
+   "description": {
+    "length": 294,
+    "available": true
+   },
+   "stored": {
+    "verdict": "PRESUMED_SAME",
+    "tier": "COMPARISON",
+    "blockers": []
+   },
+   "scenario": 8,
+   "scenarioLabel": "브랜드가 실제로 다른 상품"
+  },
+  {
+   "group": "의류-아웃터",
+   "originTitle": "Stamp Bloom all over reversible anorak",
+   "domain": "nickis.com",
+   "brand": {
+    "originStructured": "Bobo Choses",
+    "candidateStructured": "Colmar",
+    "axis": null,
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "extractionFailed": false
+   },
+   "code": {
+    "originDbSku": null,
+    "originUrlSlug": null,
+    "candidateStructured": null,
+    "axis": null,
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "variantScope": "UNKNOWN"
+   },
+   "name": {
+    "originStructured": "Stamp Bloom all over reversible anorak",
+    "candidateStructured": "Daunenjacke Reversible Quilted Marineblau",
+    "axis": null,
+    "descriptionHit": null,
+    "encodingDamaged": false,
+    "multilingual": false
+   },
+   "description": {
+    "length": 1176,
+    "available": true
+   },
+   "stored": {
+    "verdict": "PRESUMED_SAME",
+    "tier": "COMPARISON",
+    "blockers": []
+   },
+   "scenario": 8,
+   "scenarioLabel": "브랜드가 실제로 다른 상품"
+  },
+  {
+   "group": "의류-원피스",
+   "originTitle": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+   "domain": "junioredition.com",
+   "brand": {
+    "originStructured": "Bonjour",
+    "candidateStructured": null,
+    "axis": null,
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "extractionFailed": false
+   },
+   "code": {
+    "originDbSku": null,
+    "originUrlSlug": null,
+    "candidateStructured": null,
+    "axis": null,
+    "descriptionHit": {
+     "found": false,
+     "excerpt": null
+    },
+    "variantScope": "UNKNOWN"
+   },
+   "name": {
+    "originStructured": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+    "candidateStructured": null,
+    "axis": null,
+    "descriptionHit": null,
+    "encodingDamaged": false,
+    "multilingual": false
+   },
+   "description": {
+    "length": 0,
+    "available": false
+   },
+   "stored": {
+    "verdict": "PRESUMED_SAME",
+    "tier": "COMPARISON",
+    "blockers": []
+   },
+   "scenario": 9,
+   "scenarioLabel": "세 기준 모두 미측정"
+  }
+ ]
+}

@@ -213,6 +213,15 @@ export function collectHumanRows(): { rows: HumanRow[]; scanned: string[]; skipp
   skipped.push({ file: "mmse01-secondpass.json", why: "🟢 2차 선택적 증거 관측 · 사람 라벨 **없음**" });
   skipped.push({ file: "mmse02-code-evidence.json", why: "🟢 품번 출처 분해 산출 · 사람 라벨 **없음**" });
   /**
+   * 🔵 UIED-01 — 브랜드·품번·상품명·상세설명 **네 영역 통합 비교표**(17행 · 5 상품군).
+   * 🔴 분모에 넣지 않는다 — 기존 산출물 넷을 **조립한 2차 산출물** 이라 넣으면 같은
+   *    관측이 **여러 번** 세어진다(이 파일이 반복해 막아 온 그 이중 집계다).
+   */
+  skipped.push({
+    file: "uied01-unified.json",
+    why: "🟢 네 영역 통합 비교표(2차 산출물) · 사람 라벨 **없음** · **이중 집계 방지**",
+  });
+  /**
    * 🔵 CEO-EVIDENCE-REVIEW(2026-11-07) — **`candidate_reviews` 읽기 전용 덤프**(11쌍 URL · 3행).
    * 🔴 분모에 넣지 않는다 — `dsp-01-reviewed-same.json` 과 **같은 이유**(이중 집계).
    *    라벨 원본은 운영 DB 이고 이 파일은 **검토 화면 표시 전용** 고정본이다.
