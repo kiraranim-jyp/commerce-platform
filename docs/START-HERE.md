@@ -5,8 +5,6 @@
 > 🔴 **두 번째 진입 문서를 만들지 않는다** — 둘이 되면 서로 다른 말을 한다(이 트랙에서 실제로 났다).
 > 🟢 종료된 WU 상세는 `docs/ARCHIVE-CLOSED-WU.md` 와 `docs/HANDOFF-WU-*.md` 에 있고
 > **막혔을 때만 해당 절 하나** 를 연다.
->
-> 🔵🔵🔵 **[2026-11-20] 현재 «활성 실행 좌표» = `docs/NEXT-SESSION-B38.md` 하나다** — 아래 §NEXT SESSION(2026-11-07)보다 «이것이» 최신이다. 🔴 새 세션은 그 문서의 **STEP 1** 부터 실행한다(재조사 금지). 🔴 그 문서는 **두 번째 진입점이 아니다** — 진입점은 이 문서 하나이고 그 문서는 **현재 실행 지시서** 다.
 
 ---
 
@@ -48,6 +46,569 @@
 ---
 
 ## ▶▶ NEXT SESSION — **이 블록만 읽고 바로 시작한다**(2026-11-07 · PHASE 2 종료)
+
+### 🔵🔵🔵 **0-FROZEN. 이 작업 묶음은 «닫혔다» — 세 기준으로만 이어간다**(CPO 확정 2026-11-16)
+
+🔴🔴 **이 블록이 0-NOW 보다 먼저다.** 아래 0-NOW 의 「SPRINT 2 … CPO 검토 대기」 같은
+문장은 **그 시점의 기록** 이고, 현재 좌표는 **이 블록** 이다.
+
+```
+① 재개 위치        `docs/START-HERE.md` **§0-NOW**(이 문서 · 바로 아래)
+② 최종 동결 기준    `docs/HANDOFF-P0-MI-ACCURACY-RECOVERY.md` **§D-sxA**
+                  🔴 CPO 가 닫은 것이 **전수 표** 로 있다 — 그 표 밖을 열지 않는다
+③ 재개 선행 조건    🔴 **실제 상품 설명문 «원문» 을 확보할 수 있는 방법과 조건부터 확인**
+                  🔴 원문 확보 **전에는** 추출 규칙 수정 · 상세설명 운영 연결 **금지**
+                  🟢 현재 원문은 **없다**(fixture 가 옮기지 않았고 과거 산출은 세션 임시 디렉터리)
+```
+
+🔴🔴🔴 **[정정 이력 2026-11-16 · CPO 승인] 위 ③ 의 「원문은 없다」는 «폐기» 한다**
+🔴 위 문장을 지우지 않고 남긴다 — 그것이 어떤 전제에서 동결됐는지 다음 세션이 알아야 한다.
+
+```
+🔴 틀린 전제   「실제 설명문 원문이 없다」
+🟢 정확한 표현  **B군에는 원문이 있지만, CPO 동결 기준인 A군 33쌍에는 후보 원문이 없다**
+
+원문 거처(실측) — `apps/admin/.../fixtures/mi-reeval-03-keyword-input.json`(커밋 `269d9b22`)
+  🟢 그 fixture 가 **설명문 전문** 을 들고 있다(원본 92/109 · 후보 98/109 · 양쪽 82/109)
+  🔴 「없다」가 참인 것은 **`mi-reeval-01-desc-pairs.json`** 뿐이다(그것은 불리언만 옮겼다)
+  🟢 원본측은 운영 DB 와 **27/27 바이트 동일**(`product_snapshots.workspace
+     ->canonicalProduct->description->>value` · 662/668 보유 · p50 247자)
+  🔴 후보측 원문을 담는 **DB 칸은 0개** 다(migration 전수 · `candidate_reviews` ·
+     `ceo_judgments` · `workspace.searchRun` 전부 없음) ⟹ transient 다
+
+집합 분리 — 🔴 **합산하지 않는다**(`A∩B = 0`)
+  B군 109  GT 36 · 양쪽 전문 82 ⟹ 🟢 **GT∩양쪽전문 = 16** (HTTP 0 으로 검증 가능)
+  A군  33  GT 33/33 · 🔴 **후보 원문 0/33** ⟹ 수집에 **32 GET** 필요(wconcept 1건 robots 차단)
+```
+
+🔵 **CPO 결정(2026-11-16)** — ⒜ B군 GT **16쌍 오프라인 검증 «승인»** ⒝ A군 32건 HTTP 수집
+**«불승인»**(16쌍 결과를 보고 다시 결정) ⒞ 추출 규칙 변경 · 가드 기본 ON · verdict 재계산 ·
+상세설명 운영 연결 · SPRINT 3 — **전부 금지/동결 유지**.
+🔴 **16쌍 결과가 좋아도 A군 33 의 미측정 문제는 해결되지 않는다**(CPO 명시).
+
+🟢 **그 16쌍 검증은 실행 완료** — 산출물 `docs/MI-B16-FULLTEXT-EXTRACTION.json` ·
+하니스 `apps/admin/.../__tests__/b16-fulltext-extraction.test.ts`(7/7 PASS) ·
+운영 코드 **0** · HTTP **0** · DB 쓰기 **0** · STEP5/6/7 내용 변경 **0**.
+
+🔴 **다음 세션 CTO 작업 원칙**(CPO 지정 · 7항)
+```
+① 첫 작업은 **설명문 원문 확보 가능성 조사** 다(구현이 아니다)
+② 기존 구현과 **측정 산출물을 먼저 확인** 한다(§4-D · 이 트랙에서 「이미 있다」가 반복됐다)
+③ 숫자에는 **분모와 측정 범위** 를 반드시 명시한다
+④ **기존 owner 재사용** 여부와 **독립 재집계 가능성** 을 구분한다
+⑤ 확인하지 않은 내용은 **추정으로 표시** 한다
+⑥ 좌표 · 부분집합 · 규칙 입력을 확인하기 **전에 결론부터 단언하지 않는다**
+⑦ 임시 파일은 삭제 후 **절대경로로 존재 여부까지** 확인한다
+🟢 메모리 `report-needs-method-and-reproducibility` 가 ③~⑦ 의 예방법을 들고 있다
+```
+
+🔴 **동결 — 운영 정책 그대로**(CTO 가 바꾸지 않는다)
+```
+SAME 판정 변경 **없음** · 상세설명 운영 연결 **동결** · 추출 가드 **기본 OFF** ·
+verdict 재계산 **불승인** · SPRINT 3 **보류**
+```
+
+🔴 **다시 조사하지 않는다** — GT 정밀도 재측정 · blocker × GT 교차표 · 신규 증거 4건 유형별 ·
+경계 후보 · verdict 영향 경로는 **전부 완료** 다(산출물 STEP5 · STEP6 · **STEP7** · 계약 4파일).
+
+---
+
+### 🔵🔵🔵 **0-ROADMAP. 전체 제품 전략 — 상시 고정**(CPO 확정 2026-11-16 · 🔴 매 세션 작업 «전» 에 읽는다)
+
+🔴🔴 **이 절은 스프린트와 무관하게 항상 유효하다.** 아래 절들이 회전해도 **남는다**.
+🔴 새 진입 문서를 만들지 않는다 — 이 문서가 **유일한 진입점** 이다.
+
+> **최종 제품 목표 — 해외 상품 URL 하나를 입력하면 한국에서 판매할 가치가 있는지
+> «신뢰할 수 있게» 판단하는 시스템.**
+
+🔵🔵🔵 **[우선순위 정정 2026-11-16 · CPO] 지금은 «KIDS 기존 자산 재검증» 이 최우선이다**
+🔴 아래 PHASE 2~5(상품군 확대 등)는 **삭제하지 않는다 — 후속 단계로 유지** 한다.
+🔴 그러나 **현재 우선순위는 아래 7단계** 이고, 충돌하면 **이것이 이긴다**.
+
+```
+① **KIDS 기존 테스트 기반 MI 정확도 개선**            ← 🔵 **지금 여기**
+② KIDS 상세설명 기반 핵심 식별 전략 검증·안정화
+③ KIDS 에서 MI 전체 흐름 검증
+④ 실제 상품군 확대(WOMEN_FASHION · FASHION_ACCESSORIES · HOME_LIFESTYLE)
+⑤ 카테고리 엔진 개선      ⑥ MI 통합 안정화      ⑦ 추가 커머스 채널 확장
+
+🔴🔴 **KIDS 검증 전에 새 카테고리 확대를 착수하지 않는다**(CPO 확정).
+🔴 과거 테스트를 **새로 만들지 않는다** — 이미 한 수십 건의 테스트와 **CEO 육안 판단 자료**
+   부터 찾아 **재사용** 하는 것이 첫 작업이다.
+🔵🔵🔵 **상시 고정 전략 7항**(CPO 확정 2026-11-16 · 🔴 스프린트와 무관하게 유효)
+```
+① 🔴 **모든 후보의 100% 판별이 목표가 아니다**
+② 🔵 목표는 **국내 3~5개 · 해외 3~5개의 «신뢰할 수 있는» 동일상품 증거 확보** 다
+   🔴 SIMILAR · PRESUMED_SAME 은 **확정 SAME 수량에 포함하지 않는다**
+③ 기존 **KIDS 테스트 + CEO 육안 판단 자료를 우선 활용** 한다(새로 만들지 않는다)
+④ 🔵 **육안 판단의 «근거» 를 재사용 가능한 식별 규칙으로 만든다**(결과만 보고 추정하지 않는다)
+⑤ 🔴 **baseline 재현 실패** 와 **육안 판단 데이터 활용 가능성** 을 혼동하지 않는다
+⑥ 🔴 KIDS 검증이 끝나기 전 **새 카테고리 확대를 시작하지 않는다**
+⑦ 🔴 **CPO 가 단계별로 판단한 뒤** CTO 가 다음 단계로 진행한다(선행 구현 금지)
+🔵 3단계 검색·조기 종료 원칙은 **CLAUDE.md §5-D-2** 그대로 유지한다
+```
+
+### 🔵🔵🔵 **MI 핵심 상품 동일성 판단 — CEO 확정 전략**(2026-11-17 · 🔴 모든 MI 작업의 **우선 기준**)
+
+🔴🔴 **이 절이 아래 절들보다 «먼저» 다.** MI 는 **100% 자동 판정을 목표로 하지 않는다.**
+
+> 자동으로 확인할 수 있는 것은 **자동으로**, 부족한 것은 **상세설명으로 보완**,
+> 그래도 애매한 것은 **CEO 가 빠르게 판단** 하게 만들고, 그 판단을 **다음 상품에 재사용** 한다.
+
+```
+STEP 1  기본 상품정보 — **브랜드 + 제조사 품번 + 상품명**
+        🟢 이것으로 판단되면 **불필요한 추가 분석을 하지 않는다**
+STEP 2  부족·불일치면 **후보 상세설명** 확인 —
+        브랜드 · 제조사 모델코드 · 상품명 · 번역/현지어/별칭 · 기타 식별 근거
+        🟢 충분한 동일성 근거가 확인되면 **SAME 판단 가능**
+STEP 3  🔴 그래도 애매하면 **자동 DIFFERENT 처리·무조건 제외 금지** ⟹ **CEO 판단 요청**
+        제공: 원상품·후보 정보 · 상세설명 · **이미지** · 차이점
+STEP 4  SAME / SIMILAR / DIFFERENT / PRESUMED_SAME 를 **구분** 하고
+        판정 근거와 CEO 판단을 **재사용 가능한 데이터로 보존** 한다
+```
+
+🔵🔵🔵 **[기준 수정 2026-11-17 · CPO 확정] 품번은 «필수 조건» 이 아니다**
+🔴🔴 **브랜드와 상품명이 명확히 일치하는 상품을 품번이 없다는 이유로 배제하지 않는다.**
+품번은 **강력한 식별정보 중 하나**이고 **배제 조건이 아니다.**
+
+| 확보된 정보 | 처리 |
+|---|---|
+| **브랜드 MATCH + 상품명 MATCH** | 🟢 **동일상품 판단**(품번 불필요) |
+| **품번 MATCH 만** | 🟡 **상세설명·기타정보 확인 대상** |
+| **품번 MATCH + 상세설명에서 브랜드 MATCH** | 🟢 **동일상품 판단 가능** |
+| 브랜드·상품명·품번 **일부 불일치(충돌)** | 🔴 상세설명·기타 대조 → 애매하면 **CEO 검토** |
+| 판단 근거 **자체가 없음** | **정보 부족** |
+
+🟢 **109건 재분류 실측**(`docs/MI-KIDS-TRIAGE-V2.json` · 새 threshold·정규식 **0**)
+```
+            v1(품번 필수)                    v2(품번 비필수)
+JUDGEABLE          11        →        **23**   🟢 GT: SAME 5 · null 18 ·
+                                              **DIFFERENT 0 · SIMILAR 0** (오판 0)
+NEEDS_DETAIL_CHECK  —        →         **6**   🔵 GT: **SAME 6**(전부) ⟹ 이 경로가
+                                              실제 동일상품을 담고 있다
+CEO_REVIEW          7        →          7      GT: SAME 1 · DIFFERENT 2 · SIMILAR 1 · null 3
+INSUFFICIENT       91        →        **73**
+이동  INSUFFICIENT → JUDGEABLE **12** · INSUFFICIENT → NEEDS_DETAIL_CHECK **6**
+🔵 품번 «없이» 판단 가능해진 **12** = CPO 가 센 **10**(`axisStatus.BRAND=MATCH`)
+   + **2**(STEP3 브랜드 키워드 공유 · 🟢 둘 다 **GT SAME**)
+```
+
+🔴 **판단 원칙**
+```
+① 100% 자동 판정을 위해 **과도한 추출 규칙·threshold 를 먼저 만들지 않는다**
+② 상세설명은 핵심 정체성의 **중요한 보완 근거** 다(폐기 금지)
+③ 🔴 **코드 하나만으로 무조건 동일상품 처리하지 않는다**
+④ **정보 누락 ↔ 실제 상품 차이** 를 구분한다(7상태 어휘는 아래 절)
+⑤ 🔵🔵 **동일상품 여부 ↔ 가격 비교 적합성은 «별개» 다**
+   실증 — `bornyesterdaykids` 는 **상/하의 세트**: CEO 「상의는 동일상품이지만 하의가
+   포함돼 **가격 비교에는 부적합**」 ⟹ `UNCERTAIN`(`core-2m-ceo-visual-gt.json`)
+⑥ 애매한 상품은 **CEO 검토 대상으로 제공** 하고, 그 결과로 자동 판단 범위를 넓힌다
+```
+
+🔴🔴 **반영할 때 반드시 같이 지킬 «기존 동결» 둘** — 새 전략이 이것을 덮지 않는다:
+```
+⒜ 🔴 **이미지는 CEO 검토 화면에 «표시» 하는 것이고 SAME 판정 근거로 승격하는 것이 아니다**
+   `docs/STANDARD-V1.md:109` — IMAGE 는 **「SAME 정원에서 제외 · 보조 근거로 보존」** 이다
+   ⟹ 이미지를 SAME 축에 넣는 것은 **표준 개정 사안** 이다(CTO 가 임의로 하지 않는다)
+⒝ 🔴 **CEO 판정 재사용은 «SAME 만» 이다** — `human_verdict='SAME'` 만 두 경로에서 쓰인다
+   (`listReviewedSameUrls` 발견 축 · `listSnapshotVerifiedSameKeys` 가격 자격 축)
+   🔴 **DIFFERENT / SIMILAR / UNDECIDED 재사용은 CPO 명시 금지**(「과거 DIFFERENT 자동 편입 금지」)
+   🟢 2026-11-07 확정 — **표시는 승인 · 자동 차단은 불승인**
+🔴 그리고 **최신 CEO 판정이 과거 라벨을 대체한다**(`core-2m` `historicalConflicts` ·
+   실증 `m.luxboy` DIFFERENT → **SAME** 「브랜드 + 품번 동일로 판단 가능」)
+🔴 CEO UI 에는 **「다름」 버튼이 없었다** — 「유사」는 내부 calibration 에서 `DIFFERENT` 로 매핑된다
+```
+
+🔴 **CTO 작업 원칙** — 기존 데이터·기능 **먼저 재사용** · 기본정보로 해결되는 사례에 상세 분석 **금지** ·
+추출 정확도만 올리는 **세부 반복 금지** · 애매한 사례 **무조건 제외 금지** ·
+🔴 **CEO 판단과 시스템 판단을 섞지 않고 «차이를 보존»** 한다.
+
+---
+
+### 🔵🔵🔵 **PRESUMED_SAME 원인 해소 — 상시 전략**(CPO 확정 2026-11-16 · 🔴 일회성 분석이 아니다)
+
+```
+🔴 **PRESUMED_SAME 은 «포기하는 결과» 가 아니다.** 원인을 분석하고 해결 가능한 것을 먼저 해소한다
+🔴 **건수를 보고하는 것으로 작업을 끝내지 않는다** — 원인 → 해소 → SAME 증거 증가까지 간다
+① 제목·기본 데이터에서 핵심 정보가 **누락/불일치** 하면 **후보 상세설명** 을 확인한다
+② 상세설명에서 **브랜드 · 제조사 모델코드 · 상품명** 을 찾아 **원상품과 비교** 한다
+③ 영문·한글·현지어·번역·별칭·축약 표기를 고려한다
+④ 🔴🔴 **누락과 충돌을 구분한다** — 일곱 상태로 가른다:
+   `NOT_PRESENT` · `NOT_COLLECTED` · `NOT_EXTRACTED` · `TRANSLATION_VARIANT` ·
+   `MATCH` · `CONFLICT` · `UNKNOWN`
+   🔴 데이터가 없다는 이유로 **불일치로 판단하지 않는다** ·
+   🔴 키워드가 있다는 이유만으로 **일치로 판단하지 않는다**
+⑤ 기존 **CEO 육안 판정 · KIDS 자산을 재사용** 한다(새로 만들지 않는다)
+⑥ 상세설명 분석 결과는 **근거와 출처를 보존** 한다
+⑦ SAME / PRESUMED_SAME / SIMILAR / DIFFERENT 를 **구분** 한다
+⑧ PRESUMED_SAME 중 **근사 상품은 별도 노출 가능성** 을 검토한다(판정 ↔ 노출 분리)
+⑨ 🔴 기존 **가격·수익성 정책은 유지** 한다(PRESUMED_SAME 은 수익성 계산 제외 유지)
+🔵 원인 원장·복원 가능성 = HANDOFF **§D-sxF** · 산출물 `MI-KIDS-PRESUMED-ROOTCAUSE.json` ·
+   `MI-KIDS-PRESUMED-RESTORATION.json`
+```
+
+🔵🔵 **CPO 단계별 검토 자료 = `docs/MI-KIDS-CPO-COMPARISON-REVIEW.md`**(§A~§G · 신규 2026-11-16)
+   🔴 **REVIEW 1~5 는 CPO 가 순서대로 검토** 한다 — 현재 **REVIEW 1 대기** 다
+   🟢 전수 per-pair 자료 = 같은 이름의 `.json`(109행) · 숫자 계약 `kids-cpo-review-contract`(9/9)
+
+🟢 자산 위치와 측정 결과 = `docs/HANDOFF-P0-MI-ACCURACY-RECOVERY.md` **§D-sxC**
+🟢 baseline 재현 실패 13건 원인 확정 = 같은 문서 **§D-sxD**
+   🔴🔴 **지금 verdict 수준에서 측정 가능한 GT SAME 분모는 «7/18» 이다**(측정불가 11) —
+      그보다 큰 분모로 정확도를 말하지 않는다
+🔵 다음 한 수 = **CPO 결정 둘** — ⒜ baseline 행 선택 규칙(2건 즉시 회복 · 코드 0)
+   ⒝ 나머지 11건의 시스템 판정 재산출 승인 여부(HTTP 또는 오프라인 재판정 · 현재 **둘 다 불승인**)
+```
+
+```
+우선순위(고정)  MI 정확도 → 실제 상품군 확대 → 카테고리 엔진 → MI 통합 안정화 → 추가 커머스
+🔴 개발 우선순위는 **기능 구현량이 아니라 「실제 상품에서 올바르게 판단하는가」** 다
+
+PHASE 1  MI 정확도        국내 동일상품 매칭 · 해외 현지 가격/통화 · 원본가격 ORIGIN_FX ·
+                         MI CASE 및 수익성 결과 검증            ← 🔵 **지금 여기**
+PHASE 2  실제 상품군 확대  WOMEN_FASHION · FASHION_ACCESSORIES · HOME_LIFESTYLE
+                         🔴 실제 상품을 넣어 전체 분석 흐름의 «실패» 를 확인한다
+PHASE 3  카테고리 엔진     🔴 PHASE 2 에서 확인된 **블로커만 최소 수정**
+PHASE 4  MI 통합 안정화    검색 · 동일상품 판정 · 국내외 가격 · 수익성 · CASE · Radar · 등록 준비 전체
+PHASE 5  커머스 채널 확장  🟢 스마트스토어·쿠팡 실제 등록은 **이미 검증됨** ·
+                         🔴 추가 채널은 MI·상품군 검증 **이후**
+```
+
+🔴🔴 **상세설명 전략은 PHASE 1 의 핵심 작업 «중 하나» 다** — 전체 제품 전략을 대체하는
+별도 프로젝트가 **아니다**. 정의와 현재 상태는 `docs/HANDOFF-P0-MI-ACCURACY-RECOVERY.md` **§D-sxB**.
+
+---
+
+### 🔵🔵🔵 **0-CHECKLIST. 새 세션 필수 확인 — 🔴 통과하지 못하면 구현을 시작하지 않는다**
+
+🔴 CPO 확정(2026-11-16). **코드 작업 «전» 에** 아래를 확인하고 **먼저 보고** 한다.
+
+```
+확인할 것 일곱
+  ① 이 문서의 **동결 사항**(§0-FROZEN)과 **현재 진행**(§0-NOW)
+  ② `docs/HANDOFF-P0-MI-ACCURACY-RECOVERY.md` 최신 상태(**§D-sxA 동결표 · §D-sxB 전략**)
+  ③ CEO 전략 원문과 승인된 기준(`CLAUDE.md` §5-D · §5-D-2 · `docs/CEO-GT-LEDGER-*` **읽기 전용**)
+  ④ Git **HEAD / origin / worktree** 상태
+  ⑤ 이전 완료 작업과 현재 미해결 작업
+  ⑥ 이번 작업의 **전략적 목적 + 위 로드맵상 위치**
+  ⑦ 동결·불승인 사항과 **재조사 금지 경계**
+
+착수 전 보고에 반드시 넣을 것 다섯
+  ① 전체 제품 전략상 **현재 위치**
+  ② 이번 작업이 해결하려는 **제품 수준의 문제**
+  ③ **이전 작업과 중복되지 않는 이유**
+  ④ 이미 확인된 사실 ↔ **미해결 질문**
+  ⑤ **승인된 범위**와 **금지된 변경**
+```
+
+🔴 **이전에 끝난 작업을 다시 시작하려면 «새로운 미해결 질문과 근거» 를 제시해야 한다.**
+🔴 그리고 **기존 산출물은 읽기 전용** 으로 다룬다 — 새 결과는 별도 파일에 쓰고, 기존 파일에
+쓰기가 발생하면 **내용이 같아도 그 사실을 보고** 한다(§D-sxA 정정 이력).
+
+---
+
+### 🔵 **0-NOW. 현재 좌표**(2026-11-16 갱신 · 🔴 아래 0-STRATEGY 보다 «이것이» 최신이다)
+
+🔵🔵🔵 **[최신 2026-11-20 · 이 블록보다 «이것이» 최신이다] 현재 좌표 = `docs/NEXT-SESSION-B38.md` 하나다.**
+🔴 새 세션은 그 문서의 **STEP 1**(`junioredition.com × B226AC033` 의 blockers·축별 판정 추출)부터 시작한다 — **재조사 금지** · 그 문서가 아래와 충돌하면 **그 문서가 이긴다**.
+
+🔵🔵 **[최신 좌표 2026-11-16 · B16 완료] 다음 한 수는 «CPO 검토 1회» 다 — CTO 작업 없음**
+```
+직전 완료  B군 GT **16쌍** 전문 추출 검증(CPO 선택 ①) ⟹ `docs/MI-B16-FULLTEXT-EXTRACTION.json`
+핵심 결과  ⒜ **DESIGN 축이 GT 를 가장 깨끗하게 가른다** — SAME **6/6 MATCH** ↔
+              DIFFERENT **MATCH 0** (MISMATCH 6 · UNKNOWN 3)
+          ⒝ GT SAME 6쌍에서 **MISMATCH 가 전 축 0** (참 SAME 에 거짓 충돌 없음)
+          ⒞ 🔴 보조 축은 변별력이 낮다 — DIFFERENT 9쌍에서 COLOR·MATERIAL·PRODUCT_TYPE
+              이 각각 **MATCH 5** 다 ⟹ 그 축만으로 SAME 을 올리면 안 된다는 직접 증거
+          ⒟ 창(≤84자)은 전문의 **최저 11.9%** 만 덮는다(후보측 p50 81.7%) ⟹
+              **과소추출(놓친 근거)은 창으로 검증 불가** 가 수치로 확정됐다
+          ⒠ 가드 ON 은 **11/16 쌍** 을 바꿨다 — 🟢 거짓 증거 제거(「sweatshirt」 안의
+              거짓 「tshirt」 5쌍 · SLEEVE_FORM 허위 1면 신호 4쌍) ·
+              🔴 **올바른 방향 신호 상실 2쌍**(GT DIFFERENT 의 PRODUCT_TYPE MISMATCH→UNKNOWN)
+          🔴 ⒠ 때문에 가드 ON 을 「개선」으로 적지 않는다 — CPO 「거짓 증거 제거는 진전이지만
+             SAME 안전성 향상을 뜻하지 않는다」가 **이 분모에서 재현됐다**
+한계      🔴 분모 **16**(모집단 대표 아님 · 정밀도/재현율 일반화 금지) ·
+          🔴 **A군 33 은 여전히 미측정**(후보 원문 0/33) · A∩B = 0 ⟹ 대체 불가
+다음      🔵 **CPO 검토 1회** → A군 32건 HTTP 수집 여부 재결정(현재 **불승인**)
+          🔴 CTO 선제 착수 금지 · 추출 규칙 · 가드 기본값 · verdict · SPRINT 3 전부 동결
+```
+
+```
+HEAD / Production  197f7fc6  **Ready**(빌드 로그 확인) · root 200 ·
+                   /today 307(정상 인증) · origin/main 0/0 · 작업트리 기준선 유지
+회귀  11,154 passed / 880 files · typecheck 0 · build 0
+🟡 사전 존재 실패  golf01-wire-page-chain 3건 (MI 무관 · 기준선)
+🟡 실행 간 불안정 1건  `coupang/notice-regression` — 3회 중 **2차에서만** 실패 ·
+                   단독 7/7 PASS · 🔴 운영 트리가 동일한 1·3차는 통과 ⟹ 내 변경 아님 · 원인 미규명
+
+[2026-11-15~16 배포 4건]
+5ede3633  📚 후보 검토 이력을 셀러 화면에서 내림 — 내부 검토 자료로 분리(CPO 정정)
+d8be99dd  축 B — 예상 마진 근거에서 PRESUMED_SAME 제외 (MARGIN-BASIS-SPLIT-01)
+64599a66  sellability·representativeVerdict — 추정 근거로 확정 판매가능 승격 차단
+de359e2f  MI-UI-CONSISTENCY-01 P0-A — 같은 통화가 한 화면에서 두 형식으로 뜨던 것 하나로
+
+[🔵🔵🔵 MI 판단 기준 — 상시 규칙 · CLAUDE.md §5-D 에 «고정 등록» 됨(2026-11-16)]
+  🔴 모든 MI 작업은 그 절을 먼저 읽는다. 여기 요약만 둔다(원문은 §5-D · 사례는
+     `docs/CEO-GT-LEDGER-2026-11-08.md` · 🔴 복제 원장 금지)
+  핵심 식별  **브랜드+품번** 또는 **상품명+품번** 이 «함께» 일치 ⟹ 그것이 「100%」다
+            🔴 브랜드 단독·품번처럼 보이는 문자열 하나로 100% 판정 금지
+  보완      누락/불일치는 그 하나로 DIFFERENT 단정 금지 → **상세설명·사양 표** 추가 검토
+  보조      소재·이미지는 보존하되 **단독 확정 근거로 승격 금지**(이미지는 표준 §2.2 가 제외)
+  라인      키즈↔베이비는 무조건 DIFFERENT 아님(CEO 「동일 및 유사로 봐도 됨」)
+  유보      증거 부족·충돌 ⟹ SAME 확정 금지
+  🔴 추출 ≠ 판정 반영 — 상세설명 증거는 **구현돼 있으나 운영 판정에 연결되지 않은 상태** ·
+     연결 금지 사유 = COLOR_VARIANT/FIT 정밀도 손실 · 재개 조건 = **GT 정밀도 재측정 하나**
+  🔴 브랜드 alias 개선을 MI 정확도 개선의 중심 과제로 삼지 않는다
+  🔴 네 표본을 합산하지 않는다 — CEO 원장 9 · human GT 39 · 국내 PRESUMED 33 · 골든(미집계)
+  🔵 진행 위치 — `docs/HANDOFF-P0-MI-ACCURACY-RECOVERY.md`(§D-ter CPO 결정표 · §D-qu 전략)
+
+[🔵🔵🔵 최상위 MI 전략 — **단계별 검색 · 조기 종료**(CEO 확정 2026-11-16)]
+  🔴 전문은 **CLAUDE.md §5-D-2** · CEO 승인 없이 변경 금지
+  > 검색 결과 200개를 **모두 정밀 분석하지 않는다.** 성공 기준은 분석량이 아니라
+  > **유효한 동일·유사 상품과 가격 근거를 빠르게 확보** 하는 것이다
+  1차 **브랜드+제조사 품번**(저비용 필드) → 2차 **상품명 키워드**(🔴 1차 0일 때만)
+  → 3차 **상세설명·사양표·소재·색상·시즌·이미지**(🔴 1·2차 «모두» 0일 때만)
+  종료 동일 후보 **3~5개 ⟹ 즉시 종료** · **1개 이상이면 다음 단계 금지** ·
+     🔴 유사상품을 동일상품 수량에 포함하지 않는다
+  🔴 조기 종료는 **실제 provider 호출·수집까지** 멈춰야 한다(UI 표시만은 불충족)
+  🔴 완료 보고 조건 — 「구현했다」가 아니라 **「확보 시점에 나머지가 멈췄다」를 실행 기록으로**
+     (검색 요청 수 · 상세 페이지 요청 수 · 단계별 소요 시간)
+
+[현재 실행 순서 — CPO 지정]
+  ① 전략 문서 반영  🟢 **완료**(CLAUDE.md §5-D-2 · 이 블록 · HANDOFF §D-qu)
+  ② SPRINT 0 기존 구현 전수 확인  🟢 **완료(정정 반영)** — HANDOFF **§D-sx**
+  ③ SPRINT 0 · 1 · **2**  🟢🟢 **전부 완료 · 배포 `5d560002`**
+     🔵 SPRINT 2 실행 기록 전문 = HANDOFF **§D-sx3**(🔴 결정 원문은 §D-sx2 그대로 보존)
+     🟢🟢 **착수 전 확인이 바꾼 것** — CEO 조기 종료의 **정지 조건은 이미 구현돼 있었다**
+          (`comparison-search/index.ts` 샵 사다리 · `crossSellerVerdict === "SAME"` ·
+           자기참조 제외) ⟹ **멈춤 로직을 새로 만들지 않았다**(CPO ③④ 가 이미 지켜진다)
+     🟢 새로 생긴 것 — ⒜ **1차 식별 신호**(브랜드 «그리고» 품번 · **관측 전용**)
+          ⒝ **단계별 비용 계측**(`[SPRINT2-stage]` · 칸별 provider 호출·후보·신호·소요시간·멈춤)
+     🔴 **제약 3건(구현으로 우회하지 않았다 · 보고에 그대로 실었다)**
+          ⒜ `:1412` 조기 종료 시점에 **SAME verdict 가 없다**(판정은 676줄 뒤) ⟹
+             현 구조에서 「실제 SAME 수」 조기 종료 **불가**
+          ⒝ `foundVeryHighInP0` 는 **되살리지 않았다**(WU-095 는 의도된 수정)
+          ⒞ 샵은 `allSettled` 로 **동시 출발** ⟹ 조기 종료가 샵 «안» 에서만 성립한다.
+             샵 «사이» 는 **수집↔판정 교대** 구조 변경이고 **CPO 불허(⒜)**
+     🔴 MI 판정 0 · threshold 0 · 8축 0 · SAME 기준 0 · 가격 정책 0 · Registry 0 · DB 0 · UI 0
+     결정  ⒝ 채택 · 수집↔판정 교대(⒜) **불허**
+          🟢 brand+품번 일치 = **강한 식별 신호**(검색 우선순위·후보 식별 전용)
+          🔴 그것만으로 **SAME 이라 부르거나 조기 종료 충족으로 간주 금지**
+          🔴 실제 SAME = `judgeDomesticCandidate` 결과만 · SIMILAR·PRESUMED 제외
+     제약  :1412 조기 종료 시점에 **SAME verdict 가 없다**(판정은 :2087) ⟹
+          🔴 현 구조에서 「실제 SAME 수」 조기 종료 **불가** ⟹ **제약으로 보고**
+          🔴 `foundVeryHighInP0` 는 사실상 죽어 있다(실측 전건 low) · **되살리지 않는다**
+     기준선 HTTP 6 · 상세 0 · 429 0 · 1,320ms · 후보 looxloo 5 / 나머지 0
+     진행  🟢 SPRINT 2 **완료·배포** → 후속·재실측 → GT 재측정 → 제한 검증 →
+          🟢🟢 **CPO 최종 판정 완료 · 작업 묶음 CLOSED**(2026-11-16 · 위 **0-FROZEN** 참조)
+          🔴 스프린트 내부 세부 검토 요청 **금지**(CPO 확정)
+  ④ SPRINT 3~7  🔴 미착수 · 🔵 **CPO 가 SPRINT 2 결과를 보고 결정한다**(CTO 선제 착수 금지)
+     🔴 CPO 판정이 필요한 것 **하나** — 위 제약 ⒞(샵 «사이» 조기 종료)를 열 것인가.
+        그것을 열면 「수집↔판정 교대」이고 CPO 가 SPRINT 2 에서 불허한 그 구조 변경이다
+
+[🟢🟢 B226AC038 라이브 계측 — **실행 완료**(2026-11-16 · 승인 HTTP 6 중 **4** 사용)]
+  🔵 전문 HANDOFF **§D-sx5** · 원본 `docs/SPRINT2-LIVE-AC038-2026-11-16.json` · 배포 `e3ae9883`
+  🟢 CONTROL — 원상품을 운영과 **같은 owner** 로 세웠다(DB 스냅샷 `a4fd7939` →
+     backfillCanonicalProduct → buildProductIdentityDna) ⟹ **품번 `B226AC038` 복원됨**
+     🔴 저장된 canonicalProduct 에는 그 칸이 **없다**(DNA 가 파생한다) — 「null 이니 품번이
+        없다」로 읽으면 틀린다
+  🔵 결과 — **정상 발견 0** · PRESUMED_SAME **1**(vividvia) · 미도달 **5**
+     🔴 그 5 를 한 숫자로 적지 않는다 — 🟢 올바른 차단 **2**(james-basile·stitch-house 목록) ·
+        🔴 **오차단 1**(nordstrom `/s/…` **상품 상세** 가 NOT_PRODUCT_PAGE · 요청조차 안 했다) ·
+        🔴 도달 실패 **1**(junioredition UNREACHABLE · 2 HTTP) · 🟡 오통과 **1**(coupleshot
+        목록이 모양 게이트를 통과해 HTTP 1 을 쓰고 NO_FACTS 로 걸렸다)
+  🔵 생존 후보 vividvia — 품번 **exact** 인데 브랜드가 「보보쇼즈」라 **BRAND_MISMATCH** ⟹
+     1차 식별 신호 **false** · verdict **PRESUMED_SAME**(SAME 아님) ·
+     이미지 **존재 자체가 없어 검증 불가**(일치 여부 `UNVERIFIED_BY_CTO`) ·
+     링크 **PRODUCT_PAGE 정상** · 가격 **KRW 138,000 VERIFIED_CURRENT**
+  🔴🔴 대표님 제보 두 건 **둘 다 재현** — 이미지(우리 추출이 못 읽는다 · 🔴 「사이트 오류」와
+     **미분리**) · 링크(목록이 모양 게이트를 통과한다 · 🟢 NO_FACTS 가 막았다)
+  🔴 고치지 않았다 — brand alias 확대(금지축) · `classifyUrlShape`(WU-052 HOLD) ·
+     SAME 정책/임계값 **0** · 이미지·링크 오류를 SAME 근거로 **쓰지 않았다**
+  🟢🟢 **그 둘은 CPO 승인으로 «닫혔다»** — 배포 `beea5b59`(아래 블록)
+
+[🟢🟢 SPRINT 2 후속 조치 — **①② 구현·배포 완료**(2026-11-16 · `beea5b59` · HTTP 0)]
+  🔵 전문 HANDOFF **§D-sx6**. 🔴 둘 다 「완화」가 아니라 **거짓 신호 제거** 다.
+  ① **URL 오차단** `classifyUrlShape` 에 `/s/<하이픈 슬러그>/<숫자 id>` 추가
+     🔴 토큰에 `s` 를 **넣지 않았다** — 넣으면 `/s/sale`·`/s/search` 가 상품이 되고
+        그것이 CPO 가 승인하지 않겠다고 한 부작용이다(SPRINT-02 `c` 사고와 같은 종류)
+     🟢 `PRODUCT_ITEM_ID_SUFFIX` 와 같은 설계로 **셋 동시** 요구 · 도메인 조건 **0**
+     🟡 미측정 위험 — 「하이픈 카테고리 + 숫자 꼬리」 목록은 표본에 **없었다**(있으면 통과 ·
+        🟢 그때도 `NO_FACTS` 가 2층으로 막는다 · 실측에서 coupleshot 이 그렇게 걸렸다)
+  ② **한글 브랜드 표기** `brandsCompatible` 에서 **기존 등록부 재사용**
+     🔴 CPO 세 질문의 답 — ⒜ alias 는 검색어 **외에도** `facts.brand` 생산·관찰에 쓰인다
+        ⒝ cross-seller 비교에는 **연결 안 돼 있었다**(`resolveBrandIdentity` 는 shared ·
+           등록부는 crawler ⟹ **구조적으로 못 본다**) ⒞ 🟢 연결 **가능**(같은 패키지)
+     🔴 **추출은 건드리지 않았다** — `facts.brand` 는 판매처가 적은 값 그대로다
+     🔴 1차 판정이 참이면 등록부를 **보지 않는다** · 한쪽이라도 모르면 **그대로 불일치**
+     🔴 신규 alias **0**(등록부 4건 그대로) · 음역 추론 **0** · 품번 단독 SAME 승격 **0**
+  🟢 계약 **29**(양성 4 · 🔴 **음성 12** · 구조 보존 5) · 음성 대조 **M12 7F · M13 6F · M14 1F**
+     → 바이트 동일 복구 · 회귀 **11,079 passed · 실패 3 = 기준선** ⟹ 🟢🟢 **false SAME 0**
+  🟡 **미측정 1건** — 이 둘이 vividvia 를 **SAME 까지 올리는지는 재지 않았다**
+     (재측정은 HTTP 가 필요하고 승인 범위 밖) 🟢 단 blocker `BRAND_MISMATCH` 는 사라진다 ·
+     🔴 fixture 근거로는 축 4개 MATCH 에서도 baseline 이 **PRESUMED_SAME** 이었다
+  🔵 **다음 = CPO 검토 1회** → SPRINT 3 결정(🔴 CTO 선제 착수 금지)
+
+[🔴 (실행 전 기록 · 보존) 선행 확인 — 블로커 둘은 **URL 수신으로 해소됐다**]
+  🔵 기준 상품 확정  Bobo Choses **Hidden Monster Sweatshirt · B226AC038**(CPO)
+     검증 축 넷 — A 동일상품 식별 · B **이미지 일치** · C **링크 정확성** · D 가격/판매상태
+  🟢 **CPO 가 지시한 「후보 수 ↔ 검증 통과 수 분리」는 구현·배포됐다**(`14dad602`) —
+     `verifyDomesticCandidates` 가 링크(`classifyUrlShape`) · 이미지 유무 · 가격확인을
+     칸별로 센다. 🔴 「이미지 **일치**」는 세지 않는다(사람 축 · CTO 가 판정하면 반칙)
+  🔴🔴 **블로커 둘 — 둘 다 실측으로 확인했다(추측 아님)**
+     ⒜ **지시서의 6개 URL 이 없다.** B226AC038 로 저장소 전수 → URL 은 **하나뿐** 이고
+        그것은 «원상품» 이다(`bobochoses.com/en-kr/products/b226ac038-hidden-monster-sweatshirt`).
+        판매처 URL 들은 **다른 상품** 이다 — vividvia 에 있는 것은 **B226AC009** ·
+        coupleshot 은 `branduid` 만 · nordstrom 은 **Sergio Tacchini 목록** ·
+        stitchhouse **0** · jamesxbasile **0**. 🔴 URL 을 **지어내지 않았다**
+     ⒝ **국내 2곳은 등록부 검색으로 도달 불가다.** 국내 어댑터 전수 **8**
+        (bobochoses · chocoel · deuxbebe · foretforet · littleluna · looxloo · rulii ·
+         skysport[TENNIS]) ⟹ 아동 실효 **6**. 🔴 `vividvia.com` · `coupleshot.com` 은
+        어댑터가 **없다** ⟹ `findPriceSourceAdapter === null` → `unsupported` →
+        **요청을 한 번도 보내지 않는다**(WU-115 확정) ⟹ 그 둘은 **URL 을 받아야만** 들어온다
+  🔵 **승인만 있으면 한 번에 끝난다 — CPO 가 고를 둘**
+     ① **URL 6개 전달** ⟹ `candidateUrls` 경로로 6곳 전수 검증(A~D 전 축) ·
+        예상 HTTP = **6**(URL 당 1 · 상세 재조회 없음)
+     ② **URL 없이 운영 경로만** ⟹ 원상품 B226AC038 → 국내 등록부 6곳 검색 ·
+        예상 HTTP = **6**(SPRINT 1 기준선과 동일) · 🔴 단 지시서의 그 6곳은 **못 본다**
+     🔴 ①+② 둘 다면 HTTP **12**. 🔴 「HTTP 1회」를 요청 1건으로 읽으면 어느 쪽도 불가능하다
+        (SPRINT 1 도 6회였다) ⟹ **숫자로 승인해 주셔야 실행한다**
+
+[🔴🔴 SPRINT 1 전제 — **한글 검색어는 «이미» 구현돼 있다**(중복 구현 금지)]
+  운영 국내 경로 `run-domestic-price-check.ts:1276`
+    searchTerms = [...englishTerms, ...**koreanQuery.queries**]   🟢 영문 + 한글
+  owner `packages/shared/src/korean-discovery-query.ts:81`(128줄) ·
+    거부 게이트 **`NO_BRAND_ALIAS`** · **`NO_IDENTIFYING_TOKEN`**
+  🔴 내 1차 보고(「국내는 전부 영문」)는 **오보고** 였다 — 호출 경로를 안 봤다(§4-D)
+  🔴 CPO 구분 — 「기능이 있다」 ≠ 「국내 후보를 충분히 만든다」. 국내 67 · SAME 1 **원인 미확정**
+  🔵 **SPRINT 1 = 구현이 아니라 «계측»** (HTTP 0 · DB 쓰기 0 · 관찰 호출만)
+     산출물 ① 두 거부 사유 실제 분포 ② 그것이 설명하는 범위와 **한계**
+            ③ 패널 경로(`domestic-price-sources/search/route.ts:181` · **영문 전용**)가
+              실제 국내 검색 기능인지 호출 근거
+     🔴 관찰 입력이 **운영 호출과 동일한지 검증** — 보충한 입력을 운영 발생률로 적지 않는다
+     🔴 alias 부족으로 결론이 나도 **자동 진행 금지** — CPO 판단 사항
+  🔴 금지 — alias 등록부 확대 · `index.ts:263`(**해외**)에 한글 투입 ·
+     `buildCrossSellerSearchQueries` 를 한글 생성 목적으로 변경
+
+[🔴 S1-1 GET — **보류**(CEO 전략 확정에 따라 2026-11-16 전환)]
+  🟢 URL 은 **확보됐다**(내 「확보 불가」 보고는 **오보고** 였다 — fixture 에 있었다):
+     `https://www.rboutique.com/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533`
+     출처 `fixtures/wu-112-human-gt.json:9` · originCode **B226AC010** · verdict SAME
+     🟢 원장 대조 일치 — `Sku: 38533` ↔ URL 끝 `-38533`
+  🔴 **실행 금지** — 기존 HTTP 승인을 현재 실행 승인으로 해석하지 않는다 ·
+     상세설명은 **1·2차 모두 0일 때만** 고려한다(3차 단계) · URL·fixture 증거는 보존
+  🟡 리다이렉트 기록 — `en-us` → **`en-sk`**(`wu-074-probe.json`) ⟹ 승인 시 명세에 반영
+  🔴 S2-1 GET 보류 · title 관찰 후순위 · 상세설명 운영 연결 금지 · axes/threshold 변경 금지
+
+[P0 고정 — CPO 2026-11-16]  AI Search 국내·해외 동일상품 후보 수집 → 화면 노출
+  ① 후보 수집  ② 국내/해외 동일·유사 비교  ③ 후보별 증거·사유 기록
+  ④ CPO 검토 + CEO 육안 반영  ⑤ 국내·해외 «동일 템플릿» 노출
+🔴 마진·판매판정·채널등록은 ①~⑤ 이전에 우선순위를 가져가지 않는다
+
+[CEO 화면 미해결 4]  후보 오탐 · 동일상품 누락 · 국내↔해외 템플릿 불일치 · 장문 텍스트
+  오탐   🟢🟢 **P0 ③ 측정 완료 · 코드 변경 0 이 정답**(2026-11-16 · DB 실측 · 재조사 금지)
+         🔴 「19건 중 13(68%)」의 **분모를 확정했다** — 그것은 **PRESUMED 군** 수치다:
+         ```
+         군 × 사람판정 (candidate_reviews · human_verdict 있는 행 **39**)
+           LIKELY(sys SAME)        3 → human SAME 3 · DIFFERENT **0**  🟢 오탐 0
+           PRESUMED(PRESUMED_SAME) 19 → SAME 5 · SIMILAR 1 · DIFF **13**  (68%)
+           sys ∅ (GT 시딩 행)      17 → 🔴 군 재현 불가 = **측정불가**(0 아님)
+         ```
+         🟢 **화면 라벨이 데이터와 일치한다** — `CANDIDATE_GROUP_LABEL` 은
+            「🟢 동일상품 가능성 **높음**」 ↔ 「🟡 동일상품 **추정**」이고
+            🔴 **어디에도 「동일상품」이라고 단정하는 라벨이 없다**(`ccl-01` 이 잠금)
+         🟢🟢 **그리고 그 13건은 «금액» 에 닿지 않는다 — 두 축 전부 구조적으로 막힌다**:
+         ```
+         A 가격 가이드   buildMarketJudgement 가 `transientDisplayTier(row) !== "SAME"`
+                        에서 continue ⟹ 🔴 PRESUMED 는 **진입 자체가 불가능**
+         B 참고가격      candidate-market.ts 의 **5단 자격 퍼널** —
+                        EXCLUDED → verdict → **blockers** → 금액 → priceStatus
+                        실측: 그 13건은 `NO_TITLE_OVERLAP` **11/13** ·
+                        `BRAND_MISMATCH` 10/13 · `VERIFIED_CURRENT` **0/13**
+                        ⟹ 가격 있는 11건 전부 **blockers 단계에서** 탈락 · 2건은 금액 없음
+         대조군         참고가격에 실제로 들어가는 PRESUMED **3건**(GBP 37×2 · GBP 58)은
+                        **전부 human SAME** ⟹ 🟢 **오포함 0 · 정밀도 3/3**
+         ```
+         ⟹ 🔴 남은 것은 **「목록에 보일 것인가」 하나** 이고 그것은 CPO 가 이미 정한
+            **Recall 교환 정책** 이다(판정·금액 결함이 아니다)
+         🟡 관측 1(고치지 않았다) — 퍼널 마지막 줄이 `priceStatus != null && !== VERIFIED`
+            라 **`null` 은 통과한다**(GBP 37×2 가 그 경로). 이 분모에서 오포함은 없었지만
+            「모르는 것을 통과시킨다」 모양이다 ⟹ CPO 판정 사안
+  누락   공급 축 — 국내 어댑터 8 · enabled 7 · 🔴 bobochoses.com 비활성 ·
+         링크 없는 560건의 **48%(269)가 Bobo Choses**
+  템플릿 🟢 조사 완료 · **P0-A 부분 해결**(`de359e2f`) — CONTROL(두 시장 동일 입력)이
+         갈랐다: **구조는 이미 통일** 돼 있다(`MarketColumn`·`MarketBlock` 둘 다 공유 ·
+         `MarketBlock` 은 `["KR","OVERSEAS"].map()`). 🔴 남은 비대칭은 **셋**:
+         ⒜ 🟢 **고쳤다** — 금액 형식(`KRW 88000` ↔ `KRW 88,000`)
+         ⒝ 🟢🟢 **CPO 판정 CLOSED — 현 구조 유지**(2026-11-16 · 다시 열지 않는다)
+            「국내 동일상품 확인 가격」 **제목이 이미 금액의 의미를 전달한다** ⟹
+            🔴 SUMMARY 에 DETAIL 의 `headLabel` 을 **끌어올리지 않는다** ·
+            🔴 해외에 중복 라벨을 **추가하지 않는다** · 🔵 국내 SAME 데이터가 실제로
+            확보된 뒤 화면에서 의미가 전달되는지 확인한다(**라벨보다 데이터가 우선**)
+            ── 아래는 그때의 조사 근거(기록 보존) ──
+            `headLabel` 의 렌더 자리
+            (`price-guide-headline-label`)가 `MarketBlock` **DETAIL** 분기인데 운영은
+            `variant="SUMMARY"` **하나만** 넘긴다(`MarketPriceComparison:1007`) ⟹
+            해외는 라벨이 headline **문자열 안** 이라 살고(「최저 확인가 GBP 37」)
+            국내 BAND 는 **「무엇인지」를 말하지 않는다**. `MSRUX-1 D` 가 접힘을 지울 때
+            같이 죽은 것이다(메모 `hiding-a-panel-kills-independent-features-inside-it`)
+            🔴 SUMMARY 에서 `headLabel` 을 그냥 그리면 해외 쪽이 1차 금지 리터럴
+               (「통화가 여러 개라…」)을 끌고 올라온다 ⟹ 문구 결정이 필요하다
+         ⒞ 🟢🟢 **CPO 판정 CLOSED — WU-148 유지**(2026-11-16 · 다시 열지 않는다)
+            국내=**동일상품의 확인 가격대** · 해외=**최저 소싱 가격** ⟹ 표시하는 가격의
+            **의미가 다르다**. 🔴 두 제목을 억지로 동일하게 만들지 않는다.
+            🔵 **화면 구조와 표현 규칙은 통일하되 가격의 «의미» 는 구분한다**(CPO 문장)
+         🟡 그리고 **DETAIL 분기 전체가 죽은 코드** 다(`price-guide-counts`·`-note`·
+            `market-empty-*`·`SAME_CHECK_HEADING`·국내 `statusLine`/`note`/`scope`).
+            🔴 삭제는 범위 밖이라 **하지 않았다**(CPO 결정)
+  장문   🟢 조사 완료 · **코드 변경 0 이 정답** — 1차 화면 실측(운영과 같은 props ·
+         서버 빌더 `@commerce/pricing` 산출 주입):
+         MI 구역 **353자 · 최장 문단 50자** / StageBody **547자 · 최장 61자** /
+         ActionCenter **112자 · 최장 33자**. `sellingGuidance` 3문장은 **접힘 안** 이라
+         1차에 서지 않는다 ⟹ `MSRUX-1 D` + `CORE-2AO-R2` 가 이미 닫았다
+         🟢🟢 **CPO 판정 CLOSED — 현 단계 제거 보류**(2026-11-16 · 다시 열지 않는다)
+            계약 3건이 보호하고 있고 **1차 장문 문제는 이미 해결된 것으로 확인됐다** ⟹
+            🔴 지금 계약을 뒤집을 근거가 부족하다. 🔵 **재개 조건 하나** — 실제 CEO 화면
+            확인에서 **그 문구가 판단을 방해한다** 가 확인되면 **계약과 함께** 수정한다
+            ── 그 후보 2건(기록 보존) ──
+            「동일상품 여부는 시스템이 판단합니다 …」(53자 · StageBody:423) ·
+            「결론은 화면 맨 위 「📊 시장 판매 판단」 하나입니다」(30자 · :395)
+            (계약 — `product-tab-first-screen:446-447` · `uxc-7-market-progress:115` ·
+             `wu-149-seller-decision-only:155-156`)
+
+[🔴🔴🔴 사고 — BBKR 2-GET 시간 게이트 위반(2026-11-16 · CPO 사고 판정)]
+  실행 **08:43:29 KST** / 승인 **20:23:29 KST** ⟹ **11시간 40분 전** 에 HTTP 2회가 나갔다
+  원인 ① 게이트 상수를 손계산(`1763296409` = **2025**년) ② 🔴 게이트를 «실행해서»
+       검증해 그 실행이 곧 위반이 됐다(검증·실행 경로 미분리)
+  결과 Suggest **200**(품번으로 공개 endpoint 조회 1건) · Detail **429 실패**
+  🔴 해석 제한 — 「**공개 검색 endpoint 품번 조회 성공**」까지다. 국내 공급 가능성·재고·
+     통화·가격·SKU **확정 아님**. 「5~10초 간격」은 **미검증 가설**
+  🔴 CPO 결정 — 예산 **소진** · 추가 Suggest/Detail **금지** · Detail 재요청 **미승인** ·
+     어댑터 재활성화·배포 **금지**
+  🟢 후속 조치 완료(외부 요청 0) — 전문 `docs/BBKR-2GET-EVIDENCE-2026-11-16.md` §4-B~4-D
+     `bbkr-preflight.sh`(HTTP 수단 0) + `bbkr-verify-separation.sh`(정적 단언 · 변이 FAIL 확인)
+     실행 스크립트는 **삭제하지 않고** `.INCIDENT-DO-NOT-RUN` 으로 보존
+  🔴 **다음 승인 요청 시** 요청 간격 포함 실행계획 + 비네트워크 dry-run 결과를 **먼저** 낸다
+
+[🟢🟢 국내 공급 경로 — **이미 전부 구현돼 있다**(2026-11-16 · 기존 자료·DB 읽기만 · 재조사 금지)]
+  코드   DOMESTIC 어댑터 **8**(looxloo·bobochoses·rulii·skysport·deuxbebe·littleluna·
+         chocoel·foretforet) · 🔴 레지스트리에 `enabled` 플래그가 **없다**(grep 0) ⟹
+         🟢 `bobochoses.com` 은 **코드상 살아 있다**(ALWAYS_READY · `searchBoboChosesKorea` ·
+         `priceSource:"detail"` 강제) ⟹ 🔴 **「어댑터 재활성화」는 코드 작업이 아니다**
+  DB     `domestic_price_sources` **35행** 중 `enabled=false` 는 **bobochoses.com 하나**
+         `workspace_domestic_shop_settings` — bobochoses **ws_enabled=false × 6 workspace 전부**
+         ⟹ 🔴🔴 **이중으로 꺼져 있다** · 실효 owner 는 **ws 설정** 이라
+            **카탈로그만 켜도 안 켜진다**([[manual-means-uninvestigated-not-uncollectable]])
+  🟢 지금 돌아가는 국내 AUTO_SCRAPE 아동의류 **6곳** — chocoel · deuxbebe · foretforet ·
+     littleluna · looxloo · rulii (+ skysport = TENNIS)
+  🔴 bobochoses 의 전략은 **AUTO_API**(나머지는 AUTO_SCRAPE) — 내가 쏜 suggest endpoint 와 같은 성질
+  🟡 **CPO 승인 요청 사안** — 그 7행(카탈로그 1 + ws 6)을 켤 것인가. 🔴 CTO 는 켜지 않았다
+
+[🔴 재조사 금지]  검색어 전달 경로 · brandModelCode 추출 · 품번 1순위 · 축 A 영향 ·
+  SAME 점수 계약(SAME_MIN_AXES 5 · IDENTIFIER 3점) · 집계 자격 계약 · 색상 입력 계약
+
+[🔴 미측정으로 남은 것]  computeSellerAction 의 domesticBasis 미수령 ·
+  「PRESUMED 아닌 COMPARISON」 보존(운영 0건 · 합성 계약만) · 라이브 null verdict 비율
+```
 
 ### 🔵🔵🔵 **0-STRATEGY. CPO 전략 기준선이 재정렬됐다**(CPO 확정 2026-11-07)
 
@@ -310,10 +871,1140 @@
    무조건 SAME 승격 · 가격 적격성 조건 · 검색 후보 자동 제외/차단 ·
    **과거 DIFFERENT 표시 UI** · `GT_IMPORT` 13행 · migration 추가/재적용 · 승인 범위 밖 파일
 
-🔵 **현재 좌표 = `docs/MI-MATCH-ACCURACY-RESUME-PLAN.md`(A~G 제출 완료 · CPO 승인 대기)**
-   🔵 다음 한 수 = **§F-1**(신규 증거 4건에 운영 함수가 왜 닿지 않았는가 · 측정 전용 · 분모 4쌍)
-   🔴 F-2·F-3 는 F-1 결과를 보고 **다시 승인** 받는다.
+🔴 [낡음] 이전 좌표 = `docs/MI-MATCH-ACCURACY-RESUME-PLAN.md` A~G — **제출·검토 완료** 됐다.
 ```
+
+### 🟢🟢🟢 **현재 좌표 (2026-11-09 갱신 ⑥) — UNIFIED-UX-1 ①③④⑥⑧ 배포 · 남은 것은 ②⑦**
+
+```
+Production   **a826240e** Ready(빌드 로그 Commit: a826240 = HEAD · HTTP 200)
+Git          origin/main 0/0 · 미커밋 **40건 보존**(39 + START-HERE)
+직전 작업     🟢 UNIFIED-UX-1 **④⑧ 구현·배포** — 후보 카드가 「참고가격에 썼는가」를 말한다
+다음          🔵 **UNIFIED-UX-1 ②⑦** — 🔴 착수 좌표는 아래 §0-SC2(조사 0 · 바로 구현)
+```
+
+### 🟢🟢 **0-SC2. UNIFIED-UX-1 — 닫힌 것과 남은 것**(`a826240e`)
+
+```
+🟢 ① 후보 ID 대조      CLOSED — 「합계 3건」은 성립하지 않는다(분모가 겹친다)
+🟢 ② 88,000 추적       CLOSED — 판매처(domain) 단위라 **이미 추적 가능** · 화면이 안 적었을 뿐
+🟢 ③ 세 집계 분리      CLOSED — 계약 `sourcing-candidate-count-denominators-1`(5건)
+🟢 ④ 국내·해외 통일    CLOSED — **이미 같은 카드** 였다(`MarketColumn` 하나 ·
+                       `mi-candidate-row` 하나) ⟹ 다시 만들지 않고 **계약 U-1 로 잠갔다**
+🟢 ⑥ 판단 근거 연결    기존 `▸ 근거 확인` 그대로(신규 0)
+🟢 ⑧ 포함/제외 구분    **구현** — `mi-candidate-price-use` 한 줄(접힘 **밖**)
+                       「참고가격에 반영」 / 「참고가격 제외 — 상품 차이가 확인됨」
+                       🔴 「모른다」면 줄을 만들지 않는다 · 내부 토큰 노출 0
+🔴 ② 카드 5칸 제한     **미착수**
+🔴 ⑦ 선택 UI 제거(⒝)  **미착수**
+```
+
+🔴🔴 **②⑦ 을 이 세션에 하지 않은 이유** — 그 UI 를 단언하는 계약이 **46 파일** 이다(실측).
+한 세션에 완결 불가로 판단해 **착수하지 않았다**(CPO 조건: 「완결할 수 없다면 clean 으로
+중단하고 미완료 범위를 보고」). 🟢 작업트리 **clean**.
+
+### 🔵🔵🔵 **0-DEDUP. 다음 세션 1번 작업 = `JUDGEMENT-DEDUP-1`**(CPO 승인 2026-11-09)
+
+🟢🟢 **재구현하지 않는다.** 구현과 신규 계약이 `docs/JUDGEMENT-DEDUP-1.patch` 에 있다
+(clean 에서 `git apply --check` **PASS 확인됨** · 2 파일 · +43/-20 · +170).
+```bash
+git apply docs/JUDGEMENT-DEDUP-1.patch
+```
+
+🔵 **CPO 확정 설계**(실측에 맞춰 수정됐다):
+```
+접힘 밖   우리 판단 **등급** + **「확인 필요」 경고 한 줄**
+접힘 안   **긍정적인** 상세 판단 근거
+🔴 같은 경고 문구가 두 영역에 **중복 표시 금지**
+🟢 목적 변경이 아니다 — 실제 데이터 구조에서 중복을 **구조적으로** 없애는 방법이다.
+   `candidateWarningLines` 는 **언제나 최대 한 줄** 을 낸다(사유를 `·` 로 합친다)
+   ⟹ 「핵심 1 + 상세 N」 분할은 **성립하지 않는다**(죽은 코드가 된다).
+```
+
+🔴 **갱신할 기존 계약 6건 / 3 파일** — testid 가 `mi-candidate-warning`(접힘 **안**) →
+**`mi-candidate-judgement-basis`**(접힘 **밖**)로 옮겨졌다. 🔴 **삭제·약화 금지**:
+```
+cand-02                   R2-06 · R2-08 (+ 801·804·825 줄의 warn 필터)
+core-ux-rebuild-01        UXR-C-1 「경고 줄은 evidence 안에만」
+stage2-evidence-recovery  D1-5 「카드가 그 줄을 실제로 그린다」
+🟢 옮기는 방향 — 「**밖에 하나 · 안에 0**」을 **같은 강도로** 단언한다.
+```
+
+🔴🔴 **변이 D1 의 분모 함정을 기억한다** — 접힘은 **긍정 근거가 있을 때만** 선다.
+`matchReasons` 없는 fixture 로는 **중복을 측정조차 못 한다**(실제로 D1 이 그래서
+**통과** 했다). 🟢 패치의 신규 계약은 그 분모를 **이미 고쳐** 놓았다.
+
+🟡 실행 순서(CPO) — ①패치+`--check` ②계약 6건 갱신 ③밖 1·안 0 단언 ④국내·해외
+**접힘/펼침 둘 다** DOM ⑤D1·D2 변이 재검증 ⑥회귀·typecheck·build ⑦선별 커밋·배포.
+🔴 배포 뒤 **CPO 2차 검수** 를 받는다 — CEO 검수는 그 뒤다.
+
+### 🔴🔴 **0-SC3. [종료] ②⑤⑦ — 배포 완료**(`e3183254`)
+
+🟢 아래 기록은 **그 시점의 중단 사유** 다 — ②⑤⑦ 은 계약 19건 갱신 후 **배포됐다**.
+
+🟢🟢 **다음 세션은 설계·구현을 다시 하지 않는다.** 동작하는 구현 **과 신규 계약 6건** 이
+`docs/UNIFIED-UX-1-STEP-2-7.patch` 에 있다 — **그대로 적용하면 된다**:
+```bash
+git apply docs/UNIFIED-UX-1-STEP-2-7.patch   # 🟢 clean 상태에서 --check PASS 확인됨
+```
+```
+패치 내용(3 파일)
+  MarketPriceComparison.tsx                 +74 / -8   ② ⑤ ⑦ 구현
+  mi-same-candidates.ts                     +12        「우리 판단」 어휘 3
+  __tests__/sourcing-candidate-unified-ux-1 +74        🔵 **신규 계약 V-1~V-6**
+🔴🔴 **1차 패치에는 V 블록이 빠져 있었다**(소스 둘만 담았다) — 그대로였으면 CPO 4단계
+   「신규 계약 13개 재검증」이 **성립하지 않는다**(6건이 아예 없다). 🟢 그 구멍을 메웠다.
+🟢 적용 직후 기대값 — 그 파일 **13 passed**(U 7 + V 6).
+```
+
+```
+🟢 구현한 것(검증됨 · 계약 13/13 PASS · 변이 V1·V2 각 2 FAIL → 복구)
+   ② 기본 카드 **다섯 칸**(이미지·상품명·사이트명·링크·가격) — 등급을 기본 칸에서 뺐다
+   ⑤ 「우리 판단」 영역 신설 `mi-candidate-judgement`
+      「우리 판단: 동일상품 추정」 + 「판단 근거: …」(사람의 말만 · 내부 토큰 0)
+   ⑦ `<CandidateSelect>` · `<CandidateNoteChoices>` **호출 제거**
+      🟢 human_verdict 는 **읽기 전용** 으로 표시(`mi-candidate-human-verdict`)
+      🔴 `use-candidate-review.ts` · POST · DB **변경 0**(데이터 39건 보존)
+   🟢 typecheck 0 · build exit 0
+
+🔴🔴 **멈춘 이유 — 기존 계약 19건 / 8 파일이 FAIL 한다**(예고한 46-파일 반경이 터졌다).
+   전부 **의도된 방향 전환** 이라 「갱신·강화」가 필요하고, 그 작업을 안전하게 끝낼
+   용량이 없어 **되돌렸다**(CPO 조건: 「완결 못 하면 clean 으로 중단하고 보고」).
+```
+
+🔴 **갱신해야 할 계약 8 파일**(이름까지 적는다 — 다시 찾지 않게):
+```
+core-e2e-close-05-manual-recheck   R-7 「선택 → 기존 저장 경로」
+pp-01-possible-conflict            PP-09 「🟡 품번 충돌 · 참고」로 그린다
+sprint3-p4-count-chain             UXR-SELLER-05 「후보마다 «선택» 이 있다」
+stage2-evidence-recovery           D2-3 「내 판단」은 근거 접힘 «안» 에 있다
+ux04-b3-restore-render             ⒝-3 「등급이 가격보다 **앞**」 · ⒞-3 카드 구조 동일
+(+ 3 파일 · 전체 19건)
+🔴 **약화 금지** — 전부 「선택 UI 가 있다」·「등급이 가격 앞」을 보던 단언이다.
+   뜻을 바꾸지 말고 **새 자리**(「우리 판단」 영역 · 읽기 전용 표시)를 보도록 옮긴다.
+🔴 `ux04-b3 ⒝-3` 은 **DOM 순서 계약** 이라 특히 조심한다 — 등급이 가격 «뒤» 로 갔다.
+```
+
+🔴🔴 **그리고 보고에 반드시 적는다** — ⑦이 들어가면 **새 사람 판정 입력이 끊기고
+GT 신규 누적이 중단** 된다(CPO 인정). 소비자 둘: `listReviewedSameUrls`(재투입) ·
+`listSnapshotVerifiedSameKeys`(가격 자격). 「계속 누적된다」로 적지 않는다.
+
+#### [참고] ②⑦ 원래 착수 좌표
+```
+⑦ 제거 대상  `CandidateSelect`(MarketPriceComparison :2035 부근 · 4버튼
+             `mi-select-*`) · `CandidateNoteChoices`(:2102 부근 · `mi-candidate-note`)
+   🔴 둘 다 `api`(=`reviewApi`) 가 없으면 **이미 렌더되지 않는다**(WU-081 규약)
+      ⟹ 가장 작은 변경은 **그 둘을 읽기 전용 표시로 바꾸는 것** 이다
+   🟢 ⒝ 조건 — 기존 `human_verdict` 는 **보존·표시**(판단 근거 옆 참고 한 줄)
+   🔴 삭제 금지 — `use-candidate-review.ts` · POST `candidate-reviews` · DB
+🔴🔴 **그리고 보고에 반드시 적는다** — 선택 UI 가 사라지면 **새 사람 판정 입력이 끊긴다**
+   ⟹ **GT 누적도 중단** 이다(CPO 명시). 「계속 누적된다」로 적지 않는다.
+   그 두 소비자: `listReviewedSameUrls`(재투입) · `listSnapshotVerifiedSameKeys`(가격 자격).
+② 카드 5칸   현재 순서 = 이미지 → 등급 → 가격 → 상품명 → 판매처 → 근거 → 링크
+   🟡 「등급」은 **우리 판단** 이라 CPO 목업의 「우리 판단 및 근거」에 해당한다
+      ⟹ 제거 대상인지 **CPO 확인이 필요하다**(5칸에는 없지만 ⑥이 요구한다)
+🔴 금지 — 가격 집계 공식·제외 조건 변경 0 · 후보 데이터 삭제 0 · Matcher/Identity/GT 0
+```
+
+```
+Production   **1c3d5eb7** Ready — 🟢 **CEO 화면에서 참고 수익성 상자 확인됨**
+             (「예상 마진 10% · 근거 1곳 · 제외 관측 차이 1곳」) ⟹ POST-WIRING-1 효과 발화
+Git          origin/main 0/0 · 미커밋 **39건 보존**(명시 staging · 선별 커밋 유지)
+직전 작업     🟢 UNIFIED-UX-1 **①②③ 종료**(조사 · 운영 변경 0)
+다음          🔵 **UNIFIED-UX-1 ④~⑧**(UI 통일) — 🔴 그 전에 **CPO 판정 1건**(아래 §0-SC)
+```
+
+### 🔵🔵🔵 **0-SC. `SOURCING-CANDIDATE-UNIFIED-UX-1` — ①②③ 답 + ④~⑧ 착수 좌표**
+
+🔴 **다시 조사하지 않는다.** 계약 `sourcing-candidate-count-denominators-1` 이 분모를 고정했다.
+
+#### ①②③ — 🔴 **CPO 가 읽은 「합계 3건」은 성립하지 않는다**(분모가 겹친다)
+```
+「국내 소싱 후보 2곳」  = selectCandidateList(rows,"KR").length        후보 전체
+「참고가격 … 확인 1곳」 = summarize(...).byCurrency.KRW.count          금액 자격 통과
+「동일상품 확인 0곳」   = selectMiSameCandidates(...).priced.length    SAME 축
+⟹ 확인 1곳은 **후보 2곳의 부분집합** 이다 — **후보 2 = 가격 쓴 1 + 제외 1**(합계 **2**).
+   D-1 이 `확인 + 관측차이제외 === 후보수` 를 **운영 함수로** 단언한다.
+🟡 **그러나 CPO 지적의 본질은 맞다** — 화면이 그 포함/제외를 **후보 옆에서** 말하지 않는다.
+🟢 ② 추적은 **이미 가능하다**(D-4) — 집계가 **판매처(domain) 단위** 로 접으므로 참고가격을
+   낸 후보와 제외된 후보를 역추적할 수 있다. 🔴 **화면이 안 적을 뿐** 이다.
+🟢 ③ 분리 확인 — 동일상품 0곳이어도 가격 관측은 있고(D-2), PRESUMED_SAME 이라고 가격을
+   버리지 않는다(D-3). 버리는 기준은 **verdict 가 아니라 blocker** 다.
+```
+
+#### 🔴🔴 **CPO 판정 요청 1건 — ⑦(동일상품 선택 UI 제거)이 «두 운영 경로» 의 입력을 끊는다**
+```
+human_verdict === "SAME" 가 현재 **두 생산자** 에 들어간다(코드 실측):
+  ⒜ listReviewedSameUrls   → reviewedSameUrls   → **후보 재투입**(발견)
+  ⒝ listSnapshotVerifiedSameKeys → verifiedSameUrlKeys → 🔴 **가격 자격**(CORE-2AA)
+🔴 UI 를 지우면 **새 입력이 끊긴다**(기존 39건은 그대로 작동한다 · SAME 23 · DIFF 15 · SIM 1).
+🔴 그리고 CPO 3순위 「후보 검토 → GT 누적 → MI 개선」의 **입력 경로** 가 이것 하나다.
+🟡 선택지 — ⒜ 지시대로 **UI 제거**(GT 누적 중단 수용) ⒝ **선택 UI 만** 없애고
+   「동일/다름」을 **다른 자리**(예: 판단 근거 옆 한 줄)로 옮긴다 ⒞ 제거 보류.
+🔴 **CTO 가 고르지 않았다** — 「임의 우회하지 말고 중단 보고」 지시에 따른다.
+```
+
+#### ④~⑧ 착수 좌표 — 🔴 **조사 없이 바로 들어간다**
+```
+owner 파일  MarketPriceComparison.tsx(MarketColumn·격자) · GeminiTransientCandidates.tsx
+            (후보 카드) · use-candidate-review.ts(검토 API) · mi-same-candidates.ts(어휘)
+선택기 셋   selectCandidateList(목록) · selectMiSameCandidates(가격축) ·
+            selectPresumedCandidates(추정축)  🔴 **가격축 정책은 변경 0**(CPO ⑨)
+카드 5칸    이미지 · 상품명 · 사이트 · 링크 · 가격  + 판단 근거 **연결**(별도 선택 UI 0)
+🔴🔴 영향 범위 실측 — 그 UI 를 단언하는 계약 파일 **46개**. ⟹ 한 세션에 끝낼 수 없다고
+   판단해 **착수하지 않았다**(§4-C 「작업트리를 더럽힌 채 끊기는 것이 가장 나쁘다」).
+🟢 clean 상태다 — 다음 세션은 **위 판정 1건만 받고** 바로 구현에 들어간다.
+```
+
+### 🔴🔴🔴 **0-RPW. 그 전에 «내가 틀린 방식» 을 적는다 — 이것이 이 구간의 핵심 교훈**
+
+```
+🔴 AXIS-1 을 「구현·배포 완료」로 보고했는데 **CEO 화면에 그 영역이 없었다**(UI FAIL).
+   계약 29건이 **전부 초록** 이었다. 이유:
+   ⟹ 🔴🔴 **계약이 «운영에 없는 상태» 를 그려 놓고 재고 있었다.**
+      서버 산출을 **GET fixture 에 손으로 얹어** 「값이 오면 그린다」까지만 증명했고,
+      **「값이 오는가」를 한 번도 재지 않았다.** 운영 GET 은 그 칸이 **항상 null** 이다.
+🟢 그래서 셀러 화면 하니스에 **POST 경로**(`autoCheckResult`)를 더했다 —
+   그 하니스는 지금까지 **GET 만** 그려서 「POST 응답에만 있는 값」을 **재현조차 못 했다.**
+🔴 **일반 규칙**: 새 칸을 화면에 올릴 때 ① 그 칸이 **어느 응답** 에 실리는지 ②
+   화면이 **어느 응답** 을 읽는지 **둘을 맞춰 본다.** fixture 로 값을 얹는 순간
+   그 질문이 **사라진다.**
+```
+
+### 🟢🟢 **0-RP. 참고가격 기준 예상 수익성 — 설계부터 화면까지**(`de9b75da` → `1c3d5eb7`)
+
+🔵 설계 전문 `docs/REFERENCE-PRICE-PROFITABILITY-AXIS-1-DESIGN.md`. 🔴 **재조사 금지.**
+
+🔴🔴 **고친 것은 「가격은 보이는데 팔아서 남는지는 모른다」는 상태다**:
+```
+화면   「🇰🇷 국내 참고가격 KRW 88,000 · 확인 1곳」                ← 가격은 있다
+화면   「국내 동일상품 가격 근거가 없어 수익성을 판단할 수 없습니다」 ← 수익성은 모른다
+원인   tier COMPARISON ⟹ domesticBasis !== "EXACT" ⟹ marketCase **D**
+🔴 그 줄(`price-recommendation.ts`)은 **동결** 이고 한 글자도 안 바꿨다 —
+   대신 **축을 하나 더** 뒀다(CPO ③ 별도 축 신설).
+```
+
+```
+🟢 서버  `packages/pricing/src/reference-profitability.ts`(순수 함수 하나)
+   🔴 타입에 **verdict·recommendation·action 칸이 없다**(CPO 경계 ①을 타입으로 강제)
+   🔴 공식 **사본 0** — `marginPercentAt`(기존 owner · **export 만** 추가)
+🟢 통로  **POST `/check` 응답**(`domesticReference` 의 짝 · 같은 수명)
+   🔴🔴 **GET 에서 읽지 않는다** — GET 은 `geminiEvidence` 를 null 로 부르므로
+      그 칸이 **항상 null** 이다(B3-04 격리). `??` 로 이으면 POST 값이 GET 의 null 로 덮인다
+🟢 화면  「참고가격 기준 예상 수익성」 **별도 상자**(1차 · `reference-profitability`)
+   「예상 마진 N%」 + **전제 두 줄** + 「근거 N곳 · 제외 …」
+   🔴 금지 어휘(추천/비추천/낮추/경쟁력/적정가/권장) **0** · 금액(₩) **0**
+🔴 불변(측정) — marketCase · finalVerdict · recommendedPriceKrw **0** · tier 승격 0 ·
+   금액 재집계 0 · 환산 0 · **B 금액 비노출 유지** · DB 0 · schema 0 · B3-04 유지
+🟢 실데이터 — DB 실측: donokids.com **KRW 88,000**(COMPARISON · KR ·
+   system_verdict PRESUMED_SAME · match_truth TEXT_CONFIRMED · **human_verdict null**) ·
+   원가 ORIGIN_FX **₩67,290** ⟹ **예상 마진 23.5% · 근거 1곳 · 제외 0곳**
+🟢 계약 **40**(순수/배선 + 전 구간 마운트 DOM) · 변이 **M1~M10 · N1~N5 전부 FAIL → 복구** ·
+   회귀 **1014 files / 10,675 passed · 0 failed** · typecheck **0** · build **exit 0**
+🟡 **재진입(F5·`?resume=`) 한계는 CPO 가 승인했다** — 그때는 **참고가격 블록도 같이**
+   사라진다 ⟹ 둘이 **항상 같이 있거나 같이 없다**(화면 모순 0). B3-04 확장은 별도 검토.
+```
+
+🔴 **그 밖에 내가 틀린 것 넷**(같은 자리를 다시 밟지 않게):
+```
+⒜ `unverifiedCount` = 「가격이 **없다**」가 **아니라** 「금액은 있는데 확인만 안 됐다」
+   (금액 없는 행은 그 카운터 **앞에서** 빠진다 · `candidate-market.ts` 「순서가 의미다」)
+⒝ 렌더 하니스에 **내 `SNAPSHOT_ID`** 를 써서 GET stub 이 어긋났다 — 화면이
+   「시장 조사를 마치지 못했습니다」를 말했고 **제품 결함처럼 보였다.**
+⒞ 변이 **M1(Workspace prop 제거)이 통과** — 하니스가 그 조립을 **복제** 한다.
+   운영 배선은 **소스 앵커** 로 따로 문다(C-4·C-5·C-6).
+⒟ 변이 **N5(deps 제거)도 통과** — 같은 렌더에서 다른 deps 도 바뀌어 memo 가 어차피
+   재계산된다. 🔴 **deps 누락은 행동 축으로 안 잡힌다** ⟹ 소스 앵커(W4-4b).
+```
+
+🟡 **CEO Production 실화면 검수 — 질문은 네 줄이다**(`/pipeline` → 상품 → 📊 가격 분석):
+```
+① 「참고가격 기준 예상 수익성」 상자가 **보이는가**(1차 · 접힘 밖)
+② 그 안에 「예상 마진 N%」와 **전제 두 줄** 이 같이 있는가
+③ 그 상자가 **판매 판단과 섞여 보이지 않는가**(다른 상자로 읽히는가)
+④ 「근거 N곳」이 적혀 있는가
+🔴 FAIL — 추천/비추천 같은 말을 하거나 · 금액(₩)을 또 적거나 · 판매 판단과 한 상자로 보이면.
+🔴 **「국내 판매 사례 확인 필요」와 「EXACT 근거 없음」은 그대로 남는 것이 정상이다** —
+   그 둘은 **기존 판정** 이고 이번 작업이 바꾸지 않았다(CPO 승인 범위).
+🟡 상자가 **안 보이면** 먼저 「🔄 다시 분석」을 한 번 눌러 주십시오 — 이 값은 참고가격과
+   **같은 수명**(POST)이라 재진입 직후에는 둘 다 없는 것이 **설계된 동작** 입니다.
+```
+
+### 🟢🟢 **0-RP. REFERENCE-PRICE-PROFITABILITY-AXIS-1 — 구현·배포**(`de9b75da`)
+
+🔵 설계 전문 `docs/REFERENCE-PRICE-PROFITABILITY-AXIS-1-DESIGN.md`. 🔴 **재조사 금지.**
+
+🔴🔴 **고친 것은 「가격은 보이는데 팔아서 남는지는 모른다」는 상태다**:
+```
+화면   「🇰🇷 국내 동일상품 확인 가격 KRW 88,000」            ← 가격은 있다
+화면   「국내 시장가격이 확인되지 않아 … 판단할 수 없습니다」  ← 수익성은 모른다
+원인   tier COMPARISON ⟹ domesticBasis !== "EXACT" ⟹ marketCase **D**
+🔴 그 줄(`price-recommendation.ts`)은 **동결** 이고 한 글자도 안 바꿨다 —
+   대신 **축을 하나 더** 뒀다(CPO ③ 「별도 축 신설」).
+```
+
+```
+🟢 신규  `packages/pricing/src/reference-profitability.ts`(순수 함수 하나)
+   computeReferenceProfitability() → { basis:"REFERENCE_PRICE", marginPercent,
+     meetsTargetMargin, targetMarginPercent, sellerCount, excluded* }
+   🔴 타입에 **verdict·recommendation·action 칸이 없다** — CPO 경계 ①을 타입으로 강제
+   🔴 공식 **사본 0** — `marginPercentAt`(기존 owner · **export 만** 추가)을 그대로 부른다
+🟢 화면  「참고가격 기준 예상 수익성」 **별도 상자**(1차 · `reference-profitability`)
+   「예상 마진 N%」 + **전제 두 줄**(「동일상품으로 확정된 가격이 아닙니다」 ·
+   「판매 여부 판단에 반영되지 않습니다」) + 「근거 N곳 · 제외 …」
+   🔴 금지 어휘(추천/비추천/낮추/경쟁력/적정가/권장) **0** · 금액(₩) **0**
+🔴 불변(측정) — marketCase · finalVerdict · recommendedPriceKrw **0** · tier 승격 0 ·
+   금액 재집계 0 · 환산 0 · **B 금액 비노출 동결 유지** · DB 0 · schema 0
+🟢 실데이터 — DB 실측 snapshot `7b16eecc`: donokids.com **KRW 88,000**(COMPARISON ·
+   market KR) · 원가 ORIGIN_FX **₩67,290** ⟹ **예상 마진 23.5% · 근거 1곳 · 제외 0곳**
+   🔴 근거 수·제외 수는 **운영 집계기 산출** 이다(내가 적은 상수가 아니다)
+🟢 계약 신규 **29**(순수/배선 19 + **마운트 DOM 10**) · 변이 **M1~M7 · M8b · M9 · M10
+   전부 FAIL → 바이트 복구**(흔적 0) · 회귀 **1013 files / 10,656 passed · 0 failed** ·
+   typecheck **0** · build **exit 0**
+🟢 기존 계약 **1건 갱신·강화** — `wu-056` 「MI 가 국내 transient 집계를 낸다」가
+   **인라인 호출 리터럴** 을 보고 있었다. 뜻을 바꾸지 않고 ⒜호출 ⒝응답 칸
+   ⒞**「그 호출이 하나뿐」**(새로 문다)으로 쪼갰다.
+```
+
+🔴🔴 **내가 틀린 것 셋 — 다음 세션이 같은 자리를 밟지 않게 적는다**:
+```
+⒜ `unverifiedCount` 를 「가격이 **없다**」로 읽어 fixture 를 틀렸다. 실제는
+   **「금액은 있는데 확인만 안 됐다」** 다 — 금액이 없는 행은 그 카운터 **앞에서** 빠진다
+   (`candidate-market.ts` 의 「순서가 의미다」 주석). 🟢 계약 D-5 가 그 의미를 고정했다.
+⒝ 렌더 하니스에 **내 `SNAPSHOT_ID`** 를 써서 GET stub 이 어긋났고, 화면이
+   「시장 조사를 마치지 못했습니다」를 말했다 — **제품 결함처럼 보였다.**
+   🔴 id 는 **조립 owner(`seller-surface-composition`)의 것** 을 쓴다.
+⒞ 🔴🔴 변이 **M1(Workspace prop 제거)이 «통과» 했다** — 셀러 화면 하니스가 그 조립을
+   **복제** 하므로 **운영 파일의 배선 제거를 못 본다**. 🟢 운영 배선 소스 앵커 셋
+   (C-4 Workspace · C-5 패널 생산+deps · C-6 하니스 드리프트 금지)을 더해 잠갔다.
+   ⟹ **「마운트 DOM 계약이 있으니 배선도 잡힌다」는 거짓이다**(WU-110 교훈의 UI 판본).
+```
+
+🟡 **CEO Production 실화면 검수 — 질문은 네 줄이다**(`/pipeline` → 상품 → 📊 가격 분석):
+```
+① 「참고가격 기준 예상 수익성」 상자가 **보이는가**(1차 · 접힘 밖)
+② 그 안에 「예상 마진 N%」와 **전제 두 줄** 이 같이 있는가
+③ 그 상자가 **판매 판단과 섞여 보이지 않는가**(다른 상자로 읽히는가)
+④ 「근거 N곳」이 적혀 있는가
+🔴 FAIL 기준 — 그 상자가 **추천/비추천 같은 말** 을 하거나, 금액(₩)을 **또** 적거나,
+   판매 판단 문구와 **한 상자로** 보이면 FAIL 이다.
+🟢 「국내 EXACT 가 없다」는 **여전히 사실** 이고 이 WU 는 그것을 바꾸지 않았다 —
+   바뀐 것은 **그 상태에서도 수익성 비율을 말한다** 는 것 하나다.
+```
+
+### 🟢🟢 **0-WF. workflow 단계 메시지 — «런타임» 검증 완료**(`a19c7db6` · 운영 코드 **0**)
+
+🔴🔴 **CPO 지적이 맞았고 그대로 받아들였다** — M14 는 **소스 앵커** 였고 그것을 workflow
+**런타임 출력** PASS 로 확대 해석할 수 없다. 🔴 원인: 그 하니스가 `WorkflowPanel` 을
+**마운트하지 않았다.**
+
+```
+🟢 연결한 경로(운영과 같은 모양 · `CommerceWorkspace:785·3565`)
+   Panel `onMarketSignalChange` → `marketSignal` state → `resolveWorkflow({market})`
+   → `step.summary` 「분석 완료 · {verdictLabel}」 → **`WorkflowPanel`**(화면 최상단)
+
+🔴🔴 그 과정에서 **하니스의 거짓 fixture 를 지웠다** — `resolveWorkflow` 에
+   `verdictLabel: "조건부 판매"` 를 **손으로 적어** 두고 있었다. 그것이 이 하니스를
+   운영과 갈라 놓아 **「문구가 바뀌었는지」를 구조적으로 측정 불가** 하게 만들고 있었다.
+   🟢 이제 **패널이 보고한 값** 을 그대로 넘긴다.
+
+🔵 런타임 단언 넷 — 🔴 **기대값을 resolver 에서 가져오지 않았다**(CPO 금지 · 글자로 적었다)
+   MARKET_OPPORTUNITY → 「국내 판매 사례 확인 필요」
+   REVIEW_PRICE       → 「판매가격 조정 필요」
+   NEEDS_INFO         → 「원가 정보 필요」
+   HOLD               → 「판매 비추천」
+   🔴 그리고 각 상태에서 **「조건부 판매」가 남아 있지 않은 것** 도 같이 단언한다
+
+🟢🟢 **M15 가 2 → 5 FAIL 로 강화됐다**(런타임 4 + 소스 1) — 직전에는 **소스 1 뿐** 이었다.
+   ⟹ CPO 가 지적한 구멍이 닫혔다.
+🔵 블록 순서 기대값이 **WORKFLOW → SUMMARY → CONCLUSION → GRID** 로 늘었다 —
+   WU-140-R1 의 「결론은 `WorkflowPanel` **보다 뒤**」 계약과 **일치** 한다.
+```
+
+🟢 하니스 **34** · 조사 **6** · 회귀 **833 files / 10,625 passed · 0 failed** ·
+typecheck **0** · build **exit 0** · 배포 **Ready**(Commit 대조 일치).
+
+### 🟢🟢 **0-IMPL. SELLER-UX-IMPLEMENTATION-1 — 구현 완료**(`9a232c52`)
+
+🔵 운영 **5 파일** · 계약 **4 파일**. 🔴 **표시 전용 — 내부 변경 0**(동결축 전수 준수:
+`SELLER_FACING_MAP` · 내부 verdict 의미 · `READY` 조건 · 국내 EXACT 자격 · `PRESUMED_SAME` ·
+matcher/threshold/GT · CASE A/B/C/D · 가격 계산 · A/B 표시 계약 · 후보 저장 · 등록 payload).
+
+```
+🔴🔴 ① **다섯 번째 consumer 가 resolver 를 «우회» 하고 있었다**(조사가 찾은 자리)
+   `Panel` 의 `marketSignal.verdictLabel` 이 `FINAL_VERDICT_COPY` 를 **직접** 읽고,
+   그 값이 `workflow.ts:494·506` → **단계 메시지**(「분석 완료 · …」)가 된다.
+   ⟹ 요약·ActionCenter 가 「원가 정보 필요」라 해도 **그 줄만 「조건부 판매」** 로 남았다
+   🔴 **CEO 가 「문구가 그대로다」라고 본 이유 중 하나** 다 ⟹ 🟢 공통 owner 하나로 돌렸다
+🟢 ② 세 verdict 분리 + **다음 행동**
+   MARKET_OPPORTUNITY → 「국내 판매 사례 확인 필요」 / 「국내 시장가격을 직접 확인하세요」
+   REVIEW_PRICE       → 「판매가격 조정 필요」      / 「판매가격을 조정하세요」
+   NEEDS_INFO         → 「원가 정보 필요」          / 「상품 원가와 비용을 입력하세요」
+   🔴 `READY`·`HOLD` 는 **결론** 이라 행동 지시를 넣지 않았다 · tone 전부 `CAUTION` 유지
+   🟢 ActionCenter 의 늘 같던 안내문이 **판정이 요구하는 행동** 을 말한다
+🟢 ③ 가격 근거 모순 해소 — 「확인되지 않아…」를 **B 도 없고 rows 가격도 없을 때만** 세운다
+   🔴 POST 를 GET 집계 owner 로 **승격하지 않았다**(표시 게이트용 불리언 하나)
+🟢 ④ 분모 설명을 1차에서 내렸다 — 「▸ 왜 없나요?」 접힘으로 **이동**(삭제 0)
+```
+
+🔵🔵 **전후 실측(같은 하니스·같은 fixture)**
+```
+결론 영역 1차        393 → **245자**  (−38%)
+화면 전체 1차        598 → **448자**  (−25%)
+후보 있을 때 결론 1차 235 → **182자**  (−23%) · 🟢 모순 문장 **소멸** · 가격 근거는 **남음**
+판정 문구           「조건부 판매」 → **「판매가격 조정 필요」**(REVIEW_PRICE fixture)
+ActionCenter        「🇰🇷 … 근거 보기 →」 → **「판매가격을 조정하세요」**
+```
+
+🔴 **갱신한 기존 계약 둘** — `mi-review-match ①-e`(「나머지 셋은 기존 문구 그대로」가 바로
+CEO FAIL 의 원인이라 **반대 방향으로 뒤집었다**) · `core-ux-rebuild UXR-O-1`(`market-price-basis`
+를 엄격 전순서 목록에서 뺐다 — ③ 승인으로 **조건부로 서므로** 목록에 두면 정상이 FAIL 한다).
+
+🔴 **내가 만든 거짓 fixture 를 ③ 분리가 드러냈다** — `NOT_RECOMMENDED + REVIEW_PRICE` 는
+`SELLER_FACING_MAP[REVIEW_PRICE] = CONDITIONAL` 이라 **서버가 만들 수 없는 조합** 이다
+(`NOT_RECOMMENDED` 의 유일한 출처는 `HOLD`). 🟢 `HOLD` 로 고치고 **「분리는 CONDITIONAL
+코드에만」** 불변식을 계약으로 박았다 — 안 박으면 tone 이 덮여 **비추천 CTA 게이트가 조용히 죽는다**.
+
+🔴 **내 테스트의 동어반복도 잡았다** — 상태별 루프가 기대값을 **같은 resolver** 에서 읽어
+M10(분리 되돌리기)이 **2 FAIL 만** 났다. 🟢 확정 어휘를 **글자로** 단언해 **5 FAIL** 로 강화했다.
+
+🟢 **검증** — 하니스 **30** · 조사 **6** · 음성대조 **M10 5F · M11 4F · M12 1F · M13 1F ·
+M14 1F**(🔴 M14 는 **소스 축만** 잡았다 — 단계 메시지는 이 하니스가 마운트하지 않는다)
+→ 전부 **바이트 복구 · 흔적 0** · 회귀 **833 files / 10,621 passed · 0 failed** ·
+typecheck **0** · build **exit 0** · 배포 **Ready**(Commit 대조 일치).
+
+🟡 **CEO Action — 실화면 1회 · 질문 셋**
+```
+① 판매 판단이 **상품 상태에 맞는 말** 을 하는가(「조건부 판매」 대신 「원가 정보 필요」 등)
+② 그 옆/아래에 **다음에 할 일** 이 적혀 있는가(ActionCenter)
+③ 결론 영역이 **짧아졌고** 「없습니다」가 **여러 번 반복되지 않는가**
+🔴 정상인데 FAIL 로 보이기 쉬운 것 — ⒜ 「판매 추천」이 안 나오는 것은 **국내 EXACT 0**
+   때문이고 **동결축** 이다(이번 범위 밖) ⒝ 「왜 없나요?」가 접혀 있는 것이 **의도** 다
+```
+
+### 🔴 [낡음] 현재 좌표 (2026-11-09) — UI 개선 완료 판정 «취소» · 원인 조사 완료
+
+```
+Production   **3c7fa173** · (운영 코드는 `40bb52c7` 그대로 · 이번 커밋은 조사 산출만)
+Git          origin/main 0/0 · 미커밋 **39건 보존**
+🔴 CPO 판정  **Production UI FAIL**(2026-11-09) — 이전 「검수 대기」는 **취소** 됐다
+             사유: 기존과 달라진 게 없고 · 불필요한 정보가 여전히 많고 · 계속 「조건부 판매」
+🔴 그리고    **「Render 기준선 PASS」·「배포 PASS」를 셀러 화면 개선으로 읽지 않는다**(CPO 명시)
+직전 작업     🟢 **SELLER-UX-GAP-INVESTIGATION-1 완료**(조사 전용 · 운영 코드 **0**)
+             전문 `docs/SELLER-UX-GAP-INVESTIGATION-1.md`(8절) · 🔴 **재조사 금지**
+다음          🟡 **CPO 가 제품 정책 + 목표 화면을 먼저 확정** 한다 → 그 뒤 구현
+             🔴 CTO 는 그때까지 코드를 만지지 않는다
+```
+
+### 🔴🔴 **0-GAP. 조사 결론 — 둘 다 «표시» 문제가 아니다**(재조사 금지)
+
+```
+① 복잡함  화면이 복잡한 것은 데이터가 «많아서» 가 아니다 —
+          **「데이터가 없다」를 1차에서 여섯 번** 말한다.
+          실측 후보 0건 → 결론 1차 **393자** / 후보 3건 → **235자**(더 짧다)
+          1차 598자 중 **393자(66%)를 결론 영역 하나** 가 소유 · testid 24 중 22가 그 파일
+          🔴 국내/해외 **분모 설명 두 줄은 글자가 완전히 같고** 둘이 90자(1차의 23%)
+          🟢 상단 요약은 **이미 79자** 다 — 요약이 길어서 복잡한 것이 아니다
+② 조건부  **판정 구조** 다. `SELLER_FACING_MAP` 이 6코드 → 3코드로 압축하고
+          **REVIEW_PRICE · MARKET_OPPORTUNITY · NEEDS_INFO 셋이 전부 「조건부 판매」** 다
+          (`MI-REVIEW-MATCH-DISPLAY-1` 은 그중 **REVIEW_MATCH 하나만** 갈랐다)
+          🔴 「판매 추천」은 `READY` 하나이고 READY 는 **두 경로 모두**
+             `domesticBasis === "EXACT"` 를 요구한다 ⟹ 국내 EXACT 가 **0**(WU-138 동결축)
+             이므로 **구조적으로 불가능** 하다
+          🔴 셋은 **요구 행동이 서로 다르다**(시세 직접 확인 / 가격 조정 / 원가 입력)
+             ⟹ 「다음에 무엇을 하면 되는가」가 **답되지 않는다**
+```
+
+🔴🔴 **CPO 판정 필요 2건**(CTO 가 고치지 않았다)
+```
+⒜ **1차 모순** — 「국내 시장가격이 확인되지 않아…」와 「🇰🇷 국내 동일상품 확인 가격
+   KRW 88,000」이 **같은 1차에 동시에** 선다. 🔴 **`40bb52c7`(직전 내 작업)이 만들었다** —
+   앞 문장은 B(서버 `domesticCompetition`), 뒤 문장은 `buildPriceGuide(POST transient rows)`
+   를 본다. 🟡 최소안 = 그 문장을 **B 도 null 이고 rows 도 빌 때만** 세운다(집계 변경 0)
+⒝ **라벨 분리** — 「조건부 판매」가 요구 행동이 다른 **셋** 을 덮는다 ⟹ 정책 결정
+```
+
+🔴 **계약 ↔ 전략 충돌 일곱** 은 그 문서 §5 에 있다. 그중 셋(`SELLER_FACING_MAP` 압축 ·
+READY 의 EXACT 요구 · 국내 EXACT 0)은 **CPO/CEO 정책** 이고 국내 EXACT 는 **동결축** 이다.
+🔴 **측정불가** — 운영 representative 분포는 **저장되지 않는 계산값** 이라 재측정 안 했다
+(우선순위 **6 「판정 분포 측정 WU」** 의 일 · WU-021 의 2026-10-13 값을 현재로 쓰지 않는다).
+
+### 🟡 [낡음] 현재 좌표 (2026-11-08 갱신 ③) — 결론 영역이 «근거의 자리» 가 됐다
+
+```
+Production   **40bb52c7** · Ready   (빌드 로그 Commit: 40bb52c = HEAD · HTTP 200)
+Git          origin/main 0/0 · 미커밋 **39건 보존**(START-HERE 포함 · 일괄 staging 안 했다)
+직전 작업     🟢🟢 **MI-PRICE-BASIS-DISPLAY-1 + ⒝ CLOSED**(CPO 검수 통과 · 아래 §0-BASIS)
+CTO 할 일     🔴 **없다** — 코드/기능/계약을 만지지 않는다
+다음 작업     🟡 **CEO Production 실화면 검수 1회**(아래 §0-CEO 세 질문) →
+             UI PASS 확정 → 🔵 우선순위 **5 조사 성능 / 6 판정 분포**(CPO 지정)
+```
+
+### 🔴🔴🔴 **0-FREEZE. A/B 가격 표시는 «동결» 됐다 — 다시 조사하지 않는다**(CPO 확정 2026-11-08)
+
+```
+🔴🔴 **CPO 최종 결정 — B 시장가격 «금액» 은 노출하지 않는다.** 계약 셋을 **유지** 한다:
+   `UX-04-c` · `core-next-step4 B-6` · `core-next-step4 C-4`
+🔴 사유(CPO 문장) — 「A 는 셀러가 **실제로 설정할** 권장 판매가격이고 B 는 **관찰된 참고
+   근거** 다. 첫 화면에서 두 금액을 나란히 보여주면 셀러에게 **다시 판매가격 선택 부담** 을
+   줄 수 있다.」 ⟹ 그 셋은 그 위험을 막기 위해 확정된 계약이다.
+
+확정된 표시 정책
+   A — 권장 판매가격        금액 표시 **+** 설정 CTA
+   B — 국내 시장 참고가격    **근거 라벨 + 목표마진 판단**(금액 없음)
+   상세 근거               기존 계약대로 **B 금액 비노출**
+
+🔴🔴 **다음 작업에서 A/B 가격 «산출» 이나 «표시 계약» 을 다시 조사·재설계하지 않는다**
+   (CPO 명시 동결). 🔴 재검토는 **별도 UX 변경 제안 + CEO 승인** 이 있을 때만이다.
+🔴 그러므로 §0-BASIS 의 「🟡 CPO 판정 1건 대기」는 **닫혔다** — 그 블록은 **근거 기록** 이다.
+```
+
+### 🟡 **0-CEO. CEO Action — 실화면 1회 · 질문은 «셋» 이다**(CPO 지정)
+
+```
+어디     Production(`40bb52c7` 배포본) → 상품 하나를 열어 **상품정보 탭** 의
+         「📊 가격 분석」 영역과 그 **위** 의 상품 판단 요약 · **오른쪽** Action Center
+무엇     ① 🟢 **상단 요약과 Action Center 에 판매 판정이 남아 있는가?**
+         ② 🟢 **결론 영역은 판정을 반복하지 않고 «가격 근거» 를 보여주는가?**
+         ③ 🟢 **CASE D(국내 시장가격 미확인)에서 그 영역이 비어 있지 않고
+              「판단할 수 없습니다」를 설명하는가?**
+🔴 정상인데 FAIL 로 보이기 쉬운 것 둘 —
+   ⒜ 결론 영역에 「판매 추천/비추천」이 **없는 것이 이번 변경의 목적** 이다(중복 제거)
+   ⒝ 「국내 시장 참고가격 **기준**」 옆에 **금액이 없는 것도 정상** 이다(위 §0-FREEZE)
+🔴 CTO 는 이 화면을 볼 수 없다 — **UI PASS 는 CEO 확인으로만** 닫힌다.
+```
+
+### 🟢🟢 **0-BASIS. MI-PRICE-BASIS-DISPLAY-1 + ⒝ — CLOSED**(`40bb52c7`)
+
+🔵 운영 **2 파일** · 계약 **3 파일**. 🔴 집계·판정·산출·등록 **전부 0.**
+
+```
+🟢 ⒝ 판정 중복 제거 — 표현 위치가 **셋 → 둘** 이 됐다
+   요약 🟢 유지 · Action Center 🟢 유지 · **결론 영역 🔴 제거**
+   🔴 **정책이 폐기된 게 아니다** — 1차 전체 순서(판단 → 권장가 A → 근거)는 **그대로** 다
+      (판단은 결론 영역 **위** 의 요약 블록이 말한다)
+   🟢 `sellVerdictCopy` prop 은 **살아 있다** — ③ 비추천 CTA 게이트가 그 값을 쓴다
+🟢 그 자리에 **가격 전제 한 줄** — 「국내 시장 참고가격 기준 · 목표마진 달성 가능/어려움」
+   🔴 **새 판정 owner 0** — A 가 목표마진 반영가이므로 `B < A` = 미달이 **산술적으로** 참
+   🟢 상세에는 A/B 전제를 글로 적었다(A = 원가+목표마진 · B = 관측값)
+```
+
+🔴🔴 **구현 중 내가 만든 결함을 계약이 잡았다 — 기록한다**
+```
+1차 구현은 `marketPriceKrw == null` 이면 그 줄을 **만들지 않았다.** 그런데 판정 머리말을
+뺀 자리가 **바로 거기** 라서 **B 가 없는 CASE D(가장 흔한 상태)에서 결론 영역 첫 줄이
+통째로 비었다.** 🟢 계약 둘이 FAIL 로 잡았고, CPO 판단 원칙 ⒟(데이터 없으면 UNKNOWN)에
+따라 「국내 시장가격이 확인되지 않아 목표마진 달성 여부를 판단할 수 없습니다」로 고쳤다.
+🔴 「달성 가능」으로도 「어렵다」로도 적지 않는다. ⟹ 교훈: **판정을 빼면 그 자리를 채운다**
+   (「뺐다」와 「빈 자리를 뒀다」는 다른 것이다 · `wu-058` 의 번호 교훈과 같은 계열).
+```
+
+🟡🟡 **CPO 판정 1건 — B 의 «금액» 을 열 것인가**
+```
+🔴 CPO 예시는 B 금액(₩88,000)을 포함했는데 **계약 셋이 그것을 막는다**:
+   `UX-04-c`(1차 ₩ 는 A 줄 하나뿐) · `core-next-step4 B-6`(시장 금액에 ₩ 없음) ·
+   `core-next-step4 C-4`(상세에서도 금액은 A 자리 하나)
+🔴 셋 다 **CPO 확정 WU 둘** 에서 나왔고 사유가 적혀 있다 — 「둘을 나란히 두면 셀러가
+   **어느 쪽에 팔아야 하나** 를 다시 고른다」(CPO FAIL 조건).
+⟹ 🔴 **CTO 가 임의로 열지 않았다**(§4-B D). 현재는 **라벨 + 판단** 만 있고 금액은 없다.
+🟡 열려면 그 계약 셋을 **같이 개정** 해야 한다 ⟹ CPO 결정.
+```
+
+🟢 **갱신한 기존 계약 다섯**(전부 ⒝ 승인 범위 · 🔴 항목 수와 엄격한 전순서는 **불변**)
+```
+UX-01-a   순서 목록의 `market-sell-verdict` → **`market-price-basis`**
+UX-01-b   🟢 **양방향 강화** — 「이 영역에 판정이 없다」 + 「그 자리에 근거가 선다」
+          + 「`sellVerdictCopy` prop 은 살아 있다」(게이트가 죽지 않았다)
+UX-01-d   1차 목록의 판정 머리말 → **가격 근거 라벨**(항목 수 넷 그대로)
+UX-02-a   🟢 **owner 축으로 옮겼다** — 화면 수를 세는 대신 ⒜ resolver 호출 **둘** 이상
+          ⒝ 이 영역에 문구 **사본 0** 을 본다 ⟹ **일관성 계약은 유지된다**(CPO 명시)
+UXR-O-1   순서 목록 같은 교체(항목 여덟 그대로)
+```
+
+🟢 **검증** — 하니스 **22 passed** · 음성대조 **M8(가격 근거 제거) 6 FAIL · M9(판정줄
+되살리기) 2 FAIL** → 전부 **바이트 복구 · 흔적 0** · 회귀 **832 files / 10,607 passed ·
+0 failed** · typecheck **0** · build **exit 0** · 배포 **Ready**(Commit 대조 일치).
+🔴 **내 단언이 틀리고 코드가 맞은 것 하나** — 판단 문구를 정규식 `/목표마진 (…)/` 으로
+단언했는데 실제는 「목표마진**을** 달성할 수 있습니다」라 **조사** 때문에 FAIL 했다
+⟹ 문구를 **owner 에서 읽도록** 고쳤다(이 트랙 함정 ⑥의 7번째).
+
+### 🟢🟢 **0-UX2. MI-INVESTIGATION-STATE-UX-2 — ①③④ 구현 · ② 보류**(`deec1d41`)
+
+🔵 운영 **5 파일**(배선 3 + 문구 owner 2) · 테스트 2. 🔴 **집계·판정·산출 변경 0.**
+
+```
+🟢 ④ 조사 상태 **넷으로 갈랐다** — 조사 중 / 재조회 중 / 실패 / 미조회
+   🔴 전까지 결론 영역은 `rows`(결과)만 받아 **진행과 부재를 구별할 수 없었다** ⟹
+      자동 1회차가 **돌고 있는 동안에도** 「후보 조회 결과가 아직 없습니다」를 말했다
+   🟢 **새 계산 0** — 패널이 이미 들고 있는 `autoChecking`·`loading`·`data === null`
+      (= 기존 `loadFailed` 술어 **그대로**)에서 파생해 칸 하나로 올려보낸다
+   🔴 순서가 정책이다 — **진행 중이면 실패로 적지 않는다**(아직 모른다)
+   🔴 블록의 **렌더 조건은 안 바꿨다**(`canRecheck && !checkRan`) — R2 STEP 4 가 CPO 결정이다
+🟢 ③ 비추천 CTA — `tone === "STOP"` 이면 「이 가격으로 설정」을 **내리고 이유를 말한다**
+   🔴 기존 두 조건(핸들러 없음 · A 없음)은 **불변** · **세 번째 조건만** 더했다
+   🟢 그래서 기존 계약(기본 fixture = `CONDITIONAL`)이 전부 그대로 통과한다
+   🔴 **편집 길은 남는다** — A 숫자 · ⓘ · 「가격 수정 →」 전부 유지(CPO 「삭제 금지」)
+🟢 ① 1차 문장이 **세는 기준** 을 말한다 — 「이번 조사에서 수집한 후보 중에는 …
+   요약의 「비교 판매처」와 세는 기준이 다릅니다」 ⟹ 집계 변경 **0**(POST 승격 0 · GET owner 유지)
+   🔴 설명문 **줄을 늘리지 않았다**(`UX-06-a` 1줄 · `UX-06-b` 1차 25%)
+```
+
+🟡🟡 **CPO 판정 1건 — ② 판정 중복 제거는 «구현하지 않았다»**
+```
+지시   「결론 영역: 판정 반복 대신 국내외 가격 근거」(= 결론에서 판정 줄 제거)
+🔴 충돌  `CORE-UX-SELLER-01` 이 **CPO 확정(2026-10-26)** 으로 1차 순서를 못박았다:
+        「① 판매판단 → ② 권장가 A + [이 가격으로 설정] → ③ 근거 → ④ ⓘ」
+        그리고 **2026-11-02 「FINAL UX REBUILD」** 가 그 순서를 한 번 더 확정했다
+🔴 깨지는 계약 **여섯** — `UX-01-a`(엄격 전순서) · `UX-01-b`(판단이 근거보다 먼저) ·
+   `UX-01-d`(다섯이 1차) · `UX-02-a`(세 화면이 같은 글자) · `UX-02-b` · `UX-02-e`
+🔴 그리고 ActionCenter 의 판정 줄은 **P-32**(판매판정을 등록 준비와 나란히)에 걸린다
+⟹ 🔴 §4-B D 대로 **임의 구현하지 않고** 분석만 올렸다. 🟢 현재 상태를 계약으로 고정했다 —
+   CPO 가 승인하면 그 단언이 **FAIL 로 뒤집히고 그것이 변경의 증거** 다
+🟡 CPO 가 고를 것 — ⒜ ② 를 승인하고 CORE-UX-SELLER-01 을 **개정** 한다
+   ⒝ 판정은 요약·ActionCenter 둘만 두고 결론에서만 뺀다(계약 여섯 중 셋만 갱신)
+   ⒞ 현상 유지(중복 셋 · 단 같은 resolver 라 모순은 없다)
+```
+
+🔴 **내 범위 초과를 하나 되돌렸다** — `MARKET_EMPTY_NO_CANDIDATE` 도 같이 고쳤다가
+`wu-140 B-1` · `wu-145 D-3` 이 리터럴 「찾지 못했습니다」로 **FAIL** 했다. 🟢 그 상수는
+**접힘 안** 이고 ① 의 모순은 **1차 문장** 에 있었다 ⟹ **원문 복구**(계약 수정 **0**).
+
+🟢 **검증** — 하니스 **21 passed**(기준선 12 + 신규 9) · 음성대조 **M5(4분기 되돌리기) 2 FAIL ·
+M6(STOP 게이트 제거) 1 FAIL · M7(Workspace 배선 제거) 1 FAIL** → 전부 **바이트 복구 · 흔적 0** ·
+회귀 **832 files / 10,606 passed · 0 failed** · typecheck **0** · build **exit 0**.
+🔴🔴 **M7 이 중요하다** — 배선을 끊어도 **행동 계약 20개가 전부 통과** 했고 **소스 앵커만**
+잡았다(WU-110 교훈의 반복) ⟹ 하니스는 `CommerceWorkspace` 를 마운트하지 않으므로
+**다섯 자리**(타입 · useMemo · deps · Workspace · 영역 prop)는 **소스 축으로** 지킨다.
+
+### 🟢🟢 **0-HARNESS. SELLER-SURFACE-RENDER-HARNESS-1 — CLOSED**(운영 코드 **0**)
+
+🔵 산출 **2 파일**(둘 다 테스트) · 🔴 **운영 코드·API·DB·MI·가격·등록 변경 0** · 배포 영향 0.
+```
+apps/admin/src/app/pipeline/commerce/__tests__/seller-surface-composition.ts        (조립)
+apps/admin/src/app/pipeline/commerce/__tests__/seller-surface-render-harness-1.test.ts (기준선)
+```
+
+🔴🔴 **먼저 — 「선례를 제자리에서 넓힌다」를 «하지 않았고» 그 이유가 중요하다**
+```
+지시   `product-tab-composition.ts` 를 셀러 표면 전체로 넓힌다
+🔴 실측 그 파일의 `regionsOf(html)` 이 `const [mi, stage, aside] = root.children` —
+       **위치로 분해** 한다. 격자 밖 두 블록을 그 트리 앞에 더하면 `mi` 가 요약을,
+       `stage` 가 MI 를 가리켜 **그 함수를 쓰는 테스트 15개가 조용히 다른 영역을 단언** 한다
+🟢 그래서 **조립만 새 파일** 이고 fixture·규약·읽기도구는 그 파일에서 **import** 한다
+   (`makeProduct` · `PROFIT` · `RATES` · `ROUNDING_UNIT` · `productionData` · `withDomesticComparable`)
+   ⟹ 선례 트리는 **한 글자도 바뀌지 않았다**(회귀 0). 「맨바닥 금지」는 지켰다
+```
+
+🟢🟢 **이 하니스가 선례와 다른 단 둘** — 이것이 WU 의 핵심이다
+```
+① 패널을 **outer** 로 마운트한다(`DomesticPriceIntelligencePanel`)
+   선례는 `MiPanelView`(inner)라 `presentation="HIDDEN"` 게이트를 **건너뛴다**
+🟢 운영에서 `HIDDEN` 은 **훅을 전부 돌린 뒤** `return null`(패널 :2843) ⟹ 콜백은 발화한다
+   ⟹ 🟢 **「패널은 화면에 없는데 격자 밖 블록이 그 공급으로 찬다」를 처음으로 재현했다**
+② 격자 **밖** 두 블록이 있다 — 요약 슬롯 · 결론 영역(= 셀러가 보는 전부)
+```
+
+🔵🔵 **기준선 덤프(5상태 · 관측) — 개선 뒤 «같은 하니스·같은 fixture» 로 전후를 비교한다**
+```
+상태      요약 1차 노출(발췌)                              결론 1차 노출(발췌)
+CASE D    조건부 판매 · ₩115,200 추천 판매가격             판매 판단 🟡 조건부 판매 · 🇰🇷 0곳 · 🌎 0곳
+REVIEW_   **동일상품 확인 필요** · ₩115,200                판매 판단 🟡 **동일상품 확인 필요**
+ MATCH
+CASE A    판매 추천 · ₩115,200 · 🟢 동일상품 비교 3곳      판매 판단 🟢 판매 추천 · 🇰🇷 **0곳**
+CASE B    **판매 비추천** · ₩115,200                      판매 판단 🔴 **판매 비추천**
+로딩      조건부 판매 · ₩115,200                          (같음)
+🟢 블록 순서 **5상태 전부 `SUMMARY → CONCLUSION → GRID`** · 🟢 「Market Intelligence」 **0건**
+```
+
+🔴🔴🔴 **기준선이 드러낸 관측 넷 — 🔴 이번에 «고치지 않았다»(개선 ②③④ 범위 · CPO 지정 대기)**
+```
+⒜ 🔴🔴 **CASE A 에서 두 블록이 «다른 숫자» 를 말한다** — 요약은 「🟢 동일상품 · 비교 판매처
+   **3곳**」, 바로 아래 결론 영역은 「🇰🇷 국내 동일상품 확인 **0곳**」.
+   🟢 원인은 **집계 owner 가 둘** 이다 — 요약은 서버 `domesticMarketSplit`,
+      결론은 `marketComparison.rows`(= POST `/check` transient). GET 은 transient 를 안 싣는다
+   🔴 이것이 개선 ②의 실체다(「조사중 ↔ 가격없음 ↔ 실패」를 가르는 일과 같은 뿌리)
+⒝ 🔴 **판정이 1차 화면에 «세 번» 나온다** — 요약 헤드라인 · 결론 영역 · ActionCenter.
+   🟢 세 곳이 **같은 resolver** 를 쓰므로 «모순» 은 아니다(M3 가 그것을 잠근다)
+⒞ 🔴 **「판매 비추천」인데 「이 가격으로 설정」 버튼이 선다**(CASE B) — 권장가 A 는 원가 기반이라
+   판정과 무관하다. 🟡 의도인지 아닌지는 **CPO 판단** 이고 CTO 가 고르지 않았다
+⒟ 🔴 결론 영역이 5상태 전부에서 「이 화면에는 후보 조회 결과가 아직 없습니다 —
+   『🔄 다시 분석』을 누르면 가져옵니다」를 말한다(`rows = null`) ⟹ 개선 ②의 그 문구다
+```
+
+🔴 **내 단언이 틀리고 코드가 맞은 것 둘 — 그대로 적는다**(이 트랙 함정 ⑥의 5·6번째)
+```
+① 「응답 실패면 ₩115,200 이 서지 않아야 한다」 → **FAIL**. 🔴 **A 는 원가 기반** 이고
+   (`resolveListingPrice(product …)`) MI 응답과 무관하다 ⟹ 🟢 선 것이 **설계대로** 다
+   (메모 `recommended-price-is-cost-based-a-not-market-b`) ⟹ 단언을 **「A 는 선다 ·
+   시장 숫자는 0곳」** 으로 뒤집었다
+② 1차에 ActionCenter 가 「⏳ 시장 분석 중」이라 **「요약과 ActionCenter 가 어긋난다」로 적을
+   뻔했다** → 🔴 **하니스 flush 부족** 이었다(패널이 GET → 파생 → 보고로 사이클을 여럿 돈다).
+   🟢 flush 5회로 고치니 둘이 **같은 판정** 을 말한다 ⟹ **거짓 발견이 될 자리였다**
+🔴 그리고 선택자도 틀렸다 — `.grid` 가 결론 영역 **안쪽** 격자를 먼저 잡았다 ⟹ **식별자** 로 바꿨다
+🟢 typecheck 가 `Record<string, unknown>` 캐스트 2건을 **TS2352 로 잡았다** ⟹ 칸을 타입에서 읽는다
+```
+
+🟢 **검증** — 하니스 **12 passed** · 음성대조 **M1(공급 배선 제거) 2 FAIL · M2(HIDDEN→FULL) 1 FAIL ·
+M3(resolver 공유 끊기) 1 FAIL · M4(블록 순서 뒤집기) 1 FAIL** → 전부 **바이트 복구 · 흔적 0** ·
+회귀 **832 files / 10,597 passed · 0 failed** · typecheck **0**(🔴 「baseline 10」은 낡았다) · build **exit 0**.
+
+🔴 **「Production UI PASS」로 적지 않는다** — 실제 따져 화면은 CTO 가 볼 수 없다. 이것은
+**마운트 DOM** 축이고 최종 확인은 CEO 1회다(헌장 §6).
+
+🔴🔴🔴 **먼저 읽는다 — 왜 배포를 다섯 번 했는데 CEO 화면이 그대로였나**
+```
+증명의 축을 **바꿔치기** 했다:
+  「소스에 그 식이 있다」          → 코드 연결만 증명
+  「컴포넌트를 따로 띄우니 나온다」  → 그 컴포넌트의 독립 동작만 증명
+  ⟹ 🔴 둘 다 **「셀러 화면이 그렇게 보인다」를 증명하지 않는다**
+🔴 이 저장소에 **`CommerceWorkspace` 를 마운트하는 하니스가 하나도 없다**(실측):
+   `core-2ao-r1-screen-dump`(이름이 「화면 실측」) → **MarketPriceComparison 하나**
+   `core-e2e-close-01-seller-surface`(이름이 「셀러 표면」) → **GeminiTransientCandidates 하나**
+   `seller-candidate-cards-1` · `seller-judgement-summary-2` · `mi-review-match-display-1`
+   ⟹ 전부 **컴포넌트 단독 + 소스 앵커**
+🔴 그리고 `MiPanelView` 는 운영에서 **마운트되지 않는다**(`presentation="HIDDEN"`) —
+   그 안을 고치고 「개선했다」고 적으면 **화면은 0 이다**
+```
+
+### 🔵 다음 세션 1번 작업 — SELLER-SURFACE-RENDER-HARNESS-1
+
+```
+🟢 **맨바닥에서 만들지 않는다** — 선례가 이미 있다:
+   `apps/admin/src/app/pipeline/commerce/__tests__/product-tab-composition.ts`
+   그 파일 머리 주석이 **이번과 똑같은 실패 셋** 과 해법을 적어 뒀다 —
+   「`CommerceWorkspace` 가 실제로 조립하는 그 트리를 **같은 순서·같은 컴포넌트·같은 prop** 으로
+     다시 조립한다」 · fixture 규약 「숫자를 지어내지 않는다 · 수익성은 제품 함수가 낸다」
+🔵 할 일 = 그 하니스를 **셀러 표면 전체** 로 넓힌다(격자 밖 요약 · 결론 영역 · ActionCenter)
+
+덤프할 것 ① 요약 블록이 실제로 서는가 ② 판매 판단 **문구** ③ `representativeVerdict.code` **실제 값**
+         ④ 추천 판매가격 ⑤ 국내외 가격 분석 ⑥ 후보 검토·가격 설정 영역
+🔴 안전장치(CPO 명시)
+   ⚠️ **보이는 요소만** 센다 — 닫힌 `<details>` 의 자식도 **DOM 에는 있다**
+      (문자열 존재를 「표시 성공」으로 세면 이번 실패가 그대로 재발한다)
+   ⚠️ 요약 ↔ ActionCenter 가 **같은 판정** 인지 대조
+   ⚠️ 로딩/무데이터 상태를 **따로** 검증
+   ⚠️ **REVIEW_MATCH 가 아니면 resolver 가 발화하지 않는다** 는 것도 단언
+🔴 함정
+   · `.test.tsx` 는 vitest 가 **수집하지 않는다** → `.test.ts` + `createElement`
+   · `globalThis.IS_REACT_ACT_ENVIRONMENT = true` 필요
+   · 패널이 `HIDDEN` 이라 데이터가 **콜백으로** 흐른다 ⟹ 하니스가 그 콜백을 **실제로 돌려야** 화면이 찬다
+     (`onMarketComparisonChange` · `onJudgementSummaryChange` · `onSellerVerdictChange` ·
+      `onRepresentativeVerdictChange`)
+🔵 끝내는 법 — **「전」 덤프를 기준선으로 커밋** 하고, 그 뒤에야 ②③④⑤ 에 들어간다.
+   개선 뒤 **같은 하니스·같은 fixture** 로 다시 떠서 **전후 차이** 를 보고한다.
+```
+
+### 🔴 그 하니스 «뒤» 작업 순서(CPO 확정 · 전부 미착수)
+
+```
+② 조사 중 가격 표시 문구   POST=transient / GET=집계 owner · 🔴 POST 승격은 범위 밖
+                          조사중 ↔ 가격없음 ↔ 실패를 **갈라서** 말한다
+③ A/B 가격 전제 표시       추천가 A(`recommendedPriceKrw`) ↔ 시장가 B(recommendation) **의미 분리**
+④ STEP C 화면 재배치       가격 분석 **4필드**(사이트 · 링크 · 동일/유사 · 가격) ·
+                          🔴 `CandidateSelect`·`CandidateNoteChoices`·`candidate_reviews` **보존**
+                          좌표 `MarketColumn:1909` → `mi-candidate-row:2099`
+⑤ 직렬 처리 성능           `run-domestic-price-check.ts` 에 `Promise.all` **0건**(전 구간 직렬)
+                          🔴 외부 rate-limit·차단 축 · 무제한 동시요청 금지
+⑥ 판정 분포 측정 WU        🔴 `marketCase` 는 **저장되지 않는 계산값** · `pg` 미설치(prisma 전용)
+```
+
+### 🟢 이번 세션에 배포된 것(재구현 금지)
+
+```
+6140b237  상품 판단 요약을 격자 밖 최상단에 **처음 연결**(그 전엔 죽은 렌더였다)
+217c4665  소싱 후보 카드 셀러 화면 제거(컴포넌트·데이터·검토 기능 **보존**)
+2cf58932  요약 개편 + 🔴 **가격 owner 정정** — `recommendedPriceKrw`(= 판매 가격 설정과 같은 변수)
+d0792f10  **MI-SELLER-POLICY-A** — CASE B(목표마진 미달) → **판매 비추천**(CEO 승인 정책 변경)
+527c5495  **MI-REVIEW-MATCH-DISPLAY-1** — REVIEW_MATCH → **「동일상품 확인 필요」**(표시 전용 resolver)
+🔴 다섯 다 **코드/테스트/배포 PASS** 이고 **Production UI 는 미확인** 이다
+```
+
+### 🔴 영구 금지 / 동결 (CEO 승인 없이 변경 0)
+
+```
+matcher · threshold · GT 및 평가 분모 · Identity/Probe 축 · 가격 산출 공식 ·
+국내외 동일상품 판별 기준 · **PRESUMED_SAME 의 EXACT 승격**(WU-066 precision 91.7→55.6% 폐기) ·
+출처 일곱 축 · 후보 검토 저장 구조 · 커머스 등록 payload ·
+🔴🔴 **A/B 가격 표시 계약**(CPO 동결 2026-11-08 · §0-FREEZE) — `UX-04-c` ·
+`core-next-step4 B-6` · `C-4` 셋을 유지한다. **B 금액 노출은 별도 UX 제안 + CEO 승인** 사안이고
+**다시 조사·재설계하지 않는다**
+🔴 기존 미커밋 **39건** 을 수정·삭제·일괄 staging 하지 않는다(`git reset --hard`/`clean` 금지)
+```
+
+### 🔴 이 트랙이 반복해서 밟은 함정 (착수 전에 읽는다)
+
+```
+① 칸 이름을 **추측** 했다 — 이번 세션에만 5회(`displayState`·`verdict`·`price`·
+   `landedCostKrw`·`feePercent`) ⟹ **타입에서 읽는다**
+② 소스 앵커의 **slice 구간** 을 잘못 잡아 변이를 못 잡았다(deps 누락이 통과)
+③ `indexOf` 가 **-1** 일 때 비교가 참이 되어 「제거」를 못 잡았다 ⟹ 존재 단언 먼저
+④ `??` 와 `||` 혼용 구문 오류로 **3개 파일이 로드조차 안 됐다** ⟹ **Test Files 실패 수** 를 같이 본다
+⑤ 일괄 치환으로 테스트를 고치려다 명제가 뒤섞였다 ⟹ **Edit 로 한 건씩**
+⑥ 🔴 **내 단언이 틀리고 코드가 맞은 적이 4회** — FAIL 을 먼저 「코드 버그」로 읽지 않는다
+```
+
+### 🔵 [이전] 현재 좌표 (2026-11-08) — **STEP 2 닫힘 · 다음은 STEP 3+4**
+
+```
+① 품번 라벨 확장                 🟢 완료
+② BRAND-0 / BRAND-1             🟢 완료
+③ PRODUCT-NAME-1                🟢 완료
+④ COMMON-EVIDENCE-1             🟢 완료
+⑤ IDENTITY-EVIDENCE-API-UI-1    🟢 **완료·배포** `d1223d14`
+⑥ SELLER-COMPARISON-UI-1 ①      🟢 **완료·배포** `038aacdb`(근거 대조 셀러 화면 숨김)
+⑦-1 STEP 1+2 후보 카드          🟢 **완료·배포** `cb2294d7`(격자 밖 최상단)
+⑦-2 STEP 2 잔여 추천 요약        🟢 **완료·배포** `6140b237`  ← 🔴 아래 「전제 정정」을 먼저 읽는다
+⑦-3 STEP 3+4 하단 숨김          🟢 **일괄 숨김안 철회 · CLOSED**(운영 코드 0 · 전 기능 보존)
+⑧ CEO Product 화면 확인          🟢 **완료**(2026-11-08) — 그 결과로 ⑨ 가 열렸다
+⑨ SELLER-DECISION-UI-1          🟡 **진행 중** — ⒜ 배포 `217c4665` · ⒟ **이미 배선돼 있다**
+   ⒝ 상품 판단 요약 전면 개편      🟢 **완료·배포 `2cf58932`** — 가격 owner 정정 포함
+   ⒞ 가격 분석 4필드 재구성        🔴 **착수 전**(🔴 CPO 별도 승인 필요)
+⑩ **MI-SELLER-POLICY-A**         🟢 **완료·배포 `d0792f10`** — CEO 승인 **제품 정책 변경**
+   🔴 marketCase **B** → 「조건부 판매」 → **「판매 비추천」**(목표마진 미달이면 추천 안 한다)
+   🟢 A·C·D 판정 **0** · 공식 **0** · 추천가 A 경로 **0** · 🔴 분포 **측정불가**(아래)
+⑪ CEO Product 재확인             🟡 **다음 한 수**
+🔴 그 전에는 다음 MI 전략 단계로 넘어가지 않는다
+```
+
+🔴🔴 **⑦ 은 CPO 가 «⒝ 로 확정» 했다 — 다시 설계하지 않는다**:
+```
+🔴 기존 후보 카드를 **줄이지 않는다**(계약 7+ 파일이 그 칸들을 잠근다 · WU-091 사고 방지)
+🟢 **새 셀러 카드를 만들고** 기존 상세 구역은 **flag 숨김** 한다(삭제 아님)
+🔴🔴 **WU-091 네 조건은 새 카드에도 예외 없이 유지** 한다(CPO 명시 · 사진·가격·URL 보다 우선):
+   ① 기본 접힘 ② 「동일상품 없음」 먼저 ③ **행마다 판정 라벨** ④ 「가격비교에 사용되지 않습니다」
+🔴 그 예외는 **정보를 늘리는 것이 아니라** 셀러가 후보를 동일상품으로 오인하지 않게 하는 안전장치다
+```
+
+🔵 **그 WU 의 코드 좌표(재조사 금지)**:
+```
+ProductJudgementSummary          DomesticPriceIntelligencePanel.tsx **:3807**  ← 요약 기존 owner
+TransientCandidateSections       **:2748** 정의 · **:4340** 렌더(후보 구역 **넷**)
+ReviewHistorySection             **:3079**
+숨김 선례 둘                      `isSuppliedUrlInputVisible`(:2721) ·
+                                 `isIdentityEvidenceVisibleToSeller`(증분 ① · 그 바로 아래)
+🔴 숨김은 **상수가 아니라 함수** 다 — 하니스가 「켜면 배선이 산다」를 마운트로 증명해야 한다
+🔴 최상단 배치는 **격자 «밖»** 이어야 한다(WU-140-R1 — 「기둥 안 맨 위」 ≠ 「화면 맨 위」)
+🔴 단계 번호는 `resolveWorkflow` 가 **배열 순서에서 파생** 한다(WU-058 — 하드코딩 금지)
+🔴 환산 금지 — 해외는 원문 통화(`overseas-reference.ts`)
+```
+
+🔴 **갱신해야 할 계약 표면(실측)** — 「판단 근거」 **28** · 「MI 상세 분석」 **9** ·
+「시장 가격 비교」 **6** · `MARKET_JUDGEMENT_TITLE` **6** · `gt-verdict` **7** ·
+`gt-blockers` **3** · `core-e2e-close-01-seller-surface`(셀러 표면) · `wu-130 F-3/F-4` ·
+`mi-022` · `wu-056r1` · `wu-136/140/145/146/149` · `candidate-list-ui-01`.
+🔴 **약화·삭제 금지** — 숨김으로 처리하고 **양방향 음성 대조**(숨김 ↔ 삭제)로 잠근다.
+
+### 🟢🟢 **STEP 2 잔여 CLOSED — 배포 `6140b237`**(2026-11-08)
+
+🔴🔴🔴 **먼저 — 지시서 전제가 반증됐다. 다음 페이지가 이것을 다시 「중복 제거」로 읽지 않게 적는다**:
+```
+지시서  「요약이 `MiPanelView` 안에서 그려져 후보 카드와 **중복 노출** 중 ⟹ 위로 옮긴다」
+실측    CommerceWorkspace 는 패널을 `presentation="HIDDEN"` 으로만 렌더한다(전수 **1곳**) ·
+        패널은 `if (presentation === "HIDDEN") return null` 을 **`<MiPanelView>` 앞** 에서 한다
+        ⟹ 🔴 `MiPanelView` 는 **운영에서 한 번도 마운트되지 않는다**
+        ⟹ 🔴 그 안의 `<ProductJudgementSummary>` 는 **죽은 렌더** 였다
+⟹ 🔴🔴 **중복이 아니라 «부재» 였다 — 셀러는 상품 판단 요약을 «본 적이 없다».**
+   그래서 이것은 「이동」이 아니라 **「처음 연결」** 이다.
+⟹ 🔴 CPO ⒜ 의 글자(「`MiPanelView` 에서 두 번째 콜백」)는 **발화할 수 없었다**
+   (마운트되지 않는 컴포넌트의 effect 는 영원히 돌지 않는다).
+🟢 ⒜ 가 지키려던 제약 셋은 **그대로 지켰다** — ① Workspace 재계산 0 ② 요약 owner 하나
+   ③ `MarketComparisonInput` 계약 불변. 바뀐 것은 **콜백 발화 주체** 하나이고, 그 자리는
+   `HIDDEN` 에서도 훅이 전부 도는 **바깥 패널** 이다(첫 번째 콜백과 같은 컴포넌트·같은 ref 패턴).
+```
+🟢 구현 — 신규 순수 함수 **`buildJudgementSummaryInput`**(패널 모듈 최상위 · 조립 owner 하나) ·
+`onJudgementSummaryChange`(두 번째 채널) · Workspace `judgementSummary` state +
+격자 **밖** `seller-judgement-summary-slot`(**요약 → 후보 카드** 순서 · 게이트 공유 ·
+`null` 이면 아무것도 그리지 않는다) · MiPanelView 의 죽은 렌더와 **읽히지 않는 지역 변수** 제거.
+🟢 입력 타입을 `Pick<PriceHistoryResponse, …>` 로 **좁혔다** — 하니스가 거대 fixture 를
+`as never` 로 가리는 길을 막는다(WU-092 교훈).
+🔴 matcher · threshold · 8축 · GT · 가격 · 추천 판정 · 수집 · MI 산출 · 환산 · API · DB **변경 0**.
+🟢 하니스 **22** · 음성대조 **M1~M8 전부 FAIL → 바이트 복구**(md5 일치 · 흔적 0) ·
+회귀 **829 files / 10,552 passed · 0 failed** · typecheck **0** · build exit **0**.
+
+🔴🔴 **이 WU 가 잡은 내 오류 셋 — 다음 페이지가 같은 함정을 밟지 않게 적는다**:
+```
+⒜ 소스 앵커가 **호출 인자 구간까지** slice 해서 **deps 누락(M4)을 못 잡았다**(통과했다)
+   ⟹ 🔴 deps 를 볼 때는 `}),` **뒤부터** 자른다. 인자와 deps 는 **따로** 센다
+⒝ 위치 단언이 슬롯이 **없을 때**(`indexOf` = -1) **통과했다**(M2)
+   ⟹ 🔴 `toBeLessThan` 앞에 **존재 단언**(`toBeGreaterThan(-1)`)을 먼저 세운다
+⒞ 🔴 **내 단언이 틀리고 코드가 맞았다** — 「근거 없으면 블록이 서지 않는다」가 FAIL.
+   빈 요약도 **같은 모양으로 세우는 것이 기존 설계** 다(조건부로 사라지면 읽는 순서가 빈다)
+   ⟹ 단언을 「블록은 서되 **판정을 지어내지 않는다**」로 바꾸고 **더 강하게** 세웠다
+```
+🔴 **기존 계약 3건이 FAIL 했고 의도된 이동이라 갱신·강화했다**(약화·삭제 0) —
+`mi-ux-final` · `product-tab-first-screen` 의 「비교 판매처 3곳」이 그 트리에서 **0** 이 됐다.
+🔴🔴 **「0 이니까 검사하지 않는다」가 되지 않게** 그 하나를 `seller-judgement-summary-2`(②-a2)가
+**조립 owner 를 직접 렌더해** 센다 — 두 파일을 같이 읽어야 **정보 손실 0** 이 증명된다.
+`wu-130 D-5` 는 출처 **여섯 전부** 를 세도록 강화했다.
+
+🔴 **측정불가(PASS 로 적지 않는다)** — ⒜ Production 실화면은 **CTO 가 볼 수 없다**(CEO 1회로만 닫힌다)
+⒝ 🔴 **「이동 전후 요약 동일성」은 측정 불가** 다 — 이동 전 상태가 **렌더 0** 이었다.
+   🟢 대신 더 강한 것을 증명했다 — **조립 owner 가 하나** 이므로 두 값이 갈라질 자리가 없다.
+
+### 🔵🔵🔵 **SELLER-DECISION-UI-1 — ⒜ 배포 `217c4665` · 다음은 ⒝**(2026-11-08)
+
+🟢 **CEO 가 실화면을 확인했고 제품 목표가 한 줄로 고정됐다**:
+> 원본 URL 하나 → **①팔지 말지 ②얼마에 팔지** 를 상단에서 끝내고 → **국내/해외 가격으로 확인** →
+> **내 판매가 확정** → 커머스 개별 등록. 🔴 셀러에게 MI 의 복잡성을 보여주지 않는다.
+
+```
+⒜ 소싱 후보 카드 제거      🟢 **완료·배포 `217c4665`**
+   🔴 뺀 것은 **렌더 하나** 다 — 컴포넌트 파일 · WU-091 계약 · `rows` 배선 ·
+      `mi-candidate-list` · 검토 저장 경로 · 출처 일곱 축 **전부 보존**
+   🟢 계약을 **양방향** 으로 잠갔다(④-a 제거 · ④-b 삭제 아님 · ④-c 배선 생존)
+⒟ 판매 가격 설정           🟢 **이미 배선돼 있다 — 구현할 것이 없다**
+   `MarketPriceComparison` 이 `onApplyRecommendedPrice`(:763·:766) ·
+   `finalPriceKrw` · `onConfirmPriceKrw` · `onOpenPriceEditor` 를 **이미 받는다**
+   Workspace owner = **`updateSalePriceKrw`**(:3786 부근) ⟹ 확인만 하면 된다
+⒝ 상품 판단 요약 전면 개편   🔴 **다음 한 수** ← 🔴🔴 **계약 충돌 1건이 먼저다**(바로 아래)
+⒞ 가격 분석 4필드 재구성     🔴 착수 전
+```
+
+🔴🔴🔴 **⒝ 착수 전에 반드시 읽는다 — 보호 계약이 «금액» 을 금지한다**
+```
+`wu-141-r3-price-owner.test.ts`
+  C-2-a  buildJudgementSummary 산출 rows 에 **금액 정규식 금지**
+         (/\d{1,3},\d{3}|₩|KRW|GBP|EUR|USD|€|\$|£/)
+  C-2-b  **마운트 DOM 에도 없다** — 뷰가 prop 을 직접 찍는 길까지 막는다
+  C-2-c  제거한 **폴백 경로**(일시 후보 가격을 「비교 가격」으로 올리던 길)가 되살아나지 않는다
+🔴 그런데 CPO/CEO 는 요약에 **추천 판매가격** 을 요구한다 ⟹ **정면 충돌** 이다.
+🟢 그 계약의 «이유» 를 읽으면 양립 가능하다 — 금지의 근거는 「요약이 ④ 와 **다른** 숫자를
+   말하면 그 즉시 신뢰가 깨진다」이지 「숫자를 쓰지 마라」가 아니다.
+🟡 **CPO 승인(2026-11-08) — ①~④ 채택**:
+   ① 요약이 말하는 금액은 **추천 판매가격 하나** 로 제한한다
+   ③ **폴백 금지 유지** — 후보/집계 금액으로 대체하지 않는다(C-2-c 그대로)
+   ④ C-2-a/b 를 「금액 금지」 → **「추천 판매가격 «외» 의 금액 금지 + 그 값이 판매 가격
+      설정의 값과 같다」** 로 **갱신·강화** 한다(🔴 약화·삭제 금지)
+```
+
+### 🔵🔵🔵 **MI-SELLER-POLICY-A CLOSED — 배포 `d0792f10`**(2026-11-08 · CEO 승인 정책 변경)
+
+```
+🔴🔴 **제품 정책이 바뀌었다** — 손실 여부만으로 판매 가능성을 판단하지 않는다.
+전   CASE B → REVIEW_PRICE → CONDITIONAL   「손실 없이 판매 가능」
+후   CASE B → **HOLD** → **NOT_RECOMMENDED** 「현재 시장가격으로는 목표마진 달성 불가」
+🟢 바뀌지 않은 것 — CASE **A·C·D** 판정 0 · `targetPrice`/`landedCost`/`netProfitAt`
+   **공식 0** · 추천가 **A(`recommendedPriceKrw`) 경로 0** · 🔴 추천가를 시장 최저가로
+   낮춰 표시하지 않는다(CEO 명시 금지 · 계약 ①-e)
+🔴🔴 **문구를 갈랐다** — `VERDICT_COPY.HOLD` 는 「예상 수익이 **마이너스**」라 말하는데
+   B 는 손실이 **아니다** ⟹ `MARGIN_SHORTFALL_DESCRIPTION` 으로 덮어쓴다(어휘 owner 1)
+🟢 계약 신규 **9**(CEO 사례를 운영 함수 사슬로 재현) + 기존 **3 갱신**(약화 0) ·
+   음성 **P1 5 FAIL · P2 3 FAIL** → 바이트 복구 ·
+   pricing **562 passed** · admin **830 files / 10,571 passed · 0 failed** · tsc 0 · build 0
+```
+
+🔴🔴 **측정불가 — 0 으로 적지 않는다**:
+```
+「전체 상품 중 몇 건이 CONDITIONAL → NOT_RECOMMENDED 로 바뀌는가」 = **측정하지 못했다**
+이유  `marketCase` 는 **저장되지 않는 계산값** 이라 스냅샷마다 MI 재계산이 필요하고,
+      이 저장소에 **postgres 클라이언트가 없다**(prisma 전용 · `pg` 미설치)
+🟢 확정된 것은 **전이 규칙** 이다 — CASE **B 만** 바뀌고 A/C/D 는 그대로다
+🟡 분포가 필요하면 **별도 측정 WU** 가 필요하다(스냅샷 전수 MI 재계산 하니스)
+```
+
+### 🟢🟢 **⒝ CLOSED — 배포 `2cf58932`**(2026-11-08)
+
+```
+🟢 헤드라인 신설 — **판매 판단 + 추천 판매가격**(요약에서 금액을 말하는 **유일한 자리**)
+🟢 rows 재구성 — 판매 판단 / 국내 가격 분석 / 해외 가격 분석 / 핵심 판단 이유 (**금액 0**)
+🔴🔴 가격 owner = **`recommendedPriceKrw`** — Workspace 가 `MarketPriceComparison` 에
+   넘기는 **같은 변수** 를 요약에도 그대로 넘긴다 ⟹ 동일성이 **구조적** 이다(재계산 0)
+🟢 계약 강화 — `wu-141-r3 C-2`(a 유지 · b 보강 · **b2·d 신설**) ·
+   `core-next-step4 D-6`(숫자 프록시 → **「전부 같은 변수」 성질 단언**) · `wu-030` 갱신
+🟢 음성 5축 전부 FAIL → 바이트 복구 · 회귀 **829 / 10,561 · 0 failed** · tsc 0 · build 0
+🔴 matcher · threshold · GT · 가격 **산출** · 검토 저장 · 등록 payload **변경 0**
+```
+
+🔴 **⒝ 에서 계약이 잡은 내 오류 넷**(다음 세션이 같은 함정을 밟지 않게 적는다):
+```
+⒜ 등급으로 «대체» 했더니 **출처 건수가 사라졌다**(`wu-030` 이 잡았다) ⟹ **둘을 잇는다**
+⒝ 🔴 **일괄 치환으로 테스트를 고치려다** 두 줄이 한 줄로 합쳐진 것을 놓쳤다 ⟹ Edit 로만
+⒞ 🔴 `?? 와 || 혼용` 구문 오류로 **3개 파일이 로드조차 안 됐다** — 「0 failed」로 읽힐 뻔했다
+   ⟹ **Test Files 실패 수** 를 Tests 수와 **같이** 본다
+⒟ 🔴 내 단언이 틀리고 구현이 맞았다 — 해외 입력이 **금액뿐** 이면 줄을 **안 만드는** 것이 맞다
+```
+
+### 🔵 [기록] ⒝ 착수 전 — **owner 가 «틀렸다»는 CTO 자기정정(실측)**
+🔴 아래는 **판정 근거** 다(위 절이 현재 상태다):
+```
+🔴 내 직전 보고가 「`recommendation.recommendedPrice` == `market-recommended-price-amount`」
+   라고 적었고 CPO 가 그것을 owner 로 확정했다. **그 등식이 성립하지 않는다.**
+🟢 실측 — `MarketPriceComparison` 은 **서로 다른 두 prop** 을 받는다:
+   `marketPriceKrw`       ← marketComparison.marketPriceKrw ← **recommendation.recommendedPrice**
+                            (CommerceWorkspace:3778 · 🔴 「추천 판매가」로 **표시되지 않는다**)
+   `recommendedPriceKrw`  ← **Workspace `resolveListingPrice(...)`**(CommerceWorkspace:2019)
+                            (CommerceWorkspace:3773)
+   🔴 화면의 `market-recommended-price-amount`(:744) 가 찍는 값과
+      `onApplyRecommendedPrice`(→ `updateSalePriceKrw`)가 **적용하는 값** 은 **둘 다
+      `recommendedPriceKrw`** 다 — `recommendation.recommendedPrice` 가 **아니다**.
+⟹ 🔴 CPO 지시 두 줄이 **서로 모순** 이다:
+   「owner = recommendation.recommendedPrice」 ↔ 「판매 가격 설정의 값과 동일해야 한다」
+⟹ 🟢 **안전 목적(동일성)을 지키는 owner 는 하나뿐** 이다:
+   **`recommendedPriceKrw`(Workspace `resolveListingPrice`)**
+   🟢 그것은 **새 계산이 아니다** — 이미 `MarketPriceComparison` 에 넘어가는 **그 변수** 다.
+      요약에 **같은 변수를 그대로** 넘기면 동일성이 **구조적으로** 보장된다(우연 일치 아님).
+   🔴 그러면 가격만 Workspace prop 으로 들어오고 나머지는 패널 콜백으로 온다 —
+      🟢 그것은 **재계산이 아니라 렌더 prop** 이다(CPO 「Workspace 재계산 금지」와 충돌 없음).
+🟡 **CPO 확인 필요** — owner 를 `recommendedPriceKrw` 로 정정 승인하면 **조사 없이 바로 구현** 한다.
+```
+
+🔵 **그 다음 구현 좌표(확정 · 재조사 금지)**
+```
+입력   `JudgementSummaryInput` 에 `recommendedPriceKrw?: number | null` 추가
+렌더   `ProductJudgementSummary` 에 **헤드라인 한 줄**(판매 판단 + 추천 판매가격) 추가
+       🔴 금액은 그 자리 **하나** 뿐이다(rows 에는 금액 0 — C-2-a 유지)
+배선   `CommerceWorkspace:3708` 의 `<ProductJudgementSummary {...judgementSummary} />` 에
+       `recommendedPriceKrw={recommendedPriceKrw}` 를 더한다(= :3773 과 **같은 변수**)
+rows   판매 판단 / 국내 가격 분석 / 해외 가격 분석 / 핵심 판단 이유
+       🔴 기존 라벨 「시장 판단」을 바꾸면 `wu-141-r3 C-2-a` 가 FAIL 한다(의도된 갱신 대상)
+음성   ① 다른 후보 금액으로 대체 ② 판매 가격 설정과 다른 값 ③ 추천가 없을 때 후보가 노출
+       ④ 요약에 다른 금액 추가 ⑤ 조립 owner 중복 — **다섯 전부 FAIL 해야 한다**
+```
+
+🔵 **⒞ 좌표(재조사 금지)** — 가격 분석 4필드는 **`MarketColumn`**(`MarketPriceComparison.tsx:1909`)
+의 `mi-candidate-row`(**:2099**) 안에서 정리한다. 표시 허용 = **사이트명 · 사이트 링크 ·
+동일/유사 판단 · 가격(원 통화)** 넷. 🔴 국내/해외 구분 유지 · 🔴 환산 0 · 🔴 동일≠유사 ·
+🔴 판단 불가를 동일로 적지 않는다 · 🔴 내부 Evidence·상세는 **삭제가 아니라 기본 노출에서만** 제외.
+🔴 그 행 안에 **`CandidateSelect`·`CandidateNoteChoices`(검토 저장)가 같이 있다 — 지우지 않는다.**
+
+### 🟢 **[직전] STEP 3+4 — 일괄 숨김안 철회 · CLOSED**(2026-11-08 · 운영 코드 **0**)
+
+🔴🔴 **CTO 가 구현하지 않았다.** 승인된 대상 목록이 **화면에 없는 컴포넌트** 를 가리키고,
+실제 owner 는 **결론 영역 안** 이며 그 안에 **셀러 판단 저장 UI** 가 같이 들어 있었다.
+🟢 아래 실측이 그 근거이고 **CPO 가 그것을 받아 일괄 숨김안을 철회했다**(바로 아래 판정 절).
+🟢 전부 **실측** 이다 — 다음 세션은 **재조사하지 않는다**.
+
+```
+① 🔴🔴 승인 대상 ⒜ `TransientCandidateSections` 는 **숨겨도 화면이 안 바뀐다**
+   렌더 지점이 **전수 1곳**(`DomesticPriceIntelligencePanel.tsx:4520`)이고 그 자리는
+   `MiPanelView` «안» 이다 ⟹ 운영에서 **마운트되지 않는다**(STEP 2 가 확정한 사실).
+   ⟹ 🔴 그 숨김의 화면 효과는 **0** 이다.
+
+② 🔴🔴 승인된 「난점」이 **성립하지 않는다**
+   `core-e2e-close-01-seller-surface:125` 는 `GeminiTransientCandidates` 를 **직접**
+   마운트한다(`:85 createElement(GeminiTransientCandidates, props)` · 입력 `ROWS`).
+   ⟹ 🔴 패널·Workspace 를 숨겨도 그 단언은 **한 글자도 영향받지 않는다.**
+   ⟹ 🔴 「`gt-verdict` 가 0 이 된다」는 **일어나지 않는다**(계약 갱신 불필요).
+
+③ 🟢 **셀러가 실제로 보는 owner 는 `MarketPriceComparison` 하나다**(결론 영역)
+   하단 중복 후보   `mi-candidate-list`(**:2018** `<details>`) · 행 `mi-candidate-row`(:2099)
+                    🔴 둘 다 `MarketColumn`(**:1909**) 안 = `market-blocks`(:583) 안
+   가격 판단 기준    `price-basis`(**:956** `<details>` · `price-detail-fold`(:838) 안)
+   MI 상세 분석      `market-evidence-fold`(**:1044** `<details>`)
+   🔴 「판매자/가격 Evidence」는 **owner 가 모호하다** — 이 이름에 1:1 대응하는
+      `data-testid`/구역이 **없다**(후보 `price-detail-fold` / `market-detail-blocks`).
+      ⟹ 🔴 **CTO 가 고르지 않았다**(어느 드릴다운을 남기는가는 제품 결정이다).
+
+④ 🔴🔴🔴 **그 중복 목록 «안» 에 셀러 판단 저장 UI 가 있다 — 숨기면 그 기능이 사라진다**
+   `mi-candidate-list` 안 → `<CandidateSelect>` · `<CandidateNoteChoices>`
+   = **WU-131 후보 검토 저장 경로**(동일/유사/다름/보류 → `candidate_reviews`)
+   ⟹ 🔴 그것을 숨기면 **CPO 3순위**(「후보 검토 → GT 누적 → MI 개선」)가 화면에서 닫힌다.
+   ⟹ 🔴 그리고 표준 §0.3 절대불변 ⑦ **「판매자에게 근거 공개」** 와 정면으로 만난다.
+```
+
+### 🟢🟢🟢 **CPO 판정 완료(2026-11-08) — 일괄 숨김안 «철회» · 전 기능 보존**
+
+🔴🔴 **STEP 3+4 의 기존 승인(일괄 숨김)은 철회됐다.** 🔴 **지금 새 숨김 작업은 승인되지 않는다.**
+🟢 포기가 아니라 **범위 재설정** 이다 — 「제품 기능을 보존하면서 실제로 불필요한 정보만 줄인다」.
+
+```
+⒜ 🟢 **확정 — 하단 후보 목록(`mi-candidate-list`)은 «유지»**
+   새 카드가 최상단 · 기존 목록이 아래에 있는 **현재 구조를 유지** 한다.
+   🔴 목록 숨김 **승인하지 않음** · 🔴 검토 저장 UI 이전도 **현 단계 승인하지 않음**
+⒝ 🟢 **확정 — 「판매자/가격 Evidence」는 이번 숨김 대상에서 «제외»**
+   🔴 owner 가 특정되지 않았으므로 **추측으로 숨기지 않는다**(향후 별도 판단)
+⒞ 🟢 **확정 — `price-basis` · `market-evidence-fold` 도 «유지»**
+   🔴 둘 다 이미 접혀 있어 「첫 화면 단순화」라는 실익이 **입증되지 않았다**
+   🟡 영구 결정은 아니다 — **실제 셀러 화면 확인 후** 필요성을 다시 평가한다
+```
+
+🔴🔴 **임의로 제거·숨기지 않는다(보존 필수 목록)**:
+```
+CandidateSelect · CandidateNoteChoices · 동일/유사/다름/보류 판단 ·
+`candidate_reviews` 저장 경로 · 후보별 가격 및 근거 · 출처 **일곱 축** ·
+가격 판단 기준 · MI 상세 분석
+🔴 이것은 가격 비교 상세정보가 아니라 **셀러 검토 → GT 누적 → MI 개선** 의 핵심 수집 경로다
+🔴 표준 §0.3 절대불변 ⑦ 「판매자에게 근거 공개」와 충돌하는 방향은 **승인되지 않는다**
+```
+
+🟡 **추후 검토 — 실제 Production 화면을 «셀러 관점» 으로 본 뒤에만 범위를 정한다**:
+```
+① 상단 요약 ↔ 후보 카드의 정보 중복   ② 하단 후보 목록의 사용 빈도와 검토 저장 필요성
+③ 가격·MI 상세 영역의 실제 사용성      ④ 「판매자/가격 Evidence」의 정확한 렌더 owner
+🔴 그 전에는 **어떤 영역도 추측으로 숨기지 않는다.**
+```
+
+🟢 **확정된 것 — 다시 조사하지 않는다**: 숨김 선례 둘(`isSuppliedUrlInputVisible` ·
+`isIdentityEvidenceVisibleToSeller` · 🔴 **상수가 아니라 함수**) · 출처 **일곱 축** 보존 계약
+(`wu-130 F-3`) · 양방향 음성 대조(숨김 해제 → FAIL · 배선 삭제 → FAIL) · 갱신 후보 표면
+(「판단 근거」 28 · 「MI 상세 분석」 9 · 「시장 가격 비교」 6 · `MARKET_JUDGEMENT_TITLE` 6 ·
+`candidate-list-ui-01`). 🔴 금지 — matcher · threshold · 8축 · GT · 가격 로직 · 새 MI 전략.
+
+### 🔵 [낡음] STEP 2 잔여 착수 좌표 — **닫혔다. 다시 조사하지 않는다**
+```
+🔴 아래 좌표/설계 비교는 **종료된 판정 근거** 다(위 절이 이긴다).
+
+🔴 `judgementSummaryInput`(패널 **:3804**)이 **패널 내부 state 8+** 에 의존한다 —
+   hasAnyData · sellerDecision · domesticEvidence · overseasMarketEvidence ·
+   urlCandidateEvidence · geminiEvidence · overseasAutoEvidence · reviewedSameEvidence ·
+   domesticListingEvidence · webSearchEvidence
+   ⟹ 🔴 **Workspace 에서 다시 계산하면 안 된다**(사본이 생기고 둘이 갈린다).
+
+🟢🟢 **올려 보내는 길이 이미 있다 — 새 패턴 0**(WU-132 ① 선례):
+   패널 `onMarketComparisonChange`(:1989 · effect :2022) → Workspace `setMarketComparison`(:3938)
+   Workspace state `marketComparison: MarketComparisonInput | null`(**:827**)
+🔵 그래서 구현은 **그 계약에 칸 하나를 더하는 것** 이다(WU-130 주석이 「거기에 칸 둘을 더했다」고
+   적어 둔 그 자리 · 패널 :1807) — `judgementSummary` 를 그 payload 에 싣는다.
+
+🔴🔴 **②번 전제가 틀렸다 — 경계를 확정했다(이번 세션 실측)**
+   `judgementSummaryInput`(**:3804**)은 **`MiPanelView`(:3124) «안»** 에 있고,
+   전달 채널 owner `marketComparisonInput`(**:2162**)은 **바깥 패널** 에 있다.
+   그 값이 쓰는 `hasAnyData`(**:3445**) · `sellerDecision` · `domesticEvidence` ·
+   `overseasMarketEvidence` 는 **MiPanelView 의 지역 값/props** 다.
+   ⟹ 🔴 :2162 에서 그 payload 를 **만들 수 없다**(그 값들이 거기 없다).
+🟢🟢 **CPO 판정 완료(2026-11-08) — ⒜ 두 번째 콜백으로 확정. 설계 선택은 끝났다.**
+   ```
+   MiPanelView(계산 owner 유지 · :3804)
+     ├─ onJudgementSummaryChange  → Workspace state → ProductJudgementSummary
+     └─ onMarketComparisonChange  → marketComparison → SellerCandidateCards  (기존 · 불변)
+   🔴 Workspace 에서 **재계산 0** · `marketComparisonInput` 계약 **불변** ·
+      새 콜백은 **요약 객체 전달만** 담당 · 요약 데이터 owner 를 **둘로 만들지 않는다**
+   ```
+🔴 **추가 잠금(CPO 명시)** — 두 콜백이 각각 발화하는지만 보지 말고,
+   **같은 분석 사이클에서 요약과 후보가 서로 다른 시점 값으로 섞이지 않는지** 도 단언한다
+   (비동기 갱신 순서가 다르면 화면의 요약과 후보가 불일치한다).
+🔴 그리고 effect deps 누락 · stale state **부정 테스트** 를 반드시 넣는다(이 파일 4회 사고).
+
+🔴 [해소됨] 아래 ⒜/⒝ 비교는 **판정 근거 기록** 이다 — 다시 고르지 않는다:🔵 그래서 ② 는 **둘 중 하나** 이고 **CPO 판정 사안** 이다:
+   ⒜ `MiPanelView` 에서 **두 번째 콜백**(`onJudgementSummaryChange`)으로 올린다 —
+      🟢 `onMarketComparisonChangeRef` 와 **같은 패턴**(:2254 · 새 패턴 0) ·
+      🔴 전달 채널이 둘이 된다
+   ⒝ `MiPanelView` 가 그 객체를 **바깥 패널로 올려** `marketComparisonInput` 에 합친다 —
+      🟢 채널 하나 유지 · 🔴 중간 state 가 하나 늘고 effect deps 가 늘어난다
+🔴 어느 쪽이든 **계산 위치는 `MiPanelView` 에 그대로 둔다**(사본 0 · 재계산 0).
+🔵 실행 순서(조사 없이 바로)
+   ① `MarketComparisonInput` 에 `judgementSummary` 칸 추가(옵셔널)
+   ② 패널 :3804 의 값을 그 payload 에 실어 보낸다(계산 위치 **그대로** · 사본 0)
+   ③ Workspace 에서 `<ProductJudgementSummary {...marketComparison.judgementSummary} />` 를
+      **후보 카드 슬롯 «위»** 에 렌더(격자 밖 · `seller-candidates-slot` 앞)
+   ④ 🔴 패널 :3826 의 렌더를 **제거**(중복 금지) — 🔴 계산은 남긴다
+   ⑤ 마운트 DOM — 요약 index < 카드 index · 둘 다 격자/WorkflowPanel 사이
+   ⑥ 🔴 이동 전후 **요약 내용 동일성** 을 단언한다(텍스트 비교)
+🔴 함정 — effect deps 누락(이 파일이 **네 번** 밟았다) · 「기둥 안 ≠ 화면 맨 위」(WU-140-R1) ·
+   Workspace 소스에 `/sourcing/i` 금지(WU-058 · 이번에 걸렸다)
+```
+🟢 **직전 두 배포(재조사 금지)**
+```
+d1223d14  원본↔후보 근거 대조 — API `identityEvidence` + Product 화면 · 최소 의존 폐쇄 **12 파일**
+038aacdb  그 영역을 **셀러 화면에서 숨김**(기능 보존 · S1 1F · S2 2F 로 양방향 잠금)
+기준선     BRAND-0 15 · BRAND-1 22 · PRODUCT-NAME-1 19 · Q-4 11 · COMMON-EVIDENCE-1 18 ·
+          API 12 · UI **23**  ⟹ 합계 **120**
+회귀       827 files / **10,510 passed · 0 failed** · typecheck 0 · 미커밋 **39건**(보존)
+```
+
+🟢 BRAND-0 산출(재조사 금지) — `brand-0-wu080-reject.test.ts` **15건** ·
+   fixture `brand-0-wu080-cf3.json`(WU-080 BRAND blocker **14쌍**) ·
+   캐시 **0** · 네트워크 **0** · 운영 코드 **0** · 음성대조 **M1 4F · M2 5F · M3 1F · M4 4F · M5 3F**.
 
 ---
 
