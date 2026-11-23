@@ -1,0 +1,3712 @@
+{
+ "note": "🔴 PRESUMED_SAME 다음 원인(제조사 모델코드 · 상품명) 분석 · 분석 전용 · 운영 코드 0 · 운영 정규식 0 · HTTP 0 · DB 0 · alias 0 · threshold 0 · 🔴 접두 생략/공백 패턴은 **관측 전용** 이고 운영에 넣지 않았다 · 🔴 기존 B16(보조 속성)과 다른 축이다 · 🔴 상품명 단독으로 SAME 을 판단하지 않는다",
+ "denominators": {
+  "pairs": 109,
+  "originTitlePresent": 92,
+  "candidateTitlePresent": 109,
+  "candidateDescriptionPresent": 98,
+  "humanGtPresent": 36
+ },
+ "axisStatusReference": {
+  "MODEL_CODE": {
+   "MISMATCH": 8,
+   "UNKNOWN": 80,
+   "MATCH": 21
+  },
+  "PRODUCT_NAME": {
+   "MATCH": 25,
+   "UNKNOWN": 43,
+   "MISMATCH": 41
+  },
+  "BRAND": {
+   "MATCH": 24,
+   "UNKNOWN": 85
+  }
+ },
+ "step3CodeEvidenceWhere": {
+  "origin": {
+   "STRUCTURED": 81,
+   "DESCRIPTION": 3
+  },
+  "candidate": {
+   "DESCRIPTION": 26,
+   "TITLE": 5
+  },
+  "note": "🔵 후보측 모델코드 증거는 «상세설명» 이 압도적이다 — 제목은 소수다"
+ },
+ "codeCauseTally": {
+  "CODE_PRESENT_BUT_DIFFERENT": 7,
+  "NOT_PRESENT": 56,
+  "TITLE_APPROVED": 5,
+  "DESCRIPTION_ONLY": 11,
+  "TITLE_PREFIXLESS_NOT_EXTRACTED": 2,
+  "ORIGIN_CODE_ABSENT": 28
+ },
+ "codeCauseByGt": {
+  "SAME": {
+   "TITLE_APPROVED": 3,
+   "NOT_PRESENT": 8,
+   "DESCRIPTION_ONLY": 6,
+   "CODE_PRESENT_BUT_DIFFERENT": 1,
+   "TITLE_PREFIXLESS_NOT_EXTRACTED": 2
+  },
+  "DIFFERENT": {
+   "CODE_PRESENT_BUT_DIFFERENT": 2,
+   "NOT_PRESENT": 12
+  }
+ },
+ "nameCauseTally": {
+  "TOKENS_SHARED": 44,
+  "WEAK_OVERLAP": 27,
+  "ORIGIN_TITLE_ABSENT": 17,
+  "SCRIPT_DIFFERENCE_PARTIAL": 1,
+  "NO_OVERLAP": 19,
+  "SCRIPT_DIFFERENCE_NO_OVERLAP": 1
+ },
+ "nameCauseByGt": {
+  "SAME": {
+   "ORIGIN_TITLE_ABSENT": 13,
+   "TOKENS_SHARED": 6,
+   "SCRIPT_DIFFERENCE_NO_OVERLAP": 1
+  },
+  "DIFFERENT": {
+   "ORIGIN_TITLE_ABSENT": 3,
+   "WEAK_OVERLAP": 6,
+   "NO_OVERLAP": 4,
+   "TOKENS_SHARED": 1
+  }
+ },
+ "gtSupersession": {
+  "note": "🔴🔴 최신 CEO 판정(core-2m-ceo-visual-gt · 2026-10-24)이 과거 라벨을 «대체» 한다 — CPO 「최신 CEO 판정을 기준 truth 로 확정」. 🔴 낡은 라벨로 분석하면 거짓 반례가 생긴다",
+  "supersededRows": [
+   {
+    "domain": "bornyesterdaykids.com",
+    "prior": "SAME",
+    "current": "UNCERTAIN",
+    "ceoBasis": "상/하의 세트다. 🟢 상의는 동일상품이지만 하의가 포함돼 **가격 비교에는 부적합** 하다 ⟹ 판단불가가 맞다."
+   },
+   {
+    "domain": "m.luxboy.com",
+    "prior": "DIFFERENT",
+    "current": "SAME",
+    "ceoBasis": "브랜드 + 품번 동일로 판단 가능. 추가로 상품명·상세설명으로도 판단된다."
+   }
+  ],
+  "labelPolicy": "🔴 CEO UI 에 「다름」이 없었다 — 「유사」→ DIFFERENT 매핑(그래서 SIMILAR 를 SAME 성과로 세지 않는다)"
+ },
+ "counterExamples": {
+  "sameCodeButHumanDifferent": [],
+  "nameSharedButHumanDifferent": 1,
+  "note": "🔴 동일 코드인데 사람이 DIFFERENT 라 한 사례가 있으면 **코드 단독 승격 금지** 의 직접 근거다 (CEO 근거 C19·C20·C22 — 「품번이 동일하나 다른 제품/컬러」·「사이트 품번 오등록」)"
+ },
+ "rows": [
+  {
+   "originCode": "B226AB097",
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/stamp-bloom-all-over-reversible-jacket-by-bobo-choses",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "CONFLICT",
+   "axisModelCode": "MISMATCH",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "CODE_PRESENT_BUT_DIFFERENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [
+     "B226AC097"
+    ],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AC097"
+    ],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Stamp Bloom all over reversible anorak",
+    "candidateTitle": "Stamp Bloom All Over Reversible Jacket by Bobo Choses",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "MATCH"
+  },
+  {
+   "originCode": "B226AB097",
+   "candidateDomain": "nickis.com",
+   "candidateUrl": "https://nickis.com/products/colmar-daunenjacke-reversible-quilted-marineblau-7404628282",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Stamp Bloom all over reversible anorak",
+    "candidateTitle": "Daunenjacke Reversible Quilted Marineblau",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "biskuit.kr",
+   "candidateUrl": "https://biskuit.kr/product/%eb%b3%b4%eb%b3%b4%ec%87%bc%ec%a6%88-%ed%97%88%ea%b7%b8-%ed%97%a4%ec%96%b4%eb%a6%ac-%eb%aa%ac%ec%8a%a4%ed%84%b0-%ed%8b%b0%ec%85%94%ec%b8%a0-b226ac009/8891/category/367/display/1/",
+   "humanGt": "SAME",
+   "humanGtPrior": "SAME",
+   "humanGtSource": "core-2m-ceo-visual-gt(최신 · 대체)",
+   "ceoBasis": "상품명에 「보보쇼즈 + B226AC009」가 그대로 있다. 🔴 brand 칸은 판매처 이름(비스킷)이다.",
+   "ceoUiLabel": "동일",
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "axisModelCode": "MATCH",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "TITLE_APPROVED",
+    "approvedInTitle": [
+     "B226AC009"
+    ],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AC009"
+    ],
+    "confirmedByOperationalOwner": "B226AC009",
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "ORIGIN_TITLE_ABSENT",
+    "originTitle": null,
+    "candidateTitle": "[보보쇼즈] 허그 헤어리 몬스터 티셔츠 B226AC009 - 비스킷",
+    "originHasKo": null,
+    "candidateHasKo": true
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "bobochoses.com",
+   "candidateUrl": "https://bobochoses.com/products/b226ab040-hug-hairy-monster-t-shirt",
+   "humanGt": "SAME",
+   "humanGtPrior": "SAME",
+   "humanGtSource": "core-2m-ceo-visual-gt(최신 · 대체)",
+   "ceoBasis": "브랜드 같음 · 품번 다름(B226AB040) · 상품명 동일. 🔴 품번은 같은 상품을 여러 개 등록한 실수로 보인다.",
+   "ceoUiLabel": "동일",
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "axisModelCode": "MISMATCH",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "ORIGIN_TITLE_ABSENT",
+    "originTitle": null,
+    "candidateTitle": "Hug Hairy Monster T-shirt",
+    "originHasKo": null,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "bornyesterdaykids.com",
+   "candidateUrl": "https://bornyesterdaykids.com/products/bobo-choses-baby-hug-hairy-monster-l-s-t-shirt-booo-bo-choses-tag-denim-pants-set-light-blue-red",
+   "humanGt": "UNCERTAIN",
+   "humanGtPrior": "SAME",
+   "humanGtSource": "core-2m-ceo-visual-gt(최신 · 대체)",
+   "ceoBasis": "상/하의 세트다. 🟢 상의는 동일상품이지만 하의가 포함돼 **가격 비교에는 부적합** 하다 ⟹ 판단불가가 맞다.",
+   "ceoUiLabel": "판단불가",
+   "gtSuperseded": true,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "ORIGIN_TITLE_ABSENT",
+    "originTitle": null,
+    "candidateTitle": "Bobo Choses Baby Hug Hairy Monster l/s T-shirt & Booo Bo Choses Denim Pants Set ~ Light Blue/Red",
+    "originHasKo": null,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "cemarose.ca",
+   "candidateUrl": "https://cemarose.ca/products/bobo-choses-kids-booty-ghosts-sweatshirt-light-blue-c7907",
+   "humanGt": "DIFFERENT",
+   "humanGtPrior": "DIFFERENT",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "MISMATCH",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "CODE_PRESENT_BUT_DIFFERENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [
+     "B226AC031"
+    ],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AC031"
+    ],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "ORIGIN_TITLE_ABSENT",
+    "originTitle": null,
+    "candidateTitle": "Bobo Choses-Kids Booty Ghosts Sweatshirt Light Blue",
+    "originHasKo": null,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "cissywears.com",
+   "candidateUrl": "https://cissywears.com/products/bobo-choses-babyhug-hairy-monster-t-shirt",
+   "humanGt": "SAME",
+   "humanGtPrior": "SAME",
+   "humanGtSource": "core-2m-ceo-visual-gt(최신 · 대체)",
+   "ceoBasis": "브랜드 + 상품명으로 판단 가능 · 품번 없음 · 상세에서 브랜드와 상품명 파악 가능.",
+   "ceoUiLabel": "동일",
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "ORIGIN_TITLE_ABSENT",
+    "originTitle": null,
+    "candidateTitle": "Bobo Choses Baby Hug Hairy Monster T-Shirt",
+    "originHasKo": null,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "global.trenbe.com",
+   "candidateUrl": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+   "humanGt": "SAME",
+   "humanGtPrior": "SAME",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "axisModelCode": "MATCH",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "TITLE_APPROVED",
+    "approvedInTitle": [
+     "B226AC009"
+    ],
+    "approvedInDescription": [
+     "B226AC009"
+    ],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AC009",
+     "B226AC009"
+    ],
+    "confirmedByOperationalOwner": "B226AC009",
+    "longDigitRunsObserved": [
+     "160484657"
+    ]
+   },
+   "name": {
+    "cause": "ORIGIN_TITLE_ABSENT",
+    "originTitle": null,
+    "candidateTitle": "Bobo Choses Kids Hug Hairy Monster Long Sleeve T-Shirt (Light Blue) B226AC009 451 160484657 [P]",
+    "originHasKo": null,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "global.trenbe.com",
+   "candidateUrl": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "SAME",
+   "axisModelCode": "MATCH",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "TITLE_APPROVED",
+    "approvedInTitle": [
+     "B226AC009"
+    ],
+    "approvedInDescription": [
+     "B226AC009"
+    ],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AC009",
+     "B226AC009"
+    ],
+    "confirmedByOperationalOwner": "B226AC009",
+    "longDigitRunsObserved": [
+     "160484657"
+    ]
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Hug Hairy Monster T-shirt",
+    "candidateTitle": "Bobo Choses Kids Hug Hairy Monster Long Sleeve T-Shirt (Light Blue) B226AC009 451 160484657 [P]",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "MATCH"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "humanGt": "SAME",
+   "humanGtPrior": "SAME",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "MATCH",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "DESCRIPTION_ONLY",
+    "approvedInTitle": [],
+    "approvedInDescription": [
+     "B226AC009"
+    ],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AC009"
+    ],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Hug Hairy Monster T-shirt",
+    "candidateTitle": "Hug Hairy Monster T-Shirt by Bobo Choses",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "SAME",
+   "axisModelCode": "MATCH",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "DESCRIPTION_ONLY",
+    "approvedInTitle": [],
+    "approvedInDescription": [
+     "B226AC009"
+    ],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AC009"
+    ],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Hug Hairy Monster T-shirt",
+    "candidateTitle": "Hug Hairy Monster T-Shirt by Bobo Choses",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "MATCH"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://www.junioredition.com/products/hug-hairy-monster-baby-t-shirt-by-bobo-choses",
+   "humanGt": "SAME",
+   "humanGtPrior": "SAME",
+   "humanGtSource": "core-2m-ceo-visual-gt(최신 · 대체)",
+   "ceoBasis": "브랜드 + 상품명으로 판단 가능. 🔴 품번 009/040 중 이 후보는 040 이고 동일상품이 맞다.",
+   "ceoUiLabel": "동일",
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "axisModelCode": "MISMATCH",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "CODE_PRESENT_BUT_DIFFERENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [
+     "B226AB040"
+    ],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AB040"
+    ],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "ORIGIN_TITLE_ABSENT",
+    "originTitle": null,
+    "candidateTitle": "Hug Hairy Monster Baby T-Shirt by Bobo Choses",
+    "originHasKo": null,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "humanGt": "SAME",
+   "humanGtPrior": "SAME",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "SAME",
+   "axisModelCode": "MATCH",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "DESCRIPTION_ONLY",
+    "approvedInTitle": [],
+    "approvedInDescription": [
+     "B226AC009"
+    ],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AC009"
+    ],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "ORIGIN_TITLE_ABSENT",
+    "originTitle": null,
+    "candidateTitle": "Hug Hairy Monster T-Shirt by Bobo Choses",
+    "originHasKo": null,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "kids21.com",
+   "candidateUrl": "https://kids21.com/products/700005621lbl",
+   "humanGt": "SAME",
+   "humanGtPrior": "SAME",
+   "humanGtSource": "core-2m-ceo-visual-gt(최신 · 대체)",
+   "ceoBasis": "브랜드 + 상품명으로 판단 가능 · 품번 없음 · 상세 없음.",
+   "ceoUiLabel": "동일",
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "ORIGIN_TITLE_ABSENT",
+    "originTitle": null,
+    "candidateTitle": "Bobo Choses Hug Hairy Monster T-shirt",
+    "originHasKo": null,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "m.luxboy.com",
+   "candidateUrl": "https://m.luxboy.com/product/a14338197cb8698cd92c86431cce8d05",
+   "humanGt": "SAME",
+   "humanGtPrior": "DIFFERENT",
+   "humanGtSource": "core-2m-ceo-visual-gt(최신 · 대체)",
+   "ceoBasis": "브랜드 + 품번 동일로 판단 가능. 추가로 상품명·상세설명으로도 판단된다.",
+   "ceoUiLabel": "동일",
+   "gtSuperseded": true,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "axisModelCode": "MATCH",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "TITLE_APPROVED",
+    "approvedInTitle": [
+     "B226AC009"
+    ],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AC009"
+    ],
+    "confirmedByOperationalOwner": "B226AC009",
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "ORIGIN_TITLE_ABSENT",
+    "originTitle": null,
+    "candidateTitle": "보보쇼즈(BOBO CHOSES) 키즈 긴팔티셔츠 B226AC009 | SINCE 2002 No.1 명품쇼핑, 럭스보이",
+    "originHasKo": null,
+    "candidateHasKo": true
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "miniboutique.co.kr",
+   "candidateUrl": "https://miniboutique.co.kr/product/bobo-chosest-shirt-b226ac009/28043/",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "MATCH",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "TITLE_APPROVED",
+    "approvedInTitle": [
+     "B226AC009"
+    ],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AC009"
+    ],
+    "confirmedByOperationalOwner": "B226AC009",
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "SCRIPT_DIFFERENCE_PARTIAL",
+    "originTitle": "Hug Hairy Monster T-shirt",
+    "candidateTitle": "[BOBO CHOSES]T-Shirt - B226AC009 - 미니부띠끄 miniboutique",
+    "originHasKo": false,
+    "candidateHasKo": true
+   },
+   "brandAxis": "MATCH"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "parkette.ca",
+   "candidateUrl": "https://www.parkette.ca/products/hug-hairy-monster-sweatshirt",
+   "humanGt": "DIFFERENT",
+   "humanGtPrior": "DIFFERENT",
+   "humanGtSource": "core-2m-ceo-visual-gt(최신 · 대체)",
+   "ceoBasis": "상품 유형이 다르다 — 원본 T-shirt ↔ 후보 Sweatshirt. 상품명 핵심어도 shirt ↔ sweatshirt.",
+   "ceoUiLabel": "유사",
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "ORIGIN_TITLE_ABSENT",
+    "originTitle": null,
+    "candidateTitle": "Hug Hairy Monster Sweatshirt",
+    "originHasKo": null,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "scoutandcokids.com",
+   "candidateUrl": "https://scoutandcokids.com/collections/bobo-choses/products/bobo-choses-hug-hairy-monster-t-shirt",
+   "humanGt": "SAME",
+   "humanGtPrior": "SAME",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "ORIGIN_TITLE_ABSENT",
+    "originTitle": null,
+    "candidateTitle": "Bobo Choses - Hug Hairy Monster T-shirt",
+    "originHasKo": null,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "stockmann.ee",
+   "candidateUrl": "https://www.stockmann.ee/et-ee/bobo-choses-trikoosark-hug-monster/18119748633-1.html",
+   "humanGt": "SAME",
+   "humanGtPrior": "SAME",
+   "humanGtSource": "core-2m-ceo-visual-gt(최신 · 대체)",
+   "ceoBasis": "브랜드 같음 · 품번 없음 · 상품명 다름(에스토니아어 Trikoosärk Hug Monster) ⟹ 상세설명까지 내려가야 판단된다.",
+   "ceoUiLabel": "동일",
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "ORIGIN_TITLE_ABSENT",
+    "originTitle": null,
+    "candidateTitle": "BOBO CHOSES Trikoos&auml;rk Hug Monster | Stockmann",
+    "originHasKo": null,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "thefrontshop.com",
+   "candidateUrl": "https://www.thefrontshop.com/products/hug-hairy-monster-t-shirt",
+   "humanGt": "SAME",
+   "humanGtPrior": "SAME",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "ORIGIN_TITLE_ABSENT",
+    "originTitle": null,
+    "candidateTitle": "Bobo Choses - Hug Hairy Monster T-Shirt",
+    "originHasKo": null,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "tinyapple.net",
+   "candidateUrl": "https://www.tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+   "humanGt": "SAME",
+   "humanGtPrior": "SAME",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "axisModelCode": "MATCH",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "DESCRIPTION_ONLY",
+    "approvedInTitle": [],
+    "approvedInDescription": [
+     "B226AC009"
+    ],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AC009"
+    ],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "ORIGIN_TITLE_ABSENT",
+    "originTitle": null,
+    "candidateTitle": "Bobo Choses Hug Hairy Monster T-shirt, Light Blue",
+    "originHasKo": null,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "tinyapple.net",
+   "candidateUrl": "https://www.tinyapple.net/en-kr/products/bobo-choses-bobo-choses-pop-t-shirt-blue",
+   "humanGt": "DIFFERENT",
+   "humanGtPrior": "DIFFERENT",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "MISMATCH",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "CODE_PRESENT_BUT_DIFFERENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [
+     "B226AC142"
+    ],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AC142"
+    ],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "ORIGIN_TITLE_ABSENT",
+    "originTitle": null,
+    "candidateTitle": "Bobo Choses Bobo Choses Pop T-shirt, Blue",
+    "originHasKo": null,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "tinyapple.net",
+   "candidateUrl": "https://www.tinyapple.net/en-kr/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+   "humanGt": "SAME",
+   "humanGtPrior": "SAME",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "SAME",
+   "axisModelCode": "MATCH",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "DESCRIPTION_ONLY",
+    "approvedInTitle": [],
+    "approvedInDescription": [
+     "B226AC009"
+    ],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AC009"
+    ],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "ORIGIN_TITLE_ABSENT",
+    "originTitle": null,
+    "candidateTitle": "Bobo Choses Hug Hairy Monster T-shirt, Light Blue",
+    "originHasKo": null,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/pale-blue-3d-logo-t-shirt",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Hug Hairy Monster T-shirt",
+    "candidateTitle": "Pale Blue 3D Logo T-Shirt",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/pale-blue-3d-logo-t-shirt",
+   "humanGt": "DIFFERENT",
+   "humanGtPrior": "DIFFERENT",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Hug Hairy Monster T-shirt",
+    "candidateTitle": "Pale Blue 3D Logo T-Shirt",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/blue-tie-dye-polo-bear-t-shirt",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Hug Hairy Monster T-shirt",
+    "candidateTitle": "Blue Tie-Dye Polo Bear T-Shirt",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": null,
+   "candidateUrl": "https://www.junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "humanGt": "SAME",
+   "humanGtPrior": "SAME",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "axisModelCode": "MATCH",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "DESCRIPTION_ONLY",
+    "approvedInTitle": [],
+    "approvedInDescription": [
+     "B226AC009"
+    ],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AC009"
+    ],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Hug Hairy Monster T-shirt",
+    "candidateTitle": "Hug Hairy Monster T-Shirt by Bobo Choses",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": null,
+   "candidateUrl": "https://scoutandcokids.com/products/bobo-choses-hug-hairy-monster-t-shirt",
+   "humanGt": "SAME",
+   "humanGtPrior": "SAME",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Hug Hairy Monster T-shirt",
+    "candidateTitle": "Bobo Choses - Hug Hairy Monster T-shirt",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC010",
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/booty-ghosts-t-shirt-by-bobo-choses",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "CONFLICT",
+   "axisModelCode": "MISMATCH",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "CODE_PRESENT_BUT_DIFFERENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [
+     "B226AC141"
+    ],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AC141"
+    ],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+    "candidateTitle": "Booty Ghosts T-Shirt by Bobo Choses",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "MATCH"
+  },
+  {
+   "originCode": "B226AC010",
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "SAME",
+   "axisModelCode": "MATCH",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "DESCRIPTION_ONLY",
+    "approvedInTitle": [],
+    "approvedInDescription": [
+     "B226AC010"
+    ],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AC010"
+    ],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Booty Ghosts T-shirt",
+    "candidateTitle": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "MATCH"
+  },
+  {
+   "originCode": "B226AC010",
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "SAME",
+   "axisModelCode": "MATCH",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "DESCRIPTION_ONLY",
+    "approvedInTitle": [],
+    "approvedInDescription": [
+     "B226AC010"
+    ],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AC010"
+    ],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+    "candidateTitle": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "MATCH"
+  },
+  {
+   "originCode": "B226AC017",
+   "candidateDomain": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/hugo-boss-baby-boys-double-b-graphic-t-shirt",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Booo Bo Choses T-shirt",
+    "candidateTitle": "Hugo Boss Baby Boys Double B Graphic T-Shirt",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC017",
+   "candidateDomain": "nickis.com",
+   "candidateUrl": "https://nickis.com/products/bobo-choses-t-shirt-cremeweiss-3006678709",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Booo Bo Choses T-shirt",
+    "candidateTitle": "T-Shirt Cremeweiß",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "MATCH"
+  },
+  {
+   "originCode": "B226AC017",
+   "candidateDomain": "petitemaisonkids.com",
+   "candidateUrl": "https://petitemaisonkids.com/products/charlie-white-mandarin-collar-shirt",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Booo Bo Choses T-shirt",
+    "candidateTitle": "Charlie White Mandarin Collar Shirt",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC017",
+   "candidateDomain": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/white-stripe-graphic-t-shirt",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Booo Bo Choses T-shirt",
+    "candidateTitle": "White Stripe Graphic T-Shirt",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC029",
+   "candidateDomain": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/michael-kors-kids-girls-sweater-pink-r15223-44v",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "NO_OVERLAP",
+    "originTitle": "Softpaw Monster sweatshirt",
+    "candidateTitle": "Girls Pink Knit Sweater",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/fendi-baby-boys-sweatshirt-blue-buh088-8ra-f19j4",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Bobo Choses Pop sweatshirt",
+    "candidateTitle": "Baby Boys Blue Cotton Bear Sweatshirt",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/stone-island-junior-kids-boys-sweatshirt-blue-6100001-s0a20-v004b",
+   "humanGt": "DIFFERENT",
+   "humanGtPrior": "DIFFERENT",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Bobo Choses Pop sweatshirt",
+    "candidateTitle": "Boys Blue Cotton Sweatshirt",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "humanGt": "DIFFERENT",
+   "humanGtPrior": "DIFFERENT",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "NO_OVERLAP",
+    "originTitle": "Bobo Choses Pop sweatshirt",
+    "candidateTitle": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/bobo-choses-pop-sweatshirt-by-bobo-choses",
+   "humanGt": "SAME",
+   "humanGtPrior": "SAME",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "MATCH",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "DESCRIPTION_ONLY",
+    "approvedInTitle": [],
+    "approvedInDescription": [
+     "B226AC033"
+    ],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AC033"
+    ],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Bobo Choses Pop sweatshirt",
+    "candidateTitle": "Bobo Choses Pop Sweatshirt by Bobo Choses",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "MATCH"
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/hugo-boss-navy-zip-sweatshirt",
+   "humanGt": "DIFFERENT",
+   "humanGtPrior": "DIFFERENT",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Bobo Choses Pop sweatshirt",
+    "candidateTitle": "Hugo Boss Navy Zip Sweatshirt",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/lacoste-navy-sweatshirt",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Bobo Choses Pop sweatshirt",
+    "candidateTitle": "Lacoste Navy Sweatshirt",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "petitemaisonkids.com",
+   "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+   "humanGt": "DIFFERENT",
+   "humanGtPrior": "DIFFERENT",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "NO_OVERLAP",
+    "originTitle": "Bobo Choses Pop sweatshirt",
+    "candidateTitle": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "shoppiccoliandco.com",
+   "candidateUrl": "https://shoppiccoliandco.com/products/jude-navy-baby-boy-anchor-sweater",
+   "humanGt": "DIFFERENT",
+   "humanGtPrior": "DIFFERENT",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "NO_OVERLAP",
+    "originTitle": "Bobo Choses Pop sweatshirt",
+    "candidateTitle": "Jude Navy Baby Boy Anchor Sweater",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "tiptoeboutique.com",
+   "candidateUrl": "https://tiptoeboutique.com/products/b226ac033-midnight-blue",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "SAME",
+   "axisModelCode": "MATCH",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": "B226AC033",
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Bobo Choses Pop sweatshirt",
+    "candidateTitle": "Bobo Choses Midnight Blue Pop Long Sleeve Sweatshirt",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "MATCH"
+  },
+  {
+   "originCode": "B226AC036",
+   "candidateDomain": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "NO_OVERLAP",
+    "originTitle": "Mush Monster Duo sweatshirt",
+    "candidateTitle": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC036",
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/mush-monster-duo-baby-sweatshirt-by-bobo-choses",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "MISMATCH",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "CODE_PRESENT_BUT_DIFFERENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [
+     "B226AB059"
+    ],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AB059"
+    ],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Mush Monster Duo sweatshirt",
+    "candidateTitle": "Mush Monster Duo Baby Sweatshirt by Bobo Choses",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "MATCH"
+  },
+  {
+   "originCode": "B226AC036",
+   "candidateDomain": null,
+   "candidateUrl": "https://www.beaumonde.co.kr/goods/goods_view.php?goodsno=1000014013",
+   "humanGt": "SAME",
+   "humanGtPrior": "SAME",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "SCRIPT_DIFFERENCE_NO_OVERLAP",
+    "originTitle": "Mush Monster Duo sweatshirt",
+    "candidateTitle": "결과",
+    "originHasKo": false,
+    "candidateHasKo": true
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC036",
+   "candidateDomain": null,
+   "candidateUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362797&type=x&current_category=058",
+   "humanGt": "SAME",
+   "humanGtPrior": "SAME",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "axisModelCode": "MATCH",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "TITLE_PREFIXLESS_NOT_EXTRACTED",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [
+     "226AC036"
+    ],
+    "prefixlessObservedDescription": [
+     "226AC036"
+    ],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Mush Monster Duo sweatshirt",
+    "candidateTitle": "[[보보쇼즈] Mush Monster Duo sweatshirt #226AC036]",
+    "originHasKo": false,
+    "candidateHasKo": true
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC038",
+   "candidateDomain": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "NO_OVERLAP",
+    "originTitle": "Hidden Monster sweatshirt",
+    "candidateTitle": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC038",
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/hidden-monster-sweatshirt-by-bobo-choses",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "MATCH",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "DESCRIPTION_ONLY",
+    "approvedInTitle": [],
+    "approvedInDescription": [
+     "B226AC038"
+    ],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AC038"
+    ],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Hidden Monster sweatshirt",
+    "candidateTitle": "Hidden Monster Sweatshirt by Bobo Choses",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "MATCH"
+  },
+  {
+   "originCode": "B226AC038",
+   "candidateDomain": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/fendi-blue-ff-sweater",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "NO_OVERLAP",
+    "originTitle": "Hidden Monster sweatshirt",
+    "candidateTitle": "Fendi Blue FF Sweater",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC038",
+   "candidateDomain": "petitemaisonkids.com",
+   "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "NO_OVERLAP",
+    "originTitle": "Hidden Monster sweatshirt",
+    "candidateTitle": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC041",
+   "candidateDomain": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/ea7-emporio-armani-kids-boys-polo-navy-7b000023-af1290-ub102",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Beast Tag polo sweatshirt",
+    "candidateTitle": "Boys Navy Cotton Logo Polo",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC041",
+   "candidateDomain": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "NO_OVERLAP",
+    "originTitle": "Beast Tag polo sweatshirt",
+    "candidateTitle": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC041",
+   "candidateDomain": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/fendi-blue-ff-sweater",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "NO_OVERLAP",
+    "originTitle": "Beast Tag polo sweatshirt",
+    "candidateTitle": "Fendi Blue FF Sweater",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC041",
+   "candidateDomain": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/navy-logo-rugby-sweatshirt",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Beast Tag polo sweatshirt",
+    "candidateTitle": "Navy Logo Rugby Sweatshirt",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC043",
+   "candidateDomain": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "NO_OVERLAP",
+    "originTitle": "Mystery BC half zipped sweatshirt",
+    "candidateTitle": "Baby Sweater Suit ''Blue Moon'' Organic Cotton",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC043",
+   "candidateDomain": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/stone-island-blue-sweatshirt",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Mystery BC half zipped sweatshirt",
+    "candidateTitle": "Stone Island Baby Blue Sweatshirt",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC043",
+   "candidateDomain": "petitemaisonkids.com",
+   "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "NO_OVERLAP",
+    "originTitle": "Mystery BC half zipped sweatshirt",
+    "candidateTitle": "Maya Girls' Blue Cotton Sweater Top with Handmade Flowers",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC043",
+   "candidateDomain": "shoppiccoliandco.com",
+   "candidateUrl": "https://shoppiccoliandco.com/products/blue-bears-knitted-sweater",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "NO_OVERLAP",
+    "originTitle": "Mystery BC half zipped sweatshirt",
+    "candidateTitle": "Blue Bears Knitted Sweater",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC043",
+   "candidateDomain": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/blue-half-zip-sweatshirt",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Mystery BC half zipped sweatshirt",
+    "candidateTitle": "Blue Half Zip Sweatshirt",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC073",
+   "candidateDomain": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/versace-kids-baby-boys-denim-blue-1009197-1a08511-1d200",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Taxi Saurus Tag denim pants",
+    "candidateTitle": "Baby Boys Blue Denim",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC073",
+   "candidateDomain": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/gingham-woven-trousers",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": [
+     "2523016113"
+    ]
+   },
+   "name": {
+    "cause": "NO_OVERLAP",
+    "originTitle": "Taxi Saurus Tag denim pants",
+    "candidateTitle": "Gingham Woven Trousers, Super Soft , 116 - 122 / 6 - 7 Years",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC073",
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/taxi-saurus-tag-denim-pants-by-bobo-choses",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "MATCH",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "DESCRIPTION_ONLY",
+    "approvedInTitle": [],
+    "approvedInDescription": [
+     "B226AC073"
+    ],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AC073"
+    ],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Taxi Saurus Tag denim pants",
+    "candidateTitle": "Taxi Saurus Tag Denim Pants by Bobo Choses",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "MATCH"
+  },
+  {
+   "originCode": "B226AC073",
+   "candidateDomain": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/diesel-viker-jeans",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "NO_OVERLAP",
+    "originTitle": "Taxi Saurus Tag denim pants",
+    "candidateTitle": "Diesel Viker Jeans",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC073",
+   "candidateDomain": "nickis.com",
+   "candidateUrl": "https://nickis.com/products/polo-ralph-lauren-jeans-blau-3402271700",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "NO_OVERLAP",
+    "originTitle": "Taxi Saurus Tag denim pants",
+    "candidateTitle": "Jeans Blau",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC073",
+   "candidateDomain": "petitemaisonkids.com",
+   "candidateUrl": "https://petitemaisonkids.com/products/sparkle-blue-denim-jeans",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Taxi Saurus Tag denim pants",
+    "candidateTitle": "Sparkle Blue Denim Jeans",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC073",
+   "candidateDomain": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/denim-blue-jeans",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Taxi Saurus Tag denim pants",
+    "candidateTitle": "Denim Blue Jeans",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC073",
+   "candidateDomain": null,
+   "candidateUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362810&type=x&current_category=058",
+   "humanGt": "SAME",
+   "humanGtPrior": "SAME",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "axisModelCode": "MATCH",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "TITLE_PREFIXLESS_NOT_EXTRACTED",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [
+     "226AC073"
+    ],
+    "prefixlessObservedDescription": [
+     "226AC073"
+    ],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Taxi Saurus Tag denim pants",
+    "candidateTitle": "[[보보쇼즈] Taxi Saurus Tag denim pants #226AC073]",
+    "originHasKo": false,
+    "candidateHasKo": true
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC110",
+   "candidateDomain": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/dolce-gabbana-kids-boys-dg-t-shirt-white-l4jthvg7nvc-s9000",
+   "humanGt": "DIFFERENT",
+   "humanGtPrior": "DIFFERENT",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Bobo Choses Embossed T-shirt",
+    "candidateTitle": "Boys Embossed DG Logo T-Shirt",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC110",
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/bobo-choses-embossed-t-shirt-by-bobo-choses",
+   "humanGt": "SIMILAR",
+   "humanGtPrior": "SIMILAR",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "MISMATCH",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "CODE_PRESENT_BUT_DIFFERENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [
+     "B226AC111"
+    ],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AC111"
+    ],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Bobo Choses Embossed T-shirt",
+    "candidateTitle": "Bobo Choses Embossed T-Shirt by Bobo Choses",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "MATCH"
+  },
+  {
+   "originCode": "B226AC110",
+   "candidateDomain": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/marc-jacobs-black-t-shirt",
+   "humanGt": "DIFFERENT",
+   "humanGtPrior": "DIFFERENT",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Bobo Choses Embossed T-shirt",
+    "candidateTitle": "Marc Jacobs Black T-Shirt",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC110",
+   "candidateDomain": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/white-multi-sequin-logo-crop-t-shirt",
+   "humanGt": "DIFFERENT",
+   "humanGtPrior": "DIFFERENT",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Bobo Choses Embossed T-shirt",
+    "candidateTitle": "White Multi Sequin Logo Crop T-Shirt",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC170",
+   "candidateDomain": "nickis.com",
+   "candidateUrl": "https://nickis.com/products/levis-sweatshirt-rot-7401897725",
+   "humanGt": "DIFFERENT",
+   "humanGtPrior": "DIFFERENT",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Lake Monster sweatshirt",
+    "candidateTitle": "Sweatshirt Rot",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226AC170",
+   "candidateDomain": "shoppiccoliandco.com",
+   "candidateUrl": "https://shoppiccoliandco.com/products/rudolph-knitted-sweater",
+   "humanGt": "DIFFERENT",
+   "humanGtPrior": "DIFFERENT",
+   "humanGtSource": "desc-pairs",
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "NO_OVERLAP",
+    "originTitle": "Lake Monster sweatshirt",
+    "candidateTitle": "Rudolph Knitted Sweater",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "B226TC175",
+   "candidateDomain": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweater-suit-biscuit-organic-cotton",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "NO_OVERLAP",
+    "originTitle": "Dog sweatshirt",
+    "candidateTitle": "Baby Sweater Suit ''Biscuit'' Organic Cotton",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": "WK21A165",
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/double-deerstalker-cap-in-blue-soft-tan-by-wynken",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "MATCH",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Double Deerstalker Cap in Blue / Soft Tan by Wynken",
+    "candidateTitle": "Double Deerstalker Cap in Blue / Soft Tan by Wynken",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "MATCH"
+  },
+  {
+   "originCode": "WK21W97",
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/mixed-media-jacket-in-blue-mix-by-wynken",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "MATCH",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Mixed Media Jacket in Ecru Mix by Wynken",
+    "candidateTitle": "Mixed Media Jacket in Blue Mix by Wynken",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "MATCH"
+  },
+  {
+   "originCode": "WK21W97",
+   "candidateDomain": "nickis.com",
+   "candidateUrl": "https://nickis.com/products/wynken-jacke-mixed-media-mehrfarbig-7400851022",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Mixed Media Jacket in Ecru Mix by Wynken",
+    "candidateTitle": "Jacke Mixed Media Mehrfarbig",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "MATCH"
+  },
+  {
+   "originCode": "WK21W97",
+   "candidateDomain": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/black-puffer-coat-4",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "NOT_PRESENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "NO_OVERLAP",
+    "originTitle": "Mixed Media Jacket in Ecru Mix by Wynken",
+    "candidateTitle": "Black Puffer Coat",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/givenchy-baby-girls-dress-pink-h31301-46g",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Handsmock Dress in Little Bouquet by Bonjour",
+    "candidateTitle": "Baby Girls Pink Piqué Cotton Polo Dress",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/moncler-kids-enfant-baby-k2f-jacket-brown-1a00024-597z8-246",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Reversible Jacket nº03 in Otter Brown by True Artist",
+    "candidateTitle": "Baby Brown K2F Down Jacket",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/mackage-kids-jesse-blue-jesse-bl",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+    "candidateTitle": "Blue Jesse Jacket",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/color-block-jacket-pastel-blue-mellow-yellow",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+    "candidateTitle": "Color Block Jacket, Pastel Blue / Mellow Yellow",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/baby-ribbed-booties-grey-melange-organic-cotton",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Bubble Sweatshirt - Grey Melange",
+    "candidateTitle": "Baby Ribbed Booties ''Grey Melange'' Organic Cotton",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/kim-shirt-organic-cotton-sleet-check",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Bobo Choses Organic Cotton T-shirt | Ecru",
+    "candidateTitle": "Kim Shirt Organic Cotton ''Sleet Check''",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/baby-ribbed-booties-grey-melange-organic-cotton",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Bubble Sweatshirt - Grey Melange",
+    "candidateTitle": "Baby Ribbed Booties ''Grey Melange'' Organic Cotton",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/faux-fur-reversible-jacket-in-blue-ode-to-rose-by-wynken",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+    "candidateTitle": "Faux Fur Reversible Jacket in Blue / Ode To Rose by Wynken",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/everyday-ghosts-all-over-baby-t-shirt-by-bobo-choses",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [
+     "B226AB039"
+    ],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AB039"
+    ],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Bobo Choses Organic Cotton T-shirt | Ecru",
+    "candidateTitle": "Everyday Ghosts All Over Baby T-Shirt by Bobo Choses",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "MATCH"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/tunique-with-hair-clip-in-garden-flowers-print-by-bonjour",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Tunique With Hair Clip in Little Bouquet by Bonjour",
+    "candidateTitle": "Tunique With Hair Clip in Garden Flowers Print by Bonjour - Last Ones In Stock - 8-12 Years",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "MATCH"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/pixel-abduction-all-over-reversible-jacket-by-bobo-choses",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [
+     "B226AC098"
+    ],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [
+     "B226AC098"
+    ],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Reversible Jacket nº03 in Otter Brown by True Artist",
+    "candidateTitle": "Pixel Abduction All Over Reversible Jacket by Bobo Choses",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/bubble-sweatshirt-in-grey-melange-by-main-story",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Bubble Sweatshirt - Grey Melange",
+    "candidateTitle": "Bubble Sweatshirt in Grey Melange by Main Story",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "MATCH"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/mixed-media-jacket-in-ecru-mix-by-wynken",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Mixed Media Jacket - Ecru Mix",
+    "candidateTitle": "Mixed Media Jacket in Ecru Mix by Wynken",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "MATCH"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/bubble-sweatshirt-in-grey-melange-by-main-story",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Bubble Sweatshirt - Grey Melange",
+    "candidateTitle": "Bubble Sweatshirt in Grey Melange by Main Story",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "MATCH"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/handsmock-apron-dress-in-natural-by-bonjour",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+    "candidateTitle": "Handsmock Apron Dress in Natural by Bonjour - Last Ones In Stock - 2-8 Years",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "MATCH"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/exclusive-handsmock-dress-in-pink-tapestry-by-bonjour",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Handsmock Dress in Little Bouquet by Bonjour",
+    "candidateTitle": "Handsmock Dress in Pink Tapestry by Bonjour - Last Ones In Stock - 6-12 Years",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "MATCH"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/patachou-ecru-tweed-coat",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Mixed Media Jacket - Ecru Mix",
+    "candidateTitle": "Patachou Ecru Tweed Coat",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/mackage-jesse-blue-jacket",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+    "candidateTitle": "Mackage Jesse Blue Jacket",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/givenchy-lilac-dress",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Handsmock Dress in Little Bouquet by Bonjour",
+    "candidateTitle": "Givenchy Lilac Dress",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/billieblush-reversible-leopard-jacket",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Reversible Jacket nº03 in Otter Brown by True Artist",
+    "candidateTitle": "Billieblush Reversible Leopard Jacket",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "nickis.com",
+   "candidateUrl": "https://nickis.com/products/colmar-daunenjacke-reversible-quilted-marineblau-7404628282",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+    "candidateTitle": "Daunenjacke Reversible Quilted Marineblau",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "petitemaisonkids.com",
+   "candidateUrl": "https://petitemaisonkids.com/products/azalea-pink-flower-hair-clip",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MATCH",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Tunique With Hair Clip in Little Bouquet by Bonjour",
+    "candidateTitle": "Azalea Pink Flower Hair Clip",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "petitemaisonkids.com",
+   "candidateUrl": "https://petitemaisonkids.com/products/georgina-tartan-print-dress-with-red-bow",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+    "candidateTitle": "Georgina Tartan Print Dress with Red Bow",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "shoppiccoliandco.com",
+   "candidateUrl": "https://shoppiccoliandco.com/products/preorder-beatrice-burgundy-handsmocked-girl-sleeves-dress-ships-end-of-october",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+    "candidateTitle": "Beatrice Burgundy Handsmocked Girl Sleeves Dress",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/lemon-print-dress",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+    "candidateTitle": "Lemon Print Dress",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/blue-t-shirt",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Bobo Choses Organic Cotton T-shirt | Ecru",
+    "candidateTitle": "Blue T-Shirt",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/copy-of-coral-pink-broderie-anglaise-dress",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "MISMATCH",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "WEAK_OVERLAP",
+    "originTitle": "Handsmock Dress in Little Bouquet by Bonjour",
+    "candidateTitle": "White Broderie Anglaise Dress",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  },
+  {
+   "originCode": null,
+   "candidateDomain": "villagekids.co.uk",
+   "candidateUrl": "https://villagekids.co.uk/products/blue-knitted-jacket",
+   "humanGt": null,
+   "humanGtPrior": null,
+   "humanGtSource": null,
+   "ceoBasis": null,
+   "ceoUiLabel": null,
+   "gtSuperseded": false,
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "axisModelCode": "UNKNOWN",
+   "axisProductName": "UNKNOWN",
+   "code": {
+    "cause": "ORIGIN_CODE_ABSENT",
+    "approvedInTitle": [],
+    "approvedInDescription": [],
+    "prefixlessObservedTitle": [],
+    "prefixlessObservedDescription": [],
+    "spacedObserved": [],
+    "confirmedByOperationalOwner": null,
+    "longDigitRunsObserved": []
+   },
+   "name": {
+    "cause": "TOKENS_SHARED",
+    "originTitle": "Reversible Mushroom Jacket Recycled Fiber | Blue",
+    "candidateTitle": "Blue Knitted Jacket",
+    "originHasKo": false,
+    "candidateHasKo": false
+   },
+   "brandAxis": "UNKNOWN"
+  }
+ ]
+}

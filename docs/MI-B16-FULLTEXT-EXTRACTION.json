@@ -1,0 +1,2031 @@
+{
+ "note": "🔴 B군 GT 16쌍 «전문» 추출 검증 · 운영 변경 0 · HTTP 0 · DB 쓰기 0 · verdict 재계산 0 · 🔴 A군 33(동결 기본 분모)과 A∩B = 0 ⟹ 대체 불가 · 🔴 16쌍은 모집단을 대표하지 않는다",
+ "source": "mi-reeval-03-keyword-input.json(전문) + MI-REEVAL-STEP3-KEYWORDS.json(창 대조)",
+ "denominator": {
+  "bGroup": 109,
+  "gtAndBothFullText": 16
+ },
+ "originInputUsesCode": true,
+ "gtDistribution": {
+  "SAME": 6,
+  "DIFFERENT": 9,
+  "SIMILAR": 1
+ },
+ "windowCoveragePct": {
+  "origin": {
+   "n": 16,
+   "min": 65.5,
+   "p50": 69.5,
+   "max": 100
+  },
+  "candidate": {
+   "n": 16,
+   "min": 11.9,
+   "p50": 81.7,
+   "max": 100
+  }
+ },
+ "declaredColorSlot": {
+  "originHasDeclaredSlot": 0,
+  "candidateHasDeclaredSlot": 1,
+  "candidateSlotReachableFromWindows": 0,
+  "originSlotReachableFromWindows": 0
+ },
+ "axisTallyGuardsOff": {
+  "BRAND": {
+   "MATCH": 4,
+   "MISMATCH": 0,
+   "UNKNOWN": 12,
+   "NOT_APPLICABLE": 0
+  },
+  "MODEL_CODE": {
+   "MATCH": 3,
+   "MISMATCH": 1,
+   "UNKNOWN": 12,
+   "NOT_APPLICABLE": 0
+  },
+  "PRODUCT_TYPE": {
+   "MATCH": 12,
+   "MISMATCH": 2,
+   "UNKNOWN": 2,
+   "NOT_APPLICABLE": 0
+  },
+  "DESIGN": {
+   "MATCH": 6,
+   "MISMATCH": 6,
+   "UNKNOWN": 3,
+   "NOT_APPLICABLE": 1
+  },
+  "PRINT_PATTERN": {
+   "MATCH": 3,
+   "MISMATCH": 0,
+   "UNKNOWN": 5,
+   "NOT_APPLICABLE": 8
+  },
+  "COLOR": {
+   "MATCH": 9,
+   "MISMATCH": 2,
+   "UNKNOWN": 5,
+   "NOT_APPLICABLE": 0
+  },
+  "MATERIAL": {
+   "MATCH": 9,
+   "MISMATCH": 3,
+   "UNKNOWN": 4,
+   "NOT_APPLICABLE": 0
+  },
+  "SLEEVE_FORM": {
+   "MATCH": 0,
+   "MISMATCH": 0,
+   "UNKNOWN": 4,
+   "NOT_APPLICABLE": 12
+  },
+  "FIT": {
+   "MATCH": 0,
+   "MISMATCH": 0,
+   "UNKNOWN": 3,
+   "NOT_APPLICABLE": 13
+  },
+  "AUDIENCE": {
+   "MATCH": 0,
+   "MISMATCH": 0,
+   "UNKNOWN": 4,
+   "NOT_APPLICABLE": 12
+  },
+  "SIZE_OPTION": {
+   "MATCH": 0,
+   "MISMATCH": 0,
+   "UNKNOWN": 0,
+   "NOT_APPLICABLE": 16
+  }
+ },
+ "axisTallyGuardsOn": {
+  "BRAND": {
+   "MATCH": 4,
+   "MISMATCH": 0,
+   "UNKNOWN": 12,
+   "NOT_APPLICABLE": 0
+  },
+  "MODEL_CODE": {
+   "MATCH": 3,
+   "MISMATCH": 1,
+   "UNKNOWN": 12,
+   "NOT_APPLICABLE": 0
+  },
+  "PRODUCT_TYPE": {
+   "MATCH": 12,
+   "MISMATCH": 0,
+   "UNKNOWN": 4,
+   "NOT_APPLICABLE": 0
+  },
+  "DESIGN": {
+   "MATCH": 6,
+   "MISMATCH": 6,
+   "UNKNOWN": 3,
+   "NOT_APPLICABLE": 1
+  },
+  "PRINT_PATTERN": {
+   "MATCH": 3,
+   "MISMATCH": 0,
+   "UNKNOWN": 5,
+   "NOT_APPLICABLE": 8
+  },
+  "COLOR": {
+   "MATCH": 9,
+   "MISMATCH": 2,
+   "UNKNOWN": 5,
+   "NOT_APPLICABLE": 0
+  },
+  "MATERIAL": {
+   "MATCH": 9,
+   "MISMATCH": 3,
+   "UNKNOWN": 4,
+   "NOT_APPLICABLE": 0
+  },
+  "SLEEVE_FORM": {
+   "MATCH": 0,
+   "MISMATCH": 0,
+   "UNKNOWN": 0,
+   "NOT_APPLICABLE": 16
+  },
+  "FIT": {
+   "MATCH": 0,
+   "MISMATCH": 0,
+   "UNKNOWN": 3,
+   "NOT_APPLICABLE": 13
+  },
+  "AUDIENCE": {
+   "MATCH": 0,
+   "MISMATCH": 0,
+   "UNKNOWN": 4,
+   "NOT_APPLICABLE": 12
+  },
+  "SIZE_OPTION": {
+   "MATCH": 0,
+   "MISMATCH": 0,
+   "UNKNOWN": 0,
+   "NOT_APPLICABLE": 16
+  }
+ },
+ "changedPairs": 6,
+ "changedMatchedValueOnlyPairs": 5,
+ "byGtGuardsOff": {
+  "SAME": {
+   "BRAND": {
+    "MATCH": 3,
+    "MISMATCH": 0,
+    "UNKNOWN": 3,
+    "NOT_APPLICABLE": 0
+   },
+   "MODEL_CODE": {
+    "MATCH": 3,
+    "MISMATCH": 0,
+    "UNKNOWN": 3,
+    "NOT_APPLICABLE": 0
+   },
+   "PRODUCT_TYPE": {
+    "MATCH": 6,
+    "MISMATCH": 0,
+    "UNKNOWN": 0,
+    "NOT_APPLICABLE": 0
+   },
+   "DESIGN": {
+    "MATCH": 6,
+    "MISMATCH": 0,
+    "UNKNOWN": 0,
+    "NOT_APPLICABLE": 0
+   },
+   "PRINT_PATTERN": {
+    "MATCH": 0,
+    "MISMATCH": 0,
+    "UNKNOWN": 4,
+    "NOT_APPLICABLE": 2
+   },
+   "COLOR": {
+    "MATCH": 4,
+    "MISMATCH": 0,
+    "UNKNOWN": 2,
+    "NOT_APPLICABLE": 0
+   },
+   "MATERIAL": {
+    "MATCH": 3,
+    "MISMATCH": 0,
+    "UNKNOWN": 3,
+    "NOT_APPLICABLE": 0
+   },
+   "SLEEVE_FORM": {
+    "MATCH": 0,
+    "MISMATCH": 0,
+    "UNKNOWN": 3,
+    "NOT_APPLICABLE": 3
+   },
+   "FIT": {
+    "MATCH": 0,
+    "MISMATCH": 0,
+    "UNKNOWN": 3,
+    "NOT_APPLICABLE": 3
+   },
+   "AUDIENCE": {
+    "MATCH": 0,
+    "MISMATCH": 0,
+    "UNKNOWN": 0,
+    "NOT_APPLICABLE": 6
+   },
+   "SIZE_OPTION": {
+    "MATCH": 0,
+    "MISMATCH": 0,
+    "UNKNOWN": 0,
+    "NOT_APPLICABLE": 6
+   }
+  },
+  "DIFFERENT": {
+   "BRAND": {
+    "MATCH": 0,
+    "MISMATCH": 0,
+    "UNKNOWN": 9,
+    "NOT_APPLICABLE": 0
+   },
+   "MODEL_CODE": {
+    "MATCH": 0,
+    "MISMATCH": 0,
+    "UNKNOWN": 9,
+    "NOT_APPLICABLE": 0
+   },
+   "PRODUCT_TYPE": {
+    "MATCH": 5,
+    "MISMATCH": 2,
+    "UNKNOWN": 2,
+    "NOT_APPLICABLE": 0
+   },
+   "DESIGN": {
+    "MATCH": 0,
+    "MISMATCH": 6,
+    "UNKNOWN": 3,
+    "NOT_APPLICABLE": 0
+   },
+   "PRINT_PATTERN": {
+    "MATCH": 2,
+    "MISMATCH": 0,
+    "UNKNOWN": 1,
+    "NOT_APPLICABLE": 6
+   },
+   "COLOR": {
+    "MATCH": 5,
+    "MISMATCH": 2,
+    "UNKNOWN": 2,
+    "NOT_APPLICABLE": 0
+   },
+   "MATERIAL": {
+    "MATCH": 5,
+    "MISMATCH": 3,
+    "UNKNOWN": 1,
+    "NOT_APPLICABLE": 0
+   },
+   "SLEEVE_FORM": {
+    "MATCH": 0,
+    "MISMATCH": 0,
+    "UNKNOWN": 0,
+    "NOT_APPLICABLE": 9
+   },
+   "FIT": {
+    "MATCH": 0,
+    "MISMATCH": 0,
+    "UNKNOWN": 0,
+    "NOT_APPLICABLE": 9
+   },
+   "AUDIENCE": {
+    "MATCH": 0,
+    "MISMATCH": 0,
+    "UNKNOWN": 4,
+    "NOT_APPLICABLE": 5
+   },
+   "SIZE_OPTION": {
+    "MATCH": 0,
+    "MISMATCH": 0,
+    "UNKNOWN": 0,
+    "NOT_APPLICABLE": 9
+   }
+  },
+  "SIMILAR": {
+   "BRAND": {
+    "MATCH": 1,
+    "MISMATCH": 0,
+    "UNKNOWN": 0,
+    "NOT_APPLICABLE": 0
+   },
+   "MODEL_CODE": {
+    "MATCH": 0,
+    "MISMATCH": 1,
+    "UNKNOWN": 0,
+    "NOT_APPLICABLE": 0
+   },
+   "PRODUCT_TYPE": {
+    "MATCH": 1,
+    "MISMATCH": 0,
+    "UNKNOWN": 0,
+    "NOT_APPLICABLE": 0
+   },
+   "DESIGN": {
+    "MATCH": 0,
+    "MISMATCH": 0,
+    "UNKNOWN": 0,
+    "NOT_APPLICABLE": 1
+   },
+   "PRINT_PATTERN": {
+    "MATCH": 1,
+    "MISMATCH": 0,
+    "UNKNOWN": 0,
+    "NOT_APPLICABLE": 0
+   },
+   "COLOR": {
+    "MATCH": 0,
+    "MISMATCH": 0,
+    "UNKNOWN": 1,
+    "NOT_APPLICABLE": 0
+   },
+   "MATERIAL": {
+    "MATCH": 1,
+    "MISMATCH": 0,
+    "UNKNOWN": 0,
+    "NOT_APPLICABLE": 0
+   },
+   "SLEEVE_FORM": {
+    "MATCH": 0,
+    "MISMATCH": 0,
+    "UNKNOWN": 1,
+    "NOT_APPLICABLE": 0
+   },
+   "FIT": {
+    "MATCH": 0,
+    "MISMATCH": 0,
+    "UNKNOWN": 0,
+    "NOT_APPLICABLE": 1
+   },
+   "AUDIENCE": {
+    "MATCH": 0,
+    "MISMATCH": 0,
+    "UNKNOWN": 0,
+    "NOT_APPLICABLE": 1
+   },
+   "SIZE_OPTION": {
+    "MATCH": 0,
+    "MISMATCH": 0,
+    "UNKNOWN": 0,
+    "NOT_APPLICABLE": 1
+   }
+  }
+ },
+ "rows": [
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "humanGt": "SAME",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "lengths": {
+    "originDescription": 81,
+    "originDescriptionKo": 173,
+    "candidateDescription": 246
+   },
+   "windowCoverage": {
+    "origin": {
+     "chars": 81,
+     "covered": 70,
+     "pct": 86.4
+    },
+    "candidate": {
+     "chars": 246,
+     "covered": 246,
+     "pct": 100
+    }
+   },
+   "declaredColorSlot": {
+    "originFullText": null,
+    "candidateFullText": null,
+    "reachableFromWindowsOrigin": false,
+    "reachableFromWindowsCandidate": false
+   },
+   "axesGuardsOff": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_TYPE": "MATCH",
+    "DESIGN": "MATCH",
+    "PRINT_PATTERN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "MATCH",
+    "SLEEVE_FORM": "UNKNOWN",
+    "FIT": "UNKNOWN",
+    "AUDIENCE": "NOT_APPLICABLE",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "axesGuardsOn": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_TYPE": "MATCH",
+    "DESIGN": "MATCH",
+    "PRINT_PATTERN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "MATCH",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "UNKNOWN",
+    "AUDIENCE": "NOT_APPLICABLE",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "matchedGuardsOff": {
+    "BRAND": [],
+    "MODEL_CODE": [
+     "b226ac009"
+    ],
+    "PRODUCT_TYPE": [
+     "tshirt"
+    ],
+    "DESIGN": [
+     "hug",
+     "hairy",
+     "monster"
+    ],
+    "PRINT_PATTERN": [],
+    "COLOR": [
+     "blue"
+    ],
+    "MATERIAL": [
+     "cotton"
+    ],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "matchedGuardsOn": {
+    "BRAND": [],
+    "MODEL_CODE": [
+     "b226ac009"
+    ],
+    "PRODUCT_TYPE": [
+     "tshirt"
+    ],
+    "DESIGN": [
+     "hug",
+     "hairy",
+     "monster"
+    ],
+    "PRINT_PATTERN": [],
+    "COLOR": [
+     "blue"
+    ],
+    "MATERIAL": [
+     "cotton"
+    ],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "changedAxes": [
+    {
+     "axis": "SLEEVE_FORM",
+     "off": "UNKNOWN",
+     "on": "NOT_APPLICABLE"
+    }
+   ],
+   "changedMatchedValues": []
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": null,
+   "candidateUrl": "https://www.junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "humanGt": "SAME",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "lengths": {
+    "originDescription": 81,
+    "originDescriptionKo": 173,
+    "candidateDescription": 246
+   },
+   "windowCoverage": {
+    "origin": {
+     "chars": 81,
+     "covered": 70,
+     "pct": 86.4
+    },
+    "candidate": {
+     "chars": 246,
+     "covered": 246,
+     "pct": 100
+    }
+   },
+   "declaredColorSlot": {
+    "originFullText": null,
+    "candidateFullText": null,
+    "reachableFromWindowsOrigin": false,
+    "reachableFromWindowsCandidate": false
+   },
+   "axesGuardsOff": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_TYPE": "MATCH",
+    "DESIGN": "MATCH",
+    "PRINT_PATTERN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "MATCH",
+    "SLEEVE_FORM": "UNKNOWN",
+    "FIT": "UNKNOWN",
+    "AUDIENCE": "NOT_APPLICABLE",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "axesGuardsOn": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_TYPE": "MATCH",
+    "DESIGN": "MATCH",
+    "PRINT_PATTERN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "MATCH",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "UNKNOWN",
+    "AUDIENCE": "NOT_APPLICABLE",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "matchedGuardsOff": {
+    "BRAND": [],
+    "MODEL_CODE": [
+     "b226ac009"
+    ],
+    "PRODUCT_TYPE": [
+     "tshirt"
+    ],
+    "DESIGN": [
+     "hug",
+     "hairy",
+     "monster"
+    ],
+    "PRINT_PATTERN": [],
+    "COLOR": [
+     "blue"
+    ],
+    "MATERIAL": [
+     "cotton"
+    ],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "matchedGuardsOn": {
+    "BRAND": [],
+    "MODEL_CODE": [
+     "b226ac009"
+    ],
+    "PRODUCT_TYPE": [
+     "tshirt"
+    ],
+    "DESIGN": [
+     "hug",
+     "hairy",
+     "monster"
+    ],
+    "PRINT_PATTERN": [],
+    "COLOR": [
+     "blue"
+    ],
+    "MATERIAL": [
+     "cotton"
+    ],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "changedAxes": [
+    {
+     "axis": "SLEEVE_FORM",
+     "off": "UNKNOWN",
+     "on": "NOT_APPLICABLE"
+    }
+   ],
+   "changedMatchedValues": []
+  },
+  {
+   "originCode": "B226AC009",
+   "candidateDomain": null,
+   "candidateUrl": "https://scoutandcokids.com/products/bobo-choses-hug-hairy-monster-t-shirt",
+   "humanGt": "SAME",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "lengths": {
+    "originDescription": 81,
+    "originDescriptionKo": 173,
+    "candidateDescription": 85
+   },
+   "windowCoverage": {
+    "origin": {
+     "chars": 81,
+     "covered": 70,
+     "pct": 86.4
+    },
+    "candidate": {
+     "chars": 85,
+     "covered": 85,
+     "pct": 100
+    }
+   },
+   "declaredColorSlot": {
+    "originFullText": null,
+    "candidateFullText": null,
+    "reachableFromWindowsOrigin": false,
+    "reachableFromWindowsCandidate": false
+   },
+   "axesGuardsOff": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_TYPE": "MATCH",
+    "DESIGN": "MATCH",
+    "PRINT_PATTERN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN",
+    "SLEEVE_FORM": "UNKNOWN",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "NOT_APPLICABLE",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "axesGuardsOn": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_TYPE": "MATCH",
+    "DESIGN": "MATCH",
+    "PRINT_PATTERN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "UNKNOWN",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "NOT_APPLICABLE",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "matchedGuardsOff": {
+    "BRAND": [],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [
+     "tshirt"
+    ],
+    "DESIGN": [
+     "hug",
+     "hairy",
+     "monster"
+    ],
+    "PRINT_PATTERN": [],
+    "COLOR": [
+     "blue"
+    ],
+    "MATERIAL": [],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "matchedGuardsOn": {
+    "BRAND": [],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [
+     "tshirt"
+    ],
+    "DESIGN": [
+     "hug",
+     "hairy",
+     "monster"
+    ],
+    "PRINT_PATTERN": [],
+    "COLOR": [
+     "blue"
+    ],
+    "MATERIAL": [],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "changedAxes": [
+    {
+     "axis": "SLEEVE_FORM",
+     "off": "UNKNOWN",
+     "on": "NOT_APPLICABLE"
+    }
+   ],
+   "changedMatchedValues": []
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/stone-island-junior-kids-boys-sweatshirt-blue-6100001-s0a20-v004b",
+   "humanGt": "DIFFERENT",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "lengths": {
+    "originDescription": 116,
+    "originDescriptionKo": 228,
+    "candidateDescription": 368
+   },
+   "windowCoverage": {
+    "origin": {
+     "chars": 116,
+     "covered": 76,
+     "pct": 65.5
+    },
+    "candidate": {
+     "chars": 368,
+     "covered": 144,
+     "pct": 39.1
+    }
+   },
+   "declaredColorSlot": {
+    "originFullText": null,
+    "candidateFullText": null,
+    "reachableFromWindowsOrigin": false,
+    "reachableFromWindowsCandidate": false
+   },
+   "axesGuardsOff": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_TYPE": "MATCH",
+    "DESIGN": "UNKNOWN",
+    "PRINT_PATTERN": "NOT_APPLICABLE",
+    "COLOR": "MATCH",
+    "MATERIAL": "MATCH",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "UNKNOWN",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "axesGuardsOn": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_TYPE": "MATCH",
+    "DESIGN": "UNKNOWN",
+    "PRINT_PATTERN": "NOT_APPLICABLE",
+    "COLOR": "MATCH",
+    "MATERIAL": "MATCH",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "UNKNOWN",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "matchedGuardsOff": {
+    "BRAND": [],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [
+     "tshirt",
+     "sweatshirt"
+    ],
+    "DESIGN": [],
+    "PRINT_PATTERN": [],
+    "COLOR": [
+     "blue"
+    ],
+    "MATERIAL": [
+     "cotton"
+    ],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "matchedGuardsOn": {
+    "BRAND": [],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [
+     "sweatshirt"
+    ],
+    "DESIGN": [],
+    "PRINT_PATTERN": [],
+    "COLOR": [
+     "blue"
+    ],
+    "MATERIAL": [
+     "cotton"
+    ],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "changedAxes": [],
+   "changedMatchedValues": [
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "off": [
+      "tshirt",
+      "sweatshirt"
+     ],
+     "on": [
+      "sweatshirt"
+     ]
+    }
+   ]
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "folkberlin.com",
+   "candidateUrl": "https://folkberlin.com/products/baby-sweatsuit-blue-moon-organic-cotton",
+   "humanGt": "DIFFERENT",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "lengths": {
+    "originDescription": 116,
+    "originDescriptionKo": 228,
+    "candidateDescription": 851
+   },
+   "windowCoverage": {
+    "origin": {
+     "chars": 116,
+     "covered": 76,
+     "pct": 65.5
+    },
+    "candidate": {
+     "chars": 851,
+     "covered": 322,
+     "pct": 37.8
+    }
+   },
+   "declaredColorSlot": {
+    "originFullText": null,
+    "candidateFullText": "Blue Moon Made in Portugal About the Bra",
+    "reachableFromWindowsOrigin": false,
+    "reachableFromWindowsCandidate": false
+   },
+   "axesGuardsOff": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_TYPE": "MISMATCH",
+    "DESIGN": "MISMATCH",
+    "PRINT_PATTERN": "NOT_APPLICABLE",
+    "COLOR": "MATCH",
+    "MATERIAL": "MATCH",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "UNKNOWN",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "axesGuardsOn": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_TYPE": "UNKNOWN",
+    "DESIGN": "MISMATCH",
+    "PRINT_PATTERN": "NOT_APPLICABLE",
+    "COLOR": "MATCH",
+    "MATERIAL": "MATCH",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "UNKNOWN",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "matchedGuardsOff": {
+    "BRAND": [],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [],
+    "DESIGN": [],
+    "PRINT_PATTERN": [],
+    "COLOR": [
+     "blue"
+    ],
+    "MATERIAL": [
+     "cotton"
+    ],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "matchedGuardsOn": {
+    "BRAND": [],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [],
+    "DESIGN": [],
+    "PRINT_PATTERN": [],
+    "COLOR": [
+     "blue"
+    ],
+    "MATERIAL": [
+     "cotton"
+    ],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "changedAxes": [
+    {
+     "axis": "PRODUCT_TYPE",
+     "off": "MISMATCH",
+     "on": "UNKNOWN"
+    }
+   ],
+   "changedMatchedValues": []
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/bobo-choses-pop-sweatshirt-by-bobo-choses",
+   "humanGt": "SAME",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "lengths": {
+    "originDescription": 116,
+    "originDescriptionKo": 228,
+    "candidateDescription": 360
+   },
+   "windowCoverage": {
+    "origin": {
+     "chars": 116,
+     "covered": 76,
+     "pct": 65.5
+    },
+    "candidate": {
+     "chars": 360,
+     "covered": 294,
+     "pct": 81.7
+    }
+   },
+   "declaredColorSlot": {
+    "originFullText": null,
+    "candidateFullText": null,
+    "reachableFromWindowsOrigin": false,
+    "reachableFromWindowsCandidate": false
+   },
+   "axesGuardsOff": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_TYPE": "MATCH",
+    "DESIGN": "MATCH",
+    "PRINT_PATTERN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "MATCH",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "UNKNOWN",
+    "AUDIENCE": "NOT_APPLICABLE",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "axesGuardsOn": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "MATCH",
+    "PRODUCT_TYPE": "MATCH",
+    "DESIGN": "MATCH",
+    "PRINT_PATTERN": "UNKNOWN",
+    "COLOR": "MATCH",
+    "MATERIAL": "MATCH",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "UNKNOWN",
+    "AUDIENCE": "NOT_APPLICABLE",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "matchedGuardsOff": {
+    "BRAND": [
+     "bobochoses"
+    ],
+    "MODEL_CODE": [
+     "b226ac033"
+    ],
+    "PRODUCT_TYPE": [
+     "tshirt",
+     "sweatshirt"
+    ],
+    "DESIGN": [
+     "pop"
+    ],
+    "PRINT_PATTERN": [],
+    "COLOR": [
+     "blue"
+    ],
+    "MATERIAL": [
+     "cotton"
+    ],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "matchedGuardsOn": {
+    "BRAND": [
+     "bobochoses"
+    ],
+    "MODEL_CODE": [
+     "b226ac033"
+    ],
+    "PRODUCT_TYPE": [
+     "sweatshirt"
+    ],
+    "DESIGN": [
+     "pop"
+    ],
+    "PRINT_PATTERN": [],
+    "COLOR": [
+     "blue"
+    ],
+    "MATERIAL": [
+     "cotton"
+    ],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "changedAxes": [],
+   "changedMatchedValues": [
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "off": [
+      "tshirt",
+      "sweatshirt"
+     ],
+     "on": [
+      "sweatshirt"
+     ]
+    }
+   ]
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/hugo-boss-navy-zip-sweatshirt",
+   "humanGt": "DIFFERENT",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "lengths": {
+    "originDescription": 116,
+    "originDescriptionKo": 228,
+    "candidateDescription": 173
+   },
+   "windowCoverage": {
+    "origin": {
+     "chars": 116,
+     "covered": 76,
+     "pct": 65.5
+    },
+    "candidate": {
+     "chars": 173,
+     "covered": 165,
+     "pct": 95.4
+    }
+   },
+   "declaredColorSlot": {
+    "originFullText": null,
+    "candidateFullText": null,
+    "reachableFromWindowsOrigin": false,
+    "reachableFromWindowsCandidate": false
+   },
+   "axesGuardsOff": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_TYPE": "MATCH",
+    "DESIGN": "MISMATCH",
+    "PRINT_PATTERN": "NOT_APPLICABLE",
+    "COLOR": "MISMATCH",
+    "MATERIAL": "MISMATCH",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "NOT_APPLICABLE",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "axesGuardsOn": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_TYPE": "MATCH",
+    "DESIGN": "MISMATCH",
+    "PRINT_PATTERN": "NOT_APPLICABLE",
+    "COLOR": "MISMATCH",
+    "MATERIAL": "MISMATCH",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "NOT_APPLICABLE",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "matchedGuardsOff": {
+    "BRAND": [],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [
+     "tshirt",
+     "sweatshirt"
+    ],
+    "DESIGN": [],
+    "PRINT_PATTERN": [],
+    "COLOR": [],
+    "MATERIAL": [],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "matchedGuardsOn": {
+    "BRAND": [],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [
+     "sweatshirt"
+    ],
+    "DESIGN": [],
+    "PRINT_PATTERN": [],
+    "COLOR": [],
+    "MATERIAL": [],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "changedAxes": [],
+   "changedMatchedValues": [
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "off": [
+      "tshirt",
+      "sweatshirt"
+     ],
+     "on": [
+      "sweatshirt"
+     ]
+    }
+   ]
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "petitemaisonkids.com",
+   "candidateUrl": "https://petitemaisonkids.com/products/maya-blue-cotton-sweater-top",
+   "humanGt": "DIFFERENT",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "lengths": {
+    "originDescription": 116,
+    "originDescriptionKo": 228,
+    "candidateDescription": 664
+   },
+   "windowCoverage": {
+    "origin": {
+     "chars": 116,
+     "covered": 76,
+     "pct": 65.5
+    },
+    "candidate": {
+     "chars": 664,
+     "covered": 79,
+     "pct": 11.9
+    }
+   },
+   "declaredColorSlot": {
+    "originFullText": null,
+    "candidateFullText": null,
+    "reachableFromWindowsOrigin": false,
+    "reachableFromWindowsCandidate": false
+   },
+   "axesGuardsOff": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_TYPE": "UNKNOWN",
+    "DESIGN": "MISMATCH",
+    "PRINT_PATTERN": "NOT_APPLICABLE",
+    "COLOR": "MATCH",
+    "MATERIAL": "MATCH",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "NOT_APPLICABLE",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "axesGuardsOn": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_TYPE": "UNKNOWN",
+    "DESIGN": "MISMATCH",
+    "PRINT_PATTERN": "NOT_APPLICABLE",
+    "COLOR": "MATCH",
+    "MATERIAL": "MATCH",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "NOT_APPLICABLE",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "matchedGuardsOff": {
+    "BRAND": [],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [],
+    "DESIGN": [],
+    "PRINT_PATTERN": [],
+    "COLOR": [
+     "blue"
+    ],
+    "MATERIAL": [
+     "cotton"
+    ],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "matchedGuardsOn": {
+    "BRAND": [],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [],
+    "DESIGN": [],
+    "PRINT_PATTERN": [],
+    "COLOR": [
+     "blue"
+    ],
+    "MATERIAL": [
+     "cotton"
+    ],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "changedAxes": [],
+   "changedMatchedValues": []
+  },
+  {
+   "originCode": "B226AC033",
+   "candidateDomain": "shoppiccoliandco.com",
+   "candidateUrl": "https://shoppiccoliandco.com/products/jude-navy-baby-boy-anchor-sweater",
+   "humanGt": "DIFFERENT",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "lengths": {
+    "originDescription": 116,
+    "originDescriptionKo": 228,
+    "candidateDescription": 2010
+   },
+   "windowCoverage": {
+    "origin": {
+     "chars": 116,
+     "covered": 76,
+     "pct": 65.5
+    },
+    "candidate": {
+     "chars": 2010,
+     "covered": 286,
+     "pct": 14.2
+    }
+   },
+   "declaredColorSlot": {
+    "originFullText": null,
+    "candidateFullText": null,
+    "reachableFromWindowsOrigin": false,
+    "reachableFromWindowsCandidate": false
+   },
+   "axesGuardsOff": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_TYPE": "MISMATCH",
+    "DESIGN": "MISMATCH",
+    "PRINT_PATTERN": "UNKNOWN",
+    "COLOR": "MISMATCH",
+    "MATERIAL": "UNKNOWN",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "UNKNOWN",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "axesGuardsOn": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_TYPE": "UNKNOWN",
+    "DESIGN": "MISMATCH",
+    "PRINT_PATTERN": "UNKNOWN",
+    "COLOR": "MISMATCH",
+    "MATERIAL": "UNKNOWN",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "UNKNOWN",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "matchedGuardsOff": {
+    "BRAND": [],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [],
+    "DESIGN": [],
+    "PRINT_PATTERN": [],
+    "COLOR": [],
+    "MATERIAL": [],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "matchedGuardsOn": {
+    "BRAND": [],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [],
+    "DESIGN": [],
+    "PRINT_PATTERN": [],
+    "COLOR": [],
+    "MATERIAL": [],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "changedAxes": [
+    {
+     "axis": "PRODUCT_TYPE",
+     "off": "MISMATCH",
+     "on": "UNKNOWN"
+    }
+   ],
+   "changedMatchedValues": []
+  },
+  {
+   "originCode": "B226AC036",
+   "candidateDomain": null,
+   "candidateUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362797&type=x&current_category=058",
+   "humanGt": "SAME",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "lengths": {
+    "originDescription": 92,
+    "originDescriptionKo": 186,
+    "candidateDescription": 46
+   },
+   "windowCoverage": {
+    "origin": {
+     "chars": 92,
+     "covered": 81,
+     "pct": 88
+    },
+    "candidate": {
+     "chars": 46,
+     "covered": 46,
+     "pct": 100
+    }
+   },
+   "declaredColorSlot": {
+    "originFullText": null,
+    "candidateFullText": null,
+    "reachableFromWindowsOrigin": false,
+    "reachableFromWindowsCandidate": false
+   },
+   "axesGuardsOff": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_TYPE": "MATCH",
+    "DESIGN": "MATCH",
+    "PRINT_PATTERN": "NOT_APPLICABLE",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "NOT_APPLICABLE",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "axesGuardsOn": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_TYPE": "MATCH",
+    "DESIGN": "MATCH",
+    "PRINT_PATTERN": "NOT_APPLICABLE",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "NOT_APPLICABLE",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "matchedGuardsOff": {
+    "BRAND": [
+     "bobochoses"
+    ],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [
+     "tshirt",
+     "sweatshirt"
+    ],
+    "DESIGN": [
+     "mush",
+     "monster",
+     "duo"
+    ],
+    "PRINT_PATTERN": [],
+    "COLOR": [],
+    "MATERIAL": [],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "matchedGuardsOn": {
+    "BRAND": [
+     "bobochoses"
+    ],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [
+     "sweatshirt"
+    ],
+    "DESIGN": [
+     "mush",
+     "monster",
+     "duo"
+    ],
+    "PRINT_PATTERN": [],
+    "COLOR": [],
+    "MATERIAL": [],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "changedAxes": [],
+   "changedMatchedValues": [
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "off": [
+      "tshirt",
+      "sweatshirt"
+     ],
+     "on": [
+      "sweatshirt"
+     ]
+    }
+   ]
+  },
+  {
+   "originCode": "B226AC073",
+   "candidateDomain": null,
+   "candidateUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362810&type=x&current_category=058",
+   "humanGt": "SAME",
+   "baselineSystemVerdict": "BASELINE_NOT_REPRODUCED",
+   "lengths": {
+    "originDescription": 83,
+    "originDescriptionKo": 194,
+    "candidateDescription": 46
+   },
+   "windowCoverage": {
+    "origin": {
+     "chars": 83,
+     "covered": 70,
+     "pct": 84.3
+    },
+    "candidate": {
+     "chars": 46,
+     "covered": 46,
+     "pct": 100
+    }
+   },
+   "declaredColorSlot": {
+    "originFullText": null,
+    "candidateFullText": null,
+    "reachableFromWindowsOrigin": false,
+    "reachableFromWindowsCandidate": false
+   },
+   "axesGuardsOff": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_TYPE": "MATCH",
+    "DESIGN": "MATCH",
+    "PRINT_PATTERN": "NOT_APPLICABLE",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "NOT_APPLICABLE",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "axesGuardsOn": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_TYPE": "MATCH",
+    "DESIGN": "MATCH",
+    "PRINT_PATTERN": "NOT_APPLICABLE",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "UNKNOWN",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "NOT_APPLICABLE",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "matchedGuardsOff": {
+    "BRAND": [
+     "bobochoses"
+    ],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [
+     "pants"
+    ],
+    "DESIGN": [
+     "taxi",
+     "saurus",
+     "tag",
+     "denim"
+    ],
+    "PRINT_PATTERN": [],
+    "COLOR": [],
+    "MATERIAL": [],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "matchedGuardsOn": {
+    "BRAND": [
+     "bobochoses"
+    ],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [
+     "pants"
+    ],
+    "DESIGN": [
+     "taxi",
+     "saurus",
+     "tag",
+     "denim"
+    ],
+    "PRINT_PATTERN": [],
+    "COLOR": [],
+    "MATERIAL": [],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "changedAxes": [],
+   "changedMatchedValues": []
+  },
+  {
+   "originCode": "B226AC110",
+   "candidateDomain": "designerkidswear.com",
+   "candidateUrl": "https://designerkidswear.com/products/dolce-gabbana-kids-boys-dg-t-shirt-white-l4jthvg7nvc-s9000",
+   "humanGt": "DIFFERENT",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "lengths": {
+    "originDescription": 62,
+    "originDescriptionKo": 156,
+    "candidateDescription": 275
+   },
+   "windowCoverage": {
+    "origin": {
+     "chars": 62,
+     "covered": 62,
+     "pct": 100
+    },
+    "candidate": {
+     "chars": 275,
+     "covered": 219,
+     "pct": 79.6
+    }
+   },
+   "declaredColorSlot": {
+    "originFullText": null,
+    "candidateFullText": null,
+    "reachableFromWindowsOrigin": false,
+    "reachableFromWindowsCandidate": false
+   },
+   "axesGuardsOff": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_TYPE": "MATCH",
+    "DESIGN": "UNKNOWN",
+    "PRINT_PATTERN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "MATCH",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "UNKNOWN",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "axesGuardsOn": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_TYPE": "MATCH",
+    "DESIGN": "UNKNOWN",
+    "PRINT_PATTERN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "MATCH",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "UNKNOWN",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "matchedGuardsOff": {
+    "BRAND": [],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [
+     "tshirt"
+    ],
+    "DESIGN": [],
+    "PRINT_PATTERN": [
+     "embossed"
+    ],
+    "COLOR": [],
+    "MATERIAL": [
+     "cotton"
+    ],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "matchedGuardsOn": {
+    "BRAND": [],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [
+     "tshirt"
+    ],
+    "DESIGN": [],
+    "PRINT_PATTERN": [
+     "embossed"
+    ],
+    "COLOR": [],
+    "MATERIAL": [
+     "cotton"
+    ],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "changedAxes": [],
+   "changedMatchedValues": []
+  },
+  {
+   "originCode": "B226AC110",
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://junioredition.com/products/bobo-choses-embossed-t-shirt-by-bobo-choses",
+   "humanGt": "SIMILAR",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "lengths": {
+    "originDescription": 62,
+    "originDescriptionKo": 156,
+    "candidateDescription": 276
+   },
+   "windowCoverage": {
+    "origin": {
+     "chars": 62,
+     "covered": 62,
+     "pct": 100
+    },
+    "candidate": {
+     "chars": 276,
+     "covered": 268,
+     "pct": 97.1
+    }
+   },
+   "declaredColorSlot": {
+    "originFullText": null,
+    "candidateFullText": null,
+    "reachableFromWindowsOrigin": false,
+    "reachableFromWindowsCandidate": false
+   },
+   "axesGuardsOff": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "MISMATCH",
+    "PRODUCT_TYPE": "MATCH",
+    "DESIGN": "NOT_APPLICABLE",
+    "PRINT_PATTERN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "MATCH",
+    "SLEEVE_FORM": "UNKNOWN",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "NOT_APPLICABLE",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "axesGuardsOn": {
+    "BRAND": "MATCH",
+    "MODEL_CODE": "MISMATCH",
+    "PRODUCT_TYPE": "MATCH",
+    "DESIGN": "NOT_APPLICABLE",
+    "PRINT_PATTERN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "MATCH",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "NOT_APPLICABLE",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "matchedGuardsOff": {
+    "BRAND": [
+     "bobochoses"
+    ],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [
+     "tshirt"
+    ],
+    "DESIGN": [],
+    "PRINT_PATTERN": [
+     "embossed"
+    ],
+    "COLOR": [],
+    "MATERIAL": [
+     "cotton"
+    ],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "matchedGuardsOn": {
+    "BRAND": [
+     "bobochoses"
+    ],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [
+     "tshirt"
+    ],
+    "DESIGN": [],
+    "PRINT_PATTERN": [
+     "embossed"
+    ],
+    "COLOR": [],
+    "MATERIAL": [
+     "cotton"
+    ],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "changedAxes": [
+    {
+     "axis": "SLEEVE_FORM",
+     "off": "UNKNOWN",
+     "on": "NOT_APPLICABLE"
+    }
+   ],
+   "changedMatchedValues": []
+  },
+  {
+   "originCode": "B226AC110",
+   "candidateDomain": "kidbizkid.com",
+   "candidateUrl": "https://kidbizkid.com/products/marc-jacobs-black-t-shirt",
+   "humanGt": "DIFFERENT",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "lengths": {
+    "originDescription": 62,
+    "originDescriptionKo": 156,
+    "candidateDescription": 77
+   },
+   "windowCoverage": {
+    "origin": {
+     "chars": 62,
+     "covered": 62,
+     "pct": 100
+    },
+    "candidate": {
+     "chars": 77,
+     "covered": 77,
+     "pct": 100
+    }
+   },
+   "declaredColorSlot": {
+    "originFullText": null,
+    "candidateFullText": null,
+    "reachableFromWindowsOrigin": false,
+    "reachableFromWindowsCandidate": false
+   },
+   "axesGuardsOff": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_TYPE": "MATCH",
+    "DESIGN": "UNKNOWN",
+    "PRINT_PATTERN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "MATCH",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "NOT_APPLICABLE",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "axesGuardsOn": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_TYPE": "MATCH",
+    "DESIGN": "UNKNOWN",
+    "PRINT_PATTERN": "MATCH",
+    "COLOR": "UNKNOWN",
+    "MATERIAL": "MATCH",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "NOT_APPLICABLE",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "matchedGuardsOff": {
+    "BRAND": [],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [
+     "tshirt"
+    ],
+    "DESIGN": [],
+    "PRINT_PATTERN": [
+     "embossed"
+    ],
+    "COLOR": [],
+    "MATERIAL": [
+     "cotton"
+    ],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "matchedGuardsOn": {
+    "BRAND": [],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [
+     "tshirt"
+    ],
+    "DESIGN": [],
+    "PRINT_PATTERN": [
+     "embossed"
+    ],
+    "COLOR": [],
+    "MATERIAL": [
+     "cotton"
+    ],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "changedAxes": [],
+   "changedMatchedValues": []
+  },
+  {
+   "originCode": "B226AC170",
+   "candidateDomain": "nickis.com",
+   "candidateUrl": "https://nickis.com/products/levis-sweatshirt-rot-7401897725",
+   "humanGt": "DIFFERENT",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "lengths": {
+    "originDescription": 95,
+    "originDescriptionKo": 197,
+    "candidateDescription": 974
+   },
+   "windowCoverage": {
+    "origin": {
+     "chars": 95,
+     "covered": 66,
+     "pct": 69.5
+    },
+    "candidate": {
+     "chars": 974,
+     "covered": 231,
+     "pct": 23.7
+    }
+   },
+   "declaredColorSlot": {
+    "originFullText": null,
+    "candidateFullText": null,
+    "reachableFromWindowsOrigin": false,
+    "reachableFromWindowsCandidate": false
+   },
+   "axesGuardsOff": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_TYPE": "MATCH",
+    "DESIGN": "MISMATCH",
+    "PRINT_PATTERN": "NOT_APPLICABLE",
+    "COLOR": "MATCH",
+    "MATERIAL": "MISMATCH",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "NOT_APPLICABLE",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "axesGuardsOn": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_TYPE": "MATCH",
+    "DESIGN": "MISMATCH",
+    "PRINT_PATTERN": "NOT_APPLICABLE",
+    "COLOR": "MATCH",
+    "MATERIAL": "MISMATCH",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "NOT_APPLICABLE",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "matchedGuardsOff": {
+    "BRAND": [],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [
+     "tshirt",
+     "sweatshirt"
+    ],
+    "DESIGN": [],
+    "PRINT_PATTERN": [],
+    "COLOR": [
+     "red"
+    ],
+    "MATERIAL": [],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "matchedGuardsOn": {
+    "BRAND": [],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [
+     "sweatshirt"
+    ],
+    "DESIGN": [],
+    "PRINT_PATTERN": [],
+    "COLOR": [
+     "red"
+    ],
+    "MATERIAL": [],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "changedAxes": [],
+   "changedMatchedValues": [
+    {
+     "axis": "PRODUCT_TYPE",
+     "status": "MATCH",
+     "off": [
+      "tshirt",
+      "sweatshirt"
+     ],
+     "on": [
+      "sweatshirt"
+     ]
+    }
+   ]
+  },
+  {
+   "originCode": "B226AC170",
+   "candidateDomain": "shoppiccoliandco.com",
+   "candidateUrl": "https://shoppiccoliandco.com/products/rudolph-knitted-sweater",
+   "humanGt": "DIFFERENT",
+   "baselineSystemVerdict": "PRESUMED_SAME",
+   "lengths": {
+    "originDescription": 95,
+    "originDescriptionKo": 197,
+    "candidateDescription": 520
+   },
+   "windowCoverage": {
+    "origin": {
+     "chars": 95,
+     "covered": 66,
+     "pct": 69.5
+    },
+    "candidate": {
+     "chars": 520,
+     "covered": 257,
+     "pct": 49.4
+    }
+   },
+   "declaredColorSlot": {
+    "originFullText": null,
+    "candidateFullText": null,
+    "reachableFromWindowsOrigin": false,
+    "reachableFromWindowsCandidate": false
+   },
+   "axesGuardsOff": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_TYPE": "UNKNOWN",
+    "DESIGN": "MISMATCH",
+    "PRINT_PATTERN": "NOT_APPLICABLE",
+    "COLOR": "MATCH",
+    "MATERIAL": "MISMATCH",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "NOT_APPLICABLE",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "axesGuardsOn": {
+    "BRAND": "UNKNOWN",
+    "MODEL_CODE": "UNKNOWN",
+    "PRODUCT_TYPE": "UNKNOWN",
+    "DESIGN": "MISMATCH",
+    "PRINT_PATTERN": "NOT_APPLICABLE",
+    "COLOR": "MATCH",
+    "MATERIAL": "MISMATCH",
+    "SLEEVE_FORM": "NOT_APPLICABLE",
+    "FIT": "NOT_APPLICABLE",
+    "AUDIENCE": "NOT_APPLICABLE",
+    "SIZE_OPTION": "NOT_APPLICABLE"
+   },
+   "matchedGuardsOff": {
+    "BRAND": [],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [],
+    "DESIGN": [],
+    "PRINT_PATTERN": [],
+    "COLOR": [
+     "red"
+    ],
+    "MATERIAL": [],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "matchedGuardsOn": {
+    "BRAND": [],
+    "MODEL_CODE": [],
+    "PRODUCT_TYPE": [],
+    "DESIGN": [],
+    "PRINT_PATTERN": [],
+    "COLOR": [
+     "red"
+    ],
+    "MATERIAL": [],
+    "SLEEVE_FORM": [],
+    "FIT": [],
+    "AUDIENCE": [],
+    "SIZE_OPTION": []
+   },
+   "changedAxes": [],
+   "changedMatchedValues": []
+  }
+ ]
+}

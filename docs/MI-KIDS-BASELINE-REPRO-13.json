@@ -1,0 +1,393 @@
+{
+ "note": "🔴 KIDS GT SAME 13건 baseline 재현 실패 원인 조사 · 조사 전용 · 구현 0 · HTTP 0 · DB 쓰기 0 · 🔴 기존 산출물 덮어쓰기 0(이 파일은 신규) · 🔴 추측으로 원인을 확정하지 않았다(행 단위 증거로만 분류)",
+ "method": {
+  "step1": "MI-KIDS-DESC-IDENTITY-RECHECK.json 에서 humanGt=SAME AND baselineSystemVerdict=BASELINE_NOT_REPRODUCED 추출(13)",
+  "step2": "DB candidate_reviews 를 candidate_url 로 조회하고 origin_code 일치 행만 취함(읽기 전용)",
+  "step3": "그 쌍의 행 중 system_verdict 비어있지 않은 행 수로 분류",
+  "owner": "BASELINE_NOT_REPRODUCED 생산지 = mi-url-evidence-live.test.ts:202 `t.baseline.systemVerdict ?? \"BASELINE_NOT_REPRODUCED\"`"
+ },
+ "causeTally": {
+  "INPUT_MISSING": 11,
+  "CONNECT_FAIL": 2
+ },
+ "structuralRootCause": "candidate_reviews 는 설계상 **system_* 와 human_verdict 가 서로 덮지 않는다**. 실측 — human=O/system=X **17행** · human=O/system=O **22행** · GT_IMPORT 17행 중 system 보유 **5**. ⟹ CEO GT 가 시딩된 행에는 baseline 이 **구조적으로** 없다(실행 실패가 아니다).",
+ "measurableDenominator": {
+  "dbLevel": {
+   "humanRows": 39,
+   "withBaseline": 22,
+   "uniqueUrls": 20,
+   "uniqueOrigins": 4,
+   "bySplit": {
+    "SAME": {
+     "total": 23,
+     "withBaseline": 8,
+     "missing": 15
+    },
+    "DIFFERENT": {
+     "total": 15,
+     "withBaseline": 13,
+     "missing": 2
+    },
+    "SIMILAR": {
+     "total": 1,
+     "withBaseline": 1,
+     "missing": 0
+    }
+   }
+  },
+  "fixture32": {
+   "gtSame": 18,
+   "baselineSame": 3,
+   "recoverableByRowSelection": 2,
+   "presumedSame": 2,
+   "notMeasurable": 11,
+   "measurableAfterRowSelectionFix": 7
+  }
+ },
+ "cases": [
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateDomain": "biskuit.kr",
+   "candidateUrl": "https://biskuit.kr/product/%eb%b3%b4%eb%b3%b4%ec%87%bc%ec%a6%88-%ed%97%88%ea%b7%b8-%ed%97%a4%ec%96%b4%eb%a6%ac-%eb%aa%ac%ec%8a%a4%ed%84%b0-%ed%8b%b0%ec%85%94%ec%b8%a0-b226ac009/8891/category/367/display/1/",
+   "gtSameSource": "candidate_reviews.human_verdict = SAME (CEO 육안 · 권위 저장소)",
+   "recordedBaseline": "BASELINE_NOT_REPRODUCED",
+   "dbRows": 1,
+   "dbSources": [
+    "GT_IMPORT"
+   ],
+   "rowsWithSystemVerdict": 0,
+   "actualBaselineInOtherRow": null,
+   "reproducible": false,
+   "causeClass": "INPUT_MISSING",
+   "cause": "입력 데이터 누락 — 그 쌍의 어느 행에도 system_verdict 가 없다(GT 시딩 경로가 system_* 를 쓰지 않는다)",
+   "hasCandidateDescription": true,
+   "candidateDescriptionLength": 258,
+   "descIdentityEvidence": {
+    "code": true,
+    "brand": false,
+    "name": false,
+    "codeFromDescriptionOnly": false
+   },
+   "needsToConfirm": "그 쌍의 시스템 판정을 다시 산출해야 한다 ⟹ 후보 facts 필요 ⟹ 🔴 HTTP 수집(현재 불승인) 또는 오프라인 재판정(verdict 재계산 · 현재 불승인)"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateDomain": "bobochoses.com",
+   "candidateUrl": "https://bobochoses.com/products/b226ab040-hug-hairy-monster-t-shirt",
+   "gtSameSource": "candidate_reviews.human_verdict = SAME (CEO 육안 · 권위 저장소)",
+   "recordedBaseline": "BASELINE_NOT_REPRODUCED",
+   "dbRows": 1,
+   "dbSources": [
+    "GT_IMPORT"
+   ],
+   "rowsWithSystemVerdict": 0,
+   "actualBaselineInOtherRow": null,
+   "reproducible": false,
+   "causeClass": "INPUT_MISSING",
+   "cause": "입력 데이터 누락 — 그 쌍의 어느 행에도 system_verdict 가 없다(GT 시딩 경로가 system_* 를 쓰지 않는다)",
+   "hasCandidateDescription": true,
+   "candidateDescriptionLength": 81,
+   "descIdentityEvidence": {
+    "code": false,
+    "brand": false,
+    "name": false,
+    "codeFromDescriptionOnly": false
+   },
+   "needsToConfirm": "그 쌍의 시스템 판정을 다시 산출해야 한다 ⟹ 후보 facts 필요 ⟹ 🔴 HTTP 수집(현재 불승인) 또는 오프라인 재판정(verdict 재계산 · 현재 불승인)"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateDomain": "cissywears.com",
+   "candidateUrl": "https://cissywears.com/products/bobo-choses-babyhug-hairy-monster-t-shirt",
+   "gtSameSource": "candidate_reviews.human_verdict = SAME (CEO 육안 · 권위 저장소)",
+   "recordedBaseline": "BASELINE_NOT_REPRODUCED",
+   "dbRows": 1,
+   "dbSources": [
+    "GT_IMPORT"
+   ],
+   "rowsWithSystemVerdict": 0,
+   "actualBaselineInOtherRow": null,
+   "reproducible": false,
+   "causeClass": "INPUT_MISSING",
+   "cause": "입력 데이터 누락 — 그 쌍의 어느 행에도 system_verdict 가 없다(GT 시딩 경로가 system_* 를 쓰지 않는다)",
+   "hasCandidateDescription": true,
+   "candidateDescriptionLength": 764,
+   "descIdentityEvidence": {
+    "code": false,
+    "brand": false,
+    "name": false,
+    "codeFromDescriptionOnly": false
+   },
+   "needsToConfirm": "그 쌍의 시스템 판정을 다시 산출해야 한다 ⟹ 후보 facts 필요 ⟹ 🔴 HTTP 수집(현재 불승인) 또는 오프라인 재판정(verdict 재계산 · 현재 불승인)"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac009-hug-hairy-monster-t-shirt",
+   "candidateDomain": "global.trenbe.com",
+   "candidateUrl": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+   "gtSameSource": "candidate_reviews.human_verdict = SAME (CEO 육안 · 권위 저장소)",
+   "recordedBaseline": "BASELINE_NOT_REPRODUCED",
+   "dbRows": 2,
+   "dbSources": [
+    "GT_IMPORT",
+    "SELLER_URL"
+   ],
+   "rowsWithSystemVerdict": 1,
+   "actualBaselineInOtherRow": [
+    "SAME"
+   ],
+   "reproducible": true,
+   "causeClass": "CONNECT_FAIL",
+   "cause": "GT 와 실행 결과 연결 실패 — baseline 이 «같은 쌍의 다른 행» 에 존재한다(행 단위 조인 어긋남)",
+   "hasCandidateDescription": true,
+   "candidateDescriptionLength": 211,
+   "descIdentityEvidence": {
+    "code": true,
+    "brand": false,
+    "name": false,
+    "codeFromDescriptionOnly": false
+   },
+   "needsToConfirm": "같은 쌍의 어느 행을 baseline 으로 삼을지의 «선택 규칙»(출처 우선순위) — 🔴 제품 정책"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateDomain": "junioredition.com",
+   "candidateUrl": "https://www.junioredition.com/products/hug-hairy-monster-baby-t-shirt-by-bobo-choses",
+   "gtSameSource": "candidate_reviews.human_verdict = SAME (CEO 육안 · 권위 저장소)",
+   "recordedBaseline": "BASELINE_NOT_REPRODUCED",
+   "dbRows": 1,
+   "dbSources": [
+    "GT_IMPORT"
+   ],
+   "rowsWithSystemVerdict": 0,
+   "actualBaselineInOtherRow": null,
+   "reproducible": false,
+   "causeClass": "INPUT_MISSING",
+   "cause": "입력 데이터 누락 — 그 쌍의 어느 행에도 system_verdict 가 없다(GT 시딩 경로가 system_* 를 쓰지 않는다)",
+   "hasCandidateDescription": true,
+   "candidateDescriptionLength": 295,
+   "descIdentityEvidence": {
+    "code": false,
+    "brand": false,
+    "name": false,
+    "codeFromDescriptionOnly": false
+   },
+   "needsToConfirm": "그 쌍의 시스템 판정을 다시 산출해야 한다 ⟹ 후보 facts 필요 ⟹ 🔴 HTTP 수집(현재 불승인) 또는 오프라인 재판정(verdict 재계산 · 현재 불승인)"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateDomain": "kids21.com",
+   "candidateUrl": "https://kids21.com/products/700005621lbl",
+   "gtSameSource": "candidate_reviews.human_verdict = SAME (CEO 육안 · 권위 저장소)",
+   "recordedBaseline": "BASELINE_NOT_REPRODUCED",
+   "dbRows": 1,
+   "dbSources": [
+    "GT_IMPORT"
+   ],
+   "rowsWithSystemVerdict": 0,
+   "actualBaselineInOtherRow": null,
+   "reproducible": false,
+   "causeClass": "INPUT_MISSING",
+   "cause": "입력 데이터 누락 — 그 쌍의 어느 행에도 system_verdict 가 없다(GT 시딩 경로가 system_* 를 쓰지 않는다)",
+   "hasCandidateDescription": true,
+   "candidateDescriptionLength": 127,
+   "descIdentityEvidence": {
+    "code": false,
+    "brand": false,
+    "name": false,
+    "codeFromDescriptionOnly": false
+   },
+   "needsToConfirm": "그 쌍의 시스템 판정을 다시 산출해야 한다 ⟹ 후보 facts 필요 ⟹ 🔴 HTTP 수집(현재 불승인) 또는 오프라인 재판정(verdict 재계산 · 현재 불승인)"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateDomain": "stockmann.ee",
+   "candidateUrl": "https://www.stockmann.ee/et-ee/bobo-choses-trikoosark-hug-monster/18119748633-1.html",
+   "gtSameSource": "candidate_reviews.human_verdict = SAME (CEO 육안 · 권위 저장소)",
+   "recordedBaseline": "BASELINE_NOT_REPRODUCED",
+   "dbRows": 1,
+   "dbSources": [
+    "GT_IMPORT"
+   ],
+   "rowsWithSystemVerdict": 0,
+   "actualBaselineInOtherRow": null,
+   "reproducible": false,
+   "causeClass": "INPUT_MISSING",
+   "cause": "입력 데이터 누락 — 그 쌍의 어느 행에도 system_verdict 가 없다(GT 시딩 경로가 system_* 를 쓰지 않는다)",
+   "hasCandidateDescription": true,
+   "candidateDescriptionLength": 398,
+   "descIdentityEvidence": {
+    "code": false,
+    "brand": false,
+    "name": false,
+    "codeFromDescriptionOnly": false
+   },
+   "needsToConfirm": "그 쌍의 시스템 판정을 다시 산출해야 한다 ⟹ 후보 facts 필요 ⟹ 🔴 HTTP 수집(현재 불승인) 또는 오프라인 재판정(verdict 재계산 · 현재 불승인)"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateDomain": "thefrontshop.com",
+   "candidateUrl": "https://www.thefrontshop.com/products/hug-hairy-monster-t-shirt",
+   "gtSameSource": "candidate_reviews.human_verdict = SAME (CEO 육안 · 권위 저장소)",
+   "recordedBaseline": "BASELINE_NOT_REPRODUCED",
+   "dbRows": 1,
+   "dbSources": [
+    "GT_IMPORT"
+   ],
+   "rowsWithSystemVerdict": 0,
+   "actualBaselineInOtherRow": null,
+   "reproducible": false,
+   "causeClass": "INPUT_MISSING",
+   "cause": "입력 데이터 누락 — 그 쌍의 어느 행에도 system_verdict 가 없다(GT 시딩 경로가 system_* 를 쓰지 않는다)",
+   "hasCandidateDescription": true,
+   "candidateDescriptionLength": 353,
+   "descIdentityEvidence": {
+    "code": false,
+    "brand": false,
+    "name": false,
+    "codeFromDescriptionOnly": false
+   },
+   "needsToConfirm": "그 쌍의 시스템 판정을 다시 산출해야 한다 ⟹ 후보 facts 필요 ⟹ 🔴 HTTP 수집(현재 불승인) 또는 오프라인 재판정(verdict 재계산 · 현재 불승인)"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": null,
+   "candidateDomain": "tinyapple.net",
+   "candidateUrl": "https://www.tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+   "gtSameSource": "candidate_reviews.human_verdict = SAME (CEO 육안 · 권위 저장소)",
+   "recordedBaseline": "BASELINE_NOT_REPRODUCED",
+   "dbRows": 12,
+   "dbSources": [
+    "GT_IMPORT",
+    "WEB_SEARCH"
+   ],
+   "rowsWithSystemVerdict": 11,
+   "actualBaselineInOtherRow": [
+    "SAME"
+   ],
+   "reproducible": true,
+   "causeClass": "CONNECT_FAIL",
+   "cause": "GT 와 실행 결과 연결 실패 — baseline 이 «같은 쌍의 다른 행» 에 존재한다(행 단위 조인 어긋남)",
+   "hasCandidateDescription": true,
+   "candidateDescriptionLength": 170,
+   "descIdentityEvidence": {
+    "code": true,
+    "brand": false,
+    "name": false,
+    "codeFromDescriptionOnly": true
+   },
+   "needsToConfirm": "같은 쌍의 어느 행을 baseline 으로 삼을지의 «선택 규칙»(출처 우선순위) — 🔴 제품 정책"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": "https://bobochoses.com/ko-kr/products/b226ac009-hug-hairy-monster-t-shirt",
+   "candidateDomain": null,
+   "candidateUrl": "https://www.junioredition.com/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+   "gtSameSource": "candidate_reviews.human_verdict = SAME (CEO 육안 · 권위 저장소)",
+   "recordedBaseline": "BASELINE_NOT_REPRODUCED",
+   "dbRows": 1,
+   "dbSources": [
+    "SELLER_URL"
+   ],
+   "rowsWithSystemVerdict": 0,
+   "actualBaselineInOtherRow": null,
+   "reproducible": false,
+   "causeClass": "INPUT_MISSING",
+   "cause": "입력 데이터 누락 — 그 쌍의 어느 행에도 system_verdict 가 없다(GT 시딩 경로가 system_* 를 쓰지 않는다)",
+   "hasCandidateDescription": true,
+   "candidateDescriptionLength": 246,
+   "descIdentityEvidence": {
+    "code": true,
+    "brand": false,
+    "name": true,
+    "codeFromDescriptionOnly": true
+   },
+   "needsToConfirm": "그 쌍의 시스템 판정을 다시 산출해야 한다 ⟹ 후보 facts 필요 ⟹ 🔴 HTTP 수집(현재 불승인) 또는 오프라인 재판정(verdict 재계산 · 현재 불승인)"
+  },
+  {
+   "originCode": "B226AC009",
+   "originUrl": "https://bobochoses.com/ko-kr/products/b226ac009-hug-hairy-monster-t-shirt",
+   "candidateDomain": null,
+   "candidateUrl": "https://scoutandcokids.com/products/bobo-choses-hug-hairy-monster-t-shirt",
+   "gtSameSource": "candidate_reviews.human_verdict = SAME (CEO 육안 · 권위 저장소)",
+   "recordedBaseline": "BASELINE_NOT_REPRODUCED",
+   "dbRows": 1,
+   "dbSources": [
+    "SELLER_URL"
+   ],
+   "rowsWithSystemVerdict": 0,
+   "actualBaselineInOtherRow": null,
+   "reproducible": false,
+   "causeClass": "INPUT_MISSING",
+   "cause": "입력 데이터 누락 — 그 쌍의 어느 행에도 system_verdict 가 없다(GT 시딩 경로가 system_* 를 쓰지 않는다)",
+   "hasCandidateDescription": true,
+   "candidateDescriptionLength": 85,
+   "descIdentityEvidence": {
+    "code": false,
+    "brand": false,
+    "name": true,
+    "codeFromDescriptionOnly": false
+   },
+   "needsToConfirm": "그 쌍의 시스템 판정을 다시 산출해야 한다 ⟹ 후보 facts 필요 ⟹ 🔴 HTTP 수집(현재 불승인) 또는 오프라인 재판정(verdict 재계산 · 현재 불승인)"
+  },
+  {
+   "originCode": "B226AC036",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac036-mush-monster-duo-sweatshirt",
+   "candidateDomain": null,
+   "candidateUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362797&type=x&current_category=058",
+   "gtSameSource": "candidate_reviews.human_verdict = SAME (CEO 육안 · 권위 저장소)",
+   "recordedBaseline": "BASELINE_NOT_REPRODUCED",
+   "dbRows": 1,
+   "dbSources": [
+    "SELLER_URL"
+   ],
+   "rowsWithSystemVerdict": 0,
+   "actualBaselineInOtherRow": null,
+   "reproducible": false,
+   "causeClass": "INPUT_MISSING",
+   "cause": "입력 데이터 누락 — 그 쌍의 어느 행에도 system_verdict 가 없다(GT 시딩 경로가 system_* 를 쓰지 않는다)",
+   "hasCandidateDescription": true,
+   "candidateDescriptionLength": 46,
+   "descIdentityEvidence": {
+    "code": false,
+    "brand": true,
+    "name": true,
+    "codeFromDescriptionOnly": false
+   },
+   "needsToConfirm": "그 쌍의 시스템 판정을 다시 산출해야 한다 ⟹ 후보 facts 필요 ⟹ 🔴 HTTP 수집(현재 불승인) 또는 오프라인 재판정(verdict 재계산 · 현재 불승인)"
+  },
+  {
+   "originCode": "B226AC073",
+   "originUrl": "https://bobochoses.com/en-kr/products/b226ac073-taxi-saurus-tag-denim-pants",
+   "candidateDomain": null,
+   "candidateUrl": "https://www.donokids.com/shop/shopdetail.html?branduid=3362810&type=x&current_category=058",
+   "gtSameSource": "candidate_reviews.human_verdict = SAME (CEO 육안 · 권위 저장소)",
+   "recordedBaseline": "BASELINE_NOT_REPRODUCED",
+   "dbRows": 1,
+   "dbSources": [
+    "SELLER_URL"
+   ],
+   "rowsWithSystemVerdict": 0,
+   "actualBaselineInOtherRow": null,
+   "reproducible": false,
+   "causeClass": "INPUT_MISSING",
+   "cause": "입력 데이터 누락 — 그 쌍의 어느 행에도 system_verdict 가 없다(GT 시딩 경로가 system_* 를 쓰지 않는다)",
+   "hasCandidateDescription": true,
+   "candidateDescriptionLength": 46,
+   "descIdentityEvidence": {
+    "code": false,
+    "brand": true,
+    "name": true,
+    "codeFromDescriptionOnly": false
+   },
+   "needsToConfirm": "그 쌍의 시스템 판정을 다시 산출해야 한다 ⟹ 후보 facts 필요 ⟹ 🔴 HTTP 수집(현재 불승인) 또는 오프라인 재판정(verdict 재계산 · 현재 불승인)"
+  }
+ ]
+}
