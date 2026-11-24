@@ -391,6 +391,28 @@ export interface GeminiTransientEvidence {
   discoveredUrl: string;
   matchTruth: MatchTruth | null;
   verified: boolean;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔵🔵🔵 MI-KR-PRICE-TIER-01 — **CEO 가 이 스냅샷에서 이 URL 을 동일상품으로
+   *    «직접 확정» 했다**(CPO 승인 2026-11-24 · 계약 확장 1칸).
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 **왜 칸이 필요한가** — CEO 확정은 이미 **가격 «자격»** 축에 연결돼 있다
+   *    (`priceTierWithVerifiedSame` → `priceTier = EXACT`). 그런데 **화면의 가격
+   *    분류 게이트** 는 `matchTruth` 만 보므로(`transientDisplayTier`), CEO 가 SAME
+   *    으로 확정해도 `matchTruth === "TEXT_CONFIRMED"` 면 **형성대에서 탈락** 했다.
+   * 🔴🔴 **`priceTier === "EXACT"` 로 추정하지 않는다** — 그 값은
+   *    `matchTruth === null && verified === true`(= **관리자 승인**)에서도 나온다.
+   *    헌장이 「`verified` 는 관리자 승인이지 GT 가 아니다」로 못박았다 ⟹ 두 사실을
+   *    한 신호로 뭉개면 **관리자 승인이 CEO 확정으로 읽힌다**.
+   * 🟢 공급원은 **기존 술어 그대로** 다 — `verifiedSameUrlKeys`(= DB
+   *    `candidate_reviews.human_verdict = 'SAME'` · **snapshot_id + candidate_url**
+   *    격리) + `reviewKey`. 🔴 새 질의 0 · 새 규칙 0 · 추가 HTTP 0.
+   * 🔴 **판정을 바꾸지 않는다** — `matchTruth` · `verified` · `priceTier` 의 값과
+   *    의미는 **한 글자도** 건드리지 않는다. 라벨도 기존 판정 그대로 적힌다.
+   * 🔴 기본값 **false** ⟹ 자격 집합이 비면 **기존 동작 그대로** 다.
+   */
+  ceoConfirmedSame: boolean;
   /** 🟢 `priceTierFromLink` 를 **호출해서** 얻는다 — 복제 계산 금지(헌장 §12). */
   priceTier: DomesticPriceTier;
   matchType: DomesticMatchType | null;
@@ -2449,6 +2471,14 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
         discoveredUrl: best.url,
         matchTruth: finalMatchTruth,
         verified: finalVerified,
+        /**
+         * 🔵 MI-KR-PRICE-TIER-01 — **아래 `priceTierWithVerifiedSame` 과 «같은 술어»** 다.
+         *    🔴 그래서 「가격 자격은 올랐는데 화면 분류는 안 올랐다」가 **구조적으로**
+         *       생기지 않는다(두 곳이 같은 집합·같은 키 함수를 본다).
+         */
+        ceoConfirmedSame:
+          input.verifiedSameUrlKeys != null &&
+          input.verifiedSameUrlKeys.includes(reviewKey(best.url)),
         /**
          * 🔴 복제 계산하지 않는다 — 운영 owner 를 그대로 부른다.
          * 🔴🔴 CORE-2AA — 그 산출 «위에» 가격 자격만 덮는다(`matchTruth`/`verified` 불변).

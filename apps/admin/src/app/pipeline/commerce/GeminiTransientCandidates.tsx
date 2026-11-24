@@ -83,6 +83,15 @@ export interface GeminiTransientRow {
   /** 🟢 교차판매처 판정. 서버가 낸 값 그대로(SAME / PRESUMED_SAME / SIMILAR / …). */
   crossSellerVerdict?: string | null;
   matchTruth?: string | null;
+  /**
+   * 🔵🔵 MI-KR-PRICE-TIER-01 — **CEO 가 직접 확정한 동일상품** 신호(CPO 승인 2026-11-24).
+   *    🟢 공급 둘 — 라이브는 `verifiedSameUrlKeys`(runner sink) · 저장분은 DB
+   *       `human_verdict = 'SAME'`(`toSavedCandidateRows`). **둘 다 snapshot 격리** 다.
+   * 🔴 없으면 **false 취급** 이다 — 「미판단」을 확정으로 올리지 않는다.
+   * 🔴 이 칸은 **판정 라벨을 바꾸지 않는다** — 화면은 기존 판정(PRESUMED 등)을 그대로 적고
+   *    바뀌는 것은 **가격 형성대 분류** 하나다.
+   */
+  ceoConfirmedSame?: boolean | null;
   priceTier?: string | null;
   confidence?: number | null;
   matchReasons?: string[];

@@ -143,6 +143,14 @@ export function toSavedCandidateRows(rows: readonly CandidateReviewRow[]): Saved
       discoveredUrl: r.candidateUrl,
       crossSellerVerdict: r.systemVerdict,
       matchTruth: r.matchTruth,
+      /**
+       * 🔵🔵 MI-KR-PRICE-TIER-01 — **저장분에서는 DB 사실을 «직접» 싣는다.**
+       *    🟢 이 배열의 입력은 `listCandidateReviews`(= **snapshot 범위** 조회)이므로
+       *       `verifiedSameUrlKeys` 와 **같은 격리**(snapshot_id + candidate_url)다.
+       * 🔴 `SAME` **만** 본다 — `DIFFERENT`/`SIMILAR`/`UNDECIDED` 재사용은 CPO 금지다.
+       * 🔴 `priceTier`/`verified` 로 추정하지 않는다(관리자 승인과 뭉개지 않는다).
+       */
+      ceoConfirmedSame: r.humanVerdict === "SAME",
       priceTier: r.priceTier,
       matchReasons: r.matchReasons,
       crossSellerBlockers: [],

@@ -3,6 +3,7 @@
  *    집계기(`candidate-market.ts`)가 읽는 **그 집합** 을 화면도 읽는다(사본 0).
  */
 import { isPriceDisqualifiedByObservedDifference } from "@/lib/price-disqualifying-blockers";
+import { PRICE_DISQUALIFYING_BLOCKERS } from "@/lib/price-disqualifying-blockers";
 /**
  * 🔵 MI-DOMESTIC-PRICE-CANDIDATE-CONSISTENCY-1 — 🔴 **판정 자격 집합도 owner 가 하나다.**
  *    집계기(`candidate-market.ts`)가 읽는 **그 집합** 을 화면도 읽는다(사본 0).
@@ -80,6 +81,59 @@ import { blockerText } from "./blocker-text";
  *    같은 owner 가 말로 바꿔 준다. 🔴 둘 다 없으면 **판정이 없다**(`null`) —
  *    「UNKNOWN」으로 지어내지 않는다.
  */
+/**
+ * ══════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 MI-KR-PRICE-TIER-01 — **가격 형성대의 «분류 우선순위»**(CPO 승인 2026-11-24)
+ * ══════════════════════════════════════════════════════════════════════════════
+ *
+ * ```
+ * 1순위  CEO 직접 확정 SAME            → **확정** 형성대 (시스템 PRESUMED 여도 우선)
+ * 2순위  CEO 확정 없음 + 시스템 SAME     → **확정** 형성대
+ * 2순위  CEO 확정 없음 + PRESUMED_SAME  → **추정** 형성대 (§5.2 5조건 통과 시)
+ *        DIFFERENT / UNKNOWN · 5조건 미통과 → **제외**
+ * ```
+ * 🔴 **승격이 아니다** — `matchTruth`·`verified`·`priceTier` 를 바꾸지 않고 화면 라벨도
+ *    기존 판정 그대로다. 바뀌는 것은 **어느 형성대에 집계되는가** 하나다.
+ * 🔴 **중복 금지** — 1순위에 든 후보는 추정 그룹에 **오지 않는다**(두 술어가 배타다).
+ */
+export function isCeoConfirmedSame(row: GeminiTransientRow): boolean {
+  return row.ceoConfirmedSame === true;
+}
+
+/** 🔵 **확정** 형성대 입장 — CEO 확정 **또는** 시스템 SAME. */
+export function isConfirmedSameForPrice(row: GeminiTransientRow): boolean {
+  return isCeoConfirmedSame(row) || transientDisplayTier(row) === "SAME";
+}
+
+/**
+ * 🔵 **§5.2 가격 자격 5조건** — 🔴 표준 조항을 **그대로** 옮겼고 완화하지 않았다.
+ *    🟢 ⑤의 집합은 운영 owner `PRICE_DISQUALIFYING_BLOCKERS` 를 **재사용** 한다
+ *       (새 목록을 만들면 가격 정책이 둘로 갈린다).
+ *    🔴 저장분은 blockers 와 conflicts 가 **합쳐져** 있으므로 둘을 같이 본다.
+ */
+export function passesPriceEligibility(row: GeminiTransientRow): boolean {
+  const tier = transientDisplayTier(row);
+  if (row.priceTier === "EXCLUDED") return false;
+  if (tier !== "SAME" && tier !== "PRESUMED_SAME") return false;
+  const amount = row.priceAmount;
+  if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0) return false;
+  if (!row.priceCurrency) return false;
+  if (row.priceStatus === "UNVERIFIED_SEARCH") return false;
+  const marks = [...(row.crossSellerBlockers ?? []), ...(row.crossSellerConflicts ?? [])];
+  if (marks.some((b) => PRICE_DISQUALIFYING_BLOCKERS.has(b))) return false;
+  return true;
+}
+
+/**
+ * 🔵 **추정** 형성대 입장 — 🔴 **CEO 확정이 «없는»** PRESUMED_SAME 만이다.
+ *    🔴 `isConfirmedSameForPrice` 와 **동시에 참이 될 수 없다**(중복 집계 0).
+ */
+export function isPresumedSameForPrice(row: GeminiTransientRow): boolean {
+  if (isConfirmedSameForPrice(row)) return false;
+  if (transientDisplayTier(row) !== "PRESUMED_SAME") return false;
+  return passesPriceEligibility(row);
+}
+
 export function transientDisplayTier(row: GeminiTransientRow): MatchDisplayTier | null {
   if (row.matchTruth) return domesticMatchDisplay(row.matchTruth as MatchTruth).tier;
   const verdict = row.crossSellerVerdict;
@@ -1609,6 +1663,28 @@ export function overseasHasSingleCurrency(g: PriceGuide): boolean {
  * 🟢 이 함수가 그 분기를 **한 곳에서** 소유한다 — 호출부(MarketBlock)는 분기하지 않는다.
  * 🔴 가격이 없으면 `null` — 호출부가 「확인된 가격이 아직 없습니다」를 쓴다(기존 계약).
  */
+/**
+ * 🔵🔵 MI-KR-PRICE-TIER-01 — **추정 가격 형성대 한 줄.**
+ *
+ * 🔴 **확정 금액과 합치지 않는다** — 별도 문장이고 **「추정」을 글자로** 말한다
+ *    (CPO §4 「추정 가격은 추정임을 명확히 표시한다」).
+ * 🔴 **환산 0 · 통화 혼합 0** — 통화별로만 적는다(표준 §5.4).
+ * 🔴 근거가 없으면 **줄을 만들지 않는다**(`null`).
+ */
+export const PRESUMED_PRICE_LABEL = "동일상품 추정 가격대";
+export const PRESUMED_PRICE_NOTE =
+  "동일상품으로 «추정» 된 판매처의 가격입니다 — 확정 가격대와 합산하지 않습니다.";
+
+export function presumedPriceLine(g: PriceGuide): string | null {
+  if (g.byCurrency.length === 0) return null;
+  const parts = g.byCurrency.map((r) =>
+    r.lowest === r.highest
+      ? `${r.currency} ${r.lowest.toLocaleString("ko-KR")}`
+      : `${r.currency} ${r.lowest.toLocaleString("ko-KR")} ~ ${r.highest.toLocaleString("ko-KR")}`,
+  );
+  return `${PRESUMED_PRICE_LABEL} ${parts.join(" · ")} (${g.pricedCount}곳)`;
+}
+
 export function marketPriceHeadline(g: PriceGuide): string | null {
   if (g.market === "KR") return domesticBandText(domesticPriceBand(g));
   const lowest = overseasLowestText(g);
@@ -2315,13 +2391,19 @@ const SALE_ORDER: Record<SaleState, number> = { ON_SALE: 0, UNKNOWN: 1, SOLD_OUT
  */
 export function buildMarketJudgement(
   rows: readonly GeminiTransientRow[] | null | undefined,
+  /**
+   * 🔵 MI-KR-PRICE-TIER-01 — 입장 술어를 **인자로** 받는다(기본값은 **확정** 형성대).
+   *    🔴 인자를 주지 않으면 **기존 동작 그대로** 다 — 단 「SAME」의 정의에 **CEO 직접
+   *    확정** 이 더해졌다(CPO 1순위). 🟢 집계 식은 **한 벌** 이라 두 형성대가 갈리지 않는다.
+   */
+  accept: (row: GeminiTransientRow) => boolean = isConfirmedSameForPrice,
 ): MarketJudgement {
   const sellers: MarketSeller[] = [];
   const seen = new Set<string>();
   for (const row of rows ?? []) {
     if (seen.has(row.discoveredUrl)) continue;
     seen.add(row.discoveredUrl);
-    if (transientDisplayTier(row) !== "SAME") continue;
+    if (!accept(row)) continue;
     const market = row.market === "KR" || row.market === "OVERSEAS" ? row.market : "UNKNOWN";
     sellers.push({
       row,
