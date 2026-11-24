@@ -124,6 +124,15 @@ export interface GeminiTransientRow {
   priceKrwDerived?: number | null;
   /** 🔴 시장 분류. `KR` / `OVERSEAS` / `UNKNOWN` — WU-020 의 `classifyCandidateMarket` 산출. */
   market?: string | null;
+  /**
+   * 🔵 MI-OVERSEAS-SOURCING-OBSERVATION-DISPLAY-01 — **그 가격을 «언제» 봤는가.**
+   *
+   * 🔴 저장된 후보는 `candidate_reviews.last_seen_at` 이 그 값이다(실측: §5.2 통과 해외
+   *    105행 중 **88행이 14일 초과**). 🔴 이번 조회에서 갓 수집한 후보는 이 칸이 **없다** —
+   *    그때는 **지어내지 않고 비운다**(`null`), 그리고 품질 블록이 「확인 불가」로 센다.
+   * 🔴 이 값은 **판정에 들어가지 않는다** — 표시 전용이다.
+   */
+  collectedAt?: string | null;
   basis?: string | null;
 }
 

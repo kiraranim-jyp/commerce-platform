@@ -161,6 +161,12 @@ export function toSavedCandidateRows(rows: readonly CandidateReviewRow[]): Saved
       priceCurrency: r.priceCurrency,
       market: r.market,
       /**
+       * 🔵 MI-OVERSEAS-SOURCING-OBSERVATION-DISPLAY-01 — **수집 시점을 그대로 싣는다.**
+       * 🔴 「언제 본 가격인가」는 셀러의 판단 근거다(실측 해외 §5.2 통과 105행 중
+       *    **88행이 14일 초과**). 🔴 가공·추정 0 — DB 의 `last_seen_at` 그 값이다.
+       */
+      collectedAt: r.lastSeenAt,
+      /**
        * 🔵 ① — **KRW 일 때만** 국내 축 입장권을 준다(환산 0 · 추정 0).
        * 🔴 대소문자·공백을 정규화해서 본다 — 저장분에 `"krw"`·`" KRW"` 가 섞인다.
        * 🔴 금액이 숫자가 아니면 `null` 이다(저장값을 믿고 그대로 싣지 않는다).

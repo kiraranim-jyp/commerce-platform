@@ -75,6 +75,8 @@ import {
    */
   SAME_CONFIRMED_COUNT_LABEL,
   sameConfirmedCountText,
+  buildObservationQuality,
+  observationQualityNotes,
   marketPriceHeadline,
   marketPriceHeadlineLabel,
   SALE_STATE_TEXT,
@@ -1740,6 +1742,7 @@ function MarketBlock({
   selection,
   finalPriceKrw,
   onOpenPriceEditor,
+  observedAtIso,
 }: {
   market: "KR" | "OVERSEAS";
   judgement: MarketJudgement;
@@ -1755,6 +1758,12 @@ function MarketBlock({
   selection: MiSameSelection;
   finalPriceKrw?: number | null;
   onOpenPriceEditor?: () => void;
+  /**
+   * 🔵 MI-OVERSEAS-SOURCING-OBSERVATION-DISPLAY-01 — **「지금」의 기준 시각.**
+   * 🔴 계약이 시간을 고정할 수 있어야 한다(마운트 DOM 단언이 날짜에 따라 흔들리면
+   *    그 계약은 거짓이다). 🟢 운영에서는 생략하고 현재 시각을 쓴다.
+   */
+  observedAtIso?: string | null;
 }): JSX.Element {
   const g = buildPriceGuide(judgement, market);
   /**
@@ -1766,6 +1775,15 @@ function MarketBlock({
   const head = marketPriceHeadline(g);
   const headLabel = marketPriceHeadlineLabel(g);
   const suffix = market === "KR" ? "domestic" : "overseas";
+  /**
+   * 🔵🔵🔵 MI-OVERSEAS-SOURCING-OBSERVATION-DISPLAY-01 — **관측 품질을 같이 적는다.**
+   *
+   * 🔴 CPO 가 「화면에서 감춰서는 안 된다」고 지목한 셋(판매처 편중 · 극단값 · 낡은 수집)을
+   *    여기서 **문장으로** 말한다. 🔴 숫자를 바꾸지 않는다 — `g` 는 **그대로** 다.
+   * 🔴 `new Date()` 를 쓰지 않고 **주입된 기준 시각** 을 쓴다(계약이 시간을 고정해야 한다).
+   */
+  const quality = buildObservationQuality(judgement, market, observedAtIso ?? new Date().toISOString());
+  const qualityNotes = observationQualityNotes(quality);
   /**
    * ════════════════════════════════════════════════════════════════════════
    * 🔴🔴🔴 CORE-2AO-R2 — **같은 블록을 «두 번» 그린다. 금액은 한 번만.**
@@ -2072,6 +2090,31 @@ function MarketBlock({
               >
                 {sameConfirmedCountText(g.sameCount)}
               </p>
+              {/**
+               * ══════════════════════════════════════════════════════════════
+               * 🔵🔵🔵 MI-OVERSEAS-SOURCING-OBSERVATION-DISPLAY-01 — **관측 품질**
+               * ══════════════════════════════════════════════════════════════
+               *
+               * 🔴🔴 CPO 가 「화면에서 감춰서는 안 된다」고 지목한 셋이 여기 선다 —
+               *    **판매처 편중 · 관측 폭 · 낡은 수집** 그리고 **구매 가능 여부 미확인**.
+               * 🔴🔴 **1차(SUMMARY)에 둔다 — 상세로 내리지 않는다.** 내 1차 구현이 이 블록을
+               *    `DETAIL` 변형에 뒀고 **마운트 DOM 이 그것을 잡았다**(블록이 화면에 아예
+               *    없었다). 숫자가 1차에 서는데 그 숫자의 **한계가 접힘 뒤에 있으면**
+               *    그것이 CPO 가 금지한 「감추는 것」이다.
+               * 🔴 금액을 **다시 만들지 않는다** — `g` 의 숫자는 한 글자도 바뀌지 않았고
+               *    이 블록은 `observationQualityNotes` 가 만든 **문장** 만 그린다.
+               * 🔴 근거가 없으면 **줄이 서지 않는다**(거짓 안심을 만들지 않는다).
+               */}
+              {qualityNotes.length > 0 && (
+                <ul
+                  data-testid={`observation-quality-${suffix}`}
+                  className="mt-1 space-y-0.5 text-[11px] text-text-tertiary"
+                >
+                  {qualityNotes.map((n) => (
+                    <li key={n}>· {n}</li>
+                  ))}
+                </ul>
+              )}
               {/**
                * ══════════════════════════════════════════════════════════════
                * 🔵🔵🔵 PRICE & CANDIDATE UX FINAL FIX §3·§4 — **원 통화 + 원화 환산**

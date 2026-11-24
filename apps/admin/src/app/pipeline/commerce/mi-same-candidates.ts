@@ -1367,6 +1367,188 @@ export function buildPriceGuide(j: MarketJudgement, market: "KR" | "OVERSEAS"): 
 }
 
 /**
+ * ════════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 MI-OVERSEAS-SOURCING-OBSERVATION-DISPLAY-01 — **관측 품질을 «숨기지 않는다»**
+ * ════════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 CPO 가 **감추지 말라고 지목한 셋** 이 실측에서 나왔다(§5.2 통과 해외 90행):
+ * ```
+ * ① `junioredition.com` 하나가 **67/90(74%)** — 「최저가」가 사실상 한 판매처의 가격이다
+ * ② 같은 GBP 묶음에 **15,200 · 15,100** 이 있다(원화를 GBP 로 적은 모양)
+ * ③ 수집 시점이 **14일 초과 88/105** 다
+ * ```
+ * 🔴🔴🔴 **임의 임계값을 만들지 않았다**(CPO §2 「비정상 가격 제외 기준을 임의로 만들지
+ *    말고」). 이 함수는 **아무 행도 제외하지 않는다** — `byCurrency` 의 `lowest/highest` 를
+ *    **그대로 드러내** 셀러가 관측 폭을 보게 한다. 🟢 그리고 기존 상한 규칙(통화별 하위 3개 ·
+ *    WU-149)이 **최저값을 항상 보존** 하므로 극단값은 **애초에 최저가가 될 수 없다** —
+ *    실측에서도 15,200 은 **최댓값** 이다. ⟹ 제외 규칙이 **필요하지 않다**.
+ * 🔴 그래서 「비정상」이라고 **판정하지 않는다** — 적는 것은 **관측 폭(배수)** 이라는 사실뿐이다.
+ *
+ * 🔴 이 함수가 **하지 않는** 것: 판정 변경 · 가격 제외 · 환산 · 추천가 · blocker · 수집.
+ */
+export interface ObservationQuality {
+  /** 가격이 확인된 관측 수(= `PriceGuide.pricedCount` 와 같은 분모). */
+  observationCount: number;
+  independentSellerCount: number;
+  /** 🔴 편중 — 가장 많은 관측을 낸 판매처와 그 비중. 관측 0 이면 null. */
+  topSeller: { domain: string; count: number; sharePercent: number } | null;
+  /** 🔴 품절 여부를 **확인하지 못한** 판매처 수. 「판매중」으로 세지 않는다. */
+  purchasabilityUnknownCount: number;
+  /** 🔴 원화 환산 근거가 **없는** 통화(환율 미확보). 그 통화는 원화로 적지 않는다. */
+  fxMissingCurrencies: string[];
+  /** 🟢 마지막 수집 시점(ISO). 🔴 전달 경로에 값이 없으면 null — 지어내지 않는다. */
+  lastCollectedAt: string | null;
+  /** 🔴 기준 시점에서 14일을 넘긴 관측 수. 🔴 시점을 모르는 행은 **세지 않는다**. */
+  staleCount: number;
+  /** 수집 시점을 아예 모르는 관측 수(= `staleCount` 의 분모 밖). */
+  collectedAtUnknownCount: number;
+  /** 🔴 같은 통화 안의 관측 폭. **판정이 아니라 사실** 이다(배수 = highest / lowest). */
+  spreads: { currency: string; lowest: number; highest: number; ratio: number }[];
+}
+
+/** 🔴 14일은 **CPO 가 지목한 기준** 이다(「14일 초과 데이터 여부」) — 내가 고른 값이 아니다. */
+export const OBSERVATION_STALE_DAYS = 14;
+
+/**
+ * 🔵🔵 **관측 품질의 «말» 은 여기가 owner 다**(화면에 두 벌로 적지 않는다).
+ *
+ * 🔴🔴 **금지 어휘를 쓰지 않는다**(CPO §3) — 「최저가」·「구매 가능 최저가」·「추천 소싱가」.
+ * 🔴 「비정상」이라고 **판정하지 않는다** — 관측 폭(배수)을 **사실로** 적는다.
+ * 🔴 근거가 없는 줄은 **만들지 않는다**(0 이면 그 문장이 없다 · 거짓 안심 금지).
+ */
+export const PURCHASABILITY_UNKNOWN_NOTE = "구매 가능 여부는 확인되지 않았습니다";
+export function observationQualityNotes(q: ObservationQuality): string[] {
+  if (q.observationCount === 0) return [];
+  const out: string[] = [];
+  out.push(`관측 ${q.observationCount}건 · 독립 판매처 ${q.independentSellerCount}곳`);
+  /** 🔴 **편중** — 판매처가 둘 이상인데 한 곳이 과반이면 그 사실을 적는다. */
+  if (q.topSeller != null && q.independentSellerCount >= 2 && q.topSeller.sharePercent >= 50)
+    out.push(
+      `관측이 ${q.topSeller.domain} 한 곳에 ${q.topSeller.sharePercent}% 몰려 있습니다(${q.topSeller.count}/${q.observationCount})`,
+    );
+  /** 🔴 판매처가 **하나** 면 「편중」이 아니라 **표본이 하나** 라고 적는다. */
+  if (q.independentSellerCount === 1)
+    out.push("한 판매처의 관측만 있습니다 — 시장 가격으로 읽지 마세요");
+  if (q.purchasabilityUnknownCount > 0)
+    out.push(`${PURCHASABILITY_UNKNOWN_NOTE}(${q.purchasabilityUnknownCount}곳)`);
+  if (q.fxMissingCurrencies.length > 0)
+    out.push(`환율 근거가 없어 원화로 환산하지 않은 통화 — ${q.fxMissingCurrencies.join(" · ")}`);
+  if (q.staleCount > 0)
+    out.push(`${OBSERVATION_STALE_DAYS}일이 지난 관측 ${q.staleCount}건이 섞여 있습니다`);
+  if (q.collectedAtUnknownCount > 0)
+    out.push(`수집 시점을 확인할 수 없는 관측 ${q.collectedAtUnknownCount}건`);
+  for (const s of q.spreads)
+    /**
+     * 🔴🔴 **금액 형식 owner 를 재사용한다** — `amountText` 다. 1차 구현이 날 숫자를
+     *    적어 `88000` 이 화면에 섰고 기존 계약 `mi-uic-01`(「한 화면에 형식이 둘이 아니다」)
+     *    이 **2 FAIL** 로 잡았다. 🟢 가드를 풀지 않고 **owner 를 썼다**.
+     */
+    out.push(`${s.currency} 관측 폭 ${amountText(s.lowest)} ~ ${amountText(s.highest)}(${s.ratio}배)`);
+  return out;
+}
+
+export function buildObservationQuality(
+  j: MarketJudgement,
+  market: "KR" | "OVERSEAS",
+  nowIso: string,
+): ObservationQuality {
+  const mine = j.sellers.filter((s) => s.market === market);
+  /** 🟢 가격 축의 분모를 `buildPriceGuide` 와 **같은 조건** 으로 둔다(두 수가 갈리면 거짓이다). */
+  const priced = mine.filter((s) => s.price != null && s.sale !== "SOLD_OUT");
+  const keyOf = (s: MarketSeller): string => {
+    const raw = s.row.domain ?? "";
+    if (raw.trim().length > 0) return raw.trim().toLowerCase();
+    try {
+      return new URL(s.row.discoveredUrl).host.toLowerCase();
+    } catch {
+      return s.row.discoveredUrl;
+    }
+  };
+  const perSeller = new Map<string, number>();
+  for (const s of priced) perSeller.set(keyOf(s), (perSeller.get(keyOf(s)) ?? 0) + 1);
+  const top = [...perSeller.entries()].sort((a, b) => b[1] - a[1])[0] ?? null;
+
+  /**
+   * 🔴 **환율 미확보는 「통화별」로 적는다.** 한 통화 안에서도 행마다 환산값이 있을 수
+   *    있으므로(행 단위 보강), **그 통화의 어느 행에도 환산값이 없을 때만** 미확보다.
+   * 🟢 환산 owner 는 `priceKrwDerived`(`attachDerivedKrw`)이고 **여기서 환산하지 않는다**.
+   */
+  const curSeen = new Map<string, boolean>();
+  for (const s of priced) {
+    const cur = (s.price as { currency: string }).currency;
+    /**
+     * 🔴🔴 **`KRW` 는 환산 대상이 아니다.** 1차 구현이 그것을 빼지 않아 국내 블록에
+     *    「환율 근거가 없어 원화로 환산하지 않은 통화 — KRW」라는 **거짓 경고** 가 떴다.
+     *    🟢 기존 계약 `mi-uic-01` 의 마운트 DOM 단언이 그 문장을 드러냈다.
+     */
+    if (cur === "KRW") continue;
+    const hasKrw = typeof s.row.priceKrwDerived === "number" && Number.isFinite(s.row.priceKrwDerived);
+    curSeen.set(cur, (curSeen.get(cur) ?? false) || hasKrw);
+  }
+  const fxMissingCurrencies = [...curSeen.entries()]
+    .filter(([, has]) => !has)
+    .map(([cur]) => cur)
+    .sort();
+
+  const stamps = priced
+    .map((s) => s.row.collectedAt ?? null)
+    .filter((v): v is string => typeof v === "string" && v.length > 0);
+  const nowMs = Date.parse(nowIso);
+  const staleMs = OBSERVATION_STALE_DAYS * 24 * 60 * 60 * 1000;
+  const staleCount = Number.isFinite(nowMs)
+    ? stamps.filter((v) => {
+        const t = Date.parse(v);
+        return Number.isFinite(t) && nowMs - t > staleMs;
+      }).length
+    : 0;
+
+  return {
+    observationCount: priced.length,
+    independentSellerCount: perSeller.size,
+    topSeller:
+      top == null
+        ? null
+        : {
+            domain: top[0],
+            count: top[1],
+            sharePercent: Math.round((top[1] / priced.length) * 100),
+          },
+    /** 🔴 `SOLD_OUT` 이 아니면서 `ON_SALE` 도 아닌 것 = **모른다**. */
+    purchasabilityUnknownCount: priced.filter((s) => s.sale !== "ON_SALE").length,
+    fxMissingCurrencies,
+    lastCollectedAt: stamps.length === 0 ? null : stamps.slice().sort().at(-1) ?? null,
+    staleCount,
+    collectedAtUnknownCount: priced.length - stamps.length,
+    spreads: observedSpreads(priced),
+  };
+}
+
+/**
+ * 🔴🔴 **`j.byCurrency` 를 쓰지 않는다** — 그 값은 **시장 필터 «전»** 집계라 🌎 폭에
+ *    🇰🇷 통화가 섞인다(내 1차 구현이 그랬다). 🟢 그리고 `buildPriceGuide` 의 `byCurrency`
+ *    는 **통화별 하위 3개 상한** 이 걸린 값이라 **관측 폭을 줄여 말한다** ⟹ 품질 경고에는
+ *    상한 «전» 의 전수 폭을 쓴다(그래야 15,200 같은 극단값이 화면에서 사라지지 않는다).
+ * 🔴 **판정하지 않는다** — 배수는 사실이고 「비정상」이라는 말은 쓰지 않는다(제외도 0).
+ */
+function observedSpreads(
+  priced: MarketSeller[],
+): { currency: string; lowest: number; highest: number; ratio: number }[] {
+  const byCur = new Map<string, number[]>();
+  for (const s of priced) {
+    const p = s.price as { amount: number; currency: string };
+    byCur.set(p.currency, [...(byCur.get(p.currency) ?? []), p.amount]);
+  }
+  return [...byCur.entries()]
+    .map(([currency, amounts]) => {
+      const lowest = Math.min(...amounts);
+      const highest = Math.max(...amounts);
+      return { currency, lowest, highest, ratio: Math.round((highest / lowest) * 10) / 10 };
+    })
+    .filter((x) => x.highest > x.lowest)
+    .sort((a, b) => b.ratio - a.ratio);
+}
+
+/**
  * 🔴 **동일상품 «수» 의 말.** 🔴 WU-145 — owner 를 상수로 뺐다. 이 말은 두 곳이 쓴다
  *    (`priceGuideCountNote` · `marketEmptyNote` 의 0곳 머리) ⟹ 손으로 두 벌 적으면
  *    한쪽만 고치는 날이 오고, 그때 셀러는 **같은 축을 다른 이름으로** 보게 된다.
@@ -1666,9 +1848,18 @@ export function domesticBandText(b: DomesticPriceBand): string | null {
  * 🟢 그래서 **통화별 최저** 를 적는다. 통화가 하나면 그것이 곧 「최저 확인가」다.
  * 🔴 **새 집계 0** — `byCurrency[].lowest` 가 이미 그 값이다.
  */
-export const OVERSEAS_LOWEST_LABEL = "최저 확인가";
+/**
+ * 🔵🔵🔵 **MI-OVERSEAS-SOURCING-OBSERVATION-DISPLAY-01 — 명칭이 바뀌었다**(CPO 확정).
+ *
+ * 🔴🔴 전까지 「최저 **확인**가」였다. 그 말은 **구매 가능성을 확인했다** 는 뜻으로 읽힌다 —
+ *    그런데 실측에서 `sold_out` 이 **90/90 전건 「모름」** 이다(§5.2 통과 해외 전수).
+ *    ⟹ 🔴 그 라벨은 우리가 **갖고 있지 않은 근거** 를 주장한다.
+ * 🟢 그래서 CPO 가 **「해외 수집 최저 관측가」** 로 고정했다 — 「우리가 수집해서 관측한
+ *    값 중 최저」까지만 말한다. 🔴 「구매 가능 최저가」·「추천 소싱가」로 바꾸지 않는다.
+ */
+export const OVERSEAS_LOWEST_LABEL = "해외 수집 최저 관측가";
 export const OVERSEAS_LOWEST_PER_CURRENCY_NOTE =
-  "통화가 여러 개라 하나의 최저가로 합치지 않습니다 — 통화별 최저 확인가입니다.";
+  "통화가 여러 개라 하나의 최저가로 합치지 않습니다 — 통화별 수집 최저 관측가입니다.";
 
 export function overseasLowestText(g: PriceGuide): string | null {
   if (g.byCurrency.length === 0) return null;
