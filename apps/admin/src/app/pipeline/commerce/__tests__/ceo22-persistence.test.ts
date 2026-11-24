@@ -121,6 +121,39 @@ describe("MI-HJP-02 — CEO 22건 영구 연결 회귀 기준", () => {
       expect(diff, "🔴 보류 집합에서 CEO DIFFERENT 가 다수가 아니다").toBeGreaterThan(same);
     });
 
+    it("B-3 🔴🔴 **`AUDIENCE_LINE` 은 차단축으로 «쓸 수 없다»** — 단독 0 · 기존축과 전건 중복", () => {
+      /**
+       * 🔴🔴 **CPO 의 의심이 맞았다**(2026-11-24): 「5건의 관찰만으로 전역 가격 차단
+       *    규칙을 확정하지 않겠습니다」. 실측이 그 유보를 **지지** 한다.
+       *
+       * 🟢 22건 실측 — `AUDIENCE_LINE` 5건은 **전부** 기존 차단축
+       *    (`BRAND_MISMATCH` / `NO_TITLE_OVERLAP`)과 **같이** 발생한다 ⟹ 그 5건은
+       *    **이미 가격 자격에서 빠진다** ⟹ 추가 차단 효과 **0**.
+       * 🔴 **단독 발생이 0** 이므로 「이 축이 무엇을 더 막는가」의 분모가 **없다**.
+       * 🔴 그리고 운영 전수(DB 실측 2026-11-24)에서도 같다 —
+       *    AUDIENCE_LINE **105** 중 기존 차단축과 중복 **103** · 가격 자격을 통과하는
+       *    것은 **2**(둘 다 **미판정**) · CEO DIFFERENT 중 통과 **0** ·
+       *    🔴 **CEO SAME 중 이 축 보유 1건** ⟹ 이득 ≤ 위험.
+       * ⟹ 🔴 **채택하지 않는다**(CPO §5 「CEO SAME 손실이 확인되면 채택하지 않는다」).
+       */
+      const d = load();
+      const withAl = d.rows.filter((r) => (r.blockers ?? []).includes("AUDIENCE_LINE"));
+      const DISQ = ["BRAND_MISMATCH", "NO_TITLE_OVERLAP", "SAME_SELLER_DISTINCT_LISTING"];
+      const alone = withAl.filter((r) => (r.blockers ?? []).every((b) => b === "AUDIENCE_LINE"));
+      const overlap = withAl.filter((r) => (r.blockers ?? []).some((b) => DISQ.includes(b)));
+      /* eslint-disable no-console */
+      console.log(
+        `
+AUDIENCE_LINE 22건 — 보유 ${withAl.length} · 단독 ${alone.length} · 기존차단축 중복 ${overlap.length} · CEO SAME ${withAl.filter((r) => r.ceoVerdict === "SAME").length}`,
+      );
+      /* eslint-enable no-console */
+      expect(withAl.length, "🔴 보유 건수가 바뀌었다").toBe(5);
+      /** 🔴🔴 **단독이 0 이면 그 축은 «독립적으로» 아무것도 막지 못한다.** */
+      expect(alone.length, "🔴 단독 발생이 생겼다 — 그러면 이 결론을 다시 재야 한다").toBe(0);
+      expect(overlap.length, "🔴 기존 차단축과의 중복 수가 바뀌었다").toBe(5);
+      expect(withAl.length, "🔴 중복이 전건이 아니다 ⟹ 추가 효과가 생겼다").toBe(overlap.length);
+    });
+
     it("B-2 🔵🔵 **blocker 종류가 CEO 판정을 가른다** — 개선안의 근거", () => {
       const d = load();
       const count = (b: string, v: "SAME" | "DIFFERENT") =>
