@@ -107,17 +107,18 @@ async function latestVersion(
   supabase: NonNullable<ReturnType<typeof getSupabaseAdmin>>,
   reviewKeyValue: string,
   pairId: string,
-): Promise<{ id: string; version: number } | null> {
+): Promise<{ id: string; version: number; verdict: string; context: string | null } | null> {
   const { data, error } = await supabase
     .from("ceo_judgments")
-    .select("id, version")
+    .select("id, version, human_verdict, decision_context")
     .eq("review_key", reviewKeyValue)
     .eq("pair_id", pairId)
     .order("version", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (error || !data) return null;
-  return { id: (data as { id: string }).id, version: Number((data as { version: number }).version) };
+  const d = data as { id: string; version: number; human_verdict: string; decision_context: string | null };
+  return { id: d.id, version: Number(d.version), verdict: d.human_verdict, context: d.decision_context ?? null };
 }
 
 /**
@@ -131,7 +132,13 @@ async function latestVersion(
  *       동시 요청 둘이 같은 version 을 계산할 수 있다.
  *    🟢 그때 `23505` 가 나고 **1회만** 재조회·재시도한다(기존 `saveHumanVerdict` 와 같은 모양).
  *    🔴 **무한 재시도 금지** — 두 번째도 실패하면 `null` 을 돌려주고 호출부가 500 을 낸다.
- * ⒝ 같은 내용 재제출 → 🟢 **새 버전을 만든다**(CPO 결정 Ⓘ · 내용 비교 **0**)
+ * ⒝ 🔵🔵 **같은 내용 재제출 → 새 버전을 만들지 «않는다»**(멱등).
+ *    🔴🔴 **이 규칙이 뒤집혔다. 그 이력을 남긴다** — 전까지는 「같은 내용도 새 버전」
+ *       (CPO 결정 Ⓘ · 내용 비교 0)이었다. 🔴 그런데 CPO 가 2026-11-24 에 **멱등을 요구**
+ *       했다(「동일 판정의 중복 요청은 중복 버전을 만들지 않도록」 · 검증 2·5항).
+ *    🟢 비교 축은 **판정값 하나** 다 — 그것이 「동일 판정」의 정의다. 🔴 `reviewer`·
+ *       `reviewed_at` 은 매번 달라지므로 비교에 넣지 않는다(넣으면 멱등이 깨진다).
+ *    🔴 **판정이 «바뀌면» 새 버전을 만든다** — 그것이 이 표의 존재 이유다.
  * ⒞ 축 중복 → 🔴 **해당 없음**(이번 경로는 축을 쓰지 않는다)
  * ```
  */
@@ -145,6 +152,24 @@ export async function saveCeoJudgment(input: SaveCeoJudgmentInput): Promise<CeoJ
 
   const attempt = async (): Promise<{ row: CeoJudgmentRow | null; conflict: boolean }> => {
     const prev = await latestVersion(supabase, input.reviewKey, input.pairId);
+    /**
+     * 🔵🔵🔵 **멱등 — 같은 판정이면 새 버전을 만들지 않는다**(CPO 2026-11-24 · 검증 2·5항).
+     *
+     * 🔴 비교는 **판정값 하나** 다. `reviewer`/`reviewed_at` 은 매 호출 달라지므로 보면
+     *    멱등이 깨진다. 🔴 `decision_context` 도 보지 않는다 — 같은 판정을 **다른 출처
+     *    설명으로** 다시 적는 것은 새 「판단」이 아니다.
+     * 🟢 **직전 최신** 과만 비교한다 — 과거에 같은 값이 있었다가 뒤집힌 뒤 되돌아온
+     *    경우(DIFFERENT → SAME → DIFFERENT)는 **새 버전이어야** 한다(그 전이가 사실이다).
+     * 🔴 과거 이력을 **수정하지 않는다** — 그냥 그 행을 돌려준다.
+     */
+    if (prev != null && prev.verdict === input.humanVerdict) {
+      const { data: same } = await supabase
+        .from("ceo_judgments")
+        .select(SELECT)
+        .eq("id", prev.id)
+        .maybeSingle();
+      return { row: same ? toRow(same) : null, conflict: false };
+    }
     const { data, error } = await supabase
       .from("ceo_judgments")
       .insert({

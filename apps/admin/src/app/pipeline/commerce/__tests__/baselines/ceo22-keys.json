@@ -1,0 +1,29 @@
+{
+  "note": "MI-CJH-01 — 운영 reviewKey(canonicalizeProductUrl) 로 생성한 URL 키. 적재 스크립트는 이 파일을 읽기만 한다(규칙 owner 하나).",
+  "generatedBy": "ceo22-keys.test.ts",
+  "total": 22,
+  "keys": {
+    "https://designerkidswear.com/products/versace-kids-baby-boys-denim-blue-1009197-1a08511-1d200": "https://designerkidswear.com/products/versace-kids-baby-boys-denim-blue-1009197-1a08511-1d200",
+    "https://folkberlin.com/products/gingham-woven-trousers": "https://folkberlin.com/products/gingham-woven-trousers",
+    "https://junioredition.com/products/taxi-saurus-tag-denim-pants-by-bobo-choses": "https://junioredition.com/products/taxi-saurus-tag-denim-pants-by-bobo-choses",
+    "https://kidbizkid.com/products/diesel-viker-jeans": "https://kidbizkid.com/products/diesel-viker-jeans",
+    "https://nickis.com/products/polo-ralph-lauren-jeans-blau-3402271700": "https://nickis.com/products/polo-ralph-lauren-jeans-blau-3402271700",
+    "https://petitemaisonkids.com/products/sparkle-blue-denim-jeans": "https://petitemaisonkids.com/products/sparkle-blue-denim-jeans",
+    "https://villagekids.co.uk/products/denim-blue-jeans": "https://villagekids.co.uk/products/denim-blue-jeans",
+    "https://www.donokids.com/shop/shopdetail.html?branduid=3362810&type=x&current_category=058": "https://www.donokids.com/shop/shopdetail.html?branduid=3362810&type=x&current_category=058",
+    "https://designerkidswear.com/products/givenchy-baby-girls-dress-pink-h31301-46g": "https://designerkidswear.com/products/givenchy-baby-girls-dress-pink-h31301-46g",
+    "https://junioredition.com/products/exclusive-handsmock-dress-in-pink-tapestry-by-bonjour": "https://junioredition.com/products/exclusive-handsmock-dress-in-pink-tapestry-by-bonjour",
+    "https://kidbizkid.com/products/givenchy-lilac-dress": "https://kidbizkid.com/products/givenchy-lilac-dress",
+    "https://villagekids.co.uk/products/copy-of-coral-pink-broderie-anglaise-dress": "https://villagekids.co.uk/products/copy-of-coral-pink-broderie-anglaise-dress",
+    "https://junioredition.com/products/handsmock-apron-dress-in-natural-by-bonjour": "https://junioredition.com/products/handsmock-apron-dress-in-natural-by-bonjour",
+    "https://petitemaisonkids.com/products/georgina-tartan-print-dress-with-red-bow": "https://petitemaisonkids.com/products/georgina-tartan-print-dress-with-red-bow",
+    "https://shoppiccoliandco.com/products/preorder-beatrice-burgundy-handsmocked-girl-sleeves-dress-ships-end-of-october": "https://shoppiccoliandco.com/products/preorder-beatrice-burgundy-handsmocked-girl-sleeves-dress-ships-end-of-october",
+    "https://villagekids.co.uk/products/lemon-print-dress": "https://villagekids.co.uk/products/lemon-print-dress",
+    "https://designerkidswear.com/products/moncler-kids-enfant-baby-k2f-jacket-brown-1a00024-597z8-246": "https://designerkidswear.com/products/moncler-kids-enfant-baby-k2f-jacket-brown-1a00024-597z8-246",
+    "https://junioredition.com/products/pixel-abduction-all-over-reversible-jacket-by-bobo-choses": "https://junioredition.com/products/pixel-abduction-all-over-reversible-jacket-by-bobo-choses",
+    "https://kidbizkid.com/products/billieblush-reversible-leopard-jacket": "https://kidbizkid.com/products/billieblush-reversible-leopard-jacket",
+    "https://junioredition.com/products/mixed-media-jacket-in-blue-mix-by-wynken": "https://junioredition.com/products/mixed-media-jacket-in-blue-mix-by-wynken",
+    "https://nickis.com/products/wynken-jacke-mixed-media-mehrfarbig-7400851022": "https://nickis.com/products/wynken-jacke-mixed-media-mehrfarbig-7400851022",
+    "https://villagekids.co.uk/products/black-puffer-coat-4": "https://villagekids.co.uk/products/black-puffer-coat-4"
+  }
+}
