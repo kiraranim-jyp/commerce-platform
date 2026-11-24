@@ -92,6 +92,12 @@ export interface GeminiTransientRow {
    *    바뀌는 것은 **가격 형성대 분류** 하나다.
    */
   ceoConfirmedSame?: boolean | null;
+  /**
+   * 🔴🔴 **CEO 가 «다른 상품» 으로 확정했다**(MI-HUMAN-JUDGMENT-PERSISTENCE-01).
+   *    CPO §4 — 「같은 타상품을 다시 SAME 또는 PRESUMED_SAME 으로 노출하지 않는다」.
+   * 🔴 없으면 false 취급 · 🔴 **판정이 엇갈린 후보는 여기 오지 않는다**(재검토 대상).
+   */
+  ceoConfirmedDifferent?: boolean | null;
   priceTier?: string | null;
   confidence?: number | null;
   matchReasons?: string[];

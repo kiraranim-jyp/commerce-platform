@@ -18,6 +18,8 @@ import { runPriceCheck } from "../_lib/run-price-check";
 import {
   listReviewedSameUrls,
   listSnapshotVerifiedSameKeys,
+  listCeoJudgmentsForReuse,
+  type CeoJudgmentReuse,
   recordSeenCandidates,
 } from "../_lib/candidate-review";
 
@@ -174,6 +176,25 @@ export async function POST(request: Request) {
    * 🔴 실패해도 가격확인을 멈추지 않는다 — 빈 집합이면 **오늘 동작 그대로** 다.
    * 🔴 verdict 문자열은 이 라우트로 **올라오지 않는다**(리더가 URL 키만 돌려준다).
    */
+  /**
+   * 🔵🔵🔵 MI-HUMAN-JUDGMENT-PERSISTENCE-01 — **스냅샷을 넘어 기억한다**(CPO 2026-11-24).
+   *
+   * 🔴 위 가격 자격 질의(`listSnapshotVerifiedSameKeys`)와 **범위가 다르다** —
+   *    이쪽은 **원상품 식별자**(`origin_code`) 축을 쓴다. 🔴 URL 단독 전역은 아니다.
+   * 🔴 실패해도 가격확인을 멈추지 않는다 — 빈 집합이면 **오늘 동작 그대로** 다.
+   */
+  let ceoReuse: CeoJudgmentReuse = { sameKeys: [], differentKeys: [], conflictKeys: [] };
+  try {
+    const dnaForCeo = buildProductIdentityDna(product);
+    ceoReuse = await listCeoJudgmentsForReuse({
+      snapshotId,
+      originCode: dnaForCeo.brandModelCode ? dnaForCeo.brandModelCode.toUpperCase() : null,
+      workspaceId: auth.user.workspaceId,
+    });
+  } catch {
+    /* 🔴 재사용 조회 실패는 «감점» 이 아니다 — 자동 판정 그대로 간다. */
+  }
+
   let verifiedSameKeys: string[] = [];
   try {
     verifiedSameKeys = await listSnapshotVerifiedSameKeys({
@@ -217,6 +238,9 @@ export async function POST(request: Request) {
        *    비어 있으면 `priceTierFromLink` 산출 그대로다 ⟹ 기존 국내 수집 결과 불변.
        */
       verifiedSameUrlKeys: verifiedSameKeys.length > 0 ? verifiedSameKeys : undefined,
+      /** 🔵 CEO 확정 재사용 — 🔴 **분류·노출 축** 이다(가격 자격 식 불변). */
+      ceoSameUrlKeys: ceoReuse.sameKeys.length > 0 ? ceoReuse.sameKeys : undefined,
+      ceoDifferentUrlKeys: ceoReuse.differentKeys.length > 0 ? ceoReuse.differentKeys : undefined,
       /**
        * 🔴🔴 CORE-2R-4 STEP 2 — **여기서만 켠다.** 셀러가 「지금 확인 / 🔄 다시 분석」을
        *    누른 경로다. 🔴 일괄 cron(`trigger-domestic-price-check`)은 **켜지 않는다** —

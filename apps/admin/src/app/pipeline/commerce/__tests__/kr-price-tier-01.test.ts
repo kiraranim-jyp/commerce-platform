@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   isCeoConfirmedSame,
+  isCeoConfirmedDifferent,
   isConfirmedSameForPrice,
   isPresumedSameForPrice,
   passesPriceEligibility,
@@ -229,6 +230,75 @@ describe("MI-KR-PRICE-TIER-01", () => {
     expect(MI, "🔴 recommendedPrice 를 이 파일에서 계산한다").not.toContain("recommendedPrice =");
   });
 
+  it("E-1 🔵🔵 **CEO DIFFERENT 가 자동 SAME 보다 우선한다**(다시 노출하지 않는다)", () => {
+    const r = row({
+      matchTruth: "STRONG_IDENTIFIER",
+      priceTier: "EXACT",
+      ceoConfirmedDifferent: true,
+    });
+    /** 🔴 시스템은 SAME 이다 — 그래도 CEO 판정이 이긴다. */
+    expect(transientDisplayTier(r)).toBe("SAME");
+    expect(isCeoConfirmedDifferent(r)).toBe(true);
+    expect(isConfirmedSameForPrice(r), "🔴🔴 CEO DIFFERENT 가 확정 형성대에 들어갔다").toBe(false);
+    expect(isPresumedSameForPrice(r), "🔴🔴 CEO DIFFERENT 가 추정 형성대에 들어갔다").toBe(false);
+  });
+
+  it("E-2 🔴 **엇갈린 판정은 자동 적용하지 않는다** — 리더가 충돌 키를 빼 둔다", () => {
+    const SRC = readFileSync(
+      join(__dirname, "..", "..", "..", "api", "price-history", "_lib", "candidate-review.ts"),
+      "utf8",
+    );
+    /** 🟢 충돌은 **별도 집합** 이고 same/different 어느 쪽에도 담기지 않는다. */
+    expect(SRC).toContain("conflictKeys");
+    expect(SRC).toContain("if (set.size > 1) out.conflictKeys.push(key);");
+    /** 🔴 `SIMILAR`/`UNDECIDED` 를 SAME·DIFFERENT 로 쓰지 않는다(CPO §4). */
+    expect(SRC).toContain('if (v !== "SAME" && v !== "DIFFERENT") continue;');
+  });
+
+  it("E-3 🔵🔵 **스냅샷을 넘어 기억한다** — 축은 원상품 식별자(origin_code)", () => {
+    /**
+     * 🔴 **주석을 벗기고 본다** — 이 저장소에서 아홉 번 걸린 함정이다. 가격 자격 리더의
+     *    주석에 「`origin_code` 축을 쓰지 않는다」가 적혀 있어서, 벗기지 않으면
+     *    그 **주석 때문에** 단언이 거짓 FAIL 한다(1차에 실제로 났다).
+     */
+    const SRC = readFileSync(
+      join(__dirname, "..", "..", "..", "api", "price-history", "_lib", "candidate-review.ts"),
+      "utf8",
+    )
+      .replace(/\/\*[\s\S]*?\*\//g, " ")
+      .replace(/^\s*\/\/.*$/gm, "");
+    const fn = SRC.slice(SRC.indexOf("export async function listCeoJudgmentsForReuse"));
+    const bodyText = fn.slice(0, fn.length > 4000 ? 4000 : undefined);
+    /**
+     * 🟢 **원상품 식별자 축** 이 있다 — 이것이 「새 스냅샷에서도 기억한다」를 만든다.
+     *
+     * 🔴🔴 **1차 단언이 뚫렸다. 그 기록을 남긴다** — `toContain("origin_code.eq.")` 만
+     *    썼더니 음성대조 W1(조건을 `if (false)` 로 바꿈)이 **통과** 했다. 문자열은
+     *    남아 있고 **그 줄을 일으키는 조건** 이 죽었기 때문이다.
+     * 🟢 그래서 **술어까지** 잠근다(메모 `source-guard-must-lock-the-predicate`).
+     */
+    expect(bodyText, "🔴🔴 원상품 식별자 축이 없다 — 스냅샷이 바뀌면 판정을 잃는다").toContain(
+      "if (input.originCode) ors.push(",
+    );
+    expect(bodyText, "🔴 그 줄이 origin_code 축을 넣지 않는다").toContain("origin_code.eq.");
+    /** 🔴 **URL 단독 전역이 아니다** — 스냅샷 또는 원상품 식별자로 범위가 묶인다. */
+    expect(bodyText).toContain("snapshot_id.eq.");
+    /** 🔴 workspace 격리를 유지한다. */
+    expect(bodyText).toContain("r.workspace_id !== input.workspaceId");
+    /** 🔴 **가격 자격 식은 건드리지 않았다** — 그 리더는 여전히 스냅샷 한정이다. */
+    const priced = SRC.slice(SRC.indexOf("export async function listSnapshotVerifiedSameKeys"));
+    /**
+     * 🔴 **그 함수 하나로 범위를 좁힌다** — 넓게 자르면 다음 함수
+     *    (`listReviewedSameUrls`, 이쪽은 origin_code 를 **쓴다**)가 섞여 단언이 거짓이 된다.
+     */
+    const pricedEnd = priced.indexOf("listReviewedSameUrls");
+    expect(pricedEnd, "🔴 다음 함수를 못 찾았다 — 이 단언의 범위가 깨졌다").toBeGreaterThan(0);
+    const pricedBody = priced.slice(0, pricedEnd);
+    expect(pricedBody, "🔴🔴 가격 자격 축에 origin_code 가 들어갔다(§9 불변 위반)").not.toContain(
+      "origin_code",
+    );
+  });
+
   it("D-2 🔵 **공급원이 둘이고 둘 다 기존 술어를 재사용한다**(새 질의 0)", () => {
     const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/.*$/gm, "");
     const RUNNER = strip(
@@ -248,6 +318,16 @@ describe("MI-KR-PRICE-TIER-01", () => {
       ),
     );
     expect(SAVED).toContain('ceoConfirmedSame: r.humanVerdict === "SAME"');
-    expect(SAVED, "🔴 DIFFERENT/SIMILAR 를 재사용했다").not.toContain('humanVerdict === "DIFFERENT"');
+    /**
+     * 🔵🔵 **MI-HUMAN-JUDGMENT-PERSISTENCE-01 로 이 단언이 뒤집혔다 — 약화가 아니다.**
+     *    🔴 전까지 「DIFFERENT 재사용 금지」였다(CPO 2026-11-07). 🔴🔴 그런데 CPO 가
+     *    2026-11-24 에 **요구** 했다 — 「CEO 의 DIFFERENT 도 자동 판정보다 우선하며,
+     *    같은 타상품을 다시 SAME/PRESUMED_SAME 으로 **노출하지 않는다**」.
+     * 🟢 그래서 DIFFERENT 는 **제외 전용** 으로만 쓴다(판정 라벨을 만들지 않는다).
+     * 🔴 `SIMILAR`/`UNDECIDED` 는 **여전히 재사용하지 않는다** — 그 금지는 그대로다.
+     */
+    expect(SAVED).toContain('ceoConfirmedDifferent: r.humanVerdict === "DIFFERENT"');
+    expect(SAVED, "🔴 SIMILAR 를 재사용했다").not.toContain('humanVerdict === "SIMILAR"');
+    expect(SAVED, "🔴 UNDECIDED 를 재사용했다").not.toContain('humanVerdict === "UNDECIDED"');
   });
 });

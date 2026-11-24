@@ -256,6 +256,79 @@ export async function listSnapshotCandidateReviews(input: {
  * 🔴 돌려주는 것은 **정규화된 URL 키 집합** 이다 — verdict 문자열을 밖으로 내보내지
  *    않는다(그것이 나가면 하류가 사람 판단을 MI 라벨처럼 쓰게 된다).
  */
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔵🔵🔵 MI-HUMAN-JUDGMENT-PERSISTENCE-01 — **CEO 판정을 «스냅샷 밖에서도» 기억한다**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 **CPO 가 운영 원칙을 바꿨다**(2026-11-24): 「snapshot 이 달라졌다고 기존 CEO
+ *    판정을 **잃어버리는 구조 금지**」 · 「이미 확정된 판단을 단순히 새 snapshot 이라는
+ *    이유로 다시 CEO 에게 묻지 않는다」.
+ * 🔴 그러나 **URL 단독 전역 매칭도 금지** 다 — 같은 URL 이라도 원상품이 다를 수 있다.
+ * 🟢 그래서 축은 **원상품 식별자** 다 — `snapshot_id` **OR** `origin_code`
+ *    (= 운영 `brandModelCode`). 🔴 **새 표도 새 질의 모양도 만들지 않았다** —
+ *    `listCandidateReviews` 가 **이미 쓰는 그 OR 축** 이다(§3 「기존 기능 최대 재사용」).
+ *
+ * 🔴🔴 **충돌은 «자동 적용하지 않는다»**(CPO §3·§6). 같은 후보 키에 서로 다른 판정이
+ *    있으면 어느 쪽도 적용하지 않고 **재검토 대상** 으로 돌려준다 — 실측 근거가 있다:
+ *    `villagekids.co.uk/.../pale-blue-3d-logo-t-shirt` 에 `DIFFERENT` 와 `SAME` 이
+ *    **둘 다 실재** 하고, C06 은 **DIFFERENT → SAME** 으로 뒤집힌 쌍이다.
+ *    🔴 과거 판단으로 자동 차단하면 그 후보가 **영구히 사라진다**.
+ *
+ * 🔴 **가격 «자격» 식은 건드리지 않는다** — 그 축(`listSnapshotVerifiedSameKeys`)은
+ *    CPO 가 스냅샷 한정으로 고정했고 이번 지시 §9 가 「가격 자격 불변」을 요구한다.
+ *    🟢 이 리더가 바꾸는 것은 **분류·노출** 축이다.
+ * 🔴 `SIMILAR`/`UNDECIDED` 는 **SAME 으로도 DIFFERENT 로도 쓰지 않는다**(CPO §4).
+ */
+export interface CeoJudgmentReuse {
+  /** 🟢 CEO 가 **동일상품으로 확정** 한 후보 키(정규화된 `reviewKey`). */
+  sameKeys: string[];
+  /** 🟢 CEO 가 **다른 상품으로 확정** 한 후보 키. 🔴 자동 SAME 보다 **우선** 한다. */
+  differentKeys: string[];
+  /** 🔴 판정이 **엇갈리는** 후보 키 — 어느 쪽도 적용하지 않고 사람이 다시 본다. */
+  conflictKeys: string[];
+}
+
+export async function listCeoJudgmentsForReuse(input: {
+  snapshotId: string;
+  /** 🔴 **운영 `brandModelCode`** 다 — DB `sku` 칸과 혼용하지 않는다. 없으면 `null`. */
+  originCode: string | null;
+  workspaceId: string;
+}): Promise<CeoJudgmentReuse> {
+  const empty: CeoJudgmentReuse = { sameKeys: [], differentKeys: [], conflictKeys: [] };
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return empty;
+  const ors = [`snapshot_id.eq.${input.snapshotId}`];
+  /** 🟢 **원상품 식별자 축** — 이것이 「새 스냅샷에서도 기억한다」를 만든다. */
+  if (input.originCode) ors.push(`origin_code.eq.${input.originCode}`);
+  const { data, error } = await supabase
+    .from("candidate_reviews")
+    .select("candidate_url, human_verdict, workspace_id, origin_code, snapshot_id")
+    .or(ors.join(","));
+  if (error) {
+    console.warn("[candidate-review] CEO 판정 재사용 조회 실패:", error.message);
+    return empty;
+  }
+  /** 🔴 한 후보 키에 **어떤 판정들이** 있었는지 모은다(덮어쓰지 않는다). */
+  const byKey = new Map<string, Set<string>>();
+  for (const r of data as any[]) {
+    if (r.workspace_id != null && r.workspace_id !== input.workspaceId) continue;
+    if (typeof r.candidate_url !== "string" || !r.candidate_url) continue;
+    const v = r.human_verdict;
+    if (v !== "SAME" && v !== "DIFFERENT") continue;
+    const key = reviewKey(r.candidate_url);
+    if (!byKey.has(key)) byKey.set(key, new Set());
+    byKey.get(key)!.add(v);
+  }
+  const out: CeoJudgmentReuse = { sameKeys: [], differentKeys: [], conflictKeys: [] };
+  for (const [key, set] of byKey) {
+    if (set.size > 1) out.conflictKeys.push(key);
+    else if (set.has("SAME")) out.sameKeys.push(key);
+    else if (set.has("DIFFERENT")) out.differentKeys.push(key);
+  }
+  return out;
+}
+
 export async function listSnapshotVerifiedSameKeys(input: {
   snapshotId: string;
   workspaceId: string;

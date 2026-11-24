@@ -250,6 +250,13 @@ export interface DomesticPriceCheckInput {
    * 🔴 안 넘기면 **오늘 동작 그대로** 다(빈 집합 ⟹ 자격 승격 0).
    */
   verifiedSameUrlKeys?: readonly string[];
+  /**
+   * 🔵 MI-HUMAN-JUDGMENT-PERSISTENCE-01 — **CEO 확정 재사용 집합**(원상품 식별자 축).
+   * 🔴 가격 «자격» 입력이 아니다 — **분류·노출** 축이다.
+   */
+  ceoSameUrlKeys?: readonly string[];
+  /** 🔴 CEO 가 **다른 상품으로 확정** 한 후보 — 자동 SAME 보다 **우선** 한다. */
+  ceoDifferentUrlKeys?: readonly string[];
 }
 
 /**
@@ -413,6 +420,11 @@ export interface GeminiTransientEvidence {
    * 🔴 기본값 **false** ⟹ 자격 집합이 비면 **기존 동작 그대로** 다.
    */
   ceoConfirmedSame: boolean;
+  /**
+   * 🔴 **CEO 가 다른 상품으로 확정했다.** 자동 판정보다 **우선** 하고, 분류·노출에서
+   *    제외된다. 🔴 기본값 false · 충돌(엇갈린 판정)은 **여기 오지 않는다**.
+   */
+  ceoConfirmedDifferent: boolean;
   /** 🟢 `priceTierFromLink` 를 **호출해서** 얻는다 — 복제 계산 금지(헌장 §12). */
   priceTier: DomesticPriceTier;
   matchType: DomesticMatchType | null;
@@ -2477,8 +2489,18 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
          *       생기지 않는다(두 곳이 같은 집합·같은 키 함수를 본다).
          */
         ceoConfirmedSame:
-          input.verifiedSameUrlKeys != null &&
-          input.verifiedSameUrlKeys.includes(reviewKey(best.url)),
+          (input.verifiedSameUrlKeys != null &&
+            input.verifiedSameUrlKeys.includes(reviewKey(best.url))) ||
+          /** 🔵 **새 스냅샷에서도 기억한다** — 원상품 식별자 축의 CEO 확정. */
+          (input.ceoSameUrlKeys != null && input.ceoSameUrlKeys.includes(reviewKey(best.url))),
+        /**
+         * 🔴🔴 **CEO 가 「다른 상품」이라 한 후보** — CPO §4: 「같은 타상품을 다시 SAME
+         *    또는 PRESUMED_SAME 으로 노출하지 않는다」. 🔴 충돌 키는 이 집합에 **없다**
+         *    (리더가 빼 둔다) ⟹ 뒤집힌 판단이 후보를 영구히 지우지 않는다.
+         */
+        ceoConfirmedDifferent:
+          input.ceoDifferentUrlKeys != null &&
+          input.ceoDifferentUrlKeys.includes(reviewKey(best.url)),
         /**
          * 🔴 복제 계산하지 않는다 — 운영 owner 를 그대로 부른다.
          * 🔴🔴 CORE-2AA — 그 산출 «위에» 가격 자격만 덮는다(`matchTruth`/`verified` 불변).

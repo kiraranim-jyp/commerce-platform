@@ -151,6 +151,8 @@ export function toSavedCandidateRows(rows: readonly CandidateReviewRow[]): Saved
        * 🔴 `priceTier`/`verified` 로 추정하지 않는다(관리자 승인과 뭉개지 않는다).
        */
       ceoConfirmedSame: r.humanVerdict === "SAME",
+      /** 🔴 CEO 가 다른 상품이라 한 것 — 자동 판정보다 우선해 **노출에서 빠진다**. */
+      ceoConfirmedDifferent: r.humanVerdict === "DIFFERENT",
       priceTier: r.priceTier,
       matchReasons: r.matchReasons,
       crossSellerBlockers: [],

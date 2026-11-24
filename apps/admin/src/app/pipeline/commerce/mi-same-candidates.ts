@@ -100,8 +100,20 @@ export function isCeoConfirmedSame(row: GeminiTransientRow): boolean {
   return row.ceoConfirmedSame === true;
 }
 
+/**
+ * 🔴🔴 **CEO 가 「다른 상품」이라 확정했다** — 자동 판정보다 **우선** 한다(CPO §4).
+ *    🔴 그래서 확정·추정 **어느 형성대에도** 들어가지 않고, MI 후보 목록에도 서지 않는다.
+ * 🔴 **엇갈린 판정은 이 값이 false** 다(리더가 충돌 키를 빼 둔다) ⟹ 뒤집힌 판단이
+ *    후보를 영구히 지우지 않는다(C06 이 그 반례다 · DIFFERENT → SAME 으로 바뀌었다).
+ */
+export function isCeoConfirmedDifferent(row: GeminiTransientRow): boolean {
+  return row.ceoConfirmedDifferent === true;
+}
+
 /** 🔵 **확정** 형성대 입장 — CEO 확정 **또는** 시스템 SAME. */
 export function isConfirmedSameForPrice(row: GeminiTransientRow): boolean {
+  /** 🔴 **CEO DIFFERENT 가 먼저다** — 자동 SAME 이어도 들어오지 못한다. */
+  if (isCeoConfirmedDifferent(row)) return false;
   return isCeoConfirmedSame(row) || transientDisplayTier(row) === "SAME";
 }
 
@@ -129,6 +141,8 @@ export function passesPriceEligibility(row: GeminiTransientRow): boolean {
  *    🔴 `isConfirmedSameForPrice` 와 **동시에 참이 될 수 없다**(중복 집계 0).
  */
 export function isPresumedSameForPrice(row: GeminiTransientRow): boolean {
+  /** 🔴 CEO DIFFERENT 는 추정에도 오지 않는다(CPO §4 「다시 노출하지 않는다」). */
+  if (isCeoConfirmedDifferent(row)) return false;
   if (isConfirmedSameForPrice(row)) return false;
   if (transientDisplayTier(row) !== "PRESUMED_SAME") return false;
   return passesPriceEligibility(row);
