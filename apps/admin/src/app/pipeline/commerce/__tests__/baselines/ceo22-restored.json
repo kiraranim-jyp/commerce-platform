@@ -1,0 +1,323 @@
+{
+  "note": "MI-HJP-02 — CEO 22건 복원표. DIRECT=계약 CEO_CASES 근거 · COMPLEMENT=CEO 명시 총계(SAME 4/DIFFERENT 18)의 여집합. 운영 DB candidate_reviews.human_verdict 에 영구 연결됨(2026-11-24).",
+  "restoredAt": "2026-11-24",
+  "total": 22,
+  "same": 4,
+  "different": 18,
+  "direct": 11,
+  "complement": 11,
+  "rows": [
+    {
+      "snapshotId": "6cf3e50e-fec6-4463-9114-c351f81c1bbb",
+      "originCode": "B226AC073",
+      "originTitle": "Taxi Saurus Tag denim pants",
+      "url": "https://designerkidswear.com/products/versace-kids-baby-boys-denim-blue-1009197-1a08511-1d200",
+      "systemVerdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ],
+      "ceoVerdict": "DIFFERENT",
+      "basis": "DIRECT"
+    },
+    {
+      "snapshotId": "6cf3e50e-fec6-4463-9114-c351f81c1bbb",
+      "originCode": "B226AC073",
+      "originTitle": "Taxi Saurus Tag denim pants",
+      "url": "https://folkberlin.com/products/gingham-woven-trousers",
+      "systemVerdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP"
+      ],
+      "ceoVerdict": "DIFFERENT",
+      "basis": "DIRECT"
+    },
+    {
+      "snapshotId": "6cf3e50e-fec6-4463-9114-c351f81c1bbb",
+      "originCode": "B226AC073",
+      "originTitle": "Taxi Saurus Tag denim pants",
+      "url": "https://junioredition.com/products/taxi-saurus-tag-denim-pants-by-bobo-choses",
+      "systemVerdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "blockers": [
+        "COLOR_VARIANT"
+      ],
+      "ceoVerdict": "SAME",
+      "basis": "DIRECT"
+    },
+    {
+      "snapshotId": "6cf3e50e-fec6-4463-9114-c351f81c1bbb",
+      "originCode": "B226AC073",
+      "originTitle": "Taxi Saurus Tag denim pants",
+      "url": "https://kidbizkid.com/products/diesel-viker-jeans",
+      "systemVerdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "COLOR_VARIANT",
+        "NO_TITLE_OVERLAP",
+        "AUDIENCE_LINE"
+      ],
+      "ceoVerdict": "DIFFERENT",
+      "basis": "DIRECT"
+    },
+    {
+      "snapshotId": "6cf3e50e-fec6-4463-9114-c351f81c1bbb",
+      "originCode": "B226AC073",
+      "originTitle": "Taxi Saurus Tag denim pants",
+      "url": "https://nickis.com/products/polo-ralph-lauren-jeans-blau-3402271700",
+      "systemVerdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "COLOR_VARIANT",
+        "NO_TITLE_OVERLAP",
+        "AUDIENCE_LINE"
+      ],
+      "ceoVerdict": "DIFFERENT",
+      "basis": "DIRECT"
+    },
+    {
+      "snapshotId": "6cf3e50e-fec6-4463-9114-c351f81c1bbb",
+      "originCode": "B226AC073",
+      "originTitle": "Taxi Saurus Tag denim pants",
+      "url": "https://petitemaisonkids.com/products/sparkle-blue-denim-jeans",
+      "systemVerdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ],
+      "ceoVerdict": "DIFFERENT",
+      "basis": "DIRECT"
+    },
+    {
+      "snapshotId": "6cf3e50e-fec6-4463-9114-c351f81c1bbb",
+      "originCode": "B226AC073",
+      "originTitle": "Taxi Saurus Tag denim pants",
+      "url": "https://villagekids.co.uk/products/denim-blue-jeans",
+      "systemVerdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "COLOR_VARIANT",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL",
+        "AUDIENCE_LINE"
+      ],
+      "ceoVerdict": "DIFFERENT",
+      "basis": "DIRECT"
+    },
+    {
+      "snapshotId": "6cf3e50e-fec6-4463-9114-c351f81c1bbb",
+      "originCode": "B226AC073",
+      "originTitle": "Taxi Saurus Tag denim pants",
+      "url": "https://www.donokids.com/shop/shopdetail.html?branduid=3362810&type=x&current_category=058",
+      "systemVerdict": null,
+      "matchTruth": null,
+      "blockers": [],
+      "ceoVerdict": "SAME",
+      "basis": "DIRECT"
+    },
+    {
+      "snapshotId": "3073691b-1f97-4f5b-aac6-f9537e444d72",
+      "originCode": "BJ21",
+      "originTitle": "Handsmock Dress in Little Bouquet by Bonjour",
+      "url": "https://designerkidswear.com/products/givenchy-baby-girls-dress-pink-h31301-46g",
+      "systemVerdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP"
+      ],
+      "ceoVerdict": "DIFFERENT",
+      "basis": "COMPLEMENT"
+    },
+    {
+      "snapshotId": "3073691b-1f97-4f5b-aac6-f9537e444d72",
+      "originCode": "BJ21",
+      "originTitle": "Handsmock Dress in Little Bouquet by Bonjour",
+      "url": "https://junioredition.com/products/exclusive-handsmock-dress-in-pink-tapestry-by-bonjour",
+      "systemVerdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "blockers": [
+        "SAME_SELLER_DISTINCT_LISTING"
+      ],
+      "ceoVerdict": "DIFFERENT",
+      "basis": "DIRECT"
+    },
+    {
+      "snapshotId": "3073691b-1f97-4f5b-aac6-f9537e444d72",
+      "originCode": "BJ21",
+      "originTitle": "Handsmock Dress in Little Bouquet by Bonjour",
+      "url": "https://kidbizkid.com/products/givenchy-lilac-dress",
+      "systemVerdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP"
+      ],
+      "ceoVerdict": "DIFFERENT",
+      "basis": "COMPLEMENT"
+    },
+    {
+      "snapshotId": "3073691b-1f97-4f5b-aac6-f9537e444d72",
+      "originCode": "BJ21",
+      "originTitle": "Handsmock Dress in Little Bouquet by Bonjour",
+      "url": "https://villagekids.co.uk/products/copy-of-coral-pink-broderie-anglaise-dress",
+      "systemVerdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP"
+      ],
+      "ceoVerdict": "DIFFERENT",
+      "basis": "COMPLEMENT"
+    },
+    {
+      "snapshotId": "ebc8162c-e88f-4521-8124-cbb5d33f7815",
+      "originCode": "BJ44",
+      "originTitle": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+      "url": "https://junioredition.com/products/handsmock-apron-dress-in-natural-by-bonjour",
+      "systemVerdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "blockers": [
+        "SAME_SELLER_DISTINCT_LISTING"
+      ],
+      "ceoVerdict": "DIFFERENT",
+      "basis": "COMPLEMENT"
+    },
+    {
+      "snapshotId": "ebc8162c-e88f-4521-8124-cbb5d33f7815",
+      "originCode": "BJ44",
+      "originTitle": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+      "url": "https://petitemaisonkids.com/products/georgina-tartan-print-dress-with-red-bow",
+      "systemVerdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "COLOR_VARIANT",
+        "MATERIAL"
+      ],
+      "ceoVerdict": "DIFFERENT",
+      "basis": "COMPLEMENT"
+    },
+    {
+      "snapshotId": "ebc8162c-e88f-4521-8124-cbb5d33f7815",
+      "originCode": "BJ44",
+      "originTitle": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+      "url": "https://shoppiccoliandco.com/products/preorder-beatrice-burgundy-handsmocked-girl-sleeves-dress-ships-end-of-october",
+      "systemVerdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP"
+      ],
+      "ceoVerdict": "DIFFERENT",
+      "basis": "COMPLEMENT"
+    },
+    {
+      "snapshotId": "ebc8162c-e88f-4521-8124-cbb5d33f7815",
+      "originCode": "BJ44",
+      "originTitle": "Handsmock Dress in Burgundy Cashmere Print by Bonjour",
+      "url": "https://villagekids.co.uk/products/lemon-print-dress",
+      "systemVerdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "blockers": [
+        "BRAND_MISMATCH"
+      ],
+      "ceoVerdict": "DIFFERENT",
+      "basis": "COMPLEMENT"
+    },
+    {
+      "snapshotId": "ad4dd611-8c10-4d64-b1ee-a0d74c688ee3",
+      "originCode": null,
+      "originTitle": "Reversible Jacket nº03 in Otter Brown by True Artist",
+      "url": "https://designerkidswear.com/products/moncler-kids-enfant-baby-k2f-jacket-brown-1a00024-597z8-246",
+      "systemVerdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP",
+        "MATERIAL"
+      ],
+      "ceoVerdict": "DIFFERENT",
+      "basis": "COMPLEMENT"
+    },
+    {
+      "snapshotId": "ad4dd611-8c10-4d64-b1ee-a0d74c688ee3",
+      "originCode": null,
+      "originTitle": "Reversible Jacket nº03 in Otter Brown by True Artist",
+      "url": "https://junioredition.com/products/pixel-abduction-all-over-reversible-jacket-by-bobo-choses",
+      "systemVerdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "MATERIAL",
+        "SAME_SELLER_DISTINCT_LISTING"
+      ],
+      "ceoVerdict": "DIFFERENT",
+      "basis": "COMPLEMENT"
+    },
+    {
+      "snapshotId": "ad4dd611-8c10-4d64-b1ee-a0d74c688ee3",
+      "originCode": null,
+      "originTitle": "Reversible Jacket nº03 in Otter Brown by True Artist",
+      "url": "https://kidbizkid.com/products/billieblush-reversible-leopard-jacket",
+      "systemVerdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "MATERIAL"
+      ],
+      "ceoVerdict": "DIFFERENT",
+      "basis": "COMPLEMENT"
+    },
+    {
+      "snapshotId": "dfd70b3e-ced8-4a49-95f0-caeb202a276f",
+      "originCode": "WK21W97",
+      "originTitle": "Mixed Media Jacket in Ecru Mix by Wynken",
+      "url": "https://junioredition.com/products/mixed-media-jacket-in-blue-mix-by-wynken",
+      "systemVerdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "blockers": [
+        "MATERIAL",
+        "SAME_SELLER_DISTINCT_LISTING"
+      ],
+      "ceoVerdict": "SAME",
+      "basis": "DIRECT"
+    },
+    {
+      "snapshotId": "dfd70b3e-ced8-4a49-95f0-caeb202a276f",
+      "originCode": "WK21W97",
+      "originTitle": "Mixed Media Jacket in Ecru Mix by Wynken",
+      "url": "https://nickis.com/products/wynken-jacke-mixed-media-mehrfarbig-7400851022",
+      "systemVerdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "blockers": [
+        "MATERIAL"
+      ],
+      "ceoVerdict": "SAME",
+      "basis": "DIRECT"
+    },
+    {
+      "snapshotId": "dfd70b3e-ced8-4a49-95f0-caeb202a276f",
+      "originCode": "WK21W97",
+      "originTitle": "Mixed Media Jacket in Ecru Mix by Wynken",
+      "url": "https://villagekids.co.uk/products/black-puffer-coat-4",
+      "systemVerdict": "PRESUMED_SAME",
+      "matchTruth": "TEXT_CONFIRMED",
+      "blockers": [
+        "BRAND_MISMATCH",
+        "NO_TITLE_OVERLAP"
+      ],
+      "ceoVerdict": "DIFFERENT",
+      "basis": "COMPLEMENT"
+    }
+  ]
+}
