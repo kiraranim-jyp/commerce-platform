@@ -1245,6 +1245,16 @@ export interface PriceGuide {
   /** 🔴 **버리지 않는다** — 링크를 주는 곳. */
   unpricedCount: number;
   byCurrency: MarketPriceRange[];
+  /**
+   * 🔵🔵🔵 MI-DOMESTIC-PRICE-AXIS-01 — **독립 판매자 수**(도메인 기준).
+   *
+   * 🔴🔴 **`pricedCount` 와 다르다.** 그쪽은 `discoveredUrl` 로 접은 **후보 수** 이고,
+   *    한 판매처가 URL 둘을 들고 있으면 **2 로 센다** ⟹ 「판매자 2곳」으로 읽히면
+   *    **거짓 분모** 다(CPO §3 「후보 row 수를 독립 판매자 수로 표시하지 않는다」).
+   * 🟢 그래서 **도메인으로 한 번 더** 접은 수를 따로 들고 간다.
+   * 🔴 이 값이 **범위 표시의 조건** 이다 — 1곳이면 「단일 관측」이고 「가격대」가 아니다.
+   */
+  independentSellerCount: number;
   basis: PriceGuideBasis;
 }
 
@@ -1314,8 +1324,36 @@ export function buildPriceGuide(j: MarketJudgement, market: "KR" | "OVERSEAS"): 
    * 🔴 **표본 하나를 가격대라고 부르지 않는다.** 한 통화 안에 둘 이상이고 금액이
    *    실제로 다를 때만 `RANGE` 다 — 같은 금액 둘은 「가격대」가 아니다.
    */
+  /**
+   * 🔵🔵🔵 **독립 판매자 수** — 도메인으로 접는다(CPO §3).
+   * 🔴 호스트를 못 읽으면 **버리지 않고** URL 을 키로 쓴다(그 후보가 사라지면 분모가 준다).
+   */
+  const sellerKey = (s: MarketSeller): string => {
+    const raw = s.row.domain ?? "";
+    if (raw.trim().length > 0) return raw.trim().toLowerCase();
+    try {
+      return new URL(s.row.discoveredUrl).host.toLowerCase();
+    } catch {
+      return s.row.discoveredUrl;
+    }
+  };
+  const independentSellerCount = new Set(priced.map(sellerKey)).size;
+  /**
+   * 🔴 **표본 하나를 가격대라고 부르지 않는다.** 한 통화 안에 둘 이상이고 금액이
+   *    실제로 다를 때만 `RANGE` 다 — 같은 금액 둘은 「가격대」가 아니다.
+   *
+   * 🔵🔵 **MI-DOMESTIC-PRICE-AXIS-01 — 조건이 하나 더 붙었다: 독립 판매자 ≥ 2.**
+   *    🔴 CPO §3: 「독립 판매자 근거가 **2곳 이상일 때만** 가격 형성 범위를 표시한다.
+   *       1곳뿐이면 범위가 형성된 것처럼 표현하지 말고 **단일 관측 가격** 으로 구분한다」.
+   *    🔴 전까지 한 판매처의 **URL 둘** 이 금액만 다르면 「가격대」가 됐다 — 그것은
+   *       **한 곳의 두 리스팅** 이고 시장 가격대가 아니다.
+   */
   const basis: PriceGuideBasis =
-    priced.length === 0 ? "NONE" : byCurrency.some((c) => c.n >= 2 && c.highest > c.lowest) ? "RANGE" : "SINGLE";
+    priced.length === 0
+      ? "NONE"
+      : independentSellerCount >= 2 && byCurrency.some((c) => c.n >= 2 && c.highest > c.lowest)
+        ? "RANGE"
+        : "SINGLE";
   return {
     market,
     sameCount: mine.length,
@@ -1323,6 +1361,7 @@ export function buildPriceGuide(j: MarketJudgement, market: "KR" | "OVERSEAS"): 
     pricedCount: priced.length,
     unpricedCount: mine.filter((s) => s.price == null).length,
     byCurrency,
+    independentSellerCount,
     basis,
   };
 }
