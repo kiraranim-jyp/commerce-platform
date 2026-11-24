@@ -1854,10 +1854,18 @@ export function domesticBandText(b: DomesticPriceBand): string | null {
  * 🔴🔴 전까지 「최저 **확인**가」였다. 그 말은 **구매 가능성을 확인했다** 는 뜻으로 읽힌다 —
  *    그런데 실측에서 `sold_out` 이 **90/90 전건 「모름」** 이다(§5.2 통과 해외 전수).
  *    ⟹ 🔴 그 라벨은 우리가 **갖고 있지 않은 근거** 를 주장한다.
- * 🟢 그래서 CPO 가 **「해외 수집 최저 관측가」** 로 고정했다 — 「우리가 수집해서 관측한
+ * 🟢 그래서 CPO 가 **「수집 최저 관측가」** 로 고정했다 — 「우리가 수집해서 관측한
  *    값 중 최저」까지만 말한다. 🔴 「구매 가능 최저가」·「추천 소싱가」로 바꾸지 않는다.
  */
-export const OVERSEAS_LOWEST_LABEL = "해외 수집 최저 관측가";
+/**
+ * 🔵🔵 **MI-OVERSEAS-LABEL-CONSISTENCY-01 — 「해외」를 뺀다**(CPO 결정 ⒝ · 2026-11-25).
+ *
+ * 🔴 이 라벨은 **제목이 「🌎 해외 최저 소싱가」인 블록 «안»** 에 선다 ⟹ 「해외」를 두면
+ *    한 블록에서 **그 말이 두 번** 나온다(실측 덤프가 그것을 드러냈다).
+ * 🔴🔴 **제목은 건드리지 않았다** — `OVERSEAS_REFERENCE_TITLE` 은 CEO 확정 상수이고
+ *    소비처 **28곳** · `wu-056r1` 계약이 그 글자에 묶여 있다(CPO 유지 결정).
+ */
+export const OVERSEAS_LOWEST_LABEL = "수집 최저 관측가";
 export const OVERSEAS_LOWEST_PER_CURRENCY_NOTE =
   "통화가 여러 개라 하나의 최저가로 합치지 않습니다 — 통화별 수집 최저 관측가입니다.";
 

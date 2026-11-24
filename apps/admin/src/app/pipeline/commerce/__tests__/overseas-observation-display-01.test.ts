@@ -48,10 +48,10 @@ const q = (rows: GeminiTransientRow[], now = NOW) =>
   buildObservationQuality(buildMarketJudgement(rows, isConfirmedSameForPrice), "OVERSEAS", now);
 
 describe("MI-OSOD-01 — 해외 관측 가격 표시", () => {
-  it("A-1 🔵🔵 **명칭이 「해외 수집 최저 관측가」다** — 「확인가」로 되돌아가면 FAIL", () => {
-    expect(OVERSEAS_LOWEST_LABEL).toBe("해외 수집 최저 관측가");
+  it("A-1 🔵🔵 **명칭이 「수집 최저 관측가」다** — 「확인가」로 되돌아가면 FAIL", () => {
+    expect(OVERSEAS_LOWEST_LABEL).toBe("수집 최저 관측가");
     const head = marketPriceHeadline(buildPriceGuide(buildMarketJudgement([row({})], isConfirmedSameForPrice), "OVERSEAS"));
-    expect(head).toContain("해외 수집 최저 관측가");
+    expect(head).toContain("수집 최저 관측가");
     /** 🔴 **구매 가능성을 주장하는 말** 이 그 자리에 돌아오면 FAIL 한다. */
     expect(head).not.toContain("확인가");
     expect(head).not.toContain("구매 가능");

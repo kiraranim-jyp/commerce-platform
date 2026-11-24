@@ -207,11 +207,11 @@ describe("MI-UIC-01 C — owner 가 하나다(복제 금지)", () => {
      * 🔵🔵 **MI-OVERSEAS-SOURCING-OBSERVATION-DISPLAY-01 에서 명칭이 바뀌었다**(CPO 확정).
      *    전까지 「최저 **확인**가」였고 그 말은 **구매 가능성을 확인했다** 는 뜻으로 읽힌다 —
      *    실측에서 `sold_out` 이 **90/90 전건 「모름」** 이다. ⟹ 갖고 있지 않은 근거를
-     *    주장하는 라벨이라 **「해외 수집 최저 관측가」** 로 고정됐다.
+     *    주장하는 라벨이라 **「수집 최저 관측가」** 로 고정됐다.
      * 🔴 그래서 이 단언은 **금지된 옛 말로 되돌아가면 FAIL** 한다(의도된 강화).
      */
     expect(marketPriceHeadline(krGuide)).toBe("KRW 88,000 ─ 95,000");
-    expect(marketPriceHeadline(osGuide)).toBe("해외 수집 최저 관측가 JPY 26,400");
+    expect(marketPriceHeadline(osGuide)).toBe("수집 최저 관측가 JPY 26,400");
     /** 🔴 구매 가능성·추천을 주장하는 말이 그 자리에 **돌아오지 못한다**. */
     for (const banned of ["최저 확인가", "구매 가능 최저가", "추천 소싱가"])
       expect(marketPriceHeadline(osGuide), `🔴🔴 금지 어휘가 돌아왔다: ${banned}`).not.toContain(

@@ -68,11 +68,11 @@ const ROWS = [
 ];
 
 describe("MI-OSOD-01 DOM — 해외 관측 품질이 화면에 선다", () => {
-  it("R-1 🔵🔵 **「해외 수집 최저 관측가」가 화면에 있고 「확인가」는 없다**", () => {
+  it("R-1 🔵🔵 **「수집 최저 관측가」가 화면에 있고 「확인가」는 없다**", () => {
     const m = mount(ROWS);
     try {
       expect(m.text, "🔴🔴 관측가 명칭이 화면에 없다").toContain(OVERSEAS_LOWEST_LABEL);
-      expect(m.text).toContain("해외 수집 최저 관측가");
+      expect(m.text).toContain("수집 최저 관측가");
       /** 🔴 **구매 가능성을 주장하는 옛 라벨** 이 되돌아오면 FAIL. */
       expect(m.text, "🔴🔴 「최저 확인가」가 화면에 돌아왔다").not.toContain("최저 확인가");
       expect(m.text).not.toContain("구매 가능 최저가");
@@ -108,7 +108,7 @@ describe("MI-OSOD-01 DOM — 해외 관측 품질이 화면에 선다", () => {
     try {
       expect(m.text, "🔴🔴 극단값이 최저 관측가로 올라갔다").toContain("GBP 37");
       /** 🔴 그 숫자가 「최저 관측가」 자리에 **15,200** 으로 서면 FAIL 이다. */
-      expect(m.text).not.toContain("해외 수집 최저 관측가 GBP 15,200");
+      expect(m.text).not.toContain("수집 최저 관측가 GBP 15,200");
     } finally {
       m.cleanup();
     }
